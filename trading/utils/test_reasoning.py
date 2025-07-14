@@ -66,7 +66,11 @@ class TestReasoningLogger(unittest.TestCase):
             "metadata": {"test": True},
         }
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def tearDown(self):
         """Clean up test fixtures."""
@@ -206,7 +210,11 @@ class TestReasoningLogger(unittest.TestCase):
         """Test fallback routes when primary operations fail."""
         # Test fallback when Redis is unavailable
         logger_no_redis = ReasoningLogger(
-            redis_host="invalid_host", redis_port=9999, redis_db=1, log_dir=self.temp_dir, enable_gpt_explanations=False
+            redis_host="invalid_host",
+            redis_port=9999,
+            redis_db=1,
+            log_dir=self.temp_dir,
+            enable_gpt_explanations=False,
         )
 
         # Should still work with file-based fallback
@@ -246,7 +254,9 @@ class TestReasoningLogger(unittest.TestCase):
 
         # Test decision tree with deep nesting
         deep_data = self.sample_decision_data.copy()
-        deep_data["context"]["nested"] = {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}
+        deep_data["context"]["nested"] = {
+            "level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}
+        }
 
         decision_id = self.logger.log_decision(**deep_data)
         self.assertIsInstance(decision_id, str)
@@ -323,7 +333,11 @@ class TestReasoningDisplay(unittest.TestCase):
             "metadata": {"test": True},
         }
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def tearDown(self):
         """Clean up test fixtures."""

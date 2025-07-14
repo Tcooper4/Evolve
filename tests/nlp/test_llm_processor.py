@@ -9,7 +9,14 @@ class TestLLMProcessor(unittest.TestCase):
         self.api_key = os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             self.skipTest("OPENAI_API_KEY not set; skipping LLMProcessor tests.")
-        self.llm = LLMProcessor({"model": "gpt-3.5-turbo", "temperature": 0.1, "moderation": True, "max_tokens": 32})
+        self.llm = LLMProcessor(
+            {
+                "model": "gpt-3.5-turbo",
+                "temperature": 0.1,
+                "moderation": True,
+                "max_tokens": 32,
+            }
+        )
         self.prompt = "Summarize the outlook for Apple stock."
 
     def test_standard_response(self):
@@ -69,13 +76,19 @@ class TestLLMProcessor(unittest.TestCase):
 
                 # Check for hallucination mitigation techniques
                 mitigation_checks = {
-                    "uncertainty_indicators": self._check_uncertainty_indicators(response),
+                    "uncertainty_indicators": self._check_uncertainty_indicators(
+                        response
+                    ),
                     "disclaimer_present": self._check_disclaimer_present(response),
-                    "qualification_phrases": self._check_qualification_phrases(response),
+                    "qualification_phrases": self._check_qualification_phrases(
+                        response
+                    ),
                     "avoided_exact_predictions": self._check_avoided_exact_predictions(
                         response, hallucination_indicators
                     ),
-                    "reasonable_timeframes": self._check_reasonable_timeframes(response),
+                    "reasonable_timeframes": self._check_reasonable_timeframes(
+                        response
+                    ),
                     "multiple_scenarios": self._check_multiple_scenarios(response),
                 }
 
@@ -106,7 +119,9 @@ class TestLLMProcessor(unittest.TestCase):
                 self.assertIn("verifiable_facts", fact_check_result)
                 self.assertIn("unverifiable_claims", fact_check_result)
                 print(f"  🔍 Verifiable facts: {fact_check_result['verifiable_facts']}")
-                print(f"  ⚠️ Unverifiable claims: {fact_check_result['unverifiable_claims']}")
+                print(
+                    f"  ⚠️ Unverifiable claims: {fact_check_result['unverifiable_claims']}"
+                )
 
             except Exception as e:
                 print(f"  ❌ Error processing prompt {i}: {e}")
@@ -117,7 +132,16 @@ class TestLLMProcessor(unittest.TestCase):
 
     def _check_uncertainty_indicators(self, response):
         """Check if response contains uncertainty indicators."""
-        uncertainty_words = ["might", "could", "may", "possibly", "potentially", "likely", "unlikely", "uncertain"]
+        uncertainty_words = [
+            "might",
+            "could",
+            "may",
+            "possibly",
+            "potentially",
+            "likely",
+            "unlikely",
+            "uncertain",
+        ]
         return any(word in response.lower() for word in uncertainty_words)
 
     def _check_disclaimer_present(self, response):
@@ -136,26 +160,49 @@ class TestLLMProcessor(unittest.TestCase):
 
     def _check_qualification_phrases(self, response):
         """Check if response uses qualifying phrases."""
-        qualification_words = ["based on", "according to", "data suggests", "analysis indicates", "trends show"]
+        qualification_words = [
+            "based on",
+            "according to",
+            "data suggests",
+            "analysis indicates",
+            "trends show",
+        ]
         return any(phrase in response.lower() for phrase in qualification_words)
 
     def _check_avoided_exact_predictions(self, response, hallucination_indicators):
         """Check if response avoids exact predictions."""
         # Count hallucination indicators in response
-        indicator_count = sum(1 for indicator in hallucination_indicators if indicator in response.lower())
+        indicator_count = sum(
+            1 for indicator in hallucination_indicators if indicator in response.lower()
+        )
         # Response should have few or no exact prediction indicators
         return indicator_count <= 2
 
     def _check_reasonable_timeframes(self, response):
         """Check if response uses reasonable timeframes."""
-        unreasonable_timeframes = ["next week", "tomorrow", "today", "in 2 days", "next month"]
-        unreasonable_count = sum(1 for timeframe in unreasonable_timeframes if timeframe in response.lower())
+        unreasonable_timeframes = [
+            "next week",
+            "tomorrow",
+            "today",
+            "in 2 days",
+            "next month",
+        ]
+        unreasonable_count = sum(
+            1 for timeframe in unreasonable_timeframes if timeframe in response.lower()
+        )
         # Should not have many unreasonable timeframes
         return unreasonable_count <= 1
 
     def _check_multiple_scenarios(self, response):
         """Check if response presents multiple scenarios."""
-        scenario_indicators = ["scenario", "possibility", "alternative", "on the other hand", "however", "but"]
+        scenario_indicators = [
+            "scenario",
+            "possibility",
+            "alternative",
+            "on the other hand",
+            "however",
+            "but",
+        ]
         return any(indicator in response.lower() for indicator in scenario_indicators)
 
 

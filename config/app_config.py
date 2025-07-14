@@ -231,7 +231,9 @@ class AppConfig:
 
             self.server.port = int(port_env)
         except (ValueError, AttributeError) as e:
-            logger.warning(f"Invalid PORT value '{port_env}', using default {self.server.port}: {e}")
+            logger.warning(
+                f"Invalid PORT value '{port_env}', using default {self.server.port}: {e}"
+            )
             # Keep the default value
 
         self.server.debug = os.getenv("DEBUG_MODE", "false").lower() == "true"
@@ -258,10 +260,14 @@ class AppConfig:
         self.database.redis_password = os.getenv("REDIS_PASSWORD") or None
 
         # Market data settings
-        self.market_data.default_timeframe = os.getenv("DEFAULT_TIMEFRAME", self.market_data.default_timeframe)
+        self.market_data.default_timeframe = os.getenv(
+            "DEFAULT_TIMEFRAME", self.market_data.default_timeframe
+        )
 
         # Model settings
-        forecast_horizon_env = os.getenv("FORECAST_HORIZON", str(self.models.forecast_horizon))
+        forecast_horizon_env = os.getenv(
+            "FORECAST_HORIZON", str(self.models.forecast_horizon)
+        )
         try:
             if forecast_horizon_env.startswith("${") and ":-" in forecast_horizon_env:
                 default_value = forecast_horizon_env.split(":-")[-1].rstrip("}")
@@ -272,9 +278,14 @@ class AppConfig:
                 f"Invalid FORECAST_HORIZON value '{forecast_horizon_env}', using default {self.models.forecast_horizon}: {e}"
             )
 
-        confidence_interval_env = os.getenv("CONFIDENCE_INTERVAL", str(self.models.confidence_interval))
+        confidence_interval_env = os.getenv(
+            "CONFIDENCE_INTERVAL", str(self.models.confidence_interval)
+        )
         try:
-            if confidence_interval_env.startswith("${") and ":-" in confidence_interval_env:
+            if (
+                confidence_interval_env.startswith("${")
+                and ":-" in confidence_interval_env
+            ):
                 default_value = confidence_interval_env.split(":-")[-1].rstrip("}")
                 confidence_interval_env = default_value
             self.models.confidence_interval = float(confidence_interval_env)
@@ -284,7 +295,9 @@ class AppConfig:
             )
 
         # Strategy settings
-        position_size_env = os.getenv("POSITION_SIZE", str(self.strategies.position_size))
+        position_size_env = os.getenv(
+            "POSITION_SIZE", str(self.strategies.position_size)
+        )
         try:
             if position_size_env.startswith("${") and ":-" in position_size_env:
                 default_value = position_size_env.split(":-")[-1].rstrip("}")
@@ -302,7 +315,9 @@ class AppConfig:
                 stop_loss_env = default_value
             self.strategies.stop_loss = float(stop_loss_env)
         except (ValueError, AttributeError) as e:
-            logger.warning(f"Invalid STOP_LOSS value '{stop_loss_env}', using default {self.strategies.stop_loss}: {e}")
+            logger.warning(
+                f"Invalid STOP_LOSS value '{stop_loss_env}', using default {self.strategies.stop_loss}: {e}"
+            )
 
         # Risk settings
         max_drawdown_env = os.getenv("MAX_DRAWDOWN", str(self.risk.max_drawdown))
@@ -328,11 +343,17 @@ class AppConfig:
             )
 
         # Agent settings
-        self.agents.goal_planner_enabled = os.getenv("GOAL_PLANNER_ENABLED", "true").lower() == "true"
-        self.agents.router_enabled = os.getenv("ROUTER_ENABLED", "true").lower() == "true"
+        self.agents.goal_planner_enabled = (
+            os.getenv("GOAL_PLANNER_ENABLED", "true").lower() == "true"
+        )
+        self.agents.router_enabled = (
+            os.getenv("ROUTER_ENABLED", "true").lower() == "true"
+        )
 
         # NLP settings
-        nlp_confidence_env = os.getenv("NLP_CONFIDENCE_THRESHOLD", str(self.nlp.confidence_threshold))
+        nlp_confidence_env = os.getenv(
+            "NLP_CONFIDENCE_THRESHOLD", str(self.nlp.confidence_threshold)
+        )
         try:
             if nlp_confidence_env.startswith("${") and ":-" in nlp_confidence_env:
                 default_value = nlp_confidence_env.split(":-")[-1].rstrip("}")
@@ -350,7 +371,9 @@ class AppConfig:
                 nlp_tokens_env = default_value
             self.nlp.max_tokens = int(nlp_tokens_env)
         except (ValueError, AttributeError) as e:
-            logger.warning(f"Invalid NLP_MAX_TOKENS value '{nlp_tokens_env}', using default {self.nlp.max_tokens}: {e}")
+            logger.warning(
+                f"Invalid NLP_MAX_TOKENS value '{nlp_tokens_env}', using default {self.nlp.max_tokens}: {e}"
+            )
 
         # API settings
         api_rate_limit_env = os.getenv("API_RATE_LIMIT", str(self.api.rate_limit))
@@ -371,15 +394,23 @@ class AppConfig:
                 api_timeout_env = default_value
             self.api.timeout = int(api_timeout_env)
         except (ValueError, AttributeError) as e:
-            logger.warning(f"Invalid API_TIMEOUT value '{api_timeout_env}', using default {self.api.timeout}: {e}")
+            logger.warning(
+                f"Invalid API_TIMEOUT value '{api_timeout_env}', using default {self.api.timeout}: {e}"
+            )
 
         # Monitoring settings
-        self.monitoring.enabled = os.getenv("MONITORING_ENABLED", "true").lower() == "true"
-        self.monitoring.alert_email = os.getenv("ALERT_EMAIL", self.monitoring.alert_email)
+        self.monitoring.enabled = (
+            os.getenv("MONITORING_ENABLED", "true").lower() == "true"
+        )
+        self.monitoring.alert_email = os.getenv(
+            "ALERT_EMAIL", self.monitoring.alert_email
+        )
 
         # Security settings
         self.security.ssl_enabled = os.getenv("SSL_ENABLED", "false").lower() == "true"
-        self.security.auth_enabled = os.getenv("AUTH_ENABLED", "false").lower() == "true"
+        self.security.auth_enabled = (
+            os.getenv("AUTH_ENABLED", "false").lower() == "true"
+        )
 
         # Development settings
         self.development.debug = os.getenv("DEV_DEBUG", "false").lower() == "true"
@@ -427,10 +458,16 @@ class AppConfig:
                 self.server.host = server_data.get("host", self.server.host)
                 self.server.port = int(server_data.get("port", self.server.port))
                 self.server.debug = server_data.get("debug", self.server.debug)
-                self.server.workers = int(server_data.get("workers", self.server.workers))
-                self.server.timeout = int(server_data.get("timeout", self.server.timeout))
+                self.server.workers = int(
+                    server_data.get("workers", self.server.workers)
+                )
+                self.server.timeout = int(
+                    server_data.get("timeout", self.server.timeout)
+                )
                 self.server.reload = server_data.get("reload", self.server.reload)
-                self.server.access_log = server_data.get("access_log", self.server.access_log)
+                self.server.access_log = server_data.get(
+                    "access_log", self.server.access_log
+                )
 
             # Logging settings
             if "logging" in config_data:
@@ -438,30 +475,50 @@ class AppConfig:
                 self.logging.level = logging_data.get("level", self.logging.level)
                 self.logging.format = logging_data.get("format", self.logging.format)
                 self.logging.file = logging_data.get("file", self.logging.file)
-                self.logging.max_size = int(logging_data.get("max_size", self.logging.max_size))
-                self.logging.backup_count = int(logging_data.get("backup_count", self.logging.backup_count))
+                self.logging.max_size = int(
+                    logging_data.get("max_size", self.logging.max_size)
+                )
+                self.logging.backup_count = int(
+                    logging_data.get("backup_count", self.logging.backup_count)
+                )
                 self.logging.console = logging_data.get("console", self.logging.console)
-                self.logging.json_format = logging_data.get("json_format", self.logging.json_format)
+                self.logging.json_format = logging_data.get(
+                    "json_format", self.logging.json_format
+                )
 
             # Database settings
             if "database" in config_data:
                 db_data = config_data["database"]
                 if "redis" in db_data:
                     redis_data = db_data["redis"]
-                    self.database.redis_host = redis_data.get("host", self.database.redis_host)
-                    self.database.redis_port = int(redis_data.get("port", self.database.redis_port))
-                    self.database.redis_db = int(redis_data.get("db", self.database.redis_db))
+                    self.database.redis_host = redis_data.get(
+                        "host", self.database.redis_host
+                    )
+                    self.database.redis_port = int(
+                        redis_data.get("port", self.database.redis_port)
+                    )
+                    self.database.redis_db = int(
+                        redis_data.get("db", self.database.redis_db)
+                    )
                     self.database.redis_password = redis_data.get("password") or None
-                    self.database.redis_ssl = redis_data.get("ssl", self.database.redis_ssl)
-                    self.database.redis_pool_size = int(redis_data.get("pool_size", self.database.redis_pool_size))
+                    self.database.redis_ssl = redis_data.get(
+                        "ssl", self.database.redis_ssl
+                    )
+                    self.database.redis_pool_size = int(
+                        redis_data.get("pool_size", self.database.redis_pool_size)
+                    )
                     self.database.redis_retry_timeout = redis_data.get(
                         "retry_on_timeout", self.database.redis_retry_timeout
                     )
 
                 if "sqlite" in db_data:
                     sqlite_data = db_data["sqlite"]
-                    self.database.sqlite_path = sqlite_data.get("path", self.database.sqlite_path)
-                    self.database.sqlite_timeout = int(sqlite_data.get("timeout", self.database.sqlite_timeout))
+                    self.database.sqlite_path = sqlite_data.get(
+                        "path", self.database.sqlite_path
+                    )
+                    self.database.sqlite_timeout = int(
+                        sqlite_data.get("timeout", self.database.sqlite_timeout)
+                    )
 
             # Market data settings
             if "market_data" in config_data:
@@ -469,35 +526,59 @@ class AppConfig:
                 self.market_data.default_timeframe = md_data.get(
                     "default_timeframe", self.market_data.default_timeframe
                 )
-                self.market_data.default_assets = md_data.get("default_assets", self.market_data.default_assets)
-                self.market_data.cache_ttl = int(md_data.get("cache_ttl", self.market_data.cache_ttl))
-                self.market_data.max_retries = int(md_data.get("max_retries", self.market_data.max_retries))
-                self.market_data.retry_delay = int(md_data.get("retry_delay", self.market_data.retry_delay))
-                self.market_data.providers = md_data.get("providers", self.market_data.providers)
+                self.market_data.default_assets = md_data.get(
+                    "default_assets", self.market_data.default_assets
+                )
+                self.market_data.cache_ttl = int(
+                    md_data.get("cache_ttl", self.market_data.cache_ttl)
+                )
+                self.market_data.max_retries = int(
+                    md_data.get("max_retries", self.market_data.max_retries)
+                )
+                self.market_data.retry_delay = int(
+                    md_data.get("retry_delay", self.market_data.retry_delay)
+                )
+                self.market_data.providers = md_data.get(
+                    "providers", self.market_data.providers
+                )
 
             # Model settings
             if "models" in config_data:
                 models_data = config_data["models"]
                 if "forecast" in models_data:
                     forecast_data = models_data["forecast"]
-                    self.models.forecast_horizon = int(forecast_data.get("horizon", self.models.forecast_horizon))
+                    self.models.forecast_horizon = int(
+                        forecast_data.get("horizon", self.models.forecast_horizon)
+                    )
                     self.models.confidence_interval = float(
-                        forecast_data.get("confidence_interval", self.models.confidence_interval)
+                        forecast_data.get(
+                            "confidence_interval", self.models.confidence_interval
+                        )
                     )
                     self.models.min_training_samples = int(
-                        forecast_data.get("min_training_samples", self.models.min_training_samples)
+                        forecast_data.get(
+                            "min_training_samples", self.models.min_training_samples
+                        )
                     )
                     self.models.update_frequency = int(
-                        forecast_data.get("update_frequency", self.models.update_frequency)
+                        forecast_data.get(
+                            "update_frequency", self.models.update_frequency
+                        )
                     )
-                    self.models.ensemble_size = int(forecast_data.get("ensemble_size", self.models.ensemble_size))
+                    self.models.ensemble_size = int(
+                        forecast_data.get("ensemble_size", self.models.ensemble_size)
+                    )
                     self.models.validation_split = float(
-                        forecast_data.get("validation_split", self.models.validation_split)
+                        forecast_data.get(
+                            "validation_split", self.models.validation_split
+                        )
                     )
 
                 if "technical" in models_data:
                     tech_data = models_data["technical"]
-                    self.models.technical_indicators = tech_data.get("indicators", self.models.technical_indicators)
+                    self.models.technical_indicators = tech_data.get(
+                        "indicators", self.models.technical_indicators
+                    )
 
             # Strategy settings
             if "strategies" in config_data:
@@ -507,8 +588,12 @@ class AppConfig:
                     self.strategies.position_size = float(
                         default_data.get("position_size", self.strategies.position_size)
                     )
-                    self.strategies.stop_loss = float(default_data.get("stop_loss", self.strategies.stop_loss))
-                    self.strategies.take_profit = float(default_data.get("take_profit", self.strategies.take_profit))
+                    self.strategies.stop_loss = float(
+                        default_data.get("stop_loss", self.strategies.stop_loss)
+                    )
+                    self.strategies.take_profit = float(
+                        default_data.get("take_profit", self.strategies.take_profit)
+                    )
                     self.strategies.max_positions = int(
                         default_data.get("max_positions", self.strategies.max_positions)
                     )
@@ -518,26 +603,46 @@ class AppConfig:
 
                 if "optimization" in strategies_data:
                     opt_data = strategies_data["optimization"]
-                    self.strategies.optimization_method = opt_data.get("method", self.strategies.optimization_method)
-                    self.strategies.n_trials = int(opt_data.get("n_trials", self.strategies.n_trials))
-                    self.strategies.cv_folds = int(opt_data.get("cv_folds", self.strategies.cv_folds))
+                    self.strategies.optimization_method = opt_data.get(
+                        "method", self.strategies.optimization_method
+                    )
+                    self.strategies.n_trials = int(
+                        opt_data.get("n_trials", self.strategies.n_trials)
+                    )
+                    self.strategies.cv_folds = int(
+                        opt_data.get("cv_folds", self.strategies.cv_folds)
+                    )
                     self.strategies.optimization_timeout = int(
                         opt_data.get("timeout", self.strategies.optimization_timeout)
                     )
-                    self.strategies.parallel_jobs = int(opt_data.get("parallel_jobs", self.strategies.parallel_jobs))
+                    self.strategies.parallel_jobs = int(
+                        opt_data.get("parallel_jobs", self.strategies.parallel_jobs)
+                    )
 
             # Risk settings
             if "risk" in config_data:
                 risk_data = config_data["risk"]
-                self.risk.max_drawdown = float(risk_data.get("max_drawdown", self.risk.max_drawdown))
-                self.risk.max_leverage = float(risk_data.get("max_leverage", self.risk.max_leverage))
-                self.risk.position_limits = risk_data.get("position_limits", self.risk.position_limits)
-                self.risk.correlation_threshold = float(
-                    risk_data.get("correlation_threshold", self.risk.correlation_threshold)
+                self.risk.max_drawdown = float(
+                    risk_data.get("max_drawdown", self.risk.max_drawdown)
                 )
-                self.risk.var_confidence = float(risk_data.get("var_confidence", self.risk.var_confidence))
+                self.risk.max_leverage = float(
+                    risk_data.get("max_leverage", self.risk.max_leverage)
+                )
+                self.risk.position_limits = risk_data.get(
+                    "position_limits", self.risk.position_limits
+                )
+                self.risk.correlation_threshold = float(
+                    risk_data.get(
+                        "correlation_threshold", self.risk.correlation_threshold
+                    )
+                )
+                self.risk.var_confidence = float(
+                    risk_data.get("var_confidence", self.risk.var_confidence)
+                )
                 self.risk.stress_test_scenarios = int(
-                    risk_data.get("stress_test_scenarios", self.risk.stress_test_scenarios)
+                    risk_data.get(
+                        "stress_test_scenarios", self.risk.stress_test_scenarios
+                    )
                 )
 
             # Agent settings
@@ -545,25 +650,41 @@ class AppConfig:
                 agents_data = config_data["agents"]
                 if "goal_planner" in agents_data:
                     gp_data = agents_data["goal_planner"]
-                    self.agents.goal_planner_enabled = gp_data.get("enabled", self.agents.goal_planner_enabled)
-                    self.agents.goal_update_frequency = int(
-                        gp_data.get("update_frequency", self.agents.goal_update_frequency)
+                    self.agents.goal_planner_enabled = gp_data.get(
+                        "enabled", self.agents.goal_planner_enabled
                     )
-                    self.agents.max_goals = int(gp_data.get("max_goals", self.agents.max_goals))
+                    self.agents.goal_update_frequency = int(
+                        gp_data.get(
+                            "update_frequency", self.agents.goal_update_frequency
+                        )
+                    )
+                    self.agents.max_goals = int(
+                        gp_data.get("max_goals", self.agents.max_goals)
+                    )
 
                 if "router" in agents_data:
                     router_data = agents_data["router"]
-                    self.agents.router_enabled = router_data.get("enabled", self.agents.router_enabled)
-                    self.agents.router_confidence = float(
-                        router_data.get("confidence_threshold", self.agents.router_confidence)
+                    self.agents.router_enabled = router_data.get(
+                        "enabled", self.agents.router_enabled
                     )
-                    self.agents.fallback_agent = router_data.get("fallback_agent", self.agents.fallback_agent)
+                    self.agents.router_confidence = float(
+                        router_data.get(
+                            "confidence_threshold", self.agents.router_confidence
+                        )
+                    )
+                    self.agents.fallback_agent = router_data.get(
+                        "fallback_agent", self.agents.fallback_agent
+                    )
 
                 if "self_improving" in agents_data:
                     si_data = agents_data["self_improving"]
-                    self.agents.self_improving_enabled = si_data.get("enabled", self.agents.self_improving_enabled)
+                    self.agents.self_improving_enabled = si_data.get(
+                        "enabled", self.agents.self_improving_enabled
+                    )
                     self.agents.improvement_interval = int(
-                        si_data.get("improvement_interval", self.agents.improvement_interval)
+                        si_data.get(
+                            "improvement_interval", self.agents.improvement_interval
+                        )
                     )
                     self.agents.performance_thresholds = si_data.get(
                         "performance_thresholds", self.agents.performance_thresholds
@@ -575,8 +696,12 @@ class AppConfig:
                 self.nlp.confidence_threshold = float(
                     nlp_data.get("confidence_threshold", self.nlp.confidence_threshold)
                 )
-                self.nlp.max_tokens = int(nlp_data.get("max_tokens", self.nlp.max_tokens))
-                self.nlp.temperature = float(nlp_data.get("temperature", self.nlp.temperature))
+                self.nlp.max_tokens = int(
+                    nlp_data.get("max_tokens", self.nlp.max_tokens)
+                )
+                self.nlp.temperature = float(
+                    nlp_data.get("temperature", self.nlp.temperature)
+                )
                 self.nlp.cache_ttl = int(nlp_data.get("cache_ttl", self.nlp.cache_ttl))
                 self.nlp.models = nlp_data.get("models", self.nlp.models)
                 self.nlp.templates = nlp_data.get("templates", self.nlp.templates)
@@ -584,31 +709,49 @@ class AppConfig:
             # API settings
             if "api" in config_data:
                 api_data = config_data["api"]
-                self.api.rate_limit = int(api_data.get("rate_limit", self.api.rate_limit))
+                self.api.rate_limit = int(
+                    api_data.get("rate_limit", self.api.rate_limit)
+                )
                 self.api.timeout = int(api_data.get("timeout", self.api.timeout))
-                self.api.max_retries = int(api_data.get("max_retries", self.api.max_retries))
+                self.api.max_retries = int(
+                    api_data.get("max_retries", self.api.max_retries)
+                )
                 self.api.cache_ttl = int(api_data.get("cache_ttl", self.api.cache_ttl))
                 self.api.version = api_data.get("version", self.api.version)
-                self.api.documentation = api_data.get("documentation", self.api.documentation)
+                self.api.documentation = api_data.get(
+                    "documentation", self.api.documentation
+                )
 
             # Monitoring settings
             if "monitoring" in config_data:
                 monitoring_data = config_data["monitoring"]
-                self.monitoring.enabled = monitoring_data.get("enabled", self.monitoring.enabled)
-                self.monitoring.metrics = monitoring_data.get("metrics", self.monitoring.metrics)
+                self.monitoring.enabled = monitoring_data.get(
+                    "enabled", self.monitoring.enabled
+                )
+                self.monitoring.metrics = monitoring_data.get(
+                    "metrics", self.monitoring.metrics
+                )
 
                 if "alert" in monitoring_data:
                     alert_data = monitoring_data["alert"]
-                    self.monitoring.alert_email = alert_data.get("email", self.monitoring.alert_email)
+                    self.monitoring.alert_email = alert_data.get(
+                        "email", self.monitoring.alert_email
+                    )
                     self.monitoring.alert_slack = alert_data.get("slack")
                     self.monitoring.alert_webhook = alert_data.get("webhook")
 
                 if "dashboard" in monitoring_data:
                     dashboard_data = monitoring_data["dashboard"]
-                    self.monitoring.dashboard_enabled = dashboard_data.get("enabled", self.monitoring.dashboard_enabled)
-                    self.monitoring.dashboard_port = int(dashboard_data.get("port", self.monitoring.dashboard_port))
+                    self.monitoring.dashboard_enabled = dashboard_data.get(
+                        "enabled", self.monitoring.dashboard_enabled
+                    )
+                    self.monitoring.dashboard_port = int(
+                        dashboard_data.get("port", self.monitoring.dashboard_port)
+                    )
                     self.monitoring.dashboard_refresh = int(
-                        dashboard_data.get("refresh_interval", self.monitoring.dashboard_refresh)
+                        dashboard_data.get(
+                            "refresh_interval", self.monitoring.dashboard_refresh
+                        )
                     )
 
             # Security settings
@@ -616,41 +759,67 @@ class AppConfig:
                 security_data = config_data["security"]
                 if "ssl" in security_data:
                     ssl_data = security_data["ssl"]
-                    self.security.ssl_enabled = ssl_data.get("enabled", self.security.ssl_enabled)
+                    self.security.ssl_enabled = ssl_data.get(
+                        "enabled", self.security.ssl_enabled
+                    )
                     self.security.ssl_cert_file = ssl_data.get("cert_file")
                     self.security.ssl_key_file = ssl_data.get("key_file")
 
                 if "cors" in security_data:
                     cors_data = security_data["cors"]
-                    self.security.cors_origins = cors_data.get("allowed_origins", self.security.cors_origins)
-                    self.security.cors_methods = cors_data.get("allowed_methods", self.security.cors_methods)
-                    self.security.cors_headers = cors_data.get("allowed_headers", self.security.cors_headers)
+                    self.security.cors_origins = cors_data.get(
+                        "allowed_origins", self.security.cors_origins
+                    )
+                    self.security.cors_methods = cors_data.get(
+                        "allowed_methods", self.security.cors_methods
+                    )
+                    self.security.cors_headers = cors_data.get(
+                        "allowed_headers", self.security.cors_headers
+                    )
 
                 if "rate_limiting" in security_data:
                     rate_data = security_data["rate_limiting"]
-                    self.security.rate_limiting_enabled = rate_data.get("enabled", self.security.rate_limiting_enabled)
+                    self.security.rate_limiting_enabled = rate_data.get(
+                        "enabled", self.security.rate_limiting_enabled
+                    )
                     self.security.rate_limiting_window = int(
                         rate_data.get("window", self.security.rate_limiting_window)
                     )
                     self.security.rate_limiting_max_requests = int(
-                        rate_data.get("max_requests", self.security.rate_limiting_max_requests)
+                        rate_data.get(
+                            "max_requests", self.security.rate_limiting_max_requests
+                        )
                     )
 
                 if "authentication" in security_data:
                     auth_data = security_data["authentication"]
-                    self.security.auth_enabled = auth_data.get("enabled", self.security.auth_enabled)
+                    self.security.auth_enabled = auth_data.get(
+                        "enabled", self.security.auth_enabled
+                    )
                     self.security.jwt_secret = auth_data.get("jwt_secret")
-                    self.security.token_expiry = int(auth_data.get("token_expiry", self.security.token_expiry))
+                    self.security.token_expiry = int(
+                        auth_data.get("token_expiry", self.security.token_expiry)
+                    )
 
             # Development settings
             if "development" in config_data:
                 dev_data = config_data["development"]
                 self.development.debug = dev_data.get("debug", self.development.debug)
-                self.development.hot_reload = dev_data.get("hot_reload", self.development.hot_reload)
-                self.development.profiling = dev_data.get("profiling", self.development.profiling)
-                self.development.test_mode = dev_data.get("test_mode", self.development.test_mode)
-                self.development.mock_data = dev_data.get("mock_data", self.development.mock_data)
-                self.development.seed_data = dev_data.get("seed_data", self.development.seed_data)
+                self.development.hot_reload = dev_data.get(
+                    "hot_reload", self.development.hot_reload
+                )
+                self.development.profiling = dev_data.get(
+                    "profiling", self.development.profiling
+                )
+                self.development.test_mode = dev_data.get(
+                    "test_mode", self.development.test_mode
+                )
+                self.development.mock_data = dev_data.get(
+                    "mock_data", self.development.mock_data
+                )
+                self.development.seed_data = dev_data.get(
+                    "seed_data", self.development.seed_data
+                )
 
         except Exception as e:
             logger.error(f"Error updating configuration from dictionary: {e}")
@@ -691,7 +860,10 @@ class AppConfig:
                     "pool_size": self.database.redis_pool_size,
                     "retry_on_timeout": self.database.redis_retry_timeout,
                 },
-                "sqlite": {"path": self.database.sqlite_path, "timeout": self.database.sqlite_timeout},
+                "sqlite": {
+                    "path": self.database.sqlite_path,
+                    "timeout": self.database.sqlite_timeout,
+                },
             },
             "market_data": {
                 "default_timeframe": self.market_data.default_timeframe,

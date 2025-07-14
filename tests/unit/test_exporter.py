@@ -34,7 +34,11 @@ class TestFallbackReportExporter:
                 {"symbol": "AAPL", "action": "buy", "quantity": 100, "price": 150.0},
                 {"symbol": "GOOGL", "action": "sell", "quantity": 50, "price": 2800.0},
             ],
-            "performance": {"total_return": 0.15, "sharpe_ratio": 1.2, "max_drawdown": -0.08},
+            "performance": {
+                "total_return": 0.15,
+                "sharpe_ratio": 1.2,
+                "max_drawdown": -0.08,
+            },
             "metadata": {"strategy": "RSI", "period": "2024-01-01 to 2024-01-31"},
         }
 
@@ -141,7 +145,9 @@ class TestFallbackReportExporter:
     def test_custom_filename(self, exporter, sample_data):
         """Test export with custom filename."""
         custom_filename = "my_custom_report.json"
-        filepath = exporter.export_report(sample_data, format="json", filename=custom_filename)
+        filepath = exporter.export_report(
+            sample_data, format="json", filename=custom_filename
+        )
 
         # Check filename is preserved
         assert custom_filename in filepath
@@ -180,7 +186,13 @@ class TestFallbackReportExporter:
 
     def test_nested_data(self, exporter):
         """Test export with deeply nested data."""
-        nested_data = {"level1": {"level2": {"level3": {"value": 42, "list": [1, 2, 3], "dict": {"key": "value"}}}}}
+        nested_data = {
+            "level1": {
+                "level2": {
+                    "level3": {"value": 42, "list": [1, 2, 3], "dict": {"key": "value"}}
+                }
+            }
+        }
 
         filepath = exporter.export_report(nested_data, format="json")
 
@@ -193,7 +205,10 @@ class TestFallbackReportExporter:
     def test_large_data(self, exporter):
         """Test export with large dataset."""
         large_data = {
-            "trades": [{"symbol": f"STOCK_{i}", "price": i * 10.0, "quantity": i} for i in range(1000)],
+            "trades": [
+                {"symbol": f"STOCK_{i}", "price": i * 10.0, "quantity": i}
+                for i in range(1000)
+            ],
             "performance": {"total_return": 0.15},
         }
 
@@ -216,7 +231,10 @@ class TestFallbackReportExporter:
         special_data = {
             "trades": [
                 {"symbol": "AAPL", "description": 'Apple Inc. (AAPL) - "iPhone" maker'},
-                {"symbol": "TSLA", "description": "Tesla, Inc. - Electric vehicles & energy"},
+                {
+                    "symbol": "TSLA",
+                    "description": "Tesla, Inc. - Electric vehicles & energy",
+                },
             ],
             "notes": "Special chars: émojis 🚀, unicode 中文, symbols @#$%",
         }

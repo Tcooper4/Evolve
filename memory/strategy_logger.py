@@ -15,7 +15,11 @@ ANALYSIS_PATH = "memory/strategy_analysis.json"
 
 
 def log_strategy_decision(
-    ticker: str, selected_model: str, is_agentic: bool, confidence: float, metadata: Optional[Dict] = None
+    ticker: str,
+    selected_model: str,
+    is_agentic: bool,
+    confidence: float,
+    metadata: Optional[Dict] = None,
 ) -> Dict:
     """
     Logs whether the selected strategy was agentic or manually overridden.
@@ -57,7 +61,9 @@ def log_strategy_decision(
     _update_strategy_analysis(ticker, entry)
 
 
-def get_strategy_history(ticker: Optional[str] = None, model: Optional[str] = None, limit: int = 100) -> List[Dict]:
+def get_strategy_history(
+    ticker: Optional[str] = None, model: Optional[str] = None, limit: int = 100
+) -> List[Dict]:
     """
     Retrieves strategy decision history with optional filtering.
 
@@ -142,11 +148,17 @@ def _update_strategy_analysis(ticker: str, entry: Dict) -> None:
 
     # Update model usage
     model = entry["model"]
-    ticker_analysis["model_usage"][model] = ticker_analysis["model_usage"].get(model, 0) + 1
+    ticker_analysis["model_usage"][model] = (
+        ticker_analysis["model_usage"].get(model, 0) + 1
+    )
 
     # Update average confidence
-    current_total = ticker_analysis["average_confidence"] * (ticker_analysis["total_decisions"] - 1)
-    ticker_analysis["average_confidence"] = (current_total + entry["confidence"]) / ticker_analysis["total_decisions"]
+    current_total = ticker_analysis["average_confidence"] * (
+        ticker_analysis["total_decisions"] - 1
+    )
+    ticker_analysis["average_confidence"] = (
+        current_total + entry["confidence"]
+    ) / ticker_analysis["total_decisions"]
 
     # Update timestamp
     ticker_analysis["last_updated"] = entry["timestamp"]

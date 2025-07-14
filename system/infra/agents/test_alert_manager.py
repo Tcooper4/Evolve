@@ -47,7 +47,9 @@ def test_send_alert(mock_smtp, alert_manager):
     mock_smtp_instance = MagicMock()
     mock_smtp.return_value.__enter__.return_value = mock_smtp_instance
 
-    success = alert_manager.send_alert(subject="Test Alert", message="Test message", alert_type="info")
+    success = alert_manager.send_alert(
+        subject="Test Alert", message="Test message", alert_type="info"
+    )
 
     assert success is True
     mock_smtp_instance.starttls.assert_called_once()
@@ -90,9 +92,13 @@ def test_check_prediction_confidence(alert_manager):
 def test_send_system_alert(alert_manager):
     """Test sending system-level alerts."""
     with patch.object(alert_manager, "send_alert") as mock_send:
-        alert_manager.send_system_alert(component="TestComponent", message="Test system message", alert_type="error")
+        alert_manager.send_system_alert(
+            component="TestComponent", message="Test system message", alert_type="error"
+        )
         mock_send.assert_called_once_with(
-            subject="System Alert: TestComponent", message="Test system message", alert_type="error"
+            subject="System Alert: TestComponent",
+            message="Test system message",
+            alert_type="error",
         )
 
 
@@ -100,16 +106,24 @@ def test_send_backup_alert(alert_manager):
     """Test sending backup-related alerts."""
     # Test successful backup
     with patch.object(alert_manager, "send_alert") as mock_send:
-        alert_manager.send_backup_alert(backup_path="/test/path", success=True, message="Backup completed")
+        alert_manager.send_backup_alert(
+            backup_path="/test/path", success=True, message="Backup completed"
+        )
         mock_send.assert_called_once_with(
-            subject="Backup Success", message="Backup path: /test/path\nBackup completed", alert_type="info"
+            subject="Backup Success",
+            message="Backup path: /test/path\nBackup completed",
+            alert_type="info",
         )
 
     # Test failed backup
     with patch.object(alert_manager, "send_alert") as mock_send:
-        alert_manager.send_backup_alert(backup_path="/test/path", success=False, message="Backup failed")
+        alert_manager.send_backup_alert(
+            backup_path="/test/path", success=False, message="Backup failed"
+        )
         mock_send.assert_called_once_with(
-            subject="Backup Failure", message="Backup path: /test/path\nBackup failed", alert_type="error"
+            subject="Backup Failure",
+            message="Backup path: /test/path\nBackup failed",
+            alert_type="error",
         )
 
 
@@ -117,7 +131,9 @@ def test_alert_with_custom_recipients(alert_manager):
     """Test sending alert to custom recipients."""
     custom_recipients = ["user1@example.com", "user2@example.com"]
     with patch.object(alert_manager, "send_alert") as mock_send:
-        alert_manager.send_alert(subject="Test Alert", message="Test message", recipients=custom_recipients)
+        alert_manager.send_alert(
+            subject="Test Alert", message="Test message", recipients=custom_recipients
+        )
         mock_send.assert_called_once()
         # Verify recipients in the email message
         msg = mock_send.call_args[1]["msg"]

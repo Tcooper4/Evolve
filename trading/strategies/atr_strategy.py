@@ -68,7 +68,9 @@ class ATRStrategy:
 
         return atr
 
-    def calculate_bollinger_bands_atr(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    def calculate_bollinger_bands_atr(
+        self, data: pd.DataFrame
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """
         Calculate Bollinger Bands using ATR instead of standard deviation.
 
@@ -173,17 +175,23 @@ class ATRStrategy:
         positions["position"] = positions["position"].clip(-1, 1)
 
         # Add position size based on signal strength
-        positions["position_size"] = positions["position"] * self.signals["signal_strength"]
+        positions["position_size"] = (
+            positions["position"] * self.signals["signal_strength"]
+        )
 
         # Add stop loss levels
         positions["stop_loss"] = np.where(
-            positions["position"] > 0, self.signals["stop_loss_long"], self.signals["stop_loss_short"]
+            positions["position"] > 0,
+            self.signals["stop_loss_long"],
+            self.signals["stop_loss_short"],
         )
 
         self.positions = positions
         return positions
 
-    def calculate_dynamic_stop_loss(self, entry_price: float, atr_value: float, position_type: str = "long") -> float:
+    def calculate_dynamic_stop_loss(
+        self, entry_price: float, atr_value: float, position_type: str = "long"
+    ) -> float:
         """
         Calculate dynamic stop loss based on ATR.
 
@@ -201,7 +209,11 @@ class ATRStrategy:
             return entry_price + (self.config.multiplier * atr_value)
 
     def calculate_position_size(
-        self, capital: float, risk_per_trade: float, entry_price: float, stop_loss: float
+        self,
+        capital: float,
+        risk_per_trade: float,
+        entry_price: float,
+        stop_loss: float,
     ) -> float:
         """
         Calculate position size based on risk management.
@@ -244,7 +256,9 @@ class ATRStrategy:
             "features": ["dynamic_stop_loss", "position_sizing"],
         }
 
-    def optimize_parameters(self, data: pd.DataFrame, optimization_metric: str = "sharpe_ratio") -> ATRConfig:
+    def optimize_parameters(
+        self, data: pd.DataFrame, optimization_metric: str = "sharpe_ratio"
+    ) -> ATRConfig:
         """
         Optimize strategy parameters using historical data.
 
@@ -269,14 +283,20 @@ class ATRStrategy:
             for multiplier in multipliers:
                 for vol_threshold in volatility_thresholds:
                     # Test configuration
-                    test_config = ATRConfig(period=period, multiplier=multiplier, volatility_threshold=vol_threshold)
+                    test_config = ATRConfig(
+                        period=period,
+                        multiplier=multiplier,
+                        volatility_threshold=vol_threshold,
+                    )
 
                     # Create temporary strategy with test config
                     temp_strategy = ATRStrategy(test_config)
                     signals = temp_strategy.generate_signals(data)
 
                     # Calculate performance metric
-                    metric_value = self._calculate_performance_metric(signals, data, optimization_metric)
+                    metric_value = self._calculate_performance_metric(
+                        signals, data, optimization_metric
+                    )
 
                     if metric_value > best_metric:
                         best_metric = metric_value
@@ -288,7 +308,9 @@ class ATRStrategy:
 
         return best_config or self.config
 
-    def _calculate_performance_metric(self, signals: pd.DataFrame, data: pd.DataFrame, metric: str) -> float:
+    def _calculate_performance_metric(
+        self, signals: pd.DataFrame, data: pd.DataFrame, metric: str
+    ) -> float:
         """
         Calculate performance metric for optimization.
 
@@ -306,7 +328,11 @@ class ATRStrategy:
             strategy_returns = signals["signal"].shift(1) * returns
 
             if metric == "sharpe_ratio":
-                return strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() > 0 else 0
+                return (
+                    strategy_returns.mean() / strategy_returns.std()
+                    if strategy_returns.std() > 0
+                    else 0
+                )
             elif metric == "total_return":
                 return strategy_returns.sum()
             elif metric == "max_drawdown":
@@ -358,4 +384,8 @@ def generate_atr_signals(data: pd.DataFrame, **kwargs) -> Dict[str, Any]:
         }
     except Exception as e:
         logger.error(f"Error generating ATR signals: {e}")
-        return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }

@@ -10,7 +10,9 @@ import pandas as pd
 import pytest
 
 # Add project root to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from trading.strategies.rsi_signals import generate_rsi_signals
 
@@ -59,7 +61,9 @@ class TestRSISignals:
         result = generate_rsi_signals(low_rsi_data, period=14, buy_threshold=30)
 
         # Should have at least one buy signal (1)
-        assert (result["signal"] == 1).any(), "No buy signals generated for oversold condition"
+        assert (
+            result["signal"] == 1
+        ).any(), "No buy signals generated for oversold condition"
 
     def test_sell_signal_generation(self, sample_price_data):
         """Test that overbought condition triggers sell signal."""
@@ -71,7 +75,9 @@ class TestRSISignals:
         result = generate_rsi_signals(high_rsi_data, period=14, sell_threshold=70)
 
         # Should have at least one sell signal (-1)
-        assert (result["signal"] == -1).any(), "No sell signals generated for overbought condition"
+        assert (
+            result["signal"] == -1
+        ).any(), "No sell signals generated for overbought condition"
 
     def test_returns_calculation(self, sample_price_data):
         """Test that returns are calculated correctly."""
@@ -85,11 +91,15 @@ class TestRSISignals:
 
         # Returns should be calculated correctly
         expected_returns = sample_price_data["Close"].pct_change()
-        pd.testing.assert_series_equal(result["returns"], expected_returns, check_names=False)
+        pd.testing.assert_series_equal(
+            result["returns"], expected_returns, check_names=False
+        )
 
         # Strategy returns should be signal * returns (shifted by 1)
         expected_strategy_returns = result["signal"].shift(1) * result["returns"]
-        pd.testing.assert_series_equal(result["strategy_returns"], expected_strategy_returns, check_names=False)
+        pd.testing.assert_series_equal(
+            result["strategy_returns"], expected_strategy_returns, check_names=False
+        )
 
     def test_parameter_validation(self, sample_price_data):
         """Test that invalid parameters raise appropriate errors."""
@@ -99,7 +109,9 @@ class TestRSISignals:
 
         # Test invalid thresholds
         with pytest.raises(Exception):
-            generate_rsi_signals(sample_price_data, buy_threshold=80, sell_threshold=20)  # Inverted thresholds
+            generate_rsi_signals(
+                sample_price_data, buy_threshold=80, sell_threshold=20
+            )  # Inverted thresholds
 
     def test_empty_data_handling(self):
         """Test that empty data is handled correctly."""
@@ -126,11 +138,15 @@ class TestRSISignals:
 
     def test_optimized_settings_loading(self, sample_price_data):
         """Test loading of optimized settings."""
-        mock_settings = {"optimal_period": 21, "buy_threshold": 25, "sell_threshold": 75}
+        mock_settings = {
+            "optimal_period": 21,
+            "buy_threshold": 25,
+            "sell_threshold": 75,
+        }
 
-        with patch("builtins.open", mock_open(read_data=json.dumps(mock_settings))), patch(
-            "pathlib.Path.exists", return_value=True
-        ):
+        with patch(
+            "builtins.open", mock_open(read_data=json.dumps(mock_settings))
+        ), patch("pathlib.Path.exists", return_value=True):
             result = generate_rsi_signals(sample_price_data, ticker="AAPL")
 
             # Should use optimized settings
@@ -138,7 +154,9 @@ class TestRSISignals:
 
     def test_signal_consistency(self, sample_price_data):
         """Test that signals are consistent with RSI values."""
-        result = generate_rsi_signals(sample_price_data, period=14, buy_threshold=30, sell_threshold=70)
+        result = generate_rsi_signals(
+            sample_price_data, period=14, buy_threshold=30, sell_threshold=70
+        )
 
         # Get non-NaN values
         mask = result["rsi"].notna() & result["signal"].notna()
@@ -148,12 +166,16 @@ class TestRSISignals:
         # Check that oversold RSI corresponds to buy signals
         oversold_mask = rsi_values < 30
         if oversold_mask.any():
-            assert (signals[oversold_mask] == 1).all(), "Oversold RSI should generate buy signals"
+            assert (
+                signals[oversold_mask] == 1
+            ).all(), "Oversold RSI should generate buy signals"
 
         # Check that overbought RSI corresponds to sell signals
         overbought_mask = rsi_values > 70
         if overbought_mask.any():
-            assert (signals[overbought_mask] == -1).all(), "Overbought RSI should generate sell signals"
+            assert (
+                signals[overbought_mask] == -1
+            ).all(), "Overbought RSI should generate sell signals"
 
     def test_different_periods(self, sample_price_data):
         """Test RSI calculation with different periods."""
@@ -169,10 +191,14 @@ class TestRSISignals:
     def test_threshold_adjustment(self, sample_price_data):
         """Test signal generation with different thresholds."""
         # Test with tighter thresholds
-        result_tight = generate_rsi_signals(sample_price_data, buy_threshold=40, sell_threshold=60)
+        result_tight = generate_rsi_signals(
+            sample_price_data, buy_threshold=40, sell_threshold=60
+        )
 
         # Test with wider thresholds
-        result_wide = generate_rsi_signals(sample_price_data, buy_threshold=20, sell_threshold=80)
+        result_wide = generate_rsi_signals(
+            sample_price_data, buy_threshold=20, sell_threshold=80
+        )
 
         # Should have different signal patterns
         assert not result_tight["signal"].equals(result_wide["signal"])
@@ -183,12 +209,16 @@ class TestRSISignals:
 
         # Check cumulative returns calculation
         expected_cumulative = (1 + result["returns"]).cumprod()
-        pd.testing.assert_series_equal(result["cumulative_returns"], expected_cumulative, check_names=False)
+        pd.testing.assert_series_equal(
+            result["cumulative_returns"], expected_cumulative, check_names=False
+        )
 
         # Check strategy cumulative returns
         expected_strategy_cumulative = (1 + result["strategy_returns"]).cumprod()
         pd.testing.assert_series_equal(
-            result["strategy_cumulative_returns"], expected_strategy_cumulative, check_names=False
+            result["strategy_cumulative_returns"],
+            expected_strategy_cumulative,
+            check_names=False,
         )
 
     def test_error_handling(self, sample_price_data):
@@ -211,4 +241,6 @@ class TestRSISignals:
         # Check that cumulative returns are reasonable
         cumulative_returns = result["strategy_cumulative_returns"].dropna()
         assert len(cumulative_returns) > 0
-        assert (cumulative_returns >= 0).all()  # Cumulative returns should be non-negative
+        assert (
+            cumulative_returns >= 0
+        ).all()  # Cumulative returns should be non-negative

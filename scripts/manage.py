@@ -120,7 +120,9 @@ class ApplicationManager:
             Exit code of the command
         """
         try:
-            process = subprocess.run(command, cwd=cwd, check=True, capture_output=True, text=True)
+            process = subprocess.run(
+                command, cwd=cwd, check=True, capture_output=True, text=True
+            )
             return process.returncode
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Command failed: {e}")
@@ -283,7 +285,24 @@ class ApplicationManager:
         self.logger.info("Cleaning up...")
 
         # Remove Python cache files
-        if self.run_command(["find", ".", "-type", "d", "-name", "__pycache__", "-exec", "rm", "-r", "{}", "+"]) != 0:
+        if (
+            self.run_command(
+                [
+                    "find",
+                    ".",
+                    "-type",
+                    "d",
+                    "-name",
+                    "__pycache__",
+                    "-exec",
+                    "rm",
+                    "-r",
+                    "{}",
+                    "+",
+                ]
+            )
+            != 0
+        ):
             self.logger.error("Failed to remove Python cache files")
             return False
 
@@ -305,7 +324,9 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Trading Application Manager")
     parser.add_argument(
-        "command", choices=["install", "test", "lint", "format", "docker", "clean"], help="Command to run"
+        "command",
+        choices=["install", "test", "lint", "format", "docker", "clean"],
+        help="Command to run",
     )
     parser.add_argument("--help", action="store_true", help="Show usage examples")
     args = parser.parse_args()

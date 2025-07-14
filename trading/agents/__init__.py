@@ -249,15 +249,13 @@ def get_commentary_agent():
 try:
     from .prompt_templates import (
         PROMPT_TEMPLATES,
-        get_prompt_template,
-        list_prompt_templates,
-        register_prompt_template,
+        get_template as get_prompt_template,
+        list_templates as list_prompt_templates,
     )
 except ImportError as e:
     logger.warning(f"Could not import prompt templates: {e}")
     PROMPT_TEMPLATES = {}
     get_prompt_template = lambda x: None
-    register_prompt_template = lambda x, y: None
     list_prompt_templates = lambda: []
 
 # Wildcard imports for core agents to improve usability during testing
@@ -402,7 +400,11 @@ def import_all_agents():
             agent_class = func()
             if agent_class:
                 # Extract class name from function name
-                class_name = func.__name__.replace("get_", "").replace("_agent", "Agent").replace("_", "")
+                class_name = (
+                    func.__name__.replace("get_", "")
+                    .replace("_agent", "Agent")
+                    .replace("_", "")
+                )
                 all_agents[class_name] = agent_class
         except Exception as e:
             logger.debug(f"Could not import agent from {func.__name__}: {e}")

@@ -8,7 +8,12 @@ system, including the unified interface and various UI components.
 import logging
 from typing import Any, Dict, Optional
 
-__all__ = ["UnifiedInterface", "StreamlitInterface", "TerminalInterface", "APIInterface"]
+__all__ = [
+    "UnifiedInterface",
+    "StreamlitInterface",
+    "TerminalInterface",
+    "APIInterface",
+]
 
 logger = logging.getLogger(__name__)
 

@@ -74,7 +74,12 @@ class OptimizationResult:
 class StrategyValidator:
     """Validates strategy return consistency and performance metrics."""
 
-    def __init__(self, min_sharpe: float = 0.5, max_drawdown: float = 0.3, min_consistency: float = 0.6):
+    def __init__(
+        self,
+        min_sharpe: float = 0.5,
+        max_drawdown: float = 0.3,
+        min_consistency: float = 0.6,
+    ):
         """Initialize strategy validator.
 
         Args:
@@ -141,14 +146,18 @@ class StrategyValidator:
             "clustering_score": clustering_score,
             "mean_return": mean_return,
             "std_return": std_return,
-            "total_return": cumulative_returns.iloc[-1] - 1 if len(cumulative_returns) > 0 else 0,
+            "total_return": cumulative_returns.iloc[-1] - 1
+            if len(cumulative_returns) > 0
+            else 0,
         }
 
     def _calculate_return_consistency(self, returns: pd.Series) -> float:
         """Calculate return consistency score."""
         try:
             # Calculate rolling Sharpe ratios
-            rolling_sharpe = returns.rolling(window=20).mean() / returns.rolling(window=20).std()
+            rolling_sharpe = (
+                returns.rolling(window=20).mean() / returns.rolling(window=20).std()
+            )
             rolling_sharpe = rolling_sharpe.dropna()
 
             if len(rolling_sharpe) < 10:
@@ -181,7 +190,11 @@ class StrategyValidator:
                 return 0.0
 
             # Calculate volatility of volatility
-            vol_of_vol = rolling_vol.std() / rolling_vol.mean() if rolling_vol.mean() > 0 else 1.0
+            vol_of_vol = (
+                rolling_vol.std() / rolling_vol.mean()
+                if rolling_vol.mean() > 0
+                else 1.0
+            )
 
             # Stability score (lower vol of vol = more stable)
             stability_score = max(0, 1 - vol_of_vol)
@@ -243,7 +256,9 @@ class RegimeDetector:
         # Price-based features
         if "close" in data.columns:
             returns = data["close"].pct_change()
-            features["volatility"] = returns.rolling(self.lookback_window).std() * np.sqrt(252)
+            features["volatility"] = returns.rolling(
+                self.lookback_window
+            ).std() * np.sqrt(252)
             features["returns"] = returns.rolling(self.lookback_window).mean() * 252
             features["skewness"] = returns.rolling(self.lookback_window).skew()
             features["kurtosis"] = returns.rolling(self.lookback_window).kurt()
@@ -263,12 +278,16 @@ class RegimeDetector:
                 data["volume"].rolling(self.lookback_window).mean()
                 / data["volume"].rolling(self.lookback_window * 2).mean()
             )
-            features["volume_volatility"] = data["volume"].pct_change().rolling(self.lookback_window).std()
+            features["volume_volatility"] = (
+                data["volume"].pct_change().rolling(self.lookback_window).std()
+            )
 
         # Volatility regime features
         if "high" in data.columns and "low" in data.columns:
             features["volatility_regime"] = (data["high"] - data["low"]) / data["close"]
-            features["volatility_regime"] = features["volatility_regime"].rolling(self.lookback_window).mean()
+            features["volatility_regime"] = (
+                features["volatility_regime"].rolling(self.lookback_window).mean()
+            )
 
         # Remove NaN values
         features = features.dropna()
@@ -331,7 +350,9 @@ class RegimeDetector:
             regime_name = self._classify_regime(regime_characteristics)
 
             # Calculate confidence based on cluster stability
-            confidence = self._calculate_regime_confidence(features_scaled, cluster_labels, label)
+            confidence = self._calculate_regime_confidence(
+                features_scaled, cluster_labels, label
+            )
 
             regime = RegimeInfo(
                 regime_id=int(label),
@@ -390,19 +411,32 @@ class RegimeDetector:
 
         # Calculate silhouette score-like metric
         regime_center = self.kmeans.cluster_centers_[regime_label]
-        intra_cluster_dist = np.mean(np.linalg.norm(regime_features - regime_center, axis=1))
+        intra_cluster_dist = np.mean(
+            np.linalg.norm(regime_features - regime_center, axis=1)
+        )
 
         # Calculate distance to nearest other cluster
-        other_centers = [self.kmeans.cluster_centers_[i] for i in range(self.n_regimes) if i != regime_label]
+        other_centers = [
+            self.kmeans.cluster_centers_[i]
+            for i in range(self.n_regimes)
+            if i != regime_label
+        ]
         if other_centers:
-            min_inter_cluster_dist = min(np.linalg.norm(regime_center - other_center) for other_center in other_centers)
-            confidence = min_inter_cluster_dist / (min_inter_cluster_dist + intra_cluster_dist)
+            min_inter_cluster_dist = min(
+                np.linalg.norm(regime_center - other_center)
+                for other_center in other_centers
+            )
+            confidence = min_inter_cluster_dist / (
+                min_inter_cluster_dist + intra_cluster_dist
+            )
         else:
             confidence = 1.0
 
         return min(confidence, 1.0)
 
-    def get_current_regime(self, data: pd.DataFrame, lookback_days: int = 30) -> Optional[RegimeInfo]:
+    def get_current_regime(
+        self, data: pd.DataFrame, lookback_days: int = 30
+    ) -> Optional[RegimeInfo]:
         """Get the current market regime.
 
         Args:
@@ -491,7 +525,9 @@ class WalkForwardOptimizer:
         all_configurations = []
 
         for i, (train_start, train_end, val_start, val_end) in enumerate(windows):
-            self.logger.info(f"Processing window {i+1}/{len(windows)}: {train_start.date()} to {val_end.date()}")
+            self.logger.info(
+                f"Processing window {i+1}/{len(windows)}: {train_start.date()} to {val_end.date()}"
+            )
 
             # Get training and validation data
             train_data = data.loc[train_start:train_end]
@@ -507,7 +543,9 @@ class WalkForwardOptimizer:
             )
 
             # Validate and rank configurations
-            validated_results = self._validate_configurations(optimization_results, val_data, strategy_class)
+            validated_results = self._validate_configurations(
+                optimization_results, val_data, strategy_class
+            )
 
             # Log top configurations
             self._log_top_configurations(validated_results, i + 1, len(windows))
@@ -520,7 +558,9 @@ class WalkForwardOptimizer:
                 best_result = max(validated_results, key=lambda x: x.sharpe_ratio)
 
                 # Evaluate on validation set
-                val_performance = self._evaluate_strategy(val_data, strategy_class, best_result.params)
+                val_performance = self._evaluate_strategy(
+                    val_data, strategy_class, best_result.params
+                )
 
                 # Get regime for this period
                 regime = self._get_regime_for_period(regimes, val_start, val_end)
@@ -548,11 +588,16 @@ class WalkForwardOptimizer:
         # Final ranking of all configurations
         self._rank_all_configurations(all_configurations)
 
-        self.logger.info(f"Walk-forward analysis completed. {len(results)} valid results.")
+        self.logger.info(
+            f"Walk-forward analysis completed. {len(results)} valid results."
+        )
         return results
 
     def _validate_configurations(
-        self, optimization_results: List[Dict[str, Any]], val_data: pd.DataFrame, strategy_class: Any
+        self,
+        optimization_results: List[Dict[str, Any]],
+        val_data: pd.DataFrame,
+        strategy_class: Any,
     ) -> List[OptimizationResult]:
         """Validate optimization results and return ranked configurations."""
         validated_results = []
@@ -560,7 +605,9 @@ class WalkForwardOptimizer:
         for result in optimization_results:
             try:
                 # Evaluate on validation set
-                val_performance = self._evaluate_strategy(val_data, strategy_class, result["params"])
+                val_performance = self._evaluate_strategy(
+                    val_data, strategy_class, result["params"]
+                )
 
                 # Calculate returns for validation
                 if "returns" in val_performance:
@@ -593,7 +640,12 @@ class WalkForwardOptimizer:
 
         return validated_results
 
-    def _log_top_configurations(self, configurations: List[OptimizationResult], window_num: int, total_windows: int):
+    def _log_top_configurations(
+        self,
+        configurations: List[OptimizationResult],
+        window_num: int,
+        total_windows: int,
+    ):
         """Log top N configurations for current window."""
         if not configurations:
             return
@@ -646,7 +698,9 @@ class WalkForwardOptimizer:
         aggregate_scores.sort(key=lambda x: x["avg_sharpe"], reverse=True)
 
         # Log top configurations across all windows
-        self.logger.info(f"\n=== Top {self.top_n_configs} Configurations (All Windows) ===")
+        self.logger.info(
+            f"\n=== Top {self.top_n_configs} Configurations (All Windows) ==="
+        )
         for i, score in enumerate(aggregate_scores[: self.top_n_configs]):
             self.logger.info(
                 f"Rank {i+1}: Avg Sharpe={score['avg_sharpe']:.3f}, "
@@ -667,7 +721,9 @@ class WalkForwardOptimizer:
             train_start = dates[start_idx]
             train_end = dates[start_idx + self.training_window - 1]
             val_start = dates[start_idx + self.training_window]
-            val_end = dates[start_idx + self.training_window + self.validation_window - 1]
+            val_end = dates[
+                start_idx + self.training_window + self.validation_window - 1
+            ]
 
             windows.append((train_start, train_end, val_start, val_end))
             start_idx += self.step_size
@@ -675,33 +731,49 @@ class WalkForwardOptimizer:
         return windows
 
     def _get_regime_for_period(
-        self, regimes: List[RegimeInfo], start_date: pd.Timestamp, end_date: pd.Timestamp
+        self,
+        regimes: List[RegimeInfo],
+        start_date: pd.Timestamp,
+        end_date: pd.Timestamp,
     ) -> Optional[RegimeInfo]:
         """Get regime for a specific time period."""
         for regime in regimes:
             regime_start = pd.Timestamp(regime.start_date)
             regime_end = pd.Timestamp(regime.end_date)
 
-            if regime_start <= start_date <= regime_end or regime_start <= end_date <= regime_end:
+            if (
+                regime_start <= start_date <= regime_end
+                or regime_start <= end_date <= regime_end
+            ):
                 return regime
 
         return None
 
     def _optimize_strategy(
-        self, data: pd.DataFrame, strategy_class: Any, param_space: Dict[str, Any], optimization_method: str, **kwargs
+        self,
+        data: pd.DataFrame,
+        strategy_class: Any,
+        param_space: Dict[str, Any],
+        optimization_method: str,
+        **kwargs,
     ) -> List[Dict[str, Any]]:
         """Optimize strategy parameters."""
         # This would integrate with the actual optimization framework
         # For now, return mock results
         return [
-            {"params": {"param1": 0.5, "param2": 10}, "performance": {"sharpe": 1.2, "returns": [0.01, -0.005, 0.02]}},
+            {
+                "params": {"param1": 0.5, "param2": 10},
+                "performance": {"sharpe": 1.2, "returns": [0.01, -0.005, 0.02]},
+            },
             {
                 "params": {"param1": 0.7, "param2": 15},
                 "performance": {"sharpe": 1.5, "returns": [0.015, -0.003, 0.025]},
             },
         ]
 
-    def _evaluate_strategy(self, data: pd.DataFrame, strategy_class: Any, params: Dict[str, Any]) -> Dict[str, float]:
+    def _evaluate_strategy(
+        self, data: pd.DataFrame, strategy_class: Any, params: Dict[str, Any]
+    ) -> Dict[str, float]:
         """Evaluate strategy performance."""
         # This would run the actual strategy backtest
         # For now, return mock performance
@@ -719,14 +791,18 @@ class WalkForwardOptimizer:
             return {"error": "No results to analyze"}
 
         # Calculate aggregate statistics
-        sharpe_ratios = [r.validation_performance.get("sharpe_ratio", 0) for r in self.results]
+        sharpe_ratios = [
+            r.validation_performance.get("sharpe_ratio", 0) for r in self.results
+        ]
         consistency_scores = [r.return_consistency_score for r in self.results]
         validation_passed = [r.validation_passed for r in self.results]
 
         analysis = {
             "total_windows": len(self.results),
             "successful_windows": sum(validation_passed),
-            "success_rate": sum(validation_passed) / len(self.results) if self.results else 0,
+            "success_rate": sum(validation_passed) / len(self.results)
+            if self.results
+            else 0,
             "avg_sharpe_ratio": np.mean(sharpe_ratios),
             "std_sharpe_ratio": np.std(sharpe_ratios),
             "avg_consistency_score": np.mean(consistency_scores),
@@ -784,7 +860,9 @@ class WalkForwardOptimizer:
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
 
         # Sharpe ratios over time
-        sharpe_ratios = [r.validation_performance.get("sharpe_ratio", 0) for r in self.results]
+        sharpe_ratios = [
+            r.validation_performance.get("sharpe_ratio", 0) for r in self.results
+        ]
         axes[0, 0].plot(sharpe_ratios)
         axes[0, 0].set_title("Sharpe Ratios Over Time")
         axes[0, 0].set_ylabel("Sharpe Ratio")
@@ -798,7 +876,9 @@ class WalkForwardOptimizer:
         # Regime distribution
         regimes = [r.regime for r in self.results]
         regime_counts = pd.Series(regimes).value_counts()
-        axes[1, 0].pie(regime_counts.values, labels=regime_counts.index, autopct="%1.1f%%")
+        axes[1, 0].pie(
+            regime_counts.values, labels=regime_counts.index, autopct="%1.1f%%"
+        )
         axes[1, 0].set_title("Regime Distribution")
 
         # Validation success rate
@@ -832,7 +912,9 @@ class WalkForwardOptimizer:
                     "step_size": self.step_size,
                 },
                 "results": [asdict(r) for r in self.results],
-                "top_configurations": [asdict(c) for c in self.top_configurations[: self.top_n_configs]],
+                "top_configurations": [
+                    asdict(c) for c in self.top_configurations[: self.top_n_configs]
+                ],
                 "analysis": self.analyze_results(),
             }
 
@@ -860,7 +942,8 @@ class BacktestOptimizer:
 
         # Initialize components
         self.regime_detector = RegimeDetector(
-            n_regimes=self.config.get("n_regimes", 3), lookback_window=self.config.get("lookback_window", 252)
+            n_regimes=self.config.get("n_regimes", 3),
+            lookback_window=self.config.get("lookback_window", 252),
         )
 
         self.validator = StrategyValidator(
@@ -881,7 +964,11 @@ class BacktestOptimizer:
         self.logger = logging.getLogger(__name__)
 
     def run_comprehensive_backtest(
-        self, data: pd.DataFrame, strategy_class: Any, param_space: Dict[str, Any], **kwargs
+        self,
+        data: pd.DataFrame,
+        strategy_class: Any,
+        param_space: Dict[str, Any],
+        **kwargs,
     ) -> Dict[str, Any]:
         """Run comprehensive backtest with validation and logging.
 
@@ -915,8 +1002,13 @@ class BacktestOptimizer:
             "top_configurations": self.walk_forward_optimizer.top_configurations[:10],
             "validation_summary": {
                 "total_tests": len(walk_forward_results),
-                "passed_tests": sum(1 for r in walk_forward_results if r.validation_passed),
-                "success_rate": sum(1 for r in walk_forward_results if r.validation_passed) / len(walk_forward_results)
+                "passed_tests": sum(
+                    1 for r in walk_forward_results if r.validation_passed
+                ),
+                "success_rate": sum(
+                    1 for r in walk_forward_results if r.validation_passed
+                )
+                / len(walk_forward_results)
                 if walk_forward_results
                 else 0,
             },
@@ -938,16 +1030,24 @@ class BacktestOptimizer:
 
             # Add regime-specific recommendations
             if "High Volatility" in current_regime.regime_name:
-                recommendations.append("Consider reducing position sizes due to high volatility")
+                recommendations.append(
+                    "Consider reducing position sizes due to high volatility"
+                )
                 recommendations.append("Implement tighter stop-losses")
             elif "Low Volatility" in current_regime.regime_name:
-                recommendations.append("Consider increasing position sizes due to low volatility")
+                recommendations.append(
+                    "Consider increasing position sizes due to low volatility"
+                )
                 recommendations.append("Wider stop-losses may be appropriate")
 
             if "Bull Market" in current_regime.regime_name:
-                recommendations.append("Favor long positions and trend-following strategies")
+                recommendations.append(
+                    "Favor long positions and trend-following strategies"
+                )
             elif "Bear Market" in current_regime.regime_name:
-                recommendations.append("Consider defensive positioning and short strategies")
+                recommendations.append(
+                    "Consider defensive positioning and short strategies"
+                )
 
             recommendations.append(
                 f"Current regime: {current_regime.regime_name} (confidence: {current_regime.confidence:.2f})"
@@ -960,7 +1060,9 @@ class BacktestOptimizer:
             return ["Error generating recommendations"]
 
 
-def get_backtest_optimizer(config: Optional[Dict[str, Any]] = None) -> BacktestOptimizer:
+def get_backtest_optimizer(
+    config: Optional[Dict[str, Any]] = None
+) -> BacktestOptimizer:
     """Get backtest optimizer instance.
 
     Args:

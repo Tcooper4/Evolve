@@ -21,10 +21,7 @@ import pytest
 # Add the trading directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "trading"))
 
-from trading.options.options_forecaster import (
-    OptionsForecaster,
-    VolatilitySurface,
-)
+from trading.options.options_forecaster import OptionsForecaster, VolatilitySurface
 
 
 class TestOptionsForecaster:
@@ -33,7 +30,11 @@ class TestOptionsForecaster:
     @pytest.fixture
     def forecaster(self):
         """Create a test forecaster instance."""
-        config = {"risk_free_rate": 0.02, "dividend_yield": 0.01, "api_keys": {"polygon": "test_key"}}
+        config = {
+            "risk_free_rate": 0.02,
+            "dividend_yield": 0.01,
+            "api_keys": {"polygon": "test_key"},
+        }
         return OptionsForecaster(config)
 
     @pytest.fixture
@@ -299,7 +300,9 @@ class TestOptionsForecaster:
 
     def test_build_volatility_surface(self, forecaster, sample_options_data):
         """Test volatility surface building."""
-        with patch.object(forecaster, "get_options_chain", return_value=sample_options_data):
+        with patch.object(
+            forecaster, "get_options_chain", return_value=sample_options_data
+        ):
             surface = forecaster.build_volatility_surface("AAPL")
 
             assert isinstance(surface, VolatilitySurface)
@@ -340,7 +343,9 @@ class TestOptionsForecaster:
 
     def test_analyze_options_flow(self, forecaster, sample_options_data):
         """Test options flow analysis."""
-        with patch.object(forecaster, "get_options_chain", return_value=sample_options_data):
+        with patch.object(
+            forecaster, "get_options_chain", return_value=sample_options_data
+        ):
             analysis = forecaster.analyze_options_flow("AAPL", 7)
 
             assert "symbol" in analysis
@@ -406,7 +411,9 @@ class TestOptionsForecaster:
         # Create a simple volatility surface
         strikes = np.array([90, 100, 110])
         expirations = np.array([0.25, 0.5, 1.0])
-        implied_vols = np.array([[0.25, 0.30, 0.35], [0.20, 0.25, 0.30], [0.15, 0.20, 0.25]])
+        implied_vols = np.array(
+            [[0.25, 0.30, 0.35], [0.20, 0.25, 0.30], [0.15, 0.20, 0.25]]
+        )
 
         surface = VolatilitySurface(
             strikes=strikes,
@@ -439,8 +446,12 @@ class TestOptionsForecaster:
     def test_edge_cases_zero_volatility_deep_otm(self, forecaster):
         """Test edge cases like zero volatility or deep out-of-the-money options."""
         # Test zero volatility
-        zero_vol_price_call = forecaster._black_scholes_price(100.0, 100.0, 0.5, 0.0, "call")
-        zero_vol_price_put = forecaster._black_scholes_price(100.0, 100.0, 0.5, 0.0, "put")
+        zero_vol_price_call = forecaster._black_scholes_price(
+            100.0, 100.0, 0.5, 0.0, "call"
+        )
+        zero_vol_price_put = forecaster._black_scholes_price(
+            100.0, 100.0, 0.5, 0.0, "put"
+        )
 
         # With zero volatility, options should have intrinsic value only
         assert zero_vol_price_call >= 0
@@ -472,12 +483,16 @@ class TestOptionsForecaster:
         assert isinstance(high_vol_price, float)
 
         # Test extremely low time to expiration
-        low_time_price = forecaster._black_scholes_price(100.0, 100.0, 0.001, 0.3, "call")
+        low_time_price = forecaster._black_scholes_price(
+            100.0, 100.0, 0.001, 0.3, "call"
+        )
         assert low_time_price >= 0
         assert isinstance(low_time_price, float)
 
         # Test zero time to expiration
-        zero_time_price = forecaster._black_scholes_price(100.0, 100.0, 0.0, 0.3, "call")
+        zero_time_price = forecaster._black_scholes_price(
+            100.0, 100.0, 0.0, 0.3, "call"
+        )
         assert zero_time_price == 0.0  # ATM option at expiration
 
         # Test zero time with ITM option
@@ -503,12 +518,16 @@ class TestOptionsForecaster:
         assert deep_otm_greeks["vega"] > 0
 
         # Test implied volatility calculation with zero price
-        zero_price_iv = forecaster.calculate_implied_volatility(0.0, 100.0, 100.0, 0.5, "call")
+        zero_price_iv = forecaster.calculate_implied_volatility(
+            0.0, 100.0, 100.0, 0.5, "call"
+        )
         assert zero_price_iv >= 0
         assert isinstance(zero_price_iv, float)
 
         # Test implied volatility with deep OTM option
-        deep_otm_iv = forecaster.calculate_implied_volatility(0.01, 50.0, 200.0, 0.5, "call")
+        deep_otm_iv = forecaster.calculate_implied_volatility(
+            0.01, 50.0, 200.0, 0.5, "call"
+        )
         assert deep_otm_iv >= 0
         assert isinstance(deep_otm_iv, float)
 

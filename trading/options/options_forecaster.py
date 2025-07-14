@@ -96,7 +96,9 @@ class OptionsForecaster:
 
         logger.info("Options forecaster initialized")
 
-    def get_options_chain(self, symbol: str, expiration_date: Optional[datetime] = None) -> pd.DataFrame:
+    def get_options_chain(
+        self, symbol: str, expiration_date: Optional[datetime] = None
+    ) -> pd.DataFrame:
         """Get options chain for a symbol.
 
         Args:
@@ -157,7 +159,9 @@ class OptionsForecaster:
                 option_data = {
                     "symbol": contract.get("ticker"),
                     "strike": float(contract.get("strike_price", 0)),
-                    "expiration": datetime.strptime(contract.get("expiration_date"), "%Y-%m-%d"),
+                    "expiration": datetime.strptime(
+                        contract.get("expiration_date"), "%Y-%m-%d"
+                    ),
                     "option_type": contract.get("contract_type", "").lower(),
                     "underlying_price": float(contract.get("underlying_price", 0)),
                     "bid": float(contract.get("bid", 0)),
@@ -217,7 +221,9 @@ class OptionsForecaster:
 
             # Add missing columns
             if "expiration" not in combined_df.columns:
-                combined_df["expiration"] = expiration_date or datetime.strptime(nearest_exp, "%Y-%m-%d")
+                combined_df["expiration"] = expiration_date or datetime.strptime(
+                    nearest_exp, "%Y-%m-%d"
+                )
 
             if "symbol" not in combined_df.columns:
                 combined_df["symbol"] = symbol
@@ -254,8 +260,12 @@ class OptionsForecaster:
             iv = max(0.05, min(0.8, iv))  # Clamp between 5% and 80%
 
             # Calculate option prices using Black-Scholes
-            call_price = self._black_scholes_price(underlying_price, strike, time_to_expiry, iv, "call")
-            put_price = self._black_scholes_price(underlying_price, strike, time_to_expiry, iv, "put")
+            call_price = self._black_scholes_price(
+                underlying_price, strike, time_to_expiry, iv, "call"
+            )
+            put_price = self._black_scholes_price(
+                underlying_price, strike, time_to_expiry, iv, "put"
+            )
 
             # Call option
             options_list.append(
@@ -315,15 +325,18 @@ class OptionsForecaster:
 
             def objective(sigma):
                 """Objective function for volatility calculation."""
-                bs_price = self._black_scholes_price(underlying_price, strike, time_to_expiry, sigma, option_type)
+                bs_price = self._black_scholes_price(
+                    underlying_price, strike, time_to_expiry, sigma, option_type
+                )
                 return bs_price - option_price
 
             # Initial guess for volatility
-            initial_guess = 0.3
 
             # Use scipy's minimize_scalar for robust optimization
             result = minimize_scalar(
-                lambda x: abs(objective(x)), bounds=(0.001, 5.0), method="bounded"  # Reasonable volatility bounds
+                lambda x: abs(objective(x)),
+                bounds=(0.001, 5.0),
+                method="bounded",  # Reasonable volatility bounds
             )
 
             if result.success:
@@ -336,7 +349,9 @@ class OptionsForecaster:
             logger.error(f"Error calculating implied volatility: {e}")
             return 0.3
 
-    def _black_scholes_price(self, S: float, K: float, T: float, sigma: float, option_type: str) -> float:
+    def _black_scholes_price(
+        self, S: float, K: float, T: float, sigma: float, option_type: str
+    ) -> float:
         """Calculate Black-Scholes option price.
 
         Args:
@@ -353,19 +368,20 @@ class OptionsForecaster:
             if T <= 0:
                 return max(0, S - K) if option_type == "call" else max(0, K - S)
 
-            d1 = (np.log(S / K) + (self.risk_free_rate - self.dividend_yield + 0.5 * sigma**2) * T) / (
-                sigma * np.sqrt(T)
-            )
+            d1 = (
+                np.log(S / K)
+                + (self.risk_free_rate - self.dividend_yield + 0.5 * sigma**2) * T
+            ) / (sigma * np.sqrt(T))
             d2 = d1 - sigma * np.sqrt(T)
 
             if option_type == "call":
-                price = S * np.exp(-self.dividend_yield * T) * norm.cdf(d1) - K * np.exp(
-                    -self.risk_free_rate * T
-                ) * norm.cdf(d2)
+                price = S * np.exp(-self.dividend_yield * T) * norm.cdf(
+                    d1
+                ) - K * np.exp(-self.risk_free_rate * T) * norm.cdf(d2)
             else:  # put
-                price = K * np.exp(-self.risk_free_rate * T) * norm.cdf(-d2) - S * np.exp(
-                    -self.dividend_yield * T
-                ) * norm.cdf(-d1)
+                price = K * np.exp(-self.risk_free_rate * T) * norm.cdf(
+                    -d2
+                ) - S * np.exp(-self.dividend_yield * T) * norm.cdf(-d1)
 
             return price
 
@@ -396,7 +412,9 @@ class OptionsForecaster:
         try:
             if time_to_expiry <= 0:
                 return {
-                    "delta": 1.0 if option_type == "call" and underlying_price > strike else 0.0,
+                    "delta": 1.0
+                    if option_type == "call" and underlying_price > strike
+                    else 0.0,
                     "gamma": 0.0,
                     "theta": 0.0,
                     "vega": 0.0,
@@ -405,7 +423,12 @@ class OptionsForecaster:
 
             d1 = (
                 np.log(underlying_price / strike)
-                + (self.risk_free_rate - self.dividend_yield + 0.5 * implied_volatility**2) * time_to_expiry
+                + (
+                    self.risk_free_rate
+                    - self.dividend_yield
+                    + 0.5 * implied_volatility**2
+                )
+                * time_to_expiry
             ) / (implied_volatility * np.sqrt(time_to_expiry))
             d2 = d1 - implied_volatility * np.sqrt(time_to_expiry)
 
@@ -413,7 +436,9 @@ class OptionsForecaster:
             if option_type == "call":
                 delta = np.exp(-self.dividend_yield * time_to_expiry) * norm.cdf(d1)
             else:
-                delta = np.exp(-self.dividend_yield * time_to_expiry) * (norm.cdf(d1) - 1)
+                delta = np.exp(-self.dividend_yield * time_to_expiry) * (
+                    norm.cdf(d1) - 1
+                )
 
             # Gamma
             gamma = (
@@ -424,11 +449,22 @@ class OptionsForecaster:
 
             # Theta
             theta_term1 = -(
-                underlying_price * implied_volatility * np.exp(-self.dividend_yield * time_to_expiry) * norm.pdf(d1)
+                underlying_price
+                * implied_volatility
+                * np.exp(-self.dividend_yield * time_to_expiry)
+                * norm.pdf(d1)
             ) / (2 * np.sqrt(time_to_expiry))
-            theta_term2 = self.risk_free_rate * strike * np.exp(-self.risk_free_rate * time_to_expiry) * norm.cdf(d2)
+            theta_term2 = (
+                self.risk_free_rate
+                * strike
+                * np.exp(-self.risk_free_rate * time_to_expiry)
+                * norm.cdf(d2)
+            )
             theta_term3 = (
-                self.dividend_yield * underlying_price * np.exp(-self.dividend_yield * time_to_expiry) * norm.cdf(d1)
+                self.dividend_yield
+                * underlying_price
+                * np.exp(-self.dividend_yield * time_to_expiry)
+                * norm.cdf(d1)
             )
 
             if option_type == "call":
@@ -446,11 +482,27 @@ class OptionsForecaster:
 
             # Rho
             if option_type == "call":
-                rho = strike * time_to_expiry * np.exp(-self.risk_free_rate * time_to_expiry) * norm.cdf(d2)
+                rho = (
+                    strike
+                    * time_to_expiry
+                    * np.exp(-self.risk_free_rate * time_to_expiry)
+                    * norm.cdf(d2)
+                )
             else:
-                rho = -strike * time_to_expiry * np.exp(-self.risk_free_rate * time_to_expiry) * norm.cdf(-d2)
+                rho = (
+                    -strike
+                    * time_to_expiry
+                    * np.exp(-self.risk_free_rate * time_to_expiry)
+                    * norm.cdf(-d2)
+                )
 
-            return {"delta": delta, "gamma": gamma, "theta": theta, "vega": vega, "rho": rho}
+            return {
+                "delta": delta,
+                "gamma": gamma,
+                "theta": theta,
+                "vega": vega,
+                "rho": rho,
+            }
 
         except Exception as e:
             logger.error(f"Error calculating Greeks: {e}")
@@ -529,7 +581,9 @@ class OptionsForecaster:
             logger.error(f"Error building volatility surface for {symbol}: {e}")
             raise
 
-    def forecast_implied_volatility(self, symbol: str, forecast_horizon: int = 30) -> Dict[str, Any]:
+    def forecast_implied_volatility(
+        self, symbol: str, forecast_horizon: int = 30
+    ) -> Dict[str, Any]:
         """Forecast implied volatility for a symbol.
 
         Args:
@@ -551,7 +605,9 @@ class OptionsForecaster:
             long_term_iv = 0.25  # Long-term average IV
             mean_reversion_speed = 0.1  # Speed of mean reversion
 
-            forecast_iv = current_iv + mean_reversion_speed * (long_term_iv - current_iv) * (forecast_horizon / 365)
+            forecast_iv = current_iv + mean_reversion_speed * (
+                long_term_iv - current_iv
+            ) * (forecast_horizon / 365)
 
             # Add uncertainty
             forecast_uncertainty = iv_volatility * np.sqrt(forecast_horizon / 365)
@@ -600,7 +656,12 @@ class OptionsForecaster:
             total_put_volume = puts["volume"].sum()
 
             # Find most active strikes
-            active_strikes = options_df.groupby("strike")["volume"].sum().sort_values(ascending=False).head(5)
+            active_strikes = (
+                options_df.groupby("strike")["volume"]
+                .sum()
+                .sort_values(ascending=False)
+                .head(5)
+            )
 
             # Calculate IV skew (difference between OTM put and OTM call IV)
             atm_strike = options_df["underlying_price"].iloc[0]
@@ -639,7 +700,11 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
 
     # Initialize forecaster
-    config = {"risk_free_rate": 0.02, "dividend_yield": 0.01, "api_keys": {"polygon": "your_polygon_key_here"}}
+    config = {
+        "risk_free_rate": 0.02,
+        "dividend_yield": 0.01,
+        "api_keys": {"polygon": "your_polygon_key_here"},
+    }
 
     forecaster = OptionsForecaster(config)
 

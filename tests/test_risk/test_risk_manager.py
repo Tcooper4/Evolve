@@ -181,7 +181,9 @@ class TestRiskManager:
         stress_results = risk_manager.run_stress_tests()
 
         # Check that market crash scenario has significant impact
-        market_crash = next((r for r in stress_results if r.scenario_name == "Market Crash"), None)
+        market_crash = next(
+            (r for r in stress_results if r.scenario_name == "Market Crash"), None
+        )
         assert market_crash is not None
         assert market_crash.portfolio_value_change < 0  # Should be negative
         assert market_crash.var_change < 0  # VaR should worsen
@@ -211,7 +213,12 @@ class TestRiskManager:
         assets = ["AAPL", "GOOGL", "MSFT"]
         expected_returns = pd.Series([0.1, 0.12, 0.08], index=assets)
         covariance = pd.DataFrame(
-            {"AAPL": [0.04, 0.02, 0.01], "GOOGL": [0.02, 0.09, 0.015], "MSFT": [0.01, 0.015, 0.06]}, index=assets
+            {
+                "AAPL": [0.04, 0.02, 0.01],
+                "GOOGL": [0.02, 0.09, 0.015],
+                "MSFT": [0.01, 0.015, 0.06],
+            },
+            index=assets,
         )
 
         weights = risk_manager.optimize_position_sizes(expected_returns, covariance)
@@ -248,12 +255,18 @@ class TestRiskManager:
         # Test high risk scenario
         high_risk_recommendations = risk_manager._generate_risk_recommendations(80.0)
         assert len(high_risk_recommendations) > 0
-        assert any("reducing position sizes" in rec.lower() for rec in high_risk_recommendations)
+        assert any(
+            "reducing position sizes" in rec.lower()
+            for rec in high_risk_recommendations
+        )
 
         # Test medium risk scenario
         medium_risk_recommendations = risk_manager._generate_risk_recommendations(50.0)
         assert len(medium_risk_recommendations) > 0
-        assert any("moderate position sizes" in rec.lower() for rec in medium_risk_recommendations)
+        assert any(
+            "moderate position sizes" in rec.lower()
+            for rec in medium_risk_recommendations
+        )
 
         # Test low risk scenario
         low_risk_recommendations = risk_manager._generate_risk_recommendations(10.0)
@@ -367,10 +380,16 @@ class TestRiskManager:
             assert -portfolio_value < result.portfolio_value_change < portfolio_value
 
             # Most scenarios should have negative impact
-            if result.scenario_name in ["Market Crash", "Liquidity Crisis", "Currency Crisis"]:
+            if result.scenario_name in [
+                "Market Crash",
+                "Liquidity Crisis",
+                "Currency Crisis",
+            ]:
                 assert result.portfolio_value_change < 0
 
-    def test_risk_metrics_with_benchmark(self, sample_returns, sample_benchmark_returns):
+    def test_risk_metrics_with_benchmark(
+        self, sample_returns, sample_benchmark_returns
+    ):
         """Test risk metrics calculation with benchmark."""
         risk_manager = RiskManager()
         risk_manager.update_returns(sample_returns, sample_benchmark_returns)
@@ -418,13 +437,19 @@ class TestRiskManager:
         def mock_generate_risk_summary():
             return {
                 "overall_risk_score": risk_score,
-                "risk_level": "High" if risk_score > 70 else "Medium" if risk_score > 30 else "Low",
+                "risk_level": "High"
+                if risk_score > 70
+                else "Medium"
+                if risk_score > 30
+                else "Low",
                 "key_metrics": {},
                 "risk_breakdown": {},
                 "recommendations": [],
             }
 
-        with patch.object(risk_manager, "generate_risk_summary", mock_generate_risk_summary):
+        with patch.object(
+            risk_manager, "generate_risk_summary", mock_generate_risk_summary
+        ):
             return risk_manager.generate_risk_summary()
 
     def test_stress_test_error_handling(self):

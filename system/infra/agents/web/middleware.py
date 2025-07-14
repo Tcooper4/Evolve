@@ -34,7 +34,11 @@ class AgentContext:
 
     def add_trace(self, step: str, details: Optional[Dict[str, Any]] = None):
         """Add a trace step to the context."""
-        trace_entry = {"step": step, "timestamp": datetime.utcnow().isoformat(), "details": details or {}}
+        trace_entry = {
+            "step": step,
+            "timestamp": datetime.utcnow().isoformat(),
+            "details": details or {},
+        }
         self.trace_path.append(trace_entry)
 
     def add_metadata(self, key: str, value: Any):
@@ -68,7 +72,12 @@ def extract_agent_context(request) -> AgentContext:
         session_id = request.headers.get("X-Session-ID")
 
         # Create context
-        context = AgentContext(request_id=request_id, agent_id=agent_id, user_id=user_id, session_id=session_id)
+        context = AgentContext(
+            request_id=request_id,
+            agent_id=agent_id,
+            user_id=user_id,
+            session_id=session_id,
+        )
 
         # Add request metadata
         context.add_metadata("method", request.method)
@@ -118,7 +127,9 @@ def inject_agent_context(f):
                 {
                     "endpoint": f.__name__,
                     "args": list(args),
-                    "kwargs": {k: v for k, v in kwargs.items() if not k.startswith("_")},
+                    "kwargs": {
+                        k: v for k, v in kwargs.items() if not k.startswith("_")
+                    },
                 },
             )
 
@@ -132,16 +143,24 @@ def inject_agent_context(f):
                 result = f(*args, **kwargs)
 
                 # Add trace entry for successful completion
-                context.add_trace("request_completed", {"status": "success", "result_type": type(result).__name__})
+                context.add_trace(
+                    "request_completed",
+                    {"status": "success", "result_type": type(result).__name__},
+                )
 
                 # Log successful completion
-                logger.info(f"Request completed: {context.request_id} - Duration: {context.duration:.3f}s")
+                logger.info(
+                    f"Request completed: {context.request_id} - Duration: {context.duration:.3f}s"
+                )
 
                 return result
 
             except Exception as e:
                 # Add trace entry for error
-                context.add_trace("request_error", {"error_type": type(e).__name__, "error_message": str(e)})
+                context.add_trace(
+                    "request_error",
+                    {"error_type": type(e).__name__, "error_message": str(e)},
+                )
 
                 # Log error with context
                 logger.error(f"Request failed: {context.request_id} - Error: {str(e)}")
@@ -168,7 +187,9 @@ def log_agent_context(f):
 
             if context:
                 # Log detailed context for debugging
-                logger.debug(f"Agent Context: {json.dumps(context.to_dict(), indent=2)}")
+                logger.debug(
+                    f"Agent Context: {json.dumps(context.to_dict(), indent=2)}"
+                )
 
             return f(*args, **kwargs)
 
@@ -229,7 +250,9 @@ def login_required(f):
                 token = token[7:]
 
             # Verify token
-            user_manager = UserManager(current_app.redis, current_app.config["SECRET_KEY"])
+            user_manager = UserManager(
+                current_app.redis, current_app.config["SECRET_KEY"]
+            )
             user_data = user_manager.verify_token(token)
 
             if not user_data:
@@ -243,7 +266,11 @@ def login_required(f):
             if context:
                 context.user_id = user_data.get("user_id")
                 context.add_trace(
-                    "user_authenticated", {"user_id": user_data.get("user_id"), "role": user_data.get("role")}
+                    "user_authenticated",
+                    {
+                        "user_id": user_data.get("user_id"),
+                        "role": user_data.get("role"),
+                    },
                 )
 
             return f(*args, **kwargs)
@@ -269,7 +296,9 @@ def admin_required(f):
                 token = token[7:]
 
             # Verify token
-            user_manager = UserManager(current_app.redis, current_app.config["SECRET_KEY"])
+            user_manager = UserManager(
+                current_app.redis, current_app.config["SECRET_KEY"]
+            )
             user_data = user_manager.verify_token(token)
 
             if not user_data:
@@ -286,7 +315,10 @@ def admin_required(f):
             context = getattr(request, "agent_context", None)
             if context:
                 context.user_id = user_data.get("user_id")
-                context.add_trace("admin_authenticated", {"user_id": user_data.get("user_id"), "role": "admin"})
+                context.add_trace(
+                    "admin_authenticated",
+                    {"user_id": user_data.get("user_id"), "role": "admin"},
+                )
 
             return f(*args, **kwargs)
 
@@ -309,7 +341,9 @@ def inject_user(f):
                     token = token[7:]
 
                 # Verify token
-                user_manager = UserManager(current_app.redis, current_app.config["SECRET_KEY"])
+                user_manager = UserManager(
+                    current_app.redis, current_app.config["SECRET_KEY"]
+                )
                 user_data = user_manager.verify_token(token)
 
                 if user_data:
@@ -320,7 +354,11 @@ def inject_user(f):
                     if context:
                         context.user_id = user_data.get("user_id")
                         context.add_trace(
-                            "user_injected", {"user_id": user_data.get("user_id"), "role": user_data.get("role")}
+                            "user_injected",
+                            {
+                                "user_id": user_data.get("user_id"),
+                                "role": user_data.get("role"),
+                            },
                         )
 
             except Exception as e:

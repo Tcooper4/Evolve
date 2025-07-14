@@ -10,7 +10,6 @@ import logging
 import random
 from typing import Dict
 
-
 from trading.agents.agent_leaderboard import AgentLeaderboard
 from trading.agents.agent_manager import AgentManager, AgentManagerConfig
 
@@ -57,7 +56,9 @@ def generate_realistic_performance_data(agent_name: str) -> Dict[str, float]:
     }
 
     # Get profile based on agent name
-    profile = agent_performance_profiles.get(agent_name, agent_performance_profiles["model_builder"])
+    profile = agent_performance_profiles.get(
+        agent_name, agent_performance_profiles["model_builder"]
+    )
 
     # Generate performance metrics with some randomness
     sharpe_ratio = random.uniform(*profile["sharpe_range"])
@@ -94,7 +95,13 @@ def demo_basic_leaderboard_usage():
     leaderboard = AgentLeaderboard()
 
     # Add some agents with performance data
-    agents = ["model_builder", "performance_critic", "updater", "execution_agent", "optimizer_agent"]
+    agents = [
+        "model_builder",
+        "performance_critic",
+        "updater",
+        "execution_agent",
+        "optimizer_agent",
+    ]
 
     for agent in agents:
         perf_data = generate_realistic_performance_data(agent)
@@ -124,7 +131,16 @@ def demo_basic_leaderboard_usage():
     logger.info("\nLeaderboard as DataFrame:")
     df = leaderboard.as_dataframe()
     logger.info(
-        df[["agent_name", "sharpe_ratio", "max_drawdown", "win_rate", "total_return", "status"]].to_string(index=False)
+        df[
+            [
+                "agent_name",
+                "sharpe_ratio",
+                "max_drawdown",
+                "win_rate",
+                "total_return",
+                "status",
+            ]
+        ].to_string(index=False)
     )
 
 
@@ -138,14 +154,24 @@ def demo_deprecation_scenarios():
 
     # Add some poor performing agents that should be deprecated
     poor_performers = [
-        ("weak_model", 0.3, 0.35, 0.40, 0.05),  # Low Sharpe, high drawdown, low win rate
+        (
+            "weak_model",
+            0.3,
+            0.35,
+            0.40,
+            0.05,
+        ),  # Low Sharpe, high drawdown, low win rate
         ("risky_strategy", 0.4, 0.40, 0.42, 0.08),  # Very high drawdown
         ("unlucky_agent", 0.2, 0.20, 0.38, -0.05),  # Very low win rate
     ]
 
     for agent_name, sharpe, drawdown, win_rate, total_return in poor_performers:
-        leaderboard.update_performance(agent_name, sharpe, drawdown, win_rate, total_return)
-        logger.info(f"Added {agent_name}: Sharpe={sharpe:.2f}, Drawdown={drawdown:.2%}, WinRate={win_rate:.2%}")
+        leaderboard.update_performance(
+            agent_name, sharpe, drawdown, win_rate, total_return
+        )
+        logger.info(
+            f"Added {agent_name}: Sharpe={sharpe:.2f}, Drawdown={drawdown:.2%}, WinRate={win_rate:.2%}"
+        )
 
     logger.info(f"\nDeprecated Agents: {leaderboard.get_deprecated_agents()}")
     logger.info(f"Active Agents: {leaderboard.get_active_agents()}")
@@ -158,7 +184,11 @@ def demo_agent_manager_integration():
     logger.info("=" * 60)
 
     # Initialize agent manager
-    config = AgentManagerConfig(config_file="trading/agents/agent_config.json", auto_start=False, enable_metrics=True)
+    config = AgentManagerConfig(
+        config_file="trading/agents/agent_config.json",
+        auto_start=False,
+        enable_metrics=True,
+    )
     manager = AgentManager(config)
 
     # Simulate performance updates through the manager
@@ -180,7 +210,8 @@ def demo_agent_manager_integration():
     top_agents = manager.get_leaderboard(top_n=3, sort_by="sharpe_ratio")
     for i, agent in enumerate(top_agents, 1):
         logger.info(
-            f"{i}. {agent['agent_name']}: Sharpe={agent['sharpe_ratio']:.2f}, " f"Return={agent['total_return']:.2%}"
+            f"{i}. {agent['agent_name']}: Sharpe={agent['sharpe_ratio']:.2f}, "
+            f"Return={agent['total_return']:.2%}"
         )
 
     # Get deprecated agents
@@ -210,7 +241,9 @@ def demo_leaderboard_analytics():
     ]
 
     for agent_name, sharpe, drawdown, win_rate, total_return in agents_data:
-        leaderboard.update_performance(agent_name, sharpe, drawdown, win_rate, total_return)
+        leaderboard.update_performance(
+            agent_name, sharpe, drawdown, win_rate, total_return
+        )
 
     # Get DataFrame for analysis
     df = leaderboard.as_dataframe()
@@ -232,9 +265,15 @@ def demo_leaderboard_analytics():
     best_return = df.loc[df["total_return"].idxmax()]
     best_win_rate = df.loc[df["win_rate"].idxmax()]
 
-    logger.info(f"Best Sharpe: {best_sharpe['agent_name']} ({best_sharpe['sharpe_ratio']:.2f})")
-    logger.info(f"Best Return: {best_return['agent_name']} ({best_return['total_return']:.2%})")
-    logger.info(f"Best Win Rate: {best_return['agent_name']} ({best_win_rate['win_rate']:.2%})")
+    logger.info(
+        f"Best Sharpe: {best_sharpe['agent_name']} ({best_sharpe['sharpe_ratio']:.2f})"
+    )
+    logger.info(
+        f"Best Return: {best_return['agent_name']} ({best_return['total_return']:.2%})"
+    )
+    logger.info(
+        f"Best Win Rate: {best_return['agent_name']} ({best_win_rate['win_rate']:.2%})"
+    )
 
 
 def demo_reporting_integration():

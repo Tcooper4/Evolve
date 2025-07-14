@@ -30,7 +30,13 @@ def plot_strategy_result_plotly(strategy_result: dict):
         # Add price data
         if "close" in data.columns:
             fig.add_trace(
-                go.Scatter(x=data.index, y=data["close"], mode="lines", name="Price", line=dict(color="blue", width=2))
+                go.Scatter(
+                    x=data.index,
+                    y=data["close"],
+                    mode="lines",
+                    name="Price",
+                    line=dict(color="blue", width=2),
+                )
             )
 
         # Add strategy signals
@@ -90,14 +96,21 @@ def plot_strategy_result_plotly(strategy_result: dict):
 
 
 def run_backtest_strategy(
-    strategy_name: str, symbol: str, start_date: datetime, end_date: datetime, params: dict
+    strategy_name: str,
+    symbol: str,
+    start_date: datetime,
+    end_date: datetime,
+    params: dict,
 ) -> dict:
     """Run backtest for a given strategy."""
     try:
         # Validate parameters
         for param, value in params.items():
             if isinstance(value, (int, float)) and value <= 0:
-                return {"success": False, "error": f"Parameter {param} must be > 0, got {value}"}
+                return {
+                    "success": False,
+                    "error": f"Parameter {param} must be > 0, got {value}",
+                }
 
         # Import strategy modules
         if strategy_name == "Bollinger Bands":
@@ -124,7 +137,10 @@ def run_backtest_strategy(
             config = MACDConfig(**params)
             strategy = MACDStrategy(config)
         else:
-            return {"success": False, "error": f"Strategy {strategy_name} not implemented"}
+            return {
+                "success": False,
+                "error": f"Strategy {strategy_name} not implemented",
+            }
 
         # Load data (placeholder - implement with real data provider)
         # For now, generate sample data
@@ -145,15 +161,25 @@ def run_backtest_strategy(
 
         # Calculate returns
         sample_data["returns"] = sample_data["close"].pct_change()
-        sample_data["strategy_returns"] = signals["signal"].shift(1) * sample_data["returns"]
+        sample_data["strategy_returns"] = (
+            signals["signal"].shift(1) * sample_data["returns"]
+        )
         sample_data["cumulative_returns"] = (1 + sample_data["returns"]).cumprod()
-        sample_data["strategy_cumulative_returns"] = (1 + sample_data["strategy_returns"]).cumprod()
+        sample_data["strategy_cumulative_returns"] = (
+            1 + sample_data["strategy_returns"]
+        ).cumprod()
 
         # Calculate metrics
         total_return = sample_data["strategy_cumulative_returns"].iloc[-1] - 1
-        sharpe_ratio = sample_data["strategy_returns"].mean() / sample_data["strategy_returns"].std() * np.sqrt(252)
+        sharpe_ratio = (
+            sample_data["strategy_returns"].mean()
+            / sample_data["strategy_returns"].std()
+            * np.sqrt(252)
+        )
         max_drawdown = (
-            sample_data["strategy_cumulative_returns"] / sample_data["strategy_cumulative_returns"].cummax() - 1
+            sample_data["strategy_cumulative_returns"]
+            / sample_data["strategy_cumulative_returns"].cummax()
+            - 1
         ).min()
 
         return {
@@ -181,9 +207,16 @@ def main():
         st.header("Backtest Configuration")
 
         # Strategy selection with multiselect for strategy combos
-        strategy_list = ["Bollinger Bands", "Moving Average Crossover", "RSI Mean Reversion", "MACD Momentum"]
+        strategy_list = [
+            "Bollinger Bands",
+            "Moving Average Crossover",
+            "RSI Mean Reversion",
+            "MACD Momentum",
+        ]
         selected_strategies = st.multiselect(
-            "Select Strategies", strategy_list, default=[strategy_list[0]] if strategy_list else []
+            "Select Strategies",
+            strategy_list,
+            default=[strategy_list[0]] if strategy_list else [],
         )
 
         # Use first selected strategy for single strategy backtest
@@ -195,7 +228,9 @@ def main():
         # Date range
         col1, col2 = st.columns(2)
         with col1:
-            start_date = st.date_input("Start Date", value=datetime.now() - timedelta(days=365))
+            start_date = st.date_input(
+                "Start Date", value=datetime.now() - timedelta(days=365)
+            )
         with col2:
             end_date = st.date_input("End Date", value=datetime.now())
 
@@ -224,7 +259,9 @@ def main():
     # Main content
     if run_backtest:
         with st.spinner("Running backtest..."):
-            result = run_backtest_strategy(strategy, symbol, start_date, end_date, params)
+            result = run_backtest_strategy(
+                strategy, symbol, start_date, end_date, params
+            )
 
             if result["success"]:
                 st.success("✅ Backtest completed successfully!")
@@ -252,7 +289,9 @@ def main():
 
         # Show example results
         st.subheader("📈 Example Backtest Results")
-        st.info("Real backtest results will appear here after running a backtest with actual market data.")
+        st.info(
+            "Real backtest results will appear here after running a backtest with actual market data."
+        )
 
 
 if __name__ == "__main__":

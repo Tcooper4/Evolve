@@ -14,7 +14,9 @@ from unittest.mock import patch
 import pytest
 
 # Add project root to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 # Local imports
 from trading.agents.base_agent_interface import (
@@ -107,7 +109,11 @@ class TestAgentResult:
     def test_agent_result_creation(self):
         """Test creating an AgentResult instance."""
         result = AgentResult(
-            success=True, data={"key": "value"}, error_message=None, execution_time=1.5, timestamp=datetime.now()
+            success=True,
+            data={"key": "value"},
+            error_message=None,
+            execution_time=1.5,
+            timestamp=datetime.now(),
         )
 
         assert result.success is True
@@ -156,7 +162,9 @@ class MockAgent(BaseAgent):
 
         if self.should_fail:
             return AgentResult(
-                success=False, error_message="Mock agent failure", data={"execution_count": self.execution_count}
+                success=False,
+                error_message="Mock agent failure",
+                data={"execution_count": self.execution_count},
             )
 
         return AgentResult(
@@ -520,14 +528,18 @@ class TestBaseAgentErrorRecovery:
         print("  Testing execute method...")
         with pytest.raises(NotImplementedError) as exc_info:
             asyncio.run(agent.execute())
-        assert "execute" in str(exc_info.value), "NotImplementedError should mention execute method"
+        assert "execute" in str(
+            exc_info.value
+        ), "NotImplementedError should mention execute method"
         print("  ✅ execute method properly raises NotImplementedError")
 
         # Test that calling validate_input raises NotImplementedError
         print("  Testing validate_input method...")
         with pytest.raises(NotImplementedError) as exc_info:
             agent.validate_input()
-        assert "validate_input" in str(exc_info.value), "NotImplementedError should mention validate_input method"
+        assert "validate_input" in str(
+            exc_info.value
+        ), "NotImplementedError should mention validate_input method"
         print("  ✅ validate_input method properly raises NotImplementedError")
 
         # Test that calling abstract methods from base class raises NotImplementedError
@@ -535,7 +547,7 @@ class TestBaseAgentErrorRecovery:
 
         # Test get_metadata if it's abstract
         try:
-            metadata = agent.get_metadata()
+            agent.get_metadata()
             print("  ⚠️ get_metadata is not abstract")
         except NotImplementedError as e:
             print("  ✅ get_metadata properly raises NotImplementedError")

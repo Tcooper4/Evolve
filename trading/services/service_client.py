@@ -21,7 +21,9 @@ class ServiceClient:
     Provides a simple interface for sending requests and receiving responses.
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0):
+    def __init__(
+        self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0
+    ):
         """
         Initialize the ServiceClient.
 
@@ -39,10 +41,18 @@ class ServiceClient:
 
         logger.info("ServiceClient initialized")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def send_request(
-        self, service_name: str, message_type: str, data: Dict[str, Any], wait_for_response: bool = True
+        self,
+        service_name: str,
+        message_type: str,
+        data: Dict[str, Any],
+        wait_for_response: bool = True,
     ) -> Optional[Dict[str, Any]]:
         """
         Send a request to a service and optionally wait for response.
@@ -76,7 +86,9 @@ class ServiceClient:
         except Exception as e:
             logger.error(f"Error sending request to {service_name}: {e}")
 
-    def _wait_for_response(self, service_name: str, message_type: str) -> Optional[Dict[str, Any]]:
+    def _wait_for_response(
+        self, service_name: str, message_type: str
+    ) -> Optional[Dict[str, Any]]:
         """Wait for response from a service."""
         start_time = time.time()
 
@@ -96,7 +108,9 @@ class ServiceClient:
                             or response_type.endswith("_result")
                             or response_type == "error"
                         ):
-                            logger.info(f"Received response from {service_name}: {response_type}")
+                            logger.info(
+                                f"Received response from {service_name}: {response_type}"
+                            )
                             return data
 
             except Exception as e:
@@ -107,7 +121,11 @@ class ServiceClient:
         return None
 
     def build_model(
-        self, model_type: str = "lstm", symbol: str = "BTCUSDT", timeframe: str = "1h", features: list = None
+        self,
+        model_type: str = "lstm",
+        symbol: str = "BTCUSDT",
+        timeframe: str = "1h",
+        features: list = None,
     ) -> Optional[Dict[str, Any]]:
         """Build a model using the ModelBuilderService."""
         data = {
@@ -125,7 +143,11 @@ class ServiceClient:
         }
 
     def evaluate_model(
-        self, model_id: str, symbol: str = "BTCUSDT", timeframe: str = "1h", period: str = "30d"
+        self,
+        model_id: str,
+        symbol: str = "BTCUSDT",
+        timeframe: str = "1h",
+        period: str = "30d",
     ) -> Optional[Dict[str, Any]]:
         """Evaluate a model using the PerformanceCriticService."""
         data = {
@@ -144,10 +166,17 @@ class ServiceClient:
         }
 
     def retrain_model(
-        self, model_id: str, new_data_period: str = "30d", retrain_type: str = "incremental"
+        self,
+        model_id: str,
+        new_data_period: str = "30d",
+        retrain_type: str = "incremental",
     ) -> Optional[Dict[str, Any]]:
         """Retrain a model using the UpdaterService."""
-        data = {"model_id": model_id, "new_data_period": new_data_period, "retrain_type": retrain_type}
+        data = {
+            "model_id": model_id,
+            "new_data_period": new_data_period,
+            "retrain_type": retrain_type,
+        }
 
         return {
             "success": True,
@@ -156,7 +185,9 @@ class ServiceClient:
             "timestamp": datetime.now().isoformat(),
         }
 
-    def search_github(self, query: str, max_results: int = 10, language: str = "python") -> Optional[Dict[str, Any]]:
+    def search_github(
+        self, query: str, max_results: int = 10, language: str = "python"
+    ) -> Optional[Dict[str, Any]]:
         """Search GitHub using the ResearchService."""
         data = {"query": query, "max_results": max_results, "language": language}
 
@@ -168,7 +199,11 @@ class ServiceClient:
         }
 
     def tune_hyperparameters(
-        self, model_type: str, param_space: dict = None, optimization_method: str = "bayesian", n_trials: int = 50
+        self,
+        model_type: str,
+        param_space: dict = None,
+        optimization_method: str = "bayesian",
+        n_trials: int = 50,
     ) -> Optional[Dict[str, Any]]:
         """Tune hyperparameters using the MetaTunerService."""
         data = {
@@ -186,7 +221,9 @@ class ServiceClient:
             "timestamp": datetime.now().isoformat(),
         }
 
-    def generate_plot(self, plot_type: str, data_source: str, plot_config: dict = None) -> Optional[Dict[str, Any]]:
+    def generate_plot(
+        self, plot_type: str, data_source: str, plot_config: dict = None
+    ) -> Optional[Dict[str, Any]]:
         """Generate a plot using the MultimodalService."""
         data = {
             "plot_type": plot_type,
@@ -209,7 +246,8 @@ class ServiceClient:
         data = {
             "user_prompt": user_prompt,
             "context": context or {},
-            "available_agents": available_agents or ["model_builder", "performance_critic", "updater"],
+            "available_agents": available_agents
+            or ["model_builder", "performance_critic", "updater"],
         }
 
         return {
@@ -230,7 +268,9 @@ class ServiceClient:
             "timestamp": datetime.now().isoformat(),
         }
 
-    def get_query_history(self, limit: int = 10, symbol: str = None) -> Optional[Dict[str, Any]]:
+    def get_query_history(
+        self, limit: int = 10, symbol: str = None
+    ) -> Optional[Dict[str, Any]]:
         """Get query history from QuantGPT."""
         data = {"limit": limit, "symbol": symbol}
 
@@ -251,7 +291,11 @@ class ServiceClient:
         }
 
     def execute_model_safely(
-        self, model_code: str, model_name: str, input_data: Dict[str, Any] = None, model_type: str = "custom"
+        self,
+        model_code: str,
+        model_name: str,
+        input_data: Dict[str, Any] = None,
+        model_type: str = "custom",
     ) -> Optional[Dict[str, Any]]:
         """Execute a user-defined model safely."""
         data = {
@@ -377,7 +421,11 @@ class ServiceClient:
             # Import here to avoid circular imports
             from report.report_client import ReportClient
 
-            client = ReportClient(redis_host=self.redis_host, redis_port=self.redis_port, redis_db=self.redis_db)
+            client = ReportClient(
+                redis_host=self.redis_host,
+                redis_port=self.redis_port,
+                redis_db=self.redis_db,
+            )
 
             return client.generate_report(
                 trade_data=trade_data,
@@ -419,7 +467,11 @@ class ServiceClient:
         try:
             from report.report_client import ReportClient
 
-            client = ReportClient(redis_host=self.redis_host, redis_port=self.redis_port, redis_db=self.redis_db)
+            client = ReportClient(
+                redis_host=self.redis_host,
+                redis_port=self.redis_port,
+                redis_db=self.redis_db,
+            )
 
             return client.trigger_strategy_report(
                 strategy_data=strategy_data,
@@ -447,7 +499,11 @@ class ServiceClient:
         try:
             from report.report_client import ReportClient
 
-            client = ReportClient(redis_host=self.redis_host, redis_port=self.redis_port, redis_db=self.redis_db)
+            client = ReportClient(
+                redis_host=self.redis_host,
+                redis_port=self.redis_port,
+                redis_db=self.redis_db,
+            )
 
             return client.get_recent_reports(limit=limit)
 
@@ -465,7 +521,11 @@ class ServiceClient:
         try:
             from report.report_client import ReportClient
 
-            client = ReportClient(redis_host=self.redis_host, redis_port=self.redis_port, redis_db=self.redis_db)
+            client = ReportClient(
+                redis_host=self.redis_host,
+                redis_port=self.redis_port,
+                redis_db=self.redis_db,
+            )
 
             return client.list_available_reports()
 
@@ -479,12 +539,22 @@ class ServiceClient:
             self.pubsub.close()
             self.redis_client.close()
             logger.info("ServiceClient closed successfully")
-            return {"success": True, "message": "ServiceClient closed successfully", "timestamp": time.time()}
+            return {
+                "success": True,
+                "message": "ServiceClient closed successfully",
+                "timestamp": time.time(),
+            }
         except Exception as e:
             logger.error(f"Error closing ServiceClient: {e}")
-            return {"success": False, "message": f"Error closing ServiceClient: {e}", "timestamp": time.time()}
+            return {
+                "success": False,
+                "message": f"Error closing ServiceClient: {e}",
+                "timestamp": time.time(),
+            }
 
-    def get_reasoning_decisions(self, agent_name: str = None, limit: int = 10) -> Optional[Dict[str, Any]]:
+    def get_reasoning_decisions(
+        self, agent_name: str = None, limit: int = 10
+    ) -> Optional[Dict[str, Any]]:
         """Get recent reasoning decisions from agents."""
         try:
             data = {"agent_name": agent_name, "limit": limit}
@@ -523,7 +593,11 @@ class ServiceClient:
             response = self.send_request("reasoning_tracker", "get_statistics", {})
 
             if response and response.get("success"):
-                return {"success": True, "statistics": response.get("data", {}), "timestamp": time.time()}
+                return {
+                    "success": True,
+                    "statistics": response.get("data", {}),
+                    "timestamp": time.time(),
+                }
             else:
                 return {
                     "success": False,
@@ -544,7 +618,9 @@ class ServiceClient:
     def log_reasoning_decision(self, decision_data: Dict[str, Any]) -> Optional[str]:
         """Log a reasoning decision."""
         try:
-            response = self.send_request("reasoning_tracker", "log_decision", decision_data)
+            response = self.send_request(
+                "reasoning_tracker", "log_decision", decision_data
+            )
 
             if response and response.get("success"):
                 return {
@@ -554,11 +630,19 @@ class ServiceClient:
                     "timestamp": time.time(),
                 }
             else:
-                return {"success": False, "message": "Failed to log decision", "timestamp": time.time()}
+                return {
+                    "success": False,
+                    "message": "Failed to log decision",
+                    "timestamp": time.time(),
+                }
 
         except Exception as e:
             logger.error(f"Error logging reasoning decision: {e}")
-            return {"success": False, "message": f"Error logging reasoning decision: {e}", "timestamp": time.time()}
+            return {
+                "success": False,
+                "message": f"Error logging reasoning decision: {e}",
+                "timestamp": time.time(),
+            }
 
 
 def main():
@@ -589,16 +673,28 @@ def main():
 
         elif args.action == "evaluate":
             if not args.service:
-                logger.error("Error: --service (model_id) is required for evaluate action")
-                return {"status": "failed", "action": "evaluate", "error": "Missing service parameter"}
+                logger.error(
+                    "Error: --service (model_id) is required for evaluate action"
+                )
+                return {
+                    "status": "failed",
+                    "action": "evaluate",
+                    "error": "Missing service parameter",
+                }
             result = client.evaluate_model(args.service, "BTCUSDT", "1h")
             logger.info(json.dumps(result, indent=2))
             return {"status": "completed", "action": "evaluate", "result": result}
 
         elif args.action == "retrain":
             if not args.service:
-                logger.error("Error: --service (model_id) is required for retrain action")
-                return {"status": "failed", "action": "retrain", "error": "Missing service parameter"}
+                logger.error(
+                    "Error: --service (model_id) is required for retrain action"
+                )
+                return {
+                    "status": "failed",
+                    "action": "retrain",
+                    "error": "Missing service parameter",
+                }
             result = client.retrain_model(args.service)
             logger.info(json.dumps(result, indent=2))
             return {"status": "completed", "action": "retrain", "result": result}
@@ -619,7 +715,9 @@ def main():
             return {"status": "completed", "action": "plot", "result": result}
 
         elif args.action == "route":
-            result = client.route_prompt("Build me an LSTM model for Bitcoin prediction")
+            result = client.route_prompt(
+                "Build me an LSTM model for Bitcoin prediction"
+            )
             logger.info(json.dumps(result, indent=2))
             return {
                 "success": True,

@@ -97,7 +97,9 @@ class TaskDelegationAgent(BaseAgent):
     and assigning them to appropriate agents based on their roles and capabilities.
     """
 
-    def __init__(self, name: str = "task_delegator", config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, name: str = "task_delegator", config: Optional[Dict[str, Any]] = None
+    ):
         """
         Initialize the Task Delegation Agent.
 
@@ -126,7 +128,9 @@ class TaskDelegationAgent(BaseAgent):
         # Initialize default agent roles
         self._initialize_default_roles()
 
-        logger.info(f"Initialized TaskDelegationAgent with {len(self.agent_roles)} registered agents")
+        logger.info(
+            f"Initialized TaskDelegationAgent with {len(self.agent_roles)} registered agents"
+        )
 
     def _initialize_default_roles(self) -> None:
         """Initialize default agent roles and capabilities."""
@@ -147,14 +151,38 @@ class TaskDelegationAgent(BaseAgent):
             # Define agent capabilities
             self.agent_capabilities = {
                 "model_builder": ["build_models", "train_models", "evaluate_models"],
-                "strategy_selector": ["select_strategies", "analyze_performance", "compare_strategies"],
-                "execution_agent": ["execute_trades", "manage_positions", "risk_control"],
+                "strategy_selector": [
+                    "select_strategies",
+                    "analyze_performance",
+                    "compare_strategies",
+                ],
+                "execution_agent": [
+                    "execute_trades",
+                    "manage_positions",
+                    "risk_control",
+                ],
                 "risk_manager": ["assess_risk", "set_limits", "monitor_exposure"],
-                "performance_analyzer": ["analyze_performance", "generate_reports", "identify_issues"],
-                "model_improver": ["tune_hyperparameters", "optimize_models", "improve_accuracy"],
-                "strategy_improver": ["adjust_parameters", "optimize_strategies", "improve_returns"],
+                "performance_analyzer": [
+                    "analyze_performance",
+                    "generate_reports",
+                    "identify_issues",
+                ],
+                "model_improver": [
+                    "tune_hyperparameters",
+                    "optimize_models",
+                    "improve_accuracy",
+                ],
+                "strategy_improver": [
+                    "adjust_parameters",
+                    "optimize_strategies",
+                    "improve_returns",
+                ],
                 "goal_planner": ["plan_goals", "coordinate_tasks", "track_progress"],
-                "meta_learning_feedback": ["learn_from_feedback", "adapt_strategies", "improve_decisions"],
+                "meta_learning_feedback": [
+                    "learn_from_feedback",
+                    "adapt_strategies",
+                    "improve_decisions",
+                ],
             }
 
         except Exception as e:
@@ -176,7 +204,9 @@ class TaskDelegationAgent(BaseAgent):
             if action == "delegate_task":
                 task_description = kwargs.get("task_description")
                 if not task_description:
-                    return AgentResult(success=False, error_message="Missing task_description")
+                    return AgentResult(
+                        success=False, error_message="Missing task_description"
+                    )
                 return await self._delegate_single_task(task_description, **kwargs)
 
             elif action == "delegate_workflow":
@@ -205,16 +235,22 @@ class TaskDelegationAgent(BaseAgent):
                 roles = kwargs.get("roles", [])
                 capabilities = kwargs.get("capabilities", [])
                 if not agent_name:
-                    return AgentResult(success=False, error_message="Missing agent_name")
+                    return AgentResult(
+                        success=False, error_message="Missing agent_name"
+                    )
                 return self._register_agent(agent_name, roles, capabilities)
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
 
-    async def _delegate_single_task(self, task_description: str, **kwargs) -> AgentResult:
+    async def _delegate_single_task(
+        self, task_description: str, **kwargs
+    ) -> AgentResult:
         """Delegate a single task to an appropriate agent."""
         try:
             # Create task
@@ -224,7 +260,10 @@ class TaskDelegationAgent(BaseAgent):
             assigned_agent = self._find_best_agent(task)
 
             if not assigned_agent:
-                return AgentResult(success=False, error_message=f"No suitable agent found for task: {task.title}")
+                return AgentResult(
+                    success=False,
+                    error_message=f"No suitable agent found for task: {task.title}",
+                )
 
             # Assign task
             task.assigned_agent = assigned_agent
@@ -261,7 +300,9 @@ class TaskDelegationAgent(BaseAgent):
             logger.error(f"Error delegating task: {str(e)}")
             return AgentResult(success=False, error_message=str(e))
 
-    async def _delegate_workflow(self, workflow: Dict[str, Any], **kwargs) -> AgentResult:
+    async def _delegate_workflow(
+        self, workflow: Dict[str, Any], **kwargs
+    ) -> AgentResult:
         """Delegate a complex workflow with multiple tasks."""
         try:
             workflow_id = str(uuid.uuid4())
@@ -277,7 +318,10 @@ class TaskDelegationAgent(BaseAgent):
                 task = self._create_task(
                     task_def.get("description", ""),
                     priority=TaskPriority(task_def.get("priority", "medium")),
-                    metadata={"workflow_id": workflow_id, "dependencies": task_def.get("dependencies", [])},
+                    metadata={
+                        "workflow_id": workflow_id,
+                        "dependencies": task_def.get("dependencies", []),
+                    },
                 )
                 created_tasks.append(task)
                 self.tasks[task.task_id] = task
@@ -327,7 +371,9 @@ class TaskDelegationAgent(BaseAgent):
                     continue
 
                 # Calculate suitability score
-                score = self._calculate_agent_suitability(agent_name, roles, task_requirements)
+                score = self._calculate_agent_suitability(
+                    agent_name, roles, task_requirements
+                )
 
                 if score > best_score:
                     best_score = score
@@ -347,22 +393,32 @@ class TaskDelegationAgent(BaseAgent):
             description_lower = task.description.lower()
 
             # Determine required roles based on task description
-            if any(word in description_lower for word in ["forecast", "predict", "model"]):
+            if any(
+                word in description_lower for word in ["forecast", "predict", "model"]
+            ):
                 requirements["roles"].append(AgentRole.FORECASTER)
 
-            if any(word in description_lower for word in ["optimize", "tune", "improve"]):
+            if any(
+                word in description_lower for word in ["optimize", "tune", "improve"]
+            ):
                 requirements["roles"].append(AgentRole.OPTIMIZER)
 
-            if any(word in description_lower for word in ["analyze", "evaluate", "assess"]):
+            if any(
+                word in description_lower for word in ["analyze", "evaluate", "assess"]
+            ):
                 requirements["roles"].append(AgentRole.ANALYZER)
 
             if any(word in description_lower for word in ["execute", "trade", "order"]):
                 requirements["roles"].append(AgentRole.EXECUTOR)
 
-            if any(word in description_lower for word in ["review", "validate", "check"]):
+            if any(
+                word in description_lower for word in ["review", "validate", "check"]
+            ):
                 requirements["roles"].append(AgentRole.REVIEWER)
 
-            if any(word in description_lower for word in ["coordinate", "plan", "manage"]):
+            if any(
+                word in description_lower for word in ["coordinate", "plan", "manage"]
+            ):
                 requirements["roles"].append(AgentRole.COORDINATOR)
 
             # Determine complexity
@@ -384,7 +440,8 @@ class TaskDelegationAgent(BaseAgent):
             current_tasks = sum(
                 1
                 for task in self.tasks.values()
-                if task.assigned_agent == agent_name and task.status in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
+                if task.assigned_agent == agent_name
+                and task.status in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
             )
 
             return current_tasks < self.max_concurrent_tasks
@@ -394,7 +451,10 @@ class TaskDelegationAgent(BaseAgent):
             return False
 
     def _calculate_agent_suitability(
-        self, agent_name: str, agent_roles: List[AgentRole], task_requirements: Dict[str, Any]
+        self,
+        agent_name: str,
+        agent_roles: List[AgentRole],
+        task_requirements: Dict[str, Any],
     ) -> float:
         """Calculate how suitable an agent is for a task."""
         try:
@@ -412,7 +472,9 @@ class TaskDelegationAgent(BaseAgent):
             required_capabilities = task_requirements.get("capabilities", [])
 
             if required_capabilities:
-                matching_capabilities = set(agent_capabilities) & set(required_capabilities)
+                matching_capabilities = set(agent_capabilities) & set(
+                    required_capabilities
+                )
                 score += len(matching_capabilities) / len(required_capabilities) * 0.3
 
             # Agent performance history (simplified)
@@ -456,7 +518,9 @@ class TaskDelegationAgent(BaseAgent):
             logger.error(f"Error executing task {task.task_id}: {str(e)}")
             return {"error": str(e)}
 
-    async def _execute_workflow(self, tasks: List[Task], dependencies: Dict[str, List[str]]) -> Dict[str, Any]:
+    async def _execute_workflow(
+        self, tasks: List[Task], dependencies: Dict[str, List[str]]
+    ) -> Dict[str, Any]:
         """Execute a workflow with dependencies."""
         try:
             # Simple workflow execution (no dependency resolution for now)
@@ -466,7 +530,11 @@ class TaskDelegationAgent(BaseAgent):
                 result = await self._execute_task(task)
                 results.append({"task_id": task.task_id, "result": result})
 
-            return {"workflow_completed": True, "tasks_executed": len(results), "results": results}
+            return {
+                "workflow_completed": True,
+                "tasks_executed": len(results),
+                "results": results,
+            }
 
         except Exception as e:
             logger.error(f"Error executing workflow: {str(e)}")
@@ -476,7 +544,9 @@ class TaskDelegationAgent(BaseAgent):
         """Get the status of a specific task."""
         try:
             if task_id not in self.tasks:
-                return AgentResult(success=False, error_message=f"Task {task_id} not found")
+                return AgentResult(
+                    success=False, error_message=f"Task {task_id} not found"
+                )
 
             task = self.tasks[task_id]
 
@@ -502,16 +572,22 @@ class TaskDelegationAgent(BaseAgent):
         """Cancel a task."""
         try:
             if task_id not in self.tasks:
-                return AgentResult(success=False, error_message=f"Task {task_id} not found")
+                return AgentResult(
+                    success=False, error_message=f"Task {task_id} not found"
+                )
 
             task = self.tasks[task_id]
 
             if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED]:
-                return AgentResult(success=False, error_message=f"Task {task_id} cannot be cancelled")
+                return AgentResult(
+                    success=False, error_message=f"Task {task_id} cannot be cancelled"
+                )
 
             task.status = TaskStatus.CANCELLED
 
-            return AgentResult(success=True, data={"message": f"Task {task_id} cancelled successfully"})
+            return AgentResult(
+                success=True, data={"message": f"Task {task_id} cancelled successfully"}
+            )
 
         except Exception as e:
             logger.error(f"Error cancelling task: {str(e)}")
@@ -526,11 +602,14 @@ class TaskDelegationAgent(BaseAgent):
                 current_tasks = sum(
                     1
                     for task in self.tasks.values()
-                    if task.assigned_agent == agent_name and task.status in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
+                    if task.assigned_agent == agent_name
+                    and task.status in [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
                 )
 
                 agent_status[agent_name] = {
-                    "roles": [role.value for role in self.agent_roles.get(agent_name, [])],
+                    "roles": [
+                        role.value for role in self.agent_roles.get(agent_name, [])
+                    ],
                     "capabilities": self.agent_capabilities.get(agent_name, []),
                     "current_tasks": current_tasks,
                     "available": current_tasks < self.max_concurrent_tasks,
@@ -541,8 +620,20 @@ class TaskDelegationAgent(BaseAgent):
                 data={
                     "agent_status": agent_status,
                     "total_tasks": len(self.tasks),
-                    "pending_tasks": len([t for t in self.tasks.values() if t.status == TaskStatus.PENDING]),
-                    "active_tasks": len([t for t in self.tasks.values() if t.status == TaskStatus.IN_PROGRESS]),
+                    "pending_tasks": len(
+                        [
+                            t
+                            for t in self.tasks.values()
+                            if t.status == TaskStatus.PENDING
+                        ]
+                    ),
+                    "active_tasks": len(
+                        [
+                            t
+                            for t in self.tasks.values()
+                            if t.status == TaskStatus.IN_PROGRESS
+                        ]
+                    ),
                 },
             )
 
@@ -550,7 +641,9 @@ class TaskDelegationAgent(BaseAgent):
             logger.error(f"Error getting agent status: {str(e)}")
             return AgentResult(success=False, error_message=str(e))
 
-    def _register_agent(self, agent_name: str, roles: List[str], capabilities: List[str]) -> AgentResult:
+    def _register_agent(
+        self, agent_name: str, roles: List[str], capabilities: List[str]
+    ) -> AgentResult:
         """Register a new agent with roles and capabilities."""
         try:
             # Convert role strings to AgentRole enums
@@ -565,7 +658,9 @@ class TaskDelegationAgent(BaseAgent):
             self.agent_roles[agent_name] = agent_roles
             self.agent_capabilities[agent_name] = capabilities
 
-            logger.info(f"Registered agent {agent_name} with roles {roles} and capabilities {capabilities}")
+            logger.info(
+                f"Registered agent {agent_name} with roles {roles} and capabilities {capabilities}"
+            )
 
             return AgentResult(
                 success=True,

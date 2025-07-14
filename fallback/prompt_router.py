@@ -42,7 +42,14 @@ class FallbackPromptRouter:
         """
         return {
             "forecast": {
-                "keywords": ["forecast", "predict", "prediction", "model", "future", "trend"],
+                "keywords": [
+                    "forecast",
+                    "predict",
+                    "prediction",
+                    "model",
+                    "future",
+                    "trend",
+                ],
                 "confidence": 0.7,
                 "agent": "forecast_agent",
                 "description": "Price forecasting and prediction requests",
@@ -66,14 +73,22 @@ class FallbackPromptRouter:
                 "description": "Market analysis and reporting requests",
             },
             "backtest": {
-                "keywords": ["backtest", "historical", "test", "simulate", "performance"],
+                "keywords": [
+                    "backtest",
+                    "historical",
+                    "test",
+                    "simulate",
+                    "performance",
+                ],
                 "confidence": 0.6,
                 "agent": "backtest_agent",
                 "description": "Backtesting and historical analysis requests",
             },
         }
 
-    def route_prompt(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def route_prompt(
+        self, prompt: str, context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Route a prompt to appropriate agents (fallback implementation).
 
@@ -105,7 +120,9 @@ class FallbackPromptRouter:
                 "fallback_mode": True,
             }
 
-            logger.info(f"Routed to {route.get('agent', 'unknown')} with confidence {route.get('confidence', 0.3)}")
+            logger.info(
+                f"Routed to {route.get('agent', 'unknown')} with confidence {route.get('confidence', 0.3)}"
+            )
             return routing_result
 
         except Exception as e:
@@ -114,7 +131,11 @@ class FallbackPromptRouter:
                 "prompt": prompt,
                 "intent": "unknown",
                 "entities": {},
-                "route": {"agent": "general_agent", "confidence": 0.1, "reasoning": "Fallback routing due to error"},
+                "route": {
+                    "agent": "general_agent",
+                    "confidence": 0.1,
+                    "reasoning": "Fallback routing due to error",
+                },
                 "confidence": 0.1,
                 "timestamp": datetime.now().isoformat(),
                 "fallback_mode": True,
@@ -189,13 +210,17 @@ class FallbackPromptRouter:
 
             # Extract model types
             model_keywords = ["lstm", "xgboost", "prophet", "arima", "ensemble"]
-            found_models = [model for model in model_keywords if model in prompt.lower()]
+            found_models = [
+                model for model in model_keywords if model in prompt.lower()
+            ]
             if found_models:
                 entities["models"] = found_models
 
             # Extract strategy types
             strategy_keywords = ["rsi", "macd", "bollinger", "sma", "ema"]
-            found_strategies = [strategy for strategy in strategy_keywords if strategy in prompt.lower()]
+            found_strategies = [
+                strategy for strategy in strategy_keywords if strategy in prompt.lower()
+            ]
             if found_strategies:
                 entities["strategies"] = found_strategies
 
@@ -262,4 +287,9 @@ class FallbackPromptRouter:
             }
         except Exception as e:
             logger.error(f"Error getting fallback prompt router health: {e}")
-            return {"status": "error", "available_patterns": 0, "fallback_mode": True, "error": str(e)}
+            return {
+                "status": "error",
+                "available_patterns": 0,
+                "fallback_mode": True,
+                "error": str(e),
+            }

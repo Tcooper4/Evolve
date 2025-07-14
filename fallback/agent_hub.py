@@ -60,14 +60,20 @@ class FallbackAgentHub:
                     "confidence": 0.5,
                     "reasoning": "Keyword-based routing to strategy agent",
                 }
-            elif any(word in prompt_lower for word in ["portfolio", "position", "risk"]):
+            elif any(
+                word in prompt_lower for word in ["portfolio", "position", "risk"]
+            ):
                 return {
                     "agent": "portfolio_agent",
                     "confidence": 0.5,
                     "reasoning": "Keyword-based routing to portfolio agent",
                 }
             else:
-                return {"agent": "general_agent", "confidence": 0.3, "reasoning": "Default routing to general agent"}
+                return {
+                    "agent": "general_agent",
+                    "confidence": 0.3,
+                    "reasoning": "Default routing to general agent",
+                }
 
         except Exception as e:
             logger.error(f"Error in fallback routing: {e}")
@@ -90,7 +96,12 @@ class FallbackAgentHub:
             }
         except Exception as e:
             logger.error(f"Error getting fallback system health: {e}")
-            return {"status": "error", "available_agents": 0, "fallback_mode": True, "error": str(e)}
+            return {
+                "status": "error",
+                "available_agents": 0,
+                "fallback_mode": True,
+                "error": str(e),
+            }
 
     def get_recent_interactions(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -133,7 +144,9 @@ class FallbackAgentHub:
             interaction["timestamp"] = datetime.now().isoformat()
             interaction["fallback_mode"] = True
             self._interactions.append(interaction)
-            logger.debug(f"Logged fallback interaction: {interaction.get('action', 'unknown')}")
+            logger.debug(
+                f"Logged fallback interaction: {interaction.get('action', 'unknown')}"
+            )
         except Exception as e:
             logger.error(f"Error logging interaction: {e}")
 
@@ -157,4 +170,9 @@ class FallbackAgentHub:
             }
         except Exception as e:
             logger.error(f"Error getting agent status for {agent_name}: {e}")
-            return {"name": agent_name, "status": "error", "available": False, "error": str(e)}
+            return {
+                "name": agent_name,
+                "status": "error",
+                "available": False,
+                "error": str(e),
+            }

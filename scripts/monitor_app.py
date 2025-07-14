@@ -146,7 +146,10 @@ class ApplicationMonitor:
                 logging.basicConfig(
                     level=logging.INFO,
                     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                    handlers=[logging.StreamHandler(), logging.FileHandler("logs/monitor.log")],
+                    handlers=[
+                        logging.StreamHandler(),
+                        logging.FileHandler("logs/monitor.log"),
+                    ],
                 )
                 logger.info("Basic logging configuration initialized")
         except Exception as e:
@@ -201,7 +204,9 @@ class ApplicationMonitor:
             if len(self.monitoring_history) > 1000:
                 self.monitoring_history = self.monitoring_history[-1000:]
 
-            logger.debug(f"Collected metrics: CPU={cpu_usage}%, Memory={memory_usage:.2f}MB")
+            logger.debug(
+                f"Collected metrics: CPU={cpu_usage}%, Memory={memory_usage:.2f}MB"
+            )
             return metrics
 
         except Exception as e:
@@ -293,48 +298,13 @@ class ApplicationMonitor:
 
     def _send_email_alert(self, message: str) -> None:
         """
-        Send email alert.
+        Send email alert (DISABLED - email functionality removed).
 
         Args:
             message: Alert message to send
         """
-        # Implement actual email sending logic
-        try:
-            import smtplib
-            from email.mime.multipart import MIMEMultipart
-            from email.mime.text import MIMEText
-
-            # Email configuration
-            smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-            smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-            sender_email = os.environ.get("SENDER_EMAIL", "")
-            sender_password = os.environ.get("SENDER_PASSWORD", "")
-
-            if not sender_email or not sender_password:
-                logger.warning("Email credentials not configured, skipping email notification")
-                return False
-
-            # Create message
-            msg = MIMEMultipart()
-            msg["From"] = sender_email
-            msg["To"] = recipient_email
-            msg["Subject"] = subject
-
-            msg.attach(MIMEText(message, "plain"))
-
-            # Send email
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            server.starttls()
-            server.login(sender_email, sender_password)
-            server.send_message(msg)
-            server.quit()
-
-            logger.info(f"Email notification sent to {recipient_email}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to send email notification: {e}")
-            return False
+        logger.info("Email alerts have been disabled - functionality removed")
+        return False
 
     def _send_slack_alert(self, message: str) -> None:
         """
@@ -346,7 +316,9 @@ class ApplicationMonitor:
         try:
             slack_webhook = self.alert_channels.get("slack")
             if slack_webhook:
-                response = requests.post(slack_webhook, json={"text": message}, timeout=10)
+                response = requests.post(
+                    slack_webhook, json={"text": message}, timeout=10
+                )
                 response.raise_for_status()
                 logger.info("Slack alert sent successfully")
         except requests.RequestException as e:
@@ -391,7 +363,11 @@ class ApplicationMonitor:
 
         except Exception as e:
             logger.error(f"Error getting status: {e}")
-            return {"timestamp": datetime.now().isoformat(), "error": str(e), "health": "error"}
+            return {
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+                "health": "error",
+            }
 
     def _get_uptime(self) -> str:
         """Get application uptime."""
@@ -417,7 +393,9 @@ class ApplicationMonitor:
         try:
             data = {
                 "export_timestamp": datetime.now().isoformat(),
-                "monitoring_history": [asdict(metric) for metric in self.monitoring_history],
+                "monitoring_history": [
+                    asdict(metric) for metric in self.monitoring_history
+                ],
                 "current_status": self.get_status(),
                 "config": self.config,
             }
@@ -456,7 +434,7 @@ class ApplicationMonitor:
                         break
 
                     # Collect metrics
-                    metrics = self.collect_metrics()
+                    self.collect_metrics()
 
                     # Log metrics
                     self.log_metrics()
@@ -481,7 +459,9 @@ class ApplicationMonitor:
                     self.logger.error(f"Error in monitoring loop: {e}")
                     time.sleep(5)  # Wait before retrying
 
-            self.logger.info(f"Monitoring completed: {loop_count} loops, {total_alerts} alerts")
+            self.logger.info(
+                f"Monitoring completed: {loop_count} loops, {total_alerts} alerts"
+            )
 
         except Exception as e:
             self.logger.error(f"Error in monitoring loop: {e}")
@@ -490,10 +470,26 @@ class ApplicationMonitor:
 def main() -> None:
     """Main function for the application monitor."""
     parser = argparse.ArgumentParser(description="Application monitoring script")
-    parser.add_argument("command", choices=["status", "health", "export", "monitor"], help="Command to execute")
-    parser.add_argument("--output", "-o", default="monitoring_data.json", help="Output file for export command")
-    parser.add_argument("--duration", "-d", type=int, help="Duration to run monitoring in seconds")
-    parser.add_argument("--config", "-c", default="config/app_config.yaml", help="Configuration file path")
+    parser.add_argument(
+        "command",
+        choices=["status", "health", "export", "monitor"],
+        help="Command to execute",
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        default="monitoring_data.json",
+        help="Output file for export command",
+    )
+    parser.add_argument(
+        "--duration", "-d", type=int, help="Duration to run monitoring in seconds"
+    )
+    parser.add_argument(
+        "--config",
+        "-c",
+        default="config/app_config.yaml",
+        help="Configuration file path",
+    )
 
     args = parser.parse_args()
 

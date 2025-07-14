@@ -99,7 +99,9 @@ def test_rl_trader():
         status = trader.get_model_status()
         print(f"  Model Available: {status.get('model_available', False)}")
         print(f"  Gymnasium Available: {status.get('gymnasium_available', False)}")
-        print(f"  Stable-baselines3 Available: {status.get('stable_baselines3_available', False)}")
+        print(
+            f"  Stable-baselines3 Available: {status.get('stable_baselines3_available', False)}"
+        )
 
         # Test system health
         health = trader.get_system_health()
@@ -152,7 +154,6 @@ def test_function_with_logging():
 def test_function_should_return():
     """Test function that should return based on name."""
     # This function name suggests it should return something
-    data = [1, 2, 3, 4, 5]
     return False
 
 

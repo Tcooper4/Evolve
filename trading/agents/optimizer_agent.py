@@ -15,11 +15,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 
-from trading.agents.base_agent_interface import (
-    AgentConfig,
-    AgentResult,
-    BaseAgent,
-)
+from trading.agents.base_agent_interface import AgentConfig, AgentResult, BaseAgent
 from trading.backtesting.backtester import Backtester
 from trading.evaluation.metrics import (
     calculate_max_drawdown,
@@ -133,7 +129,9 @@ class OptimizationRequest:
             "symbols": self.symbols,
             "time_periods": self.time_periods,
             "strategy_configs": [config.to_dict() for config in self.strategy_configs],
-            "parameters_to_optimize": [param.to_dict() for param in self.parameters_to_optimize],
+            "parameters_to_optimize": [
+                param.to_dict() for param in self.parameters_to_optimize
+            ],
             "max_iterations": self.max_iterations,
             "parallel_workers": self.parallel_workers,
             "min_trades": self.min_trades,
@@ -145,9 +143,12 @@ class OptimizationRequest:
         """Create from dictionary."""
         data["optimization_type"] = OptimizationType(data["optimization_type"])
         data["target_metric"] = OptimizationMetric(data["target_metric"])
-        data["strategy_configs"] = [StrategyConfig.from_dict(config) for config in data["strategy_configs"]]
+        data["strategy_configs"] = [
+            StrategyConfig.from_dict(config) for config in data["strategy_configs"]
+        ]
         data["parameters_to_optimize"] = [
-            OptimizationParameter.from_dict(param) for param in data["parameters_to_optimize"]
+            OptimizationParameter.from_dict(param)
+            for param in data["parameters_to_optimize"]
         ]
         return cls(**data)
 
@@ -199,7 +200,9 @@ class OptimizationConfig:
             "symbols": self.symbols,
             "time_periods": self.time_periods,
             "strategy_configs": [config.to_dict() for config in self.strategy_configs],
-            "parameters_to_optimize": [param.to_dict() for param in self.parameters_to_optimize],
+            "parameters_to_optimize": [
+                param.to_dict() for param in self.parameters_to_optimize
+            ],
             "max_iterations": self.max_iterations,
             "parallel_workers": self.parallel_workers,
             "min_trades": self.min_trades,
@@ -211,9 +214,12 @@ class OptimizationConfig:
         """Create from dictionary."""
         data["optimization_type"] = OptimizationType(data["optimization_type"])
         data["target_metric"] = OptimizationMetric(data["target_metric"])
-        data["strategy_configs"] = [StrategyConfig.from_dict(config) for config in data["strategy_configs"]]
+        data["strategy_configs"] = [
+            StrategyConfig.from_dict(config) for config in data["strategy_configs"]
+        ]
         data["parameters_to_optimize"] = [
-            OptimizationParameter.from_dict(param) for param in data["parameters_to_optimize"]
+            OptimizationParameter.from_dict(param)
+            for param in data["parameters_to_optimize"]
         ]
         return cls(**data)
 
@@ -241,7 +247,11 @@ class OptimizerAgent(BaseAgent):
         self.trials: List[float] = []  # Track optimization scores for convergence
 
         # Strategy registry
-        self.strategy_registry = {"bollinger": BollingerStrategy, "macd": MACDStrategy, "rsi": RSIStrategy}
+        self.strategy_registry = {
+            "bollinger": BollingerStrategy,
+            "macd": MACDStrategy,
+            "rsi": RSIStrategy,
+        }
 
         # Performance tracking
         self.optimization_stats = {
@@ -251,7 +261,9 @@ class OptimizerAgent(BaseAgent):
             "average_improvement": 0.0,
         }
 
-        self.logger.info(f"OptimizerAgent initialized with {len(self.strategy_registry)} strategies")
+        self.logger.info(
+            f"OptimizerAgent initialized with {len(self.strategy_registry)} strategies"
+        )
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the optimization process.
@@ -276,19 +288,37 @@ class OptimizerAgent(BaseAgent):
                 )
 
             # Start optimization
-            self.logger.info(f"Starting {optimization_config.optimization_type.value} optimization")
+            self.logger.info(
+                f"Starting {optimization_config.optimization_type.value} optimization"
+            )
 
             # Perform optimization based on type
-            if optimization_config.optimization_type == OptimizationType.STRATEGY_COMBINATION:
-                results = await self._optimize_strategy_combinations(optimization_config)
-            elif optimization_config.optimization_type == OptimizationType.THRESHOLD_OPTIMIZATION:
+            if (
+                optimization_config.optimization_type
+                == OptimizationType.STRATEGY_COMBINATION
+            ):
+                results = await self._optimize_strategy_combinations(
+                    optimization_config
+                )
+            elif (
+                optimization_config.optimization_type
+                == OptimizationType.THRESHOLD_OPTIMIZATION
+            ):
                 results = await self._optimize_thresholds(optimization_config)
-            elif optimization_config.optimization_type == OptimizationType.INDICATOR_OPTIMIZATION:
+            elif (
+                optimization_config.optimization_type
+                == OptimizationType.INDICATOR_OPTIMIZATION
+            ):
                 results = await self._optimize_indicators(optimization_config)
-            elif optimization_config.optimization_type == OptimizationType.HYBRID_OPTIMIZATION:
+            elif (
+                optimization_config.optimization_type
+                == OptimizationType.HYBRID_OPTIMIZATION
+            ):
                 results = await self._optimize_hybrid(optimization_config)
             else:
-                raise ValueError(f"Unknown optimization type: {optimization_config.optimization_type}")
+                raise ValueError(
+                    f"Unknown optimization type: {optimization_config.optimization_type}"
+                )
 
             # Update configurations based on results
             await self._update_configurations(results, optimization_config)
@@ -302,15 +332,21 @@ class OptimizerAgent(BaseAgent):
                 data={
                     "results": [r.to_dict() for r in results],
                     "summary": summary,
-                    "best_results": {k: v.to_dict() for k, v in self.best_results.items()},
+                    "best_results": {
+                        k: v.to_dict() for k, v in self.best_results.items()
+                    },
                 },
             )
 
         except Exception as e:
             self.logger.error(f"Error in optimization: {e}")
-            return AgentResult(success=False, message=f"Optimization error: {str(e)}", error=e)
+            return AgentResult(
+                success=False, message=f"Optimization error: {str(e)}", error=e
+            )
 
-    async def _optimize_strategy_combinations(self, config: OptimizationConfig) -> List[OptimizationResult]:
+    async def _optimize_strategy_combinations(
+        self, config: OptimizationConfig
+    ) -> List[OptimizationResult]:
         """Optimize strategy combinations.
 
         Args:
@@ -322,7 +358,9 @@ class OptimizerAgent(BaseAgent):
         results = []
 
         # Generate strategy combinations
-        strategy_combinations = self._generate_strategy_combinations(config.strategy_configs)
+        strategy_combinations = self._generate_strategy_combinations(
+            config.strategy_configs
+        )
 
         self.logger.info(f"Testing {len(strategy_combinations)} strategy combinations")
 
@@ -336,12 +374,16 @@ class OptimizerAgent(BaseAgent):
 
                 # Add convergence early stopping based on last N trials
                 if len(self.trials) > 10 and np.std(self.trials[-10:]) < 0.001:
-                    self.logger.info(f"Convergence detected, stopping optimization after {i + 1} trials")
+                    self.logger.info(
+                        f"Convergence detected, stopping optimization after {i + 1} trials"
+                    )
                     break
 
                 # Log progress
                 if (i + 1) % 10 == 0:
-                    self.logger.info(f"Progress: {i + 1}/{len(strategy_combinations)} combinations tested")
+                    self.logger.info(
+                        f"Progress: {i + 1}/{len(strategy_combinations)} combinations tested"
+                    )
 
             except Exception as e:
                 self.logger.error(f"Error testing combination {i}: {e}")
@@ -352,7 +394,9 @@ class OptimizerAgent(BaseAgent):
 
         return results
 
-    async def _optimize_thresholds(self, config: OptimizationConfig) -> List[OptimizationResult]:
+    async def _optimize_thresholds(
+        self, config: OptimizationConfig
+    ) -> List[OptimizationResult]:
         """Optimize strategy thresholds.
 
         Args:
@@ -364,9 +408,13 @@ class OptimizerAgent(BaseAgent):
         results = []
 
         # Generate parameter combinations
-        parameter_combinations = self._generate_parameter_combinations(config.parameters_to_optimize)
+        parameter_combinations = self._generate_parameter_combinations(
+            config.parameters_to_optimize
+        )
 
-        self.logger.info(f"Testing {len(parameter_combinations)} threshold combinations")
+        self.logger.info(
+            f"Testing {len(parameter_combinations)} threshold combinations"
+        )
 
         # Test each combination
         for i, combination in enumerate(parameter_combinations):
@@ -377,7 +425,9 @@ class OptimizerAgent(BaseAgent):
 
                 # Log progress
                 if (i + 1) % 10 == 0:
-                    self.logger.info(f"Progress: {i + 1}/{len(parameter_combinations)} combinations tested")
+                    self.logger.info(
+                        f"Progress: {i + 1}/{len(parameter_combinations)} combinations tested"
+                    )
 
             except Exception as e:
                 self.logger.error(f"Error testing combination {i}: {e}")
@@ -388,7 +438,9 @@ class OptimizerAgent(BaseAgent):
 
         return results
 
-    async def _optimize_indicators(self, config: OptimizationConfig) -> List[OptimizationResult]:
+    async def _optimize_indicators(
+        self, config: OptimizationConfig
+    ) -> List[OptimizationResult]:
         """Optimize indicator parameters.
 
         Args:
@@ -400,9 +452,13 @@ class OptimizerAgent(BaseAgent):
         results = []
 
         # Generate indicator combinations
-        indicator_combinations = self._generate_indicator_combinations(config.parameters_to_optimize)
+        indicator_combinations = self._generate_indicator_combinations(
+            config.parameters_to_optimize
+        )
 
-        self.logger.info(f"Testing {len(indicator_combinations)} indicator combinations")
+        self.logger.info(
+            f"Testing {len(indicator_combinations)} indicator combinations"
+        )
 
         # Test each combination
         for i, combination in enumerate(indicator_combinations):
@@ -413,7 +469,9 @@ class OptimizerAgent(BaseAgent):
 
                 # Log progress
                 if (i + 1) % 10 == 0:
-                    self.logger.info(f"Progress: {i + 1}/{len(indicator_combinations)} combinations tested")
+                    self.logger.info(
+                        f"Progress: {i + 1}/{len(indicator_combinations)} combinations tested"
+                    )
 
             except Exception as e:
                 self.logger.error(f"Error testing combination {i}: {e}")
@@ -424,7 +482,9 @@ class OptimizerAgent(BaseAgent):
 
         return results
 
-    async def _optimize_hybrid(self, config: OptimizationConfig) -> List[OptimizationResult]:
+    async def _optimize_hybrid(
+        self, config: OptimizationConfig
+    ) -> List[OptimizationResult]:
         """Perform hybrid optimization (strategies + thresholds + indicators).
 
         Args:
@@ -449,7 +509,9 @@ class OptimizerAgent(BaseAgent):
 
                 # Log progress
                 if (i + 1) % 10 == 0:
-                    self.logger.info(f"Progress: {i + 1}/{len(hybrid_combinations)} combinations tested")
+                    self.logger.info(
+                        f"Progress: {i + 1}/{len(hybrid_combinations)} combinations tested"
+                    )
 
             except Exception as e:
                 self.logger.error(f"Error testing combination {i}: {e}")
@@ -460,7 +522,9 @@ class OptimizerAgent(BaseAgent):
 
         return results
 
-    def _generate_strategy_combinations(self, strategy_configs: List[StrategyConfig]) -> List[List[StrategyConfig]]:
+    def _generate_strategy_combinations(
+        self, strategy_configs: List[StrategyConfig]
+    ) -> List[List[StrategyConfig]]:
         """Generate strategy combinations to test.
 
         Args:
@@ -480,7 +544,9 @@ class OptimizerAgent(BaseAgent):
 
         return combinations
 
-    def _generate_parameter_combinations(self, parameters: List[OptimizationParameter]) -> List[Dict[str, Any]]:
+    def _generate_parameter_combinations(
+        self, parameters: List[OptimizationParameter]
+    ) -> List[Dict[str, Any]]:
         """
         Generate parameter combinations for optimization.
 
@@ -507,7 +573,9 @@ class OptimizerAgent(BaseAgent):
                     if param.categories:
                         param_ranges.append(param.categories)
                     else:
-                        self.logger.warning(f"Categorical parameter {param.name} has no categories")
+                        self.logger.warning(
+                            f"Categorical parameter {param.name} has no categories"
+                        )
                         continue
                 else:
                     # Generate range for numeric parameters
@@ -515,7 +583,9 @@ class OptimizerAgent(BaseAgent):
                     if param_range:
                         param_ranges.append(param_range)
                     else:
-                        self.logger.warning(f"Could not generate range for parameter {param.name}")
+                        self.logger.warning(
+                            f"Could not generate range for parameter {param.name}"
+                        )
                         continue
 
             if not param_ranges:
@@ -529,7 +599,9 @@ class OptimizerAgent(BaseAgent):
                     param_dict[param.name] = combination[i]
 
                 # Validate the combination
-                if self._validate_parameter_combination(param_dict, validated_parameters):
+                if self._validate_parameter_combination(
+                    param_dict, validated_parameters
+                ):
                     combinations.append(param_dict)
 
             self.logger.info(f"Generated {len(combinations)} parameter combinations")
@@ -539,7 +611,9 @@ class OptimizerAgent(BaseAgent):
             self.logger.error(f"Error generating parameter combinations: {e}")
             return []
 
-    def _validate_optimization_parameters(self, parameters: List[OptimizationParameter]) -> List[OptimizationParameter]:
+    def _validate_optimization_parameters(
+        self, parameters: List[OptimizationParameter]
+    ) -> List[OptimizationParameter]:
         """
         Validate optimization parameters to ensure realistic bounds.
 
@@ -555,7 +629,9 @@ class OptimizerAgent(BaseAgent):
             try:
                 # Check parameter type
                 if param.parameter_type not in ["float", "int", "categorical"]:
-                    self.logger.warning(f"Invalid parameter type for {param.name}: {param.parameter_type}")
+                    self.logger.warning(
+                        f"Invalid parameter type for {param.name}: {param.parameter_type}"
+                    )
                     continue
 
                 # Validate numeric parameters
@@ -573,7 +649,9 @@ class OptimizerAgent(BaseAgent):
                     continue
 
                 validated_parameters.append(param)
-                self.logger.info(f"Validated parameter: {param.name} ({param.parameter_type})")
+                self.logger.info(
+                    f"Validated parameter: {param.name} ({param.parameter_type})"
+                )
 
             except Exception as e:
                 self.logger.error(f"Error validating parameter {param.name}: {e}")
@@ -605,13 +683,17 @@ class OptimizerAgent(BaseAgent):
             # Check if step size is reasonable relative to range
             range_size = param.max_value - param.min_value
             if param.step > range_size:
-                self.logger.warning(f"Step size too large for {param.name}: {param.step} > {range_size}")
+                self.logger.warning(
+                    f"Step size too large for {param.name}: {param.step} > {range_size}"
+                )
                 return False
 
             # Check for reasonable number of steps (avoid too many combinations)
             num_steps = int(range_size / param.step) + 1
             if num_steps > 100:
-                self.logger.warning(f"Too many steps for {param.name}: {num_steps} steps")
+                self.logger.warning(
+                    f"Too many steps for {param.name}: {num_steps} steps"
+                )
                 return False
 
             return True
@@ -632,7 +714,9 @@ class OptimizerAgent(BaseAgent):
         """
         try:
             if not param.categories:
-                self.logger.warning(f"No categories provided for categorical parameter {param.name}")
+                self.logger.warning(
+                    f"No categories provided for categorical parameter {param.name}"
+                )
                 return False
 
             if len(param.categories) == 0:
@@ -640,13 +724,17 @@ class OptimizerAgent(BaseAgent):
                 return False
 
             if len(param.categories) > 20:
-                self.logger.warning(f"Too many categories for parameter {param.name}: {len(param.categories)}")
+                self.logger.warning(
+                    f"Too many categories for parameter {param.name}: {len(param.categories)}"
+                )
                 return False
 
             return True
 
         except Exception as e:
-            self.logger.error(f"Error validating categorical parameter {param.name}: {e}")
+            self.logger.error(
+                f"Error validating categorical parameter {param.name}: {e}"
+            )
             return False
 
     def _check_realistic_bounds(self, param: OptimizationParameter) -> bool:
@@ -710,7 +798,9 @@ class OptimizerAgent(BaseAgent):
             self.logger.error(f"Error checking realistic bounds for {param.name}: {e}")
             return True  # Default to allowing if check fails
 
-    def _generate_parameter_range(self, param: OptimizationParameter) -> List[Union[float, int, str]]:
+    def _generate_parameter_range(
+        self, param: OptimizationParameter
+    ) -> List[Union[float, int, str]]:
         """
         Generate parameter range with bounds checking.
 
@@ -856,7 +946,9 @@ class OptimizerAgent(BaseAgent):
                     return False
 
                 # Risk-reward ratio should be reasonable
-                risk_reward_ratio = combination["take_profit"] / combination["stop_loss"]
+                risk_reward_ratio = (
+                    combination["take_profit"] / combination["stop_loss"]
+                )
                 if risk_reward_ratio < 1.5 or risk_reward_ratio > 10:
                     return False
 
@@ -887,7 +979,9 @@ class OptimizerAgent(BaseAgent):
             # Create strategies with combination
             strategies = []
             for strategy_config in combination:
-                strategy_class = self.strategy_registry.get(strategy_config.strategy_name)
+                strategy_class = self.strategy_registry.get(
+                    strategy_config.strategy_name
+                )
                 if strategy_class:
                     strategy = strategy_class(**strategy_config.parameters)
                     strategies.append(strategy)
@@ -899,7 +993,9 @@ class OptimizerAgent(BaseAgent):
             all_results = []
             for symbol in config.symbols:
                 for time_period in config.time_periods:
-                    result = await self._run_backtest(strategies, symbol, time_period, config)
+                    result = await self._run_backtest(
+                        strategies, symbol, time_period, config
+                    )
                     if result:
                         all_results.append(result)
 
@@ -908,10 +1004,14 @@ class OptimizerAgent(BaseAgent):
 
             # Aggregate results
             aggregated_metrics = self._aggregate_metrics(all_results)
-            optimization_score = self._calculate_optimization_score(aggregated_metrics, config.target_metric)
+            optimization_score = self._calculate_optimization_score(
+                aggregated_metrics, config.target_metric
+            )
 
             return OptimizationResult(
-                parameter_combination={"strategies": [s.to_dict() for s in combination]},
+                parameter_combination={
+                    "strategies": [s.to_dict() for s in combination]
+                },
                 performance_metrics=aggregated_metrics,
                 backtest_results={"individual_results": all_results},
                 optimization_score=optimization_score,
@@ -936,8 +1036,12 @@ class OptimizerAgent(BaseAgent):
         """
         try:
             # Validate combination before testing
-            if not self._validate_parameter_combination(combination, config.parameters_to_optimize):
-                self.logger.debug(f"Skipping invalid parameter combination: {combination}")
+            if not self._validate_parameter_combination(
+                combination, config.parameters_to_optimize
+            ):
+                self.logger.debug(
+                    f"Skipping invalid parameter combination: {combination}"
+                )
                 return None
 
             # Apply parameter bounds during testing
@@ -955,17 +1059,23 @@ class OptimizerAgent(BaseAgent):
                         )
 
                         # Run backtest
-                        backtest_result = await self._run_backtest(strategies, symbol, time_period, config)
+                        backtest_result = await self._run_backtest(
+                            strategies, symbol, time_period, config
+                        )
 
                         if backtest_result:
                             all_results.append(backtest_result)
 
                     except Exception as e:
-                        self.logger.warning(f"Error testing {symbol} for time period {time_period}: {e}")
+                        self.logger.warning(
+                            f"Error testing {symbol} for time period {time_period}: {e}"
+                        )
                         continue
 
             if not all_results:
-                self.logger.warning("No valid backtest results for parameter combination")
+                self.logger.warning(
+                    "No valid backtest results for parameter combination"
+                )
                 return None
 
             # Aggregate metrics
@@ -973,11 +1083,15 @@ class OptimizerAgent(BaseAgent):
 
             # Check if results meet minimum requirements
             if not self._meets_minimum_requirements(aggregated_metrics, config):
-                self.logger.debug(f"Parameter combination does not meet minimum requirements")
+                self.logger.debug(
+                    f"Parameter combination does not meet minimum requirements"
+                )
                 return None
 
             # Calculate optimization score
-            optimization_score = self._calculate_optimization_score(aggregated_metrics, config.target_metric)
+            optimization_score = self._calculate_optimization_score(
+                aggregated_metrics, config.target_metric
+            )
 
             # Create result
             result = OptimizationResult(
@@ -1032,7 +1146,9 @@ class OptimizerAgent(BaseAgent):
                 merged_params = strategy_config.parameters.copy()
                 merged_params.update(parameters)
 
-                strategy_class = self.strategy_registry.get(strategy_config.strategy_name)
+                strategy_class = self.strategy_registry.get(
+                    strategy_config.strategy_name
+                )
                 if strategy_class:
                     strategy = strategy_class(**merged_params)
                     strategies.append(strategy)
@@ -1044,7 +1160,9 @@ class OptimizerAgent(BaseAgent):
             all_results = []
             for symbol in config.symbols:
                 for time_period in config.time_periods:
-                    result = await self._run_backtest(strategies, symbol, time_period, config)
+                    result = await self._run_backtest(
+                        strategies, symbol, time_period, config
+                    )
                     if result:
                         all_results.append(result)
 
@@ -1053,7 +1171,9 @@ class OptimizerAgent(BaseAgent):
 
             # Aggregate results
             aggregated_metrics = self._aggregate_metrics(all_results)
-            optimization_score = self._calculate_optimization_score(aggregated_metrics, config.target_metric)
+            optimization_score = self._calculate_optimization_score(
+                aggregated_metrics, config.target_metric
+            )
 
             return OptimizationResult(
                 parameter_combination=combination,
@@ -1067,7 +1187,11 @@ class OptimizerAgent(BaseAgent):
             return None
 
     async def _run_backtest(
-        self, strategies: List, symbol: str, time_period: Dict[str, Any], config: OptimizationConfig
+        self,
+        strategies: List,
+        symbol: str,
+        time_period: Dict[str, Any],
+        config: OptimizationConfig,
     ) -> Optional[Dict[str, Any]]:
         """Run backtest for a specific configuration.
 
@@ -1090,7 +1214,10 @@ class OptimizerAgent(BaseAgent):
                 initial_capital=100000.0,
             )
 
-            if not backtest_result or backtest_result["total_trades"] < config.min_trades:
+            if (
+                not backtest_result
+                or backtest_result["total_trades"] < config.min_trades
+            ):
                 return None
 
             # Calculate metrics
@@ -1133,14 +1260,27 @@ class OptimizerAgent(BaseAgent):
         total_trades = sum(metrics["total_trades"] for metrics in metrics_list)
 
         aggregated = {}
-        for metric_name in ["total_return", "sharpe_ratio", "max_drawdown", "win_rate", "profit_factor"]:
+        for metric_name in [
+            "total_return",
+            "sharpe_ratio",
+            "max_drawdown",
+            "win_rate",
+            "profit_factor",
+        ]:
             if metric_name in metrics_list[0]:
-                weighted_sum = sum(metrics[metric_name] * metrics["total_trades"] for metrics in metrics_list)
-                aggregated[metric_name] = weighted_sum / total_trades if total_trades > 0 else 0.0
+                weighted_sum = sum(
+                    metrics[metric_name] * metrics["total_trades"]
+                    for metrics in metrics_list
+                )
+                aggregated[metric_name] = (
+                    weighted_sum / total_trades if total_trades > 0 else 0.0
+                )
 
         return aggregated
 
-    def _calculate_optimization_score(self, metrics: Dict[str, float], target_metric: OptimizationMetric) -> float:
+    def _calculate_optimization_score(
+        self, metrics: Dict[str, float], target_metric: OptimizationMetric
+    ) -> float:
         """Calculate optimization score based on target metric.
 
         Args:
@@ -1155,7 +1295,9 @@ class OptimizerAgent(BaseAgent):
         elif target_metric == OptimizationMetric.TOTAL_RETURN:
             return metrics.get("total_return", 0.0)
         elif target_metric == OptimizationMetric.MAX_DRAWDOWN:
-            return -abs(metrics.get("max_drawdown", 0.0))  # Negative because lower is better
+            return -abs(
+                metrics.get("max_drawdown", 0.0)
+            )  # Negative because lower is better
         elif target_metric == OptimizationMetric.WIN_RATE:
             return metrics.get("win_rate", 0.0)
         elif target_metric == OptimizationMetric.PROFIT_FACTOR:
@@ -1172,12 +1314,19 @@ class OptimizerAgent(BaseAgent):
             profit_factor = metrics.get("profit_factor", 0.0)
 
             # Normalize and weight
-            score = sharpe * 0.3 + return_pct * 0.3 + win_rate * 0.2 + min(profit_factor, 5.0) / 5.0 * 0.2
+            score = (
+                sharpe * 0.3
+                + return_pct * 0.3
+                + win_rate * 0.2
+                + min(profit_factor, 5.0) / 5.0 * 0.2
+            )
             return score
         else:
             return 0.0
 
-    async def _update_configurations(self, results: List[OptimizationResult], config: OptimizationConfig) -> None:
+    async def _update_configurations(
+        self, results: List[OptimizationResult], config: OptimizationConfig
+    ) -> None:
         """Update configurations based on optimization results.
 
         Args:
@@ -1204,7 +1353,9 @@ class OptimizerAgent(BaseAgent):
         # Log optimization results
         self._log_optimization_results(results, config)
 
-    async def _update_agent_configs(self, best_result: OptimizationResult, config: OptimizationConfig) -> None:
+    async def _update_agent_configs(
+        self, best_result: OptimizationResult, config: OptimizationConfig
+    ) -> None:
         """Update agent configurations based on best result.
 
         Args:
@@ -1218,10 +1369,14 @@ class OptimizerAgent(BaseAgent):
 
                 # Update risk parameters if they were optimized
                 if "risk_per_trade" in best_result.parameter_combination:
-                    execution_config["risk_per_trade"] = best_result.parameter_combination["risk_per_trade"]
+                    execution_config[
+                        "risk_per_trade"
+                    ] = best_result.parameter_combination["risk_per_trade"]
 
                 if "max_position_size" in best_result.parameter_combination:
-                    execution_config["max_position_size"] = best_result.parameter_combination["max_position_size"]
+                    execution_config[
+                        "max_position_size"
+                    ] = best_result.parameter_combination["max_position_size"]
 
             # Update other agent configs as needed
             # This would depend on the specific agents in your system
@@ -1229,7 +1384,9 @@ class OptimizerAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error updating agent configs: {e}")
 
-    async def _update_strategy_configs(self, best_result: OptimizationResult, config: OptimizationConfig) -> None:
+    async def _update_strategy_configs(
+        self, best_result: OptimizationResult, config: OptimizationConfig
+    ) -> None:
         """Update strategy configurations based on best result.
 
         Args:
@@ -1257,7 +1414,9 @@ class OptimizerAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error updating strategy configs: {e}")
 
-    async def _save_strategy_config(self, strategy_name: str, config: Dict[str, Any]) -> None:
+    async def _save_strategy_config(
+        self, strategy_name: str, config: Dict[str, Any]
+    ) -> None:
         """Save strategy configuration.
 
         Args:
@@ -1306,7 +1465,9 @@ class OptimizerAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error saving parameter config: {e}")
 
-    def _log_optimization_results(self, results: List[OptimizationResult], config: OptimizationConfig) -> None:
+    def _log_optimization_results(
+        self, results: List[OptimizationResult], config: OptimizationConfig
+    ) -> None:
         """Log optimization results.
 
         Args:
@@ -1333,7 +1494,9 @@ class OptimizerAgent(BaseAgent):
 
             # Log to memory
             self.memory.log_decision(
-                agent_name=self.config.name, decision_type="optimization_completed", details=history_entry
+                agent_name=self.config.name,
+                decision_type="optimization_completed",
+                details=history_entry,
             )
 
         except Exception as e:
@@ -1352,7 +1515,12 @@ class OptimizerAgent(BaseAgent):
             Optimization summary
         """
         if not results:
-            return {"total_results": 0, "best_score": 0.0, "average_score": 0.0, "improvement": 0.0}
+            return {
+                "total_results": 0,
+                "best_score": 0.0,
+                "average_score": 0.0,
+                "improvement": 0.0,
+            }
 
         scores = [r.optimization_score for r in results]
 
@@ -1371,7 +1539,9 @@ class OptimizerAgent(BaseAgent):
 
         return summary
 
-    def _calculate_improvement(self, results: List[OptimizationResult], config: OptimizationConfig) -> float:
+    def _calculate_improvement(
+        self, results: List[OptimizationResult], config: OptimizationConfig
+    ) -> float:
         """Calculate improvement over baseline.
 
         Args:

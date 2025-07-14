@@ -16,9 +16,7 @@ from redis.exceptions import RedisError
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from trading.optimization.performance_logger import (
-    PerformanceLogger,
-)
+from trading.optimization.performance_logger import PerformanceLogger
 from trading.optimization.strategy_selection_agent import StrategySelectionAgent
 from trading.portfolio.llm_utils import DailyCommentary, LLMInterface, TradeRationale
 
@@ -29,7 +27,9 @@ logger.setLevel(logging.DEBUG)
 # Add file handler for debug logs
 debug_handler = logging.FileHandler("trading/portfolio/logs/portfolio_debug.log")
 debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+debug_formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 debug_handler.setFormatter(debug_formatter)
 logger.addHandler(debug_handler)
 
@@ -90,7 +90,9 @@ class Position:
         if isinstance(data["exit_time"], str):
             data["exit_time"] = datetime.fromisoformat(data["exit_time"])
         if isinstance(data["max_holding_period"], str):
-            data["max_holding_period"] = timedelta(seconds=float(data["max_holding_period"]))
+            data["max_holding_period"] = timedelta(
+                seconds=float(data["max_holding_period"])
+            )
 
         # Convert rationale
         if "rationale" in data:
@@ -134,7 +136,9 @@ class PortfolioState:
 
         # Convert position dictionaries to Position objects
         data["open_positions"] = [Position.from_dict(p) for p in data["open_positions"]]
-        data["closed_positions"] = [Position.from_dict(p) for p in data["closed_positions"]]
+        data["closed_positions"] = [
+            Position.from_dict(p) for p in data["closed_positions"]
+        ]
 
         return cls(**data)
 
@@ -205,9 +209,13 @@ class PortfolioManager:
         # Add file handler if no handlers exist
         if not self.logger.handlers:
             try:
-                file_handler = logging.FileHandler("trading/portfolio/logs/portfolio.log")
+                file_handler = logging.FileHandler(
+                    "trading/portfolio/logs/portfolio.log"
+                )
                 file_handler.setLevel(logging.INFO)
-                formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+                formatter = logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                )
                 file_handler.setFormatter(formatter)
                 self.logger.addHandler(file_handler)
             except Exception as e:
@@ -252,7 +260,10 @@ class PortfolioManager:
 
         # Generate trade rationale
         rationale = self.llm_interface.generate_trade_rationale(
-            symbol=symbol, direction=direction.value, strategy=strategy, market_data=market_data
+            symbol=symbol,
+            direction=direction.value,
+            strategy=strategy,
+            market_data=market_data,
         )
 
         # Create position
@@ -328,7 +339,9 @@ class PortfolioManager:
         # Update metrics
         self._update_metrics()
 
-    def update_positions(self, prices: Dict[str, float], market_data: Dict[str, Any]) -> None:
+    def update_positions(
+        self, prices: Dict[str, float], market_data: Dict[str, Any]
+    ) -> None:
         """Update all open positions with current prices.
 
         Args:
@@ -357,27 +370,40 @@ class PortfolioManager:
             total_unrealized_pnl += unrealized_pnl
 
             # Update risk metrics
-            position.risk_metrics = self._calculate_position_risk(position, price, market_data)
+            position.risk_metrics = self._calculate_position_risk(
+                position, price, market_data
+            )
 
             # Check take profit
             if position.take_profit is not None:
-                if (position.direction == TradeDirection.LONG and price >= position.take_profit) or (
-                    position.direction == TradeDirection.SHORT and price <= position.take_profit
+                if (
+                    position.direction == TradeDirection.LONG
+                    and price >= position.take_profit
+                ) or (
+                    position.direction == TradeDirection.SHORT
+                    and price <= position.take_profit
                 ):
                     self.close_position(position, price)
                     continue
 
             # Check stop loss
             if position.stop_loss is not None:
-                if (position.direction == TradeDirection.LONG and price <= position.stop_loss) or (
-                    position.direction == TradeDirection.SHORT and price >= position.stop_loss
+                if (
+                    position.direction == TradeDirection.LONG
+                    and price <= position.stop_loss
+                ) or (
+                    position.direction == TradeDirection.SHORT
+                    and price >= position.stop_loss
                 ):
                     self.close_position(position, price)
                     continue
 
             # Check max holding period
             if position.max_holding_period is not None:
-                if datetime.utcnow() - position.entry_time > position.max_holding_period:
+                if (
+                    datetime.utcnow() - position.entry_time
+                    > position.max_holding_period
+                ):
                     self.close_position(position, price)
                     continue
 
@@ -394,7 +420,9 @@ class PortfolioManager:
         # Generate daily commentary if needed
         self._generate_daily_commentary(market_data)
 
-    def _calculate_position_size(self, symbol: str, price: float, strategy: str, market_data: Dict[str, Any]) -> float:
+    def _calculate_position_size(
+        self, symbol: str, price: float, strategy: str, market_data: Dict[str, Any]
+    ) -> float:
         """Calculate position size based on risk and strategy confidence.
 
         Args:
@@ -415,7 +443,9 @@ class PortfolioManager:
         volatility_factor = 1.0 / (1.0 + volatility)
 
         # Adjust for strategy confidence
-        strategy_confidence = self.strategy_agent.get_strategy_confidence(strategy, market_data)
+        strategy_confidence = self.strategy_agent.get_strategy_confidence(
+            strategy, market_data
+        )
         confidence_factor = 0.5 + strategy_confidence  # 0.5-1.5 range
 
         # Adjust for market regime
@@ -499,9 +529,16 @@ class PortfolioManager:
         # Calculate beta
         beta = market_data.get("beta", {}).get(position.symbol, 1.0)
 
-        return {"var_95": var_95, "var_99": var_99, "volatility": volatility, "beta": beta}
+        return {
+            "var_95": var_95,
+            "var_99": var_99,
+            "volatility": volatility,
+            "beta": beta,
+        }
 
-    def _update_risk_metrics(self, prices: Dict[str, float], market_data: Dict[str, Any]) -> None:
+    def _update_risk_metrics(
+        self, prices: Dict[str, float], market_data: Dict[str, Any]
+    ) -> None:
         """Update portfolio risk metrics.
 
         Args:
@@ -512,7 +549,11 @@ class PortfolioManager:
         position_var = []
         for position in self.state.open_positions:
             if position.symbol in prices:
-                var = position.risk_metrics.get("var_95", 0) * position.size * prices[position.symbol]
+                var = (
+                    position.risk_metrics.get("var_95", 0)
+                    * position.size
+                    * prices[position.symbol]
+                )
                 position_var.append(var)
 
         portfolio_var = np.sqrt(np.sum(np.square(position_var)))
@@ -521,7 +562,11 @@ class PortfolioManager:
         position_vol = []
         for position in self.state.open_positions:
             if position.symbol in prices:
-                vol = position.risk_metrics.get("volatility", 0) * position.size * prices[position.symbol]
+                vol = (
+                    position.risk_metrics.get("volatility", 0)
+                    * position.size
+                    * prices[position.symbol]
+                )
                 position_vol.append(vol)
 
         portfolio_vol = np.sqrt(np.sum(np.square(position_vol)))
@@ -530,7 +575,11 @@ class PortfolioManager:
         position_beta = []
         for position in self.state.open_positions:
             if position.symbol in prices:
-                beta = position.risk_metrics.get("beta", 1.0) * position.size * prices[position.symbol]
+                beta = (
+                    position.risk_metrics.get("beta", 1.0)
+                    * position.size
+                    * prices[position.symbol]
+                )
                 position_beta.append(beta)
 
         portfolio_beta = np.average(position_beta) if position_beta else 1.0
@@ -548,16 +597,22 @@ class PortfolioManager:
         strategy_pnl = {}
         for position in self.state.closed_positions:
             if position.pnl is not None:
-                strategy_pnl[position.strategy] = strategy_pnl.get(position.strategy, 0) + position.pnl
+                strategy_pnl[position.strategy] = (
+                    strategy_pnl.get(position.strategy, 0) + position.pnl
+                )
 
         # Calculate weights
         total_pnl = sum(strategy_pnl.values())
         if total_pnl > 0:
-            self.state.strategy_weights = {strategy: pnl / total_pnl for strategy, pnl in strategy_pnl.items()}
+            self.state.strategy_weights = {
+                strategy: pnl / total_pnl for strategy, pnl in strategy_pnl.items()
+            }
         else:
             # Equal weights if no profit
             strategies = set(p.strategy for p in self.state.closed_positions)
-            self.state.strategy_weights = {strategy: 1.0 / len(strategies) for strategy in strategies}
+            self.state.strategy_weights = {
+                strategy: 1.0 / len(strategies) for strategy in strategies
+            }
 
     def _generate_daily_commentary(self, market_data: Dict[str, Any]) -> None:
         """Generate daily trading commentary.
@@ -572,12 +627,16 @@ class PortfolioManager:
         if current_date > last_commentary:
             # Get trades for the day
             daily_trades = [
-                p.to_dict() for p in self.state.closed_positions if p.exit_time and p.exit_time.date() == current_date
+                p.to_dict()
+                for p in self.state.closed_positions
+                if p.exit_time and p.exit_time.date() == current_date
             ]
 
             # Generate commentary
             commentary = self.llm_interface.generate_daily_commentary(
-                portfolio_state=self.state.to_dict(), trades=daily_trades, market_data=market_data
+                portfolio_state=self.state.to_dict(),
+                trades=daily_trades,
+                market_data=market_data,
             )
 
             if commentary:
@@ -596,7 +655,11 @@ class PortfolioManager:
         """
         if self.redis is not None:
             try:
-                message = {"timestamp": datetime.utcnow().isoformat(), "event_type": event_type, "data": data}
+                message = {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "event_type": event_type,
+                    "data": data,
+                }
                 self.redis.publish("portfolio_updates", json.dumps(message))
             except RedisError as e:
                 logger.error(f"Failed to publish update: {e}")
@@ -609,7 +672,11 @@ class PortfolioManager:
             action: Action performed ("open" or "close")
         """
         # Create log entry
-        log_entry = {"timestamp": datetime.utcnow().isoformat(), "action": action, "position": position.to_dict()}
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "action": action,
+            "position": position.to_dict(),
+        }
 
         # Save to JSON
         log_path = f"trading/portfolio/logs/positions_{datetime.utcnow().strftime('%Y%m%d')}.json"
@@ -627,11 +694,15 @@ class PortfolioManager:
         """Log daily commentary."""
         try:
             if self.redis:
-                self.redis.lpush("portfolio_commentary", json.dumps(commentary.to_dict()))
+                self.redis.lpush(
+                    "portfolio_commentary", json.dumps(commentary.to_dict())
+                )
             else:
                 # Log to file
                 with open("trading/portfolio/logs/commentary.log", "a") as f:
-                    f.write(f"{datetime.utcnow().isoformat()}: {commentary.to_dict()}\n")
+                    f.write(
+                        f"{datetime.utcnow().isoformat()}: {commentary.to_dict()}\n"
+                    )
         except Exception as e:
             logger.error(f"Error logging commentary: {e}")
 
@@ -715,8 +786,12 @@ class PortfolioManager:
         try:
             # Calculate basic metrics
             total_positions = len(self.state.closed_positions)
-            winning_positions = len([p for p in self.state.closed_positions if p.pnl and p.pnl > 0])
-            win_rate = winning_positions / total_positions if total_positions > 0 else 0.0
+            winning_positions = len(
+                [p for p in self.state.closed_positions if p.pnl and p.pnl > 0]
+            )
+            win_rate = (
+                winning_positions / total_positions if total_positions > 0 else 0.0
+            )
 
             # Calculate P&L metrics
             total_pnl = sum([p.pnl or 0 for p in self.state.closed_positions])
@@ -740,7 +815,11 @@ class PortfolioManager:
             for position in self.state.closed_positions:
                 strategy = position.strategy
                 if strategy not in strategy_performance:
-                    strategy_performance[strategy] = {"total_pnl": 0.0, "positions": 0, "wins": 0}
+                    strategy_performance[strategy] = {
+                        "total_pnl": 0.0,
+                        "positions": 0,
+                        "wins": 0,
+                    }
                 strategy_performance[strategy]["total_pnl"] += position.pnl or 0
                 strategy_performance[strategy]["positions"] += 1
                 if position.pnl and position.pnl > 0:
@@ -750,9 +829,13 @@ class PortfolioManager:
             for strategy in strategy_performance:
                 total_pos = strategy_performance[strategy]["positions"]
                 wins = strategy_performance[strategy]["wins"]
-                strategy_performance[strategy]["win_rate"] = wins / total_pos if total_pos > 0 else 0.0
+                strategy_performance[strategy]["win_rate"] = (
+                    wins / total_pos if total_pos > 0 else 0.0
+                )
                 strategy_performance[strategy]["avg_pnl"] = (
-                    strategy_performance[strategy]["total_pnl"] / total_pos if total_pos > 0 else 0.0
+                    strategy_performance[strategy]["total_pnl"] / total_pos
+                    if total_pos > 0
+                    else 0.0
                 )
 
             summary = {
@@ -775,7 +858,13 @@ class PortfolioManager:
 
         except Exception as e:
             logger.error(f"Error generating performance summary: {e}")
-            return {"error": str(e), "total_positions": 0, "win_rate": 0.0, "total_pnl": 0.0, "sharpe_ratio": 0.0}
+            return {
+                "error": str(e),
+                "total_positions": 0,
+                "win_rate": 0.0,
+                "total_pnl": 0.0,
+                "sharpe_ratio": 0.0,
+            }
 
     def save(self, filename: str) -> None:
         """Save portfolio state to file.
@@ -817,4 +906,10 @@ class PortfolioManager:
             raise
 
 
-__all__ = ["PortfolioManager", "PortfolioState", "Position", "PositionStatus", "TradeDirection"]
+__all__ = [
+    "PortfolioManager",
+    "PortfolioState",
+    "Position",
+    "PositionStatus",
+    "TradeDirection",
+]

@@ -11,7 +11,9 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -109,18 +111,24 @@ class ReturnStatementAuditor:
 
         return python_files
 
-    def audit_function(self, node: ast.FunctionDef, filepath: str) -> List[Dict[str, Any]]:
+    def audit_function(
+        self, node: ast.FunctionDef, filepath: str
+    ) -> List[Dict[str, Any]]:
         """Audit a single function for return statement violations."""
         violations = []
 
         # Skip abstract methods and properties
         if any(
-            decorator.id == "abstractmethod" for decorator in node.decorator_list if isinstance(decorator, ast.Name)
+            decorator.id == "abstractmethod"
+            for decorator in node.decorator_list
+            if isinstance(decorator, ast.Name)
         ):
             return violations
 
         if any(
-            decorator.attr == "property" for decorator in node.decorator_list if isinstance(decorator, ast.Attribute)
+            decorator.attr == "property"
+            for decorator in node.decorator_list
+            if isinstance(decorator, ast.Attribute)
         ):
             return violations
 
@@ -133,7 +141,8 @@ class ReturnStatementAuditor:
                 has_return = True
                 # Check if it's a structured return (dict with success key)
                 if isinstance(child.value, ast.Dict) and any(
-                    isinstance(k, ast.Constant) and k.value == "success" for k in child.value.keys
+                    isinstance(k, ast.Constant) and k.value == "success"
+                    for k in child.value.keys
                 ):
                     has_structured_return = True
                 elif (
@@ -253,9 +262,13 @@ class ReturnStatementAuditor:
             print("Files with violations:")
             for file_result in results["file_results"]:
                 if file_result["violation_count"] > 0:
-                    print(f"  {file_result['filepath']}: {file_result['violation_count']} violations")
+                    print(
+                        f"  {file_result['filepath']}: {file_result['violation_count']} violations"
+                    )
                     for violation in file_result["violations"]:
-                        print(f"    - {violation['function']} (line {violation['line']}): {violation['message']}")
+                        print(
+                            f"    - {violation['function']} (line {violation['line']}): {violation['message']}"
+                        )
         else:
             print("✅ No return statement violations found!")
 

@@ -3,18 +3,14 @@
 Alpha Attribution Engine for decomposing PnL and detecting alpha decay.
 """
 
-import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from scipy import stats
-from sklearn.decomposition import PCA
 from sklearn.linear_model import LinearRegression
 
 from trading.memory.agent_memory import AgentMemory
@@ -26,6 +22,7 @@ from trading.utils.performance_metrics import (
 
 class AttributionMethod(str, Enum):
     """Alpha attribution methods."""
+
     BRINSON_HOOD_BEEBOWER = "brinson_hood_beebower"
     FACTOR_MODEL = "factor_model"
     RISK_DECOMPOSITION = "risk_decomposition"
@@ -35,6 +32,7 @@ class AttributionMethod(str, Enum):
 @dataclass
 class AttributionResult:
     """Alpha attribution result."""
+
     timestamp: datetime
     period: str
     total_return: float
@@ -50,6 +48,7 @@ class AttributionResult:
 @dataclass
 class AlphaDecayAlert:
     """Alpha decay alert."""
+
     strategy_name: str
     timestamp: datetime
     decay_score: float
@@ -61,6 +60,7 @@ class AlphaDecayAlert:
 @dataclass
 class StrategyContribution:
     """Strategy contribution to performance."""
+
     strategy_name: str
     period_start: datetime
     period_end: datetime
@@ -75,6 +75,7 @@ class StrategyContribution:
 @dataclass
 class AlphaDecayAnalysis:
     """Alpha decay analysis result."""
+
     strategy_name: str
     decay_detected: bool
     decay_score: float
@@ -87,6 +88,7 @@ class AlphaDecayAnalysis:
 @dataclass
 class AttributionFactor:
     """Individual attribution factor."""
+
     factor_name: str
     contribution: float
     weight: float
@@ -98,6 +100,7 @@ class AttributionFactor:
 @dataclass
 class AlphaAttribution:
     """Complete alpha attribution analysis."""
+
     total_alpha: float
     explained_alpha: float
     unexplained_alpha: float
@@ -130,10 +133,10 @@ class AlphaAttributionEngine:
         self.memory = AgentMemory()
 
         # Configuration
-        self.attribution_window = self.config.get('attribution_window', 252)  # 1 year
-        self.decay_detection_window = self.config.get('decay_detection_window', 60)
-        self.decay_threshold = self.config.get('decay_threshold', 0.3)
-        self.confidence_threshold = self.config.get('confidence_threshold', 0.7)
+        self.attribution_window = self.config.get("attribution_window", 252)  # 1 year
+        self.decay_detection_window = self.config.get("decay_detection_window", 60)
+        self.decay_threshold = self.config.get("decay_threshold", 0.3)
+        self.confidence_threshold = self.config.get("confidence_threshold", 0.7)
 
         # Storage
         self.attribution_history: List[AttributionResult] = []
@@ -142,10 +145,10 @@ class AlphaAttributionEngine:
         self.factor_exposures: Dict[str, pd.DataFrame] = {}
 
         # Attribution parameters
-        self.min_periods = self.config.get('min_periods', 30)
+        self.min_periods = self.config.get("min_periods", 30)
 
         # Performance metrics
-        self.metrics = ['return', 'sharpe_ratio', 'max_drawdown', 'volatility']
+        self.metrics = ["return", "sharpe_ratio", "max_drawdown", "volatility"]
 
         # Initialize components
         self.alpha_decay_model = None
@@ -153,123 +156,147 @@ class AlphaAttributionEngine:
 
         self.logger.info("Alpha Attribution Engine initialized")
 
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _initialize_factor_registry(self) -> Dict[str, Dict[str, Any]]:
         """Initialize factor registry for attribution analysis."""
         return {
-            'momentum': {
-                'description': 'Price momentum factor',
-                'calculation': self._calculate_momentum_factor,
-                'expected_decay': 0.1,
-                'category': 'technical'
+            "momentum": {
+                "description": "Price momentum factor",
+                "calculation": self._calculate_momentum_factor,
+                "expected_decay": 0.1,
+                "category": "technical",
             },
-            'volatility': {
-                'description': 'Volatility factor',
-                'calculation': self._calculate_volatility_factor,
-                'expected_decay': 0.15,
-                'category': 'risk'
+            "volatility": {
+                "description": "Volatility factor",
+                "calculation": self._calculate_volatility_factor,
+                "expected_decay": 0.15,
+                "category": "risk",
             },
-            'volume': {
-                'description': 'Volume factor',
-                'calculation': self._calculate_volume_factor,
-                'expected_decay': 0.2,
-                'category': 'liquidity'
+            "volume": {
+                "description": "Volume factor",
+                "calculation": self._calculate_volume_factor,
+                "expected_decay": 0.2,
+                "category": "liquidity",
             },
-            'mean_reversion': {
-                'description': 'Mean reversion factor',
-                'calculation': self._calculate_mean_reversion_factor,
-                'expected_decay': 0.05,
-                'category': 'technical'
+            "mean_reversion": {
+                "description": "Mean reversion factor",
+                "calculation": self._calculate_mean_reversion_factor,
+                "expected_decay": 0.05,
+                "category": "technical",
             },
-            'trend': {
-                'description': 'Trend strength factor',
-                'calculation': self._calculate_trend_factor,
-                'expected_decay': 0.08,
-                'category': 'technical'
+            "trend": {
+                "description": "Trend strength factor",
+                "calculation": self._calculate_trend_factor,
+                "expected_decay": 0.08,
+                "category": "technical",
             },
-            'correlation': {
-                'description': 'Market correlation factor',
-                'calculation': self._calculate_correlation_factor,
-                'expected_decay': 0.12,
-                'category': 'systematic'
+            "correlation": {
+                "description": "Market correlation factor",
+                "calculation": self._calculate_correlation_factor,
+                "expected_decay": 0.12,
+                "category": "systematic",
             },
-            'liquidity': {
-                'description': 'Liquidity factor',
-                'calculation': self._calculate_liquidity_factor,
-                'expected_decay': 0.25,
-                'category': 'liquidity'
+            "liquidity": {
+                "description": "Liquidity factor",
+                "calculation": self._calculate_liquidity_factor,
+                "expected_decay": 0.25,
+                "category": "liquidity",
             },
-            'sentiment': {
-                'description': 'Market sentiment factor',
-                'calculation': self._calculate_sentiment_factor,
-                'expected_decay': 0.3,
-                'category': 'behavioral'
-            }
+            "sentiment": {
+                "description": "Market sentiment factor",
+                "calculation": self._calculate_sentiment_factor,
+                "expected_decay": 0.3,
+                "category": "behavioral",
+            },
         }
 
     def _calculate_momentum_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate momentum factor."""
         try:
-            returns = data['Close'].pct_change()
+            returns = data["Close"].pct_change()
             momentum_5 = returns.rolling(5).mean()
             momentum_20 = returns.rolling(20).mean()
             momentum_factor = momentum_5 - momentum_20
             return momentum_factor
         except Exception as e:
             self.logger.error(f"Error calculating momentum factor: {e}")
-            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": pd.Series(index=data.index, data=0.0),
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _calculate_volatility_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate volatility factor."""
         try:
-            returns = data['Close'].pct_change()
+            returns = data["Close"].pct_change()
             volatility_5 = returns.rolling(5).std()
             volatility_20 = returns.rolling(20).std()
             volatility_factor = volatility_5 / volatility_20 - 1
             return volatility_factor
         except Exception as e:
             self.logger.error(f"Error calculating volatility factor: {e}")
-            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": pd.Series(index=data.index, data=0.0),
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _calculate_volume_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate volume factor."""
         try:
-            if 'Volume' not in data.columns:
+            if "Volume" not in data.columns:
                 return pd.Series(index=data.index, data=0.0)
 
-            volume_ma = data['Volume'].rolling(20).mean()
-            volume_factor = (data['Volume'] - volume_ma) / volume_ma
+            volume_ma = data["Volume"].rolling(20).mean()
+            volume_factor = (data["Volume"] - volume_ma) / volume_ma
             return volume_factor
         except Exception as e:
             self.logger.error(f"Error calculating volume factor: {e}")
-            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": pd.Series(index=data.index, data=0.0),
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _calculate_mean_reversion_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate mean reversion factor."""
         try:
-            sma = data['Close'].rolling(20).mean()
-            std = data['Close'].rolling(20).std()
+            sma = data["Close"].rolling(20).mean()
+            std = data["Close"].rolling(20).std()
             upper_band = sma + (2 * std)
             lower_band = sma - (2 * std)
 
             # Position within Bollinger Bands
-            position = (data['Close'] - lower_band) / (upper_band - lower_band)
+            position = (data["Close"] - lower_band) / (upper_band - lower_band)
             mean_reversion_factor = 0.5 - position  # Distance from center
             return mean_reversion_factor
         except Exception as e:
             self.logger.error(f"Error calculating mean reversion factor: {e}")
-            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": pd.Series(index=data.index, data=0.0),
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _calculate_trend_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate trend strength factor."""
         try:
-            sma_20 = data['Close'].rolling(20).mean()
-            sma_50 = data['Close'].rolling(50).mean()
-            sma_200 = data['Close'].rolling(200).mean()
+            sma_20 = data["Close"].rolling(20).mean()
+            sma_50 = data["Close"].rolling(50).mean()
+            sma_200 = data["Close"].rolling(200).mean()
 
             # Trend strength based on moving average alignment
-            trend_short = (data['Close'] - sma_20) / sma_20
+            trend_short = (data["Close"] - sma_20) / sma_20
             trend_medium = (sma_20 - sma_50) / sma_50
             trend_long = (sma_50 - sma_200) / sma_200
 
@@ -277,43 +304,58 @@ class AlphaAttributionEngine:
             return trend_factor
         except Exception as e:
             self.logger.error(f"Error calculating trend factor: {e}")
-            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": pd.Series(index=data.index, data=0.0),
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _calculate_correlation_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate market correlation factor."""
         try:
             # Use rolling correlation with a market proxy (SPY)
-            returns = data['Close'].pct_change()
+            returns = data["Close"].pct_change()
 
             # For simplicity, use autocorrelation as proxy
             correlation_factor = returns.rolling(20).corr(returns.shift(1))
             return correlation_factor
         except Exception as e:
             self.logger.error(f"Error calculating correlation factor: {e}")
-            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": pd.Series(index=data.index, data=0.0),
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _calculate_liquidity_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate liquidity factor."""
         try:
-            if 'Volume' not in data.columns:
+            if "Volume" not in data.columns:
                 return pd.Series(index=data.index, data=0.0)
 
             # Price impact of volume
-            returns = data['Close'].pct_change()
-            volume_ratio = data['Volume'] / data['Volume'].rolling(20).mean()
+            returns = data["Close"].pct_change()
+            volume_ratio = data["Volume"] / data["Volume"].rolling(20).mean()
 
             # Liquidity factor (inverse of price impact)
             liquidity_factor = 1.0 / (1.0 + abs(returns) * volume_ratio)
             return liquidity_factor
         except Exception as e:
             self.logger.error(f"Error calculating liquidity factor: {e}")
-            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": pd.Series(index=data.index, data=0.0),
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _calculate_sentiment_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate market sentiment factor."""
         try:
             # Combine multiple sentiment indicators
-            returns = data['Close'].pct_change()
+            returns = data["Close"].pct_change()
 
             # Volatility-adjusted returns as sentiment proxy
             volatility = returns.rolling(20).std()
@@ -324,14 +366,21 @@ class AlphaAttributionEngine:
             return sentiment_factor
         except Exception as e:
             self.logger.error(f"Error calculating sentiment factor: {e}")
-            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": pd.Series(index=data.index, data=0.0),
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def perform_attribution_analysis(self,
-                                   portfolio_returns: pd.Series,
-                                   strategy_returns: Dict[str, pd.Series],
-                                   benchmark_returns: pd.Series,
-                                   factor_data: Optional[Dict[str, pd.Series]] = None,
-                                   method: AttributionMethod = AttributionMethod.STRATEGY_DECOMPOSITION) -> AttributionResult:
+    def perform_attribution_analysis(
+        self,
+        portfolio_returns: pd.Series,
+        strategy_returns: Dict[str, pd.Series],
+        benchmark_returns: pd.Series,
+        factor_data: Optional[Dict[str, pd.Series]] = None,
+        method: AttributionMethod = AttributionMethod.STRATEGY_DECOMPOSITION,
+    ) -> AttributionResult:
         """
         Perform comprehensive alpha attribution analysis.
 
@@ -355,25 +404,41 @@ class AlphaAttributionEngine:
 
             # Perform attribution based on method
             if method == AttributionMethod.STRATEGY_DECOMPOSITION:
-                strategy_attribution = self._decompose_by_strategy(portfolio_returns, strategy_returns)
+                strategy_attribution = self._decompose_by_strategy(
+                    portfolio_returns, strategy_returns
+                )
                 factor_attribution = {}
                 risk_attribution = {}
             elif method == AttributionMethod.FACTOR_MODEL:
                 strategy_attribution = {}
-                factor_attribution = self._decompose_by_factors(portfolio_returns, factor_data)
+                factor_attribution = self._decompose_by_factors(
+                    portfolio_returns, factor_data
+                )
                 risk_attribution = {}
             elif method == AttributionMethod.RISK_DECOMPOSITION:
                 strategy_attribution = {}
                 factor_attribution = {}
-                risk_attribution = self._decompose_by_risk(portfolio_returns, benchmark_returns)
+                risk_attribution = self._decompose_by_risk(
+                    portfolio_returns, benchmark_returns
+                )
             else:
                 # Comprehensive attribution
-                strategy_attribution = self._decompose_by_strategy(portfolio_returns, strategy_returns)
-                factor_attribution = self._decompose_by_factors(portfolio_returns, factor_data) if factor_data else {}
-                risk_attribution = self._decompose_by_risk(portfolio_returns, benchmark_returns)
+                strategy_attribution = self._decompose_by_strategy(
+                    portfolio_returns, strategy_returns
+                )
+                factor_attribution = (
+                    self._decompose_by_factors(portfolio_returns, factor_data)
+                    if factor_data
+                    else {}
+                )
+                risk_attribution = self._decompose_by_risk(
+                    portfolio_returns, benchmark_returns
+                )
 
             # Detect alpha decay
-            alpha_decay_score = self._detect_alpha_decay(strategy_returns, benchmark_returns)
+            alpha_decay_score = self._detect_alpha_decay(
+                strategy_returns, benchmark_returns
+            )
 
             # Calculate attribution confidence
             attribution_confidence = self._calculate_attribution_confidence(
@@ -391,7 +456,7 @@ class AlphaAttributionEngine:
                 factor_attribution=factor_attribution,
                 risk_attribution=risk_attribution,
                 alpha_decay_score=alpha_decay_score,
-                attribution_confidence=attribution_confidence
+                attribution_confidence=attribution_confidence,
             )
 
             # Store result
@@ -404,7 +469,9 @@ class AlphaAttributionEngine:
             # Store in memory
             self._store_attribution_result(result)
 
-            self.logger.info(f"Attribution analysis completed: Excess return = {excess_return:.4f}")
+            self.logger.info(
+                f"Attribution analysis completed: Excess return = {excess_return:.4f}"
+            )
 
             return result
 
@@ -412,9 +479,9 @@ class AlphaAttributionEngine:
             self.logger.error(f"Error performing attribution analysis: {str(e)}")
             raise
 
-    def _decompose_by_strategy(self,
-                              portfolio_returns: pd.Series,
-                              strategy_returns: Dict[str, pd.Series]) -> Dict[str, float]:
+    def _decompose_by_strategy(
+        self, portfolio_returns: pd.Series, strategy_returns: Dict[str, pd.Series]
+    ) -> Dict[str, float]:
         """Decompose returns by strategy contribution."""
         try:
             strategy_attribution = {}
@@ -446,9 +513,9 @@ class AlphaAttributionEngine:
             self.logger.error(f"Error decomposing by strategy: {str(e)}")
             return {}
 
-    def _decompose_by_factors(self,
-                             portfolio_returns: pd.Series,
-                             factor_data: Dict[str, pd.Series]) -> Dict[str, float]:
+    def _decompose_by_factors(
+        self, portfolio_returns: pd.Series, factor_data: Dict[str, pd.Series]
+    ) -> Dict[str, float]:
         """Decompose returns using factor model."""
         try:
             factor_attribution = {}
@@ -460,7 +527,9 @@ class AlphaAttributionEngine:
             aligned_factors = {}
             for factor_name, factor_series in factor_data.items():
                 # Align factor series with portfolio returns
-                aligned_factor = factor_series.reindex(portfolio_returns.index, method='ffill')
+                aligned_factor = factor_series.reindex(
+                    portfolio_returns.index, method="ffill"
+                )
                 aligned_factors[factor_name] = aligned_factor
 
             if not aligned_factors:
@@ -489,11 +558,13 @@ class AlphaAttributionEngine:
                     factor_attribution[factor_name] = factor_contributions[i]
 
                 # Store factor exposures
-                self.factor_exposures['current'] = pd.DataFrame({
-                    'factor': factor_matrix.columns,
-                    'exposure': model.coef_,
-                    'contribution': factor_contributions
-                })
+                self.factor_exposures["current"] = pd.DataFrame(
+                    {
+                        "factor": factor_matrix.columns,
+                        "exposure": model.coef_,
+                        "contribution": factor_contributions,
+                    }
+                )
 
             except Exception as e:
                 self.logger.error(f"Error in factor regression: {str(e)}")
@@ -504,15 +575,17 @@ class AlphaAttributionEngine:
             self.logger.error(f"Error decomposing by factors: {str(e)}")
             return {}
 
-    def _decompose_by_risk(self,
-                          portfolio_returns: pd.Series,
-                          benchmark_returns: pd.Series) -> Dict[str, float]:
+    def _decompose_by_risk(
+        self, portfolio_returns: pd.Series, benchmark_returns: pd.Series
+    ) -> Dict[str, float]:
         """Decompose returns by risk factors."""
         try:
             risk_attribution = {}
 
             # Align returns
-            aligned_returns = pd.concat([portfolio_returns, benchmark_returns], axis=1).dropna()
+            aligned_returns = pd.concat(
+                [portfolio_returns, benchmark_returns], axis=1
+            ).dropna()
             if len(aligned_returns) < 10:
                 return risk_attribution
 
@@ -525,24 +598,32 @@ class AlphaAttributionEngine:
             correlation = portfolio_aligned.corr(benchmark_aligned)
 
             # Beta calculation
-            beta = (portfolio_aligned * benchmark_aligned).sum() / (benchmark_aligned ** 2).sum()
+            beta = (portfolio_aligned * benchmark_aligned).sum() / (
+                benchmark_aligned**2
+            ).sum()
 
             # Risk decomposition
             # Market risk contribution
             market_risk = beta * benchmark_aligned.sum()
-            risk_attribution['market_risk'] = market_risk
+            risk_attribution["market_risk"] = market_risk
 
             # Idiosyncratic risk contribution
             idiosyncratic_risk = portfolio_aligned.sum() - market_risk
-            risk_attribution['idiosyncratic_risk'] = idiosyncratic_risk
+            risk_attribution["idiosyncratic_risk"] = idiosyncratic_risk
 
             # Volatility contribution
-            vol_contribution = (portfolio_vol - benchmark_vol) * portfolio_aligned.sum() / portfolio_vol
-            risk_attribution['volatility_contribution'] = vol_contribution
+            vol_contribution = (
+                (portfolio_vol - benchmark_vol)
+                * portfolio_aligned.sum()
+                / portfolio_vol
+            )
+            risk_attribution["volatility_contribution"] = vol_contribution
 
             # Correlation contribution
-            corr_contribution = (correlation - 1) * portfolio_aligned.sum() * 0.1  # Simplified
-            risk_attribution['correlation_contribution'] = corr_contribution
+            corr_contribution = (
+                (correlation - 1) * portfolio_aligned.sum() * 0.1
+            )  # Simplified
+            risk_attribution["correlation_contribution"] = corr_contribution
 
             return risk_attribution
 
@@ -550,13 +631,15 @@ class AlphaAttributionEngine:
             self.logger.error(f"Error decomposing by risk: {str(e)}")
             return {}
 
-    def _align_returns_data(self,
-                           portfolio_returns: pd.Series,
-                           strategy_returns: Dict[str, pd.Series]) -> Optional[Tuple[pd.Series, Dict[str, pd.Series]]]:
+    def _align_returns_data(
+        self, portfolio_returns: pd.Series, strategy_returns: Dict[str, pd.Series]
+    ) -> Optional[Tuple[pd.Series, Dict[str, pd.Series]]]:
         """Align portfolio and strategy returns data."""
         try:
             # Find common index
-            all_indices = [portfolio_returns.index] + [s.index for s in strategy_returns.values()]
+            all_indices = [portfolio_returns.index] + [
+                s.index for s in strategy_returns.values()
+            ]
             common_index = all_indices[0]
             for idx in all_indices[1:]:
                 common_index = common_index.intersection(idx)
@@ -569,23 +652,27 @@ class AlphaAttributionEngine:
             strategies_aligned = {}
 
             for strategy_name, strategy_series in strategy_returns.items():
-                strategies_aligned[strategy_name] = strategy_series.reindex(common_index)
+                strategies_aligned[strategy_name] = strategy_series.reindex(
+                    common_index
+                )
 
             return portfolio_aligned, strategies_aligned
 
         except Exception as e:
             self.logger.error(f"Error aligning returns data: {str(e)}")
 
-    def _detect_alpha_decay(self,
-                           strategy_returns: Dict[str, pd.Series],
-                           benchmark_returns: pd.Series) -> float:
+    def _detect_alpha_decay(
+        self, strategy_returns: Dict[str, pd.Series], benchmark_returns: pd.Series
+    ) -> float:
         """Detect alpha decay across strategies."""
         try:
             decay_scores = []
 
             for strategy_name, strategy_series in strategy_returns.items():
                 # Align strategy with benchmark
-                aligned_data = pd.concat([strategy_series, benchmark_returns], axis=1).dropna()
+                aligned_data = pd.concat(
+                    [strategy_series, benchmark_returns], axis=1
+                ).dropna()
                 if len(aligned_data) < self.decay_detection_window:
                     continue
 
@@ -593,7 +680,9 @@ class AlphaAttributionEngine:
                 benchmark_aligned = aligned_data.iloc[:, 1]
 
                 # Calculate rolling alpha
-                rolling_alpha = self._calculate_rolling_alpha(strategy_aligned, benchmark_aligned)
+                rolling_alpha = self._calculate_rolling_alpha(
+                    strategy_aligned, benchmark_aligned
+                )
 
                 if len(rolling_alpha) > 10:
                     # Detect decay trend
@@ -609,18 +698,20 @@ class AlphaAttributionEngine:
             self.logger.error(f"Error detecting alpha decay: {str(e)}")
             return 0.0
 
-    def _calculate_rolling_alpha(self,
-                               strategy_returns: pd.Series,
-                               benchmark_returns: pd.Series,
-                               window: int = 20) -> pd.Series:
+    def _calculate_rolling_alpha(
+        self,
+        strategy_returns: pd.Series,
+        benchmark_returns: pd.Series,
+        window: int = 20,
+    ) -> pd.Series:
         """Calculate rolling alpha using regression."""
         try:
             alphas = pd.Series(index=strategy_returns.index, dtype=float)
 
             for i in range(window, len(strategy_returns)):
                 # Get rolling window
-                strategy_window = strategy_returns.iloc[i-window:i]
-                benchmark_window = benchmark_returns.iloc[i-window:i]
+                strategy_window = strategy_returns.iloc[i - window : i]
+                benchmark_window = benchmark_returns.iloc[i - window : i]
 
                 # Run regression
                 try:
@@ -672,10 +763,12 @@ class AlphaAttributionEngine:
             self.logger.error(f"Error calculating decay score: {str(e)}")
             return 0.0
 
-    def _calculate_attribution_confidence(self,
-                                        strategy_attribution: Dict[str, float],
-                                        factor_attribution: Dict[str, float],
-                                        risk_attribution: Dict[str, float]) -> float:
+    def _calculate_attribution_confidence(
+        self,
+        strategy_attribution: Dict[str, float],
+        factor_attribution: Dict[str, float],
+        risk_attribution: Dict[str, float],
+    ) -> float:
         """Calculate confidence in attribution results."""
         try:
             confidence_factors = []
@@ -685,7 +778,11 @@ class AlphaAttributionEngine:
                 # Check if strategy contributions sum to total
                 strategy_sum = sum(strategy_attribution.values())
                 if strategy_sum != 0:
-                    strategy_confidence = min(1.0, abs(strategy_sum) / max(abs(v) for v in strategy_attribution.values()))
+                    strategy_confidence = min(
+                        1.0,
+                        abs(strategy_sum)
+                        / max(abs(v) for v in strategy_attribution.values()),
+                    )
                     confidence_factors.append(strategy_confidence)
 
             # Factor attribution confidence
@@ -699,7 +796,10 @@ class AlphaAttributionEngine:
                 # Check risk decomposition completeness
                 risk_sum = sum(risk_attribution.values())
                 if risk_sum != 0:
-                    risk_confidence = min(1.0, abs(risk_sum) / max(abs(v) for v in risk_attribution.values()))
+                    risk_confidence = min(
+                        1.0,
+                        abs(risk_sum) / max(abs(v) for v in risk_attribution.values()),
+                    )
                     confidence_factors.append(risk_confidence)
 
             if confidence_factors:
@@ -711,9 +811,9 @@ class AlphaAttributionEngine:
             self.logger.error(f"Error calculating attribution confidence: {str(e)}")
             return 0.5
 
-    def _create_alpha_decay_alert(self,
-                                strategy_returns: Dict[str, pd.Series],
-                                decay_score: float):
+    def _create_alpha_decay_alert(
+        self, strategy_returns: Dict[str, pd.Series], decay_score: float
+    ):
         """Create alpha decay alert."""
         try:
             # Find strategies with highest decay
@@ -721,7 +821,9 @@ class AlphaAttributionEngine:
 
             for strategy_name, strategy_series in strategy_returns.items():
                 # Calculate individual strategy decay
-                strategy_decay = self._calculate_strategy_decay(strategy_name, strategy_series)
+                strategy_decay = self._calculate_strategy_decay(
+                    strategy_name, strategy_series
+                )
                 decay_by_strategy[strategy_name] = strategy_decay
 
             # Find worst performing strategy
@@ -730,13 +832,13 @@ class AlphaAttributionEngine:
 
                 # Determine severity
                 if decay_score > 0.7:
-                    severity = 'critical'
+                    severity = "critical"
                 elif decay_score > 0.5:
-                    severity = 'high'
+                    severity = "high"
                 elif decay_score > 0.3:
-                    severity = 'medium'
+                    severity = "medium"
                 else:
-                    severity = 'low'
+                    severity = "low"
 
                 # Create alert
                 alert = AlphaDecayAlert(
@@ -745,17 +847,23 @@ class AlphaAttributionEngine:
                     decay_score=decay_score,
                     severity=severity,
                     description=f"Alpha decay detected with score {decay_score:.3f}",
-                    recommendations=self._generate_decay_recommendations(decay_score, worst_strategy[0])
+                    recommendations=self._generate_decay_recommendations(
+                        decay_score, worst_strategy[0]
+                    ),
                 )
 
                 self.alpha_decay_alerts.append(alert)
 
-                self.logger.warning(f"Alpha decay alert: {alert.strategy_name} (score: {decay_score:.3f})")
+                self.logger.warning(
+                    f"Alpha decay alert: {alert.strategy_name} (score: {decay_score:.3f})"
+                )
 
         except Exception as e:
             self.logger.error(f"Error creating alpha decay alert: {str(e)}")
 
-    def _calculate_strategy_decay(self, strategy_name: str, strategy_returns: pd.Series) -> float:
+    def _calculate_strategy_decay(
+        self, strategy_name: str, strategy_returns: pd.Series
+    ) -> float:
         """Calculate decay score for individual strategy."""
         try:
             # Use stored strategy performance if available
@@ -767,12 +875,21 @@ class AlphaAttributionEngine:
 
                 if len(rolling_performance.dropna()) > 10:
                     # Calculate decay trend
-                    early_perf = rolling_performance.iloc[:len(rolling_performance)//2].mean()
-                    late_perf = rolling_performance.iloc[len(rolling_performance)//2:].mean()
+                    early_perf = rolling_performance.iloc[
+                        : len(rolling_performance) // 2
+                    ].mean()
+                    late_perf = rolling_performance.iloc[
+                        len(rolling_performance) // 2 :
+                    ].mean()
 
                     if early_perf != 0:
                         decay_ratio = (early_perf - late_perf) / abs(early_perf)
-                        return {'success': True, 'result': max(0.0, min(1.0, decay_ratio)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                        return {
+                            "success": True,
+                            "result": max(0.0, min(1.0, decay_ratio)),
+                            "message": "Operation completed successfully",
+                            "timestamp": datetime.now().isoformat(),
+                        }
 
             return 0.0
 
@@ -780,14 +897,20 @@ class AlphaAttributionEngine:
             self.logger.error(f"Error calculating strategy decay: {str(e)}")
             return 0.0
 
-    def _generate_decay_recommendations(self, decay_score: float, strategy_name: str) -> List[str]:
+    def _generate_decay_recommendations(
+        self, decay_score: float, strategy_name: str
+    ) -> List[str]:
         """Generate recommendations for alpha decay."""
         try:
             recommendations = []
 
             if decay_score > 0.7:
-                recommendations.append(f"Consider disabling {strategy_name} strategy immediately")
-                recommendations.append("Review strategy parameters and market conditions")
+                recommendations.append(
+                    f"Consider disabling {strategy_name} strategy immediately"
+                )
+                recommendations.append(
+                    "Review strategy parameters and market conditions"
+                )
                 recommendations.append("Implement alternative strategies")
             elif decay_score > 0.5:
                 recommendations.append(f"Reduce allocation to {strategy_name} strategy")
@@ -810,10 +933,10 @@ class AlphaAttributionEngine:
     def _store_attribution_result(self, result: AttributionResult):
         """Store attribution result in memory."""
         try:
-            self.memory.store('attribution_results', {
-                'result': result.__dict__,
-                'timestamp': datetime.now()
-            })
+            self.memory.store(
+                "attribution_results",
+                {"result": result.__dict__, "timestamp": datetime.now()},
+            )
         except Exception as e:
             self.logger.error(f"Error storing attribution result: {str(e)}")
 
@@ -822,7 +945,9 @@ class AlphaAttributionEngine:
         try:
             if period:
                 # Filter by period
-                filtered_results = [r for r in self.attribution_history if period in r.period]
+                filtered_results = [
+                    r for r in self.attribution_history if period in r.period
+                ]
             else:
                 filtered_results = self.attribution_history
 
@@ -836,36 +961,44 @@ class AlphaAttributionEngine:
             confidence_scores = [r.attribution_confidence for r in filtered_results]
 
             return {
-                'total_analyses': len(filtered_results),
-                'avg_total_return': np.mean(total_returns),
-                'avg_excess_return': np.mean(excess_returns),
-                'avg_alpha_decay': np.mean(decay_scores),
-                'avg_confidence': np.mean(confidence_scores),
-                'recent_attribution': {
-                    'period': filtered_results[-1].period,
-                    'excess_return': filtered_results[-1].excess_return,
-                    'decay_score': filtered_results[-1].alpha_decay_score
-                } if filtered_results else None
+                "total_analyses": len(filtered_results),
+                "avg_total_return": np.mean(total_returns),
+                "avg_excess_return": np.mean(excess_returns),
+                "avg_alpha_decay": np.mean(decay_scores),
+                "avg_confidence": np.mean(confidence_scores),
+                "recent_attribution": {
+                    "period": filtered_results[-1].period,
+                    "excess_return": filtered_results[-1].excess_return,
+                    "decay_score": filtered_results[-1].alpha_decay_score,
+                }
+                if filtered_results
+                else None,
             }
 
         except Exception as e:
             self.logger.error(f"Error getting attribution summary: {str(e)}")
             return {}
 
-    def get_alpha_decay_alerts(self, severity: Optional[str] = None) -> List[AlphaDecayAlert]:
+    def get_alpha_decay_alerts(
+        self, severity: Optional[str] = None
+    ) -> List[AlphaDecayAlert]:
         """Get alpha decay alerts."""
         try:
             if severity:
-                return [alert for alert in self.alpha_decay_alerts if alert.severity == severity]
+                return [
+                    alert
+                    for alert in self.alpha_decay_alerts
+                    if alert.severity == severity
+                ]
             else:
                 return self.alpha_decay_alerts
         except Exception as e:
             self.logger.error(f"Error getting alpha decay alerts: {str(e)}")
             return []
 
-    def disable_underperforming_strategies(self,
-                                         strategy_returns: Dict[str, pd.Series],
-                                         threshold: float = 0.5) -> List[str]:
+    def disable_underperforming_strategies(
+        self, strategy_returns: Dict[str, pd.Series], threshold: float = 0.5
+    ) -> List[str]:
         """Identify strategies to disable based on performance."""
         try:
             disabled_strategies = []
@@ -895,6 +1028,7 @@ class AlphaAttributionEngine:
         except Exception as e:
             self.logger.error(f"Error disabling underperforming strategies: {str(e)}")
             return []
+
 
 # Global alpha attribution engine instance
 alpha_attribution_engine = AlphaAttributionEngine()

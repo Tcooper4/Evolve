@@ -15,7 +15,9 @@ import sys
 from pathlib import Path
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Add project root to path
@@ -35,7 +37,7 @@ def test_complete_system_integration():
         # Test system resilience
         from system_resilience import SystemResilience
 
-        resilience = SystemResilience()
+        SystemResilience()
         logger.info("✅ System resilience integration successful")
 
         # Test all core components - skip interface components since they're deprecated
@@ -54,8 +56,12 @@ def test_agentic_intelligence():
 
     try:
         # Skip unified interface test since it's deprecated
-        logger.info("⚠️  UnifiedInterface (v2) is deprecated, skipping agentic intelligence test")
-        logger.info("✅ Agentic intelligence test skipped (migrated to new UI/agent system)")
+        logger.info(
+            "⚠️  UnifiedInterface (v2) is deprecated, skipping agentic intelligence test"
+        )
+        logger.info(
+            "✅ Agentic intelligence test skipped (migrated to new UI/agent system)"
+        )
 
         return True
 
@@ -70,8 +76,12 @@ def test_forecasting_capabilities():
 
     try:
         # Skip unified interface test since it's deprecated
-        logger.info("⚠️  UnifiedInterface (v2) is deprecated, skipping forecasting test")
-        logger.info("✅ Forecasting capabilities test skipped (migrated to new UI/agent system)")
+        logger.info(
+            "⚠️  UnifiedInterface (v2) is deprecated, skipping forecasting test"
+        )
+        logger.info(
+            "✅ Forecasting capabilities test skipped (migrated to new UI/agent system)"
+        )
 
         return True
 
@@ -86,7 +96,9 @@ def test_strategy_engine():
 
     try:
         # Skip unified interface test since it's deprecated
-        logger.info("⚠️  UnifiedInterface (v2) is deprecated, skipping strategy engine test")
+        logger.info(
+            "⚠️  UnifiedInterface (v2) is deprecated, skipping strategy engine test"
+        )
         logger.info("✅ Strategy engine test skipped (migrated to new UI/agent system)")
 
         return True
@@ -102,8 +114,12 @@ def test_backtesting_and_reporting():
 
     try:
         # Skip unified interface test since it's deprecated
-        logger.info("⚠️  UnifiedInterface (v2) is deprecated, skipping backtesting test")
-        logger.info("✅ Backtesting and reporting test skipped (migrated to new UI/agent system)")
+        logger.info(
+            "⚠️  UnifiedInterface (v2) is deprecated, skipping backtesting test"
+        )
+        logger.info(
+            "✅ Backtesting and reporting test skipped (migrated to new UI/agent system)"
+        )
 
         return True
 
@@ -119,7 +135,9 @@ def test_llm_and_commentary():
     try:
         # Skip unified interface test since it's deprecated
         logger.info("⚠️  UnifiedInterface (v2) is deprecated, skipping LLM test")
-        logger.info("✅ LLM and commentary test skipped (migrated to new UI/agent system)")
+        logger.info(
+            "✅ LLM and commentary test skipped (migrated to new UI/agent system)"
+        )
 
         return True
 
@@ -135,7 +153,9 @@ def test_ui_and_deployment():
     try:
         # Skip unified interface test since it's deprecated
         logger.info("⚠️  UnifiedInterface (v2) is deprecated, skipping UI test")
-        logger.info("✅ UI and deployment test skipped (migrated to new UI/agent system)")
+        logger.info(
+            "✅ UI and deployment test skipped (migrated to new UI/agent system)"
+        )
 
         return True
 
@@ -190,8 +210,12 @@ def test_fallback_mechanisms():
 
     try:
         # Skip unified interface test since it's deprecated
-        logger.info("⚠️  UnifiedInterface (v2) is deprecated, skipping fallback mechanisms test")
-        logger.info("✅ Fallback mechanisms test skipped (migrated to new UI/agent system)")
+        logger.info(
+            "⚠️  UnifiedInterface (v2) is deprecated, skipping fallback mechanisms test"
+        )
+        logger.info(
+            "✅ Fallback mechanisms test skipped (migrated to new UI/agent system)"
+        )
 
         return True
 
@@ -206,7 +230,9 @@ def test_error_handling():
 
     try:
         # Skip unified interface test since it's deprecated
-        logger.info("⚠️  UnifiedInterface (v2) is deprecated, skipping error handling test")
+        logger.info(
+            "⚠️  UnifiedInterface (v2) is deprecated, skipping error handling test"
+        )
         logger.info("✅ Error handling test skipped (migrated to new UI/agent system)")
 
         return True
@@ -294,19 +320,25 @@ def run_final_validation():
     completion_percentage = (passed / total) * 100
 
     if completion_percentage >= 90:
-        logger.info("🎉 EXCELLENT! System is production-ready with comprehensive functionality!")
+        logger.info(
+            "🎉 EXCELLENT! System is production-ready with comprehensive functionality!"
+        )
         logger.info("✅ All major components integrated and validated")
         logger.info("✅ Agentic intelligence fully functional")
         logger.info("✅ UI and deployment ready for production")
         logger.info("✅ Fallback mechanisms and error handling robust")
         return True
     elif completion_percentage >= 80:
-        logger.info("🟢 GOOD! System is mostly production-ready with minor improvements needed")
+        logger.info(
+            "🟢 GOOD! System is mostly production-ready with minor improvements needed"
+        )
         logger.info("⚠️  Some components may need additional testing or configuration")
         return True
     elif completion_percentage >= 70:
         logger.info("🟡 FAIR! System has good foundation but needs more work")
-        logger.info("⚠️  Several components need attention before production deployment")
+        logger.info(
+            "⚠️  Several components need attention before production deployment"
+        )
         return False
     else:
         logger.info("🔴 NEEDS WORK! System requires significant improvements")

@@ -236,7 +236,9 @@ class TimeUtils:
 
         return formatted
 
-    def round_to_granularity(self, dt: datetime, granularity: str, timezone: Optional[str] = None) -> datetime:
+    def round_to_granularity(
+        self, dt: datetime, granularity: str, timezone: Optional[str] = None
+    ) -> datetime:
         """Round datetime to specified granularity.
 
         Args:
@@ -259,7 +261,9 @@ class TimeUtils:
         elif granularity == "week":
             # Round to Monday of the week
             days_since_monday = dt.weekday()
-            return dt.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days_since_monday)
+            return dt.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
+                days=days_since_monday
+            )
         elif granularity == "month":
             return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         else:
@@ -295,7 +299,9 @@ class TimeUtils:
                 return dt.replace(microsecond=0).isoformat()
         elif format_type == "readable":
             if include_milliseconds:
-                return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + f" {dt.strftime('%Z')}"
+                return (
+                    dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + f" {dt.strftime('%Z')}"
+                )
             else:
                 return dt.strftime("%Y-%m-%d %H:%M:%S %Z")
         elif format_type == "compact":
@@ -306,7 +312,9 @@ class TimeUtils:
         else:
             raise ValueError(f"Unsupported format type: {format_type}")
 
-    def get_time_granularity_for_logging(self, time_range: timedelta, max_points: int = 1000) -> str:
+    def get_time_granularity_for_logging(
+        self, time_range: timedelta, max_points: int = 1000
+    ) -> str:
         """Determine appropriate time granularity for logging based on time range.
 
         Args:
@@ -329,7 +337,9 @@ class TimeUtils:
         else:
             return "month"
 
-    def get_market_sessions(self, start_date: datetime, end_date: datetime) -> List[Tuple[datetime, datetime]]:
+    def get_market_sessions(
+        self, start_date: datetime, end_date: datetime
+    ) -> List[Tuple[datetime, datetime]]:
         """Get market sessions between dates.
 
         Args:
@@ -346,27 +356,44 @@ class TimeUtils:
         while current_date <= end_date:
             # Regular session
             if self.market_hours.regular_start and self.market_hours.regular_end:
-                session_start = self.market_hours._combine_date_time(current_date, self.market_hours.regular_start)
-                session_end = self.market_hours._combine_date_time(current_date, self.market_hours.regular_end)
+                session_start = self.market_hours._combine_date_time(
+                    current_date, self.market_hours.regular_start
+                )
+                session_end = self.market_hours._combine_date_time(
+                    current_date, self.market_hours.regular_end
+                )
                 sessions.append((session_start, session_end))
 
             # Pre-market session
             if self.market_hours.pre_market_start and self.market_hours.pre_market_end:
-                session_start = self.market_hours._combine_date_time(current_date, self.market_hours.pre_market_start)
-                session_end = self.market_hours._combine_date_time(current_date, self.market_hours.pre_market_end)
+                session_start = self.market_hours._combine_date_time(
+                    current_date, self.market_hours.pre_market_start
+                )
+                session_end = self.market_hours._combine_date_time(
+                    current_date, self.market_hours.pre_market_end
+                )
                 sessions.append((session_start, session_end))
 
             # Post-market session
-            if self.market_hours.post_market_start and self.market_hours.post_market_end:
-                session_start = self.market_hours._combine_date_time(current_date, self.market_hours.post_market_start)
-                session_end = self.market_hours._combine_date_time(current_date, self.market_hours.post_market_end)
+            if (
+                self.market_hours.post_market_start
+                and self.market_hours.post_market_end
+            ):
+                session_start = self.market_hours._combine_date_time(
+                    current_date, self.market_hours.post_market_start
+                )
+                session_end = self.market_hours._combine_date_time(
+                    current_date, self.market_hours.post_market_end
+                )
                 sessions.append((session_start, session_end))
 
             current_date += timedelta(days=1)
 
         return sessions
 
-    def resample_market_data(self, df: pd.DataFrame, freq: str, session: str = "regular") -> pd.DataFrame:
+    def resample_market_data(
+        self, df: pd.DataFrame, freq: str, session: str = "regular"
+    ) -> pd.DataFrame:
         """Resample market data to specified frequency.
 
         Args:
@@ -386,7 +413,15 @@ class TimeUtils:
 
         return (
             df_filtered.resample(freq)
-            .agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"})
+            .agg(
+                {
+                    "open": "first",
+                    "high": "max",
+                    "low": "min",
+                    "close": "last",
+                    "volume": "sum",
+                }
+            )
             .dropna()
         )
 
@@ -463,7 +498,9 @@ def get_current_time(timezone: str = "UTC") -> datetime:
     return time_utils.to_timezone(datetime.now(), timezone)
 
 
-def format_timestamp(dt: datetime, format_str: str = "%Y-%m-%d %H:%M:%S", timezone: str = "UTC") -> str:
+def format_timestamp(
+    dt: datetime, format_str: str = "%Y-%m-%d %H:%M:%S", timezone: str = "UTC"
+) -> str:
     """Format timestamp with timezone awareness.
 
     Args:

@@ -56,7 +56,9 @@ class BaseDataProvider(ABC):
         """
         self.config = config
         self.logger = logging.getLogger(f"{__name__}.{config.name}")
-        self.status = ProviderStatus(name=config.name, enabled=config.enabled, is_available=True)
+        self.status = ProviderStatus(
+            name=config.name, enabled=config.enabled, is_available=True
+        )
         self._setup()
 
     def _setup(self) -> None:
@@ -82,7 +84,9 @@ class BaseDataProvider(ABC):
         """
 
     @abstractmethod
-    def fetch_multiple(self, symbols: List[str], interval: str = "1d", **kwargs) -> Dict[str, pd.DataFrame]:
+    def fetch_multiple(
+        self, symbols: List[str], interval: str = "1d", **kwargs
+    ) -> Dict[str, pd.DataFrame]:
         """Fetch data for multiple symbols.
 
         Args:

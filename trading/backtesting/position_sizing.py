@@ -50,7 +50,11 @@ class PositionSizingEngine:
     """Engine for calculating position sizes using various methods."""
 
     def __init__(
-        self, cash: float, risk_per_trade: float = 0.02, risk_free_rate: float = 0.02, max_leverage: float = 1.0
+        self,
+        cash: float,
+        risk_per_trade: float = 0.02,
+        risk_free_rate: float = 0.02,
+        max_leverage: float = 1.0,
     ):
         """Initialize position sizing engine.
 
@@ -120,10 +124,14 @@ class PositionSizingEngine:
             raise ValueError(f"Unknown position sizing method: {method}")
 
         try:
-            position_size = sizing_method(asset, price, strategy, signal, data, positions)
+            position_size = sizing_method(
+                asset, price, strategy, signal, data, positions
+            )
 
             # Apply position size limits
-            position_size = max(min(position_size, MAX_POSITION_SIZE), MIN_POSITION_SIZE)
+            position_size = max(
+                min(position_size, MAX_POSITION_SIZE), MIN_POSITION_SIZE
+            )
 
             # Apply leverage limits
             position_size = min(position_size, self.max_leverage)
@@ -132,54 +140,88 @@ class PositionSizingEngine:
 
         except Exception as e:
             logger.error(f"Error calculating position size with {method}: {e}")
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
     def _calculate_equal_weighted_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate equal-weighted position size."""
         return 0.1  # 10% of portfolio
 
     def _calculate_risk_based_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate risk-based position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         returns = data[asset].pct_change().dropna()
         volatility = returns.std()
 
         if volatility == 0:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Risk-based sizing: risk_per_trade / volatility
         position_size = self.risk_per_trade / volatility
         return min(position_size, MAX_POSITION_SIZE)
 
     def _calculate_kelly_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate Kelly criterion position size."""
         # Get historical trades for this asset/strategy
-        asset_trades = [t for t in self.trade_history if t["asset"] == asset and t["strategy"] == strategy]
+        asset_trades = [
+            t
+            for t in self.trade_history
+            if t["asset"] == asset and t["strategy"] == strategy
+        ]
 
         if len(asset_trades) < 10:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate win rate and average win/loss
         winning_trades = [t for t in asset_trades if t.get("pnl", 0) > 0]
         losing_trades = [t for t in asset_trades if t.get("pnl", 0) < 0]
 
         if not winning_trades or not losing_trades:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         win_rate = len(winning_trades) / len(asset_trades)
         avg_win = np.mean([t["pnl"] for t in winning_trades])
         avg_loss = abs(np.mean([t["pnl"] for t in losing_trades]))
 
         if avg_loss == 0:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Kelly formula: f = (bp - q) / b
         # where b = avg_win/avg_loss, p = win_rate, q = 1-p
@@ -194,51 +236,85 @@ class PositionSizingEngine:
         return max(0, min(position_size, MAX_POSITION_SIZE))
 
     def _calculate_fixed_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate fixed position size."""
         return 0.05  # 5% of portfolio
 
     def _calculate_volatility_adjusted_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate volatility-adjusted position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         returns = data[asset].pct_change().dropna()
         volatility = returns.rolling(window=20).std().iloc[-1]
 
         if np.isnan(volatility) or volatility == 0:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Adjust position size inversely to volatility
-        base_size = self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        base_size = self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
         return base_size * (1 / (1 + volatility))
 
     def _calculate_optimal_f_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate position size using Optimal f."""
         # Get historical trades for this asset/strategy
-        asset_trades = [t for t in self.trade_history if t["asset"] == asset and t["strategy"] == strategy]
+        asset_trades = [
+            t
+            for t in self.trade_history
+            if t["asset"] == asset and t["strategy"] == strategy
+        ]
 
         if len(asset_trades) < 10:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate win/loss ratio and win rate
         winning_trades = [t for t in asset_trades if t.get("pnl", 0) > 0]
         losing_trades = [t for t in asset_trades if t.get("pnl", 0) < 0]
 
         if not winning_trades or not losing_trades:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         win_rate = len(winning_trades) / len(asset_trades)
         avg_win = np.mean([t["pnl"] for t in winning_trades])
         avg_loss = abs(np.mean([t["pnl"] for t in losing_trades]))
 
         if avg_win == 0:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate Optimal f
         f = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
@@ -246,11 +322,19 @@ class PositionSizingEngine:
         return max(0, min(position_size, MAX_POSITION_SIZE))
 
     def _calculate_risk_parity_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate position size using Risk Parity approach."""
         if not positions:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate risk contribution for all assets
         returns_data = {}
@@ -262,21 +346,27 @@ class PositionSizingEngine:
             returns_data[asset] = data[asset].pct_change().dropna()
 
         if len(returns_data) < 2:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate covariance matrix
         returns_df = pd.DataFrame(returns_data)
         cov_matrix = returns_df.cov()
 
         if cov_matrix.empty or cov_matrix.isnull().any().any():
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate risk contribution
         risk_contrib = np.sqrt(np.diag(cov_matrix))
         total_risk = np.sum(risk_contrib)
 
         if total_risk == 0:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate target weights
         target_weights = risk_contrib / total_risk
@@ -285,21 +375,33 @@ class PositionSizingEngine:
         if asset in target_weights:
             return target_weights[asset] * abs(signal)
         else:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
     def _calculate_black_litterman_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate position size using Black-Litterman model."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         returns = data[asset].pct_change().dropna()
         market_return = returns.mean()
         market_risk = returns.std()
 
         if market_risk == 0:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate investor views
         view_return = signal * market_return
@@ -307,7 +409,7 @@ class PositionSizingEngine:
 
         # Calculate Black-Litterman weights
         tau = 0.05  # Prior uncertainty
-        omega = 1 / view_confidence if view_confidence > 0 else 1
+        1 / view_confidence if view_confidence > 0 else 1
 
         # Calculate posterior returns and weights
         prior_return = market_return
@@ -317,63 +419,111 @@ class PositionSizingEngine:
         post_cov = prior_cov * (1 + tau)
 
         # Calculate position size
-        position_size = (post_return - self.risk_free_rate) / (post_cov * self.risk_per_trade)
+        position_size = (post_return - self.risk_free_rate) / (
+            post_cov * self.risk_per_trade
+        )
         return max(0, min(position_size, MAX_POSITION_SIZE))
 
     def _calculate_martingale_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate position size using Martingale strategy."""
         # Get recent trades for this asset
-        asset_trades = [t for t in self.trade_history if t["asset"] == asset and t["strategy"] == strategy]
+        asset_trades = [
+            t
+            for t in self.trade_history
+            if t["asset"] == asset and t["strategy"] == strategy
+        ]
 
         if not asset_trades:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Double position size after losses
         last_trade = asset_trades[-1]
         if last_trade.get("pnl", 0) < 0:
             return min(last_trade.get("position_size", 0.1) * 2, MAX_POSITION_SIZE)
 
-        return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        return self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
 
     def _calculate_anti_martingale_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate position size using Anti-Martingale strategy."""
         # Get recent trades for this asset
-        asset_trades = [t for t in self.trade_history if t["asset"] == asset and t["strategy"] == strategy]
+        asset_trades = [
+            t
+            for t in self.trade_history
+            if t["asset"] == asset and t["strategy"] == strategy
+        ]
 
         if not asset_trades:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Increase position size after wins
         last_trade = asset_trades[-1]
         if last_trade.get("pnl", 0) > 0:
             return min(last_trade.get("position_size", 0.1) * 1.5, MAX_POSITION_SIZE)
 
-        return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        return self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
 
     def _calculate_half_kelly_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate half Kelly position size."""
-        kelly_size = self._calculate_kelly_size(asset, price, strategy, signal, data, positions)
+        kelly_size = self._calculate_kelly_size(
+            asset, price, strategy, signal, data, positions
+        )
         return kelly_size * 0.5
 
     def _calculate_dynamic_kelly_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate dynamic Kelly position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Use recent data for dynamic Kelly
         recent_data = data[asset].tail(252)  # Last year
         returns = recent_data.pct_change().dropna()
 
         if len(returns) < 30:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate rolling Kelly
         rolling_kelly = []
@@ -398,14 +548,24 @@ class PositionSizingEngine:
             dynamic_kelly = np.mean(rolling_kelly[-10:])  # Average of last 10
             return dynamic_kelly * abs(signal)
 
-        return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        return self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
 
     def _calculate_correlation_adjusted_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate correlation-adjusted position size."""
         if not positions or asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate correlation with existing positions
         correlations = []
@@ -417,53 +577,83 @@ class PositionSizingEngine:
                 # Align returns
                 common_index = asset_returns.index.intersection(pos_returns.index)
                 if len(common_index) > 10:
-                    corr = asset_returns.loc[common_index].corr(pos_returns.loc[common_index])
+                    corr = asset_returns.loc[common_index].corr(
+                        pos_returns.loc[common_index]
+                    )
                     if not np.isnan(corr):
                         correlations.append(abs(corr))
 
         if correlations:
             avg_correlation = np.mean(correlations)
             # Reduce position size for high correlation
-            base_size = self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            base_size = self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
             return base_size * (1 - avg_correlation * 0.5)
 
-        return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        return self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
 
     def _calculate_momentum_weighted_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate momentum-weighted position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate momentum
         returns = data[asset].pct_change().dropna()
         if len(returns) < 20:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         momentum = returns.rolling(window=20).mean().iloc[-1]
 
         if np.isnan(momentum):
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Adjust position size based on momentum
-        base_size = self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        base_size = self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
         momentum_factor = 1 + momentum * 2  # Scale momentum effect
         return base_size * momentum_factor
 
     def _calculate_mean_variance_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate mean-variance optimal position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Get all available assets
         available_assets = [asset] + list(positions.keys())
         available_assets = [a for a in available_assets if a in data.columns]
 
         if len(available_assets) < 2:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate returns for all assets
         returns_data = {}
@@ -474,14 +664,18 @@ class PositionSizingEngine:
         returns_df = returns_df.dropna()
 
         if len(returns_df) < 30:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate mean returns and covariance matrix
         mean_returns = returns_df.mean()
         cov_matrix = returns_df.cov()
 
         if cov_matrix.empty or cov_matrix.isnull().any().any():
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Mean-variance optimization
         n_assets = len(available_assets)
@@ -500,7 +694,13 @@ class PositionSizingEngine:
         initial_weights = np.array([1 / n_assets] * n_assets)
 
         try:
-            result = minimize(portfolio_stats, initial_weights, method="SLSQP", bounds=bounds, constraints=constraints)
+            result = minimize(
+                portfolio_stats,
+                initial_weights,
+                method="SLSQP",
+                bounds=bounds,
+                constraints=constraints,
+            )
 
             if result.success:
                 optimal_weights = result.x
@@ -509,21 +709,33 @@ class PositionSizingEngine:
         except Exception as e:
             logger.warning(f"Mean-variance optimization failed: {e}")
 
-        return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        return self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
 
     def _calculate_minimum_variance_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate minimum variance position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Get all available assets
         available_assets = [asset] + list(positions.keys())
         available_assets = [a for a in available_assets if a in data.columns]
 
         if len(available_assets) < 2:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate returns for all assets
         returns_data = {}
@@ -534,13 +746,17 @@ class PositionSizingEngine:
         returns_df = returns_df.dropna()
 
         if len(returns_df) < 30:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate covariance matrix
         cov_matrix = returns_df.cov()
 
         if cov_matrix.empty or cov_matrix.isnull().any().any():
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Minimum variance optimization
         n_assets = len(available_assets)
@@ -557,7 +773,11 @@ class PositionSizingEngine:
 
         try:
             result = minimize(
-                portfolio_variance, initial_weights, method="SLSQP", bounds=bounds, constraints=constraints
+                portfolio_variance,
+                initial_weights,
+                method="SLSQP",
+                bounds=bounds,
+                constraints=constraints,
             )
 
             if result.success:
@@ -567,21 +787,33 @@ class PositionSizingEngine:
         except Exception as e:
             logger.warning(f"Minimum variance optimization failed: {e}")
 
-        return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        return self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
 
     def _calculate_maximum_diversification_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate maximum diversification position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Get all available assets
         available_assets = [asset] + list(positions.keys())
         available_assets = [a for a in available_assets if a in data.columns]
 
         if len(available_assets) < 2:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate returns for all assets
         returns_data = {}
@@ -592,14 +824,18 @@ class PositionSizingEngine:
         returns_df = returns_df.dropna()
 
         if len(returns_df) < 30:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate covariance matrix and volatilities
         cov_matrix = returns_df.cov()
         volatilities = returns_df.std()
 
         if cov_matrix.empty or cov_matrix.isnull().any().any():
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Maximum diversification optimization
         n_assets = len(available_assets)
@@ -607,7 +843,9 @@ class PositionSizingEngine:
         def diversification_ratio(weights):
             portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
             weighted_vol = np.sum(weights * volatilities)
-            return -weighted_vol / portfolio_vol  # Minimize negative diversification ratio
+            return (
+                -weighted_vol / portfolio_vol
+            )  # Minimize negative diversification ratio
 
         # Constraints
         constraints = {"type": "eq", "fun": lambda x: np.sum(x) - 1}  # Weights sum to 1
@@ -618,7 +856,11 @@ class PositionSizingEngine:
 
         try:
             result = minimize(
-                diversification_ratio, initial_weights, method="SLSQP", bounds=bounds, constraints=constraints
+                diversification_ratio,
+                initial_weights,
+                method="SLSQP",
+                bounds=bounds,
+                constraints=constraints,
             )
 
             if result.success:
@@ -628,21 +870,33 @@ class PositionSizingEngine:
         except Exception as e:
             logger.warning(f"Maximum diversification optimization failed: {e}")
 
-        return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        return self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
 
     def _calculate_risk_efficient_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate risk-efficient position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Get all available assets
         available_assets = [asset] + list(positions.keys())
         available_assets = [a for a in available_assets if a in data.columns]
 
         if len(available_assets) < 2:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate returns for all assets
         returns_data = {}
@@ -653,14 +907,18 @@ class PositionSizingEngine:
         returns_df = returns_df.dropna()
 
         if len(returns_df) < 30:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate mean returns and covariance matrix
         mean_returns = returns_df.mean()
         cov_matrix = returns_df.cov()
 
         if cov_matrix.empty or cov_matrix.isnull().any().any():
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Risk-efficient optimization (maximize return per unit of risk)
         n_assets = len(available_assets)
@@ -678,7 +936,13 @@ class PositionSizingEngine:
         initial_weights = np.array([1 / n_assets] * n_assets)
 
         try:
-            result = minimize(risk_efficiency, initial_weights, method="SLSQP", bounds=bounds, constraints=constraints)
+            result = minimize(
+                risk_efficiency,
+                initial_weights,
+                method="SLSQP",
+                bounds=bounds,
+                constraints=constraints,
+            )
 
             if result.success:
                 optimal_weights = result.x
@@ -687,26 +951,40 @@ class PositionSizingEngine:
         except Exception as e:
             logger.warning(f"Risk-efficient optimization failed: {e}")
 
-        return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        return self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
 
     def _calculate_adaptive_weight_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate adaptive weight position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate market regime
         returns = data[asset].pct_change().dropna()
         if len(returns) < 60:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate volatility regime
         recent_vol = returns.tail(20).std()
         long_term_vol = returns.tail(252).std()
 
         if long_term_vol == 0:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         vol_ratio = recent_vol / long_term_vol
 
@@ -715,7 +993,9 @@ class PositionSizingEngine:
         long_term_return = returns.tail(252).mean()
 
         # Adaptive sizing based on regime
-        base_size = self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        base_size = self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
 
         # Adjust for volatility regime
         if vol_ratio > 1.5:  # High volatility
@@ -736,15 +1016,25 @@ class PositionSizingEngine:
         return base_size * vol_adjustment * trend_adjustment
 
     def _calculate_regime_based_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate regime-based position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         returns = data[asset].pct_change().dropna()
         if len(returns) < 60:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate regime indicators
         volatility = returns.rolling(window=20).std().iloc[-1]
@@ -752,10 +1042,14 @@ class PositionSizingEngine:
         skewness = returns.rolling(window=60).skew().iloc[-1]
 
         if np.isnan(volatility) or np.isnan(momentum) or np.isnan(skewness):
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Determine regime
-        base_size = self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        base_size = self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
 
         # High volatility regime
         if volatility > returns.std() * 1.5:
@@ -786,16 +1080,26 @@ class PositionSizingEngine:
         return base_size * regime_adjustment * momentum_adjustment * skew_adjustment
 
     def _calculate_factor_based_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate factor-based position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Calculate factor scores
         returns = data[asset].pct_change().dropna()
         if len(returns) < 60:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Value factor (inverse of price relative to moving average)
         sma_20 = data[asset].rolling(window=20).mean().iloc[-1]
@@ -823,29 +1127,49 @@ class PositionSizingEngine:
         quality_factor = positive_returns
 
         # Combine factors
-        base_size = self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+        base_size = self._calculate_equal_weighted_size(
+            asset, price, strategy, signal, data, positions
+        )
 
-        factor_score = (value_factor + (1 + momentum_factor) + volatility_factor + quality_factor) / 4
+        factor_score = (
+            value_factor + (1 + momentum_factor) + volatility_factor + quality_factor
+        ) / 4
         return base_size * factor_score
 
     def _calculate_machine_learning_size(
-        self, asset: str, price: float, strategy: str, signal: float, data: pd.DataFrame, positions: Dict[str, float]
+        self,
+        asset: str,
+        price: float,
+        strategy: str,
+        signal: float,
+        data: pd.DataFrame,
+        positions: Dict[str, float],
     ) -> float:
         """Calculate machine learning-based position size."""
         if asset not in data.columns:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         # Get historical trades for training
-        asset_trades = [t for t in self.trade_history if t["asset"] == asset and t["strategy"] == strategy]
+        asset_trades = [
+            t
+            for t in self.trade_history
+            if t["asset"] == asset and t["strategy"] == strategy
+        ]
 
         if len(asset_trades) < 20:
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
         try:
             # Prepare features
             returns = data[asset].pct_change().dropna()
             if len(returns) < 60:
-                return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+                return self._calculate_equal_weighted_size(
+                    asset, price, strategy, signal, data, positions
+                )
 
             # Calculate technical features
             features = {
@@ -866,7 +1190,9 @@ class PositionSizingEngine:
                     y_train.append(1 if trade["pnl"] > 0 else 0)
 
             if len(X_train) < 10:
-                return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+                return self._calculate_equal_weighted_size(
+                    asset, price, strategy, signal, data, positions
+                )
 
             # Train simple model (Random Forest)
             from sklearn.ensemble import RandomForestRegressor
@@ -879,12 +1205,16 @@ class PositionSizingEngine:
             predicted_prob = model.predict([current_features])[0]
 
             # Convert probability to position size
-            base_size = self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            base_size = self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
             return base_size * predicted_prob
 
         except Exception as e:
             logger.warning(f"Machine learning sizing failed: {e}")
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
 
     def _calculate_rsi(self, returns: pd.Series, period: int = 14) -> float:
         """Calculate RSI indicator."""

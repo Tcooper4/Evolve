@@ -47,7 +47,9 @@ class UpdaterAgent:
         """
         self.config = self._load_config(config_path)
         self.task_memory = TaskMemory()
-        self.scheduler = UpdateScheduler(check_interval=self.config.get("check_interval", 6))
+        self.scheduler = UpdateScheduler(
+            check_interval=self.config.get("check_interval", 6)
+        )
 
         # Initialize directories
         self.models_dir = "models"
@@ -84,20 +86,36 @@ class UpdaterAgent:
             # Start the scheduler
             self.scheduler.start(self.check_updates)
             logger.info("Updater agent started")
-            return {"success": True, "message": "Updater agent started", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "Updater agent started",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
             logger.error(f"Error starting updater agent: {str(e)}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def stop(self) -> dict:
         """Stop the updater agent."""
         try:
             self.scheduler.stop()
             logger.info("Updater agent stopped")
-            return {"success": True, "message": "Updater agent stopped", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "Updater agent stopped",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
             logger.error(f"Error stopping updater agent: {str(e)}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def check_updates(self) -> dict:
         """
@@ -133,7 +151,10 @@ class UpdaterAgent:
 
             # Update task status
             task.status = TaskStatus.COMPLETED
-            task.metadata = {"models_checked": len(models), "timestamp": datetime.now().isoformat()}
+            task.metadata = {
+                "models_checked": len(models),
+                "timestamp": datetime.now().isoformat(),
+            }
             self.task_memory.update_task(task)
 
             return {
@@ -147,7 +168,11 @@ class UpdaterAgent:
             task.status = TaskStatus.FAILED
             task.metadata = {"error": str(e)}
             self.task_memory.update_task(task)
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _get_model_list(self) -> List[str]:
         """
@@ -156,7 +181,11 @@ class UpdaterAgent:
         Returns:
             List[str]: List of model IDs
         """
-        return [d for d in os.listdir(self.models_dir) if os.path.isdir(os.path.join(self.models_dir, d))]
+        return [
+            d
+            for d in os.listdir(self.models_dir)
+            if os.path.isdir(os.path.join(self.models_dir, d))
+        ]
 
     def _needs_update(self, model_id: str) -> bool:
         """
@@ -223,7 +252,10 @@ class UpdaterAgent:
 
             # Update task status
             task.status = TaskStatus.COMPLETED
-            task.metadata = {"model_id": model_id, "timestamp": datetime.now().isoformat()}
+            task.metadata = {
+                "model_id": model_id,
+                "timestamp": datetime.now().isoformat(),
+            }
             self.task_memory.update_task(task)
 
         except Exception as e:

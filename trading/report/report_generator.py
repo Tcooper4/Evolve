@@ -13,7 +13,6 @@ import base64
 import json
 import logging
 import os
-import smtplib
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -23,7 +22,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -191,7 +190,11 @@ class ReportGenerator:
             pdf_path = self._generate_pdf_report(report_data)
 
             # Add file paths to report data
-            report_data["files"] = {"markdown": str(markdown_path), "html": str(html_path), "pdf": str(pdf_path)}
+            report_data["files"] = {
+                "markdown": str(markdown_path),
+                "html": str(html_path),
+                "pdf": str(pdf_path),
+            }
 
             # Send integrations if configured
             self._send_integrations(report_data)
@@ -233,14 +236,18 @@ class ReportGenerator:
             # Calculate Sharpe ratio
             returns = [t.get("pnl", 0) for t in trades]
             if len(returns) > 1:
-                sharpe_ratio = np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0.0
+                sharpe_ratio = (
+                    np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0.0
+                )
             else:
                 sharpe_ratio = 0.0
 
             # Calculate profit factor
             total_gains = sum(gains) if gains else 0.0
             total_losses = sum(losses) if losses else 0.0
-            profit_factor = total_gains / total_losses if total_losses > 0 else float("inf")
+            profit_factor = (
+                total_gains / total_losses if total_losses > 0 else float("inf")
+            )
 
             # Calculate average trade duration
             durations = [t.get("duration", 0) for t in trades if t.get("duration")]
@@ -286,7 +293,9 @@ class ReportGenerator:
 
             # Calculate returns and Sharpe ratio
             returns = np.diff(actuals) / actuals[:-1]
-            sharpe_ratio = np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0.0
+            sharpe_ratio = (
+                np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0.0
+            )
             volatility = np.std(returns) if len(returns) > 0 else 0.0
 
             # Calculate drawdown
@@ -296,17 +305,31 @@ class ReportGenerator:
             max_drawdown = np.max(drawdown) if len(drawdown) > 0 else 0.0
 
             # Calculate accuracy metrics
-            correct_predictions = sum(1 for p, a in zip(predictions, actuals) if (p > a and p > 0) or (p < a and p < 0))
+            correct_predictions = sum(
+                1
+                for p, a in zip(predictions, actuals)
+                if (p > a and p > 0) or (p < a and p < 0)
+            )
             accuracy = correct_predictions / len(predictions) if predictions else 0.0
 
             # Calculate precision and recall (simplified)
             positive_predictions = sum(1 for p in predictions if p > 0)
             actual_positives = sum(1 for a in actuals if a > 0)
-            true_positives = sum(1 for p, a in zip(predictions, actuals) if p > 0 and a > 0)
+            true_positives = sum(
+                1 for p, a in zip(predictions, actuals) if p > 0 and a > 0
+            )
 
-            precision = true_positives / positive_predictions if positive_predictions > 0 else 0.0
+            precision = (
+                true_positives / positive_predictions
+                if positive_predictions > 0
+                else 0.0
+            )
             recall = true_positives / actual_positives if actual_positives > 0 else 0.0
-            f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+            f1_score = (
+                2 * (precision * recall) / (precision + recall)
+                if (precision + recall) > 0
+                else 0.0
+            )
 
             return ModelMetrics(
                 mse=mse,
@@ -325,12 +348,16 @@ class ReportGenerator:
             logger.error(f"Error calculating model metrics: {e}")
             return {
                 "success": True,
-                "result": ModelMetrics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                "result": ModelMetrics(
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+                ),
                 "message": "Operation completed successfully",
                 "timestamp": datetime.now().isoformat(),
             }
 
-    def _generate_strategy_reasoning(self, strategy_data: Dict[str, Any]) -> StrategyReasoning:
+    def _generate_strategy_reasoning(
+        self, strategy_data: Dict[str, Any]
+    ) -> StrategyReasoning:
         """Generate strategy reasoning using GPT."""
         try:
             if not self.openai_api_key:
@@ -407,19 +434,31 @@ class ReportGenerator:
             logger.error(f"Error generating strategy reasoning: {e}")
             return self._generate_fallback_reasoning(strategy_data)
 
-    def _generate_fallback_reasoning(self, strategy_data: Dict[str, Any]) -> StrategyReasoning:
+    def _generate_fallback_reasoning(
+        self, strategy_data: Dict[str, Any]
+    ) -> StrategyReasoning:
         """Generate fallback reasoning without GPT."""
         strategy_name = strategy_data.get("strategy_name", "Unknown")
         symbol = strategy_data.get("symbol", "Unknown")
         signals = strategy_data.get("signals", [])
 
-        summary = f"Strategy {strategy_name} executed on {symbol} with {len(signals)} signals"
+        summary = (
+            f"Strategy {strategy_name} executed on {symbol} with {len(signals)} signals"
+        )
 
-        key_factors = [f"Strategy type: {strategy_name}", f"Symbol: {symbol}", f"Number of signals: {len(signals)}"]
+        key_factors = [
+            f"Strategy type: {strategy_name}",
+            f"Symbol: {symbol}",
+            f"Number of signals: {len(signals)}",
+        ]
 
         risk_assessment = "Standard risk assessment based on strategy parameters"
         confidence_level = 0.7
-        recommendations = ["Monitor strategy performance", "Adjust parameters if needed", "Consider market conditions"]
+        recommendations = [
+            "Monitor strategy performance",
+            "Adjust parameters if needed",
+            "Consider market conditions",
+        ]
         market_conditions = "Market conditions analyzed based on available data"
 
         return StrategyReasoning(
@@ -431,7 +470,9 @@ class ReportGenerator:
             market_conditions=market_conditions,
         )
 
-    def _generate_charts(self, trade_data: Dict[str, Any], model_data: Dict[str, Any], symbol: str) -> Dict[str, str]:
+    def _generate_charts(
+        self, trade_data: Dict[str, Any], model_data: Dict[str, Any], symbol: str
+    ) -> Dict[str, str]:
         """Generate charts and return as base64 encoded images or HTML snippets."""
         charts = {}
         config = self.report_config
@@ -453,13 +494,23 @@ class ReportGenerator:
                 charts["equity_curve"] = base64.b64encode(buffer.getvalue()).decode()
                 plt.close()
             # 2. Model Predictions vs Actual
-            if config.get("predictions", True) and model_data.get("predictions") and model_data.get("actuals"):
+            if (
+                config.get("predictions", True)
+                and model_data.get("predictions")
+                and model_data.get("actuals")
+            ):
                 predictions = model_data["predictions"]
                 actuals = model_data["actuals"]
                 plt.figure(figsize=(10, 6))
                 plt.plot(actuals, label="Actual", linewidth=2, color="blue")
-                plt.plot(predictions, label="Predicted", linewidth=2, color="red", alpha=0.7)
-                plt.title(f"{symbol} - Model Predictions vs Actual", fontsize=14, fontweight="bold")
+                plt.plot(
+                    predictions, label="Predicted", linewidth=2, color="red", alpha=0.7
+                )
+                plt.title(
+                    f"{symbol} - Model Predictions vs Actual",
+                    fontsize=14,
+                    fontweight="bold",
+                )
                 plt.xlabel("Time")
                 plt.ylabel("Price")
                 plt.legend()
@@ -474,14 +525,18 @@ class ReportGenerator:
                 pnls = [t.get("pnl", 0) for t in trades]
                 plt.figure(figsize=(10, 6))
                 plt.hist(pnls, bins=20, alpha=0.7, color="green", edgecolor="black")
-                plt.title(f"{symbol} - Trade PnL Distribution", fontsize=14, fontweight="bold")
+                plt.title(
+                    f"{symbol} - Trade PnL Distribution", fontsize=14, fontweight="bold"
+                )
                 plt.xlabel("PnL")
                 plt.ylabel("Frequency")
                 plt.grid(True, alpha=0.3)
                 buffer = BytesIO()
                 plt.savefig(buffer, format="png", dpi=300, bbox_inches="tight")
                 buffer.seek(0)
-                charts["pnl_distribution"] = base64.b64encode(buffer.getvalue()).decode()
+                charts["pnl_distribution"] = base64.b64encode(
+                    buffer.getvalue()
+                ).decode()
                 plt.close()
             # 4. Heatmap of trade profitability over time
             if config.get("heatmap", True) and trades:
@@ -492,29 +547,47 @@ class ReportGenerator:
                     df["day"] = df["timestamp"].dt.date
                     df["hour"] = df["timestamp"].dt.hour
                     heatmap_data = df.pivot_table(
-                        index="day", columns="hour", values="pnl", aggfunc="sum", fill_value=0
+                        index="day",
+                        columns="hour",
+                        values="pnl",
+                        aggfunc="sum",
+                        fill_value=0,
                     )
                     plt.figure(figsize=(12, 6))
                     sns.heatmap(heatmap_data, cmap="RdYlGn", annot=False, fmt=".0f")
-                    plt.title(f"{symbol} - Trade Profitability Heatmap (Day vs Hour)", fontsize=14, fontweight="bold")
+                    plt.title(
+                        f"{symbol} - Trade Profitability Heatmap (Day vs Hour)",
+                        fontsize=14,
+                        fontweight="bold",
+                    )
                     plt.xlabel("Hour of Day")
                     plt.ylabel("Day")
                     buffer = BytesIO()
                     plt.savefig(buffer, format="png", dpi=300, bbox_inches="tight")
                     buffer.seek(0)
-                    charts["profit_heatmap"] = base64.b64encode(buffer.getvalue()).decode()
+                    charts["profit_heatmap"] = base64.b64encode(
+                        buffer.getvalue()
+                    ).decode()
                     plt.close()
             # 5. Model summary (most/least successful)
             if config.get("model_summary", True):
                 # Aggregate by model_id or model_name if available in trade_data
                 df = pd.DataFrame(trades)
                 if "model_id" in df.columns and "pnl" in df.columns:
-                    model_group = df.groupby("model_id")["pnl"].agg(["sum", "count", "mean"]).reset_index()
+                    model_group = (
+                        df.groupby("model_id")["pnl"]
+                        .agg(["sum", "count", "mean"])
+                        .reset_index()
+                    )
                     best = model_group.sort_values("sum", ascending=False).head(1)
                     worst = model_group.sort_values("sum", ascending=True).head(1)
                     summary = {
-                        "most_successful": best.to_dict(orient="records")[0] if not best.empty else {},
-                        "least_successful": worst.to_dict(orient="records")[0] if not worst.empty else {},
+                        "most_successful": best.to_dict(orient="records")[0]
+                        if not best.empty
+                        else {},
+                        "least_successful": worst.to_dict(orient="records")[0]
+                        if not worst.empty
+                        else {},
                     }
                     charts["model_summary"] = summary
             # 6. Per-trade execution log
@@ -522,7 +595,11 @@ class ReportGenerator:
                 # Prepare a log as a Markdown table and as a list for HTML
                 log_columns = ["timestamp", "action", "pnl", "result", "model_id"]
                 df = pd.DataFrame(trades)
-                log_df = df[log_columns].copy() if all(col in df.columns for col in log_columns) else df.copy()
+                log_df = (
+                    df[log_columns].copy()
+                    if all(col in df.columns for col in log_columns)
+                    else df.copy()
+                )
                 log_df = log_df.fillna("")
                 # Markdown table
                 md_table = "| Time | Action | PnL | Result | Model ID |\n|---|---|---|---|---|\n"
@@ -992,8 +1069,16 @@ _No model summary available._
                     {
                         "color": "good" if total_pnl > 0 else "danger",
                         "fields": [
-                            {"title": "Total PnL", "value": f"${total_pnl:.2f}", "short": True},
-                            {"title": "Win Rate", "value": f"{win_rate:.1%}", "short": True},
+                            {
+                                "title": "Total PnL",
+                                "value": f"${total_pnl:.2f}",
+                                "short": True,
+                            },
+                            {
+                                "title": "Win Rate",
+                                "value": f"{win_rate:.1%}",
+                                "short": True,
+                            },
                             {
                                 "title": "Sharpe Ratio",
                                 "value": f"{report_data['trade_metrics'].sharpe_ratio:.2f}",
@@ -1047,16 +1132,27 @@ _No model summary available._
 
                 encoders.encode_base64(part)
                 part.add_header(
-                    "Content-Disposition", f'attachment; filename= {Path(report_data["files"]["pdf"]).name}'
+                    "Content-Disposition",
+                    f'attachment; filename= {Path(report_data["files"]["pdf"]).name}',
                 )
                 msg.attach(part)
 
             # Send email
-            server = smtplib.SMTP(self.email_config.get("smtp_server", ""), self.email_config.get("smtp_port", 587))
+            server = smtplib.SMTP(
+                self.email_config.get("smtp_server", ""),
+                self.email_config.get("smtp_port", 587),
+            )
             server.starttls()
-            server.login(self.email_config.get("username", ""), self.email_config.get("password", ""))
+            server.login(
+                self.email_config.get("username", ""),
+                self.email_config.get("password", ""),
+            )
             text = msg.as_string()
-            server.sendmail(self.email_config.get("from_email", ""), self.email_config.get("to_email", ""), text)
+            server.sendmail(
+                self.email_config.get("from_email", ""),
+                self.email_config.get("to_email", ""),
+                text,
+            )
             server.quit()
 
             logger.info("Report sent via email successfully")
@@ -1079,4 +1175,6 @@ def generate_trade_report(
 ) -> Dict[str, Any]:
     """Generate a comprehensive trading report."""
     generator = ReportGenerator(**kwargs)
-    return generator.generate_comprehensive_report(trade_data, model_data, strategy_data, symbol, timeframe, period)
+    return generator.generate_comprehensive_report(
+        trade_data, model_data, strategy_data, symbol, timeframe, period
+    )

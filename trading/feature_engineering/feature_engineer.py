@@ -52,7 +52,9 @@ class FeatureEngineer(FeatureEngineering):
         self.pca = PCA(n_components=0.95)  # Keep 95% of variance
 
         # Feature selection components
-        self.variance_threshold = VarianceThreshold(threshold=0.01)  # Remove low variance features
+        self.variance_threshold = VarianceThreshold(
+            threshold=0.01
+        )  # Remove low variance features
         self.feature_selector = None
         self.selected_features = []
 
@@ -71,7 +73,9 @@ class FeatureEngineer(FeatureEngineering):
 
         self.feature_columns = []
         # Dictionary of custom indicator functions registered by name
-        self.custom_indicators: Dict[str, Callable[[pd.DataFrame], Union[pd.Series, pd.DataFrame]]] = {}
+        self.custom_indicators: Dict[
+            str, Callable[[pd.DataFrame], Union[pd.Series, pd.DataFrame]]
+        ] = {}
 
         # Register built-in custom indicators
         try:
@@ -94,7 +98,9 @@ class FeatureEngineer(FeatureEngineering):
         """
         self.custom_indicators[name] = func
 
-    def apply_registered_indicator(self, name: str, df: pd.DataFrame, **kwargs) -> Union[pd.Series, pd.DataFrame]:
+    def apply_registered_indicator(
+        self, name: str, df: pd.DataFrame, **kwargs
+    ) -> Union[pd.Series, pd.DataFrame]:
         """Apply a registered indicator by name.
 
         Args:
@@ -142,7 +148,9 @@ class FeatureEngineer(FeatureEngineering):
 
         return descriptions
 
-    def select_features(self, features: pd.DataFrame, target: pd.Series = None) -> pd.DataFrame:
+    def select_features(
+        self, features: pd.DataFrame, target: pd.Series = None
+    ) -> pd.DataFrame:
         """Apply feature selection to reduce dimensionality.
 
         Args:
@@ -159,12 +167,16 @@ class FeatureEngineer(FeatureEngineering):
             if self.feature_selection_config.get("enable_variance_threshold", True):
                 logger.info("Applying variance threshold feature selection...")
                 self.variance_threshold = VarianceThreshold(
-                    threshold=self.feature_selection_config.get("variance_threshold", 0.01)
+                    threshold=self.feature_selection_config.get(
+                        "variance_threshold", 0.01
+                    )
                 )
                 selected_features = pd.DataFrame(
                     self.variance_threshold.fit_transform(selected_features),
                     index=selected_features.index,
-                    columns=selected_features.columns[self.variance_threshold.get_support()],
+                    columns=selected_features.columns[
+                        self.variance_threshold.get_support()
+                    ],
                 )
                 logger.info(
                     f"Variance threshold reduced features from {features.shape[1]} to {selected_features.shape[1]}"
@@ -181,7 +193,9 @@ class FeatureEngineer(FeatureEngineering):
                     estimator = RandomForestRegressor(n_estimators=50, random_state=42)
                     rfe = RFE(
                         estimator=estimator,
-                        n_features_to_select=self.feature_selection_config.get("rfe_n_features", 30),
+                        n_features_to_select=self.feature_selection_config.get(
+                            "rfe_n_features", 30
+                        ),
                     )
                     selected_features = pd.DataFrame(
                         rfe.fit_transform(selected_features, target),
@@ -194,12 +208,19 @@ class FeatureEngineer(FeatureEngineering):
                     logger.warning(f"RFE failed: {e}")
 
             # 3. Select K Best features (if target is provided)
-            elif self.feature_selection_config.get("enable_k_best", True) and target is not None and len(target) > 0:
+            elif (
+                self.feature_selection_config.get("enable_k_best", True)
+                and target is not None
+                and len(target) > 0
+            ):
                 logger.info("Applying K-best feature selection...")
                 try:
                     k_best = SelectKBest(
                         score_func=f_regression,
-                        k=min(self.feature_selection_config.get("k_best_features", 50), selected_features.shape[1]),
+                        k=min(
+                            self.feature_selection_config.get("k_best_features", 50),
+                            selected_features.shape[1],
+                        ),
                     )
                     selected_features = pd.DataFrame(
                         k_best.fit_transform(selected_features, target),
@@ -207,14 +228,18 @@ class FeatureEngineer(FeatureEngineering):
                         columns=selected_features.columns[k_best.get_support()],
                     )
                     self.feature_selector = k_best
-                    logger.info(f"K-best reduced features to {selected_features.shape[1]}")
+                    logger.info(
+                        f"K-best reduced features to {selected_features.shape[1]}"
+                    )
                 except Exception as e:
                     logger.warning(f"K-best failed: {e}")
 
             # Store selected feature names
             self.selected_features = selected_features.columns.tolist()
 
-            logger.info(f"Feature selection completed. Final features: {len(self.selected_features)}")
+            logger.info(
+                f"Feature selection completed. Final features: {len(self.selected_features)}"
+            )
             return selected_features
 
         except Exception as e:
@@ -242,17 +267,25 @@ class FeatureEngineer(FeatureEngineering):
             elif self.feature_selector and hasattr(self.feature_selector, "ranking_"):
                 # Use RFE ranking
                 importance_df = pd.DataFrame(
-                    {"feature": self.selected_features, "ranking": self.feature_selector.ranking_}
+                    {
+                        "feature": self.selected_features,
+                        "ranking": self.feature_selector.ranking_,
+                    }
                 )
             elif self.feature_selector and hasattr(self.feature_selector, "scores_"):
                 # Use K-best scores
                 importance_df = pd.DataFrame(
-                    {"feature": self.selected_features, "score": self.feature_selector.scores_}
+                    {
+                        "feature": self.selected_features,
+                        "score": self.feature_selector.scores_,
+                    }
                 )
             else:
                 # Fallback to variance scores
                 features = self.selected_features or self.feature_columns
-                importance_df = pd.DataFrame({"feature": features, "variance": [1.0] * len(features)})  # Placeholder
+                importance_df = pd.DataFrame(
+                    {"feature": features, "variance": [1.0] * len(features)}
+                )  # Placeholder
 
             return importance_df.sort_values(
                 "importance"
@@ -267,7 +300,9 @@ class FeatureEngineer(FeatureEngineering):
             logger.error(f"Error getting feature importance: {e}")
             return pd.DataFrame()
 
-    def engineer_features(self, data: pd.DataFrame, target: pd.Series = None) -> pd.DataFrame:
+    def engineer_features(
+        self, data: pd.DataFrame, target: pd.Series = None
+    ) -> pd.DataFrame:
         """Engineer all features from the input data with feature selection.
 
         Args:
@@ -520,10 +555,18 @@ class FeatureEngineer(FeatureEngineering):
 
         # Rolling statistics
         for window in [5, 10, 20]:
-            features[f"rolling_mean_{window}"] = data["close"].rolling(window=window).mean()
-            features[f"rolling_std_{window}"] = data["close"].rolling(window=window).std()
-            features[f"rolling_skew_{window}"] = data["close"].rolling(window=window).skew()
-            features[f"rolling_kurt_{window}"] = data["close"].rolling(window=window).kurt()
+            features[f"rolling_mean_{window}"] = (
+                data["close"].rolling(window=window).mean()
+            )
+            features[f"rolling_std_{window}"] = (
+                data["close"].rolling(window=window).std()
+            )
+            features[f"rolling_skew_{window}"] = (
+                data["close"].rolling(window=window).skew()
+            )
+            features[f"rolling_kurt_{window}"] = (
+                data["close"].rolling(window=window).kurt()
+            )
 
         return features
 
@@ -535,13 +578,17 @@ class FeatureEngineer(FeatureEngineering):
         features["spread"] = (data["high"] - data["low"]) / data["close"]
 
         # Volume profile
-        features["volume_ma_ratio"] = data["volume"] / data["volume"].rolling(window=20).mean()
+        features["volume_ma_ratio"] = (
+            data["volume"] / data["volume"].rolling(window=20).mean()
+        )
 
         # Price impact
         features["price_impact"] = features["returns"].abs() / data["volume"]
 
         # Order flow imbalance
-        features["flow_imbalance"] = (data["close"] - data["open"]) / (data["high"] - data["low"])
+        features["flow_imbalance"] = (data["close"] - data["open"]) / (
+            data["high"] - data["low"]
+        )
 
         return features
 
@@ -569,7 +616,11 @@ class FeatureEngineer(FeatureEngineering):
             self.scaler.fit(features)
 
         # Transform features
-        scaled_features = pd.DataFrame(self.scaler.transform(features), index=features.index, columns=features.columns)
+        scaled_features = pd.DataFrame(
+            self.scaler.transform(features),
+            index=features.index,
+            columns=features.columns,
+        )
 
         return scaled_features
 
@@ -633,7 +684,11 @@ class FeatureEngineer(FeatureEngineering):
         df = df.dropna()
 
         # Store feature columns
-        self.feature_columns = [col for col in df.columns if col not in ["open", "high", "low", "close", "volume"]]
+        self.feature_columns = [
+            col
+            for col in df.columns
+            if col not in ["open", "high", "low", "close", "volume"]
+        ]
 
         return df
 
@@ -664,13 +719,17 @@ class FeatureEngineer(FeatureEngineering):
         df[self.feature_columns] = self.scaler.fit_transform(df[self.feature_columns])
         return df
 
-    def create_target_variable(self, data: pd.DataFrame, horizon: int = 1) -> pd.DataFrame:
+    def create_target_variable(
+        self, data: pd.DataFrame, horizon: int = 1
+    ) -> pd.DataFrame:
         """Create target variable for prediction."""
         df = data.copy()
         df["target"] = df["close"].shift(-horizon) / df["close"] - 1
         return df
 
-    def prepare_training_data(self, data: pd.DataFrame, target_col: str = "target") -> tuple:
+    def prepare_training_data(
+        self, data: pd.DataFrame, target_col: str = "target"
+    ) -> tuple:
         """Prepare data for training."""
         df = data.copy()
 
@@ -688,8 +747,26 @@ class FeatureEngineer(FeatureEngineering):
         return {
             "num_features": len(self.feature_columns),
             "feature_types": {
-                "technical": len([f for f in self.feature_columns if f.startswith(("SMA", "RSI", "MACD", "BB"))]),
-                "fundamental": len([f for f in self.feature_columns if f.startswith(("PE", "PB", "ROE"))]),
-                "sentiment": len([f for f in self.feature_columns if f.startswith(("sentiment", "emotion"))]),
+                "technical": len(
+                    [
+                        f
+                        for f in self.feature_columns
+                        if f.startswith(("SMA", "RSI", "MACD", "BB"))
+                    ]
+                ),
+                "fundamental": len(
+                    [
+                        f
+                        for f in self.feature_columns
+                        if f.startswith(("PE", "PB", "ROE"))
+                    ]
+                ),
+                "sentiment": len(
+                    [
+                        f
+                        for f in self.feature_columns
+                        if f.startswith(("sentiment", "emotion"))
+                    ]
+                ),
             },
         }

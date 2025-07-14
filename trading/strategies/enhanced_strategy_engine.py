@@ -96,17 +96,22 @@ class PerformanceChecker:
     def __init__(self, thresholds: Optional[Dict[str, float]] = None):
         self.thresholds = thresholds or self.THRESHOLDS.copy()
 
-    def check_strategy_performance(self, strategy_name: str, performance: Dict[str, float]) -> Dict[str, Any]:
+    def check_strategy_performance(
+        self, strategy_name: str, performance: Dict[str, float]
+    ) -> Dict[str, Any]:
         """Evaluate strategy performance and recommend actions."""
         sharpe = performance.get("sharpe_ratio", 0)
         drawdown = performance.get("max_drawdown", 0)
         win_rate = performance.get("win_rate", 0)
         volatility = performance.get("volatility", 0)
-        calmar = performance.get("calmar_ratio", 0)
+        performance.get("calmar_ratio", 0)
         total_return = performance.get("total_return", 0)
 
         should_retire = (
-            sharpe < 0 or drawdown < self.thresholds["max_drawdown"] * 2 or win_rate < 0.2 or total_return < -0.2
+            sharpe < 0
+            or drawdown < self.thresholds["max_drawdown"] * 2
+            or win_rate < 0.2
+            or total_return < -0.2
         )
         should_tune = (
             sharpe < self.thresholds["min_sharpe_ratio"]
@@ -114,16 +119,26 @@ class PerformanceChecker:
             or win_rate < self.thresholds["min_win_rate"]
             or volatility > self.thresholds["max_volatility"]
         )
-        confidence = max(0.0, min(1.0, 0.5 + 0.5 * (sharpe - self.thresholds["min_sharpe_ratio"])))
+        confidence = max(
+            0.0, min(1.0, 0.5 + 0.5 * (sharpe - self.thresholds["min_sharpe_ratio"]))
+        )
         recommendations = []
         if should_retire:
-            recommendations.append("Retire or replace this strategy due to persistent underperformance.")
+            recommendations.append(
+                "Retire or replace this strategy due to persistent underperformance."
+            )
         elif should_tune:
-            recommendations.append("Tune parameters or retrain this strategy to improve performance.")
+            recommendations.append(
+                "Tune parameters or retrain this strategy to improve performance."
+            )
         else:
-            recommendations.append("Strategy is performing within acceptable thresholds.")
+            recommendations.append(
+                "Strategy is performing within acceptable thresholds."
+            )
         if volatility > self.thresholds["max_volatility"]:
-            recommendations.append("Reduce position size or add risk controls due to high volatility.")
+            recommendations.append(
+                "Reduce position size or add risk controls due to high volatility."
+            )
         if win_rate < self.thresholds["min_win_rate"]:
             recommendations.append("Review entry/exit logic to improve win rate.")
         return {
@@ -134,22 +149,33 @@ class PerformanceChecker:
             "timestamp": datetime.now().isoformat(),
         }
 
-    def check_model_performance(self, model_name: str, performance: Dict[str, float]) -> Dict[str, Any]:
+    def check_model_performance(
+        self, model_name: str, performance: Dict[str, float]
+    ) -> Dict[str, Any]:
         """Evaluate model performance and recommend actions."""
         mse = performance.get("mse", 1.0)
         accuracy = performance.get("accuracy", 0.0)
         sharpe = performance.get("sharpe_ratio", 0)
-        should_retrain = mse > self.thresholds["max_mse"] or accuracy < self.thresholds["min_accuracy"]
+        should_retrain = (
+            mse > self.thresholds["max_mse"]
+            or accuracy < self.thresholds["min_accuracy"]
+        )
         should_replace = sharpe < 0 or mse > self.thresholds["max_mse"] * 2
         recommendations = []
         if should_replace:
-            recommendations.append("Replace this model due to poor performance (negative Sharpe or high MSE).")
+            recommendations.append(
+                "Replace this model due to poor performance (negative Sharpe or high MSE)."
+            )
         elif should_retrain:
-            recommendations.append("Retrain or tune this model to improve accuracy and reduce error.")
+            recommendations.append(
+                "Retrain or tune this model to improve accuracy and reduce error."
+            )
         else:
             recommendations.append("Model is performing within acceptable thresholds.")
         if accuracy < self.thresholds["min_accuracy"]:
-            recommendations.append("Collect more data or improve feature engineering to boost accuracy.")
+            recommendations.append(
+                "Collect more data or improve feature engineering to boost accuracy."
+            )
         return {
             "should_retrain": should_retrain and not should_replace,
             "should_replace": should_replace,
@@ -157,21 +183,33 @@ class PerformanceChecker:
             "timestamp": datetime.now().isoformat(),
         }
 
-    def suggest_improvements(self, name: str, performance: Dict[str, float], is_model: bool = False) -> List[str]:
+    def suggest_improvements(
+        self, name: str, performance: Dict[str, float], is_model: bool = False
+    ) -> List[str]:
         """Suggest concrete improvements for a strategy or model."""
         suggestions = []
         if is_model:
             if performance.get("mse", 0) > self.thresholds["max_mse"]:
-                suggestions.append("Reduce model complexity or regularize to lower MSE.")
+                suggestions.append(
+                    "Reduce model complexity or regularize to lower MSE."
+                )
             if performance.get("accuracy", 1) < self.thresholds["min_accuracy"]:
-                suggestions.append("Add more training data or features to improve accuracy.")
+                suggestions.append(
+                    "Add more training data or features to improve accuracy."
+                )
             if performance.get("sharpe_ratio", 0) < self.thresholds["min_sharpe_ratio"]:
-                suggestions.append("Tune hyperparameters or try alternative model architectures.")
+                suggestions.append(
+                    "Tune hyperparameters or try alternative model architectures."
+                )
         else:
             if performance.get("sharpe_ratio", 0) < self.thresholds["min_sharpe_ratio"]:
-                suggestions.append("Increase lookback window or adjust signal thresholds.")
+                suggestions.append(
+                    "Increase lookback window or adjust signal thresholds."
+                )
             if performance.get("max_drawdown", 0) < self.thresholds["max_drawdown"]:
-                suggestions.append("Add stop-loss or reduce leverage to control drawdown.")
+                suggestions.append(
+                    "Add stop-loss or reduce leverage to control drawdown."
+                )
             if performance.get("win_rate", 1) < self.thresholds["min_win_rate"]:
                 suggestions.append("Refine entry/exit rules to improve win rate.")
             if performance.get("volatility", 0) > self.thresholds["max_volatility"]:
@@ -216,7 +254,11 @@ class EnhancedStrategyEngine:
             logger.warning("PerformanceChecker not available - using fallback")
             self.meta_agent = self._create_fallback_meta_agent()
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _create_fallback_regime_classifier(self):
         """Create fallback regime classifier."""
@@ -256,15 +298,27 @@ class EnhancedStrategyEngine:
         """Create fallback meta-agent."""
 
         class FallbackMetaAgent:
-            def check_strategy_performance(self, strategy_name: str, performance: Dict[str, float]) -> Dict[str, Any]:
-                return {"should_retire": False, "should_tune": False, "confidence": 0.5, "recommendations": []}
+            def check_strategy_performance(
+                self, strategy_name: str, performance: Dict[str, float]
+            ) -> Dict[str, Any]:
+                return {
+                    "should_retire": False,
+                    "should_tune": False,
+                    "confidence": 0.5,
+                    "recommendations": [],
+                }
 
-            def suggest_improvements(self, strategy_name: str, performance: Dict[str, float]) -> List[str]:
+            def suggest_improvements(
+                self, strategy_name: str, performance: Dict[str, float]
+            ) -> List[str]:
                 return {
                     "success": True,
                     "result": {
                         "success": True,
-                        "result": ["Consider parameter tuning", "Monitor performance closely"],
+                        "result": [
+                            "Consider parameter tuning",
+                            "Monitor performance closely",
+                        ],
                         "message": "Operation completed successfully",
                         "timestamp": datetime.now().isoformat(),
                     },
@@ -385,7 +439,9 @@ class EnhancedStrategyEngine:
 
         return strategies
 
-    def get_strategy_chain(self, regime: MarketRegime, risk_tolerance: str) -> List[Dict[str, Any]]:
+    def get_strategy_chain(
+        self, regime: MarketRegime, risk_tolerance: str
+    ) -> List[Dict[str, Any]]:
         """Get dynamic strategy chain based on regime and risk tolerance."""
         compatible_strategies = []
 
@@ -394,8 +450,14 @@ class EnhancedStrategyEngine:
                 # Check risk level compatibility
                 risk_compatible = (
                     (risk_tolerance == "low" and config.risk_level in ["low"])
-                    or (risk_tolerance == "medium" and config.risk_level in ["low", "medium"])
-                    or (risk_tolerance == "high" and config.risk_level in ["low", "medium", "high"])
+                    or (
+                        risk_tolerance == "medium"
+                        and config.risk_level in ["low", "medium"]
+                    )
+                    or (
+                        risk_tolerance == "high"
+                        and config.risk_level in ["low", "medium", "high"]
+                    )
                 )
 
                 if risk_compatible:
@@ -427,7 +489,9 @@ class EnhancedStrategyEngine:
 
         return compatible_strategies
 
-    def execute_strategy_chain(self, data: pd.DataFrame, regime: MarketRegime, risk_tolerance: str) -> Dict[str, Any]:
+    def execute_strategy_chain(
+        self, data: pd.DataFrame, regime: MarketRegime, risk_tolerance: str
+    ) -> Dict[str, Any]:
         """Execute a strategy chain and combine results."""
         start_time = datetime.now()
 
@@ -456,7 +520,9 @@ class EnhancedStrategyEngine:
             if result:
                 # Weight the results
                 weighted_signals = result.signals * weight
-                weighted_performance = {k: v * weight for k, v in result.performance.items()}
+                weighted_performance = {
+                    k: v * weight for k, v in result.performance.items()
+                }
 
                 strategy_results.append(
                     {
@@ -504,7 +570,9 @@ class EnhancedStrategyEngine:
             "execution_time": execution_time,
         }
 
-    def _execute_single_strategy(self, data: pd.DataFrame, config: StrategyConfig) -> Optional[StrategyResult]:
+    def _execute_single_strategy(
+        self, data: pd.DataFrame, config: StrategyConfig
+    ) -> Optional[StrategyResult]:
         """Execute a single strategy."""
         try:
             start_time = datetime.now()
@@ -534,7 +602,9 @@ class EnhancedStrategyEngine:
         except Exception as e:
             logger.error(f"Strategy execution failed for {config.name}: {e}")
 
-    def _generate_signals(self, data: pd.DataFrame, config: StrategyConfig) -> pd.DataFrame:
+    def _generate_signals(
+        self, data: pd.DataFrame, config: StrategyConfig
+    ) -> pd.DataFrame:
         """Generate trading signals based on strategy configuration."""
         signals = pd.DataFrame(index=data.index)
         signals["position"] = 0.0
@@ -630,7 +700,7 @@ class EnhancedStrategyEngine:
             signals.loc[stop_loss_triggered, "position"] = 0.0
 
         elif config.strategy_type == StrategyType.CASH_HEAVY:
-            cash_allocation = config.parameters["cash_allocation"]
+            config.parameters["cash_allocation"]
             bond_allocation = config.parameters["bond_allocation"]
 
             # Cash-heavy strategy - mostly cash with small bond allocation
@@ -644,7 +714,9 @@ class EnhancedStrategyEngine:
 
         return signals
 
-    def _calculate_performance(self, signals: pd.DataFrame, data: pd.DataFrame) -> Dict[str, float]:
+    def _calculate_performance(
+        self, signals: pd.DataFrame, data: pd.DataFrame
+    ) -> Dict[str, float]:
         """Calculate performance metrics for signals."""
         try:
             # Calculate returns
@@ -667,7 +739,9 @@ class EnhancedStrategyEngine:
             total_return = (1 + strategy_returns).prod() - 1
             volatility = strategy_returns.std() * np.sqrt(252)
             sharpe_ratio = (
-                strategy_returns.mean() / strategy_returns.std() * np.sqrt(252) if strategy_returns.std() > 0 else 0
+                strategy_returns.mean() / strategy_returns.std() * np.sqrt(252)
+                if strategy_returns.std() > 0
+                else 0
             )
 
             # Calculate max drawdown
@@ -689,20 +763,39 @@ class EnhancedStrategyEngine:
 
         except Exception as e:
             logger.error(f"Performance calculation failed: {e}")
-            return {"total_return": 0.0, "sharpe_ratio": 0.0, "max_drawdown": 0.0, "win_rate": 0.0, "volatility": 0.0}
+            return {
+                "total_return": 0.0,
+                "sharpe_ratio": 0.0,
+                "max_drawdown": 0.0,
+                "win_rate": 0.0,
+                "volatility": 0.0,
+            }
 
-    def _adjust_confidence(self, base_confidence: float, performance: Dict[str, float]) -> float:
+    def _adjust_confidence(
+        self, base_confidence: float, performance: Dict[str, float]
+    ) -> float:
         """Adjust confidence based on performance metrics."""
         # Adjust based on Sharpe ratio
-        sharpe_adjustment = min(performance["sharpe_ratio"] / 2.0, 0.2)  # Max 20% adjustment
+        sharpe_adjustment = min(
+            performance["sharpe_ratio"] / 2.0, 0.2
+        )  # Max 20% adjustment
 
         # Adjust based on win rate
-        win_rate_adjustment = (performance["win_rate"] - 0.5) * 0.3  # Max 15% adjustment
+        win_rate_adjustment = (
+            performance["win_rate"] - 0.5
+        ) * 0.3  # Max 15% adjustment
 
         # Adjust based on drawdown
-        drawdown_adjustment = max(performance["max_drawdown"] * 2, -0.2)  # Max 20% penalty
+        drawdown_adjustment = max(
+            performance["max_drawdown"] * 2, -0.2
+        )  # Max 20% penalty
 
-        adjusted_confidence = base_confidence + sharpe_adjustment + win_rate_adjustment + drawdown_adjustment
+        adjusted_confidence = (
+            base_confidence
+            + sharpe_adjustment
+            + win_rate_adjustment
+            + drawdown_adjustment
+        )
 
         # Clamp to [0, 1]
         return {
@@ -712,7 +805,9 @@ class EnhancedStrategyEngine:
             "timestamp": datetime.now().isoformat(),
         }
 
-    def _log_strategy_performance(self, combined_result: StrategyResult, strategy_results: List[Dict[str, Any]]):
+    def _log_strategy_performance(
+        self, combined_result: StrategyResult, strategy_results: List[Dict[str, Any]]
+    ):
         """Log strategy performance for meta-agent analysis."""
         try:
             # Store performance history
@@ -747,18 +842,28 @@ class EnhancedStrategyEngine:
                 )
 
                 if meta_analysis.get("should_retire", False):
-                    logger.warning(f"Meta-agent suggests retiring strategy: {combined_result.strategy_name}")
+                    logger.warning(
+                        f"Meta-agent suggests retiring strategy: {combined_result.strategy_name}"
+                    )
 
                 if meta_analysis.get("should_tune", False):
-                    logger.info(f"Meta-agent suggests tuning strategy: {combined_result.strategy_name}")
+                    logger.info(
+                        f"Meta-agent suggests tuning strategy: {combined_result.strategy_name}"
+                    )
 
         except Exception as e:
             logger.error(f"Performance logging failed: {e}")
 
-    def get_strategy_performance_history(self, strategy_name: str = None, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_strategy_performance_history(
+        self, strategy_name: str = None, limit: int = 100
+    ) -> List[Dict[str, Any]]:
         """Get strategy performance history."""
         if strategy_name:
-            return [record for record in self.performance_history[-limit:] if record["strategy_name"] == strategy_name]
+            return [
+                record
+                for record in self.performance_history[-limit:]
+                if record["strategy_name"] == strategy_name
+            ]
         else:
             return self.performance_history[-limit:]
 
@@ -766,14 +871,22 @@ class EnhancedStrategyEngine:
         """Get strategy engine health information."""
         try:
             # Calculate recent performance
-            recent_performance = self.performance_history[-50:] if self.performance_history else []
+            recent_performance = (
+                self.performance_history[-50:] if self.performance_history else []
+            )
 
             if recent_performance:
-                avg_sharpe = np.mean([p["performance"]["sharpe_ratio"] for p in recent_performance])
-                avg_confidence = np.mean([p["confidence"] for p in recent_performance])
-                success_rate = len([p for p in recent_performance if p["performance"]["total_return"] > 0]) / len(
-                    recent_performance
+                avg_sharpe = np.mean(
+                    [p["performance"]["sharpe_ratio"] for p in recent_performance]
                 )
+                avg_confidence = np.mean([p["confidence"] for p in recent_performance])
+                success_rate = len(
+                    [
+                        p
+                        for p in recent_performance
+                        if p["performance"]["total_return"] > 0
+                    ]
+                ) / len(recent_performance)
             else:
                 avg_sharpe = 0.0
                 avg_confidence = 0.0
@@ -786,7 +899,9 @@ class EnhancedStrategyEngine:
                 "average_sharpe": avg_sharpe,
                 "average_confidence": avg_confidence,
                 "success_rate": success_rate,
-                "last_execution": self.performance_history[-1]["timestamp"] if self.performance_history else None,
+                "last_execution": self.performance_history[-1]["timestamp"]
+                if self.performance_history
+                else None,
             }
 
         except Exception as e:

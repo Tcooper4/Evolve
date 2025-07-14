@@ -62,7 +62,11 @@ class OptimizationResult:
 class SelfTuningOptimizer:
     """Self-tuning optimizer for trading strategies."""
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None, log_path: str = "logs/optimizer_history.json"):
+    def __init__(
+        self,
+        config: Optional[Dict[str, Any]] = None,
+        log_path: str = "logs/optimizer_history.json",
+    ):
         """Initialize self-tuning optimizer.
 
         Args:
@@ -75,8 +79,12 @@ class SelfTuningOptimizer:
 
         # Optimization settings
         self.evaluation_window = self.config.get("evaluation_window", 30)  # days
-        self.min_trades_for_evaluation = self.config.get("min_trades_for_evaluation", 10)
-        self.optimization_threshold = self.config.get("optimization_threshold", 0.05)  # 5% improvement
+        self.min_trades_for_evaluation = self.config.get(
+            "min_trades_for_evaluation", 10
+        )
+        self.optimization_threshold = self.config.get(
+            "optimization_threshold", 0.05
+        )  # 5% improvement
         self.max_parameter_changes = self.config.get("max_parameter_changes", 3)
 
         # Parameter bounds and step sizes
@@ -91,7 +99,9 @@ class SelfTuningOptimizer:
         # Load existing history
         self._load_history()
 
-        logger.info(f"Self-tuning optimizer initialized with evaluation window: {self.evaluation_window} days")
+        logger.info(
+            f"Self-tuning optimizer initialized with evaluation window: {self.evaluation_window} days"
+        )
 
     def _load_history(self):
         """Load optimization history from file."""
@@ -100,11 +110,17 @@ class SelfTuningOptimizer:
                 with open(self.log_path, "r") as f:
                     data = json.load(f)
                     self.performance_history = data.get("performance_history", [])
-                    self.parameter_changes = [ParameterChange(**change) for change in data.get("parameter_changes", [])]
-                    self.optimization_history = [
-                        OptimizationResult(**result) for result in data.get("optimization_history", [])
+                    self.parameter_changes = [
+                        ParameterChange(**change)
+                        for change in data.get("parameter_changes", [])
                     ]
-                logger.info(f"Loaded optimization history: {len(self.performance_history)} records")
+                    self.optimization_history = [
+                        OptimizationResult(**result)
+                        for result in data.get("optimization_history", [])
+                    ]
+                logger.info(
+                    f"Loaded optimization history: {len(self.performance_history)} records"
+                )
         except Exception as e:
             logger.warning(f"Failed to load optimization history: {e}")
 
@@ -113,8 +129,12 @@ class SelfTuningOptimizer:
         try:
             data = {
                 "performance_history": self.performance_history,
-                "parameter_changes": [asdict(change) for change in self.parameter_changes],
-                "optimization_history": [asdict(result) for result in self.optimization_history],
+                "parameter_changes": [
+                    asdict(change) for change in self.parameter_changes
+                ],
+                "optimization_history": [
+                    asdict(result) for result in self.optimization_history
+                ],
             }
 
             with open(self.log_path, "w") as f:
@@ -125,7 +145,11 @@ class SelfTuningOptimizer:
             logger.error(f"Failed to save optimization history: {e}")
 
     def record_performance(
-        self, strategy: str, parameters: Dict[str, Any], metrics: Dict[str, float], trades: List[Dict[str, Any]]
+        self,
+        strategy: str,
+        parameters: Dict[str, Any],
+        metrics: Dict[str, float],
+        trades: List[Dict[str, Any]],
     ):
         """Record strategy performance for optimization.
 
@@ -149,7 +173,9 @@ class SelfTuningOptimizer:
         # Keep only recent history
         cutoff_date = datetime.now() - timedelta(days=365)  # Keep 1 year
         self.performance_history = [
-            record for record in self.performance_history if datetime.fromisoformat(record["timestamp"]) > cutoff_date
+            record
+            for record in self.performance_history
+            if datetime.fromisoformat(record["timestamp"]) > cutoff_date
         ]
 
         logger.info(f"Recorded performance for {strategy}: {metrics}")
@@ -164,7 +190,11 @@ class SelfTuningOptimizer:
             True if optimization is recommended
         """
         # Get recent performance records
-        recent_records = [record for record in self.performance_history if record["strategy"] == strategy]
+        recent_records = [
+            record
+            for record in self.performance_history
+            if record["strategy"] == strategy
+        ]
 
         if len(recent_records) < 2:
             return False  # Need at least 2 records to compare
@@ -174,15 +204,25 @@ class SelfTuningOptimizer:
         previous_metrics = recent_records[-2]["metrics"]
 
         # Calculate performance change
-        sharpe_change = recent_metrics.get("sharpe_ratio", 0) - previous_metrics.get("sharpe_ratio", 0)
+        sharpe_change = recent_metrics.get("sharpe_ratio", 0) - previous_metrics.get(
+            "sharpe_ratio", 0
+        )
 
-        return_change = recent_metrics.get("total_return", 0) - previous_metrics.get("total_return", 0)
+        return_change = recent_metrics.get("total_return", 0) - previous_metrics.get(
+            "total_return", 0
+        )
 
         # Optimize if performance is declining significantly
-        return sharpe_change < -self.optimization_threshold or return_change < -self.optimization_threshold
+        return (
+            sharpe_change < -self.optimization_threshold
+            or return_change < -self.optimization_threshold
+        )
 
     def optimize_strategy(
-        self, strategy: str, current_parameters: Dict[str, Any], current_metrics: Dict[str, float]
+        self,
+        strategy: str,
+        current_parameters: Dict[str, Any],
+        current_metrics: Dict[str, float],
     ) -> Optional[OptimizationResult]:
         """Optimize strategy parameters.
 
@@ -209,7 +249,9 @@ class SelfTuningOptimizer:
             return None
 
         # Generate parameter variations
-        variations = self._generate_parameter_variations(current_parameters, bounds, steps)
+        variations = self._generate_parameter_variations(
+            current_parameters, bounds, steps
+        )
 
         # Evaluate variations using historical data
         best_variation = None
@@ -236,7 +278,9 @@ class SelfTuningOptimizer:
                 improvement[metric] = best_metrics[metric] - current_metrics[metric]
 
         # Generate recommendations
-        recommendations = self._generate_recommendations(strategy, current_parameters, best_variation, improvement)
+        recommendations = self._generate_recommendations(
+            strategy, current_parameters, best_variation, improvement
+        )
 
         # Create optimization result
         result = OptimizationResult(
@@ -259,7 +303,10 @@ class SelfTuningOptimizer:
         return result
 
     def _generate_parameter_variations(
-        self, current_params: Dict[str, Any], bounds: Dict[str, Tuple[float, float]], steps: Dict[str, float]
+        self,
+        current_params: Dict[str, Any],
+        bounds: Dict[str, Tuple[float, float]],
+        steps: Dict[str, float],
     ) -> List[Dict[str, Any]]:
         """Generate parameter variations for optimization.
 
@@ -278,7 +325,7 @@ class SelfTuningOptimizer:
                 continue
 
             current_val = current_params[param]
-            step = steps.get(param, (max_val - min_val) / 10)
+            steps.get(param, (max_val - min_val) / 10)
 
             # Generate variations around current value
             for multiplier in [-2, -1, 0.5, 1.5, 2]:
@@ -290,7 +337,9 @@ class SelfTuningOptimizer:
 
         return variations[: self.max_parameter_changes * 2]  # Limit variations
 
-    def _simulate_performance(self, strategy: str, parameters: Dict[str, Any]) -> Dict[str, float]:
+    def _simulate_performance(
+        self, strategy: str, parameters: Dict[str, Any]
+    ) -> Dict[str, float]:
         """Simulate performance with given parameters.
 
         Args:
@@ -301,7 +350,11 @@ class SelfTuningOptimizer:
             Simulated performance metrics
         """
         # Get historical performance data
-        historical_records = [record for record in self.performance_history if record["strategy"] == strategy]
+        historical_records = [
+            record
+            for record in self.performance_history
+            if record["strategy"] == strategy
+        ]
 
         if not historical_records:
             # Return default metrics if no history
@@ -319,7 +372,9 @@ class SelfTuningOptimizer:
         weighted_metrics = {}
 
         for record in historical_records[-10:]:  # Use last 10 records
-            similarity = self._calculate_parameter_similarity(parameters, record["parameters"])
+            similarity = self._calculate_parameter_similarity(
+                parameters, record["parameters"]
+            )
             weight = similarity
 
             for metric, value in record["metrics"].items():
@@ -336,7 +391,9 @@ class SelfTuningOptimizer:
 
         return weighted_metrics
 
-    def _calculate_parameter_similarity(self, params1: Dict[str, Any], params2: Dict[str, Any]) -> float:
+    def _calculate_parameter_similarity(
+        self, params1: Dict[str, Any], params2: Dict[str, Any]
+    ) -> float:
         """Calculate similarity between parameter sets.
 
         Args:
@@ -432,14 +489,20 @@ class SelfTuningOptimizer:
         avg_positive = np.mean(positive_improvements) if positive_improvements else 0
         avg_negative = np.mean(negative_improvements) if negative_improvements else 0
 
-        magnitude_factor = min(1.0, (avg_positive - avg_negative) / 0.1)  # Normalize to 10%
+        magnitude_factor = min(
+            1.0, (avg_positive - avg_negative) / 0.1
+        )  # Normalize to 10%
 
         confidence = positive_ratio * 0.7 + magnitude_factor * 0.3
 
         return max(0.0, min(1.0, confidence))
 
     def _generate_recommendations(
-        self, strategy: str, old_params: Dict[str, Any], new_params: Dict[str, Any], improvement: Dict[str, float]
+        self,
+        strategy: str,
+        old_params: Dict[str, Any],
+        new_params: Dict[str, Any],
+        improvement: Dict[str, float],
     ) -> List[str]:
         """Generate recommendations based on optimization.
 
@@ -459,7 +522,8 @@ class SelfTuningOptimizer:
             if param in old_params and old_params[param] != new_val:
                 change_pct = ((new_val - old_params[param]) / old_params[param]) * 100
                 recommendations.append(
-                    f"Adjust {param} from {old_params[param]:.2f} to {new_val:.2f} " f"({change_pct:+.1f}%)"
+                    f"Adjust {param} from {old_params[param]:.2f} to {new_val:.2f} "
+                    f"({change_pct:+.1f}%)"
                 )
 
         # Performance improvement recommendations
@@ -495,7 +559,9 @@ class SelfTuningOptimizer:
                 "recent_optimizations": [],
             }
 
-        successful_optimizations = [result for result in self.optimization_history if result.confidence > 0.5]
+        successful_optimizations = [
+            result for result in self.optimization_history if result.confidence > 0.5
+        ]
 
         # Calculate average improvements
         avg_improvement = {}
@@ -511,7 +577,8 @@ class SelfTuningOptimizer:
         return {
             "total_optimizations": len(self.optimization_history),
             "successful_optimizations": len(successful_optimizations),
-            "success_rate": len(successful_optimizations) / len(self.optimization_history),
+            "success_rate": len(successful_optimizations)
+            / len(self.optimization_history),
             "average_improvement": avg_improvement,
             "recent_optimizations": [
                 {

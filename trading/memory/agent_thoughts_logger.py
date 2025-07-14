@@ -46,7 +46,9 @@ class TaskContext:
     task_id: str
     task_type: str
     priority: int = 1
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
     started_at: Optional[str] = None
     completed_at: Optional[str] = None
     status: str = "pending"  # pending, running, completed, failed
@@ -64,7 +66,11 @@ class AgentThoughtsLogger:
     Enhanced with task tracking and improved timestamp management.
     """
 
-    def __init__(self, log_file: str = "logs/agent_thoughts.json", task_log_file: str = "logs/agent_tasks.json"):
+    def __init__(
+        self,
+        log_file: str = "logs/agent_thoughts.json",
+        task_log_file: str = "logs/agent_tasks.json",
+    ):
         """
         Initialize the agent thoughts logger.
 
@@ -198,7 +204,9 @@ class AgentThoughtsLogger:
         try:
             with self._lock:
                 if task_id in self._task_cache:
-                    self._task_cache[task_id].started_at = datetime.now(timezone.utc).isoformat()
+                    self._task_cache[task_id].started_at = datetime.now(
+                        timezone.utc
+                    ).isoformat()
                     self._task_cache[task_id].status = "running"
 
             # Update in file
@@ -230,7 +238,9 @@ class AgentThoughtsLogger:
         try:
             with self._lock:
                 if task_id in self._task_cache:
-                    self._task_cache[task_id].completed_at = datetime.now(timezone.utc).isoformat()
+                    self._task_cache[task_id].completed_at = datetime.now(
+                        timezone.utc
+                    ).isoformat()
                     self._task_cache[task_id].status = status
 
             # Update in file
@@ -321,12 +331,16 @@ class AgentThoughtsLogger:
 
             # Keep only last 1000 thoughts to prevent file bloat
             if len(thoughts_data["agent_thoughts"]) > 1000:
-                thoughts_data["agent_thoughts"] = thoughts_data["agent_thoughts"][-1000:]
+                thoughts_data["agent_thoughts"] = thoughts_data["agent_thoughts"][
+                    -1000:
+                ]
 
             # Save thoughts
             self._save_thoughts(thoughts_data)
 
-            logger.info(f"Logged thought {thought_id} for {agent_name} (task: {task_id}): {decision[:50]}...")
+            logger.info(
+                f"Logged thought {thought_id} for {agent_name} (task: {task_id}): {decision[:50]}..."
+            )
 
             return thought_id
 
@@ -491,7 +505,9 @@ class AgentThoughtsLogger:
             logger.error(f"Error searching thoughts by tags: {str(e)}")
             return []
 
-    def get_thoughts_by_task(self, task_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_thoughts_by_task(
+        self, task_id: str, limit: int = 50
+    ) -> List[Dict[str, Any]]:
         """
         Get all thoughts for a specific task.
 
@@ -519,7 +535,9 @@ class AgentThoughtsLogger:
             logger.error(f"Error getting thoughts by task: {str(e)}")
             return []
 
-    def get_thought_chain(self, thought_id: str, max_depth: int = 5) -> List[Dict[str, Any]]:
+    def get_thought_chain(
+        self, thought_id: str, max_depth: int = 5
+    ) -> List[Dict[str, Any]]:
         """
         Get a chain of related thoughts starting from a given thought.
 
@@ -553,7 +571,9 @@ class AgentThoughtsLogger:
             logger.error(f"Error getting thought chain: {str(e)}")
             return []
 
-    def get_all_tags(self, agent_name: Optional[str] = None, task_id: Optional[str] = None) -> List[str]:
+    def get_all_tags(
+        self, agent_name: Optional[str] = None, task_id: Optional[str] = None
+    ) -> List[str]:
         """
         Get all unique tags used in thoughts.
 
@@ -630,7 +650,11 @@ class AgentThoughtsLogger:
             return []
 
     def get_thoughts_by_context_keywords(
-        self, keywords: List[str], agent_name: Optional[str] = None, task_id: Optional[str] = None, limit: int = 50
+        self,
+        keywords: List[str],
+        agent_name: Optional[str] = None,
+        task_id: Optional[str] = None,
+        limit: int = 50,
     ) -> List[Dict[str, Any]]:
         """
         Search thoughts by keywords in context.
@@ -770,7 +794,9 @@ class AgentThoughtsLogger:
             logger.error(f"Error updating thought outcome: {str(e)}")
             return False
 
-    def get_decision_patterns(self, agent_name: Optional[str] = None, task_id: Optional[str] = None) -> Dict[str, Any]:
+    def get_decision_patterns(
+        self, agent_name: Optional[str] = None, task_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Analyze decision patterns for an agent or task.
 
@@ -782,14 +808,18 @@ class AgentThoughtsLogger:
             Dictionary with pattern analysis
         """
         try:
-            thoughts = self.get_agent_thoughts(agent_name=agent_name, task_id=task_id, limit=1000)
+            thoughts = self.get_agent_thoughts(
+                agent_name=agent_name, task_id=task_id, limit=1000
+            )
 
             if not thoughts:
                 return {"message": "No thoughts found for analysis"}
 
             # Calculate patterns
             total_thoughts = len(thoughts)
-            avg_confidence = sum(t.get("confidence", 0) for t in thoughts) / total_thoughts
+            avg_confidence = (
+                sum(t.get("confidence", 0) for t in thoughts) / total_thoughts
+            )
 
             # Most common tags
             tag_counts = {}
@@ -797,12 +827,16 @@ class AgentThoughtsLogger:
                 for tag in thought.get("tags", []):
                     tag_counts[tag] = tag_counts.get(tag, 0) + 1
 
-            common_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+            common_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[
+                :10
+            ]
 
             # Confidence distribution
             confidence_ranges = {
                 "low": len([t for t in thoughts if t.get("confidence", 0) < 0.3]),
-                "medium": len([t for t in thoughts if 0.3 <= t.get("confidence", 0) < 0.7]),
+                "medium": len(
+                    [t for t in thoughts if 0.3 <= t.get("confidence", 0) < 0.7]
+                ),
                 "high": len([t for t in thoughts if t.get("confidence", 0) >= 0.7]),
             }
 
@@ -819,7 +853,9 @@ class AgentThoughtsLogger:
             logger.error(f"Error analyzing decision patterns: {str(e)}")
             return {"error": str(e)}
 
-    def get_agent_performance_summary(self, agent_name: str, task_id: Optional[str] = None) -> Dict[str, Any]:
+    def get_agent_performance_summary(
+        self, agent_name: str, task_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Get performance summary for an agent.
 
@@ -831,24 +867,40 @@ class AgentThoughtsLogger:
             Dictionary with performance summary
         """
         try:
-            thoughts = self.get_agent_thoughts(agent_name=agent_name, task_id=task_id, limit=1000)
+            thoughts = self.get_agent_thoughts(
+                agent_name=agent_name, task_id=task_id, limit=1000
+            )
 
             if not thoughts:
                 return {"message": f"No thoughts found for agent {agent_name}"}
 
             # Calculate metrics
             total_thoughts = len(thoughts)
-            avg_confidence = sum(t.get("confidence", 0) for t in thoughts) / total_thoughts
+            avg_confidence = (
+                sum(t.get("confidence", 0) for t in thoughts) / total_thoughts
+            )
 
             # Execution time analysis
-            execution_times = [t.get("execution_time_ms", 0) for t in thoughts if t.get("execution_time_ms")]
-            avg_execution_time = sum(execution_times) / len(execution_times) if execution_times else 0
+            execution_times = [
+                t.get("execution_time_ms", 0)
+                for t in thoughts
+                if t.get("execution_time_ms")
+            ]
+            avg_execution_time = (
+                sum(execution_times) / len(execution_times) if execution_times else 0
+            )
 
             # Success rate (thoughts with positive outcomes)
             successful_thoughts = len(
-                [t for t in thoughts if t.get("outcome") and "success" in t.get("outcome", "").lower()]
+                [
+                    t
+                    for t in thoughts
+                    if t.get("outcome") and "success" in t.get("outcome", "").lower()
+                ]
             )
-            success_rate = successful_thoughts / total_thoughts if total_thoughts > 0 else 0
+            success_rate = (
+                successful_thoughts / total_thoughts if total_thoughts > 0 else 0
+            )
 
             return {
                 "agent_name": agent_name,
@@ -865,7 +917,11 @@ class AgentThoughtsLogger:
             return {"error": str(e)}
 
     def search_thoughts(
-        self, query: str, agent_name: Optional[str] = None, task_id: Optional[str] = None, limit: int = 50
+        self,
+        query: str,
+        agent_name: Optional[str] = None,
+        task_id: Optional[str] = None,
+        limit: int = 50,
     ) -> List[Dict[str, Any]]:
         """
         Search thoughts by text query.
@@ -896,7 +952,11 @@ class AgentThoughtsLogger:
                 decision = thought.get("decision", "").lower()
                 rationale = thought.get("rationale", "").lower()
 
-                if query_lower in context or query_lower in decision or query_lower in rationale:
+                if (
+                    query_lower in context
+                    or query_lower in decision
+                    or query_lower in rationale
+                ):
                     matching_thoughts.append(thought)
 
                     if len(matching_thoughts) >= limit:
@@ -942,7 +1002,9 @@ class AgentThoughtsLogger:
         except Exception as e:
             logger.error(f"Error saving tasks: {str(e)}")
 
-    def clear_thoughts(self, agent_name: Optional[str] = None, task_id: Optional[str] = None) -> bool:
+    def clear_thoughts(
+        self, agent_name: Optional[str] = None, task_id: Optional[str] = None
+    ) -> bool:
         """
         Clear thoughts, optionally filtered by agent or task.
 
@@ -1016,7 +1078,9 @@ class AgentThoughtsLogger:
                 "total_tasks": total_tasks,
                 "agent_counts": agent_counts,
                 "task_status_counts": task_status_counts,
-                "top_tags": sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:10],
+                "top_tags": sorted(
+                    tag_counts.items(), key=lambda x: x[1], reverse=True
+                )[:10],
                 "unique_agents": len(agent_counts),
                 "unique_tags": len(tag_counts),
             }
@@ -1041,7 +1105,13 @@ def get_thoughts_logger() -> AgentThoughtsLogger:
 
 
 def log_agent_thought(
-    agent_name: str, task_id: str, context: str, decision: str, rationale: str, confidence: float, **kwargs
+    agent_name: str,
+    task_id: str,
+    context: str,
+    decision: str,
+    rationale: str,
+    confidence: float,
+    **kwargs,
 ) -> str:
     """
     Convenience function to log an agent thought.

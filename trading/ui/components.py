@@ -21,7 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 def create_date_range_selector(
-    default_days: int = 30, min_days: int = 1, max_days: int = 365, key: str = "date_range"
+    default_days: int = 30,
+    min_days: int = 1,
+    max_days: int = 365,
+    key: str = "date_range",
 ) -> Tuple[datetime, datetime]:
     """Create a date range selector with validation.
 
@@ -48,7 +51,11 @@ def create_date_range_selector(
         )
     with col2:
         end_date = st.date_input(
-            "End Date", value=end_date, min_value=start_date, max_value=datetime.now(), key=f"{key}_end"
+            "End Date",
+            value=end_date,
+            min_value=start_date,
+            max_value=datetime.now(),
+            key=f"{key}_end",
         )
 
     # Validate date range
@@ -59,7 +66,9 @@ def create_date_range_selector(
 
 
 def create_model_selector(
-    category: Optional[str] = None, default_model: Optional[str] = None, key: str = "model_selector"
+    category: Optional[str] = None,
+    default_model: Optional[str] = None,
+    key: str = "model_selector",
 ) -> Optional[str]:
     """Create a model selector with dynamic options from registry.
 
@@ -90,7 +99,9 @@ def create_model_selector(
 
 
 def create_strategy_selector(
-    category: Optional[str] = None, default_strategy: Optional[str] = None, key: str = "strategy_selector"
+    category: Optional[str] = None,
+    default_strategy: Optional[str] = None,
+    key: str = "strategy_selector",
 ) -> Optional[str]:
     """Create a strategy selector with dynamic options from registry.
 
@@ -110,7 +121,9 @@ def create_strategy_selector(
     selected_strategy = st.selectbox(
         "Select Strategy",
         options=strategy_names,
-        index=strategy_names.index(default_strategy) if default_strategy in strategy_names else 0,
+        index=strategy_names.index(default_strategy)
+        if default_strategy in strategy_names
+        else 0,
         key=key,
     )
 
@@ -139,11 +152,17 @@ def create_parameter_inputs(
         if isinstance(default_value, bool):
             values[param_name] = st.checkbox(param_name, value=default_value, key=key)
         elif isinstance(default_value, int):
-            values[param_name] = st.number_input(param_name, value=default_value, step=1, key=key)
+            values[param_name] = st.number_input(
+                param_name, value=default_value, step=1, key=key
+            )
         elif isinstance(default_value, float):
-            values[param_name] = st.number_input(param_name, value=default_value, step=0.01, key=key)
+            values[param_name] = st.number_input(
+                param_name, value=default_value, step=0.01, key=key
+            )
         else:
-            values[param_name] = st.text_input(param_name, value=str(default_value), key=key)
+            values[param_name] = st.text_input(
+                param_name, value=str(default_value), key=key
+            )
 
     # Log parameter changes for agentic monitoring
     logger.info(f"Parameters updated: {values}")
@@ -168,7 +187,10 @@ def create_asset_selector(
         st.warning("No assets available")
 
     selected_asset = st.selectbox(
-        "Select Asset", options=assets, index=assets.index(default_asset) if default_asset in assets else 0, key=key
+        "Select Asset",
+        options=assets,
+        index=assets.index(default_asset) if default_asset in assets else 0,
+        key=key,
     )
 
     # Log selection for agentic monitoring
@@ -178,7 +200,9 @@ def create_asset_selector(
 
 
 def create_timeframe_selector(
-    timeframes: List[str], default_timeframe: Optional[str] = None, key: str = "timeframe_selector"
+    timeframes: List[str],
+    default_timeframe: Optional[str] = None,
+    key: str = "timeframe_selector",
 ) -> Optional[str]:
     """Create a timeframe selector with validation.
 
@@ -196,7 +220,9 @@ def create_timeframe_selector(
     selected_timeframe = st.selectbox(
         "Select Timeframe",
         options=timeframes,
-        index=timeframes.index(default_timeframe) if default_timeframe in timeframes else 0,
+        index=timeframes.index(default_timeframe)
+        if default_timeframe in timeframes
+        else 0,
         key=key,
     )
 
@@ -206,7 +232,9 @@ def create_timeframe_selector(
     return selected_timeframe
 
 
-def create_confidence_interval(data: pd.DataFrame, confidence_level: float = 0.95) -> Tuple[pd.Series, pd.Series]:
+def create_confidence_interval(
+    data: pd.DataFrame, confidence_level: float = 0.95
+) -> Tuple[pd.Series, pd.Series]:
     """Calculate confidence intervals for predictions.
 
     Args:
@@ -222,7 +250,9 @@ def create_confidence_interval(data: pd.DataFrame, confidence_level: float = 0.9
     return (lower_bound, upper_bound)
 
 
-def create_benchmark_overlay(data: pd.DataFrame, benchmark_column: str, prediction_column: str) -> go.Figure:
+def create_benchmark_overlay(
+    data: pd.DataFrame, benchmark_column: str, prediction_column: str
+) -> go.Figure:
     """Create a plot with benchmark overlay.
 
     Args:
@@ -236,11 +266,23 @@ def create_benchmark_overlay(data: pd.DataFrame, benchmark_column: str, predicti
     fig = go.Figure()
 
     # Add prediction line
-    fig.add_trace(go.Scatter(x=data.index, y=data[prediction_column], name="Prediction", line=dict(color="blue")))
+    fig.add_trace(
+        go.Scatter(
+            x=data.index,
+            y=data[prediction_column],
+            name="Prediction",
+            line=dict(color="blue"),
+        )
+    )
 
     # Add benchmark line
     fig.add_trace(
-        go.Scatter(x=data.index, y=data[benchmark_column], name="Benchmark", line=dict(color="gray", dash="dash"))
+        go.Scatter(
+            x=data.index,
+            y=data[benchmark_column],
+            name="Benchmark",
+            line=dict(color="gray", dash="dash"),
+        )
     )
 
     # Add confidence interval if available
@@ -248,17 +290,30 @@ def create_benchmark_overlay(data: pd.DataFrame, benchmark_column: str, predicti
         lower, upper = create_confidence_interval(data)
         fig.add_trace(
             go.Scatter(
-                x=data.index, y=upper, fill=None, mode="lines", line_color="rgba(0,100,80,0.2)", name="Upper Bound"
+                x=data.index,
+                y=upper,
+                fill=None,
+                mode="lines",
+                line_color="rgba(0,100,80,0.2)",
+                name="Upper Bound",
             )
         )
         fig.add_trace(
             go.Scatter(
-                x=data.index, y=lower, fill="tonexty", mode="lines", line_color="rgba(0,100,80,0.2)", name="Lower Bound"
+                x=data.index,
+                y=lower,
+                fill="tonexty",
+                mode="lines",
+                line_color="rgba(0,100,80,0.2)",
+                name="Lower Bound",
             )
         )
 
     fig.update_layout(
-        title="Prediction with Benchmark Overlay", xaxis_title="Date", yaxis_title="Value", hovermode="x unified"
+        title="Prediction with Benchmark Overlay",
+        xaxis_title="Date",
+        yaxis_title="Value",
+        hovermode="x unified",
     )
 
     return fig
@@ -279,7 +334,12 @@ def create_prompt_input() -> Dict[str, Any]:
         )
 
         if prompt:
-            return {"success": True, "prompt": prompt, "length": len(prompt), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "prompt": prompt,
+                "length": len(prompt),
+                "timestamp": datetime.now().isoformat(),
+            }
         else:
             return {
                 "success": False,
@@ -310,33 +370,53 @@ def create_sidebar() -> Dict[str, Any]:
 
             # Navigation
             page = st.selectbox(
-                "Navigation", ["Dashboard", "Forecast", "Strategy", "Analysis", "Settings"], key=os.getenv("KEY", "")
+                "Navigation",
+                ["Dashboard", "Forecast", "Strategy", "Analysis", "Settings"],
+                key=os.getenv("KEY", ""),
             )
 
             # Model settings
             st.subheader("Model Settings")
             model_type = st.selectbox(
-                "Model Type", ["LSTM", "Transformer", "Ensemble", "Custom"], key=os.getenv("KEY", "")
+                "Model Type",
+                ["LSTM", "Transformer", "Ensemble", "Custom"],
+                key=os.getenv("KEY", ""),
             )
 
             # Strategy settings
             st.subheader("Strategy Settings")
             strategy_type = st.selectbox(
-                "Strategy Type", ["Momentum", "Mean Reversion", "Breakout", "Custom"], key=os.getenv("KEY", "")
+                "Strategy Type",
+                ["Momentum", "Mean Reversion", "Breakout", "Custom"],
+                key=os.getenv("KEY", ""),
             )
 
             # Risk settings
             st.subheader("Risk Settings")
             max_position_size = st.slider(
-                "Max Position Size (%)", min_value=1, max_value=100, value=10, key=os.getenv("KEY", "")
+                "Max Position Size (%)",
+                min_value=1,
+                max_value=100,
+                value=10,
+                key=os.getenv("KEY", ""),
             )
 
-            stop_loss = st.slider("Stop Loss (%)", min_value=1, max_value=50, value=5, key=os.getenv("KEY", ""))
+            stop_loss = st.slider(
+                "Stop Loss (%)",
+                min_value=1,
+                max_value=50,
+                value=5,
+                key=os.getenv("KEY", ""),
+            )
 
             # System settings
             st.subheader("System Settings")
-            auto_refresh = st.checkbox("Auto Refresh", value=True, key=os.getenv("KEY", ""))
-            debug_mode = st.checkbox("Debug Mode", value=False, key=os.getenv("KEY", ""))
+            auto_refresh = st.checkbox(
+                "Auto Refresh", value=True, key=os.getenv("KEY", "")
+            )
+            debug_mode = st.checkbox(
+                "Debug Mode", value=False, key=os.getenv("KEY", "")
+            )
 
             return {
                 "success": True,
@@ -361,7 +441,9 @@ def create_sidebar() -> Dict[str, Any]:
 
 
 def create_forecast_chart(
-    historical_data: pd.DataFrame, forecast_data: pd.DataFrame, title: str = "Price Forecast"
+    historical_data: pd.DataFrame,
+    forecast_data: pd.DataFrame,
+    title: str = "Price Forecast",
 ) -> go.Figure:
     """Create an interactive forecast chart.
 
@@ -377,7 +459,12 @@ def create_forecast_chart(
 
     # Add historical data
     fig.add_trace(
-        go.Scatter(x=historical_data.index, y=historical_data["close"], name="Historical", line=dict(color="blue")),
+        go.Scatter(
+            x=historical_data.index,
+            y=historical_data["close"],
+            name="Historical",
+            line=dict(color="blue"),
+        ),
         row=1,
         col=1,
     )
@@ -385,7 +472,10 @@ def create_forecast_chart(
     # Add forecast
     fig.add_trace(
         go.Scatter(
-            x=forecast_data.index, y=forecast_data["forecast"], name="Forecast", line=dict(color="red", dash="dash")
+            x=forecast_data.index,
+            y=forecast_data["forecast"],
+            name="Forecast",
+            line=dict(color="red", dash="dash"),
         ),
         row=1,
         col=1,
@@ -416,12 +506,20 @@ def create_forecast_chart(
         col=1,
     )
 
-    fig.update_layout(title=title, xaxis_title="Date", yaxis_title="Price", showlegend=True, height=600)
+    fig.update_layout(
+        title=title,
+        xaxis_title="Date",
+        yaxis_title="Price",
+        showlegend=True,
+        height=600,
+    )
 
     return fig
 
 
-def create_strategy_chart(data: pd.DataFrame, signals: pd.DataFrame, title: str = "Strategy Signals") -> go.Figure:
+def create_strategy_chart(
+    data: pd.DataFrame, signals: pd.DataFrame, title: str = "Strategy Signals"
+) -> go.Figure:
     """Create an interactive strategy chart.
 
     Args:
@@ -435,7 +533,9 @@ def create_strategy_chart(data: pd.DataFrame, signals: pd.DataFrame, title: str 
     edge_handler = EdgeCaseHandler()
     # Validate signals with edge handler
     validation = edge_handler.validate_signals(
-        signals["signal"] if isinstance(signals, pd.DataFrame) and "signal" in signals.columns else signals
+        signals["signal"]
+        if isinstance(signals, pd.DataFrame) and "signal" in signals.columns
+        else signals
     )
     if validation["status"] != "success":
         st.warning(validation["message"])
@@ -447,17 +547,37 @@ def create_strategy_chart(data: pd.DataFrame, signals: pd.DataFrame, title: str 
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True)
 
     # Add price data
-    fig.add_trace(go.Scatter(x=data.index, y=data["close"], name="Price", line=dict(color="blue")), row=1, col=1)
+    fig.add_trace(
+        go.Scatter(
+            x=data.index, y=data["close"], name="Price", line=dict(color="blue")
+        ),
+        row=1,
+        col=1,
+    )
 
     # Add signals
-    fig.add_trace(go.Scatter(x=signals.index, y=signals["signal"], name="Signal", line=dict(color="red")), row=2, col=1)
+    fig.add_trace(
+        go.Scatter(
+            x=signals.index, y=signals["signal"], name="Signal", line=dict(color="red")
+        ),
+        row=2,
+        col=1,
+    )
 
-    fig.update_layout(title=title, xaxis_title="Date", yaxis_title="Value", showlegend=True, height=600)
+    fig.update_layout(
+        title=title,
+        xaxis_title="Date",
+        yaxis_title="Value",
+        showlegend=True,
+        height=600,
+    )
 
     return fig
 
 
-def create_performance_report(results: Dict[str, Any], title: str = "Performance Report") -> Dict[str, Any]:
+def create_performance_report(
+    results: Dict[str, Any], title: str = "Performance Report"
+) -> Dict[str, Any]:
     """Create an expandable performance report section.
 
     Args:
@@ -471,8 +591,12 @@ def create_performance_report(results: Dict[str, Any], title: str = "Performance
     # Validate results for performance metrics
     if not results or not results.get("total_return"):
         st.warning("No performance data available.")
-        fallback = edge_handler.create_fallback_chart(pd.DataFrame(), chart_type="performance")
-        st.write(fallback["chart_data"]["message"] if fallback["chart_data"] else "No data.")
+        fallback = edge_handler.create_fallback_chart(
+            pd.DataFrame(), chart_type="performance"
+        )
+        st.write(
+            fallback["chart_data"]["message"] if fallback["chart_data"] else "No data."
+        )
         return {"status": "warning", "message": fallback["message"]}
 
     with st.expander(title, expanded=True):
@@ -504,7 +628,12 @@ def create_performance_report(results: Dict[str, Any], title: str = "Performance
                     line=dict(color="blue"),
                 )
             )
-            fig.update_layout(title="Equity Curve", xaxis_title="Date", yaxis_title="Portfolio Value", height=400)
+            fig.update_layout(
+                title="Equity Curve",
+                xaxis_title="Date",
+                yaxis_title="Portfolio Value",
+                height=400,
+            )
             st.plotly_chart(fig, use_container_width=True)
 
         # Create drawdown chart
@@ -519,7 +648,12 @@ def create_performance_report(results: Dict[str, Any], title: str = "Performance
                     line=dict(color="red"),
                 )
             )
-            fig.update_layout(title="Drawdowns", xaxis_title="Date", yaxis_title="Drawdown", height=400)
+            fig.update_layout(
+                title="Drawdowns",
+                xaxis_title="Date",
+                yaxis_title="Drawdown",
+                height=400,
+            )
             st.plotly_chart(fig, use_container_width=True)
 
     # Log report creation for agentic monitoring
@@ -554,7 +688,12 @@ def create_error_block(message: str) -> Dict[str, Any]:
     # Log error for agentic monitoring
     logger.error(f"Error block displayed: {message}")
 
-    return {"success": True, "error_displayed": True, "message": message, "timestamp": datetime.now().isoformat()}
+    return {
+        "success": True,
+        "error_displayed": True,
+        "message": message,
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 def create_loading_spinner(message: str = "Processing...") -> Dict[str, Any]:
@@ -571,7 +710,12 @@ def create_loading_spinner(message: str = "Processing...") -> Dict[str, Any]:
     # Log spinner creation for agentic monitoring
     logger.info(f"Loading spinner created: {message}")
 
-    return {"success": True, "spinner_created": True, "message": message, "spinner_object": spinner}
+    return {
+        "success": True,
+        "spinner_created": True,
+        "message": message,
+        "spinner_object": spinner,
+    }
 
 
 def create_forecast_metrics(forecast_results: Dict[str, Any]) -> Dict[str, Any]:
@@ -603,7 +747,9 @@ def create_forecast_metrics(forecast_results: Dict[str, Any]) -> Dict[str, Any]:
         st.metric("MAE", f"{metrics.get('mae', 0):.4f}")
 
     # Log metrics for agentic monitoring
-    logger.info(f"Forecast metrics displayed for {forecast_results.get('ticker', 'unknown')}")
+    logger.info(
+        f"Forecast metrics displayed for {forecast_results.get('ticker', 'unknown')}"
+    )
 
     return {
         "success": True,
@@ -645,7 +791,9 @@ def create_forecast_table(forecast_results: Dict[str, Any]) -> Dict[str, Any]:
     st.table(df)
 
     # Log table creation for agentic monitoring
-    logger.info(f"Forecast table displayed for {forecast_results.get('ticker', 'unknown')}")
+    logger.info(
+        f"Forecast table displayed for {forecast_results.get('ticker', 'unknown')}"
+    )
 
     return {
         "success": True,
@@ -673,46 +821,87 @@ def create_system_metrics_panel(metrics: Dict[str, float]) -> Dict[str, Any]:
     with col1:
         sharpe = metrics.get("sharpe_ratio", 0.0)
         if sharpe >= 1.5:
-            st.metric("Sharpe Ratio", f"{sharpe:.2f}", delta="Excellent", delta_color="normal")
+            st.metric(
+                "Sharpe Ratio", f"{sharpe:.2f}", delta="Excellent", delta_color="normal"
+            )
         elif sharpe >= 1.0:
-            st.metric("Sharpe Ratio", f"{sharpe:.2f}", delta="Good", delta_color="normal")
+            st.metric(
+                "Sharpe Ratio", f"{sharpe:.2f}", delta="Good", delta_color="normal"
+            )
         elif sharpe >= 0.5:
             st.metric("Sharpe Ratio", f"{sharpe:.2f}", delta="Fair", delta_color="off")
         else:
-            st.metric("Sharpe Ratio", f"{sharpe:.2f}", delta="Poor", delta_color="inverse")
+            st.metric(
+                "Sharpe Ratio", f"{sharpe:.2f}", delta="Poor", delta_color="inverse"
+            )
 
     with col2:
         total_return = metrics.get("total_return", 0.0)
         if total_return >= 0.20:
-            st.metric("Total Return", f"{total_return:.1%}", delta="Strong", delta_color="normal")
+            st.metric(
+                "Total Return",
+                f"{total_return:.1%}",
+                delta="Strong",
+                delta_color="normal",
+            )
         elif total_return >= 0.10:
-            st.metric("Total Return", f"{total_return:.1%}", delta="Good", delta_color="normal")
+            st.metric(
+                "Total Return",
+                f"{total_return:.1%}",
+                delta="Good",
+                delta_color="normal",
+            )
         elif total_return >= 0.05:
-            st.metric("Total Return", f"{total_return:.1%}", delta="Moderate", delta_color="off")
+            st.metric(
+                "Total Return",
+                f"{total_return:.1%}",
+                delta="Moderate",
+                delta_color="off",
+            )
         else:
-            st.metric("Total Return", f"{total_return:.1%}", delta="Weak", delta_color="inverse")
+            st.metric(
+                "Total Return",
+                f"{total_return:.1%}",
+                delta="Weak",
+                delta_color="inverse",
+            )
 
     with col3:
         max_dd = metrics.get("max_drawdown", 0.0)
         if max_dd <= 0.10:
-            st.metric("Max Drawdown", f"{max_dd:.1%}", delta="Low Risk", delta_color="normal")
+            st.metric(
+                "Max Drawdown", f"{max_dd:.1%}", delta="Low Risk", delta_color="normal"
+            )
         elif max_dd <= 0.20:
-            st.metric("Max Drawdown", f"{max_dd:.1%}", delta="Moderate", delta_color="off")
+            st.metric(
+                "Max Drawdown", f"{max_dd:.1%}", delta="Moderate", delta_color="off"
+            )
         elif max_dd <= 0.30:
-            st.metric("Max Drawdown", f"{max_dd:.1%}", delta="High Risk", delta_color="off")
+            st.metric(
+                "Max Drawdown", f"{max_dd:.1%}", delta="High Risk", delta_color="off"
+            )
         else:
-            st.metric("Max Drawdown", f"{max_dd:.1%}", delta="Very High Risk", delta_color="inverse")
+            st.metric(
+                "Max Drawdown",
+                f"{max_dd:.1%}",
+                delta="Very High Risk",
+                delta_color="inverse",
+            )
 
     with col4:
         win_rate = metrics.get("win_rate", 0.0)
         if win_rate >= 0.60:
-            st.metric("Win Rate", f"{win_rate:.1%}", delta="Excellent", delta_color="normal")
+            st.metric(
+                "Win Rate", f"{win_rate:.1%}", delta="Excellent", delta_color="normal"
+            )
         elif win_rate >= 0.50:
             st.metric("Win Rate", f"{win_rate:.1%}", delta="Good", delta_color="normal")
         elif win_rate >= 0.40:
             st.metric("Win Rate", f"{win_rate:.1%}", delta="Fair", delta_color="off")
         else:
-            st.metric("Win Rate", f"{win_rate:.1%}", delta="Poor", delta_color="inverse")
+            st.metric(
+                "Win Rate", f"{win_rate:.1%}", delta="Poor", delta_color="inverse"
+            )
 
     with col5:
         pnl = metrics.get("total_pnl", 0.0)

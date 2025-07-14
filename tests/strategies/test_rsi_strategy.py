@@ -45,7 +45,9 @@ class TestRSIStrategy(unittest.TestCase):
         self.assertIn("strategy_returns", result.columns)
 
         # Test with custom parameters
-        result = generate_rsi_signals(self.data, period=10, buy_threshold=20, sell_threshold=80)
+        result = generate_rsi_signals(
+            self.data, period=10, buy_threshold=20, sell_threshold=80
+        )
         self.assertIsInstance(result, pd.DataFrame)
         self.assertIn("signal", result.columns)
 
@@ -103,7 +105,9 @@ class TestRSIStrategy(unittest.TestCase):
             print(f"\n  ⏰ Testing {timeframe['name']} timeframe...")
 
             # Create intraday data with specific timeframe
-            dates = pd.date_range(start="2023-01-01", end="2023-01-31", freq=timeframe["freq"])
+            dates = pd.date_range(
+                start="2023-01-01", end="2023-01-31", freq=timeframe["freq"]
+            )
 
             # Create price data with clear oversold/overbought cycles
             base_price = 100
@@ -142,7 +146,11 @@ class TestRSIStrategy(unittest.TestCase):
                 {"buy_threshold": 10, "sell_threshold": 90, "name": "Aggressive"},
                 {"buy_threshold": 25, "sell_threshold": 75, "name": "Moderate"},
                 {"buy_threshold": 15, "sell_threshold": 85, "name": "Balanced"},
-                {"buy_threshold": 35, "sell_threshold": 65, "name": "Very Conservative"},
+                {
+                    "buy_threshold": 35,
+                    "sell_threshold": 65,
+                    "name": "Very Conservative",
+                },
             ]
 
             timeframe_results = {}
@@ -187,9 +195,16 @@ class TestRSIStrategy(unittest.TestCase):
                             if timeframe["freq"] == "30T"
                             else 96 * 365
                         )
-                        sharpe_ratio = strategy_returns.mean() / strategy_returns.std() * np.sqrt(periods_per_year)
+                        sharpe_ratio = (
+                            strategy_returns.mean()
+                            / strategy_returns.std()
+                            * np.sqrt(periods_per_year)
+                        )
                         win_rate = (strategy_returns > 0).mean()
-                        max_drawdown = (strategy_returns.cumsum() - strategy_returns.cumsum().cummax()).min()
+                        max_drawdown = (
+                            strategy_returns.cumsum()
+                            - strategy_returns.cumsum().cummax()
+                        ).min()
                         total_return = strategy_returns.sum()
 
                         print(f"      Sharpe ratio: {sharpe_ratio:.3f}")
@@ -211,27 +226,59 @@ class TestRSIStrategy(unittest.TestCase):
                 # Test threshold-specific assertions
                 if thresholds["name"] == "Standard":
                     # Standard thresholds should have moderate signal activity
-                    self.assertGreater(buy_ratio, 0.05, "Standard thresholds should generate some buy signals")
-                    self.assertGreater(sell_ratio, 0.05, "Standard thresholds should generate some sell signals")
+                    self.assertGreater(
+                        buy_ratio,
+                        0.05,
+                        "Standard thresholds should generate some buy signals",
+                    )
+                    self.assertGreater(
+                        sell_ratio,
+                        0.05,
+                        "Standard thresholds should generate some sell signals",
+                    )
 
                 elif thresholds["name"] == "Conservative":
                     # Conservative thresholds should have more signals
-                    self.assertGreater(buy_ratio, 0.1, "Conservative thresholds should generate more buy signals")
-                    self.assertGreater(sell_ratio, 0.1, "Conservative thresholds should generate more sell signals")
+                    self.assertGreater(
+                        buy_ratio,
+                        0.1,
+                        "Conservative thresholds should generate more buy signals",
+                    )
+                    self.assertGreater(
+                        sell_ratio,
+                        0.1,
+                        "Conservative thresholds should generate more sell signals",
+                    )
 
                 elif thresholds["name"] == "Aggressive":
                     # Aggressive thresholds should have fewer signals
-                    self.assertLess(buy_ratio, 0.1, "Aggressive thresholds should generate fewer buy signals")
-                    self.assertLess(sell_ratio, 0.1, "Aggressive thresholds should generate fewer sell signals")
+                    self.assertLess(
+                        buy_ratio,
+                        0.1,
+                        "Aggressive thresholds should generate fewer buy signals",
+                    )
+                    self.assertLess(
+                        sell_ratio,
+                        0.1,
+                        "Aggressive thresholds should generate fewer sell signals",
+                    )
 
             # Compare performance across threshold combinations for this timeframe
             if len(timeframe_results) > 1:
                 print(f"\n    📈 {timeframe['name']} Performance Comparison:")
-                best_sharpe = max(timeframe_results.values(), key=lambda x: x["sharpe_ratio"])
-                best_return = max(timeframe_results.values(), key=lambda x: x["total_return"])
+                best_sharpe = max(
+                    timeframe_results.values(), key=lambda x: x["sharpe_ratio"]
+                )
+                best_return = max(
+                    timeframe_results.values(), key=lambda x: x["total_return"]
+                )
 
-                print(f"      Best Sharpe: {best_sharpe['thresholds']['name']} ({best_sharpe['sharpe_ratio']:.3f})")
-                print(f"      Best Return: {best_return['thresholds']['name']} ({best_return['total_return']:.3f})")
+                print(
+                    f"      Best Sharpe: {best_sharpe['thresholds']['name']} ({best_sharpe['sharpe_ratio']:.3f})"
+                )
+                print(
+                    f"      Best Return: {best_return['thresholds']['name']} ({best_return['total_return']:.3f})"
+                )
 
                 # Assert that different thresholds produce different results
                 sharpe_ratios = [r["sharpe_ratio"] for r in timeframe_results.values()]
@@ -256,20 +303,30 @@ class TestRSIStrategy(unittest.TestCase):
             print(f"\n    📊 Testing {condition['name']} market condition...")
 
             # Create data with specific market condition
-            condition_dates = pd.date_range(start="2023-01-01", end="2023-01-07", freq="H")
+            condition_dates = pd.date_range(
+                start="2023-01-01", end="2023-01-07", freq="H"
+            )
             condition_prices = []
             base_price = 100
 
             for i in range(len(condition_dates)):
                 # Add trend and volatility
-                price = base_price + i * condition["trend"] + np.random.normal(0, condition["volatility"])
+                price = (
+                    base_price
+                    + i * condition["trend"]
+                    + np.random.normal(0, condition["volatility"])
+                )
                 condition_prices.append(price)
 
             condition_data = pd.DataFrame(
                 {
                     "open": condition_prices,
-                    "high": [p + abs(np.random.normal(0, 0.1)) for p in condition_prices],
-                    "low": [p - abs(np.random.normal(0, 0.1)) for p in condition_prices],
+                    "high": [
+                        p + abs(np.random.normal(0, 0.1)) for p in condition_prices
+                    ],
+                    "low": [
+                        p - abs(np.random.normal(0, 0.1)) for p in condition_prices
+                    ],
                     "close": condition_prices,
                     "volume": np.random.normal(1000000, 100000, len(condition_dates)),
                 },
@@ -277,7 +334,9 @@ class TestRSIStrategy(unittest.TestCase):
             )
 
             # Test with standard thresholds
-            condition_result = generate_rsi_signals(condition_data, period=14, buy_threshold=20, sell_threshold=80)
+            condition_result = generate_rsi_signals(
+                condition_data, period=14, buy_threshold=20, sell_threshold=80
+            )
 
             # Analyze signal distribution
             buy_signals = (condition_result["signal"] == 1).sum()
@@ -293,23 +352,33 @@ class TestRSIStrategy(unittest.TestCase):
             # Test market condition specific expectations
             if condition["name"] == "Trending Up":
                 # In uptrend, should have more buy signals
-                self.assertGreater(buy_ratio, sell_ratio, "Uptrend should have more buy signals")
+                self.assertGreater(
+                    buy_ratio, sell_ratio, "Uptrend should have more buy signals"
+                )
 
             elif condition["name"] == "Trending Down":
                 # In downtrend, should have more sell signals
-                self.assertGreater(sell_ratio, buy_ratio, "Downtrend should have more sell signals")
+                self.assertGreater(
+                    sell_ratio, buy_ratio, "Downtrend should have more sell signals"
+                )
 
             elif condition["name"] == "High Volatility":
                 # High volatility should have more signals overall
                 total_signal_ratio = buy_ratio + sell_ratio
-                self.assertGreater(total_signal_ratio, 0.15, "High volatility should generate more signals")
+                self.assertGreater(
+                    total_signal_ratio,
+                    0.15,
+                    "High volatility should generate more signals",
+                )
 
         # Test threshold sensitivity analysis
         print(f"\n  🎯 Testing threshold sensitivity analysis...")
 
         # Create baseline data
         baseline_dates = pd.date_range(start="2023-01-01", end="2023-01-15", freq="H")
-        baseline_prices = 100 + np.cumsum(np.random.normal(0, 0.02, len(baseline_dates)))
+        baseline_prices = 100 + np.cumsum(
+            np.random.normal(0, 0.02, len(baseline_dates))
+        )
 
         baseline_data = pd.DataFrame(
             {
@@ -332,13 +401,20 @@ class TestRSIStrategy(unittest.TestCase):
             for sell_thresh in sell_thresholds:
                 if buy_thresh < sell_thresh:  # Valid combination
                     result = generate_rsi_signals(
-                        baseline_data, period=14, buy_threshold=buy_thresh, sell_threshold=sell_thresh
+                        baseline_data,
+                        period=14,
+                        buy_threshold=buy_thresh,
+                        sell_threshold=sell_thresh,
                     )
 
                     if "strategy_returns" in result.columns:
                         strategy_returns = result["strategy_returns"].dropna()
                         if len(strategy_returns) > 0:
-                            sharpe_ratio = strategy_returns.mean() / strategy_returns.std() * np.sqrt(24 * 365)
+                            sharpe_ratio = (
+                                strategy_returns.mean()
+                                / strategy_returns.std()
+                                * np.sqrt(24 * 365)
+                            )
                             buy_signals = (result["signal"] == 1).sum()
                             sell_signals = (result["signal"] == -1).sum()
 
@@ -366,7 +442,9 @@ class TestRSIStrategy(unittest.TestCase):
 
             for result in sensitivity_results:
                 if result != best_combination:
-                    sharpe_diff = abs(result["sharpe_ratio"] - base_sharpe) / base_sharpe
+                    sharpe_diff = (
+                        abs(result["sharpe_ratio"] - base_sharpe) / base_sharpe
+                    )
                     if sharpe_diff > sensitivity_threshold:
                         print(
                             f"    High sensitivity: {result['buy_threshold']}/{result['sell_threshold']} -> {sharpe_diff:.1%} change"
@@ -414,7 +492,10 @@ class TestRSIStrategy(unittest.TestCase):
 
         for timing_thresh in timing_thresholds:
             timing_result = generate_rsi_signals(
-                timing_data, period=14, buy_threshold=timing_thresh["buy"], sell_threshold=timing_thresh["sell"]
+                timing_data,
+                period=14,
+                buy_threshold=timing_thresh["buy"],
+                sell_threshold=timing_thresh["sell"],
             )
 
             # Count signals in expected periods
@@ -424,7 +505,9 @@ class TestRSIStrategy(unittest.TestCase):
             for i, signal in enumerate(timing_result["signal"]):
                 cycle_position = (i % 24) / 24
 
-                if cycle_position < 0.25 and signal == 1:  # Buy signal in oversold period
+                if (
+                    cycle_position < 0.25 and signal == 1
+                ):  # Buy signal in oversold period
                     expected_buy_periods += 1
                 elif (
                     cycle_position > 0.5 and cycle_position < 0.75 and signal == -1
@@ -434,8 +517,14 @@ class TestRSIStrategy(unittest.TestCase):
             total_buy_signals = (timing_result["signal"] == 1).sum()
             total_sell_signals = (timing_result["signal"] == -1).sum()
 
-            buy_accuracy = expected_buy_periods / total_buy_signals if total_buy_signals > 0 else 0
-            sell_accuracy = expected_sell_periods / total_sell_signals if total_sell_signals > 0 else 0
+            buy_accuracy = (
+                expected_buy_periods / total_buy_signals if total_buy_signals > 0 else 0
+            )
+            sell_accuracy = (
+                expected_sell_periods / total_sell_signals
+                if total_sell_signals > 0
+                else 0
+            )
 
             print(f"    {timing_thresh['name']} thresholds:")
             print(f"      Buy accuracy: {buy_accuracy:.2%}")

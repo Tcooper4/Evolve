@@ -18,9 +18,10 @@ import sys
 from pathlib import Path
 from typing import Dict, Optional
 
-
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -81,7 +82,10 @@ class SecretManager:
         env_vars = self.load_env_file()
         rotated = False
         for key in env_vars:
-            if any(secret_type in key for secret_type in ["SECRET", "KEY", "PASSWORD", "TOKEN"]):
+            if any(
+                secret_type in key
+                for secret_type in ["SECRET", "KEY", "PASSWORD", "TOKEN"]
+            ):
                 self.update_secret(key)
                 rotated = True
         if rotated:
@@ -105,7 +109,9 @@ class SecretManager:
         env_vars = self.load_env_file()
         missing_vars = [var for var in required_vars if var not in env_vars]
         if missing_vars:
-            logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+            logger.error(
+                f"Missing required environment variables: {', '.join(missing_vars)}"
+            )
             return False
         # Validate SSL certificate paths
         ssl_paths = [
@@ -126,11 +132,17 @@ class SecretManager:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Manage environment variables and secrets")
+    parser = argparse.ArgumentParser(
+        description="Manage environment variables and secrets"
+    )
     parser.add_argument("--generate", action="store_true", help="Generate new secrets")
     parser.add_argument("--rotate", action="store_true", help="Rotate all secrets")
-    parser.add_argument("--validate", action="store_true", help="Validate configuration")
-    parser.add_argument("--update", metavar="KEY=VALUE", help="Update a specific secret")
+    parser.add_argument(
+        "--validate", action="store_true", help="Validate configuration"
+    )
+    parser.add_argument(
+        "--update", metavar="KEY=VALUE", help="Update a specific secret"
+    )
     args = parser.parse_args()
     manager = SecretManager()
     if args.generate:

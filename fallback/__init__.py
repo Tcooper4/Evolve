@@ -22,7 +22,6 @@ Components:
 import logging
 from typing import Any, Dict
 
-
 from .agent_hub import FallbackAgentHub
 from .data_feed import FallbackDataFeed
 from .hybrid_engine import FallbackHybridEngine

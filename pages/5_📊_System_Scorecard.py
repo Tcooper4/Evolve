@@ -61,9 +61,15 @@ def render_system_scorecard():
     if goals:
         for key, value in goals.items():
             if value is True or (isinstance(value, str) and value.lower() == "pass"):
-                st.markdown(f"✅ **{key}**: <span style='color:green'>Met</span>", unsafe_allow_html=True)
+                st.markdown(
+                    f"✅ **{key}**: <span style='color:green'>Met</span>",
+                    unsafe_allow_html=True,
+                )
             else:
-                st.markdown(f"❌ **{key}**: <span style='color:red'>Missed</span>", unsafe_allow_html=True)
+                st.markdown(
+                    f"❌ **{key}**: <span style='color:red'>Missed</span>",
+                    unsafe_allow_html=True,
+                )
     else:
         st.info("No goal status available.")
 

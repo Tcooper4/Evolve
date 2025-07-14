@@ -74,7 +74,10 @@ class AutomationConfig:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "config.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "config.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def setup_encryption(self):
@@ -132,7 +135,9 @@ class AutomationConfig:
 
             # Process sections
             for section_name, section_data in data.items():
-                section = ConfigSection(name=section_name, description=section_data.get("description", ""))
+                section = ConfigSection(
+                    name=section_name, description=section_data.get("description", "")
+                )
 
                 # Process values
                 for key, value_data in section_data.get("values", {}).items():
@@ -220,7 +225,9 @@ class AutomationConfig:
 
     @sleep_and_retry
     @limits(calls=100, period=60)
-    async def get_value(self, file_path: str, section: str, key: str, format: str = "json") -> Any:
+    async def get_value(
+        self, file_path: str, section: str, key: str, format: str = "json"
+    ) -> Any:
         """Get configuration value."""
         try:
             config_file = await self.load_config(file_path, format)
@@ -240,7 +247,9 @@ class AutomationConfig:
 
     @sleep_and_retry
     @limits(calls=100, period=60)
-    async def set_value(self, file_path: str, section: str, key: str, value: Any, format: str = "json"):
+    async def set_value(
+        self, file_path: str, section: str, key: str, value: Any, format: str = "json"
+    ):
         """Set configuration value."""
         try:
             config_file = await self.load_config(file_path, format)

@@ -147,7 +147,9 @@ class RegimeClassifier:
         support_resistance = self._calculate_support_resistance(data)
 
         # Determine regime based on multiple factors
-        regime, confidence = self._determine_regime(volatility, momentum, trend_strength, volume_profile)
+        regime, confidence = self._determine_regime(
+            volatility, momentum, trend_strength, volume_profile
+        )
 
         # Calculate regime duration and transition probability
         regime_duration = self._calculate_regime_duration(regime)
@@ -184,7 +186,9 @@ class RegimeClassifier:
         signal = macd.ewm(span=9).mean()
 
         # Combine momentum indicators
-        momentum = (rsi.iloc[-1] - 50) / 50 + (macd.iloc[-1] - signal.iloc[-1]) / data["Close"].iloc[-1]
+        momentum = (rsi.iloc[-1] - 50) / 50 + (macd.iloc[-1] - signal.iloc[-1]) / data[
+            "Close"
+        ].iloc[-1]
         return momentum
 
     def _calculate_trend_strength(self, data: pd.DataFrame) -> float:
@@ -201,8 +205,12 @@ class RegimeClassifier:
         atr = tr.rolling(window=14).mean()
 
         # Calculate Directional Movement
-        dm_plus = (high - high.shift()).where((high - high.shift()) > (low.shift() - low), 0)
-        dm_minus = (low.shift() - low).where((low.shift() - low) > (high - high.shift()), 0)
+        dm_plus = (high - high.shift()).where(
+            (high - high.shift()) > (low.shift() - low), 0
+        )
+        dm_minus = (low.shift() - low).where(
+            (low.shift() - low) > (high - high.shift()), 0
+        )
 
         # Calculate ADX
         di_plus = 100 * (dm_plus.rolling(window=14).mean() / atr)
@@ -230,10 +238,18 @@ class RegimeClassifier:
         high = data["High"].rolling(window=20).max()
         low = data["Low"].rolling(window=20).min()
 
-        return {"resistance": high.iloc[-1], "support": low.iloc[-1], "current": data["Close"].iloc[-1]}
+        return {
+            "resistance": high.iloc[-1],
+            "support": low.iloc[-1],
+            "current": data["Close"].iloc[-1],
+        }
 
     def _determine_regime(
-        self, volatility: float, momentum: float, trend_strength: float, volume_profile: str
+        self,
+        volatility: float,
+        momentum: float,
+        trend_strength: float,
+        volume_profile: str,
     ) -> Tuple[MarketRegime, float]:
         """Determine market regime based on indicators."""
         # High volatility scenarios
@@ -351,7 +367,9 @@ class StrategyGatekeeper:
         console_handler.setLevel(logging.INFO)
 
         # Formatter
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         file_handler.setFormatter(formatter)
         console_handler.setFormatter(formatter)
 
@@ -376,7 +394,9 @@ class StrategyGatekeeper:
             regime_metrics = self.regime_classifier.classify_regime(data)
 
             # Calculate strategy performance
-            performance = self._calculate_strategy_performance(strategy_name, data, strategy_signals, regime_metrics)
+            performance = self._calculate_strategy_performance(
+                strategy_name, data, strategy_signals, regime_metrics
+            )
 
             # Update performance history
             self.strategy_performance[strategy_name] = performance
@@ -391,10 +411,16 @@ class StrategyGatekeeper:
 
         except Exception as e:
             logger.error(f"Error evaluating strategy {strategy_name}: {e}")
-            return self._create_rejection_decision(strategy_name, f"Evaluation error: {e}")
+            return self._create_rejection_decision(
+                strategy_name, f"Evaluation error: {e}"
+            )
 
     def _calculate_strategy_performance(
-        self, strategy_name: str, data: pd.DataFrame, signals: pd.DataFrame, regime_metrics: RegimeMetrics
+        self,
+        strategy_name: str,
+        data: pd.DataFrame,
+        signals: pd.DataFrame,
+        regime_metrics: RegimeMetrics,
     ) -> StrategyPerformance:
         """Calculate comprehensive strategy performance metrics."""
         try:
@@ -412,7 +438,9 @@ class StrategyGatekeeper:
             sortino_ratio = self._calculate_sortino_ratio(strategy_returns)
 
             # Calculate regime-specific performance
-            regime_performance = self._calculate_regime_performance(strategy_returns, regime_metrics.regime)
+            regime_performance = self._calculate_regime_performance(
+                strategy_returns, regime_metrics.regime
+            )
 
             # Calculate recent performance (last 30 days)
             recent_performance = strategy_returns.tail(30).mean() * 252
@@ -438,7 +466,9 @@ class StrategyGatekeeper:
             logger.error(f"Error calculating performance for {strategy_name}: {e}")
             return self._create_fallback_performance(strategy_name)
 
-    def _calculate_strategy_returns(self, signals: pd.DataFrame, returns: pd.Series) -> pd.Series:
+    def _calculate_strategy_returns(
+        self, signals: pd.DataFrame, returns: pd.Series
+    ) -> pd.Series:
         """Calculate strategy returns from signals."""
         # Simple long-only strategy for now
         # In a real implementation, this would handle long/short positions
@@ -497,7 +527,10 @@ class StrategyGatekeeper:
         return {current_regime: returns.mean() * 252}
 
     def _make_decision(
-        self, strategy_name: str, performance: StrategyPerformance, regime_metrics: RegimeMetrics
+        self,
+        strategy_name: str,
+        performance: StrategyPerformance,
+        regime_metrics: RegimeMetrics,
     ) -> GatekeeperDecision:
         """Make comprehensive decision about strategy."""
         reasoning = []
@@ -507,7 +540,9 @@ class StrategyGatekeeper:
 
         # Check performance thresholds
         if performance.sharpe_ratio < self.min_sharpe_ratio:
-            reasoning.append(f"Sharpe ratio {performance.sharpe_ratio:.3f} below threshold {self.min_sharpe_ratio}")
+            reasoning.append(
+                f"Sharpe ratio {performance.sharpe_ratio:.3f} below threshold {self.min_sharpe_ratio}"
+            )
             risk_score += 0.3
 
         if performance.max_drawdown > self.max_drawdown_threshold:
@@ -517,7 +552,9 @@ class StrategyGatekeeper:
             risk_score += 0.4
 
         if performance.win_rate < self.min_win_rate:
-            reasoning.append(f"Win rate {performance.win_rate:.3f} below threshold {self.min_win_rate}")
+            reasoning.append(
+                f"Win rate {performance.win_rate:.3f} below threshold {self.min_win_rate}"
+            )
             risk_score += 0.2
 
         # Check regime compatibility
@@ -525,7 +562,9 @@ class StrategyGatekeeper:
         preferred_regimes = strategy_config.get("preferred_regimes", [])
 
         if preferred_regimes and regime_metrics.regime.value not in preferred_regimes:
-            reasoning.append(f"Strategy not optimized for current regime: {regime_metrics.regime.value}")
+            reasoning.append(
+                f"Strategy not optimized for current regime: {regime_metrics.regime.value}"
+            )
             risk_score += 0.2
 
         # Calculate position size based on performance and risk
@@ -538,7 +577,9 @@ class StrategyGatekeeper:
         if risk_score > 0.5:
             base_position_size *= 0.5
 
-        position_size = max(self.min_position_size, min(self.max_position_size, base_position_size))
+        position_size = max(
+            self.min_position_size, min(self.max_position_size, base_position_size)
+        )
 
         # Calculate stop loss and take profit
         stop_loss = performance.max_drawdown * 1.5
@@ -571,7 +612,9 @@ class StrategyGatekeeper:
             take_profit=take_profit,
         )
 
-    def _create_rejection_decision(self, strategy_name: str, reason: str) -> GatekeeperDecision:
+    def _create_rejection_decision(
+        self, strategy_name: str, reason: str
+    ) -> GatekeeperDecision:
         """Create a rejection decision."""
         return GatekeeperDecision(
             decision=GatekeeperDecision.REJECT,
@@ -624,10 +667,13 @@ class StrategyGatekeeper:
         return {
             name: perf
             for name, perf in self.strategy_performance.items()
-            if perf.sharpe_ratio > self.min_sharpe_ratio and perf.max_drawdown < self.max_drawdown_threshold
+            if perf.sharpe_ratio > self.min_sharpe_ratio
+            and perf.max_drawdown < self.max_drawdown_threshold
         }
 
-    def get_strategy_recommendations(self, regime: MarketRegime) -> List[Tuple[str, float]]:
+    def get_strategy_recommendations(
+        self, regime: MarketRegime
+    ) -> List[Tuple[str, float]]:
         """Get strategy recommendations for current regime."""
         active_strategies = self.get_active_strategies()
         recommendations = []
@@ -635,7 +681,11 @@ class StrategyGatekeeper:
         for name, performance in active_strategies.items():
             # Calculate regime-specific score
             regime_performance = performance.regime_performance.get(regime, 0.0)
-            score = performance.sharpe_ratio * 0.4 + (1 - performance.max_drawdown) * 0.3 + regime_performance * 0.3
+            score = (
+                performance.sharpe_ratio * 0.4
+                + (1 - performance.max_drawdown) * 0.3
+                + regime_performance * 0.3
+            )
 
             recommendations.append((name, score))
 
@@ -698,7 +748,9 @@ class StrategyGatekeeper:
                 )
 
             # Restore other state
-            self.active_strategies = {name: True for name in state.get("active_strategies", [])}
+            self.active_strategies = {
+                name: True for name in state.get("active_strategies", [])
+            }
             self.retired_strategies = set(state.get("retired_strategies", []))
 
             logger.info(f"Gatekeeper state loaded from {filepath}")
@@ -707,7 +759,9 @@ class StrategyGatekeeper:
             logger.error(f"Error loading gatekeeper state: {e}")
 
 
-def create_strategy_gatekeeper(config: Optional[Dict[str, Any]] = None) -> StrategyGatekeeper:
+def create_strategy_gatekeeper(
+    config: Optional[Dict[str, Any]] = None
+) -> StrategyGatekeeper:
     """Factory function to create a strategy gatekeeper.
 
     Args:

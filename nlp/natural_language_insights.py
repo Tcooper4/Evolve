@@ -13,12 +13,9 @@ import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-
 # Import NLP libraries with fallback handling
 try:
-    from transformers import (
-        pipeline,
-    )
+    from transformers import pipeline
 
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
@@ -71,8 +68,26 @@ class NaturalLanguageInsights:
 
         # Financial keywords for context
         self.financial_keywords = {
-            "positive": ["bullish", "buy", "strong", "growth", "positive", "up", "rise", "gain"],
-            "negative": ["bearish", "sell", "weak", "decline", "negative", "down", "fall", "loss"],
+            "positive": [
+                "bullish",
+                "buy",
+                "strong",
+                "growth",
+                "positive",
+                "up",
+                "rise",
+                "gain",
+            ],
+            "negative": [
+                "bearish",
+                "sell",
+                "weak",
+                "decline",
+                "negative",
+                "down",
+                "fall",
+                "loss",
+            ],
             "neutral": ["hold", "maintain", "stable", "steady", "unchanged"],
         }
 
@@ -91,12 +106,17 @@ class NaturalLanguageInsights:
 
                 # Initialize summarization pipeline
                 self.summarizer_pipeline = pipeline(
-                    "summarization", model="facebook/bart-large-cnn", max_length=130, min_length=30
+                    "summarization",
+                    model="facebook/bart-large-cnn",
+                    max_length=130,
+                    min_length=30,
                 )
 
                 # Initialize text classification for financial sentiment
                 self.financial_sentiment_pipeline = pipeline(
-                    "text-classification", model="ProsusAI/finbert", return_all_scores=True
+                    "text-classification",
+                    model="ProsusAI/finbert",
+                    return_all_scores=True,
                 )
 
                 logger.info("Transformers models loaded successfully")
@@ -215,12 +235,22 @@ class NaturalLanguageInsights:
         try:
             if self.financial_sentiment_pipeline:
                 # Use FinBERT for financial sentiment
-                result = self.financial_sentiment_pipeline(context[:512])  # Limit length
-                return {"label": result[0]["label"], "score": result[0]["score"], "method": "finbert"}
+                result = self.financial_sentiment_pipeline(
+                    context[:512]
+                )  # Limit length
+                return {
+                    "label": result[0]["label"],
+                    "score": result[0]["score"],
+                    "method": "finbert",
+                }
             elif self.sentiment_pipeline:
                 # Use general sentiment analysis
                 result = self.sentiment_pipeline(context[:512])
-                return {"label": result[0]["label"], "score": result[0]["score"], "method": "general"}
+                return {
+                    "label": result[0]["label"],
+                    "score": result[0]["score"],
+                    "method": "general",
+                }
             else:
                 # Fallback to keyword-based analysis
                 return self._keyword_sentiment_analysis(context)
@@ -241,9 +271,15 @@ class NaturalLanguageInsights:
         try:
             text_lower = text.lower()
 
-            positive_count = sum(1 for word in self.financial_keywords["positive"] if word in text_lower)
-            negative_count = sum(1 for word in self.financial_keywords["negative"] if word in text_lower)
-            neutral_count = sum(1 for word in self.financial_keywords["neutral"] if word in text_lower)
+            positive_count = sum(
+                1 for word in self.financial_keywords["positive"] if word in text_lower
+            )
+            negative_count = sum(
+                1 for word in self.financial_keywords["negative"] if word in text_lower
+            )
+            neutral_count = sum(
+                1 for word in self.financial_keywords["neutral"] if word in text_lower
+            )
 
             total = positive_count + negative_count + neutral_count
 
@@ -251,9 +287,17 @@ class NaturalLanguageInsights:
                 return {"label": "neutral", "score": 0.5, "method": "keyword"}
 
             if positive_count > negative_count:
-                return {"label": "positive", "score": positive_count / total, "method": "keyword"}
+                return {
+                    "label": "positive",
+                    "score": positive_count / total,
+                    "method": "keyword",
+                }
             elif negative_count > positive_count:
-                return {"label": "negative", "score": negative_count / total, "method": "keyword"}
+                return {
+                    "label": "negative",
+                    "score": negative_count / total,
+                    "method": "keyword",
+                }
             else:
                 return {"label": "neutral", "score": 0.5, "method": "keyword"}
 
@@ -274,7 +318,14 @@ class NaturalLanguageInsights:
             confidence = 0.5  # Base confidence
 
             # Increase confidence for financial context
-            financial_terms = ["stock", "shares", "market", "trading", "price", "earnings"]
+            financial_terms = [
+                "stock",
+                "shares",
+                "market",
+                "trading",
+                "price",
+                "earnings",
+            ]
             if any(term in context.lower() for term in financial_terms):
                 confidence += 0.2
 
@@ -295,7 +346,9 @@ class NaturalLanguageInsights:
             logger.error(f"Error calculating confidence: {e}")
             return 0.5
 
-    def summarize_earnings_call(self, transcript: str, max_length: int = 500) -> Dict[str, Any]:
+    def summarize_earnings_call(
+        self, transcript: str, max_length: int = 500
+    ) -> Dict[str, Any]:
         """Summarize earnings call transcript.
 
         Args:
@@ -320,7 +373,10 @@ class NaturalLanguageInsights:
             # Generate summary
             if self.summarizer_pipeline:
                 summary_result = self.summarizer_pipeline(
-                    cleaned_transcript, max_length=max_length, min_length=100, do_sample=False
+                    cleaned_transcript,
+                    max_length=max_length,
+                    min_length=100,
+                    do_sample=False,
                 )
                 summary = summary_result[0]["summary_text"]
             else:
@@ -407,12 +463,16 @@ class NaturalLanguageInsights:
                 for sentence in sentences:
                     words = word_tokenize(sentence.lower())
                     score = sum(
-                        word_freq.get(word, 0) for word in words if word not in self.stop_words and word.isalnum()
+                        word_freq.get(word, 0)
+                        for word in words
+                        if word not in self.stop_words and word.isalnum()
                     )
                     sentence_scores[sentence] = score
 
                 # Select top sentences
-                sorted_sentences = sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)
+                sorted_sentences = sorted(
+                    sentence_scores.items(), key=lambda x: x[1], reverse=True
+                )
 
                 summary_sentences = []
                 current_length = 0
@@ -478,7 +538,9 @@ class NaturalLanguageInsights:
             logger.error(f"Error extracting key points: {e}")
             return []
 
-    def _calculate_summary_confidence(self, summary: str, key_points: List[str]) -> float:
+    def _calculate_summary_confidence(
+        self, summary: str, key_points: List[str]
+    ) -> float:
         """Calculate confidence score for summary.
 
         Args:
@@ -521,7 +583,12 @@ class NaturalLanguageInsights:
         """
         try:
             if not commentary or len(commentary.strip()) < 50:
-                return {"tickers": [], "sentiment": "neutral", "recommendations": [], "confidence": 0.0}
+                return {
+                    "tickers": [],
+                    "sentiment": "neutral",
+                    "recommendations": [],
+                    "confidence": 0.0,
+                }
 
             # Extract tickers
             tickers = self.extract_tickers(commentary)
@@ -536,13 +603,21 @@ class NaturalLanguageInsights:
                 "tickers": tickers,
                 "sentiment": sentiment,
                 "recommendations": recommendations,
-                "confidence": self._calculate_commentary_confidence(commentary, tickers, recommendations),
+                "confidence": self._calculate_commentary_confidence(
+                    commentary, tickers, recommendations
+                ),
                 "timestamp": datetime.now().isoformat(),
             }
 
         except Exception as e:
             logger.error(f"Error analyzing analyst commentary: {e}")
-            return {"tickers": [], "sentiment": "neutral", "recommendations": [], "confidence": 0.0, "error": str(e)}
+            return {
+                "tickers": [],
+                "sentiment": "neutral",
+                "recommendations": [],
+                "confidence": 0.0,
+                "error": str(e),
+            }
 
     def _extract_recommendations(self, text: str) -> List[str]:
         """Extract investment recommendations from text.
@@ -608,7 +683,13 @@ class NaturalLanguageInsights:
                 confidence += 0.1
 
             # Increase confidence for financial terms
-            financial_terms = ["price target", "earnings", "revenue", "growth", "valuation"]
+            financial_terms = [
+                "price target",
+                "earnings",
+                "revenue",
+                "growth",
+                "valuation",
+            ]
             if any(term in commentary.lower() for term in financial_terms):
                 confidence += 0.2
 
@@ -631,7 +712,8 @@ class NaturalLanguageInsights:
             "models_loaded": {
                 "sentiment_pipeline": self.sentiment_pipeline is not None,
                 "summarizer_pipeline": self.summarizer_pipeline is not None,
-                "financial_sentiment_pipeline": self.financial_sentiment_pipeline is not None,
+                "financial_sentiment_pipeline": self.financial_sentiment_pipeline
+                is not None,
                 "spacy_model": self.nlp is not None,
             },
             "timestamp": datetime.now().isoformat(),

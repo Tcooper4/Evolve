@@ -16,11 +16,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field, validator
 
-from system.infra.agents.core.models.task import (
-    Task,
-    TaskStatus,
-    TaskType,
-)
+from system.infra.agents.core.models.task import Task, TaskStatus, TaskType
 from trading.automation_core import AutomationCore
 from trading.automation_monitoring import AutomationMonitoring
 from trading.automation_notification import AutomationNotification
@@ -130,7 +126,10 @@ class AutomationAPI:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "api.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "api.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def setup_security(self):
@@ -169,10 +168,14 @@ class AutomationAPI:
             user = await self._authenticate_user(form_data.username, form_data.password)
             if not user:
                 raise HTTPException(
-                    status_code=401, detail="Incorrect username or password", headers={"WWW-Authenticate": "Bearer"}
+                    status_code=401,
+                    detail="Incorrect username or password",
+                    headers={"WWW-Authenticate": "Bearer"},
                 )
 
-            access_token = self._create_access_token(data={"sub": user.username, "scopes": user.scopes})
+            access_token = self._create_access_token(
+                data={"sub": user.username, "scopes": user.scopes}
+            )
             return {"access_token": access_token, "token_type": "bearer"}
 
         @self.app.get("/docs", include_in_schema=False)
@@ -190,7 +193,10 @@ class AutomationAPI:
         async def get_openapi_endpoint():
             """OpenAPI schema."""
             return get_openapi(
-                title="Automation API", version="1.0.0", description="API for automation system", routes=self.app.routes
+                title="Automation API",
+                version="1.0.0",
+                description="API for automation system",
+                routes=self.app.routes,
             )
 
         @self.app.get("/tasks", response_model=List[Task])
@@ -206,7 +212,9 @@ class AutomationAPI:
             return await self.tasks.list_tasks(status, task_type)
 
         @self.app.post("/tasks", response_model=Task)
-        async def create_task(task: Task, current_user: User = Depends(self._get_current_user)):
+        async def create_task(
+            task: Task, current_user: User = Depends(self._get_current_user)
+        ):
             """Create task endpoint."""
             if "tasks:write" not in current_user.scopes:
                 raise HTTPException(status_code=403, detail="Not enough permissions")
@@ -220,7 +228,10 @@ class AutomationAPI:
             )
 
         @self.app.get("/workflows")
-        async def get_workflows(status: Optional[str] = None, current_user: User = Depends(self._get_current_user)):
+        async def get_workflows(
+            status: Optional[str] = None,
+            current_user: User = Depends(self._get_current_user),
+        ):
             """Get workflows endpoint."""
             if "workflows:read" not in current_user.scopes:
                 raise HTTPException(status_code=403, detail="Not enough permissions")
@@ -228,13 +239,17 @@ class AutomationAPI:
             return await self.workflows.get_workflows(status)
 
         @self.app.post("/workflows")
-        async def create_workflow(workflow: dict, current_user: User = Depends(self._get_current_user)):
+        async def create_workflow(
+            workflow: dict, current_user: User = Depends(self._get_current_user)
+        ):
             """Create workflow endpoint."""
             if "workflows:write" not in current_user.scopes:
                 raise HTTPException(status_code=403, detail="Not enough permissions")
 
             return await self.workflows.create_workflow(
-                name=workflow["name"], description=workflow["description"], steps=workflow["steps"]
+                name=workflow["name"],
+                description=workflow["description"],
+                steps=workflow["steps"],
             )
 
         @self.app.get("/metrics")
@@ -258,7 +273,9 @@ class AutomationAPI:
             return await self.scheduler.get_schedules(enabled, task_type)
 
         @self.app.post("/schedules")
-        async def create_schedule(schedule: dict, current_user: User = Depends(self._get_current_user)):
+        async def create_schedule(
+            schedule: dict, current_user: User = Depends(self._get_current_user)
+        ):
             """Create schedule endpoint."""
             if "schedules:write" not in current_user.scopes:
                 raise HTTPException(status_code=403, detail="Not enough permissions")
@@ -279,9 +296,13 @@ class AutomationAPI:
         async def global_exception_handler(request: Request, exc: Exception):
             """Global exception handler."""
             logger.error(f"Unhandled exception: {str(exc)}")
-            return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+            return JSONResponse(
+                status_code=500, content={"detail": "Internal server error"}
+            )
 
-    async def _authenticate_user(self, username: str, password: str) -> Optional[UserInDB]:
+    async def _authenticate_user(
+        self, username: str, password: str
+    ) -> Optional[UserInDB]:
         """Authenticate user."""
         user = self.users.get(username)
         if not user:
@@ -305,16 +326,22 @@ class AutomationAPI:
         to_encode = data.copy()
         expire = datetime.utcnow() + timedelta(minutes=self.config.jwt_expire_minutes)
         to_encode.update({"exp": expire})
-        return jwt.encode(to_encode, self.config.jwt_secret, algorithm=self.config.jwt_algorithm)
+        return jwt.encode(
+            to_encode, self.config.jwt_secret, algorithm=self.config.jwt_algorithm
+        )
 
     async def _get_current_user(self, token: str = Depends(oauth2_scheme)) -> User:
         """Get current user from token."""
         credentials_exception = HTTPException(
-            status_code=401, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"}
+            status_code=401,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
         try:
-            payload = jwt.decode(token, self.config.jwt_secret, algorithms=[self.config.jwt_algorithm])
+            payload = jwt.decode(
+                token, self.config.jwt_secret, algorithms=[self.config.jwt_algorithm]
+            )
             username: str = payload.get("sub")
             if username is None:
                 raise credentials_exception
@@ -333,7 +360,12 @@ class AutomationAPI:
     async def start(self):
         """Start the API server."""
         try:
-            uvicorn.run(self.app, host=self.config.host, port=self.config.port, debug=self.config.debug)
+            uvicorn.run(
+                self.app,
+                host=self.config.host,
+                port=self.config.port,
+                debug=self.config.debug,
+            )
         except Exception as e:
             logger.error(f"Failed to start API server: {str(e)}")
             raise

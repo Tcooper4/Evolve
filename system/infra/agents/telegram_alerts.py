@@ -34,17 +34,25 @@ class TelegramAlerts:
         self.enabled = self._is_enabled()
 
         if self.enabled and not self.bot_token:
-            logger.warning("Telegram bot token not found. Telegram alerts will be disabled.")
+            logger.warning(
+                "Telegram bot token not found. Telegram alerts will be disabled."
+            )
             self.enabled = False
 
         if self.enabled and not self.chat_id:
-            logger.warning("Telegram chat ID not found. Telegram alerts will be disabled.")
+            logger.warning(
+                "Telegram chat ID not found. Telegram alerts will be disabled."
+            )
             self.enabled = False
 
     def _get_bot_token(self) -> Optional[str]:
         """Get bot token from environment variables."""
         # Try multiple environment variable names for flexibility
-        token = os.getenv("TELEGRAM_BOT_KEY") or os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_API_KEY")
+        token = (
+            os.getenv("TELEGRAM_BOT_KEY")
+            or os.getenv("TELEGRAM_BOT_TOKEN")
+            or os.getenv("TELEGRAM_API_KEY")
+        )
 
         if not token:
             logger.warning("No Telegram bot token found in environment variables")
@@ -84,7 +92,11 @@ class TelegramAlerts:
         try:
             url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
 
-            payload = {"chat_id": self.chat_id, "text": message, "parse_mode": parse_mode}
+            payload = {
+                "chat_id": self.chat_id,
+                "text": message,
+                "parse_mode": parse_mode,
+            }
 
             response = requests.post(url, json=payload, timeout=10)
             response.raise_for_status()
@@ -99,7 +111,13 @@ class TelegramAlerts:
             logger.error(f"Unexpected error sending Telegram message: {e}")
             return False
 
-    def send_alert(self, subject: str, message: str, alert_type: str = "info", include_timestamp: bool = True) -> bool:
+    def send_alert(
+        self,
+        subject: str,
+        message: str,
+        alert_type: str = "info",
+        include_timestamp: bool = True,
+    ) -> bool:
         """Send a formatted alert via Telegram.
 
         Args:
@@ -162,7 +180,9 @@ class TelegramAlerts:
 
         return self.send_alert(f"Trading Signal: {symbol}", message, "info")
 
-    def send_performance_alert(self, metric: str, value: float, threshold: float, status: str) -> bool:
+    def send_performance_alert(
+        self, metric: str, value: float, threshold: float, status: str
+    ) -> bool:
         """Send a performance monitoring alert.
 
         Args:
@@ -185,7 +205,9 @@ class TelegramAlerts:
 
         return self.send_alert(f"Performance Alert: {metric}", message, alert_type)
 
-    def send_system_alert(self, component: str, message: str, alert_type: str = "error") -> bool:
+    def send_system_alert(
+        self, component: str, message: str, alert_type: str = "error"
+    ) -> bool:
         """Send a system-level alert.
 
         Args:
@@ -215,7 +237,9 @@ class TelegramAlerts:
 
             bot_info = response.json()
             if bot_info.get("ok"):
-                logger.info(f"Telegram bot connection successful: {bot_info['result']['username']}")
+                logger.info(
+                    f"Telegram bot connection successful: {bot_info['result']['username']}"
+                )
                 return True
             else:
                 logger.error(f"Telegram bot connection failed: {bot_info}")
@@ -247,9 +271,13 @@ if __name__ == "__main__":
     # Test connection
     if telegram.test_connection():
         # Send test message
-        telegram.send_alert("Test Alert", "This is a test message from the trading system.", "info")
+        telegram.send_alert(
+            "Test Alert", "This is a test message from the trading system.", "info"
+        )
 
         # Send trading alert
-        telegram.send_trading_alert("AAPL", "BUY", 150.25, quantity=100, confidence=0.85)
+        telegram.send_trading_alert(
+            "AAPL", "BUY", 150.25, quantity=100, confidence=0.85
+        )
     else:
         print("Telegram connection test failed")

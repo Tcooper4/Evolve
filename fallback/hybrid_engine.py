@@ -49,7 +49,11 @@ class FallbackHybridEngine:
             "macd": {
                 "name": "MACD Strategy",
                 "function": self._execute_macd_strategy,
-                "parameters": {"fast_period": 12, "slow_period": 26, "signal_period": 9},
+                "parameters": {
+                    "fast_period": 12,
+                    "slow_period": 26,
+                    "signal_period": 9,
+                },
             },
             "bollinger": {
                 "name": "Bollinger Bands Strategy",
@@ -64,7 +68,10 @@ class FallbackHybridEngine:
         }
 
     def run_strategy(
-        self, data: pd.DataFrame, strategy_name: str, parameters: Optional[Dict[str, Any]] = None
+        self,
+        data: pd.DataFrame,
+        strategy_name: str,
+        parameters: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Run a specific strategy (fallback implementation).
@@ -109,7 +116,9 @@ class FallbackHybridEngine:
             logger.error(f"Error running strategy {strategy_name}: {e}")
             return None
 
-    def _execute_rsi_strategy(self, data: pd.DataFrame, parameters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _execute_rsi_strategy(
+        self, data: pd.DataFrame, parameters: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """
         Execute RSI strategy (fallback implementation).
 
@@ -145,7 +154,9 @@ class FallbackHybridEngine:
                 "signals": signals.tolist(),
                 "rsi_values": rsi.tolist(),
                 "total_return": strategy_returns.sum(),
-                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() > 0 else 0,
+                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std()
+                if strategy_returns.std() > 0
+                else 0,
                 "win_rate": (strategy_returns > 0).mean(),
                 "max_drawdown": self._calculate_max_drawdown(strategy_returns),
                 "signal_count": len(signals[signals != 0]),
@@ -157,7 +168,9 @@ class FallbackHybridEngine:
             logger.error(f"Error executing RSI strategy: {e}")
             return None
 
-    def _execute_macd_strategy(self, data: pd.DataFrame, parameters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _execute_macd_strategy(
+        self, data: pd.DataFrame, parameters: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """
         Execute MACD strategy (fallback implementation).
 
@@ -182,8 +195,12 @@ class FallbackHybridEngine:
 
             # Generate signals
             signals = pd.Series(index=data.index, data=0)
-            signals[(macd_line > signal_line) & (macd_line.shift(1) <= signal_line.shift(1))] = 1  # Buy
-            signals[(macd_line < signal_line) & (macd_line.shift(1) >= signal_line.shift(1))] = -1  # Sell
+            signals[
+                (macd_line > signal_line) & (macd_line.shift(1) <= signal_line.shift(1))
+            ] = 1  # Buy
+            signals[
+                (macd_line < signal_line) & (macd_line.shift(1) >= signal_line.shift(1))
+            ] = -1  # Sell
 
             # Calculate performance metrics
             returns = data["Close"].pct_change()
@@ -195,7 +212,9 @@ class FallbackHybridEngine:
                 "signal_line": signal_line.tolist(),
                 "histogram": histogram.tolist(),
                 "total_return": strategy_returns.sum(),
-                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() > 0 else 0,
+                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std()
+                if strategy_returns.std() > 0
+                else 0,
                 "win_rate": (strategy_returns > 0).mean(),
                 "max_drawdown": self._calculate_max_drawdown(strategy_returns),
                 "signal_count": len(signals[signals != 0]),
@@ -207,7 +226,9 @@ class FallbackHybridEngine:
             logger.error(f"Error executing MACD strategy: {e}")
             return None
 
-    def _execute_bollinger_strategy(self, data: pd.DataFrame, parameters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _execute_bollinger_strategy(
+        self, data: pd.DataFrame, parameters: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """
         Execute Bollinger Bands strategy (fallback implementation).
 
@@ -243,7 +264,9 @@ class FallbackHybridEngine:
                 "lower_band": lower_band.tolist(),
                 "sma": sma.tolist(),
                 "total_return": strategy_returns.sum(),
-                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() > 0 else 0,
+                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std()
+                if strategy_returns.std() > 0
+                else 0,
                 "win_rate": (strategy_returns > 0).mean(),
                 "max_drawdown": self._calculate_max_drawdown(strategy_returns),
                 "signal_count": len(signals[signals != 0]),
@@ -278,8 +301,12 @@ class FallbackHybridEngine:
 
             # Generate signals
             signals = pd.Series(index=data.index, data=0)
-            signals[(sma_fast > sma_slow) & (sma_fast.shift(1) <= sma_slow.shift(1))] = 1  # Buy
-            signals[(sma_fast < sma_slow) & (sma_fast.shift(1) >= sma_slow.shift(1))] = -1  # Sell
+            signals[
+                (sma_fast > sma_slow) & (sma_fast.shift(1) <= sma_slow.shift(1))
+            ] = 1  # Buy
+            signals[
+                (sma_fast < sma_slow) & (sma_fast.shift(1) >= sma_slow.shift(1))
+            ] = -1  # Sell
 
             # Calculate performance metrics
             returns = data["Close"].pct_change()
@@ -290,7 +317,9 @@ class FallbackHybridEngine:
                 "sma_fast": sma_fast.tolist(),
                 "sma_slow": sma_slow.tolist(),
                 "total_return": strategy_returns.sum(),
-                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() > 0 else 0,
+                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std()
+                if strategy_returns.std() > 0
+                else 0,
                 "win_rate": (strategy_returns > 0).mean(),
                 "max_drawdown": self._calculate_max_drawdown(strategy_returns),
                 "signal_count": len(signals[signals != 0]),
@@ -351,4 +380,9 @@ class FallbackHybridEngine:
             }
         except Exception as e:
             logger.error(f"Error getting fallback hybrid engine health: {e}")
-            return {"status": "error", "available_strategies": 0, "fallback_mode": True, "error": str(e)}
+            return {
+                "status": "error",
+                "available_strategies": 0,
+                "fallback_mode": True,
+                "error": str(e),
+            }

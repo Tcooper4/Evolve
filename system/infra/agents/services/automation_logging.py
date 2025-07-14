@@ -50,7 +50,9 @@ class LogConfig(BaseModel):
     def validate_rotation(cls, v):
         valid_rotations = ["size", "time"]
         if v not in valid_rotations:
-            raise ValueError(f"Invalid rotation type. Must be one of: {valid_rotations}")
+            raise ValueError(
+                f"Invalid rotation type. Must be one of: {valid_rotations}"
+            )
         return v
 
 
@@ -109,13 +111,17 @@ class AutomationLogging:
 
             # Add console handler
             console_handler = logging.StreamHandler(sys.stdout)
-            console_handler.setFormatter(logging.Formatter(self.config.format, datefmt=self.config.date_format))
+            console_handler.setFormatter(
+                logging.Formatter(self.config.format, datefmt=self.config.date_format)
+            )
             root_logger.addHandler(console_handler)
 
             # Add file handler
             if self.config.rotation == "size":
                 file_handler = RotatingFileHandler(
-                    log_path / "automation.log", maxBytes=self.config.max_bytes, backupCount=self.config.backup_count
+                    log_path / "automation.log",
+                    maxBytes=self.config.max_bytes,
+                    backupCount=self.config.backup_count,
                 )
             else:
                 file_handler = TimedRotatingFileHandler(
@@ -124,7 +130,9 @@ class AutomationLogging:
                     backupCount=self.config.backup_count,
                 )
 
-            file_handler.setFormatter(logging.Formatter(self.config.format, datefmt=self.config.date_format))
+            file_handler.setFormatter(
+                logging.Formatter(self.config.format, datefmt=self.config.date_format)
+            )
             root_logger.addHandler(file_handler)
 
         except Exception as e:
@@ -164,7 +172,11 @@ class AutomationLogging:
                     dsn=self.config.sentry_dsn,
                     environment=self.config.sentry_environment,
                     traces_sample_rate=self.config.sentry_traces_sample_rate,
-                    integrations=[LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)],
+                    integrations=[
+                        LoggingIntegration(
+                            level=logging.INFO, event_level=logging.ERROR
+                        )
+                    ],
                 )
 
         except Exception as e:

@@ -277,7 +277,12 @@ def main():
 
     if failed == 0:
         print("\n🎉 ALL TESTS PASSED! Return statement compliance: 100%")
-        return {"status": "all_tests_passed", "passed": passed, "failed": failed, "success_rate": 100.0}
+        return {
+            "status": "all_tests_passed",
+            "passed": passed,
+            "failed": failed,
+            "success_rate": 100.0,
+        }
     else:
         print(f"\n⚠️ {failed} tests failed. Check individual results below.")
         for result in results:

@@ -40,7 +40,9 @@ def test_investment_prompt():
         app.input("prompt_input").set_value("What stocks should I invest in today?")
         app.button("Submit").click()
         output = app.text_output()
-        assert any(keyword in output.lower() for keyword in ["invest", "stock", "recommend"])
+        assert any(
+            keyword in output.lower() for keyword in ["invest", "stock", "recommend"]
+        )
     except Exception as e:
         pytest.skip(f"Streamlit testing not available: {e}")
 

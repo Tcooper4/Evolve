@@ -106,7 +106,11 @@ def create_market_scenarios() -> List[Dict[str, Any]]:
             "name": "Stop Loss Triggered",
             "description": "AAPL price drops to trigger stop loss",
             "market_data": {
-                "AAPL": {"price": 147.00, "volatility": 0.15, "volume": 1000000},  # -2.2%
+                "AAPL": {
+                    "price": 147.00,
+                    "volatility": 0.15,
+                    "volume": 1000000,
+                },  # -2.2%
                 "TSLA": {"price": 245.50, "volatility": 0.25, "volume": 2000000},
                 "NVDA": {"price": 420.75, "volatility": 0.20, "volume": 1500000},
             },
@@ -117,7 +121,11 @@ def create_market_scenarios() -> List[Dict[str, Any]]:
             "description": "TSLA price rises to trigger take profit",
             "market_data": {
                 "AAPL": {"price": 150.25, "volatility": 0.15, "volume": 1000000},
-                "TSLA": {"price": 260.00, "volatility": 0.25, "volume": 2000000},  # +5.9%
+                "TSLA": {
+                    "price": 260.00,
+                    "volatility": 0.25,
+                    "volume": 2000000,
+                },  # +5.9%
                 "NVDA": {"price": 420.75, "volatility": 0.20, "volume": 1500000},
             },
         },
@@ -126,7 +134,11 @@ def create_market_scenarios() -> List[Dict[str, Any]]:
             "name": "High Volatility",
             "description": "High volatility triggers volatility limit exit",
             "market_data": {
-                "AAPL": {"price": 150.25, "volatility": 0.45, "volume": 1000000},  # High vol
+                "AAPL": {
+                    "price": 150.25,
+                    "volatility": 0.45,
+                    "volume": 1000000,
+                },  # High vol
                 "TSLA": {"price": 245.50, "volatility": 0.25, "volume": 2000000},
                 "NVDA": {"price": 420.75, "volatility": 0.20, "volume": 1500000},
             },
@@ -167,8 +179,18 @@ async def demo_risk_controls():
             "risk_monitoring_enabled": True,
             "auto_exit_enabled": True,
             "risk_controls": {
-                "stop_loss": {"threshold_type": "percentage", "value": 0.02, "atr_multiplier": 2.0, "atr_period": 14},
-                "take_profit": {"threshold_type": "percentage", "value": 0.06, "atr_multiplier": 3.0, "atr_period": 14},
+                "stop_loss": {
+                    "threshold_type": "percentage",
+                    "value": 0.02,
+                    "atr_multiplier": 2.0,
+                    "atr_period": 14,
+                },
+                "take_profit": {
+                    "threshold_type": "percentage",
+                    "value": 0.06,
+                    "atr_multiplier": 3.0,
+                    "atr_period": 14,
+                },
                 "max_position_size": 0.2,
                 "max_portfolio_risk": 0.05,
                 "max_daily_loss": 0.02,
@@ -183,7 +205,9 @@ async def demo_risk_controls():
     execution_agent = ExecutionAgent(agent_config)
 
     logger.info(f"✅ ExecutionAgent initialized with risk controls")
-    logger.info(f"📊 Default risk controls: {execution_agent.default_risk_controls.to_dict()}")
+    logger.info(
+        f"📊 Default risk controls: {execution_agent.default_risk_controls.to_dict()}"
+    )
 
     # Create risk-aware signals
     signals = create_risk_aware_signals()
@@ -204,7 +228,10 @@ async def demo_risk_controls():
     }
 
     result = await execution_agent.execute(
-        signals=signals, market_data=initial_market_data, portfolio_update=True, risk_check=True
+        signals=signals,
+        market_data=initial_market_data,
+        portfolio_update=True,
+        risk_check=True,
     )
 
     if result.success:
@@ -228,7 +255,10 @@ async def demo_risk_controls():
 
         # Update market data and run risk monitoring
         result = await execution_agent.execute(
-            signals=[], market_data=scenario["market_data"], portfolio_update=True, risk_check=True
+            signals=[],
+            market_data=scenario["market_data"],
+            portfolio_update=True,
+            risk_check=True,
         )
 
         if result.success:
@@ -298,7 +328,11 @@ async def demo_risk_threshold_types():
     config = {
         "name": "threshold_demo_agent",
         "enabled": True,
-        "custom_config": {"execution_mode": "simulation", "max_positions": 3, "risk_monitoring_enabled": True},
+        "custom_config": {
+            "execution_mode": "simulation",
+            "max_positions": 3,
+            "risk_monitoring_enabled": True,
+        },
     }
 
     agent_config = AgentConfig(**config)
@@ -320,7 +354,10 @@ async def demo_risk_threshold_types():
         else:
             threshold = RiskThreshold(threshold_type, value)
 
-        risk_controls = RiskControls(stop_loss=threshold, take_profit=RiskThreshold(RiskThresholdType.PERCENTAGE, 0.06))
+        risk_controls = RiskControls(
+            stop_loss=threshold,
+            take_profit=RiskThreshold(RiskThresholdType.PERCENTAGE, 0.06),
+        )
 
         # Create signal
         signal = TradeSignal(
@@ -336,17 +373,42 @@ async def demo_risk_threshold_types():
         market_data = {"AAPL": {"price": 150.00, "volatility": 0.15}}
 
         # Update price history for ATR calculation
-        agent.price_history["AAPL"] = [145, 148, 152, 149, 151, 150, 153, 147, 150, 155, 148, 152, 149, 150]
+        agent.price_history["AAPL"] = [
+            145,
+            148,
+            152,
+            149,
+            151,
+            150,
+            153,
+            147,
+            150,
+            155,
+            148,
+            152,
+            149,
+            150,
+        ]
 
         stop_loss_price = agent._calculate_stop_loss_price(
-            type("Position", (), {"symbol": "AAPL", "direction": TradeDirection.LONG, "entry_price": 150.00})(),
+            type(
+                "Position",
+                (),
+                {
+                    "symbol": "AAPL",
+                    "direction": TradeDirection.LONG,
+                    "entry_price": 150.00,
+                },
+            )(),
             risk_controls,
             market_data,
         )
 
         logger.info(f"  Entry price: ${signal.entry_price:.2f}")
         logger.info(f"  Stop loss price: ${stop_loss_price:.2f}")
-        logger.info(f"  Stop loss distance: ${abs(stop_loss_price - signal.entry_price):.2f}")
+        logger.info(
+            f"  Stop loss distance: ${abs(stop_loss_price - signal.entry_price):.2f}"
+        )
 
     logger.info(f"\n✅ Threshold types demo completed!")
 
@@ -377,12 +439,27 @@ async def demo_emergency_exits():
 
     # Create positions
     signals = [
-        TradeSignal(symbol="AAPL", direction=TradeDirection.LONG, strategy="demo", confidence=0.8, entry_price=150.00),
-        TradeSignal(symbol="TSLA", direction=TradeDirection.LONG, strategy="demo", confidence=0.8, entry_price=245.00),
+        TradeSignal(
+            symbol="AAPL",
+            direction=TradeDirection.LONG,
+            strategy="demo",
+            confidence=0.8,
+            entry_price=150.00,
+        ),
+        TradeSignal(
+            symbol="TSLA",
+            direction=TradeDirection.LONG,
+            strategy="demo",
+            confidence=0.8,
+            entry_price=245.00,
+        ),
     ]
 
     # Execute trades
-    market_data = {"AAPL": {"price": 150.00, "volatility": 0.15}, "TSLA": {"price": 245.00, "volatility": 0.25}}
+    market_data = {
+        "AAPL": {"price": 150.00, "volatility": 0.15},
+        "TSLA": {"price": 245.00, "volatility": 0.25},
+    }
 
     result = await agent.execute(signals=signals, market_data=market_data)
 
@@ -396,12 +473,16 @@ async def demo_emergency_exits():
         agent.daily_pnl = -0.015  # -1.5% (above 1% limit)
 
         # Run risk monitoring
-        result = await agent.execute(signals=[], market_data=market_data, risk_check=True)
+        result = await agent.execute(
+            signals=[], market_data=market_data, risk_check=True
+        )
 
         if result.success:
             logger.info("✅ Emergency exit triggered")
             logger.info(f"  Daily PnL: {agent.daily_pnl:.2%}")
-            logger.info(f"  Open positions: {len(agent.portfolio_manager.state.open_positions)}")
+            logger.info(
+                f"  Open positions: {len(agent.portfolio_manager.state.open_positions)}"
+            )
         else:
             logger.error(f"❌ Emergency exit failed: {result.message}")
 

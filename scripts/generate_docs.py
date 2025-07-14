@@ -63,7 +63,9 @@ class DocumentationGenerator:
     def run_command(self, command: List[str], cwd: Optional[str] = None) -> int:
         """Run a shell command and return its exit code."""
         try:
-            process = subprocess.run(command, cwd=cwd, check=True, capture_output=True, text=True)
+            process = subprocess.run(
+                command, cwd=cwd, check=True, capture_output=True, text=True
+            )
             return process.returncode
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Command failed: {e}")
@@ -74,7 +76,10 @@ class DocumentationGenerator:
         """Generate API documentation using pdoc."""
         self.logger.info("Generating API documentation...")
 
-        if self.run_command(["pdoc", "--html", "--output-dir", "docs/api", "trading"]) != 0:
+        if (
+            self.run_command(["pdoc", "--html", "--output-dir", "docs/api", "trading"])
+            != 0
+        ):
             self.logger.error("Failed to generate API documentation")
             return False
 
@@ -111,7 +116,16 @@ class DocumentationGenerator:
 
         for example in examples:
             if (
-                self.run_command(["jupyter", "nbconvert", "--to", "notebook", "--execute", f"docs/examples/{example}"])
+                self.run_command(
+                    [
+                        "jupyter",
+                        "nbconvert",
+                        "--to",
+                        "notebook",
+                        "--execute",
+                        f"docs/examples/{example}",
+                    ]
+                )
                 != 0
             ):
                 self.logger.error(f"Failed to generate example: {example}")
@@ -128,7 +142,11 @@ class DocumentationGenerator:
         diagrams_dir.mkdir(parents=True, exist_ok=True)
 
         # Generate diagrams using Graphviz
-        diagrams = ["system_architecture.dot", "data_flow.dot", "component_interaction.dot"]
+        diagrams = [
+            "system_architecture.dot",
+            "data_flow.dot",
+            "component_interaction.dot",
+        ]
 
         for diagram in diagrams:
             if (
@@ -158,7 +176,12 @@ class DocumentationGenerator:
 
         # Generate documentation
         if not all(
-            [self.generate_api_docs(), self.generate_user_guide(), self.generate_examples(), self.generate_diagrams()]
+            [
+                self.generate_api_docs(),
+                self.generate_user_guide(),
+                self.generate_examples(),
+                self.generate_diagrams(),
+            ]
         ):
             self.logger.error("Documentation generation failed")
             return False
@@ -171,7 +194,9 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Documentation Generator")
     parser.add_argument(
-        "command", choices=["api", "guide", "examples", "diagrams", "all"], help="Documentation to generate"
+        "command",
+        choices=["api", "guide", "examples", "diagrams", "all"],
+        help="Documentation to generate",
     )
 
     args = parser.parse_args()

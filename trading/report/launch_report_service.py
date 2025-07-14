@@ -21,10 +21,17 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.FileHandler("logs/report_service.log"), logging.StreamHandler()],
+        handlers=[
+            logging.FileHandler("logs/report_service.log"),
+            logging.StreamHandler(),
+        ],
     )
 
-    return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+    return {
+        "success": True,
+        "message": "Initialization completed",
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 def main():

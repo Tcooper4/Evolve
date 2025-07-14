@@ -180,7 +180,9 @@ class RedisCache:
             logger.error(f"Error deserializing value: {e}")
             return value
 
-    def set(self, key: str, value: Any, ttl: Optional[int] = None, category: str = "default") -> bool:
+    def set(
+        self, key: str, value: Any, ttl: Optional[int] = None, category: str = "default"
+    ) -> bool:
         """Set a value in cache with TTL.
 
         Args:
@@ -325,7 +327,9 @@ class RedisCache:
             logger.error(f"Error getting TTL {key}: {e}")
             return -2
 
-    def set_strategy_signals(self, ticker: str, signals: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+    def set_strategy_signals(
+        self, ticker: str, signals: Dict[str, Any], ttl: Optional[int] = None
+    ) -> bool:
         """Cache strategy signals for a ticker.
 
         Args:
@@ -351,7 +355,9 @@ class RedisCache:
         key = f"strategy_signals:{ticker}"
         return self.get(key)
 
-    def set_predictions(self, model_name: str, ticker: str, predictions: Any, ttl: Optional[int] = None) -> bool:
+    def set_predictions(
+        self, model_name: str, ticker: str, predictions: Any, ttl: Optional[int] = None
+    ) -> bool:
         """Cache model predictions.
 
         Args:
@@ -379,7 +385,9 @@ class RedisCache:
         key = f"predictions:{model_name}:{ticker}"
         return self.get(key)
 
-    def set_agent_memory(self, agent_id: str, memory_data: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+    def set_agent_memory(
+        self, agent_id: str, memory_data: Dict[str, Any], ttl: Optional[int] = None
+    ) -> bool:
         """Cache agent memory state.
 
         Args:
@@ -405,7 +413,9 @@ class RedisCache:
         key = f"agent_memory:{agent_id}"
         return self.get(key)
 
-    def set_market_data(self, ticker: str, data: Any, ttl: Optional[int] = None) -> bool:
+    def set_market_data(
+        self, ticker: str, data: Any, ttl: Optional[int] = None
+    ) -> bool:
         """Cache market data.
 
         Args:
@@ -431,7 +441,9 @@ class RedisCache:
         key = f"market_data:{ticker}"
         return self.get(key)
 
-    def set_sentiment_data(self, ticker: str, sentiment_data: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+    def set_sentiment_data(
+        self, ticker: str, sentiment_data: Dict[str, Any], ttl: Optional[int] = None
+    ) -> bool:
         """Cache sentiment data.
 
         Args:
@@ -552,7 +564,9 @@ class RedisCache:
                 "timestamp": datetime.now().isoformat(),
             }
 
-            if not all([ping_result, set_result, get_result is not None, delete_result]):
+            if not all(
+                [ping_result, set_result, get_result is not None, delete_result]
+            ):
                 health_status["status"] = "degraded"
                 health_status["warnings"] = []
 
@@ -568,7 +582,11 @@ class RedisCache:
             return health_status
 
         except Exception as e:
-            return {"status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "status": "error",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
 
 # Global Redis cache instance

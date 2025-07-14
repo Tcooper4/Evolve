@@ -22,7 +22,14 @@ from .base_model import BaseModel
 class LSTMModel(nn.Module):
     """A class to handle LSTM model for time series prediction."""
 
-    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int, num_layers: int = 1, dropout: float = 0.0):
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        output_dim: int,
+        num_layers: int = 1,
+        dropout: float = 0.0,
+    ):
         """Initialize the LSTM model.
 
         Args:
@@ -33,7 +40,13 @@ class LSTMModel(nn.Module):
             dropout (float, optional): Dropout rate. Defaults to 0.0.
         """
         super().__init__()
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=num_layers, batch_first=True, dropout=dropout)
+        self.lstm = nn.LSTM(
+            input_dim,
+            hidden_dim,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout,
+        )
         self.fc = nn.Linear(hidden_dim, output_dim)
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
@@ -98,14 +111,20 @@ class LSTMModel(nn.Module):
         y = y[valid_mask]
 
         if len(X) < 10:
-            raise ValueError("Insufficient valid data after cleaning (need at least 10 samples)")
+            raise ValueError(
+                "Insufficient valid data after cleaning (need at least 10 samples)"
+            )
 
-        self.logger.info(f"Data cleaned: {len(data)} -> {len(X)} samples after removing NaN/infinite values")
+        self.logger.info(
+            f"Data cleaned: {len(data)} -> {len(X)} samples after removing NaN/infinite values"
+        )
 
         # Initialize optimizer, loss function, and scheduler
         optimizer = Adam(self.parameters(), lr=learning_rate)
         criterion = nn.MSELoss()
-        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5, verbose=True)
+        scheduler = ReduceLROnPlateau(
+            optimizer, mode="min", factor=0.5, patience=5, verbose=True
+        )
 
         # Setup checkpoint directory
         os.makedirs(checkpoint_dir, exist_ok=True)
@@ -168,7 +187,9 @@ class LSTMModel(nn.Module):
                 best_model_state = self.state_dict().copy()
 
                 # Save checkpoint
-                checkpoint_path = os.path.join(checkpoint_dir, f"best_model_epoch_{epoch+1}.pt")
+                checkpoint_path = os.path.join(
+                    checkpoint_dir, f"best_model_epoch_{epoch+1}.pt"
+                )
                 torch.save(
                     {
                         "epoch": epoch,
@@ -288,14 +309,26 @@ class LSTMModel(nn.Module):
 
         # Rule of thumb: sequence length should be 10-20% of data length
         # but not less than 10 and not more than max_sequence_length
-        optimal_length = max(10, min(int(data_length * 0.15), self.config.get("max_sequence_length", 100)))
+        optimal_length = max(
+            10,
+            min(int(data_length * 0.15), self.config.get("max_sequence_length", 100)),
+        )
 
         # Adjust based on volatility
-        if "target_column" in self.config and self.config["target_column"] in data.columns:
+        if (
+            "target_column" in self.config
+            and self.config["target_column"] in data.columns
+        ):
             target_volatility = data[self.config["target_column"]].std()
-            if target_volatility > data[self.config["target_column"]].mean() * 0.1:  # High volatility
-                optimal_length = min(optimal_length + 5, self.config.get("max_sequence_length", 100))
-            elif target_volatility < data[self.config["target_column"]].mean() * 0.01:  # Low volatility
+            if (
+                target_volatility > data[self.config["target_column"]].mean() * 0.1
+            ):  # High volatility
+                optimal_length = min(
+                    optimal_length + 5, self.config.get("max_sequence_length", 100)
+                )
+            elif (
+                target_volatility < data[self.config["target_column"]].mean() * 0.01
+            ):  # Low volatility
                 optimal_length = max(optimal_length - 5, 10)
 
         return optimal_length
@@ -445,7 +478,10 @@ class LSTMForecaster(BaseModel):
                 )
 
             # Check batch size
-            if "max_batch_size" in self.config and x.size(0) > self.config["max_batch_size"]:
+            if (
+                "max_batch_size" in self.config
+                and x.size(0) > self.config["max_batch_size"]
+            ):
                 raise ValueError(
                     f"Batch size {x.size(0)} exceeds maximum allowed value of {self.config['max_batch_size']}"
                 )
@@ -490,11 +526,15 @@ class LSTMForecaster(BaseModel):
             # Normalize data
             if is_training:
                 self.scaler = StandardScaler()
-                normalized_data = self.scaler.fit_transform(data[self.config["feature_columns"]])
+                normalized_data = self.scaler.fit_transform(
+                    data[self.config["feature_columns"]]
+                )
             else:
                 if not hasattr(self, "scaler"):
                     raise ValueError("Model must be trained before prediction")
-                normalized_data = self.scaler.transform(data[self.config["feature_columns"]])
+                normalized_data = self.scaler.transform(
+                    data[self.config["feature_columns"]]
+                )
 
             # Convert to tensor
             X = torch.FloatTensor(normalized_data)
@@ -507,7 +547,9 @@ class LSTMForecaster(BaseModel):
                 y = torch.FloatTensor(
                     normalized_data[
                         self.config["sequence_length"] :,
-                        self.config["feature_columns"].index(self.config["target_column"]),
+                        self.config["feature_columns"].index(
+                            self.config["target_column"]
+                        ),
                     ]
                 )
                 return X_seq, y
@@ -566,30 +608,42 @@ class LSTMForecaster(BaseModel):
                 raise ValueError("Target Series is empty or None")
 
             if len(X) != len(y):
-                raise ValueError(f"Length mismatch: X has {len(X)} rows, y has {len(y)} rows")
+                raise ValueError(
+                    f"Length mismatch: X has {len(X)} rows, y has {len(y)} rows"
+                )
 
             # Check for NaN values
             if X.isnull().any().any():
-                self.logger.warning("NaN values found in input features, attempting to clean")
+                self.logger.warning(
+                    "NaN values found in input features, attempting to clean"
+                )
                 X = X.dropna()
                 y = y[X.index]  # Align target with cleaned features
                 if X.empty:
-                    raise ValueError("No valid data remaining after removing NaN values")
+                    raise ValueError(
+                        "No valid data remaining after removing NaN values"
+                    )
 
             if y.isnull().any():
                 self.logger.warning("NaN values found in target, attempting to clean")
                 y = y.dropna()
                 X = X[y.index]  # Align features with cleaned target
                 if y.empty:
-                    raise ValueError("No valid data remaining after removing NaN values")
+                    raise ValueError(
+                        "No valid data remaining after removing NaN values"
+                    )
 
             # Validate data size
             if len(X) < self.config["sequence_length"]:
-                raise ValueError(f"Data length {len(X)} is less than sequence length {self.config['sequence_length']}")
+                raise ValueError(
+                    f"Data length {len(X)} is less than sequence length {self.config['sequence_length']}"
+                )
 
             # Validate batch size
             if batch_size > len(X):
-                self.logger.warning(f"Batch size {batch_size} is larger than data size {len(X)}, reducing to {len(X)}")
+                self.logger.warning(
+                    f"Batch size {batch_size} is larger than data size {len(X)}, reducing to {len(X)}"
+                )
                 batch_size = len(X)
 
             # Validate epochs
@@ -613,8 +667,12 @@ class LSTMForecaster(BaseModel):
             # Create DataLoaders
             train_dataset = TensorDataset(X_train, y_train)
             val_dataset = TensorDataset(X_val, y_val)
-            train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-            val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+            train_dataloader = DataLoader(
+                train_dataset, batch_size=batch_size, shuffle=True
+            )
+            val_dataloader = DataLoader(
+                val_dataset, batch_size=batch_size, shuffle=False
+            )
 
             # Initialize optimizer and loss function
             optimizer = Adam(self.model.parameters(), lr=learning_rate)
@@ -672,7 +730,9 @@ class LSTMForecaster(BaseModel):
                 # Set model back to training mode
                 self.model.train()
 
-            self.logger.info(f"LSTM model training completed successfully with {len(X)} data points")
+            self.logger.info(
+                f"LSTM model training completed successfully with {len(X)} data points"
+            )
             return history
 
         except Exception as e:
@@ -693,17 +753,23 @@ class LSTMForecaster(BaseModel):
             if data is None or data.empty:
                 import logging
 
-                logging.warning("LSTM predict: Input dataframe is empty, returning empty result")
+                logging.warning(
+                    "LSTM predict: Input dataframe is empty, returning empty result"
+                )
                 return np.array([])
 
             # Check for NaN values
             if data.isnull().any().any():
                 import logging
 
-                logging.warning("LSTM predict: NaN values found in input data, attempting to clean")
+                logging.warning(
+                    "LSTM predict: NaN values found in input data, attempting to clean"
+                )
                 data = data.dropna()
                 if data.empty:
-                    logging.warning("LSTM predict: No valid data after cleaning, returning empty result")
+                    logging.warning(
+                        "LSTM predict: No valid data after cleaning, returning empty result"
+                    )
                     return np.array([])
 
             # Validate data size
@@ -722,7 +788,9 @@ class LSTMForecaster(BaseModel):
             if len(X_seq) == 0:
                 import logging
 
-                logging.warning("LSTM predict: No valid sequences could be created, returning empty result")
+                logging.warning(
+                    "LSTM predict: No valid sequences could be created, returning empty result"
+                )
                 return np.array([])
 
             # Move to device
@@ -755,7 +823,14 @@ class LSTMForecaster(BaseModel):
         Args:
             path (str): Path to save the model
         """
-        torch.save({"model_state_dict": self.model.state_dict(), "config": self.config, "scaler": self.scaler}, path)
+        torch.save(
+            {
+                "model_state_dict": self.model.state_dict(),
+                "config": self.config,
+                "scaler": self.scaler,
+            },
+            path,
+        )
 
     def load(self, path: str) -> None:
         """Load the model.
@@ -782,7 +857,7 @@ class LSTMForecaster(BaseModel):
         """
         try:
             # Make initial prediction
-            predictions = self.predict(data)
+            self.predict(data)
 
             # Generate multi-step forecast
             forecast_values = []
@@ -796,7 +871,9 @@ class LSTMForecaster(BaseModel):
                 # Update data for next iteration
                 new_row = current_data.iloc[-1].copy()
                 new_row[self.config["target_column"]] = pred[-1]
-                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                current_data = pd.concat(
+                    [current_data, pd.DataFrame([new_row])], ignore_index=True
+                )
                 current_data = current_data.iloc[1:]  # Remove oldest row
 
             return {
@@ -824,8 +901,18 @@ class LSTMForecaster(BaseModel):
                 predictions = self.predict(data)
 
             plt.figure(figsize=(12, 6))
-            plt.plot(data.index, data[self.config["target_column"]], label="Actual", color="blue")
-            plt.plot(data.index[self.config["sequence_length"] :], predictions, label="Predicted", color="red")
+            plt.plot(
+                data.index,
+                data[self.config["target_column"]],
+                label="Actual",
+                color="blue",
+            )
+            plt.plot(
+                data.index[self.config["sequence_length"] :],
+                predictions,
+                label="Predicted",
+                color="red",
+            )
             plt.title("LSTM Model Predictions")
             plt.xlabel("Time")
             plt.ylabel("Value")

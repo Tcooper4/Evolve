@@ -30,7 +30,11 @@ def setup_signal_handlers(runner):
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+    return {
+        "success": True,
+        "message": "Initialization completed",
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 async def demo_live_market_runner():
@@ -41,7 +45,11 @@ async def demo_live_market_runner():
     # Create configuration
     config = {
         "symbols": ["AAPL", "TSLA", "NVDA"],
-        "market_data_config": {"cache_size": 1000, "update_threshold": 5, "max_retries": 3},
+        "market_data_config": {
+            "cache_size": 1000,
+            "update_threshold": 5,
+            "max_retries": 3,
+        },
     }
 
     # Create runner
@@ -176,13 +184,19 @@ async def demo_agent_triggering():
     from trading.live_market_runner import TriggerConfig, TriggerType
 
     # Test time-based trigger
-    time_config = TriggerConfig(trigger_type=TriggerType.TIME_BASED, interval_seconds=60)
+    time_config = TriggerConfig(
+        trigger_type=TriggerType.TIME_BASED, interval_seconds=60
+    )
 
-    should_trigger = await runner._should_trigger_agent("test_agent", time_config, datetime.utcnow())
+    should_trigger = await runner._should_trigger_agent(
+        "test_agent", time_config, datetime.utcnow()
+    )
     logger.info(f"   Time-based trigger: {should_trigger}")
 
     # Test price move trigger
-    price_config = TriggerConfig(trigger_type=TriggerType.PRICE_MOVE, price_move_threshold=0.01)
+    price_config = TriggerConfig(
+        trigger_type=TriggerType.PRICE_MOVE, price_move_threshold=0.01
+    )
 
     # Simulate price data
     runner.live_data["AAPL"] = {
@@ -192,7 +206,9 @@ async def demo_agent_triggering():
         "price_change": 0.015,  # 1.5% change
     }
 
-    should_trigger = await runner._should_trigger_agent("test_agent", price_config, datetime.utcnow())
+    should_trigger = await runner._should_trigger_agent(
+        "test_agent", price_config, datetime.utcnow()
+    )
     logger.info(f"   Price move trigger: {should_trigger}")
 
 
@@ -220,7 +236,7 @@ async def demo_simulated_trading():
     trade_logger.setLevel(logging.INFO)
 
     # Create runner
-    runner = create_live_market_runner()
+    create_live_market_runner()
 
     # Simulate trade execution
     simulated_trades = [
@@ -311,7 +327,11 @@ async def demo_simulated_trading():
     logger.info(f"\n📊 Performance Tracking:")
 
     # Simulate price changes and calculate P&L
-    price_changes = {"AAPL": 0.025, "TSLA": -0.015, "NVDA": 0.035}  # 2.5% increase  # 1.5% decrease  # 3.5% increase
+    price_changes = {
+        "AAPL": 0.025,
+        "TSLA": -0.015,
+        "NVDA": 0.035,
+    }  # 2.5% increase  # 1.5% decrease  # 3.5% increase
 
     total_pnl = 0
     for trade in simulated_trades:
@@ -325,10 +345,15 @@ async def demo_simulated_trading():
 
             total_pnl += pnl
 
-            logger.info(f"   {symbol} {trade['action']}: " f"${pnl:+,.2f} ({price_change:+.1%})")
+            logger.info(
+                f"   {symbol} {trade['action']}: " f"${pnl:+,.2f} ({price_change:+.1%})"
+            )
 
             # Log P&L to file
-            trade_logger.info(f"P&L_UPDATE: {symbol} {trade['action']} " f"P&L=${pnl:+,.2f} Change={price_change:+.1%}")
+            trade_logger.info(
+                f"P&L_UPDATE: {symbol} {trade['action']} "
+                f"P&L=${pnl:+,.2f} Change={price_change:+.1%}"
+            )
 
     logger.info(f"   Total P&L: ${total_pnl:+,.2f}")
     trade_logger.info(f"TOTAL_P&L: ${total_pnl:+,.2f}")
@@ -338,7 +363,8 @@ async def demo_simulated_trading():
         "total_trades": len(simulated_trades),
         "buy_trades": len([t for t in simulated_trades if t["action"] == "BUY"]),
         "sell_trades": len([t for t in simulated_trades if t["action"] == "SELL"]),
-        "avg_confidence": sum(t["confidence"] for t in simulated_trades) / len(simulated_trades),
+        "avg_confidence": sum(t["confidence"] for t in simulated_trades)
+        / len(simulated_trades),
         "total_volume": sum(t["quantity"] for t in simulated_trades),
         "total_value": sum(t["total_value"] for t in simulated_trades),
     }

@@ -17,7 +17,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from services.service_client import ServiceClient
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +45,10 @@ class DemoSafeExecutor:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.StreamHandler(), logging.FileHandler("demo_safe_executor.log")],
+            handlers=[
+                logging.StreamHandler(),
+                logging.FileHandler("demo_safe_executor.log"),
+            ],
         )
 
     def initialize_client(self) -> bool:
@@ -60,7 +62,9 @@ class DemoSafeExecutor:
             logger.error(f"❌ Failed to initialize ServiceClient: {e}")
             return False
 
-    def validate_agent_orchestration_output(self, result: Dict[str, Any]) -> AgentOrchestrationResult:
+    def validate_agent_orchestration_output(
+        self, result: Dict[str, Any]
+    ) -> AgentOrchestrationResult:
         """Validate agent orchestration output type and structure.
 
         Args:
@@ -82,7 +86,12 @@ class DemoSafeExecutor:
 
             # Extract and validate output type
             output_type = result.get("type", "unknown")
-            valid_types = ["model_executed", "strategy_executed", "indicator_executed", "agent_orchestrated"]
+            valid_types = [
+                "model_executed",
+                "strategy_executed",
+                "indicator_executed",
+                "agent_orchestrated",
+            ]
 
             if output_type not in valid_types:
                 return AgentOrchestrationResult(
@@ -139,7 +148,9 @@ class DemoSafeExecutor:
                 error_message=f"Validation error: {str(e)}",
             )
 
-    def _validate_return_value(self, output_type: str, return_value: Dict[str, Any]) -> bool:
+    def _validate_return_value(
+        self, output_type: str, return_value: Dict[str, Any]
+    ) -> bool:
         """Validate return value structure based on output type."""
         if not isinstance(return_value, dict):
             return False
@@ -195,7 +206,10 @@ def main(input_data):
 
         logger.info("Executing simple moving average model...")
         result = self.client.execute_model_safely(
-            model_code=model_code, model_name="simple_ma_model", input_data=input_data, model_type="custom"
+            model_code=model_code,
+            model_name="simple_ma_model",
+            input_data=input_data,
+            model_type="custom",
         )
 
         # Validate the result
@@ -257,7 +271,10 @@ def main(input_data):
 
         logger.info("Executing RSI strategy...")
         result = self.client.execute_strategy_safely(
-            strategy_code=strategy_code, strategy_name="rsi_strategy", market_data=market_data, parameters=parameters
+            strategy_code=strategy_code,
+            strategy_name="rsi_strategy",
+            market_data=market_data,
+            parameters=parameters,
         )
 
         # Validate the result
@@ -352,7 +369,10 @@ def main(input_data):
 
         logger.info("Executing MACD indicator...")
         result = self.client.execute_indicator_safely(
-            indicator_code=indicator_code, indicator_name="macd_indicator", price_data=price_data, parameters=parameters
+            indicator_code=indicator_code,
+            indicator_name="macd_indicator",
+            price_data=price_data,
+            parameters=parameters,
         )
 
         # Validate the result
@@ -391,7 +411,10 @@ def main(input_data):
 
         logger.info("Attempting to execute dangerous code...")
         result = self.client.execute_model_safely(
-            model_code=dangerous_code, model_name="dangerous_model", input_data={}, model_type="custom"
+            model_code=dangerous_code,
+            model_name="dangerous_model",
+            input_data={},
+            model_type="custom",
         )
 
         # Validate the result
@@ -457,7 +480,9 @@ def main(input_data):
             return_value = validated_result.metadata.get("return_value", {})
             logger.info(f"Decision: {return_value.get('decision', 'N/A')}")
             logger.info(f"Confidence: {return_value.get('confidence', 'N/A')}")
-            logger.info(f"Market Condition: {return_value.get('market_condition', 'N/A')}")
+            logger.info(
+                f"Market Condition: {return_value.get('market_condition', 'N/A')}"
+            )
             logger.info(f"Risk Level: {return_value.get('risk_level', 'N/A')}")
             logger.info(f"Reasoning: {return_value.get('reasoning', 'N/A')}")
             return True
@@ -470,7 +495,9 @@ def main(input_data):
         """Run all demonstration scenarios."""
         logger.info("🛡️ Safe Executor Demonstration")
         logger.info("=" * 60)
-        logger.info("This demo shows how to safely execute user-defined models and strategies.")
+        logger.info(
+            "This demo shows how to safely execute user-defined models and strategies."
+        )
         logger.info("=" * 60)
 
         # Initialize client

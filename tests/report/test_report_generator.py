@@ -115,7 +115,9 @@ class TestReportGenerator(unittest.TestCase):
         self.assertIsNotNone(drawdown_chart)
 
         # Test returns distribution chart
-        returns_chart = generator._create_returns_distribution_chart(self.performance_data)
+        returns_chart = generator._create_returns_distribution_chart(
+            self.performance_data
+        )
         self.assertIsNotNone(returns_chart)
 
         # Test rolling metrics chart
@@ -131,7 +133,9 @@ class TestReportGenerator(unittest.TestCase):
 
         # Check files were created
         self.assertTrue(os.path.exists(os.path.join(self.output_dir, "metrics.csv")))
-        self.assertTrue(os.path.exists(os.path.join(self.output_dir, "equity_curve.csv")))
+        self.assertTrue(
+            os.path.exists(os.path.join(self.output_dir, "equity_curve.csv"))
+        )
         self.assertTrue(os.path.exists(os.path.join(self.output_dir, "returns.csv")))
         self.assertTrue(os.path.exists(os.path.join(self.output_dir, "trades.csv")))
         self.assertTrue(os.path.exists(os.path.join(self.output_dir, "full_data.json")))
@@ -161,24 +165,42 @@ class TestReportGenerator(unittest.TestCase):
             print(f"\n  📁 Testing {format_type.upper()} export format...")
 
             # Export data in specific format
-            export_result = generator._export_data(self.performance_data, self.output_dir, format=format_type)
+            export_result = generator._export_data(
+                self.performance_data, self.output_dir, format=format_type
+            )
 
             # Validate export result
-            self.assertIsNotNone(export_result, f"Export result should not be None for {format_type}")
-            self.assertIn("files_created", export_result, f"Should have files_created for {format_type}")
-            self.assertIn("export_time", export_result, f"Should have export_time for {format_type}")
-            self.assertIn("file_sizes", export_result, f"Should have file_sizes for {format_type}")
+            self.assertIsNotNone(
+                export_result, f"Export result should not be None for {format_type}"
+            )
+            self.assertIn(
+                "files_created",
+                export_result,
+                f"Should have files_created for {format_type}",
+            )
+            self.assertIn(
+                "export_time",
+                export_result,
+                f"Should have export_time for {format_type}",
+            )
+            self.assertIn(
+                "file_sizes", export_result, f"Should have file_sizes for {format_type}"
+            )
 
             print(f"    Files created: {len(export_result['files_created'])}")
             print(f"    Export time: {export_result['export_time']:.3f}s")
 
             # Validate each created file
             for file_path in export_result["files_created"]:
-                self.assertTrue(os.path.exists(file_path), f"File should exist: {file_path}")
+                self.assertTrue(
+                    os.path.exists(file_path), f"File should exist: {file_path}"
+                )
 
                 # Check file size
                 file_size = os.path.getsize(file_path)
-                self.assertGreater(file_size, 0, f"File should not be empty: {file_path}")
+                self.assertGreater(
+                    file_size, 0, f"File should not be empty: {file_path}"
+                )
 
                 print(f"    ✓ {os.path.basename(file_path)}: {file_size} bytes")
 
@@ -200,17 +222,31 @@ class TestReportGenerator(unittest.TestCase):
         ]
 
         for col in expected_metric_columns:
-            self.assertIn(col, df_metrics.columns, f"metrics.csv should contain column: {col}")
+            self.assertIn(
+                col, df_metrics.columns, f"metrics.csv should contain column: {col}"
+            )
 
         self.assertEqual(len(df_metrics), 1, "metrics.csv should have exactly one row")
 
         # Validate data types and ranges
-        self.assertIsInstance(df_metrics["sharpe_ratio"].iloc[0], (int, float), "Sharpe ratio should be numeric")
-        self.assertIsInstance(df_metrics["win_rate"].iloc[0], (int, float), "Win rate should be numeric")
-        self.assertGreaterEqual(df_metrics["win_rate"].iloc[0], 0, "Win rate should be >= 0")
-        self.assertLessEqual(df_metrics["win_rate"].iloc[0], 1, "Win rate should be <= 1")
+        self.assertIsInstance(
+            df_metrics["sharpe_ratio"].iloc[0],
+            (int, float),
+            "Sharpe ratio should be numeric",
+        )
+        self.assertIsInstance(
+            df_metrics["win_rate"].iloc[0], (int, float), "Win rate should be numeric"
+        )
+        self.assertGreaterEqual(
+            df_metrics["win_rate"].iloc[0], 0, "Win rate should be >= 0"
+        )
+        self.assertLessEqual(
+            df_metrics["win_rate"].iloc[0], 1, "Win rate should be <= 1"
+        )
 
-        print(f"    ✓ metrics.csv: {len(df_metrics.columns)} columns, {len(df_metrics)} rows")
+        print(
+            f"    ✓ metrics.csv: {len(df_metrics.columns)} columns, {len(df_metrics)} rows"
+        )
 
         # Validate equity_curve.csv structure
         eq_path = os.path.join(self.output_dir, "equity_curve.csv")
@@ -218,17 +254,26 @@ class TestReportGenerator(unittest.TestCase):
 
         df_eq = pd.read_csv(eq_path)
         self.assertIn("date", df_eq.columns, "equity_curve.csv should have date column")
-        self.assertIn("equity", df_eq.columns, "equity_curve.csv should have equity column")
+        self.assertIn(
+            "equity", df_eq.columns, "equity_curve.csv should have equity column"
+        )
 
         # Validate date format and sequence
         df_eq["date"] = pd.to_datetime(df_eq["date"])
-        self.assertTrue(df_eq["date"].is_monotonic_increasing, "Dates should be in ascending order")
+        self.assertTrue(
+            df_eq["date"].is_monotonic_increasing, "Dates should be in ascending order"
+        )
 
         # Validate equity curve properties
         self.assertGreater(len(df_eq), 0, "equity_curve.csv should have data")
-        self.assertTrue(df_eq["equity"].is_monotonic_increasing, "Equity curve should be generally increasing")
+        self.assertTrue(
+            df_eq["equity"].is_monotonic_increasing,
+            "Equity curve should be generally increasing",
+        )
 
-        print(f"    ✓ equity_curve.csv: {len(df_eq.columns)} columns, {len(df_eq)} rows")
+        print(
+            f"    ✓ equity_curve.csv: {len(df_eq.columns)} columns, {len(df_eq)} rows"
+        )
 
         # Validate returns.csv structure
         ret_path = os.path.join(self.output_dir, "returns.csv")
@@ -236,11 +281,15 @@ class TestReportGenerator(unittest.TestCase):
 
         df_ret = pd.read_csv(ret_path)
         self.assertIn("date", df_ret.columns, "returns.csv should have date column")
-        self.assertIn("returns", df_ret.columns, "returns.csv should have returns column")
+        self.assertIn(
+            "returns", df_ret.columns, "returns.csv should have returns column"
+        )
 
         # Validate returns data
         self.assertGreater(len(df_ret), 0, "returns.csv should have data")
-        self.assertIsInstance(df_ret["returns"].iloc[0], (int, float), "Returns should be numeric")
+        self.assertIsInstance(
+            df_ret["returns"].iloc[0], (int, float), "Returns should be numeric"
+        )
 
         print(f"    ✓ returns.csv: {len(df_ret.columns)} columns, {len(df_ret)} rows")
 
@@ -261,15 +310,27 @@ class TestReportGenerator(unittest.TestCase):
         ]
 
         for col in expected_trade_columns:
-            self.assertIn(col, df_trades.columns, f"trades.csv should contain column: {col}")
+            self.assertIn(
+                col, df_trades.columns, f"trades.csv should contain column: {col}"
+            )
 
         # Validate trade data
         self.assertGreater(len(df_trades), 0, "trades.csv should have data")
-        self.assertIn(df_trades["direction"].iloc[0], ["long", "short"], "Direction should be long or short")
-        self.assertGreater(df_trades["entry_price"].iloc[0], 0, "Entry price should be positive")
-        self.assertGreater(df_trades["exit_price"].iloc[0], 0, "Exit price should be positive")
+        self.assertIn(
+            df_trades["direction"].iloc[0],
+            ["long", "short"],
+            "Direction should be long or short",
+        )
+        self.assertGreater(
+            df_trades["entry_price"].iloc[0], 0, "Entry price should be positive"
+        )
+        self.assertGreater(
+            df_trades["exit_price"].iloc[0], 0, "Exit price should be positive"
+        )
 
-        print(f"    ✓ trades.csv: {len(df_trades.columns)} columns, {len(df_trades)} rows")
+        print(
+            f"    ✓ trades.csv: {len(df_trades.columns)} columns, {len(df_trades)} rows"
+        )
 
         # Comprehensive JSON validation
         print(f"\n  📄 Testing JSON export validation...")
@@ -289,7 +350,9 @@ class TestReportGenerator(unittest.TestCase):
         metrics = data["metrics"]
         for metric in expected_metric_columns:
             self.assertIn(metric, metrics, f"JSON metrics should contain: {metric}")
-            self.assertIsInstance(metrics[metric], (int, float), f"Metric {metric} should be numeric")
+            self.assertIsInstance(
+                metrics[metric], (int, float), f"Metric {metric} should be numeric"
+            )
 
         # Validate equity curve section
         equity_curve = data["equity_curve"]
@@ -320,20 +383,33 @@ class TestReportGenerator(unittest.TestCase):
 
             # Allow for small floating point differences
             self.assertAlmostEqual(
-                csv_value, json_value, places=6, msg=f"Metric {metric} should be consistent between CSV and JSON"
+                csv_value,
+                json_value,
+                places=6,
+                msg=f"Metric {metric} should be consistent between CSV and JSON",
             )
 
-        print(f"    ✓ Metrics consistency: {len(expected_metric_columns)} metrics validated")
+        print(
+            f"    ✓ Metrics consistency: {len(expected_metric_columns)} metrics validated"
+        )
 
         # Validate file output consistency
         print(f"\n  📊 Testing file output consistency...")
 
         # Check that all expected files exist
-        expected_files = ["metrics.csv", "equity_curve.csv", "returns.csv", "trades.csv", "full_data.json"]
+        expected_files = [
+            "metrics.csv",
+            "equity_curve.csv",
+            "returns.csv",
+            "trades.csv",
+            "full_data.json",
+        ]
 
         for filename in expected_files:
             file_path = os.path.join(self.output_dir, filename)
-            self.assertTrue(os.path.exists(file_path), f"Expected file should exist: {filename}")
+            self.assertTrue(
+                os.path.exists(file_path), f"Expected file should exist: {filename}"
+            )
 
             # Check file is readable
             try:
@@ -355,7 +431,10 @@ class TestReportGenerator(unittest.TestCase):
         returns_dates = set(df_ret["date"].dt.strftime("%Y-%m-%d"))
 
         # Returns should be a subset of equity curve dates (missing first day)
-        self.assertTrue(returns_dates.issubset(equity_dates), "Returns dates should be subset of equity curve dates")
+        self.assertTrue(
+            returns_dates.issubset(equity_dates),
+            "Returns dates should be subset of equity curve dates",
+        )
 
         # Check that trade dates are within equity curve range
         trade_dates = set()
@@ -363,7 +442,10 @@ class TestReportGenerator(unittest.TestCase):
             trade_dates.add(pd.to_datetime(trade["entry_time"]).strftime("%Y-%m-%d"))
             trade_dates.add(pd.to_datetime(trade["exit_time"]).strftime("%Y-%m-%d"))
 
-        self.assertTrue(trade_dates.issubset(equity_dates), "Trade dates should be within equity curve range")
+        self.assertTrue(
+            trade_dates.issubset(equity_dates),
+            "Trade dates should be within equity curve range",
+        )
 
         print(
             f"    ✓ Date consistency: {len(equity_dates)} equity dates, {len(returns_dates)} return dates, {len(trade_dates)} trade dates"

@@ -13,45 +13,34 @@ import threading
 import time
 import warnings
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import numpy as np
-import pandas as pd
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 # Import all strategic intelligence modules
 try:
-    from trading.agents.execution_risk_control_agent import (
-        ExecutionRiskControlAgent,
-        RiskCheck,
-    )
-    from trading.agents.market_regime_agent import MarketRegimeAgent, RegimeAnalysis
+    from trading.agents.execution_risk_control_agent import ExecutionRiskControlAgent
+    from trading.agents.market_regime_agent import MarketRegimeAgent
     from trading.agents.rolling_retraining_agent import (
         RetrainingConfig,
         RollingRetrainingAgent,
     )
-    from trading.analytics.alpha_attribution_engine import (
-        AlphaAttribution,
-        AlphaAttributionEngine,
-    )
+    from trading.analytics.alpha_attribution_engine import AlphaAttributionEngine
     from trading.analytics.forecast_explainability import (
-        ForecastExplanation,
         IntelligentForecastExplainability,
     )
-    from trading.data.macro_data_integration import MacroDataIntegration, MacroIndicator
+    from trading.data.macro_data_integration import MacroDataIntegration
     from trading.report.report_export_engine import ReportConfig, ReportExportEngine
-    from trading.risk.position_sizing_engine import PositionSizingEngine, SizingResult
-    from trading.services.real_time_signal_center import (
-        RealTimeSignalCenter,
-        TradingSignal,
-    )
+    from trading.risk.position_sizing_engine import PositionSizingEngine
+    from trading.services.real_time_signal_center import RealTimeSignalCenter
     from trading.strategies.multi_strategy_hybrid_engine import (
-        HybridSignal,
         MultiStrategyHybridEngine,
     )
+
     MODULES_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"Some modules not available: {e}")
@@ -62,6 +51,7 @@ logger = logging.getLogger(__name__)
 
 class SystemStatus(Enum):
     """System status enumeration."""
+
     INITIALIZING = "initializing"
     RUNNING = "running"
     PAUSED = "paused"
@@ -72,6 +62,7 @@ class SystemStatus(Enum):
 @dataclass
 class SystemMetrics:
     """System performance metrics."""
+
     uptime: float
     total_signals: int
     active_trades: int
@@ -84,9 +75,7 @@ class SystemMetrics:
 class InstitutionalGradeSystem:
     """Main institutional-grade trading system integration."""
 
-    def __init__(self,
-                 config_path: Optional[str] = None,
-                 auto_start: bool = True):
+    def __init__(self, config_path: Optional[str] = None, auto_start: bool = True):
         """Initialize the institutional-grade system.
 
         Args:
@@ -115,12 +104,17 @@ class InstitutionalGradeSystem:
 
         logger.info("Institutional-Grade Trading System initialized")
 
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
+
     def _load_config(self) -> Dict[str, Any]:
         """Load system configuration."""
         try:
             if os.path.exists(self.config_path):
-                with open(self.config_path, 'r') as f:
+                with open(self.config_path, "r") as f:
                     return json.load(f)
             else:
                 return self._create_default_config()
@@ -131,36 +125,39 @@ class InstitutionalGradeSystem:
     def _create_default_config(self) -> Dict[str, Any]:
         """Create default system configuration."""
         return {
-            'system': {
-                'name': 'Institutional-Grade Trading System',
-                'version': '2.0.0',
-                'auto_restart': True,
-                'max_memory_usage': 0.8,
-                'log_level': 'INFO'
+            "system": {
+                "name": "Institutional-Grade Trading System",
+                "version": "2.0.0",
+                "auto_restart": True,
+                "max_memory_usage": 0.8,
+                "log_level": "INFO",
             },
-            'modules': {
-                'market_regime': {'enabled': True, 'update_interval': 300},
-                'rolling_retraining': {'enabled': True, 'retrain_interval': 86400},
-                'hybrid_engine': {'enabled': True, 'signal_interval': 60},
-                'alpha_attribution': {'enabled': True, 'analysis_interval': 3600},
-                'position_sizing': {'enabled': True, 'update_interval': 300},
-                'execution_control': {'enabled': True, 'check_interval': 30},
-                'macro_data': {'enabled': True, 'update_interval': 3600},
-                'forecast_explainability': {'enabled': True, 'explanation_interval': 300},
-                'signal_center': {'enabled': True, 'websocket_port': 8765},
-                'report_engine': {'enabled': True, 'report_interval': 86400}
+            "modules": {
+                "market_regime": {"enabled": True, "update_interval": 300},
+                "rolling_retraining": {"enabled": True, "retrain_interval": 86400},
+                "hybrid_engine": {"enabled": True, "signal_interval": 60},
+                "alpha_attribution": {"enabled": True, "analysis_interval": 3600},
+                "position_sizing": {"enabled": True, "update_interval": 300},
+                "execution_control": {"enabled": True, "check_interval": 30},
+                "macro_data": {"enabled": True, "update_interval": 3600},
+                "forecast_explainability": {
+                    "enabled": True,
+                    "explanation_interval": 300,
+                },
+                "signal_center": {"enabled": True, "websocket_port": 8765},
+                "report_engine": {"enabled": True, "report_interval": 86400},
             },
-            'risk_limits': {
-                'max_position_size': 0.25,
-                'max_daily_loss': 0.05,
-                'max_drawdown': 0.15,
-                'max_correlation': 0.7
+            "risk_limits": {
+                "max_position_size": 0.25,
+                "max_daily_loss": 0.05,
+                "max_drawdown": 0.15,
+                "max_correlation": 0.7,
             },
-            'data_sources': {
-                'primary': 'yahoo',
-                'backup': 'alpha_vantage',
-                'macro': 'fred'
-            }
+            "data_sources": {
+                "primary": "yahoo",
+                "backup": "alpha_vantage",
+                "macro": "fred",
+            },
         }
 
     def _initialize_modules(self):
@@ -169,86 +166,87 @@ class InstitutionalGradeSystem:
             self.modules = {}
 
             if not MODULES_AVAILABLE:
-                logger.warning("Not all modules available, using fallback implementations")
+                logger.warning(
+                    "Not all modules available, using fallback implementations"
+                )
                 self._initialize_fallback_modules()
 
             # Market Regime Agent
-            if self.config['modules']['market_regime']['enabled']:
-                self.modules['market_regime'] = MarketRegimeAgent(
-                    lookback_period=252,
-                    regime_threshold=0.7
+            if self.config["modules"]["market_regime"]["enabled"]:
+                self.modules["market_regime"] = MarketRegimeAgent(
+                    lookback_period=252, regime_threshold=0.7
                 )
 
             # Rolling Retraining Agent
-            if self.config['modules']['rolling_retraining']['enabled']:
+            if self.config["modules"]["rolling_retraining"]["enabled"]:
                 retraining_config = RetrainingConfig(
                     retrain_frequency=30,
                     lookback_window=252,
                     min_train_size=60,
                     test_size=20,
-                    performance_threshold=0.1
+                    performance_threshold=0.1,
                 )
-                self.modules['rolling_retraining'] = RollingRetrainingAgent(
+                self.modules["rolling_retraining"] = RollingRetrainingAgent(
                     config=retraining_config
                 )
 
             # Multi-Strategy Hybrid Engine
-            if self.config['modules']['hybrid_engine']['enabled']:
-                self.modules['hybrid_engine'] = MultiStrategyHybridEngine(
+            if self.config["modules"]["hybrid_engine"]["enabled"]:
+                self.modules["hybrid_engine"] = MultiStrategyHybridEngine(
                     ensemble_method="weighted_average",
                     confidence_threshold=0.6,
-                    max_position_size=self.config['risk_limits']['max_position_size']
+                    max_position_size=self.config["risk_limits"]["max_position_size"],
                 )
 
             # Alpha Attribution Engine
-            if self.config['modules']['alpha_attribution']['enabled']:
-                self.modules['alpha_attribution'] = AlphaAttributionEngine(
-                    lookback_period=252,
-                    min_alpha_threshold=0.01
+            if self.config["modules"]["alpha_attribution"]["enabled"]:
+                self.modules["alpha_attribution"] = AlphaAttributionEngine(
+                    lookback_period=252, min_alpha_threshold=0.01
                 )
 
             # Position Sizing Engine
-            if self.config['modules']['position_sizing']['enabled']:
-                self.modules['position_sizing'] = PositionSizingEngine(
+            if self.config["modules"]["position_sizing"]["enabled"]:
+                self.modules["position_sizing"] = PositionSizingEngine(
                     risk_per_trade=0.02,
-                    max_position_size=self.config['risk_limits']['max_position_size']
+                    max_position_size=self.config["risk_limits"]["max_position_size"],
                 )
 
             # Execution Risk Control Agent
-            if self.config['modules']['execution_control']['enabled']:
-                self.modules['execution_control'] = ExecutionRiskControlAgent(
-                    max_position_size=self.config['risk_limits']['max_position_size'],
+            if self.config["modules"]["execution_control"]["enabled"]:
+                self.modules["execution_control"] = ExecutionRiskControlAgent(
+                    max_position_size=self.config["risk_limits"]["max_position_size"],
                     max_daily_trades=50,
-                    max_daily_loss=self.config['risk_limits']['max_daily_loss']
+                    max_daily_loss=self.config["risk_limits"]["max_daily_loss"],
                 )
 
             # Macro Data Integration
-            if self.config['modules']['macro_data']['enabled']:
-                self.modules['macro_data'] = MacroDataIntegration(
-                    fred_api_key=os.getenv('FRED_API_KEY'),
-                    alpha_vantage_api_key=os.getenv('ALPHA_VANTAGE_API_KEY')
+            if self.config["modules"]["macro_data"]["enabled"]:
+                self.modules["macro_data"] = MacroDataIntegration(
+                    fred_api_key=os.getenv("FRED_API_KEY"),
+                    alpha_vantage_api_key=os.getenv("ALPHA_VANTAGE_API_KEY"),
                 )
 
             # Forecast Explainability
-            if self.config['modules']['forecast_explainability']['enabled']:
-                self.modules['forecast_explainability'] = IntelligentForecastExplainability(
-                    confidence_levels=[0.68, 0.80, 0.95],
-                    max_features=10
+            if self.config["modules"]["forecast_explainability"]["enabled"]:
+                self.modules[
+                    "forecast_explainability"
+                ] = IntelligentForecastExplainability(
+                    confidence_levels=[0.68, 0.80, 0.95], max_features=10
                 )
 
             # Real-Time Signal Center
-            if self.config['modules']['signal_center']['enabled']:
-                self.modules['signal_center'] = RealTimeSignalCenter(
-                    websocket_port=self.config['modules']['signal_center']['websocket_port'],
-                    max_signals=1000
+            if self.config["modules"]["signal_center"]["enabled"]:
+                self.modules["signal_center"] = RealTimeSignalCenter(
+                    websocket_port=self.config["modules"]["signal_center"][
+                        "websocket_port"
+                    ],
+                    max_signals=1000,
                 )
 
             # Report Export Engine
-            if self.config['modules']['report_engine']['enabled']:
-                self.modules['report_engine'] = ReportExportEngine(
-                    output_dir="reports",
-                    template_dir="templates",
-                    chart_dir="charts"
+            if self.config["modules"]["report_engine"]["enabled"]:
+                self.modules["report_engine"] = ReportExportEngine(
+                    output_dir="reports", template_dir="templates", chart_dir="charts"
                 )
 
             logger.info(f"Initialized {len(self.modules)} modules successfully")
@@ -268,12 +266,24 @@ class InstitutionalGradeSystem:
                     self.name = name
 
                 def get_status(self):
-                    return {'success': True, 'result': {'status': 'fallback', 'module': self.name}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return {
+                        "success": True,
+                        "result": {"status": "fallback", "module": self.name},
+                        "message": "Operation completed successfully",
+                        "timestamp": datetime.now().isoformat(),
+                    }
 
             module_names = [
-                'market_regime', 'rolling_retraining', 'hybrid_engine',
-                'alpha_attribution', 'position_sizing', 'execution_control',
-                'macro_data', 'forecast_explainability', 'signal_center', 'report_engine'
+                "market_regime",
+                "rolling_retraining",
+                "hybrid_engine",
+                "alpha_attribution",
+                "position_sizing",
+                "execution_control",
+                "macro_data",
+                "forecast_explainability",
+                "signal_center",
+                "report_engine",
             ]
 
             for name in module_names:
@@ -291,7 +301,7 @@ class InstitutionalGradeSystem:
 
             # Start all modules
             for name, module in self.modules.items():
-                if hasattr(module, 'start'):
+                if hasattr(module, "start"):
                     try:
                         module.start()
                         logger.info(f"Started module: {name}")
@@ -318,7 +328,7 @@ class InstitutionalGradeSystem:
 
             # Stop all modules
             for name, module in self.modules.items():
-                if hasattr(module, 'stop'):
+                if hasattr(module, "stop"):
                     try:
                         module.stop()
                         logger.info(f"Stopped module: {name}")
@@ -378,10 +388,10 @@ class InstitutionalGradeSystem:
             total_signals = 0
             active_trades = 0
 
-            if 'signal_center' in self.modules:
-                summary = self.modules['signal_center'].get_signal_summary()
-                total_signals = summary.get('total_signals_24h', 0)
-                active_trades = summary.get('active_trades', 0)
+            if "signal_center" in self.modules:
+                summary = self.modules["signal_center"].get_signal_summary()
+                total_signals = summary.get("total_signals_24h", 0)
+                active_trades = summary.get("active_trades", 0)
 
             # Calculate system health
             module_health = self._calculate_module_health()
@@ -399,7 +409,7 @@ class InstitutionalGradeSystem:
                 system_health=module_health,
                 performance_score=performance_score,
                 risk_score=risk_score,
-                last_update=datetime.now()
+                last_update=datetime.now(),
             )
 
         except Exception as e:
@@ -415,14 +425,14 @@ class InstitutionalGradeSystem:
 
             for name, module in self.modules.items():
                 try:
-                    if hasattr(module, 'get_status'):
+                    if hasattr(module, "get_status"):
                         status = module.get_status()
-                        if isinstance(status, dict) and 'status' in status:
-                            if status['status'] == 'healthy':
+                        if isinstance(status, dict) and "status" in status:
+                            if status["status"] == "healthy":
                                 health_scores.append(1.0)
-                            elif status['status'] == 'warning':
+                            elif status["status"] == "warning":
                                 health_scores.append(0.7)
-                            elif status['status'] == 'error':
+                            elif status["status"] == "error":
                                 health_scores.append(0.3)
                             else:
                                 health_scores.append(0.5)
@@ -446,20 +456,20 @@ class InstitutionalGradeSystem:
             scores = []
 
             # Get performance from various modules
-            if 'hybrid_engine' in self.modules:
-                summary = self.modules['hybrid_engine'].get_performance_summary()
-                if 'avg_confidence' in summary:
-                    scores.append(summary['avg_confidence'])
+            if "hybrid_engine" in self.modules:
+                summary = self.modules["hybrid_engine"].get_performance_summary()
+                if "avg_confidence" in summary:
+                    scores.append(summary["avg_confidence"])
 
-            if 'rolling_retraining' in self.modules:
-                summary = self.modules['rolling_retraining'].get_performance_summary()
-                if 'avg_recent_performance' in summary:
-                    scores.append(summary['avg_recent_performance'])
+            if "rolling_retraining" in self.modules:
+                summary = self.modules["rolling_retraining"].get_performance_summary()
+                if "avg_recent_performance" in summary:
+                    scores.append(summary["avg_recent_performance"])
 
-            if 'alpha_attribution' in self.modules:
-                summary = self.modules['alpha_attribution'].get_attribution_summary()
-                if 'avg_r_squared' in summary:
-                    scores.append(summary['avg_r_squared'])
+            if "alpha_attribution" in self.modules:
+                summary = self.modules["alpha_attribution"].get_attribution_summary()
+                if "avg_r_squared" in summary:
+                    scores.append(summary["avg_r_squared"])
 
             return np.mean(scores) if scores else 0.5
 
@@ -473,16 +483,20 @@ class InstitutionalGradeSystem:
             scores = []
 
             # Get risk metrics from various modules
-            if 'execution_control' in self.modules:
-                summary = self.modules['execution_control'].get_risk_summary()
-                if 'current_drawdown' in summary:
-                    drawdown = abs(summary['current_drawdown'])
-                    scores.append(min(1.0, drawdown / 0.15))  # Normalize to max drawdown
+            if "execution_control" in self.modules:
+                summary = self.modules["execution_control"].get_risk_summary()
+                if "current_drawdown" in summary:
+                    drawdown = abs(summary["current_drawdown"])
+                    scores.append(
+                        min(1.0, drawdown / 0.15)
+                    )  # Normalize to max drawdown
 
-            if 'position_sizing' in self.modules:
-                summary = self.modules['position_sizing'].get_sizing_summary()
-                if 'avg_confidence' in summary:
-                    scores.append(1.0 - summary['avg_confidence'])  # Lower confidence = higher risk
+            if "position_sizing" in self.modules:
+                summary = self.modules["position_sizing"].get_sizing_summary()
+                if "avg_confidence" in summary:
+                    scores.append(
+                        1.0 - summary["avg_confidence"]
+                    )  # Lower confidence = higher risk
 
             return np.mean(scores) if scores else 0.5
 
@@ -495,9 +509,9 @@ class InstitutionalGradeSystem:
         try:
             for name, module in self.modules.items():
                 try:
-                    if hasattr(module, 'get_status'):
+                    if hasattr(module, "get_status"):
                         status = module.get_status()
-                        if isinstance(status, dict) and status.get('status') == 'error':
+                        if isinstance(status, dict) and status.get("status") == "error":
                             logger.warning(f"Module {name} reported error status")
                             self._handle_module_error(name, module)
                 except Exception as e:
@@ -512,10 +526,10 @@ class InstitutionalGradeSystem:
             logger.warning(f"Handling error for module: {module_name}")
 
             # Attempt to restart module
-            if hasattr(module, 'stop'):
+            if hasattr(module, "stop"):
                 module.stop()
 
-            if hasattr(module, 'start'):
+            if hasattr(module, "start"):
                 module.start()
                 logger.info(f"Restarted module: {module_name}")
 
@@ -545,15 +559,15 @@ class InstitutionalGradeSystem:
         """Trigger risk alert."""
         try:
             alert = {
-                'type': 'risk_alert',
-                'message': message,
-                'priority': 'high',
-                'timestamp': datetime.now().isoformat()
+                "type": "risk_alert",
+                "message": message,
+                "priority": "high",
+                "timestamp": datetime.now().isoformat(),
             }
 
             # Send to signal center if available
-            if 'signal_center' in self.modules:
-                self.modules['signal_center']._queue_alert(alert)
+            if "signal_center" in self.modules:
+                self.modules["signal_center"]._queue_alert(alert)
 
             logger.warning(f"Risk alert triggered: {message}")
 
@@ -578,12 +592,12 @@ class InstitutionalGradeSystem:
 
             # Collect data from all modules
             report_data = {
-                'system_metrics': self._get_system_metrics_dict(),
-                'module_status': self._get_module_status(),
-                'performance_data': self._get_performance_data(),
-                'risk_data': self._get_risk_data(),
-                'regime_data': self._get_regime_data(),
-                'signal_data': self._get_signal_data()
+                "system_metrics": self._get_system_metrics_dict(),
+                "module_status": self._get_module_status(),
+                "performance_data": self._get_performance_data(),
+                "risk_data": self._get_risk_data(),
+                "regime_data": self._get_regime_data(),
+                "signal_data": self._get_signal_data(),
             }
 
             # Create report configuration
@@ -594,14 +608,14 @@ class InstitutionalGradeSystem:
                 format=ReportFormat.MARKDOWN,
                 include_charts=True,
                 include_tables=True,
-                include_metrics=True
+                include_metrics=True,
             )
 
             # Generate report
-            if 'report_engine' in self.modules:
-                report_path = self.modules['report_engine'].generate_comprehensive_report(
-                    config, report_data
-                )
+            if "report_engine" in self.modules:
+                report_path = self.modules[
+                    "report_engine"
+                ].generate_comprehensive_report(config, report_data)
                 logger.info(f"System report generated: {report_path}")
                 return report_path
             else:
@@ -616,13 +630,13 @@ class InstitutionalGradeSystem:
         """Get system metrics as dictionary."""
         if self.system_metrics:
             return {
-                'uptime': self.system_metrics.uptime,
-                'total_signals': self.system_metrics.total_signals,
-                'active_trades': self.system_metrics.active_trades,
-                'system_health': self.system_metrics.system_health,
-                'performance_score': self.system_metrics.performance_score,
-                'risk_score': self.system_metrics.risk_score,
-                'last_update': self.system_metrics.last_update.isoformat()
+                "uptime": self.system_metrics.uptime,
+                "total_signals": self.system_metrics.total_signals,
+                "active_trades": self.system_metrics.active_trades,
+                "system_health": self.system_metrics.system_health,
+                "performance_score": self.system_metrics.performance_score,
+                "risk_score": self.system_metrics.risk_score,
+                "last_update": self.system_metrics.last_update.isoformat(),
             }
         return {}
 
@@ -631,26 +645,32 @@ class InstitutionalGradeSystem:
         status = {}
         for name, module in self.modules.items():
             try:
-                if hasattr(module, 'get_status'):
+                if hasattr(module, "get_status"):
                     status[name] = module.get_status()
                 else:
-                    status[name] = {'status': 'unknown', 'module': name}
+                    status[name] = {"status": "unknown", "module": name}
             except Exception as e:
-                status[name] = {'status': 'error', 'error': str(e)}
+                status[name] = {"status": "error", "error": str(e)}
         return status
 
     def _get_performance_data(self) -> Dict[str, Any]:
         """Get performance data from modules."""
         data = {}
 
-        if 'hybrid_engine' in self.modules:
-            data['hybrid_engine'] = self.modules['hybrid_engine'].get_performance_summary()
+        if "hybrid_engine" in self.modules:
+            data["hybrid_engine"] = self.modules[
+                "hybrid_engine"
+            ].get_performance_summary()
 
-        if 'rolling_retraining' in self.modules:
-            data['rolling_retraining'] = self.modules['rolling_retraining'].get_performance_summary()
+        if "rolling_retraining" in self.modules:
+            data["rolling_retraining"] = self.modules[
+                "rolling_retraining"
+            ].get_performance_summary()
 
-        if 'alpha_attribution' in self.modules:
-            data['alpha_attribution'] = self.modules['alpha_attribution'].get_attribution_summary()
+        if "alpha_attribution" in self.modules:
+            data["alpha_attribution"] = self.modules[
+                "alpha_attribution"
+            ].get_attribution_summary()
 
         return data
 
@@ -658,11 +678,15 @@ class InstitutionalGradeSystem:
         """Get risk data from modules."""
         data = {}
 
-        if 'execution_control' in self.modules:
-            data['execution_control'] = self.modules['execution_control'].get_risk_summary()
+        if "execution_control" in self.modules:
+            data["execution_control"] = self.modules[
+                "execution_control"
+            ].get_risk_summary()
 
-        if 'position_sizing' in self.modules:
-            data['position_sizing'] = self.modules['position_sizing'].get_sizing_summary()
+        if "position_sizing" in self.modules:
+            data["position_sizing"] = self.modules[
+                "position_sizing"
+            ].get_sizing_summary()
 
         return data
 
@@ -670,11 +694,11 @@ class InstitutionalGradeSystem:
         """Get regime data from modules."""
         data = {}
 
-        if 'market_regime' in self.modules:
-            data['market_regime'] = self.modules['market_regime'].get_regime_summary()
+        if "market_regime" in self.modules:
+            data["market_regime"] = self.modules["market_regime"].get_regime_summary()
 
-        if 'macro_data' in self.modules:
-            data['macro_data'] = self.modules['macro_data'].analyze_macro_environment()
+        if "macro_data" in self.modules:
+            data["macro_data"] = self.modules["macro_data"].analyze_macro_environment()
 
         return data
 
@@ -682,11 +706,13 @@ class InstitutionalGradeSystem:
         """Get signal data from modules."""
         data = {}
 
-        if 'signal_center' in self.modules:
-            data['signal_center'] = self.modules['signal_center'].get_signal_summary()
+        if "signal_center" in self.modules:
+            data["signal_center"] = self.modules["signal_center"].get_signal_summary()
 
-        if 'forecast_explainability' in self.modules:
-            data['forecast_explainability'] = self.modules['forecast_explainability'].get_explanation_summary()
+        if "forecast_explainability" in self.modules:
+            data["forecast_explainability"] = self.modules[
+                "forecast_explainability"
+            ].get_explanation_summary()
 
         return data
 
@@ -694,20 +720,27 @@ class InstitutionalGradeSystem:
         """Get comprehensive system status."""
         try:
             return {
-                'status': self.status.value,
-                'uptime': (datetime.now() - self.start_time).total_seconds() if self.start_time else 0,
-                'modules': len(self.modules),
-                'system_metrics': self._get_system_metrics_dict(),
-                'config': {
-                    'name': self.config['system']['name'],
-                    'version': self.config['system']['version']
+                "status": self.status.value,
+                "uptime": (datetime.now() - self.start_time).total_seconds()
+                if self.start_time
+                else 0,
+                "modules": len(self.modules),
+                "system_metrics": self._get_system_metrics_dict(),
+                "config": {
+                    "name": self.config["system"]["name"],
+                    "version": self.config["system"]["version"],
                 },
-                'last_update': datetime.now().isoformat()
+                "last_update": datetime.now().isoformat(),
             }
 
         except Exception as e:
             logger.error(f"Error getting system status: {e}")
-            return {'success': True, 'result': {'status': 'error', 'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": {"status": "error", "error": str(e)},
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def process_natural_language_query(self, query: str) -> Dict[str, Any]:
         """Process natural language query and route to appropriate modules."""
@@ -715,19 +748,25 @@ class InstitutionalGradeSystem:
             query_lower = query.lower()
 
             # Route to appropriate modules based on query content
-            if any(word in query_lower for word in ['regime', 'market', 'bull', 'bear']):
+            if any(
+                word in query_lower for word in ["regime", "market", "bull", "bear"]
+            ):
                 return self._handle_regime_query(query)
 
-            elif any(word in query_lower for word in ['signal', 'trade', 'buy', 'sell']):
+            elif any(
+                word in query_lower for word in ["signal", "trade", "buy", "sell"]
+            ):
                 return self._handle_signal_query(query)
 
-            elif any(word in query_lower for word in ['risk', 'position', 'size']):
+            elif any(word in query_lower for word in ["risk", "position", "size"]):
                 return self._handle_risk_query(query)
 
-            elif any(word in query_lower for word in ['performance', 'return', 'sharpe']):
+            elif any(
+                word in query_lower for word in ["performance", "return", "sharpe"]
+            ):
                 return self._handle_performance_query(query)
 
-            elif any(word in query_lower for word in ['report', 'summary', 'analysis']):
+            elif any(word in query_lower for word in ["report", "summary", "analysis"]):
                 return self._handle_report_query(query)
 
             else:
@@ -735,77 +774,77 @@ class InstitutionalGradeSystem:
 
         except Exception as e:
             logger.error(f"Error processing natural language query: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'query': query
-            }
+            return {"success": False, "error": str(e), "query": query}
 
     def _handle_regime_query(self, query: str) -> Dict[str, Any]:
         """Handle regime-related queries."""
         try:
-            if 'market_regime' in self.modules:
-                regime_summary = self.modules['market_regime'].get_regime_summary()
+            if "market_regime" in self.modules:
+                regime_summary = self.modules["market_regime"].get_regime_summary()
                 return {
-                    'success': True,
-                    'type': 'regime_analysis',
-                    'data': regime_summary,
-                    'query': query
+                    "success": True,
+                    "type": "regime_analysis",
+                    "data": regime_summary,
+                    "query": query,
                 }
             else:
                 return {
-                    'success': False,
-                    'error': 'Market regime module not available',
-                    'query': query
+                    "success": False,
+                    "error": "Market regime module not available",
+                    "query": query,
                 }
 
         except Exception as e:
             logger.error(f"Error handling regime query: {e}")
-            return {'success': False, 'error': str(e), 'query': query}
+            return {"success": False, "error": str(e), "query": query}
 
     def _handle_signal_query(self, query: str) -> Dict[str, Any]:
         """Handle signal-related queries."""
         try:
-            if 'signal_center' in self.modules:
-                signal_summary = self.modules['signal_center'].get_signal_summary()
+            if "signal_center" in self.modules:
+                signal_summary = self.modules["signal_center"].get_signal_summary()
                 return {
-                    'success': True,
-                    'type': 'signal_analysis',
-                    'data': signal_summary,
-                    'query': query
+                    "success": True,
+                    "type": "signal_analysis",
+                    "data": signal_summary,
+                    "query": query,
                 }
             else:
                 return {
-                    'success': False,
-                    'error': 'Signal center module not available',
-                    'query': query
+                    "success": False,
+                    "error": "Signal center module not available",
+                    "query": query,
                 }
 
         except Exception as e:
             logger.error(f"Error handling signal query: {e}")
-            return {'success': False, 'error': str(e), 'query': query}
+            return {"success": False, "error": str(e), "query": query}
 
     def _handle_risk_query(self, query: str) -> Dict[str, Any]:
         """Handle risk-related queries."""
         try:
             risk_data = {}
 
-            if 'execution_control' in self.modules:
-                risk_data['execution_control'] = self.modules['execution_control'].get_risk_summary()
+            if "execution_control" in self.modules:
+                risk_data["execution_control"] = self.modules[
+                    "execution_control"
+                ].get_risk_summary()
 
-            if 'position_sizing' in self.modules:
-                risk_data['position_sizing'] = self.modules['position_sizing'].get_sizing_summary()
+            if "position_sizing" in self.modules:
+                risk_data["position_sizing"] = self.modules[
+                    "position_sizing"
+                ].get_sizing_summary()
 
             return {
-                'success': True,
-                'type': 'risk_analysis',
-                'data': risk_data,
-                'query': query
+                "success": True,
+                "type": "risk_analysis",
+                "data": risk_data,
+                "query": query,
             }
 
         except Exception as e:
             logger.error(f"Error handling risk query: {e}")
-            return {'success': False, 'error': str(e), 'query': query}
+            return {"success": False, "error": str(e), "query": query}
 
     def _handle_performance_query(self, query: str) -> Dict[str, Any]:
         """Handle performance-related queries."""
@@ -813,15 +852,15 @@ class InstitutionalGradeSystem:
             performance_data = self._get_performance_data()
 
             return {
-                'success': True,
-                'type': 'performance_analysis',
-                'data': performance_data,
-                'query': query
+                "success": True,
+                "type": "performance_analysis",
+                "data": performance_data,
+                "query": query,
             }
 
         except Exception as e:
             logger.error(f"Error handling performance query: {e}")
-            return {'success': False, 'error': str(e), 'query': query}
+            return {"success": False, "error": str(e), "query": query}
 
     def _handle_report_query(self, query: str) -> Dict[str, Any]:
         """Handle report-related queries."""
@@ -829,15 +868,15 @@ class InstitutionalGradeSystem:
             report_path = self.generate_system_report()
 
             return {
-                'success': True,
-                'type': 'report_generation',
-                'data': {'report_path': report_path},
-                'query': query
+                "success": True,
+                "type": "report_generation",
+                "data": {"report_path": report_path},
+                "query": query,
             }
 
         except Exception as e:
             logger.error(f"Error handling report query: {e}")
-            return {'success': False, 'error': str(e), 'query': query}
+            return {"success": False, "error": str(e), "query": query}
 
     def _handle_general_query(self, query: str) -> Dict[str, Any]:
         """Handle general queries."""
@@ -845,31 +884,33 @@ class InstitutionalGradeSystem:
             system_status = self.get_system_status()
 
             return {
-                'success': True,
-                'type': 'system_status',
-                'data': system_status,
-                'query': query
+                "success": True,
+                "type": "system_status",
+                "data": system_status,
+                "query": query,
             }
 
         except Exception as e:
             logger.error(f"Error handling general query: {e}")
-            return {'success': False, 'error': str(e), 'query': query}
+            return {"success": False, "error": str(e), "query": query}
 
-    def export_system_data(self, filepath: str = "logs/institutional_system_export.json"):
+    def export_system_data(
+        self, filepath: str = "logs/institutional_system_export.json"
+    ):
         """Export comprehensive system data."""
         try:
             export_data = {
-                'system_status': self.get_system_status(),
-                'module_status': self._get_module_status(),
-                'performance_data': self._get_performance_data(),
-                'risk_data': self._get_risk_data(),
-                'regime_data': self._get_regime_data(),
-                'signal_data': self._get_signal_data(),
-                'config': self.config,
-                'export_date': datetime.now().isoformat()
+                "system_status": self.get_system_status(),
+                "module_status": self._get_module_status(),
+                "performance_data": self._get_performance_data(),
+                "risk_data": self._get_risk_data(),
+                "regime_data": self._get_regime_data(),
+                "signal_data": self._get_signal_data(),
+                "config": self.config,
+                "export_date": datetime.now().isoformat(),
             }
 
-            with open(filepath, 'w') as f:
+            with open(filepath, "w") as f:
                 json.dump(export_data, f, indent=2)
 
             logger.info(f"System data exported to {filepath}")
@@ -880,23 +921,23 @@ class InstitutionalGradeSystem:
     def get_help(self) -> Dict[str, Any]:
         """Get system help and usage information."""
         return {
-            'system_name': self.config['system']['name'],
-            'version': self.config['system']['version'],
-            'description': 'Institutional-Grade Trading System with full strategic intelligence',
-            'modules': list(self.modules.keys()),
-            'commands': {
-                'status': 'Get system status and health',
-                'query': 'Process natural language queries',
-                'report': 'Generate comprehensive system report',
-                'export': 'Export system data',
-                'start': 'Start the system',
-                'stop': 'Stop the system'
+            "system_name": self.config["system"]["name"],
+            "version": self.config["system"]["version"],
+            "description": "Institutional-Grade Trading System with full strategic intelligence",
+            "modules": list(self.modules.keys()),
+            "commands": {
+                "status": "Get system status and health",
+                "query": "Process natural language queries",
+                "report": "Generate comprehensive system report",
+                "export": "Export system data",
+                "start": "Start the system",
+                "stop": "Stop the system",
             },
-            'example_queries': [
-                'What is the current market regime?',
-                'Show me recent trading signals',
-                'What is the current risk level?',
-                'Generate a performance report',
-                'How is the system performing?'
-            ]
+            "example_queries": [
+                "What is the current market regime?",
+                "Show me recent trading signals",
+                "What is the current risk level?",
+                "Generate a performance report",
+                "How is the system performing?",
+            ],
         }

@@ -462,7 +462,9 @@ def save_env_config(config_vars: Dict[str, str], file_path: Union[str, Path]) ->
         return False
 
 
-def create_default_config(config_path: Union[str, Path] = "config/app_config.yaml") -> bool:
+def create_default_config(
+    config_path: Union[str, Path] = "config/app_config.yaml"
+) -> bool:
     """
     Create default configuration file.
 
@@ -495,7 +497,11 @@ def validate_config_file(config_path: Union[str, Path]) -> Dict[str, Any]:
         return config.validate()
     except Exception as e:
         logger.error(f"Error validating configuration file: {e}")
-        return {"valid": False, "errors": [f"Configuration file error: {e}"], "warnings": []}
+        return {
+            "valid": False,
+            "errors": [f"Configuration file error: {e}"],
+            "warnings": [],
+        }
 
 
 # Convenience functions
@@ -583,7 +589,11 @@ def get_nlp_config() -> Dict[str, Any]:
 def get_api_config() -> Dict[str, Any]:
     """Get API configuration."""
     config = get_simple_config()
-    return {"rate_limit": config.api_rate_limit, "timeout": config.api_timeout, "version": config.api_version}
+    return {
+        "rate_limit": config.api_rate_limit,
+        "timeout": config.api_timeout,
+        "version": config.api_version,
+    }
 
 
 def get_monitoring_config() -> Dict[str, Any]:
@@ -609,4 +619,8 @@ def get_security_config() -> Dict[str, Any]:
 def get_development_config() -> Dict[str, Any]:
     """Get development configuration."""
     config = get_simple_config()
-    return {"debug": config.dev_debug, "test_mode": config.test_mode, "mock_data": config.mock_data}
+    return {
+        "debug": config.dev_debug,
+        "test_mode": config.test_mode,
+        "mock_data": config.mock_data,
+    }

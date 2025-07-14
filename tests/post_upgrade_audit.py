@@ -69,7 +69,9 @@ class PostUpgradeAuditor:
 
         except Exception as e:
             logger.error(f"Error auditing {file_path}: {e}")
-            self.violations.append({"file": file_path, "type": "parse_error", "error": str(e)})
+            self.violations.append(
+                {"file": file_path, "type": "parse_error", "error": str(e)}
+            )
 
     def _analyze_ast(self, file_path: str, tree: ast.AST, content: str):
         """Analyze AST for function definitions and return statements."""
@@ -121,7 +123,9 @@ class PostUpgradeAuditor:
                     "line": func_line,
                     "function": func_name,
                     "type": "missing_return",
-                    "reason": self._get_violation_reason(has_return, has_only_logging, has_side_effects, should_return),
+                    "reason": self._get_violation_reason(
+                        has_return, has_only_logging, has_side_effects, should_return
+                    ),
                 }
             )
         else:
@@ -183,7 +187,9 @@ class PostUpgradeAuditor:
         func_str = ast.unparse(func_node)
         return any(pattern in func_str for pattern in side_effect_patterns)
 
-    def _has_only_logging_statements(self, func_node: ast.FunctionDef, content: str) -> bool:
+    def _has_only_logging_statements(
+        self, func_node: ast.FunctionDef, content: str
+    ) -> bool:
         """Check if function only contains logging/print statements."""
         lines = content.split("\n")
         func_start = func_node.lineno - 1
@@ -193,9 +199,18 @@ class PostUpgradeAuditor:
         func_content = "\n".join(func_lines)
 
         # Check for logging patterns
-        logging_patterns = [r"logger\.", r"print\(", r"st\.", r"logging\.", r"console\.", r"print\s*\("]
+        logging_patterns = [
+            r"logger\.",
+            r"print\(",
+            r"st\.",
+            r"logging\.",
+            r"console\.",
+            r"print\s*\(",
+        ]
 
-        has_logging = any(re.search(pattern, func_content) for pattern in logging_patterns)
+        has_logging = any(
+            re.search(pattern, func_content) for pattern in logging_patterns
+        )
 
         # Check if function has other meaningful operations
         has_other_ops = self._has_meaningful_operations(func_node)
@@ -307,7 +322,11 @@ class PostUpgradeAuditor:
         return False
 
     def _get_violation_reason(
-        self, has_return: bool, has_only_logging: bool, has_side_effects: bool, should_return: bool
+        self,
+        has_return: bool,
+        has_only_logging: bool,
+        has_side_effects: bool,
+        should_return: bool,
     ) -> str:
         """Get the reason for violation."""
         if has_side_effects:
@@ -325,7 +344,9 @@ class PostUpgradeAuditor:
         total_compliant = len(self.compliant_functions)
         total_functions = total_violations + total_compliant
 
-        compliance_rate = (total_compliant / total_functions * 100) if total_functions > 0 else 0
+        compliance_rate = (
+            (total_compliant / total_functions * 100) if total_functions > 0 else 0
+        )
 
         return {
             "success": True,
@@ -376,7 +397,9 @@ def main():
             print(f"\n📁 {file_path}")
             for violation in violations[:10]:  # Show first 10 per file
                 if violation["type"] != "parse_error":
-                    print(f"  ❌ Line {violation['line']}: {violation['function']} - {violation['reason']}")
+                    print(
+                        f"  ❌ Line {violation['line']}: {violation['function']} - {violation['reason']}"
+                    )
                 else:
                     print(f"  ❌ {violation['error']}")
 

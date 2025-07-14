@@ -108,7 +108,9 @@ def detect_drift(model_id: str) -> bool:
         # Get recent performance metrics
         recent_metrics = performance_data.get("recent_metrics", [])
         if len(recent_metrics) < 10:
-            logger.warning(f"Insufficient recent metrics for drift detection: {len(recent_metrics)}")
+            logger.warning(
+                f"Insufficient recent metrics for drift detection: {len(recent_metrics)}"
+            )
             return False
 
         # Calculate performance degradation
@@ -171,7 +173,9 @@ def check_deprecated_logic(component: str) -> bool:
         has_deprecated = deprecated_count > 0
 
         if has_deprecated:
-            logger.warning(f"Deprecated logic found in {component}: {deprecated_count} patterns")
+            logger.warning(
+                f"Deprecated logic found in {component}: {deprecated_count} patterns"
+            )
 
         return has_deprecated
 
@@ -218,7 +222,9 @@ def check_missing_parameters(component: str) -> bool:
         has_missing = missing_count > 0
 
         if has_missing:
-            logger.warning(f"Missing parameters found in {component}: {missing_count} patterns")
+            logger.warning(
+                f"Missing parameters found in {component}: {missing_count} patterns"
+            )
 
         return has_missing
 

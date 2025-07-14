@@ -10,14 +10,15 @@ from typing import Dict, List, Optional
 import jwt
 from fastapi import WebSocket, WebSocketDisconnect
 
-
 # Setup logging
 log_handler = RotatingFileHandler(
     os.getenv("LOG_FILE", "trading.log"),
     maxBytes=int(os.getenv("LOG_MAX_SIZE", 10485760)),
     backupCount=int(os.getenv("LOG_BACKUP_COUNT", 5)),
 )
-log_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+log_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+)
 logger = logging.getLogger("websocket")
 logger.addHandler(log_handler)
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
@@ -127,13 +128,16 @@ class WebSocketManager:
                 # Remove from queue if max attempts reached
                 self.reconnect_queue.remove(state)
                 state.status = ConnectionStatus.FAILED
-                logger.warning(f"Max reconnection attempts reached for user {state.username}")
+                logger.warning(
+                    f"Max reconnection attempts reached for user {state.username}"
+                )
                 continue
 
             # Check if enough time has passed since last attempt
             if (
                 state.last_reconnect_attempt is None
-                or (current_time - state.last_reconnect_attempt).total_seconds() >= state.reconnect_delay
+                or (current_time - state.last_reconnect_attempt).total_seconds()
+                >= state.reconnect_delay
             ):
                 reconnect_candidates.append(state)
 
@@ -144,7 +148,9 @@ class WebSocketManager:
     async def _attempt_reconnection(self, state: ConnectionState):
         """Attempt to reconnect a client."""
         try:
-            logger.info(f"Attempting reconnection for user {state.username} (attempt {state.reconnect_attempts + 1})")
+            logger.info(
+                f"Attempting reconnection for user {state.username} (attempt {state.reconnect_attempts + 1})"
+            )
 
             # Update state
             state.status = ConnectionStatus.RECONNECTING
@@ -171,7 +177,9 @@ class WebSocketManager:
                 logger.warning(f"Reconnection failed for user {state.username}")
 
         except Exception as e:
-            logger.error(f"Error during reconnection attempt for user {state.username}: {e}")
+            logger.error(
+                f"Error during reconnection attempt for user {state.username}: {e}"
+            )
 
     async def _simulate_reconnection(self, state: ConnectionState) -> bool:
         """Simulate reconnection process (replace with actual implementation)."""
@@ -197,7 +205,9 @@ class WebSocketManager:
             }
             await state.websocket.send_text(json.dumps(message))
         except Exception as e:
-            logger.error(f"Error sending reconnection success message to {state.username}: {e}")
+            logger.error(
+                f"Error sending reconnection success message to {state.username}: {e}"
+            )
 
     async def _cleanup_stale_connections(self):
         """Clean up stale connections."""
@@ -207,7 +217,9 @@ class WebSocketManager:
         for username, state in self.connection_states.items():
             if state.status == ConnectionStatus.CONNECTED:
                 # Check for inactivity
-                if (current_time - state.last_activity).total_seconds() > self.connection_timeout:
+                if (
+                    current_time - state.last_activity
+                ).total_seconds() > self.connection_timeout:
                     stale_connections.append(username)
 
         for username in stale_connections:
@@ -259,7 +271,9 @@ class WebSocketManager:
             }
             await state.websocket.send_text(json.dumps(message))
         except Exception as e:
-            logger.error(f"Error sending connection success message to {state.username}: {e}")
+            logger.error(
+                f"Error sending connection success message to {state.username}: {e}"
+            )
 
     async def disconnect(self, username: str, reason: str = "user_disconnect") -> None:
         if username in self.active_connections:
@@ -274,7 +288,10 @@ class WebSocketManager:
                 await self._send_disconnect_message(state, reason)
 
                 # Add to reconnect queue if appropriate
-                if reason not in ["user_disconnect", "inactivity_timeout"] and state.can_reconnect():
+                if (
+                    reason not in ["user_disconnect", "inactivity_timeout"]
+                    and state.can_reconnect()
+                ):
                     self.reconnect_queue.append(state)
                     logger.info(f"Added user {username} to reconnection queue")
                 else:
@@ -407,6 +424,8 @@ class WebSocketHandler:
         finally:
             try:
                 data = jwt.decode(token, os.getenv("JWT_SECRET"), algorithms=["HS256"])
-                await self.manager.disconnect(data["username"], reason="connection_closed")
+                await self.manager.disconnect(
+                    data["username"], reason="connection_closed"
+                )
             except Exception as e:
                 logger.error(f"Error disconnecting user: {e}")

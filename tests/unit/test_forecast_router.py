@@ -77,7 +77,7 @@ class TestForecastRouter(unittest.TestCase):
 
     def test_register_model(self):
         """Test dynamic model registration."""
-        mock_model = MockModel("TestModel")
+        MockModel("TestModel")
 
         # Register new model
         self.router.register_model("test_model", MockModel)
@@ -101,7 +101,13 @@ class TestForecastRouter(unittest.TestCase):
         characteristics = self.router._analyze_data(self.sample_data)
 
         # Check that all expected characteristics are present
-        expected_keys = ["length", "has_seasonality", "has_trend", "volatility", "missing_values"]
+        expected_keys = [
+            "length",
+            "has_seasonality",
+            "has_trend",
+            "volatility",
+            "missing_values",
+        ]
         for key in expected_keys:
             self.assertIn(key, characteristics)
 
@@ -119,7 +125,9 @@ class TestForecastRouter(unittest.TestCase):
         self.assertEqual(selected, "lstm")
 
         # Test with invalid model preference
-        selected = self.router._select_model(self.sample_data, model_type="invalid_model")
+        selected = self.router._select_model(
+            self.sample_data, model_type="invalid_model"
+        )
         self.assertIn(selected, self.router.model_registry.keys())
 
     def test_select_model_auto(self):
@@ -132,14 +140,18 @@ class TestForecastRouter(unittest.TestCase):
         with patch.object(self.router, "_prepare_data_safely") as mock_prepare:
             mock_prepare.return_value = self.sample_data
 
-            with patch.object(self.router, "_select_model_with_fallback") as mock_select:
+            with patch.object(
+                self.router, "_select_model_with_fallback"
+            ) as mock_select:
                 mock_select.return_value = "lstm"
 
                 with patch("models.forecast_router.LSTMModel") as mock_lstm_class:
                     mock_model = MockModel()
                     mock_lstm_class.return_value = mock_model
 
-                    result = self.router.get_forecast(data=self.sample_data, horizon=30, model_type="lstm")
+                    result = self.router.get_forecast(
+                        data=self.sample_data, horizon=30, model_type="lstm"
+                    )
 
                     # Check result structure
                     self.assertIsInstance(result, dict)
@@ -195,11 +207,15 @@ class TestForecastRouter(unittest.TestCase):
     def test_select_model_with_fallback(self):
         """Test model selection with fallback logic."""
         # Test with valid preferred model
-        selected = self.router._select_model_with_fallback(self.sample_data, preferred_model="lstm")
+        selected = self.router._select_model_with_fallback(
+            self.sample_data, preferred_model="lstm"
+        )
         self.assertEqual(selected, "lstm")
 
         # Test with invalid preferred model
-        selected = self.router._select_model_with_fallback(self.sample_data, preferred_model="invalid_model")
+        selected = self.router._select_model_with_fallback(
+            self.sample_data, preferred_model="invalid_model"
+        )
         self.assertIn(selected, self.router.model_registry.keys())
 
     def test_get_model_defaults(self):
@@ -283,7 +299,11 @@ class TestForecastRouter(unittest.TestCase):
     def test_forecast_method(self):
         """Test the main forecast method."""
         with patch.object(self.router, "get_forecast") as mock_get_forecast:
-            mock_get_forecast.return_value = {"forecast": [1, 2, 3], "model_type": "lstm", "confidence": 0.8}
+            mock_get_forecast.return_value = {
+                "forecast": [1, 2, 3],
+                "model_type": "lstm",
+                "confidence": 0.8,
+            }
 
             result = self.router.forecast(self.sample_data, horizon=30)
             self.assertIsInstance(result, dict)
@@ -291,7 +311,11 @@ class TestForecastRouter(unittest.TestCase):
 
     def test_plot_results(self):
         """Test plotting results."""
-        forecast_result = {"forecast": [1, 2, 3], "model_type": "lstm", "confidence": 0.8}
+        forecast_result = {
+            "forecast": [1, 2, 3],
+            "model_type": "lstm",
+            "confidence": 0.8,
+        }
 
         # Should not raise an exception
         self.router.plot_results(self.sample_data, forecast_result)
@@ -308,7 +332,12 @@ class TestForecastRouter(unittest.TestCase):
     def test_config_based_loading(self):
         """Test loading models from configuration."""
         config = {
-            "models": {"test_model": {"enabled": True, "class_path": "tests.unit.test_forecast_router.MockModel"}}
+            "models": {
+                "test_model": {
+                    "enabled": True,
+                    "class_path": "tests.unit.test_forecast_router.MockModel",
+                }
+            }
         }
 
         router = ForecastRouter(config)
@@ -345,7 +374,9 @@ class TestForecastRouter(unittest.TestCase):
 
         # Test with extremely long prompt
         long_prompt = "x" * 10000
-        result = self.router.get_forecast(data=self.sample_data, horizon=30, prompt=long_prompt)
+        result = self.router.get_forecast(
+            data=self.sample_data, horizon=30, prompt=long_prompt
+        )
         self.assertIsInstance(result, dict)
         self.assertIn("forecast", result)
 

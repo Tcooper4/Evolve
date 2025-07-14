@@ -67,7 +67,9 @@ def get_model_info(model_path: Path) -> Dict[str, Any]:
                 "file_size": model_path.stat().st_size,
                 "num_parameters": len(state_dict),
                 "parameter_names": list(state_dict.keys()),
-                "total_params": sum(p.numel() for p in state_dict.values() if hasattr(p, "numel")),
+                "total_params": sum(
+                    p.numel() for p in state_dict.values() if hasattr(p, "numel")
+                ),
             }
         else:
             return {}

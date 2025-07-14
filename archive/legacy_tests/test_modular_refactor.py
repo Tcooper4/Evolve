@@ -84,7 +84,7 @@ def test_dependency_injection():
 
         global_container = get_container()
         register_service(ILogger, lambda: "global_logger")
-        global_logger = global_container.resolve(ILogger)
+        global_container.resolve(ILogger)
         print("✅ Global container working")
 
         return True
@@ -129,7 +129,7 @@ def test_event_system():
         print("✅ Event publishing successful")
 
         # Test global event bus
-        global_bus = get_event_bus()
+        get_event_bus()
         from core import publish_data_loaded
 
         publish_data_loaded("TSLA", "test_data", "test_script")
@@ -190,7 +190,7 @@ def test_logging_system():
         print("✅ Logging methods working")
 
         # Test global logger
-        global_logger = get_logger()
+        get_logger()
         log_info("Global info message")
         log_warning("Global warning message")
         print("✅ Global logging working")
@@ -246,13 +246,7 @@ def test_interface_compliance():
         # Test that interfaces are abstract
         from abc import ABC
 
-        from core import (
-            DataRequest,
-            IAgent,
-            IDataProvider,
-            IModel,
-            IStrategy,
-        )
+        from core import DataRequest, IAgent, IDataProvider, IModel, IStrategy
 
         assert issubclass(IDataProvider, ABC)
         assert issubclass(IModel, ABC)

@@ -66,14 +66,20 @@ class AutomationLogger:
             self.logger.addHandler(console_handler)
         # Add file handler
         if enable_file:
-            log_file = self.log_dir / f"{self.name}_{datetime.now().strftime('%Y%m%d')}.log"
+            log_file = (
+                self.log_dir / f"{self.name}_{datetime.now().strftime('%Y%m%d')}.log"
+            )
             file_handler = logging.FileHandler(log_file)
             file_handler.setLevel(self.log_level)
             self.logger.addHandler(file_handler)
 
     def _format_context(self, **kwargs) -> Dict[str, Any]:
         """Format context for logging."""
-        context = {"timestamp": datetime.now().isoformat(), "logger": self.name, **kwargs}
+        context = {
+            "timestamp": datetime.now().isoformat(),
+            "logger": self.name,
+            **kwargs,
+        }
         return context
 
     def debug(self, message: str, **kwargs) -> None:
@@ -88,7 +94,9 @@ class AutomationLogger:
         """Log warning message."""
         self.logger.warning(message, **self._format_context(**kwargs))
 
-    def error(self, message: str, exc_info: Optional[Exception] = None, **kwargs) -> None:
+    def error(
+        self, message: str, exc_info: Optional[Exception] = None, **kwargs
+    ) -> None:
         """Log error message."""
         context = self._format_context(**kwargs)
         if exc_info:
@@ -99,7 +107,9 @@ class AutomationLogger:
             }
         self.logger.error(message, **context)
 
-    def critical(self, message: str, exc_info: Optional[Exception] = None, **kwargs) -> None:
+    def critical(
+        self, message: str, exc_info: Optional[Exception] = None, **kwargs
+    ) -> None:
         """Log critical message."""
         context = self._format_context(**kwargs)
         if exc_info:
@@ -113,19 +123,26 @@ class AutomationLogger:
     def performance(self, operation: str, duration_ms: float, **kwargs) -> None:
         """Log performance metrics."""
         self.logger.info(
-            f"Performance: {operation}", **self._format_context(operation=operation, duration_ms=duration_ms, **kwargs)
+            f"Performance: {operation}",
+            **self._format_context(
+                operation=operation, duration_ms=duration_ms, **kwargs
+            ),
         )
 
     def security(self, event: str, **kwargs) -> None:
         """Log security events."""
         self.logger.warning(
-            f"Security Event: {event}", **self._format_context(event_type="security", event=event, **kwargs)
+            f"Security Event: {event}",
+            **self._format_context(event_type="security", event=event, **kwargs),
         )
 
     def audit(self, action: str, user: str, **kwargs) -> None:
         """Log audit events."""
         self.logger.info(
-            f"Audit: {action} by {user}", **self._format_context(event_type="audit", action=action, user=user, **kwargs)
+            f"Audit: {action} by {user}",
+            **self._format_context(
+                event_type="audit", action=action, user=user, **kwargs
+            ),
         )
 
     def set_level(self, level: str) -> None:

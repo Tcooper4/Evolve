@@ -20,10 +20,8 @@ class ValidationError(Exception):
     """Custom exception for validation errors."""
 
 
-
 class ModelError(Exception):
     """Custom exception for model errors."""
-
 
 
 def validate_data(data: pd.DataFrame, required_columns: list) -> None:
@@ -74,7 +72,9 @@ def to_device(
         raise ModelError(f"Device transfer failed: {e}")
 
 
-def from_device(data: Union[torch.Tensor, Dict[str, torch.Tensor]]) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
+def from_device(
+    data: Union[torch.Tensor, Dict[str, torch.Tensor]]
+) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
     """Move data from device to CPU.
 
     Args:
@@ -119,7 +119,9 @@ def safe_forward(model: torch.nn.Module, *args, **kwargs) -> torch.Tensor:
         raise ModelError(f"Forward pass failed: {e}")
 
 
-def compute_loss(criterion: torch.nn.Module, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
+def compute_loss(
+    criterion: torch.nn.Module, y_pred: torch.Tensor, y_true: torch.Tensor
+) -> torch.Tensor:
     """Compute loss with error handling.
 
     Args:
@@ -190,7 +192,9 @@ def get_model_confidence(val_losses: list) -> Dict[str, float]:
             "confidence": confidence,
             "latest_val_loss": latest_val_loss,
             "best_val_loss": best_val_loss,
-            "loss_ratio": latest_val_loss / best_val_loss if best_val_loss > 0 else float("inf"),
+            "loss_ratio": latest_val_loss / best_val_loss
+            if best_val_loss > 0
+            else float("inf"),
         }
     except Exception as e:
         logger.error(f"Confidence calculation failed: {e}")
@@ -203,7 +207,11 @@ def get_model_confidence(val_losses: list) -> Dict[str, float]:
 
 
 def get_model_metadata(
-    model_type: str, config: dict, device: torch.device, best_val_loss: float, train_losses: list
+    model_type: str,
+    config: dict,
+    device: torch.device,
+    best_val_loss: float,
+    train_losses: list,
 ) -> Dict[str, Any]:
     """Get model metadata.
 
@@ -228,4 +236,9 @@ def get_model_metadata(
         }
     except Exception as e:
         logger.warning(f"Could not get model metadata: {e}")
-        return {"model_type": model_type, "config": config, "created_at": datetime.now().isoformat(), "error": str(e)}
+        return {
+            "model_type": model_type,
+            "config": config,
+            "created_at": datetime.now().isoformat(),
+            "error": str(e),
+        }

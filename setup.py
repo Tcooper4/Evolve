@@ -12,7 +12,9 @@ def read_file(filename: str) -> str:
 def read_requirements(filename: str) -> List[str]:
     """Read requirements from file, filtering out comments and empty lines."""
     with open(filename, "r", encoding="utf-8") as fh:
-        return [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+        return [
+            line.strip() for line in fh if line.strip() and not line.startswith("#")
+        ]
 
 
 # Read project files

@@ -47,7 +47,10 @@ class TestBollingerSignals:
         low = close_prices - np.random.uniform(0, 3, 100)
         volume = np.random.uniform(1000000, 5000000, 100)
 
-        df = pd.DataFrame({"Close": close_prices, "High": high, "Low": low, "Volume": volume}, index=dates)
+        df = pd.DataFrame(
+            {"Close": close_prices, "High": high, "Low": low, "Volume": volume},
+            index=dates,
+        )
 
         return df
 
@@ -135,7 +138,9 @@ class TestBollingerSignals:
             pytest.skip("Bollinger strategy not available")
         return BollingerStrategy()
 
-    def test_bollinger_signal_generation(self, bollinger_strategy, synthetic_price_data):
+    def test_bollinger_signal_generation(
+        self, bollinger_strategy, synthetic_price_data
+    ):
         """Test that Bollinger signals are generated correctly."""
         signals = bollinger_strategy.generate_signals(synthetic_price_data)
 
@@ -152,7 +157,9 @@ class TestBollingerSignals:
             assert "strategy_name" in signal
             assert signal["strategy_name"] == "Bollinger"
 
-    def test_bollinger_bands_calculation(self, bollinger_strategy, synthetic_price_data):
+    def test_bollinger_bands_calculation(
+        self, bollinger_strategy, synthetic_price_data
+    ):
         """Test that Bollinger bands are calculated correctly."""
         bands = bollinger_strategy.calculate_bollinger_bands(synthetic_price_data)
 
@@ -171,7 +178,9 @@ class TestBollingerSignals:
         if not BOLLINGER_AVAILABLE:
             pytest.skip("Bollinger not available")
 
-        result_df = generate_bollinger_signals(synthetic_price_data, period=20, std_dev=2)
+        result_df = generate_bollinger_signals(
+            synthetic_price_data, period=20, std_dev=2
+        )
 
         # Check required columns exist
         required_columns = [
@@ -192,7 +201,9 @@ class TestBollingerSignals:
         if not BOLLINGER_AVAILABLE:
             pytest.skip("Bollinger not available")
 
-        result_df = generate_bollinger_signals(synthetic_price_data, period=20, std_dev=2)
+        result_df = generate_bollinger_signals(
+            synthetic_price_data, period=20, std_dev=2
+        )
 
         # Signals should be 1 (buy), -1 (sell), or 0 (hold)
         valid_signals = result_df["signal"].dropna()
@@ -204,7 +215,9 @@ class TestBollingerSignals:
         if not BOLLINGER_AVAILABLE:
             pytest.skip("Bollinger not available")
 
-        result_df = generate_bollinger_signals(synthetic_price_data, period=20, std_dev=2)
+        result_df = generate_bollinger_signals(
+            synthetic_price_data, period=20, std_dev=2
+        )
 
         # Signal column should not contain NaN values
         assert not result_df["signal"].isna().any()
@@ -216,20 +229,27 @@ class TestBollingerSignals:
 
         # Should handle short data gracefully
         try:
-            result_df = generate_bollinger_signals(short_price_data, period=20, std_dev=2)
+            result_df = generate_bollinger_signals(
+                short_price_data, period=20, std_dev=2
+            )
             # If it succeeds, check structure
             assert "signal" in result_df.columns
             assert "upper_band" in result_df.columns
         except Exception as e:
             # If it fails, should be due to insufficient data
-            assert any(keyword in str(e).lower() for keyword in ["insufficient", "at least", "minimum", "period"])
+            assert any(
+                keyword in str(e).lower()
+                for keyword in ["insufficient", "at least", "minimum", "period"]
+            )
 
     def test_constant_data_handling(self, constant_price_data):
         """Test handling of constant price data."""
         if not BOLLINGER_AVAILABLE:
             pytest.skip("Bollinger not available")
 
-        result_df = generate_bollinger_signals(constant_price_data, period=20, std_dev=2)
+        result_df = generate_bollinger_signals(
+            constant_price_data, period=20, std_dev=2
+        )
 
         # Should handle constant data gracefully
         assert "signal" in result_df.columns
@@ -257,7 +277,9 @@ class TestBollingerSignals:
             assert "upper_band" in result_df.columns
         except Exception as e:
             # If it fails, should be due to NaN values
-            assert any(keyword in str(e).lower() for keyword in ["nan", "missing", "invalid"])
+            assert any(
+                keyword in str(e).lower() for keyword in ["nan", "missing", "invalid"]
+            )
 
     def test_different_periods(self, synthetic_price_data):
         """Test Bollinger calculation with different periods."""
@@ -267,7 +289,9 @@ class TestBollingerSignals:
         periods = [10, 20, 30, 50]
 
         for period in periods:
-            result_df = generate_bollinger_signals(synthetic_price_data, period=period, std_dev=2)
+            result_df = generate_bollinger_signals(
+                synthetic_price_data, period=period, std_dev=2
+            )
             assert "signal" in result_df.columns
             assert "upper_band" in result_df.columns
 
@@ -290,7 +314,9 @@ class TestBollingerSignals:
         std_devs = [1, 2, 3]
 
         for std_dev in std_devs:
-            result_df = generate_bollinger_signals(synthetic_price_data, period=20, std_dev=std_dev)
+            result_df = generate_bollinger_signals(
+                synthetic_price_data, period=20, std_dev=std_dev
+            )
             assert "signal" in result_df.columns
             assert "upper_band" in result_df.columns
 
@@ -310,7 +336,9 @@ class TestBollingerSignals:
         if not BOLLINGER_AVAILABLE:
             pytest.skip("Bollinger not available")
 
-        result_df = generate_bollinger_signals(trending_price_data, period=20, std_dev=2)
+        result_df = generate_bollinger_signals(
+            trending_price_data, period=20, std_dev=2
+        )
 
         assert "signal" in result_df.columns
         assert "upper_band" in result_df.columns
@@ -324,7 +352,9 @@ class TestBollingerSignals:
         if not BOLLINGER_AVAILABLE:
             pytest.skip("Bollinger not available")
 
-        result_df = generate_bollinger_signals(synthetic_price_data, period=20, std_dev=2)
+        result_df = generate_bollinger_signals(
+            synthetic_price_data, period=20, std_dev=2
+        )
 
         # Check returns columns
         assert "returns" in result_df.columns
@@ -344,7 +374,9 @@ class TestBollingerSignals:
         if not BOLLINGER_AVAILABLE:
             pytest.skip("Bollinger not available")
 
-        result_df = generate_bollinger_signals(synthetic_price_data, period=20, std_dev=2)
+        result_df = generate_bollinger_signals(
+            synthetic_price_data, period=20, std_dev=2
+        )
 
         # Check cumulative returns columns
         assert "cumulative_returns" in result_df.columns
@@ -352,11 +384,13 @@ class TestBollingerSignals:
 
         # Cumulative returns should be monotonically increasing or decreasing
         cum_returns = result_df["cumulative_returns"].dropna()
-        strategy_cum_returns = result_df["strategy_cumulative_returns"].dropna()
+        result_df["strategy_cumulative_returns"].dropna()
 
         if len(cum_returns) > 1:
             # Should be monotonically increasing (for positive returns)
-            assert (cum_returns.diff().dropna() >= 0).all() or (cum_returns.diff().dropna() <= 0).all()
+            assert (cum_returns.diff().dropna() >= 0).all() or (
+                cum_returns.diff().dropna() <= 0
+            ).all()
 
     def test_strategy_parameters(self, bollinger_strategy):
         """Test Bollinger strategy parameters."""
@@ -400,7 +434,10 @@ class TestBollingerSignals:
             assert len(result_df) == 0
         except Exception as e:
             # If it fails, should be due to empty data
-            assert any(keyword in str(e).lower() for keyword in ["empty", "no data", "insufficient"])
+            assert any(
+                keyword in str(e).lower()
+                for keyword in ["empty", "no data", "insufficient"]
+            )
 
     def test_edge_case_missing_columns(self):
         """Test handling of data with missing columns."""
@@ -430,7 +467,9 @@ class TestBollingerSignals:
         if not BOLLINGER_AVAILABLE:
             pytest.skip("Bollinger not available")
 
-        result_df = generate_bollinger_signals(synthetic_price_data, period=20, std_dev=2)
+        result_df = generate_bollinger_signals(
+            synthetic_price_data, period=20, std_dev=2
+        )
 
         # Calculate basic performance metrics
         if "strategy_returns" in result_df.columns:
@@ -448,10 +487,16 @@ class TestBollingerSignals:
         if not BOLLINGER_AVAILABLE:
             pytest.skip("Bollinger not available")
 
-        result_df = generate_bollinger_signals(synthetic_price_data, period=20, std_dev=2)
+        result_df = generate_bollinger_signals(
+            synthetic_price_data, period=20, std_dev=2
+        )
 
         # Validate signal logic
-        if "signal" in result_df.columns and "upper_band" in result_df.columns and "lower_band" in result_df.columns:
+        if (
+            "signal" in result_df.columns
+            and "upper_band" in result_df.columns
+            and "lower_band" in result_df.columns
+        ):
             signals = result_df["signal"]
             upper_band = result_df["upper_band"]
             lower_band = result_df["lower_band"]
@@ -482,7 +527,9 @@ class TestBollingerSignals:
         if not BOLLINGER_AVAILABLE:
             pytest.skip("Bollinger not available")
 
-        result_df = generate_bollinger_signals(synthetic_price_data, period=20, std_dev=2)
+        result_df = generate_bollinger_signals(
+            synthetic_price_data, period=20, std_dev=2
+        )
 
         # Check BB width column
         assert "bb_width" in result_df.columns
@@ -498,20 +545,29 @@ class TestBollingerSignals:
             middle_band = result_df["middle_band"].dropna()
             bb_width = result_df["bb_width"].dropna()
 
-            if len(upper_band) > 0 and len(lower_band) > 0 and len(middle_band) > 0 and len(bb_width) > 0:
+            if (
+                len(upper_band) > 0
+                and len(lower_band) > 0
+                and len(middle_band) > 0
+                and len(bb_width) > 0
+            ):
                 # BB width should be positive
                 assert (bb_width > 0).all()
 
                 # BB width should equal (upper - lower) / middle
                 expected_width = (upper_band - lower_band) / middle_band
-                np.testing.assert_array_almost_equal(bb_width, expected_width, decimal=10)
+                np.testing.assert_array_almost_equal(
+                    bb_width, expected_width, decimal=10
+                )
 
     def test_bb_position_calculation(self, synthetic_price_data):
         """Test Bollinger Band position calculation."""
         if not BOLLINGER_AVAILABLE:
             pytest.skip("Bollinger not available")
 
-        result_df = generate_bollinger_signals(synthetic_price_data, period=20, std_dev=2)
+        result_df = generate_bollinger_signals(
+            synthetic_price_data, period=20, std_dev=2
+        )
 
         # Check BB position column
         assert "bb_position" in result_df.columns

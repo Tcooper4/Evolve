@@ -37,16 +37,24 @@ class SafeLLMResponseParser:
             r"secret\s*[:=]\s*\S+",
         ]
 
-    def parse_llm_response(self, response: str, response_type: str = "general") -> Dict[str, Any]:
+    def parse_llm_response(
+        self, response: str, response_type: str = "general"
+    ) -> Dict[str, Any]:
         """Safely parse LLM response with validation and sanitization."""
         try:
             # Validate input
             if not response or not isinstance(response, str):
-                return {"success": False, "error": "Invalid response format", "parsed_data": None}
+                return {
+                    "success": False,
+                    "error": "Invalid response format",
+                    "parsed_data": None,
+                }
 
             # Check response length
             if len(response) > self.max_response_length:
-                logger.warning(f"LLM response too long ({len(response)} chars), truncating")
+                logger.warning(
+                    f"LLM response too long ({len(response)} chars), truncating"
+                )
                 response = response[: self.max_response_length] + "..."
 
             # Sanitize sensitive information
@@ -118,7 +126,9 @@ class SafeLLMResponseParser:
             "has_links": "http" in response.lower(),
         }
 
-    def validate_parsed_data(self, data: Dict[str, Any], expected_fields: list = None) -> Dict[str, Any]:
+    def validate_parsed_data(
+        self, data: Dict[str, Any], expected_fields: list = None
+    ) -> Dict[str, Any]:
         """Validate parsed data against expected fields."""
         if not data:
             return {"valid": False, "error": "No data to validate"}
@@ -141,12 +151,18 @@ def demo_quant_gpt() -> dict:
     try:
         logger.info("🤖 QuantGPT Trading Interface Demonstration")
         logger.info("=" * 60)
-        logger.info("This demo shows how to use natural language to interact with the trading system.")
+        logger.info(
+            "This demo shows how to use natural language to interact with the trading system."
+        )
         logger.info("=" * 60)
 
         # Initialize QuantGPT
         logger.info("\n🔧 Initializing QuantGPT...")
-        quant_gpt = QuantGPT(openai_api_key=os.getenv("OPENAI_API_KEY"), redis_host="localhost", redis_port=6379)
+        quant_gpt = QuantGPT(
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            redis_host="localhost",
+            redis_port=6379,
+        )
 
         logger.info("✅ QuantGPT initialized successfully!")
 
@@ -155,10 +171,22 @@ def demo_quant_gpt() -> dict:
 
         # Demo queries
         demo_queries = [
-            {"query": "Give me the best model for NVDA over 90 days", "description": "Model recommendation query"},
-            {"query": "Should I long TSLA this week?", "description": "Trading signal query"},
-            {"query": "Analyze BTCUSDT market conditions", "description": "Market analysis query"},
-            {"query": "What's the trading signal for AAPL?", "description": "Another trading signal query"},
+            {
+                "query": "Give me the best model for NVDA over 90 days",
+                "description": "Model recommendation query",
+            },
+            {
+                "query": "Should I long TSLA this week?",
+                "description": "Trading signal query",
+            },
+            {
+                "query": "Analyze BTCUSDT market conditions",
+                "description": "Market analysis query",
+            },
+            {
+                "query": "What's the trading signal for AAPL?",
+                "description": "Another trading signal query",
+            },
         ]
 
         logger.info(f"\n📝 Running {len(demo_queries)} demo queries...")
@@ -179,10 +207,14 @@ def demo_quant_gpt() -> dict:
                 processing_time = time.time() - start_time
 
                 # Safely parse and validate the result
-                parsed_result = response_parser.parse_llm_response(str(result), response_type="structured")
+                parsed_result = response_parser.parse_llm_response(
+                    str(result), response_type="structured"
+                )
 
                 if not parsed_result["success"]:
-                    logger.error(f"❌ Failed to parse response: {parsed_result['error']}")
+                    logger.error(
+                        f"❌ Failed to parse response: {parsed_result['error']}"
+                    )
                     continue
 
                 # Display results
@@ -204,10 +236,18 @@ def demo_quant_gpt() -> dict:
                     if action == "model_recommendation":
                         best_model = results.get("best_model")
                         if best_model:
-                            logger.info(f"🏆 Best Model: {best_model['model_type'].upper()}")
-                            logger.info(f"📊 Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}")
-                            logger.info(f"📈 Models Built: {results.get('models_built', 0)}")
-                            logger.info(f"🔍 Models Evaluated: {results.get('models_evaluated', 0)}")
+                            logger.info(
+                                f"🏆 Best Model: {best_model['model_type'].upper()}"
+                            )
+                            logger.info(
+                                f"📊 Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}"
+                            )
+                            logger.info(
+                                f"📈 Models Built: {results.get('models_built', 0)}"
+                            )
+                            logger.info(
+                                f"🔍 Models Evaluated: {results.get('models_evaluated', 0)}"
+                            )
 
                     elif action == "trading_signal":
                         signal = results.get("signal", {})
@@ -219,22 +259,30 @@ def demo_quant_gpt() -> dict:
                             logger.info(f"💭 Reasoning: {signal['reasoning']}")
 
                     elif action == "market_analysis":
-                        logger.info(f"📊 Market Data Available: {'Yes' if results.get('market_data') else 'No'}")
-                        logger.info(f"📈 Plots Generated: {len(results.get('plots', []))}")
+                        logger.info(
+                            f"📊 Market Data Available: {'Yes' if results.get('market_data') else 'No'}"
+                        )
+                        logger.info(
+                            f"📈 Plots Generated: {len(results.get('plots', []))}"
+                        )
                         logger.info(
                             f"🤖 Model Analysis: {'Available' if results.get('model_analysis') else 'Not available'}"
                         )
 
                     # Safely parse and display GPT commentary
                     if commentary:
-                        parsed_commentary = response_parser.parse_llm_response(commentary, "general")
+                        parsed_commentary = response_parser.parse_llm_response(
+                            commentary, "general"
+                        )
                         if parsed_commentary["success"]:
                             safe_commentary = parsed_commentary["parsed_data"]["text"]
                             logger.info(f"\n🤖 GPT Commentary:")
                             logger.info("-" * 30)
                             logger.info(safe_commentary)
                         else:
-                            logger.warning(f"⚠️  Could not parse commentary: {parsed_commentary['error']}")
+                            logger.warning(
+                                f"⚠️  Could not parse commentary: {parsed_commentary['error']}"
+                            )
 
                     logger.info("✅ Query processed successfully!")
 
@@ -258,10 +306,18 @@ def demo_quant_gpt() -> dict:
         # Show available parameters
         logger.info("\n📋 Available Parameters")
         logger.info("-" * 30)
-        logger.info(f"Symbols: {', '.join(quant_gpt.trading_context['available_symbols'])}")
-        logger.info(f"Timeframes: {', '.join(quant_gpt.trading_context['available_timeframes'])}")
-        logger.info(f"Periods: {', '.join(quant_gpt.trading_context['available_periods'])}")
-        logger.info(f"Models: {', '.join(quant_gpt.trading_context['available_models'])}")
+        logger.info(
+            f"Symbols: {', '.join(quant_gpt.trading_context['available_symbols'])}"
+        )
+        logger.info(
+            f"Timeframes: {', '.join(quant_gpt.trading_context['available_timeframes'])}"
+        )
+        logger.info(
+            f"Periods: {', '.join(quant_gpt.trading_context['available_periods'])}"
+        )
+        logger.info(
+            f"Models: {', '.join(quant_gpt.trading_context['available_models'])}"
+        )
 
         # Clean up
         logger.info("\n🧹 Cleaning up...")
@@ -273,9 +329,13 @@ def demo_quant_gpt() -> dict:
         logger.info("=" * 60)
         logger.info("\n💡 Tips for using QuantGPT:")
         logger.info("- Be specific about symbols, timeframes, and periods")
-        logger.info("- Ask for model recommendations, trading signals, or market analysis")
+        logger.info(
+            "- Ask for model recommendations, trading signals, or market analysis"
+        )
         logger.info("- Use natural language - no need to learn specific commands")
-        logger.info("- The system will automatically route your query to the right services")
+        logger.info(
+            "- The system will automatically route your query to the right services"
+        )
         logger.info("\n🚀 Ready to start trading with natural language!")
         return {
             "success": True,
@@ -283,7 +343,11 @@ def demo_quant_gpt() -> dict:
             "timestamp": datetime.datetime.now().isoformat(),
         }
     except Exception as e:
-        return {"success": False, "error": str(e), "timestamp": datetime.datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.datetime.now().isoformat(),
+        }
 
 
 def main() -> dict:
@@ -298,11 +362,19 @@ def main() -> dict:
         }
     except KeyboardInterrupt:
         logger.info("\n\n⏹️  Demo interrupted by user")
-        return {"success": False, "error": "Demo interrupted by user", "timestamp": datetime.datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": "Demo interrupted by user",
+            "timestamp": datetime.datetime.now().isoformat(),
+        }
     except Exception as e:
         logger.error(f"\n❌ Demo failed: {e}")
         logger.error("💡 Make sure Redis is running and all services are available")
-        return {"success": False, "error": str(e), "timestamp": datetime.datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.datetime.now().isoformat(),
+        }
 
 
 # Comment out test code to prevent accidental execution

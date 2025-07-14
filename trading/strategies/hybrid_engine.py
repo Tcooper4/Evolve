@@ -94,13 +94,22 @@ class HybridEngine:
         # Confidence thresholds
         self.confidence_thresholds = self.config.get(
             "confidence_thresholds",
-            {"minimum_confidence": 0.6, "strong_signal_threshold": 0.8, "consensus_threshold": 0.7},
+            {
+                "minimum_confidence": 0.6,
+                "strong_signal_threshold": 0.8,
+                "consensus_threshold": 0.7,
+            },
         )
 
         # Risk management
         self.risk_config = self.config.get(
             "risk_config",
-            {"max_position_size": 0.2, "stop_loss_pct": 0.05, "take_profit_pct": 0.15, "max_drawdown": 0.1},
+            {
+                "max_position_size": 0.2,
+                "stop_loss_pct": 0.05,
+                "take_profit_pct": 0.15,
+                "max_drawdown": 0.1,
+            },
         )
 
         # Strategy instances
@@ -165,7 +174,9 @@ class HybridEngine:
             logger.error(f"Error generating hybrid signals: {e}")
             return self._create_default_signal()
 
-    def _apply_filters(self, signals: List[StrategySignal], data: pd.DataFrame) -> List[StrategySignal]:
+    def _apply_filters(
+        self, signals: List[StrategySignal], data: pd.DataFrame
+    ) -> List[StrategySignal]:
         """Apply conditional filters to strategy signals.
 
         Args:
@@ -312,7 +323,9 @@ class HybridEngine:
         # Could include market regime, sector correlation, etc.
         return True
 
-    def _combine_signals(self, signals: List[StrategySignal], data: pd.DataFrame) -> HybridSignal:
+    def _combine_signals(
+        self, signals: List[StrategySignal], data: pd.DataFrame
+    ) -> HybridSignal:
         """Combine multiple strategy signals into a hybrid signal.
 
         Args:
@@ -350,13 +363,19 @@ class HybridEngine:
             signal_type = SignalType.HOLD
             confidence = 0.0
         elif buy_weight > sell_weight:
-            if buy_weight / total_weight > self.confidence_thresholds["strong_signal_threshold"]:
+            if (
+                buy_weight / total_weight
+                > self.confidence_thresholds["strong_signal_threshold"]
+            ):
                 signal_type = SignalType.STRONG_BUY
             else:
                 signal_type = SignalType.BUY
             confidence = buy_weight / total_weight
         elif sell_weight > buy_weight:
-            if sell_weight / total_weight > self.confidence_thresholds["strong_signal_threshold"]:
+            if (
+                sell_weight / total_weight
+                > self.confidence_thresholds["strong_signal_threshold"]
+            ):
                 signal_type = SignalType.STRONG_SELL
             else:
                 signal_type = SignalType.SELL
@@ -416,7 +435,9 @@ class HybridEngine:
 
         return 0.0
 
-    def _assess_risk_level(self, signals: List[StrategySignal], data: pd.DataFrame) -> str:
+    def _assess_risk_level(
+        self, signals: List[StrategySignal], data: pd.DataFrame
+    ) -> str:
         """Assess risk level based on signals and market data.
 
         Args:
@@ -457,7 +478,9 @@ class HybridEngine:
         else:
             return "LOW"
 
-    def _calculate_strength(self, signals: List[StrategySignal], confidence: float) -> float:
+    def _calculate_strength(
+        self, signals: List[StrategySignal], confidence: float
+    ) -> float:
         """Calculate signal strength.
 
         Args:
@@ -508,7 +531,9 @@ class HybridEngine:
                 if len(volume) >= 10:
                     avg_volume = np.mean(volume[-10:])
                     current_volume = volume[-1]
-                    conditions["volume"] = "high" if current_volume > avg_volume else "low"
+                    conditions["volume"] = (
+                        "high" if current_volume > avg_volume else "low"
+                    )
 
             return conditions
 
@@ -560,12 +585,22 @@ class HybridEngine:
         metrics = {
             "total_signals": len(self.signal_history),
             "buy_signals": len(
-                [s for s in self.signal_history if s.signal_type in [SignalType.BUY, SignalType.STRONG_BUY]]
+                [
+                    s
+                    for s in self.signal_history
+                    if s.signal_type in [SignalType.BUY, SignalType.STRONG_BUY]
+                ]
             ),
             "sell_signals": len(
-                [s for s in self.signal_history if s.signal_type in [SignalType.SELL, SignalType.STRONG_SELL]]
+                [
+                    s
+                    for s in self.signal_history
+                    if s.signal_type in [SignalType.SELL, SignalType.STRONG_SELL]
+                ]
             ),
-            "hold_signals": len([s for s in self.signal_history if s.signal_type == SignalType.HOLD]),
+            "hold_signals": len(
+                [s for s in self.signal_history if s.signal_type == SignalType.HOLD]
+            ),
             "avg_confidence": np.mean([s.confidence for s in self.signal_history]),
             "avg_consensus": np.mean([s.consensus_score for s in self.signal_history]),
         }

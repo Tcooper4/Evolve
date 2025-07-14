@@ -77,7 +77,12 @@ class VoiceInput:
 class SpeechRecognizer:
     """Handles speech recognition and transcription."""
 
-    def __init__(self, language: str = "en-US", use_whisper: bool = True, whisper_api_key: Optional[str] = None):
+    def __init__(
+        self,
+        language: str = "en-US",
+        use_whisper: bool = True,
+        whisper_api_key: Optional[str] = None,
+    ):
         """Initialize speech recognizer.
 
         Args:
@@ -101,7 +106,9 @@ class SpeechRecognizer:
 
         logger.info(f"Initialized Speech Recognizer (Whisper: {self.use_whisper})")
 
-    def listen_for_speech(self, timeout: float = 5.0, phrase_time_limit: float = 10.0) -> Optional[VoiceInput]:
+    def listen_for_speech(
+        self, timeout: float = 5.0, phrase_time_limit: float = 10.0
+    ) -> Optional[VoiceInput]:
         """Listen for speech input.
 
         Args:
@@ -119,7 +126,9 @@ class SpeechRecognizer:
                 self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
 
                 # Listen for audio
-                audio = self.recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+                audio = self.recognizer.listen(
+                    source, timeout=timeout, phrase_time_limit=phrase_time_limit
+                )
 
                 # Create voice input
                 voice_input = VoiceInput(
@@ -172,7 +181,9 @@ class SpeechRecognizer:
 
             # Transcribe with Whisper
             with open(temp_file, "rb") as f:
-                transcript = openai.Audio.transcribe("whisper-1", f, language=self.language)
+                transcript = openai.Audio.transcribe(
+                    "whisper-1", f, language=self.language
+                )
 
             # Clean up
             temp_file.unlink()
@@ -187,7 +198,9 @@ class SpeechRecognizer:
         """Transcribe using Sphinx (offline)."""
         try:
             # Convert audio data to AudioData object
-            audio = sr.AudioData(voice_input.audio_data, voice_input.sample_rate, 2)  # Sample width
+            audio = sr.AudioData(
+                voice_input.audio_data, voice_input.sample_rate, 2
+            )  # Sample width
 
             # Transcribe
             text = self.recognizer.recognize_sphinx(audio, language=self.language)
@@ -453,7 +466,12 @@ class CommandParser:
 class ChatboxAgent:
     """Main chatbox agent for voice and text interactions."""
 
-    def __init__(self, enable_voice: bool = True, enable_tts: bool = True, whisper_api_key: Optional[str] = None):
+    def __init__(
+        self,
+        enable_voice: bool = True,
+        enable_tts: bool = True,
+        whisper_api_key: Optional[str] = None,
+    ):
         """Initialize chatbox agent.
 
         Args:
@@ -465,7 +483,9 @@ class ChatboxAgent:
         self.enable_tts = enable_tts
 
         # Initialize components
-        self.speech_recognizer = SpeechRecognizer(whisper_api_key=whisper_api_key) if enable_voice else None
+        self.speech_recognizer = (
+            SpeechRecognizer(whisper_api_key=whisper_api_key) if enable_voice else None
+        )
         self.tts = TextToSpeech() if enable_tts else None
         self.command_parser = CommandParser()
 
@@ -496,7 +516,9 @@ class ChatboxAgent:
             "invalid_symbol": "I'm sorry, but {symbol} is not a valid trading symbol.",
         }
 
-    def add_message(self, content: str, sender: str = "user", message_type: str = "text") -> str:
+    def add_message(
+        self, content: str, sender: str = "user", message_type: str = "text"
+    ) -> str:
         """Add a message to the chat.
 
         Args:
@@ -510,7 +532,11 @@ class ChatboxAgent:
         message_id = f"msg_{len(self.messages)}_{datetime.now().strftime('%H%M%S')}"
 
         message = ChatMessage(
-            id=message_id, content=content, sender=sender, timestamp=datetime.now(), message_type=message_type
+            id=message_id,
+            content=content,
+            sender=sender,
+            timestamp=datetime.now(),
+            message_type=message_type,
         )
 
         self.messages.append(message)
@@ -608,7 +634,11 @@ class ChatboxAgent:
         elif command.action == "explain":
             return self._handle_explanation_command(command)
         else:
-            return "I understand you want to " + command.action + ". How can I help you with that?"
+            return (
+                "I understand you want to "
+                + command.action
+                + ". How can I help you with that?"
+            )
 
     def _handle_trade_command(self, command: TradingCommand) -> str:
         """Handle trade commands."""
@@ -620,7 +650,9 @@ class ChatboxAgent:
 
         # Validate symbol
         if not self._is_valid_symbol(command.symbol):
-            return self.response_templates["invalid_symbol"].format(symbol=command.symbol)
+            return self.response_templates["invalid_symbol"].format(
+                symbol=command.symbol
+            )
 
         # Check if trading interface is available
         if not self.trading_interface:
@@ -634,7 +666,9 @@ class ChatboxAgent:
             order_status = self.trading_interface.place_order(order_request)
 
             if order_status.status == "filled":
-                return self.response_templates["success"].format(action=command.action, symbol=command.symbol)
+                return self.response_templates["success"].format(
+                    action=command.action, symbol=command.symbol
+                )
             elif order_status.status == "rejected":
                 return "The order was rejected. Please check your account balance and try again."
             else:
@@ -694,7 +728,17 @@ class ChatboxAgent:
     def _is_valid_symbol(self, symbol: str) -> bool:
         """Check if symbol is valid."""
         # Basic validation - in practice, check against available symbols
-        valid_symbols = ["AAPL", "GOOGL", "MSFT", "TSLA", "AMZN", "BTC", "ETH", "SPY", "QQQ"]
+        valid_symbols = [
+            "AAPL",
+            "GOOGL",
+            "MSFT",
+            "TSLA",
+            "AMZN",
+            "BTC",
+            "ETH",
+            "SPY",
+            "QQQ",
+        ]
         return symbol.upper() in valid_symbols
 
     def _create_order_request(self, command: TradingCommand):
@@ -737,7 +781,9 @@ class ChatboxAgent:
 
 
 def create_chatbox_agent(
-    enable_voice: bool = True, enable_tts: bool = True, whisper_api_key: Optional[str] = None
+    enable_voice: bool = True,
+    enable_tts: bool = True,
+    whisper_api_key: Optional[str] = None,
 ) -> ChatboxAgent:
     """Create chatbox agent.
 
@@ -750,7 +796,11 @@ def create_chatbox_agent(
         Chatbox agent
     """
     try:
-        agent = ChatboxAgent(enable_voice=enable_voice, enable_tts=enable_tts, whisper_api_key=whisper_api_key)
+        agent = ChatboxAgent(
+            enable_voice=enable_voice,
+            enable_tts=enable_tts,
+            whisper_api_key=whisper_api_key,
+        )
         return agent
     except Exception as e:
         logger.error(f"Error creating chatbox agent: {e}")

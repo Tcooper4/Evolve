@@ -141,9 +141,13 @@ class AgentManager:
         self.agents: Dict[str, AgentConfig] = {}
         self.metrics: Dict[str, AgentMetrics] = {}
         self.tasks: Dict[str, AgentTask] = {}
-        self.callbacks: Dict[EventType, List[Callable]] = {event_type: [] for event_type in EventType}
+        self.callbacks: Dict[EventType, List[Callable]] = {
+            event_type: [] for event_type in EventType
+        }
         self.event_history: List[EventData] = []
-        self.agent_status_log: Dict[str, Dict[str, Any]] = {}  # Track agent status with timestamps
+        self.agent_status_log: Dict[
+            str, Dict[str, Any]
+        ] = {}  # Track agent status with timestamps
         self._load_agents()
 
     def register_agent(self, agent_config: AgentConfig) -> bool:
@@ -157,9 +161,13 @@ class AgentManager:
         """
         try:
             self.agents[agent_config.agent_id] = agent_config
-            self.metrics[agent_config.agent_id] = AgentMetrics(agent_id=agent_config.agent_id)
+            self.metrics[agent_config.agent_id] = AgentMetrics(
+                agent_id=agent_config.agent_id
+            )
             self._save_agents()
-            logger.info(f"Registered agent: {agent_config.name} ({agent_config.agent_id})")
+            logger.info(
+                f"Registered agent: {agent_config.name} ({agent_config.agent_id})"
+            )
             return True
         except Exception as e:
             logger.error(f"Error registering agent {agent_config.agent_id}: {e}")
@@ -180,7 +188,11 @@ class AgentManager:
                 if agent_id in self.metrics:
                     del self.metrics[agent_id]
                 # Remove associated tasks
-                self.tasks = {task_id: task for task_id, task in self.tasks.items() if task.agent_id != agent_id}
+                self.tasks = {
+                    task_id: task
+                    for task_id, task in self.tasks.items()
+                    if task.agent_id != agent_id
+                }
                 self._save_agents()
                 logger.info(f"Unregistered agent: {agent_id}")
                 return True
@@ -213,7 +225,9 @@ class AgentManager:
                 }
 
                 # Log status transition
-                logger.info(f"Agent {agent_id} status transition: {old_status.value} → {status.value}")
+                logger.info(
+                    f"Agent {agent_id} status transition: {old_status.value} → {status.value}"
+                )
 
                 self._save_agents()
                 return True
@@ -233,7 +247,9 @@ class AgentManager:
         """
         return self.agents.get(agent_id)
 
-    def get_active_agents(self, agent_type: Optional[AgentType] = None) -> List[AgentConfig]:
+    def get_active_agents(
+        self, agent_type: Optional[AgentType] = None
+    ) -> List[AgentConfig]:
         """Get all active agents, optionally filtered by type.
 
         Args:
@@ -243,11 +259,15 @@ class AgentManager:
             List of active agent configurations
         """
         active_agents = [
-            agent for agent in self.agents.values() if agent.status == AgentStatus.ACTIVE and agent.enabled
+            agent
+            for agent in self.agents.values()
+            if agent.status == AgentStatus.ACTIVE and agent.enabled
         ]
 
         if agent_type:
-            active_agents = [agent for agent in active_agents if agent.agent_type == agent_type]
+            active_agents = [
+                agent for agent in active_agents if agent.agent_type == agent_type
+            ]
 
         return active_agents
 
@@ -263,7 +283,9 @@ class AgentManager:
         for agent in active_agents:
             # Count tasks for this agent
             task_count = sum(
-                1 for task in self.tasks.values() if task.agent_id == agent.agent_id and task.status != "completed"
+                1
+                for task in self.tasks.values()
+                if task.agent_id == agent.agent_id and task.status != "completed"
             )
             result.append((agent.agent_id, agent.name, task_count))
 
@@ -278,20 +300,30 @@ class AgentManager:
         Returns:
             List of UI agent information objects
         """
-        agents_to_process = [self.agents[agent_id]] if agent_id and agent_id in self.agents else self.agents.values()
+        agents_to_process = (
+            [self.agents[agent_id]]
+            if agent_id and agent_id in self.agents
+            else self.agents.values()
+        )
         result = []
 
         for agent in agents_to_process:
             # Count tasks for this agent
             task_count = sum(
-                1 for task in self.tasks.values() if task.agent_id == agent.agent_id and task.status != "completed"
+                1
+                for task in self.tasks.values()
+                if task.agent_id == agent.agent_id and task.status != "completed"
             )
 
             # Get metrics
-            metrics = self.metrics.get(agent.agent_id, AgentMetrics(agent_id=agent.agent_id))
+            metrics = self.metrics.get(
+                agent.agent_id, AgentMetrics(agent_id=agent.agent_id)
+            )
 
             # Calculate uptime
-            created_time = datetime.fromisoformat(agent.created_at.replace("Z", "+00:00"))
+            created_time = datetime.fromisoformat(
+                agent.created_at.replace("Z", "+00:00")
+            )
             uptime = datetime.now(created_time.tzinfo) - created_time
             uptime_str = str(uptime).split(".")[0]  # Remove microseconds
 
@@ -348,7 +380,9 @@ class AgentManager:
             task_summary["tasks_by_type"][task.task_type] += 1
 
         # Get recent tasks (last 10)
-        recent_tasks = sorted(self.tasks.values(), key=lambda x: x.created_at, reverse=True)[:10]
+        recent_tasks = sorted(
+            self.tasks.values(), key=lambda x: x.created_at, reverse=True
+        )[:10]
         task_summary["recent_tasks"] = [
             {
                 "task_id": task.task_id,
@@ -363,7 +397,11 @@ class AgentManager:
         return task_summary
 
     def add_task(
-        self, agent_id: str, task_type: str, priority: int = 1, task_data: Optional[Dict[str, Any]] = None
+        self,
+        agent_id: str,
+        task_type: str,
+        priority: int = 1,
+        task_data: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Add a new task for an agent.
 
@@ -378,14 +416,20 @@ class AgentManager:
         """
         task_id = f"{agent_id}_{task_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-        task = AgentTask(task_id=task_id, agent_id=agent_id, task_type=task_type, priority=priority)
+        task = AgentTask(
+            task_id=task_id, agent_id=agent_id, task_type=task_type, priority=priority
+        )
 
         self.tasks[task_id] = task
         logger.info(f"Added task {task_id} for agent {agent_id}")
         return task_id
 
     def update_task_status(
-        self, task_id: str, status: str, result: Optional[Dict[str, Any]] = None, error: Optional[str] = None
+        self,
+        task_id: str,
+        status: str,
+        result: Optional[Dict[str, Any]] = None,
+        error: Optional[str] = None,
     ) -> bool:
         """Update task status.
 
@@ -417,7 +461,9 @@ class AgentManager:
 
         return False
 
-    def get_agent_tasks(self, agent_id: str, status: Optional[str] = None) -> List[AgentTask]:
+    def get_agent_tasks(
+        self, agent_id: str, status: Optional[str] = None
+    ) -> List[AgentTask]:
         """Get tasks for a specific agent.
 
         Args:
@@ -450,7 +496,8 @@ class AgentManager:
             if (
                 task.status in ["completed", "failed"]
                 and task.completed_at
-                and datetime.fromisoformat(task.completed_at.replace("Z", "+00:00")) < cutoff_date
+                and datetime.fromisoformat(task.completed_at.replace("Z", "+00:00"))
+                < cutoff_date
             ):
                 tasks_to_remove.append(task_id)
 
@@ -476,11 +523,17 @@ class AgentManager:
                             enabled=agent_data.get("enabled", True),
                             priority=agent_data.get("priority", 1),
                             config=agent_data.get("config", {}),
-                            created_at=agent_data.get("created_at", datetime.now().isoformat()),
-                            updated_at=agent_data.get("updated_at", datetime.now().isoformat()),
+                            created_at=agent_data.get(
+                                "created_at", datetime.now().isoformat()
+                            ),
+                            updated_at=agent_data.get(
+                                "updated_at", datetime.now().isoformat()
+                            ),
                         )
                         self.agents[agent_config.agent_id] = agent_config
-                        self.metrics[agent_config.agent_id] = AgentMetrics(agent_id=agent_config.agent_id)
+                        self.metrics[agent_config.agent_id] = AgentMetrics(
+                            agent_id=agent_config.agent_id
+                        )
         except Exception as e:
             logger.error(f"Error loading agents: {e}")
 
@@ -567,7 +620,9 @@ class EventHandlers:
 
             # Action 3: Switch strategies if needed
             if performance_data["sharpe_ratio"] < 0.3:
-                logger.info(f"Very low Sharpe ratio - switching to conservative strategy")
+                logger.info(
+                    f"Very low Sharpe ratio - switching to conservative strategy"
+                )
                 try:
                     from trading.strategies.gatekeeper import StrategyGatekeeper
 
@@ -577,10 +632,14 @@ class EventHandlers:
                 except Exception as e:
                     logger.error(f"Failed to switch strategy: {e}")
             if performance_data["sharpe_ratio"] < 0.5:
-                logger.warning(f"Low Sharpe ratio detected for {agent_name}: {performance_data['sharpe_ratio']}")
+                logger.warning(
+                    f"Low Sharpe ratio detected for {agent_name}: {performance_data['sharpe_ratio']}"
+                )
                 return "low_performance"
             elif performance_data["max_drawdown"] > 0.2:
-                logger.warning(f"High drawdown detected for {agent_name}: {performance_data['max_drawdown']}")
+                logger.warning(
+                    f"High drawdown detected for {agent_name}: {performance_data['max_drawdown']}"
+                )
                 return "high_risk"
             else:
                 return "normal"
@@ -607,7 +666,9 @@ class EventHandlers:
             logger.warning(f"Metric {metric} breached threshold: {value} > {threshold}")
 
             # Implement threshold breach responses
-            logger.info(f"Implementing threshold breach responses for agent {event_data.agent_id}")
+            logger.info(
+                f"Implementing threshold breach responses for agent {event_data.agent_id}"
+            )
 
             # Determine breach type based on metric
             if metric in ["sharpe_ratio", "return_rate", "win_rate"]:
@@ -618,7 +679,9 @@ class EventHandlers:
                 breach_type = "unknown"
 
             if breach_type == "performance":
-                logger.warning(f"Performance threshold breached for {event_data.agent_id}")
+                logger.warning(
+                    f"Performance threshold breached for {event_data.agent_id}"
+                )
                 # Action: Reduce position sizes and switch to conservative mode
                 try:
                     from trading.strategies.gatekeeper import StrategyGatekeeper
@@ -674,7 +737,9 @@ class EventHandlers:
                 agent_manager = get_agent_manager()
                 agent = agent_manager.get_agent(event_data.agent_id)
                 if agent:
-                    agent_manager.update_agent_status(event_data.agent_id, AgentStatus.INACTIVE)
+                    agent_manager.update_agent_status(
+                        event_data.agent_id, AgentStatus.INACTIVE
+                    )
                     logger.info(f"Agent {event_data.agent_id} stopped for recovery")
                     # In a real implementation, this would trigger a restart
             except Exception as e:
@@ -685,7 +750,9 @@ class EventHandlers:
                 backup_agent_id = f"{event_data.agent_id}_backup"
                 backup_agent = agent_manager.get_agent(backup_agent_id)
                 if backup_agent:
-                    agent_manager.update_agent_status(backup_agent_id, AgentStatus.ACTIVE)
+                    agent_manager.update_agent_status(
+                        backup_agent_id, AgentStatus.ACTIVE
+                    )
                     logger.info(f"Switched to backup agent {backup_agent_id}")
             except Exception as e:
                 logger.error(f"Failed to switch to backup agent: {e}")
@@ -837,13 +904,6 @@ def handle_underperformance(status_report: Dict[str, Any]) -> None:
 
 # --- Initialize Default Event Handlers ---
 
-
-def _initialize_default_handlers():
-    """Initialize default event handlers."""
-    _agent_manager.register_callback(EventType.UNDERPERFORMANCE, EventHandlers.handle_underperformance)
-    _agent_manager.register_callback(EventType.THRESHOLD_BREACH, EventHandlers.handle_threshold_breach)
-    _agent_manager.register_callback(EventType.SYSTEM_ERROR, EventHandlers.handle_system_error)
-
-
-# Initialize handlers when module is imported
-_initialize_default_handlers()
+# Note: Legacy register_callback system removed. 
+# Use modern event handling patterns instead.
+# If agent lifecycle events need tracking, implement proper hooks or logging systems.

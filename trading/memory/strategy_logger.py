@@ -29,13 +29,19 @@ class StrategyLogger:
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
     def log_decision(
-        self, strategy_name: str, decision: str, confidence: float, metadata: Optional[Dict[str, Any]] = None
+        self,
+        strategy_name: str,
+        decision: str,
+        confidence: float,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Log a strategy decision.
 
@@ -61,7 +67,11 @@ class StrategyLogger:
         self.logger.info(f"Strategy Decision: {json.dumps(log_data)}")
 
     def save_strategy_regime_mapping(
-        self, strategy_name: str, regime: str, performance_metrics: Dict[str, float], market_conditions: Dict[str, Any]
+        self,
+        strategy_name: str,
+        regime: str,
+        performance_metrics: Dict[str, float],
+        market_conditions: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Save strategy performance mapping for a specific market regime.
 
@@ -106,14 +116,18 @@ class StrategyLogger:
             # Save mappings using safe JSON saving
             result = safe_save_historical_data(mappings, self.regime_mapping_file)
             if not result["success"]:
-                self.logger.error(f"Failed to save strategy-regime mappings: {result['error']}")
+                self.logger.error(
+                    f"Failed to save strategy-regime mappings: {result['error']}"
+                )
                 return {
                     "success": False,
                     "error": f"Failed to save mappings: {result['error']}",
                     "timestamp": datetime.now().isoformat(),
                 }
 
-            self.logger.info(f"Strategy-regime mapping saved: {strategy_name} -> {regime}")
+            self.logger.info(
+                f"Strategy-regime mapping saved: {strategy_name} -> {regime}"
+            )
 
             return {
                 "success": True,
@@ -125,7 +139,11 @@ class StrategyLogger:
 
         except Exception as e:
             self.logger.error(f"Error saving strategy-regime mapping: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def load_strategy_regime_mappings(self) -> Dict[str, Any]:
         """Load strategy-regime mappings from file.
@@ -144,7 +162,9 @@ class StrategyLogger:
             self.logger.error(f"Error loading strategy-regime mappings: {e}")
             return {}
 
-    def get_best_strategy_for_regime(self, regime: str, metric: str = "sharpe_ratio") -> Dict[str, Any]:
+    def get_best_strategy_for_regime(
+        self, regime: str, metric: str = "sharpe_ratio"
+    ) -> Dict[str, Any]:
         """Get the best performing strategy for a specific market regime.
 
         Args:
@@ -168,10 +188,14 @@ class StrategyLogger:
 
                     for mapping in regime_mappings[regime]:
                         if metric in mapping["performance_metrics"]:
-                            regime_performance.append(mapping["performance_metrics"][metric])
+                            regime_performance.append(
+                                mapping["performance_metrics"][metric]
+                            )
 
                     if regime_performance:
-                        avg_performance = sum(regime_performance) / len(regime_performance)
+                        avg_performance = sum(regime_performance) / len(
+                            regime_performance
+                        )
 
                         if avg_performance > best_performance:
                             best_performance = avg_performance
@@ -198,9 +222,15 @@ class StrategyLogger:
 
         except Exception as e:
             self.logger.error(f"Error getting best strategy for regime: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def get_strategy_regime_performance(self, strategy_name: str, regime: str = None) -> Dict[str, Any]:
+    def get_strategy_regime_performance(
+        self, strategy_name: str, regime: str = None
+    ) -> Dict[str, Any]:
         """Get performance summary for a strategy across different regimes.
 
         Args:
@@ -235,7 +265,9 @@ class StrategyLogger:
                     }
 
                 regime_data = strategy_mappings[regime]
-                return self._analyze_regime_performance(strategy_name, regime, regime_data)
+                return self._analyze_regime_performance(
+                    strategy_name, regime, regime_data
+                )
             else:
                 # Analyze all regimes
                 regime_summaries = {}
@@ -249,17 +281,31 @@ class StrategyLogger:
                 }
 
                 for regime_name, regime_data in strategy_mappings.items():
-                    regime_summary = self._analyze_regime_performance(strategy_name, regime_name, regime_data)
+                    regime_summary = self._analyze_regime_performance(
+                        strategy_name, regime_name, regime_data
+                    )
                     regime_summaries[regime_name] = regime_summary
 
                     # Aggregate overall performance
                     if regime_summary["success"]:
-                        overall_performance["total_mappings"] += regime_summary["mapping_count"]
-                        overall_performance["avg_confidence"] += regime_summary["avg_confidence"]
-                        overall_performance["avg_win_rate"] += regime_summary["avg_win_rate"]
-                        overall_performance["avg_sharpe_ratio"] += regime_summary["avg_sharpe_ratio"]
-                        overall_performance["avg_total_return"] += regime_summary["avg_total_return"]
-                        overall_performance["avg_max_drawdown"] += regime_summary["avg_max_drawdown"]
+                        overall_performance["total_mappings"] += regime_summary[
+                            "mapping_count"
+                        ]
+                        overall_performance["avg_confidence"] += regime_summary[
+                            "avg_confidence"
+                        ]
+                        overall_performance["avg_win_rate"] += regime_summary[
+                            "avg_win_rate"
+                        ]
+                        overall_performance["avg_sharpe_ratio"] += regime_summary[
+                            "avg_sharpe_ratio"
+                        ]
+                        overall_performance["avg_total_return"] += regime_summary[
+                            "avg_total_return"
+                        ]
+                        overall_performance["avg_max_drawdown"] += regime_summary[
+                            "avg_max_drawdown"
+                        ]
 
                 # Calculate averages
                 regime_count = len(regime_summaries)
@@ -284,7 +330,11 @@ class StrategyLogger:
 
         except Exception as e:
             self.logger.error(f"Error getting strategy regime performance: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _analyze_regime_performance(
         self, strategy_name: str, regime: str, regime_data: List[Dict[str, Any]]
@@ -332,7 +382,9 @@ class StrategyLogger:
                 avg_total_return = total_return / valid_records
                 avg_max_drawdown = total_max_drawdown / valid_records
             else:
-                avg_confidence = avg_win_rate = avg_sharpe_ratio = avg_total_return = avg_max_drawdown = 0.0
+                avg_confidence = (
+                    avg_win_rate
+                ) = avg_sharpe_ratio = avg_total_return = avg_max_drawdown = 0.0
 
             # Get most recent mapping
             latest_mapping = regime_data[-1] if regime_data else None
@@ -353,7 +405,11 @@ class StrategyLogger:
 
         except Exception as e:
             self.logger.error(f"Error analyzing regime performance: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_recent_decisions(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent strategy decisions.
@@ -383,7 +439,10 @@ class StrategyLogger:
         return decisions[::-1]  # Reverse to get most recent first
 
     def get_strategy_performance(
-        self, strategy_name: str, start_date: Optional[str] = None, end_date: Optional[str] = None
+        self,
+        strategy_name: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Get performance metrics for a specific strategy.
 
@@ -398,7 +457,9 @@ class StrategyLogger:
         decisions = self.get_recent_decisions(limit=1000)
 
         # Filter by strategy name
-        strategy_decisions = [d for d in decisions if d.get("strategy") == strategy_name]
+        strategy_decisions = [
+            d for d in decisions if d.get("strategy") == strategy_name
+        ]
 
         # Filter by date range if provided
         if start_date:
@@ -406,13 +467,17 @@ class StrategyLogger:
             strategy_decisions = [
                 d
                 for d in strategy_decisions
-                if datetime.fromisoformat(d["timestamp"].replace("Z", "+00:00")) >= start_dt
+                if datetime.fromisoformat(d["timestamp"].replace("Z", "+00:00"))
+                >= start_dt
             ]
 
         if end_date:
             end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
             strategy_decisions = [
-                d for d in strategy_decisions if datetime.fromisoformat(d["timestamp"].replace("Z", "+00:00")) <= end_dt
+                d
+                for d in strategy_decisions
+                if datetime.fromisoformat(d["timestamp"].replace("Z", "+00:00"))
+                <= end_dt
             ]
 
         # Calculate metrics
@@ -427,7 +492,9 @@ class StrategyLogger:
                 "period": {"start": start_date, "end": end_date},
             }
 
-        avg_confidence = sum(d.get("confidence", 0) for d in strategy_decisions) / total_decisions
+        avg_confidence = (
+            sum(d.get("confidence", 0) for d in strategy_decisions) / total_decisions
+        )
 
         # Simple win rate calculation (assuming 'buy' decisions are wins)
         buy_decisions = [d for d in strategy_decisions if d.get("decision") == "buy"]
@@ -448,7 +515,9 @@ class StrategyLogger:
             self.log_file.unlink()
         self.logger.info("Strategy logs cleared")
 
-    def analyze_strategy(self, strategy_name: str, analysis_type: str = "performance") -> Dict[str, Any]:
+    def analyze_strategy(
+        self, strategy_name: str, analysis_type: str = "performance"
+    ) -> Dict[str, Any]:
         """Analyze strategy performance and behavior.
 
         Args:
@@ -460,7 +529,9 @@ class StrategyLogger:
         """
         try:
             decisions = self.get_recent_decisions(limit=1000)
-            strategy_decisions = [d for d in decisions if d.get("strategy") == strategy_name]
+            strategy_decisions = [
+                d for d in decisions if d.get("strategy") == strategy_name
+            ]
 
             if not strategy_decisions:
                 return {
@@ -486,7 +557,12 @@ class StrategyLogger:
 
         except Exception as e:
             self.logger.error(f"Error analyzing strategy {strategy_name}: {e}")
-            return {"strategy": strategy_name, "analysis_type": analysis_type, "status": "error", "message": str(e)}
+            return {
+                "strategy": strategy_name,
+                "analysis_type": analysis_type,
+                "status": "error",
+                "message": str(e),
+            }
 
     def _analyze_performance(self, decisions: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze strategy performance metrics."""
@@ -495,7 +571,9 @@ class StrategyLogger:
         sell_decisions = [d for d in decisions if d.get("decision") == "sell"]
         hold_decisions = [d for d in decisions if d.get("decision") == "hold"]
 
-        avg_confidence = sum(d.get("confidence", 0) for d in decisions) / total_decisions
+        avg_confidence = (
+            sum(d.get("confidence", 0) for d in decisions) / total_decisions
+        )
 
         # Calculate decision distribution
         decision_distribution = {
@@ -506,8 +584,12 @@ class StrategyLogger:
 
         # Calculate confidence trends
         recent_decisions = decisions[-10:] if len(decisions) >= 10 else decisions
-        recent_confidence = sum(d.get("confidence", 0) for d in recent_decisions) / len(recent_decisions)
-        confidence_trend = "improving" if recent_confidence > avg_confidence else "declining"
+        recent_confidence = sum(d.get("confidence", 0) for d in recent_decisions) / len(
+            recent_decisions
+        )
+        confidence_trend = (
+            "improving" if recent_confidence > avg_confidence else "declining"
+        )
 
         return {
             "analysis_type": "performance",
@@ -532,20 +614,34 @@ class StrategyLogger:
             }
 
         # Analyze decision frequency
-        timestamps = [datetime.fromisoformat(d["timestamp"].replace("Z", "+00:00")) for d in decisions]
-        time_diffs = [(timestamps[i] - timestamps[i - 1]).total_seconds() / 3600 for i in range(1, len(timestamps))]
+        timestamps = [
+            datetime.fromisoformat(d["timestamp"].replace("Z", "+00:00"))
+            for d in decisions
+        ]
+        time_diffs = [
+            (timestamps[i] - timestamps[i - 1]).total_seconds() / 3600
+            for i in range(1, len(timestamps))
+        ]
         avg_decision_interval = sum(time_diffs) / len(time_diffs)
 
         # Analyze confidence patterns
         confidences = [d.get("confidence", 0) for d in decisions]
-        confidence_volatility = sum(abs(confidences[i] - confidences[i - 1]) for i in range(1, len(confidences))) / len(
-            confidences
-        )
+        confidence_volatility = sum(
+            abs(confidences[i] - confidences[i - 1]) for i in range(1, len(confidences))
+        ) / len(confidences)
 
         # Analyze decision consistency
         decisions_list = [d.get("decision") for d in decisions]
-        decision_changes = sum(1 for i in range(1, len(decisions_list)) if decisions_list[i] != decisions_list[i - 1])
-        consistency_ratio = 1 - (decision_changes / (len(decisions_list) - 1)) if len(decisions_list) > 1 else 1.0
+        decision_changes = sum(
+            1
+            for i in range(1, len(decisions_list))
+            if decisions_list[i] != decisions_list[i - 1]
+        )
+        consistency_ratio = (
+            1 - (decision_changes / (len(decisions_list) - 1))
+            if len(decisions_list) > 1
+            else 1.0
+        )
 
         return {
             "analysis_type": "behavior",
@@ -563,7 +659,9 @@ class StrategyLogger:
 
         # Calculate risk metrics
         avg_confidence = sum(confidences) / len(confidences)
-        confidence_std = (sum((c - avg_confidence) ** 2 for c in confidences) / len(confidences)) ** 0.5
+        confidence_std = (
+            sum((c - avg_confidence) ** 2 for c in confidences) / len(confidences)
+        ) ** 0.5
 
         # Risk assessment
         risk_level = "low"
@@ -587,13 +685,17 @@ class StrategyLogger:
             "risk_level": risk_level,
             "volatility_level": volatility_level,
             "risk_score": round((1 - avg_confidence) * 100, 1),
-            "recommendation": self._get_risk_recommendation(risk_level, volatility_level),
+            "recommendation": self._get_risk_recommendation(
+                risk_level, volatility_level
+            ),
         }
 
     def _get_risk_recommendation(self, risk_level: str, volatility_level: str) -> str:
         """Get risk management recommendation."""
         if risk_level == "high" and volatility_level == "high":
-            return "Consider reducing position sizes and implementing stricter stop-losses"
+            return (
+                "Consider reducing position sizes and implementing stricter stop-losses"
+            )
         elif risk_level == "high":
             return "Review strategy parameters and consider additional validation"
         elif volatility_level == "high":
@@ -603,7 +705,10 @@ class StrategyLogger:
 
 
 def log_strategy_decision(
-    strategy_name: str, decision: str, confidence: float, metadata: Optional[Dict[str, Any]] = None
+    strategy_name: str,
+    decision: str,
+    confidence: float,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Log a strategy decision.
 
@@ -646,7 +751,9 @@ def get_strategy_analysis(
             filtered_decisions = []
             for decision in decisions:
                 if decision.get("strategy") == strategy_name:
-                    decision_date = datetime.fromisoformat(decision["timestamp"].replace("Z", "+00:00"))
+                    decision_date = datetime.fromisoformat(
+                        decision["timestamp"].replace("Z", "+00:00")
+                    )
 
                     if start_date:
                         start_dt = datetime.fromisoformat(start_date)
@@ -677,15 +784,27 @@ def get_strategy_analysis(
 
         # Calculate metrics
         total_decisions = len(decisions)
-        avg_confidence = sum(d.get("confidence", 0) for d in decisions) / total_decisions
+        avg_confidence = (
+            sum(d.get("confidence", 0) for d in decisions) / total_decisions
+        )
 
         # Calculate win rate (assuming positive outcomes for buy decisions with high confidence)
-        buy_decisions = [d for d in decisions if d.get("decision") == "buy" and d.get("confidence", 0) > 0.7]
+        buy_decisions = [
+            d
+            for d in decisions
+            if d.get("decision") == "buy" and d.get("confidence", 0) > 0.7
+        ]
         win_rate = len(buy_decisions) / total_decisions if total_decisions > 0 else 0.0
 
         # Estimate accuracy based on confidence levels
-        high_confidence_decisions = [d for d in decisions if d.get("confidence", 0) > 0.8]
-        accuracy = len(high_confidence_decisions) / total_decisions if total_decisions > 0 else 0.0
+        high_confidence_decisions = [
+            d for d in decisions if d.get("confidence", 0) > 0.8
+        ]
+        accuracy = (
+            len(high_confidence_decisions) / total_decisions
+            if total_decisions > 0
+            else 0.0
+        )
 
         return {
             "strategy": strategy_name,

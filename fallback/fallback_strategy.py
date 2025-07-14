@@ -53,7 +53,9 @@ class FallbackStrategy:
         Returns:
             List[FallbackSignal]: Generated signals
         """
-        self.logger.info(f"Generating signals with fallback strategy {self.strategy_name}")
+        self.logger.info(
+            f"Generating signals with fallback strategy {self.strategy_name}"
+        )
 
         if data.empty:
             return []
@@ -66,7 +68,9 @@ class FallbackStrategy:
 
         return signals
 
-    def _generate_signal(self, row: pd.Series, index: int, data: pd.DataFrame) -> Optional[FallbackSignal]:
+    def _generate_signal(
+        self, row: pd.Series, index: int, data: pd.DataFrame
+    ) -> Optional[FallbackSignal]:
         """
         Generate a single signal.
 
@@ -87,7 +91,7 @@ class FallbackStrategy:
 
         # Calculate simple indicators
         sma_20 = np.mean(recent_prices)
-        price_change = (current_price - recent_prices[0]) / recent_prices[0]
+        (current_price - recent_prices[0]) / recent_prices[0]
 
         # Generate signal based on price vs moving average
         if current_price < sma_20 * 0.95:  # 5% below SMA
@@ -120,7 +124,9 @@ class FallbackRSIStrategy(FallbackStrategy):
         """Initialize fallback RSI strategy."""
         super().__init__("FallbackRSI")
 
-    def _generate_signal(self, row: pd.Series, index: int, data: pd.DataFrame) -> Optional[FallbackSignal]:
+    def _generate_signal(
+        self, row: pd.Series, index: int, data: pd.DataFrame
+    ) -> Optional[FallbackSignal]:
         """
         Generate RSI-based signal.
 
@@ -184,7 +190,9 @@ class FallbackMACDStrategy(FallbackStrategy):
         """Initialize fallback MACD strategy."""
         super().__init__("FallbackMACD")
 
-    def _generate_signal(self, row: pd.Series, index: int, data: pd.DataFrame) -> Optional[FallbackSignal]:
+    def _generate_signal(
+        self, row: pd.Series, index: int, data: pd.DataFrame
+    ) -> Optional[FallbackSignal]:
         """
         Generate MACD-based signal.
 
@@ -279,7 +287,9 @@ class FallbackBollingerStrategy(FallbackStrategy):
         """Initialize fallback Bollinger Bands strategy."""
         super().__init__("FallbackBollinger")
 
-    def _generate_signal(self, row: pd.Series, index: int, data: pd.DataFrame) -> Optional[FallbackSignal]:
+    def _generate_signal(
+        self, row: pd.Series, index: int, data: pd.DataFrame
+    ) -> Optional[FallbackSignal]:
         """
         Generate Bollinger Bands-based signal.
 
@@ -340,7 +350,9 @@ class FallbackSMAStrategy(FallbackStrategy):
         """Initialize fallback SMA strategy."""
         super().__init__("FallbackSMA")
 
-    def _generate_signal(self, row: pd.Series, index: int, data: pd.DataFrame) -> Optional[FallbackSignal]:
+    def _generate_signal(
+        self, row: pd.Series, index: int, data: pd.DataFrame
+    ) -> Optional[FallbackSignal]:
         """
         Generate SMA-based signal.
 

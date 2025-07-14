@@ -80,13 +80,32 @@ class VoicePromptAgent:
                 r"predict\s+(\w+)\s+(\d+)\s+(day|days|week|weeks)",
                 r"what\s+will\s+(\w+)\s+be\s+in\s+(\d+)\s+(day|days|week|weeks)",
             ],
-            "trade": [r"buy\s+(\w+)", r"sell\s+(\w+)", r"trade\s+(\w+)", r"execute\s+trade\s+on\s+(\w+)"],
-            "strategy": [r"apply\s+(\w+)\s+strategy", r"use\s+(\w+)\s+strategy", r"run\s+(\w+)\s+strategy"],
-            "analysis": [r"analyze\s+(\w+)", r"get\s+analysis\s+for\s+(\w+)", r"show\s+me\s+(\w+)"],
-            "portfolio": [r"show\s+portfolio", r"portfolio\s+status", r"my\s+positions"],
+            "trade": [
+                r"buy\s+(\w+)",
+                r"sell\s+(\w+)",
+                r"trade\s+(\w+)",
+                r"execute\s+trade\s+on\s+(\w+)",
+            ],
+            "strategy": [
+                r"apply\s+(\w+)\s+strategy",
+                r"use\s+(\w+)\s+strategy",
+                r"run\s+(\w+)\s+strategy",
+            ],
+            "analysis": [
+                r"analyze\s+(\w+)",
+                r"get\s+analysis\s+for\s+(\w+)",
+                r"show\s+me\s+(\w+)",
+            ],
+            "portfolio": [
+                r"show\s+portfolio",
+                r"portfolio\s+status",
+                r"my\s+positions",
+            ],
         }
 
-    def listen_for_command(self, timeout: int = 5, phrase_time_limit: int = 10) -> Optional[str]:
+    def listen_for_command(
+        self, timeout: int = 5, phrase_time_limit: int = 10
+    ) -> Optional[str]:
         """Listen for voice command."""
         try:
             with sr.Microphone() as source:
@@ -96,7 +115,9 @@ class VoicePromptAgent:
                 self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
 
                 # Listen for audio
-                audio = self.recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+                audio = self.recognizer.listen(
+                    source, timeout=timeout, phrase_time_limit=phrase_time_limit
+                )
 
                 # Convert speech to text
                 text = self._convert_speech_to_text(audio)
@@ -104,7 +125,11 @@ class VoicePromptAgent:
                 if text:
                     logger.info(f"Voice command: {text}")
                     self.voice_history.append(
-                        {"timestamp": datetime.now().isoformat(), "command": text, "status": "received"}
+                        {
+                            "timestamp": datetime.now().isoformat(),
+                            "command": text,
+                            "status": "received",
+                        }
                     )
 
                 return text
@@ -138,7 +163,9 @@ class VoicePromptAgent:
                 import os
                 import tempfile
 
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
+                with tempfile.NamedTemporaryFile(
+                    delete=False, suffix=".wav"
+                ) as tmp_file:
                     # Convert audio to WAV format
                     audio_data = audio.get_wav_data()
                     tmp_file.write(audio_data)
@@ -159,7 +186,13 @@ class VoicePromptAgent:
 
     def parse_trading_command(self, text: str) -> Dict[str, Any]:
         """Parse voice command into structured trading action."""
-        command = {"action": "unknown", "symbol": None, "parameters": {}, "confidence": 0.0, "raw_text": text}
+        command = {
+            "action": "unknown",
+            "symbol": None,
+            "parameters": {},
+            "confidence": 0.0,
+            "raw_text": text,
+        }
 
         # Use centralized template if available
         if TEMPLATES_AVAILABLE and format_template:
@@ -195,7 +228,10 @@ class VoicePromptAgent:
             if match:
                 command["action"] = "forecast"
                 command["symbol"] = match.group(1).upper()
-                command["parameters"] = {"period": int(match.group(2)), "unit": match.group(3)}
+                command["parameters"] = {
+                    "period": int(match.group(2)),
+                    "unit": match.group(3),
+                }
                 command["confidence"] = 0.9
                 break
 
@@ -256,7 +292,9 @@ class VoicePromptAgent:
             command["parameters"]["amount"] = int(amount_match.group(1))
 
         # Extract timeframe
-        timeframe_match = re.search(r"(\d+)\s*(days?|weeks?|months?|years?)", text.lower())
+        timeframe_match = re.search(
+            r"(\d+)\s*(days?|weeks?|months?|years?)", text.lower()
+        )
         if timeframe_match:
             command["parameters"]["period"] = int(timeframe_match.group(1))
             command["parameters"]["unit"] = timeframe_match.group(2).rstrip("s")
@@ -282,7 +320,9 @@ class VoicePromptAgent:
         try:
             # Use centralized prompt router if available
             if self.prompt_router and command["raw_text"]:
-                logger.info(f"Routing voice command through PromptRouterAgent: {command['raw_text']}")
+                logger.info(
+                    f"Routing voice command through PromptRouterAgent: {command['raw_text']}"
+                )
 
                 # Route the raw text through the centralized agent
                 router_result = self.prompt_router.execute(command["raw_text"])
@@ -365,7 +405,11 @@ class VoicePromptAgent:
             }
 
         except Exception as e:
-            return {"success": False, "action": "forecast", "message": f"Forecast error: {str(e)}"}
+            return {
+                "success": False,
+                "action": "forecast",
+                "message": f"Forecast error: {str(e)}",
+            }
 
     def _execute_trade_command(self, command: Dict[str, Any]) -> Dict[str, Any]:
         """Execute trade command."""
@@ -383,7 +427,10 @@ class VoicePromptAgent:
 
             # Create order
             order = TradeOrder(
-                symbol=symbol, side=side, quantity=command["parameters"].get("amount", 100), order_type="market"
+                symbol=symbol,
+                side=side,
+                quantity=command["parameters"].get("amount", 100),
+                order_type="market",
             )
 
             # Place order
@@ -397,7 +444,11 @@ class VoicePromptAgent:
             }
 
         except Exception as e:
-            return {"success": False, "action": "trade", "message": f"Trade error: {str(e)}"}
+            return {
+                "success": False,
+                "action": "trade",
+                "message": f"Trade error: {str(e)}",
+            }
 
     def _execute_strategy_command(self, command: Dict[str, Any]) -> Dict[str, Any]:
         """Execute strategy command."""
@@ -437,7 +488,11 @@ class VoicePromptAgent:
             }
 
         except Exception as e:
-            return {"success": False, "action": "portfolio", "message": f"Portfolio error: {str(e)}"}
+            return {
+                "success": False,
+                "action": "portfolio",
+                "message": f"Portfolio error: {str(e)}",
+            }
 
     def _update_voice_history(self, command: Dict[str, Any], result: Dict[str, Any]):
         """Update voice history."""
@@ -462,7 +517,9 @@ class VoicePromptAgent:
             return {}
 
         total_commands = len(self.voice_history)
-        successful_commands = len([h for h in self.voice_history if h.get("result", {}).get("success", False)])
+        successful_commands = len(
+            [h for h in self.voice_history if h.get("result", {}).get("success", False)]
+        )
 
         action_counts = {}
         for entry in self.voice_history:
@@ -472,9 +529,13 @@ class VoicePromptAgent:
         return {
             "total_commands": total_commands,
             "successful_commands": successful_commands,
-            "success_rate": successful_commands / total_commands if total_commands > 0 else 0,
+            "success_rate": successful_commands / total_commands
+            if total_commands > 0
+            else 0,
             "action_distribution": action_counts,
-            "last_command": self.voice_history[-1]["timestamp"] if self.voice_history else None,
+            "last_command": self.voice_history[-1]["timestamp"]
+            if self.voice_history
+            else None,
         }
 
 

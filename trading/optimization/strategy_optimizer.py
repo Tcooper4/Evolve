@@ -15,7 +15,6 @@ import pandas as pd
 import torch.nn as nn
 from pydantic import Field, validator
 
-
 from .base_optimizer import BaseOptimizer, OptimizerConfig
 from .performance_logger import PerformanceLogger
 
@@ -31,9 +30,7 @@ except ImportError:
     RAY_AVAILABLE = False
 
 from trading.optimization.base_optimizer import BaseOptimizer, OptimizerConfig
-from trading.optimization.performance_logger import (
-    PerformanceLogger,
-)
+from trading.optimization.performance_logger import PerformanceLogger
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -42,7 +39,9 @@ logger.setLevel(logging.DEBUG)
 # Add file handler for debug logs
 debug_handler = logging.FileHandler("trading/optimization/logs/optimization_debug.log")
 debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+debug_formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 debug_handler.setFormatter(debug_formatter)
 logger.addHandler(debug_handler)
 
@@ -76,10 +75,13 @@ class OptimizationMethod(ABC):
         self.config = config or {}
         self.logger = logging.getLogger(self.__class__.__name__)
 
-
     @abstractmethod
     def optimize(
-        self, objective: Callable, param_space: Dict[str, Any], data: pd.DataFrame, **kwargs
+        self,
+        objective: Callable,
+        param_space: Dict[str, Any],
+        data: pd.DataFrame,
+        **kwargs,
     ) -> OptimizationResult:
         """Run optimization.
 
@@ -112,11 +114,15 @@ class OptimizationMethod(ABC):
             elif isinstance(space, dict):
                 required_keys = {"start", "end"}
                 if not required_keys.issubset(space.keys()):
-                    raise ValueError(f"Parameter {param} missing required keys: {required_keys}")
+                    raise ValueError(
+                        f"Parameter {param} missing required keys: {required_keys}"
+                    )
                 if space["start"] >= space["end"]:
                     raise ValueError(f"Parameter {param} has invalid range")
 
-    def _check_early_stopping(self, scores: List[float], patience: int = 5, min_delta: float = 1e-4) -> bool:
+    def _check_early_stopping(
+        self, scores: List[float], patience: int = 5, min_delta: float = 1e-4
+    ) -> bool:
         """Check if optimization should stop early.
 
         Args:
@@ -170,7 +176,11 @@ class GridSearch(OptimizationMethod):
     """Grid search optimization method."""
 
     def optimize(
-        self, objective: Callable, param_space: Dict[str, Any], data: pd.DataFrame, **kwargs
+        self,
+        objective: Callable,
+        param_space: Dict[str, Any],
+        data: pd.DataFrame,
+        **kwargs,
     ) -> OptimizationResult:
         """Run grid search optimization.
 
@@ -235,7 +245,9 @@ class GridSearch(OptimizationMethod):
         optimization_time = (datetime.now() - start_time).total_seconds()
 
         # Calculate hyperparameter importance
-        hyperparameter_importance = self._calculate_hyperparameter_importance(param_grid, scores)
+        hyperparameter_importance = self._calculate_hyperparameter_importance(
+            param_grid, scores
+        )
 
         return OptimizationResult(
             best_params=best_params,
@@ -250,7 +262,9 @@ class GridSearch(OptimizationMethod):
             hyperparameter_importance=hyperparameter_importance,
         )
 
-    def _cross_validate(self, objective: Callable, params: Dict[str, Any], data: pd.DataFrame, **kwargs) -> List[float]:
+    def _cross_validate(
+        self, objective: Callable, params: Dict[str, Any], data: pd.DataFrame, **kwargs
+    ) -> List[float]:
         """Perform cross-validation.
 
         Args:
@@ -267,7 +281,7 @@ class GridSearch(OptimizationMethod):
         scores = []
 
         for train_idx, val_idx in tscv.split(data):
-            train_data = data.iloc[train_idx]
+            data.iloc[train_idx]
             val_data = data.iloc[val_idx]
             score = objective(params, val_data)
             scores.append(score)
@@ -310,7 +324,9 @@ class GridSearch(OptimizationMethod):
             if isinstance(space, (list, tuple)):
                 grid[param] = space
             elif isinstance(space, dict):
-                grid[param] = np.linspace(space["start"], space["end"], space.get("n_points", 10))
+                grid[param] = np.linspace(
+                    space["start"], space["end"], space.get("n_points", 10)
+                )
 
         return list(ParameterGrid(grid))
 
@@ -319,7 +335,11 @@ class BayesianOptimization(OptimizationMethod):
     """Bayesian optimization method."""
 
     def optimize(
-        self, objective: Callable, param_space: Dict[str, Any], data: pd.DataFrame, **kwargs
+        self,
+        objective: Callable,
+        param_space: Dict[str, Any],
+        data: pd.DataFrame,
+        **kwargs,
     ) -> OptimizationResult:
         """Run Bayesian optimization.
 
@@ -351,9 +371,13 @@ class BayesianOptimization(OptimizationMethod):
             elif isinstance(space, dict):
                 if "start" in space and "end" in space:
                     if isinstance(space["start"], int):
-                        dimensions.append(Integer(space["start"], space["end"], name=param))
+                        dimensions.append(
+                            Integer(space["start"], space["end"], name=param)
+                        )
                     else:
-                        dimensions.append(Real(space["start"], space["end"], name=param))
+                        dimensions.append(
+                            Real(space["start"], space["end"], name=param)
+                        )
 
         # Define objective function with cross-validation
         @use_named_args(dimensions=dimensions)
@@ -386,10 +410,14 @@ class BayesianOptimization(OptimizationMethod):
         optimization_time = (datetime.now() - start_time).total_seconds()
 
         # Calculate feature importance
-        feature_importance = self._calculate_feature_importance(result.models[-1], dimensions)
+        feature_importance = self._calculate_feature_importance(
+            result.models[-1], dimensions
+        )
 
         # Calculate hyperparameter importance
-        hyperparameter_importance = self._calculate_hyperparameter_importance(result.x_iters, result.func_vals)
+        hyperparameter_importance = self._calculate_hyperparameter_importance(
+            result.x_iters, result.func_vals
+        )
 
         return OptimizationResult(
             best_params=dict(zip(param_names, result.x)),
@@ -410,7 +438,9 @@ class BayesianOptimization(OptimizationMethod):
             res: Optimization result
         """
         if len(res.func_vals) % 10 == 0:
-            self.logger.info(f"Iteration {len(res.func_vals)}, Best score: {min(res.func_vals)}")
+            self.logger.info(
+                f"Iteration {len(res.func_vals)}, Best score: {min(res.func_vals)}"
+            )
 
     def _calculate_feature_importance(self, model, dimensions):
         """Calculate feature importance from GP model.
@@ -447,7 +477,9 @@ class RayOptimization(OptimizationMethod):
         """
         super().__init__(config)
         if not RAY_AVAILABLE:
-            self.logger.warning("Ray is not available. Falling back to ThreadPoolExecutor.")
+            self.logger.warning(
+                "Ray is not available. Falling back to ThreadPoolExecutor."
+            )
 
     def _setup_ray(self):
         """Setup Ray for distributed computing."""
@@ -455,7 +487,11 @@ class RayOptimization(OptimizationMethod):
             ray.init(ignore_reinit_error=True)
 
     def optimize(
-        self, objective: Callable, param_space: Dict[str, Any], data: pd.DataFrame, **kwargs
+        self,
+        objective: Callable,
+        param_space: Dict[str, Any],
+        data: pd.DataFrame,
+        **kwargs,
     ) -> OptimizationResult:
         """Run distributed optimization using Ray or ThreadPoolExecutor.
 
@@ -493,7 +529,10 @@ class RayOptimization(OptimizationMethod):
 
             # Setup scheduler and search algorithm
             scheduler = ASHAScheduler(
-                metric="score", mode="min", max_t=kwargs.get("max_t", 100), grace_period=kwargs.get("grace_period", 10)
+                metric="score",
+                mode="min",
+                max_t=kwargs.get("max_t", 100),
+                grace_period=kwargs.get("grace_period", 10),
             )
 
             search_alg = BayesOptSearch(metric="score", mode="min")
@@ -523,7 +562,10 @@ class RayOptimization(OptimizationMethod):
             best_params = None
 
             with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-                futures = [executor.submit(objective, params, data) for params in param_combinations]
+                futures = [
+                    executor.submit(objective, params, data)
+                    for params in param_combinations
+                ]
                 for future, params in zip(as_completed(futures), param_combinations):
                     score = future.result()
                     scores.append(score)
@@ -551,7 +593,11 @@ class GeneticAlgorithm(OptimizationMethod):
     """Genetic Algorithm optimization method."""
 
     def optimize(
-        self, objective: Callable, param_space: Dict[str, Any], data: pd.DataFrame, **kwargs
+        self,
+        objective: Callable,
+        param_space: Dict[str, Any],
+        data: pd.DataFrame,
+        **kwargs,
     ) -> OptimizationResult:
         """Run Genetic Algorithm optimization.
 
@@ -611,7 +657,9 @@ class GeneticAlgorithm(OptimizationMethod):
             selected = self._selection(population, scores, elite_size)
 
             # Crossover
-            offspring = self._crossover(selected, crossover_rate, population_size - elite_size)
+            offspring = self._crossover(
+                selected, crossover_rate, population_size - elite_size
+            )
 
             # Mutation
             offspring = self._mutation(offspring, mutation_rate, param_space)
@@ -632,7 +680,9 @@ class GeneticAlgorithm(OptimizationMethod):
             convergence_history=convergence_history,
         )
 
-    def _initialize_population(self, param_space: Dict[str, Any], population_size: int) -> List[Dict[str, Any]]:
+    def _initialize_population(
+        self, param_space: Dict[str, Any], population_size: int
+    ) -> List[Dict[str, Any]]:
         """Initialize random population."""
         population = []
         for _ in range(population_size):
@@ -642,9 +692,13 @@ class GeneticAlgorithm(OptimizationMethod):
                     individual[param] = np.random.choice(space)
                 elif isinstance(space, dict):
                     if space.get("type") == "int":
-                        individual[param] = np.random.randint(space["start"], space["end"] + 1)
+                        individual[param] = np.random.randint(
+                            space["start"], space["end"] + 1
+                        )
                     else:
-                        individual[param] = np.random.uniform(space["start"], space["end"])
+                        individual[param] = np.random.uniform(
+                            space["start"], space["end"]
+                        )
             population.append(individual)
         return population
 
@@ -659,7 +713,9 @@ class GeneticAlgorithm(OptimizationMethod):
         # Tournament selection for rest
         tournament_size = 3
         while len(selected) < len(population):
-            tournament_indices = np.random.choice(len(population), tournament_size, replace=False)
+            tournament_indices = np.random.choice(
+                len(population), tournament_size, replace=False
+            )
             tournament_scores = [scores[i] for i in tournament_indices]
             winner_idx = tournament_indices[np.argmin(tournament_scores)]
             selected.append(population[winner_idx])
@@ -686,7 +742,10 @@ class GeneticAlgorithm(OptimizationMethod):
         return offspring
 
     def _mutation(
-        self, offspring: List[Dict[str, Any]], mutation_rate: float, param_space: Dict[str, Any]
+        self,
+        offspring: List[Dict[str, Any]],
+        mutation_rate: float,
+        param_space: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
         """Gaussian mutation."""
         for individual in offspring:
@@ -696,7 +755,9 @@ class GeneticAlgorithm(OptimizationMethod):
                         individual[param] = np.random.choice(space)
                     elif isinstance(space, dict):
                         if space.get("type") == "int":
-                            individual[param] = np.random.randint(space["start"], space["end"] + 1)
+                            individual[param] = np.random.randint(
+                                space["start"], space["end"] + 1
+                            )
                         else:
                             # Gaussian mutation
                             current_value = individual[param]
@@ -711,7 +772,11 @@ class ParticleSwarmOptimization(OptimizationMethod):
     """Particle Swarm Optimization method."""
 
     def optimize(
-        self, objective: Callable, param_space: Dict[str, Any], data: pd.DataFrame, **kwargs
+        self,
+        objective: Callable,
+        param_space: Dict[str, Any],
+        data: pd.DataFrame,
+        **kwargs,
     ) -> OptimizationResult:
         """Run Particle Swarm Optimization.
 
@@ -780,10 +845,16 @@ class ParticleSwarmOptimization(OptimizationMethod):
                 for param in param_space.keys():
                     # Velocity update
                     r1, r2 = np.random.random(2)
-                    cognitive_velocity = c1 * r1 * (personal_best[i][param] - particles[i][param])
-                    social_velocity = c2 * r2 * (global_best[param] - particles[i][param])
+                    cognitive_velocity = (
+                        c1 * r1 * (personal_best[i][param] - particles[i][param])
+                    )
+                    social_velocity = (
+                        c2 * r2 * (global_best[param] - particles[i][param])
+                    )
 
-                    velocities[i][param] = w * velocities[i][param] + cognitive_velocity + social_velocity
+                    velocities[i][param] = (
+                        w * velocities[i][param] + cognitive_velocity + social_velocity
+                    )
 
                     # Position update
                     particles[i][param] += velocities[i][param]
@@ -791,10 +862,14 @@ class ParticleSwarmOptimization(OptimizationMethod):
                     # Boundary handling
                     space = param_space[param]
                     if isinstance(space, (list, tuple)):
-                        particles[i][param] = np.clip(particles[i][param], 0, len(space) - 1)
+                        particles[i][param] = np.clip(
+                            particles[i][param], 0, len(space) - 1
+                        )
                         particles[i][param] = int(particles[i][param])
                     elif isinstance(space, dict):
-                        particles[i][param] = np.clip(particles[i][param], space["start"], space["end"])
+                        particles[i][param] = np.clip(
+                            particles[i][param], space["start"], space["end"]
+                        )
 
         end_time = datetime.now()
         optimization_time = (end_time - start_time).total_seconds()
@@ -826,11 +901,17 @@ class ParticleSwarmOptimization(OptimizationMethod):
                     velocity[param] = np.random.uniform(-1, 1)
                 elif isinstance(space, dict):
                     if space.get("type") == "int":
-                        particle[param] = np.random.randint(space["start"], space["end"] + 1)
+                        particle[param] = np.random.randint(
+                            space["start"], space["end"] + 1
+                        )
                         velocity[param] = np.random.uniform(-1, 1)
                     else:
-                        particle[param] = np.random.uniform(space["start"], space["end"])
-                        velocity[param] = np.random.uniform(-0.1, 0.1) * (space["end"] - space["start"])
+                        particle[param] = np.random.uniform(
+                            space["start"], space["end"]
+                        )
+                        velocity[param] = np.random.uniform(-0.1, 0.1) * (
+                            space["end"] - space["start"]
+                        )
 
             particles.append(particle)
             velocities.append(velocity)
@@ -842,7 +923,11 @@ class OptunaOptimization(OptimizationMethod):
     """Optuna optimization method."""
 
     def optimize(
-        self, objective: Callable, param_space: Dict[str, Any], data: pd.DataFrame, **kwargs
+        self,
+        objective: Callable,
+        param_space: Dict[str, Any],
+        data: pd.DataFrame,
+        **kwargs,
     ) -> OptimizationResult:
         """Run Optuna optimization.
 
@@ -869,9 +954,13 @@ class OptunaOptimization(OptimizationMethod):
                 elif isinstance(space, dict):
                     if "start" in space and "end" in space:
                         if isinstance(space["start"], int):
-                            params[param] = trial.suggest_int(param, space["start"], space["end"])
+                            params[param] = trial.suggest_int(
+                                param, space["start"], space["end"]
+                            )
                         else:
-                            params[param] = trial.suggest_float(param, space["start"], space["end"])
+                            params[param] = trial.suggest_float(
+                                param, space["start"], space["end"]
+                            )
             return objective(params, data)
 
         # Run optimization
@@ -905,7 +994,11 @@ class PyTorchOptimization(OptimizationMethod):
     """PyTorch-based optimization method."""
 
     def optimize(
-        self, objective: Callable, param_space: Dict[str, Any], data: pd.DataFrame, **kwargs
+        self,
+        objective: Callable,
+        param_space: Dict[str, Any],
+        data: pd.DataFrame,
+        **kwargs,
     ) -> OptimizationResult:
         """Run PyTorch-based optimization.
 
@@ -927,7 +1020,9 @@ class PyTorchOptimization(OptimizationMethod):
                 param_tensors[param] = torch.tensor(space, dtype=torch.float32)
             elif isinstance(space, dict):
                 if "start" in space and "end" in space:
-                    param_tensors[param] = torch.linspace(space["start"], space["end"], kwargs.get("n_points", 100))
+                    param_tensors[param] = torch.linspace(
+                        space["start"], space["end"], kwargs.get("n_points", 100)
+                    )
 
         # Initialize optimizer
         optimizer = optim.Adam([{"params": torch.tensor([0.0], requires_grad=True)}])
@@ -984,7 +1079,11 @@ class DistributedOptimization(OptimizationMethod):
     """Distributed optimization using ray or ThreadPoolExecutor."""
 
     def optimize(
-        self, objective: Callable, param_space: Dict[str, Any], data: pd.DataFrame, **kwargs
+        self,
+        objective: Callable,
+        param_space: Dict[str, Any],
+        data: pd.DataFrame,
+        **kwargs,
     ) -> OptimizationResult:
         """Run distributed optimization.
 
@@ -1054,7 +1153,10 @@ class DistributedOptimization(OptimizationMethod):
         else:
             # Use ThreadPoolExecutor as fallback
             with ThreadPoolExecutor() as executor:
-                futures = [executor.submit(objective, params, data) for params in param_combinations]
+                futures = [
+                    executor.submit(objective, params, data)
+                    for params in param_combinations
+                ]
 
                 for params, future in zip(param_combinations, futures):
                     score = future.result()
@@ -1081,7 +1183,9 @@ class DistributedOptimization(OptimizationMethod):
             convergence_history=convergence_history,
         )
 
-    def _generate_param_combinations(self, param_space: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _generate_param_combinations(
+        self, param_space: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Generate parameter combinations.
 
         Args:
@@ -1099,7 +1203,11 @@ class DistributedOptimization(OptimizationMethod):
                 param_values.append(space)
             elif isinstance(space, dict):
                 if "start" in space and "end" in space:
-                    param_values.append(np.linspace(space["start"], space["end"], space.get("n_points", 10)))
+                    param_values.append(
+                        np.linspace(
+                            space["start"], space["end"], space.get("n_points", 10)
+                        )
+                    )
 
         combinations = []
         for values in itertools.product(*param_values):
@@ -1113,25 +1221,38 @@ class StrategyOptimizerConfig(OptimizerConfig):
 
     # Optimization settings
     optimizer_type: str = Field("bayesian", description="Type of optimizer to use")
-    n_initial_points: int = Field(5, ge=1, description="Number of initial points for Bayesian optimization")
+    n_initial_points: int = Field(
+        5, ge=1, description="Number of initial points for Bayesian optimization"
+    )
     n_iterations: int = Field(50, ge=1, description="Number of optimization iterations")
-    grid_search_points: int = Field(100, ge=1, description="Maximum number of points for grid search")
+    grid_search_points: int = Field(
+        100, ge=1, description="Maximum number of points for grid search"
+    )
 
     # Metric settings
-    primary_metric: str = Field("sharpe_ratio", description="Primary metric to optimize")
-    secondary_metrics: List[str] = Field(["win_rate", "max_drawdown"], description="Secondary metrics to track")
+    primary_metric: str = Field(
+        "sharpe_ratio", description="Primary metric to optimize"
+    )
+    secondary_metrics: List[str] = Field(
+        ["win_rate", "max_drawdown"], description="Secondary metrics to track"
+    )
     metric_weights: Dict[str, float] = Field(
-        {"sharpe_ratio": 0.6, "win_rate": 0.3, "max_drawdown": 0.1}, description="Weights for each metric"
+        {"sharpe_ratio": 0.6, "win_rate": 0.3, "max_drawdown": 0.1},
+        description="Weights for each metric",
     )
 
     # Bayesian optimization settings
-    kernel_type: str = Field("matern", description="Type of kernel for Gaussian process")
+    kernel_type: str = Field(
+        "matern", description="Type of kernel for Gaussian process"
+    )
     kernel_length_scale: float = Field(1.0, gt=0, description="Length scale for kernel")
     kernel_nu: float = Field(2.5, gt=0, description="Nu parameter for Matern kernel")
 
     # Grid search settings
     grid_search_strategy: str = Field("random", description="Strategy for grid search")
-    grid_search_batch_size: int = Field(10, ge=1, description="Batch size for grid search")
+    grid_search_batch_size: int = Field(
+        10, ge=1, description="Batch size for grid search"
+    )
 
     @validator("optimizer_type", allow_reuse=True)
     def validate_optimizer_type(cls, v):
@@ -1169,7 +1290,10 @@ class StrategyOptimizer(BaseOptimizer):
         self.optimizer = self._create_optimizer()
 
     def optimize(
-        self, strategy_class: Any, data: pd.DataFrame, initial_params: Optional[Dict[str, Any]] = None
+        self,
+        strategy_class: Any,
+        data: pd.DataFrame,
+        initial_params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Optimize strategy parameters.
 
@@ -1193,7 +1317,10 @@ class StrategyOptimizer(BaseOptimizer):
 
         # Run optimization
         result = self.optimizer.optimize(
-            objective=objective, param_space=param_space, data=data, n_iterations=self.config.n_iterations
+            objective=objective,
+            param_space=param_space,
+            data=data,
+            n_iterations=self.config.n_iterations,
         )
 
         # Log results
@@ -1219,7 +1346,9 @@ class StrategyOptimizer(BaseOptimizer):
 
         optimizer_class = optimizer_map.get(self.config.optimizer_type)
         if optimizer_class is None:
-            raise ValueError(f"Unsupported optimizer type: {self.config.optimizer_type}")
+            raise ValueError(
+                f"Unsupported optimizer type: {self.config.optimizer_type}"
+            )
 
         return optimizer_class(self.config.dict())
 
@@ -1322,7 +1451,9 @@ class StrategyOptimizer(BaseOptimizer):
 
         # Log results
         self.performance_logger.log_metrics(
-            strategy_name=strategy_class.__name__, metrics=metrics, parameters=optimized_params
+            strategy_name=strategy_class.__name__,
+            metrics=metrics,
+            parameters=optimized_params,
         )
 
         # Save results to file
@@ -1336,7 +1467,9 @@ class StrategyOptimizer(BaseOptimizer):
             "timestamp": datetime.now().isoformat(),
         }
 
-        with open(results_dir / f"{strategy_class.__name__}_optimization.json", "w") as f:
+        with open(
+            results_dir / f"{strategy_class.__name__}_optimization.json", "w"
+        ) as f:
             json.dump(results, f, indent=4)
 
     def plot_optimization_results(self, save_path: Optional[str] = None) -> None:
@@ -1367,7 +1500,10 @@ class StrategyOptimizer(BaseOptimizer):
             if self.optimization_history:
                 param_names = list(self.optimization_history[0]["best_params"].keys())
                 for i, param in enumerate(param_names[:3]):  # Show first 3 parameters
-                    values = [entry["best_params"].get(param, 0) for entry in self.optimization_history]
+                    values = [
+                        entry["best_params"].get(param, 0)
+                        for entry in self.optimization_history
+                    ]
                     axes[0, 1].plot(iterations, values, label=param, linewidth=2)
                 axes[0, 1].set_title("Parameter Evolution")
                 axes[0, 1].set_xlabel("Iteration")
@@ -1376,7 +1512,11 @@ class StrategyOptimizer(BaseOptimizer):
                 axes[0, 1].grid(True, alpha=0.3)
 
             # Plot 3: Score distribution
-            all_scores = [score for entry in self.optimization_history for score in entry.get("scores", [])]
+            all_scores = [
+                score
+                for entry in self.optimization_history
+                for score in entry.get("scores", [])
+            ]
             if all_scores:
                 axes[1, 0].hist(all_scores, bins=20, alpha=0.7, color="green")
                 axes[1, 0].set_title("Score Distribution")
@@ -1389,11 +1529,14 @@ class StrategyOptimizer(BaseOptimizer):
                 improvements = []
                 for i in range(1, len(self.optimization_history)):
                     improvement = (
-                        self.optimization_history[i]["best_score"] - self.optimization_history[i - 1]["best_score"]
+                        self.optimization_history[i]["best_score"]
+                        - self.optimization_history[i - 1]["best_score"]
                     )
                     improvements.append(improvement)
 
-                axes[1, 1].bar(range(len(improvements)), improvements, alpha=0.7, color="orange")
+                axes[1, 1].bar(
+                    range(len(improvements)), improvements, alpha=0.7, color="orange"
+                )
                 axes[1, 1].set_title("Score Improvements")
                 axes[1, 1].set_xlabel("Iteration")
                 axes[1, 1].set_ylabel("Score Improvement")
@@ -1444,8 +1587,14 @@ class StrategyOptimizer(BaseOptimizer):
                 "slow_period": {"start": 20, "end": 30},
                 "signal_period": {"start": 7, "end": 12},
             },
-            "Bollinger": {"period": {"start": 15, "end": 30}, "std_dev": {"start": 1.5, "end": 3.0}},
-            "SMA": {"short_period": {"start": 5, "end": 15}, "long_period": {"start": 20, "end": 50}},
+            "Bollinger": {
+                "period": {"start": 15, "end": 30},
+                "std_dev": {"start": 1.5, "end": 3.0},
+            },
+            "SMA": {
+                "short_period": {"start": 5, "end": 15},
+                "long_period": {"start": 20, "end": 50},
+            },
         }
 
         return {
@@ -1456,7 +1605,12 @@ class StrategyOptimizer(BaseOptimizer):
         }
 
     def optimize_strategy(
-        self, strategy: str, optimizer_type: str, param_space: Dict[str, Any], training_data: pd.DataFrame, **settings
+        self,
+        strategy: str,
+        optimizer_type: str,
+        param_space: Dict[str, Any],
+        training_data: pd.DataFrame,
+        **settings,
     ) -> Dict[str, Any]:
         """Optimize a strategy with given parameters.
 
@@ -1594,7 +1748,9 @@ class Optimizer:
         # Load configuration from environment variables with defaults
         self.config = {
             "learning_rate": float(os.getenv("OPTIMIZER_LEARNING_RATE", 0.001)),
-            "hidden_dims": [int(x) for x in os.getenv("OPTIMIZER_HIDDEN_DIMS", "64,32").split(",")],
+            "hidden_dims": [
+                int(x) for x in os.getenv("OPTIMIZER_HIDDEN_DIMS", "64,32").split(",")
+            ],
             "dropout_rate": float(os.getenv("OPTIMIZER_DROPOUT_RATE", 0.1)),
             "batch_norm": os.getenv("OPTIMIZER_BATCH_NORM", "true").lower() == "true",
             "log_level": os.getenv("OPTIMIZER_LOG_LEVEL", "INFO"),
@@ -1610,7 +1766,9 @@ class Optimizer:
         self.logger.setLevel(getattr(logging, self.config["log_level"]))
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 
@@ -1630,13 +1788,23 @@ class Optimizer:
 
         # Initialize neural network
         self.model = self._build_model()
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.config["learning_rate"])
+        self.optimizer = optim.Adam(
+            self.model.parameters(), lr=self.config["learning_rate"]
+        )
         self.criterion = nn.MSELoss()
 
         # Initialize metrics tracking
-        self.metrics_history = {"loss": [], "validation_loss": [], "optimization_time": []}
+        self.metrics_history = {
+            "loss": [],
+            "validation_loss": [],
+            "optimization_time": [],
+        }
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _build_model(self) -> nn.Module:
         """Build neural network model.
@@ -1685,7 +1853,9 @@ class Optimizer:
             if not isinstance(state, np.ndarray) or not isinstance(target, np.ndarray):
                 raise OptimizationError("state and target must be numpy arrays")
             if state.shape[0] != target.shape[0]:
-                raise OptimizationError("state and target must have same number of samples")
+                raise OptimizationError(
+                    "state and target must have same number of samples"
+                )
 
             # Split data
             split_idx = int(len(state) * (1 - validation_split))
@@ -1843,8 +2013,12 @@ class Optimizer:
         """
         metrics = {
             "model_parameters": sum(p.numel() for p in self.model.parameters()),
-            "trainable_parameters": sum(p.numel() for p in self.model.parameters() if p.requires_grad),
-            "avg_loss": np.mean(self.metrics_history["loss"]) if self.metrics_history["loss"] else 0,
+            "trainable_parameters": sum(
+                p.numel() for p in self.model.parameters() if p.requires_grad
+            ),
+            "avg_loss": np.mean(self.metrics_history["loss"])
+            if self.metrics_history["loss"]
+            else 0,
             "avg_validation_loss": np.mean(self.metrics_history["validation_loss"])
             if self.metrics_history["validation_loss"]
             else 0,
@@ -1866,9 +2040,15 @@ class Optimizer:
         """
         try:
             if path is None:
-                path = self.results_dir / f"metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                path = (
+                    self.results_dir
+                    / f"metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                )
 
-            metrics = {"optimization_metrics": self.get_optimization_metrics(), "metrics_history": self.metrics_history}
+            metrics = {
+                "optimization_metrics": self.get_optimization_metrics(),
+                "metrics_history": self.metrics_history,
+            }
 
             with open(path, "w") as f:
                 json.dump(metrics, f, indent=4)

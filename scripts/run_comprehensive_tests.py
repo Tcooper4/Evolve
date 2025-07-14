@@ -94,7 +94,9 @@ class ComprehensiveTestRunner:
         ]
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, cwd=self.project_root)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, cwd=self.project_root
+            )
 
             return {
                 "success": result.returncode == 0,
@@ -128,7 +130,9 @@ class ComprehensiveTestRunner:
         ]
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, cwd=self.project_root)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, cwd=self.project_root
+            )
 
             return {
                 "success": result.returncode == 0,
@@ -159,7 +163,9 @@ class ComprehensiveTestRunner:
         ]
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, cwd=self.project_root)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, cwd=self.project_root
+            )
 
             return {
                 "success": result.returncode == 0,
@@ -189,7 +195,9 @@ class ComprehensiveTestRunner:
         ]
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, cwd=self.project_root)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, cwd=self.project_root
+            )
 
             return {
                 "success": result.returncode == 0,
@@ -205,10 +213,20 @@ class ComprehensiveTestRunner:
         """Run smoke tests."""
         logger.info("Running smoke tests...")
 
-        cmd = [sys.executable, "-m", "pytest", "tests/test_app_smoke.py", "-v", "--tb=short", "--disable-warnings"]
+        cmd = [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/test_app_smoke.py",
+            "-v",
+            "--tb=short",
+            "--disable-warnings",
+        ]
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, cwd=self.project_root)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, cwd=self.project_root
+            )
 
             return {
                 "success": result.returncode == 0,
@@ -252,7 +270,10 @@ class ComprehensiveTestRunner:
             assert isinstance(sma, pd.Series)
             assert len(sma) == len(test_data)
 
-            return {"success": True, "message": "pandas-ta compatibility validated successfully"}
+            return {
+                "success": True,
+                "message": "pandas-ta compatibility validated successfully",
+            }
 
         except Exception as e:
             logger.error(f"pandas-ta compatibility validation failed: {e}")
@@ -269,8 +290,16 @@ class ComprehensiveTestRunner:
             "test_results": self.test_results,
             "summary": {
                 "total_tests": len(self.test_results),
-                "passed_tests": sum(1 for result in self.test_results.values() if result.get("success", False)),
-                "failed_tests": sum(1 for result in self.test_results.values() if not result.get("success", False)),
+                "passed_tests": sum(
+                    1
+                    for result in self.test_results.values()
+                    if result.get("success", False)
+                ),
+                "failed_tests": sum(
+                    1
+                    for result in self.test_results.values()
+                    if not result.get("success", False)
+                ),
             },
         }
 
@@ -293,7 +322,9 @@ class ComprehensiveTestRunner:
             self.install_dependencies()
 
             # Validate pandas-ta compatibility
-            self.test_results["pandas_ta_compatibility"] = self.validate_pandas_ta_compatibility()
+            self.test_results[
+                "pandas_ta_compatibility"
+            ] = self.validate_pandas_ta_compatibility()
 
             # Run different test categories
             self.test_results["smoke_tests"] = self.run_smoke_tests()
@@ -306,14 +337,18 @@ class ComprehensiveTestRunner:
             report = self.generate_test_report()
 
             # Log results
-            logger.info(f"Test run completed in {report['duration_seconds']:.2f} seconds")
+            logger.info(
+                f"Test run completed in {report['duration_seconds']:.2f} seconds"
+            )
             logger.info(f"Total tests: {report['summary']['total_tests']}")
             logger.info(f"Passed: {report['summary']['passed_tests']}")
             logger.info(f"Failed: {report['summary']['failed_tests']}")
 
             # Return overall success
             overall_success = report["summary"]["failed_tests"] == 0
-            logger.info(f"Overall test result: {'PASSED' if overall_success else 'FAILED'}")
+            logger.info(
+                f"Overall test result: {'PASSED' if overall_success else 'FAILED'}"
+            )
 
             return overall_success
 

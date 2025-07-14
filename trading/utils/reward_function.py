@@ -20,7 +20,10 @@ class RewardFunction:
     """
 
     def __init__(
-        self, weights: Optional[Dict[str, float]] = None, adaptive_mode: bool = True, lookback_period: int = 30
+        self,
+        weights: Optional[Dict[str, float]] = None,
+        adaptive_mode: bool = True,
+        lookback_period: int = 30,
     ):
         """
         Args:
@@ -28,7 +31,11 @@ class RewardFunction:
             adaptive_mode: Whether to use adaptive weighting based on market conditions
             lookback_period: Number of periods to consider for adaptive weighting
         """
-        self.base_weights = weights or {"return": 0.4, "sharpe": 0.4, "consistency": 0.2}
+        self.base_weights = weights or {
+            "return": 0.4,
+            "sharpe": 0.4,
+            "consistency": 0.2,
+        }
         self.weights = self.base_weights.copy()
         self.adaptive_mode = adaptive_mode
         self.lookback_period = lookback_period
@@ -73,7 +80,9 @@ class RewardFunction:
         total_return = metrics.get("total_return", 0.0)
         sharpe = metrics.get("sharpe_ratio", 0.0)
         win_rate = metrics.get("win_rate", 0.0)
-        max_drawdown = abs(metrics.get("max_drawdown", 1e-6)) or 1e-6  # Avoid div by zero
+        max_drawdown = (
+            abs(metrics.get("max_drawdown", 1e-6)) or 1e-6
+        )  # Avoid div by zero
 
         # Consistency: win rate over drawdown (higher is better)
         consistency = win_rate / max_drawdown if max_drawdown > 0 else 0.0
@@ -87,20 +96,27 @@ class RewardFunction:
         return {"return": total_return, "sharpe": sharpe, "consistency": consistency}
 
     def _update_adaptive_weights(
-        self, prediction_variance: Optional[float] = None, market_volatility: Optional[float] = None
+        self,
+        prediction_variance: Optional[float] = None,
+        market_volatility: Optional[float] = None,
     ) -> None:
         """
         Update weights adaptively based on market conditions and prediction confidence.
         """
         now = datetime.now()
-        if self.last_adaptation and now - self.last_adaptation < self.adaptation_interval:
+        if (
+            self.last_adaptation
+            and now - self.last_adaptation < self.adaptation_interval
+        ):
             return  # Too soon to adapt again
 
         # Store current performance for history
         if self.performance_history:
-            recent_performance = np.mean([p["sharpe"] for p in self.performance_history[-self.lookback_period :]])
+            recent_performance = np.mean(
+                [p["sharpe"] for p in self.performance_history[-self.lookback_period :]]
+            )
         else:
-            recent_performance = 0.0
+            pass
 
         # Determine market regime
         regime = self._classify_market_regime(market_volatility, prediction_variance)
@@ -142,7 +158,9 @@ class RewardFunction:
         self.last_adaptation = now
         logger.info(f"Adaptive weights updated for regime '{regime}': {self.weights}")
 
-    def _classify_market_regime(self, volatility: Optional[float], prediction_variance: Optional[float]) -> str:
+    def _classify_market_regime(
+        self, volatility: Optional[float], prediction_variance: Optional[float]
+    ) -> str:
         """
         Classify current market regime based on volatility and prediction confidence.
         """
@@ -150,7 +168,9 @@ class RewardFunction:
             return "stable"
 
         high_vol = volatility and volatility > 0.25  # 25% annualized volatility
-        low_conf = prediction_variance and prediction_variance > 0.05  # 5% prediction variance
+        low_conf = (
+            prediction_variance and prediction_variance > 0.05
+        )  # 5% prediction variance
 
         if high_vol and low_conf:
             return "crisis"
@@ -169,7 +189,9 @@ class RewardFunction:
         Returns:
             Weighted sum (float)
         """
-        return sum(self.weights.get(k, 0.0) * objectives.get(k, 0.0) for k in self.weights)
+        return sum(
+            self.weights.get(k, 0.0) * objectives.get(k, 0.0) for k in self.weights
+        )
 
     def multi_objective_vector(self, metrics: Dict[str, Any]) -> List[float]:
         """

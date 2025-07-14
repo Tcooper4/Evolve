@@ -21,7 +21,9 @@ try:
     VADER_AVAILABLE = True
 except ImportError:
     VADER_AVAILABLE = False
-    logging.warning("VaderSentiment not available. Install with: pip install vaderSentiment")
+    logging.warning(
+        "VaderSentiment not available. Install with: pip install vaderSentiment"
+    )
 
 try:
     from textblob import TextBlob
@@ -72,7 +74,9 @@ class SentimentSignals:
             newsapi_key: NewsAPI key
         """
         self.reddit_client_id = reddit_client_id or os.getenv("REDDIT_CLIENT_ID")
-        self.reddit_client_secret = reddit_client_secret or os.getenv("REDDIT_CLIENT_SECRET")
+        self.reddit_client_secret = reddit_client_secret or os.getenv(
+            "REDDIT_CLIENT_SECRET"
+        )
         self.reddit_user_agent = reddit_user_agent
         self.newsapi_key = newsapi_key or os.getenv("NEWSAPI_KEY")
 
@@ -126,19 +130,25 @@ class SentimentSignals:
                 )
                 logger.info("Reddit client initialized successfully")
             else:
-                logger.warning("Reddit client not available - missing credentials or PRAW")
+                logger.warning(
+                    "Reddit client not available - missing credentials or PRAW"
+                )
 
             # Initialize NewsAPI client
             if NEWSAPI_AVAILABLE and self.newsapi_key:
                 self.newsapi_client = NewsApiClient(api_key=self.newsapi_key)
                 logger.info("NewsAPI client initialized successfully")
             else:
-                logger.warning("NewsAPI client not available - missing API key or NewsAPI")
+                logger.warning(
+                    "NewsAPI client not available - missing API key or NewsAPI"
+                )
 
         except Exception as e:
             logger.error(f"Error initializing clients: {e}")
 
-    def get_reddit_sentiment(self, ticker: str, hours: int = 24, limit: int = 100) -> Dict[str, Any]:
+    def get_reddit_sentiment(
+        self, ticker: str, hours: int = 24, limit: int = 100
+    ) -> Dict[str, Any]:
         """Get sentiment from Reddit posts and comments.
 
         Args:
@@ -165,7 +175,9 @@ class SentimentSignals:
                     # Search for posts containing the ticker
                     search_query = f"{ticker}"
                     posts = subreddit.search(
-                        search_query, time_filter="day", limit=limit // len(self.financial_subreddits)
+                        search_query,
+                        time_filter="day",
+                        limit=limit // len(self.financial_subreddits),
                     )
 
                     for post in posts:
@@ -181,7 +193,9 @@ class SentimentSignals:
                         all_posts.append(post_data)
 
                         # Get comments
-                        post.comments.replace_more(limit=0)  # Remove MoreComments objects
+                        post.comments.replace_more(
+                            limit=0
+                        )  # Remove MoreComments objects
                         for comment in post.comments.list():
                             comment_data = {
                                 "body": comment.body,
@@ -246,7 +260,11 @@ class SentimentSignals:
             # Search for articles about the ticker
             try:
                 response = self.newsapi_client.get_everything(
-                    q=ticker, from_param=from_date, language="en", sort_by="relevancy", page_size=100
+                    q=ticker,
+                    from_param=from_date,
+                    language="en",
+                    sort_by="relevancy",
+                    page_size=100,
                 )
 
                 for article in response.get("articles", []):
@@ -280,7 +298,9 @@ class SentimentSignals:
             # Cache results
             self._cache_sentiment("news", ticker, sentiment_results)
 
-            logger.info(f"News sentiment analysis completed for {ticker}: {len(articles)} articles")
+            logger.info(
+                f"News sentiment analysis completed for {ticker}: {len(articles)} articles"
+            )
             return sentiment_results
 
         except Exception as e:
@@ -318,13 +338,18 @@ class SentimentSignals:
                 if TEXTBLOB_AVAILABLE:
                     blob = TextBlob(text)
                     textblob_scores.append(
-                        {"polarity": blob.sentiment.polarity, "subjectivity": blob.sentiment.subjectivity}
+                        {
+                            "polarity": blob.sentiment.polarity,
+                            "subjectivity": blob.sentiment.subjectivity,
+                        }
                     )
 
             # Calculate aggregate scores
             results = {
                 "total_texts": len(texts),
-                "analyzed_texts": len(vader_scores) if vader_scores else len(textblob_scores),
+                "analyzed_texts": len(vader_scores)
+                if vader_scores
+                else len(textblob_scores),
             }
 
             # Vader results
@@ -349,7 +374,9 @@ class SentimentSignals:
             if textblob_scores:
                 avg_textblob = {
                     "polarity": np.mean([s["polarity"] for s in textblob_scores]),
-                    "subjectivity": np.mean([s["subjectivity"] for s in textblob_scores]),
+                    "subjectivity": np.mean(
+                        [s["subjectivity"] for s in textblob_scores]
+                    ),
                 }
                 results["textblob_sentiment"] = avg_textblob
 
@@ -364,7 +391,8 @@ class SentimentSignals:
             # Combined sentiment score
             if "vader_sentiment" in results and "textblob_sentiment" in results:
                 combined_score = (
-                    results["vader_sentiment"]["compound"] + results["textblob_sentiment"]["polarity"]
+                    results["vader_sentiment"]["compound"]
+                    + results["textblob_sentiment"]["polarity"]
                 ) / 2
                 results["combined_sentiment_score"] = combined_score
 
@@ -395,7 +423,12 @@ class SentimentSignals:
             Dictionary with sentiment signals
         """
         try:
-            signals = {"ticker": ticker, "timestamp": datetime.now().isoformat(), "signals": {}, "confidence": 0.0}
+            signals = {
+                "ticker": ticker,
+                "timestamp": datetime.now().isoformat(),
+                "signals": {},
+                "confidence": 0.0,
+            }
 
             reddit_sentiment = None
             news_sentiment = None
@@ -413,18 +446,26 @@ class SentimentSignals:
                     signals["news_sentiment"] = news_sentiment
 
             # Generate trading signals
-            sentiment_signals = self._create_trading_signals(reddit_sentiment, news_sentiment)
+            sentiment_signals = self._create_trading_signals(
+                reddit_sentiment, news_sentiment
+            )
             signals["signals"] = sentiment_signals
 
             # Calculate overall confidence
             confidence_factors = []
             if reddit_sentiment and "error" not in reddit_sentiment:
-                confidence_factors.append(reddit_sentiment.get("analyzed_texts", 0) / 100)  # Normalize
+                confidence_factors.append(
+                    reddit_sentiment.get("analyzed_texts", 0) / 100
+                )  # Normalize
             if news_sentiment and "error" not in news_sentiment:
-                confidence_factors.append(news_sentiment.get("analyzed_texts", 0) / 50)  # Normalize
+                confidence_factors.append(
+                    news_sentiment.get("analyzed_texts", 0) / 50
+                )  # Normalize
 
             signals["confidence"] = (
-                min(1.0, sum(confidence_factors) / len(confidence_factors)) if confidence_factors else 0.0
+                min(1.0, sum(confidence_factors) / len(confidence_factors))
+                if confidence_factors
+                else 0.0
             )
 
             return signals
@@ -457,7 +498,9 @@ class SentimentSignals:
 
                 if "overall_classification" in reddit_sentiment:
                     classification = reddit_sentiment["overall_classification"]
-                    signals["reasoning"].append(f"Reddit classification: {classification}")
+                    signals["reasoning"].append(
+                        f"Reddit classification: {classification}"
+                    )
 
             # Process news sentiment
             if news_sentiment and "error" not in news_sentiment:
@@ -468,7 +511,9 @@ class SentimentSignals:
 
                 if "overall_classification" in news_sentiment:
                     classification = news_sentiment["overall_classification"]
-                    signals["reasoning"].append(f"News classification: {classification}")
+                    signals["reasoning"].append(
+                        f"News classification: {classification}"
+                    )
 
             # Generate signals based on average sentiment
             if sentiment_scores:
@@ -515,7 +560,9 @@ class SentimentSignals:
                 latest_file = max(files, key=lambda x: x.stat().st_mtime)
 
                 # Check if cache is recent (within 1 hour)
-                if (datetime.now() - datetime.fromtimestamp(latest_file.stat().st_mtime)).seconds < 3600:
+                if (
+                    datetime.now() - datetime.fromtimestamp(latest_file.stat().st_mtime)
+                ).seconds < 3600:
                     with open(latest_file, "r") as f:
                         return json.load(f)
 

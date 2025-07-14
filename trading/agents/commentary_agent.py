@@ -151,7 +151,12 @@ class CommentaryAgent(BaseAgent):
                 return False
 
             # Validate data structures
-            for data_key in ["trade_data", "performance_data", "portfolio_data", "context"]:
+            for data_key in [
+                "trade_data",
+                "performance_data",
+                "portfolio_data",
+                "context",
+            ]:
                 if data_key in kwargs and kwargs[data_key] is not None:
                     if not isinstance(kwargs[data_key], dict):
                         self.logger.error(f"{data_key} must be a dictionary")
@@ -242,7 +247,11 @@ class CommentaryAgent(BaseAgent):
             success=False,
             error_message=user_message,
             error_type=error_type,
-            metadata={"error_category": error_category, "traceback": error_traceback, "agent_name": self.config.name},
+            metadata={
+                "error_category": error_category,
+                "traceback": error_traceback,
+                "agent_name": self.config.name,
+            },
         )
 
     def _setup(self) -> None:
@@ -295,12 +304,18 @@ class CommentaryAgent(BaseAgent):
             Dict[str, Any]: Dictionary of requirements
         """
         return {
-            "dependencies": ["trading.commentary", "trading.memory.agent_memory", "trading.utils.reasoning_logger"],
+            "dependencies": [
+                "trading.commentary",
+                "trading.memory.agent_memory",
+                "trading.utils.reasoning_logger",
+            ],
             "system_requirements": {"python_version": ">=3.8", "async_support": True},
             "external_services": ["commentary_engine", "llm_service"],
         }
 
-    async def _generate_commentary_with_retry(self, request: CommentaryAgentRequest) -> AgentResult:
+    async def _generate_commentary_with_retry(
+        self, request: CommentaryAgentRequest
+    ) -> AgentResult:
         """
         Generate commentary with retry logic and comprehensive error handling.
 
@@ -338,7 +353,8 @@ class CommentaryAgent(BaseAgent):
 
                 # Generate commentary with timeout
                 response = await asyncio.wait_for(
-                    self.commentary_engine.generate_commentary(commentary_request), timeout=self.config.timeout_seconds
+                    self.commentary_engine.generate_commentary(commentary_request),
+                    timeout=self.config.timeout_seconds,
                 )
 
                 # Log decision
@@ -365,7 +381,9 @@ class CommentaryAgent(BaseAgent):
                 )
 
             except asyncio.TimeoutError as e:
-                self.logger.warning(f"Commentary generation timed out (attempt {attempt + 1})")
+                self.logger.warning(
+                    f"Commentary generation timed out (attempt {attempt + 1})"
+                )
                 if attempt < max_retries:
                     await asyncio.sleep(retry_delay)
                     continue
@@ -375,7 +393,9 @@ class CommentaryAgent(BaseAgent):
             except ConnectionError as e:
                 self.logger.warning(f"Connection error (attempt {attempt + 1}): {e}")
                 if attempt < max_retries:
-                    await asyncio.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+                    await asyncio.sleep(
+                        retry_delay * (attempt + 1)
+                    )  # Exponential backoff
                     continue
                 else:
                     return self.handle_error(e)
@@ -406,7 +426,9 @@ class CommentaryAgent(BaseAgent):
             AgentResult with commentary data
         """
         try:
-            self.logger.info(f"Generating {request.commentary_type} commentary for {request.symbol}")
+            self.logger.info(
+                f"Generating {request.commentary_type} commentary for {request.symbol}"
+            )
 
             # Map commentary type
             commentary_type = self.commentary_type_mapping.get(
@@ -426,7 +448,9 @@ class CommentaryAgent(BaseAgent):
             )
 
             # Generate commentary
-            response = await self.commentary_engine.generate_commentary(commentary_request)
+            response = await self.commentary_engine.generate_commentary(
+                commentary_request
+            )
 
             # Log decision
             self._log_commentary_decision(response)
@@ -448,10 +472,14 @@ class CommentaryAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error generating commentary: {str(e)}")
             return AgentResult(
-                success=False, message=f"Failed to generate commentary: {str(e)}", data={"error": str(e)}
+                success=False,
+                message=f"Failed to generate commentary: {str(e)}",
+                data={"error": str(e)},
             )
 
-    def explain_trade(self, symbol: str, trade_data: Dict[str, Any], market_data: Optional[Any] = None) -> AgentResult:
+    def explain_trade(
+        self, symbol: str, trade_data: Dict[str, Any], market_data: Optional[Any] = None
+    ) -> AgentResult:
         """
         Explain a trading decision.
 
@@ -464,7 +492,10 @@ class CommentaryAgent(BaseAgent):
             AgentResult with trade explanation
         """
         request = CommentaryAgentRequest(
-            commentary_type="trade", symbol=symbol, trade_data=trade_data, market_data=market_data
+            commentary_type="trade",
+            symbol=symbol,
+            trade_data=trade_data,
+            market_data=market_data,
         )
 
         # Run async function in sync context
@@ -472,12 +503,14 @@ class CommentaryAgent(BaseAgent):
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 # If we're already in an async context, create a new task
-                task = asyncio.create_task(self.generate_commentary(request))
+                asyncio.create_task(self.generate_commentary(request))
                 # This is a simplified approach - in practice you'd handle this differently
                 return AgentResult(
                     success=False,
                     message="Async commentary generation not supported in sync context",
-                    data={"suggestion": "Use generate_commentary_async for async operation"},
+                    data={
+                        "suggestion": "Use generate_commentary_async for async operation"
+                    },
                 )
             else:
                 return loop.run_until_complete(self.generate_commentary(request))
@@ -486,10 +519,14 @@ class CommentaryAgent(BaseAgent):
             return AgentResult(
                 success=False,
                 message="No event loop available for async commentary generation",
-                data={"suggestion": "Use generate_commentary_async for async operation"},
+                data={
+                    "suggestion": "Use generate_commentary_async for async operation"
+                },
             )
 
-    def analyze_performance(self, symbol: str, performance_data: Dict[str, Any]) -> AgentResult:
+    def analyze_performance(
+        self, symbol: str, performance_data: Dict[str, Any]
+    ) -> AgentResult:
         """
         Analyze trading performance.
 
@@ -501,7 +538,9 @@ class CommentaryAgent(BaseAgent):
             AgentResult with performance analysis
         """
         request = CommentaryAgentRequest(
-            commentary_type="performance", symbol=symbol, performance_data=performance_data
+            commentary_type="performance",
+            symbol=symbol,
+            performance_data=performance_data,
         )
 
         try:
@@ -510,7 +549,9 @@ class CommentaryAgent(BaseAgent):
                 return AgentResult(
                     success=False,
                     message="Async commentary generation not supported in sync context",
-                    data={"suggestion": "Use generate_commentary_async for async operation"},
+                    data={
+                        "suggestion": "Use generate_commentary_async for async operation"
+                    },
                 )
             else:
                 return loop.run_until_complete(self.generate_commentary(request))
@@ -518,11 +559,16 @@ class CommentaryAgent(BaseAgent):
             return AgentResult(
                 success=False,
                 message="No event loop available for async commentary generation",
-                data={"suggestion": "Use generate_commentary_async for async operation"},
+                data={
+                    "suggestion": "Use generate_commentary_async for async operation"
+                },
             )
 
     def assess_risk(
-        self, symbol: str, trade_data: Optional[Dict[str, Any]] = None, portfolio_data: Optional[Dict[str, Any]] = None
+        self,
+        symbol: str,
+        trade_data: Optional[Dict[str, Any]] = None,
+        portfolio_data: Optional[Dict[str, Any]] = None,
     ) -> AgentResult:
         """
         Assess trading risks.
@@ -536,7 +582,10 @@ class CommentaryAgent(BaseAgent):
             AgentResult with risk assessment
         """
         request = CommentaryAgentRequest(
-            commentary_type="risk", symbol=symbol, trade_data=trade_data, portfolio_data=portfolio_data
+            commentary_type="risk",
+            symbol=symbol,
+            trade_data=trade_data,
+            portfolio_data=portfolio_data,
         )
 
         try:
@@ -545,7 +594,9 @@ class CommentaryAgent(BaseAgent):
                 return AgentResult(
                     success=False,
                     message="Async commentary generation not supported in sync context",
-                    data={"suggestion": "Use generate_commentary_async for async operation"},
+                    data={
+                        "suggestion": "Use generate_commentary_async for async operation"
+                    },
                 )
             else:
                 return loop.run_until_complete(self.generate_commentary(request))
@@ -553,7 +604,9 @@ class CommentaryAgent(BaseAgent):
             return AgentResult(
                 success=False,
                 message="No event loop available for async commentary generation",
-                data={"suggestion": "Use generate_commentary_async for async operation"},
+                data={
+                    "suggestion": "Use generate_commentary_async for async operation"
+                },
             )
 
     def _log_commentary_decision(self, response):
@@ -575,7 +628,9 @@ class CommentaryAgent(BaseAgent):
                 "recommendations": response.recommendations,
                 "risk_warnings": response.risk_warnings,
             },
-            confidence_level=ConfidenceLevel.HIGH if response.confidence_score > 0.8 else ConfidenceLevel.MEDIUM,
+            confidence_level=ConfidenceLevel.HIGH
+            if response.confidence_score > 0.8
+            else ConfidenceLevel.MEDIUM,
             metadata=response.metadata,
         )
 
@@ -584,7 +639,11 @@ class CommentaryAgent(BaseAgent):
         try:
             self.memory.store(
                 "commentary_history",
-                {"response": response.__dict__, "timestamp": datetime.now(), "agent": "CommentaryAgent"},
+                {
+                    "response": response.__dict__,
+                    "timestamp": datetime.now(),
+                    "agent": "CommentaryAgent",
+                },
             )
         except Exception as e:
             self.logger.error(f"Error storing commentary: {str(e)}")

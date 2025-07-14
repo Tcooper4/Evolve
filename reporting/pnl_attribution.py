@@ -129,7 +129,13 @@ class PnLAttributor:
 
     def calculate_factor_attribution(self, trades: List[Dict]) -> Dict[str, float]:
         """Calculate PnL attribution by market factors."""
-        factor_pnl = {"momentum": 0, "mean_reversion": 0, "volatility": 0, "correlation": 0, "liquidity": 0}
+        factor_pnl = {
+            "momentum": 0,
+            "mean_reversion": 0,
+            "volatility": 0,
+            "correlation": 0,
+            "liquidity": 0,
+        }
 
         for trade in trades:
             factors = trade.get("factors", {})
@@ -145,7 +151,10 @@ class PnLAttributor:
         return factor_pnl
 
     def run_attribution_analysis(
-        self, start_date: Optional[str] = None, end_date: Optional[str] = None, symbols: Optional[List[str]] = None
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        symbols: Optional[List[str]] = None,
     ) -> AttributionBreakdown:
         """Run comprehensive PnL attribution analysis."""
 
@@ -154,11 +163,19 @@ class PnLAttributor:
 
         if start_date:
             start_dt = pd.to_datetime(start_date)
-            filtered_trades = [t for t in filtered_trades if pd.to_datetime(t.get("timestamp")) >= start_dt]
+            filtered_trades = [
+                t
+                for t in filtered_trades
+                if pd.to_datetime(t.get("timestamp")) >= start_dt
+            ]
 
         if end_date:
             end_dt = pd.to_datetime(end_date)
-            filtered_trades = [t for t in filtered_trades if pd.to_datetime(t.get("timestamp")) <= end_dt]
+            filtered_trades = [
+                t
+                for t in filtered_trades
+                if pd.to_datetime(t.get("timestamp")) <= end_dt
+            ]
 
         if symbols:
             filtered_trades = [t for t in filtered_trades if t.get("symbol") in symbols]
@@ -219,7 +236,8 @@ class PnLAttributor:
         recent_attributions = [
             a
             for a in self.attribution_history
-            if (datetime.now() - pd.to_datetime(a.attribution_date)).days <= lookback_days
+            if (datetime.now() - pd.to_datetime(a.attribution_date)).days
+            <= lookback_days
         ]
 
         if not recent_attributions:
@@ -245,10 +263,26 @@ class PnLAttributor:
                 strategy_performance[strategy] += pnl
 
         # Find best and worst performers
-        best_model = max(model_performance.items(), key=lambda x: x[1])[0] if model_performance else None
-        worst_model = min(model_performance.items(), key=lambda x: x[1])[0] if model_performance else None
-        best_strategy = max(strategy_performance.items(), key=lambda x: x[1])[0] if strategy_performance else None
-        worst_strategy = min(strategy_performance.items(), key=lambda x: x[1])[0] if strategy_performance else None
+        best_model = (
+            max(model_performance.items(), key=lambda x: x[1])[0]
+            if model_performance
+            else None
+        )
+        worst_model = (
+            min(model_performance.items(), key=lambda x: x[1])[0]
+            if model_performance
+            else None
+        )
+        best_strategy = (
+            max(strategy_performance.items(), key=lambda x: x[1])[0]
+            if strategy_performance
+            else None
+        )
+        worst_strategy = (
+            min(strategy_performance.items(), key=lambda x: x[1])[0]
+            if strategy_performance
+            else None
+        )
 
         summary = {
             "total_pnl": total_pnl,
@@ -265,11 +299,15 @@ class PnLAttributor:
 
         return summary
 
-    def export_attribution_report(self, filepath: str = "reports/pnl_attribution.json") -> None:
+    def export_attribution_report(
+        self, filepath: str = "reports/pnl_attribution.json"
+    ) -> None:
         """Export attribution report to file."""
         try:
             report = {
-                "attribution_history": [asdict(attr) for attr in self.attribution_history],
+                "attribution_history": [
+                    asdict(attr) for attr in self.attribution_history
+                ],
                 "summary": self.get_attribution_summary(),
                 "trades_count": len(self.trades_history),
                 "export_date": datetime.now().isoformat(),

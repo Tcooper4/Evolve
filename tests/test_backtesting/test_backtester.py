@@ -59,7 +59,10 @@ class TestBacktester:
 
         assert "commission" in trades.columns
         assert (trades["commission"] >= 0).all()
-        assert (trades["commission"] == trades["position"].abs() * sample_data["close"] * backtester.commission).all()
+        assert (
+            trades["commission"]
+            == trades["position"].abs() * sample_data["close"] * backtester.commission
+        ).all()
 
     def test_slippage_application(self, backtester, sample_data, sample_signals):
         """Test that slippage is applied correctly."""
@@ -67,7 +70,10 @@ class TestBacktester:
 
         assert "slippage" in trades.columns
         assert (trades["slippage"] >= 0).all()
-        assert (trades["slippage"] == trades["position"].abs() * sample_data["close"] * backtester.slippage).all()
+        assert (
+            trades["slippage"]
+            == trades["position"].abs() * sample_data["close"] * backtester.slippage
+        ).all()
 
     def test_performance_calculation(self, backtester, sample_data, sample_signals):
         """Test that performance metrics are calculated correctly."""
@@ -149,7 +155,9 @@ class TestBacktester:
         signals = pd.Series(1, index=sample_data.index)
         trades = backtester.execute_trades(sample_data, signals)
 
-        assert (trades["position"] * sample_data["close"] <= backtester.initial_balance).all()
+        assert (
+            trades["position"] * sample_data["close"] <= backtester.initial_balance
+        ).all()
 
     def test_trade_sequencing(self, backtester, sample_data, sample_signals):
         """Test that trades are sequenced correctly."""

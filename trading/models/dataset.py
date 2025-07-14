@@ -21,7 +21,6 @@ class ValidationError(Exception):
     """Custom exception for validation errors."""
 
 
-
 class TimeSeriesDataset(Dataset):
     """Dataset for time series data."""
 
@@ -86,7 +85,11 @@ class TimeSeriesDataset(Dataset):
             raise ValidationError("Data contains infinite values")
 
         # Check for required columns
-        missing_cols = [col for col in self.feature_cols + [self.target_col] if col not in data.columns]
+        missing_cols = [
+            col
+            for col in self.feature_cols + [self.target_col]
+            if col not in data.columns
+        ]
         if missing_cols:
             raise ValidationError(f"Missing required columns: {missing_cols}")
 
@@ -103,7 +106,10 @@ class TimeSeriesDataset(Dataset):
         Returns:
             Tuple of (features, target)
         """
-        return (torch.FloatTensor(self.sequences[idx]), torch.FloatTensor([self.sequence_targets[idx]]))
+        return (
+            torch.FloatTensor(self.sequences[idx]),
+            torch.FloatTensor([self.sequence_targets[idx]]),
+        )
 
     def get_scaler(self) -> StandardScaler:
         """Get the fitted scaler.

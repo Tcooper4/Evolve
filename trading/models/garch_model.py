@@ -86,7 +86,9 @@ class GARCHModel(BaseModel):
 
         # Validate ARCH availability
         if not ARCH_AVAILABLE:
-            raise ImportError("ARCH library is required for GARCH models. Install with: pip install arch")
+            raise ImportError(
+                "ARCH library is required for GARCH models. Install with: pip install arch"
+            )
 
         # Set default configuration
         self.config = {
@@ -118,13 +120,19 @@ class GARCHModel(BaseModel):
         valid_distributions = ["normal", "t", "skewt"]
 
         if self.config["model_type"] not in valid_model_types:
-            raise ValidationError(f"Invalid model_type. Must be one of: {valid_model_types}")
+            raise ValidationError(
+                f"Invalid model_type. Must be one of: {valid_model_types}"
+            )
 
         if self.config["mean_model"] not in valid_mean_models:
-            raise ValidationError(f"Invalid mean_model. Must be one of: {valid_mean_models}")
+            raise ValidationError(
+                f"Invalid mean_model. Must be one of: {valid_mean_models}"
+            )
 
         if self.config["dist"] not in valid_distributions:
-            raise ValidationError(f"Invalid dist. Must be one of: {valid_distributions}")
+            raise ValidationError(
+                f"Invalid dist. Must be one of: {valid_distributions}"
+            )
 
         if self.config["p"] < 0 or self.config["q"] < 0:
             raise ValidationError("GARCH orders p and q must be non-negative")
@@ -132,7 +140,9 @@ class GARCHModel(BaseModel):
         if self.config["p"] == 0 and self.config["q"] == 0:
             raise ValidationError("At least one of p or q must be greater than 0")
 
-    def _prepare_data(self, data: pd.DataFrame, is_training: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+    def _prepare_data(
+        self, data: pd.DataFrame, is_training: bool = True
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Prepare data for GARCH modeling.
 
@@ -162,13 +172,17 @@ class GARCHModel(BaseModel):
 
             # Use the first numeric column and assume it's returns
             returns = data[numeric_cols[0]].values
-            logger.warning(f"Using column '{numeric_cols[0]}' as returns. Ensure this is correct.")
+            logger.warning(
+                f"Using column '{numeric_cols[0]}' as returns. Ensure this is correct."
+            )
 
         # Remove any NaN values
         returns = returns[~np.isnan(returns)]
 
         if len(returns) < 50:
-            raise ValidationError("Insufficient data for GARCH modeling. Need at least 50 observations.")
+            raise ValidationError(
+                "Insufficient data for GARCH modeling. Need at least 50 observations."
+            )
 
         # Rescale if requested
         if self.config.get("rescale", True):
@@ -188,7 +202,11 @@ class GARCHModel(BaseModel):
         return None
 
     def train(
-        self, data: pd.DataFrame, target_col: str = "returns", feature_cols: Optional[List[str]] = None, **kwargs
+        self,
+        data: pd.DataFrame,
+        target_col: str = "returns",
+        feature_cols: Optional[List[str]] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Train the GARCH model.
@@ -220,7 +238,9 @@ class GARCHModel(BaseModel):
             )
 
             # Fit the model
-            logger.info(f"Fitting {self.config['model_type']}({self.config['p']},{self.config['q']}) model")
+            logger.info(
+                f"Fitting {self.config['model_type']}({self.config['p']},{self.config['q']}) model"
+            )
             self.fitted_model = model_spec.fit(disp="off", show_warning=False, **kwargs)
 
             # Store model summary
@@ -233,7 +253,9 @@ class GARCHModel(BaseModel):
             training_time = (datetime.now() - start_time).total_seconds()
             metrics = self._calculate_training_metrics()
 
-            logger.info(f"GARCH model training completed in {training_time:.2f} seconds")
+            logger.info(
+                f"GARCH model training completed in {training_time:.2f} seconds"
+            )
             logger.info(f"Training metrics: {metrics}")
 
             return {
@@ -266,7 +288,9 @@ class GARCHModel(BaseModel):
                 "std_residual": float(np.std(residuals)),
                 "skewness": float(pd.Series(residuals).skew()),
                 "kurtosis": float(pd.Series(residuals).kurtosis()),
-                "ljung_box_pvalue": float(self.fitted_model.conditional_volatility.std()),
+                "ljung_box_pvalue": float(
+                    self.fitted_model.conditional_volatility.std()
+                ),
             }
             return metrics
         except Exception as e:
@@ -326,7 +350,10 @@ class GARCHModel(BaseModel):
             # In practice, you might want to use bootstrap or simulation methods
             std_error = np.std(volatility_forecast) * 0.1  # Simplified
             confidence_intervals = np.column_stack(
-                [volatility_forecast - 1.96 * std_error, volatility_forecast + 1.96 * std_error]
+                [
+                    volatility_forecast - 1.96 * std_error,
+                    volatility_forecast + 1.96 * std_error,
+                ]
             )
 
             forecast_results = {
@@ -344,7 +371,9 @@ class GARCHModel(BaseModel):
             logger.error(f"Error during GARCH forecasting: {e}")
             raise ModelError(f"GARCH forecasting failed: {e}")
 
-    def evaluate(self, data: pd.DataFrame, target_col: str = "returns") -> Dict[str, float]:
+    def evaluate(
+        self, data: pd.DataFrame, target_col: str = "returns"
+    ) -> Dict[str, float]:
         """
         Evaluate the GARCH model on test data.
 
@@ -373,7 +402,9 @@ class GARCHModel(BaseModel):
                 "mean_volatility": float(np.mean(conditional_vol)),
                 "volatility_std": float(np.std(conditional_vol)),
                 "residual_skewness": float(pd.Series(self.fitted_model.resid).skew()),
-                "residual_kurtosis": float(pd.Series(self.fitted_model.resid).kurtosis()),
+                "residual_kurtosis": float(
+                    pd.Series(self.fitted_model.resid).kurtosis()
+                ),
                 "aic": self.fitted_model.aic,
                 "bic": self.fitted_model.bic,
                 "log_likelihood": self.fitted_model.loglikelihood,
@@ -450,8 +481,13 @@ class GARCHModel(BaseModel):
                     self.config.update(metadata.get("config", {}))
 
             # Restore conditional volatility if available
-            if "conditional_volatility" in metadata and metadata["conditional_volatility"]:
-                self.conditional_volatility = np.array(metadata["conditional_volatility"])
+            if (
+                "conditional_volatility" in metadata
+                and metadata["conditional_volatility"]
+            ):
+                self.conditional_volatility = np.array(
+                    metadata["conditional_volatility"]
+                )
 
             logger.info(f"GARCH model loaded from {filepath}")
             return metadata
@@ -496,7 +532,12 @@ class GARCHModel(BaseModel):
             # Normalize confidence (simplified approach)
             confidence = min(1.0, max(0.0, (log_likelihood + 1000) / 1000))
 
-            return {"confidence": confidence, "aic": aic, "bic": bic, "log_likelihood": log_likelihood}
+            return {
+                "confidence": confidence,
+                "aic": aic,
+                "bic": bic,
+                "log_likelihood": log_likelihood,
+            }
 
         except Exception as e:
             logger.warning(f"Error calculating confidence: {e}")
@@ -507,7 +548,11 @@ class GARCHModel(BaseModel):
 
 
 def create_garch_model(
-    model_type: str = "GARCH", p: int = 1, q: int = 1, mean_model: str = "Constant", dist: str = "normal"
+    model_type: str = "GARCH",
+    p: int = 1,
+    q: int = 1,
+    mean_model: str = "Constant",
+    dist: str = "normal",
 ) -> GARCHModel:
     """
     Create a GARCH model with specified parameters.
@@ -522,6 +567,12 @@ def create_garch_model(
     Returns:
         Configured GARCH model
     """
-    config = {"model_type": model_type, "p": p, "q": q, "mean_model": mean_model, "dist": dist}
+    config = {
+        "model_type": model_type,
+        "p": p,
+        "q": q,
+        "mean_model": mean_model,
+        "dist": dist,
+    }
 
     return GARCHModel(config)

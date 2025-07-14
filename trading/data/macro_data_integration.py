@@ -92,7 +92,9 @@ class MacroDataIntegration:
             cache_dir: Directory to cache data
         """
         self.fred_api_key = fred_api_key or os.getenv("FRED_API_KEY")
-        self.alpha_vantage_api_key = alpha_vantage_api_key or os.getenv("ALPHA_VANTAGE_API_KEY")
+        self.alpha_vantage_api_key = alpha_vantage_api_key or os.getenv(
+            "ALPHA_VANTAGE_API_KEY"
+        )
         self.cache_dir = cache_dir
 
         # Create cache directory
@@ -192,7 +194,10 @@ class MacroDataIntegration:
         return ["1M", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "7Y", "10Y", "20Y", "30Y"]
 
     def get_fred_data(
-        self, series_id: str, start_date: Optional[str] = None, end_date: Optional[str] = None
+        self,
+        series_id: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> pd.DataFrame:
         """Get data from FRED API."""
         try:
@@ -259,14 +264,20 @@ class MacroDataIntegration:
                     continue
 
             # Create DataFrame
-            df = pd.DataFrame({"date": dates, "value": values}).set_index("date").sort_index()
+            df = (
+                pd.DataFrame({"date": dates, "value": values})
+                .set_index("date")
+                .sort_index()
+            )
 
             # Cache data
             self._cache_data(cache_key, df)
 
             # Log fetch latency
             fetch_time = (datetime.now() - start_time).total_seconds()
-            logger.info(f"FRED data fetch completed in {fetch_time:.2f}s for {series_id}: {len(df)} observations")
+            logger.info(
+                f"FRED data fetch completed in {fetch_time:.2f}s for {series_id}: {len(df)} observations"
+            )
             return df
 
         except Exception as e:
@@ -284,7 +295,9 @@ class MacroDataIntegration:
 
             if series_id in ["DGS10", "DGS2", "DGS3MO"]:
                 # Treasury rates - trending upward
-                base_rate = {"DGS10": 4.0, "DGS2": 4.5, "DGS3MO": 5.0}.get(series_id, 4.0)
+                base_rate = {"DGS10": 4.0, "DGS2": 4.5, "DGS3MO": 5.0}.get(
+                    series_id, 4.0
+                )
                 values = (
                     base_rate
                     + 0.5 * np.sin(np.linspace(0, 4 * np.pi, len(dates)))
@@ -293,13 +306,19 @@ class MacroDataIntegration:
 
             elif series_id == "VIXCLS":
                 # VIX - mean-reverting around 20
-                values = 20 + 5 * np.sin(np.linspace(0, 6 * np.pi, len(dates))) + np.random.normal(0, 2, len(dates))
+                values = (
+                    20
+                    + 5 * np.sin(np.linspace(0, 6 * np.pi, len(dates)))
+                    + np.random.normal(0, 2, len(dates))
+                )
                 values = np.maximum(values, 10)  # VIX can't go below ~10
 
             elif series_id == "UNRATE":
                 # Unemployment rate - around 4%
                 values = (
-                    4.0 + 0.5 * np.sin(np.linspace(0, 2 * np.pi, len(dates))) + np.random.normal(0, 0.1, len(dates))
+                    4.0
+                    + 0.5 * np.sin(np.linspace(0, 2 * np.pi, len(dates)))
+                    + np.random.normal(0, 0.1, len(dates))
                 )
 
             elif series_id == "CPIAUCSL":
@@ -361,7 +380,10 @@ class MacroDataIntegration:
                 spread_10y_2y=spread_10y_2y,
                 spread_10y_3m=spread_10y_3m,
                 curve_slope=curve_slope,
-                metadata={"source": "FRED + interpolation", "maturities_available": list(rates.keys())},
+                metadata={
+                    "source": "FRED + interpolation",
+                    "maturities_available": list(rates.keys()),
+                },
             )
 
         except Exception as e:
@@ -393,7 +415,9 @@ class MacroDataIntegration:
             metadata={"source": "fallback", "note": "synthetic data"},
         )
 
-    def get_earnings_data(self, symbol: str, lookback_days: int = 365) -> List[EarningsData]:
+    def get_earnings_data(
+        self, symbol: str, lookback_days: int = 365
+    ) -> List[EarningsData]:
         """Get earnings data for a symbol."""
         try:
             # Validate inputs
@@ -428,7 +452,9 @@ class MacroDataIntegration:
                     actual_eps = row.get("Earnings", 0)
                     estimated_eps = row.get("Estimated_Earnings", actual_eps)
                     surprise = actual_eps - estimated_eps if estimated_eps != 0 else 0
-                    surprise_percent = (surprise / estimated_eps * 100) if estimated_eps != 0 else 0
+                    surprise_percent = (
+                        (surprise / estimated_eps * 100) if estimated_eps != 0 else 0
+                    )
 
                     earnings_obj = EarningsData(
                         symbol=symbol,
@@ -446,7 +472,9 @@ class MacroDataIntegration:
                     earnings_data.append(earnings_obj)
 
                 except Exception as e:
-                    logger.warning(f"Error parsing earnings data for {symbol} on {date}: {e}")
+                    logger.warning(
+                        f"Error parsing earnings data for {symbol} on {date}: {e}"
+                    )
                     continue
 
             # Filter by lookback period
@@ -488,7 +516,10 @@ class MacroDataIntegration:
                             frequency=series_info["frequency"],
                             last_updated=df.index[-1],
                             source=DataSource.FRED,
-                            metadata={"series_id": series_id, "description": series_info["description"]},
+                            metadata={
+                                "series_id": series_id,
+                                "description": series_info["description"],
+                            },
                         )
 
                         indicators.append(indicator)
@@ -565,7 +596,9 @@ class MacroDataIntegration:
             logger.error(f"Error classifying economic regime: {e}")
             return "unknown"
 
-    def _calculate_stress_indicators(self, analysis: Dict[str, Any]) -> Dict[str, float]:
+    def _calculate_stress_indicators(
+        self, analysis: Dict[str, Any]
+    ) -> Dict[str, float]:
         """Calculate market stress indicators."""
         try:
             indicators = analysis.get("indicators", {})
@@ -579,11 +612,14 @@ class MacroDataIntegration:
             # Yield curve stress
             yield_curve = analysis.get("yield_curve", {})
             spread_10y_2y = yield_curve.get("spread_10y_2y", 0)
-            stress_indicators["curve_stress"] = max(0, -spread_10y_2y / 2)  # Inversion stress
+            stress_indicators["curve_stress"] = max(
+                0, -spread_10y_2y / 2
+            )  # Inversion stress
 
             # Overall stress index
             stress_indicators["overall_stress"] = (
-                stress_indicators.get("vix_stress", 0) * 0.6 + stress_indicators.get("curve_stress", 0) * 0.4
+                stress_indicators.get("vix_stress", 0) * 0.6
+                + stress_indicators.get("curve_stress", 0) * 0.4
             )
 
             return stress_indicators
@@ -610,13 +646,29 @@ class MacroDataIntegration:
                     ]
                 )
             elif regime == "growth_slowdown":
-                implications.extend(["Reduce risk exposure", "Focus on defensive sectors", "Consider dividend stocks"])
+                implications.extend(
+                    [
+                        "Reduce risk exposure",
+                        "Focus on defensive sectors",
+                        "Consider dividend stocks",
+                    ]
+                )
             elif regime == "tight_monetary":
                 implications.extend(
-                    ["Expect higher volatility", "Consider value over growth", "Monitor credit conditions"]
+                    [
+                        "Expect higher volatility",
+                        "Consider value over growth",
+                        "Monitor credit conditions",
+                    ]
                 )
             elif regime == "strong_growth":
-                implications.extend(["Favorable for equities", "Consider cyclical sectors", "Monitor inflation risks"])
+                implications.extend(
+                    [
+                        "Favorable for equities",
+                        "Consider cyclical sectors",
+                        "Monitor inflation risks",
+                    ]
+                )
 
             if stress > 0.7:
                 implications.append("High market stress - consider risk reduction")
@@ -648,7 +700,9 @@ class MacroDataIntegration:
         """Cache data with expiration."""
         try:
             self.data_cache[cache_key] = data
-            self.cache_expiry[cache_key] = datetime.now() + timedelta(hours=expiry_hours)
+            self.cache_expiry[cache_key] = datetime.now() + timedelta(
+                hours=expiry_hours
+            )
 
         except Exception as e:
             logger.error(f"Error caching data: {e}")

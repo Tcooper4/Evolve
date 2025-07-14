@@ -16,7 +16,7 @@ import pytest
 
 # Import components to test
 from trading.agents.prompt_router_agent import PromptRouterAgent, RequestType
-from trading.llm.agent import PromptAgent
+from agents.llm.agent import PromptAgent
 from trading.models.forecast_router import ForecastRouter
 from trading.strategies.gatekeeper import StrategyGatekeeper
 
@@ -47,7 +47,9 @@ class TestModelSelection:
         bull_data["Close"] = [100, 102, 104, 106, 108]  # Upward trend
 
         # Test model selection
-        selected_model = self.forecast_router.select_best_model(symbol="AAPL", data=bull_data, timeframe="1d")
+        selected_model = self.forecast_router.select_best_model(
+            symbol="AAPL", data=bull_data, timeframe="1d"
+        )
 
         assert selected_model is not None
         assert isinstance(selected_model, str)
@@ -60,7 +62,9 @@ class TestModelSelection:
         bear_data = self.sample_data.copy()
         bear_data["Close"] = [100, 98, 96, 94, 92]  # Downward trend
 
-        selected_model = self.forecast_router.select_best_model(symbol="AAPL", data=bear_data, timeframe="1d")
+        selected_model = self.forecast_router.select_best_model(
+            symbol="AAPL", data=bear_data, timeframe="1d"
+        )
 
         assert selected_model is not None
         # Should prefer volatility models for bear markets
@@ -72,7 +76,9 @@ class TestModelSelection:
         volatile_data = self.sample_data.copy()
         volatile_data["Close"] = [100, 105, 95, 110, 90]  # High volatility
 
-        selected_model = self.forecast_router.select_best_model(symbol="AAPL", data=volatile_data, timeframe="1d")
+        selected_model = self.forecast_router.select_best_model(
+            symbol="AAPL", data=volatile_data, timeframe="1d"
+        )
 
         assert selected_model is not None
         # Should prefer volatility models
@@ -209,8 +215,30 @@ class TestPerformanceMetrics:
                 "exit_date": pd.date_range("2024-01-02", periods=10),
                 "entry_price": [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
                 "exit_price": [101, 102, 103, 104, 105, 106, 107, 108, 109, 110],
-                "position_size": [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
-                "side": ["long", "long", "long", "long", "long", "long", "long", "long", "long", "long"],
+                "position_size": [
+                    1000,
+                    1000,
+                    1000,
+                    1000,
+                    1000,
+                    1000,
+                    1000,
+                    1000,
+                    1000,
+                    1000,
+                ],
+                "side": [
+                    "long",
+                    "long",
+                    "long",
+                    "long",
+                    "long",
+                    "long",
+                    "long",
+                    "long",
+                    "long",
+                    "long",
+                ],
             }
         )
 

@@ -70,7 +70,10 @@ class SelfImprovingAgent(BaseAgent):
                 task_data = kwargs.get("task_data")
 
                 if task_data is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: task_data")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: task_data",
+                    )
 
                 result = self.process_task(task_data)
                 if result["status"] == "success":
@@ -83,7 +86,10 @@ class SelfImprovingAgent(BaseAgent):
                         },
                     )
                 else:
-                    return AgentResult(success=False, error_message=result.get("error", "Task processing failed"))
+                    return AgentResult(
+                        success=False,
+                        error_message=result.get("error", "Task processing failed"),
+                    )
 
             elif action == "get_metrics":
                 return AgentResult(
@@ -95,7 +101,9 @@ class SelfImprovingAgent(BaseAgent):
                 )
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
@@ -131,7 +139,11 @@ class SelfImprovingAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"Error processing task: {str(e)}")
-            return {"status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "status": "error",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _execute_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the actual task.
@@ -143,7 +155,11 @@ class SelfImprovingAgent(BaseAgent):
             Dict[str, Any]: Task execution results
         """
         # Basic implementation - can be expanded based on requirements
-        return {"task_id": task_data.get("task_id"), "execution_time": datetime.now().isoformat(), "metrics": {}}
+        return {
+            "task_id": task_data.get("task_id"),
+            "execution_time": datetime.now().isoformat(),
+            "metrics": {},
+        }
 
     def _learn_from_results(self, results: Dict[str, Any]) -> None:
         """Learn from task execution results.

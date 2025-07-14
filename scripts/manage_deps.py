@@ -71,13 +71,18 @@ class DependencyManager:
         """Install dependencies from requirements file."""
         self.logger.info("Installing dependencies...")
 
-        requirements_file = self.dev_requirements_file if dev else self.requirements_file
+        requirements_file = (
+            self.dev_requirements_file if dev else self.requirements_file
+        )
         if not requirements_file.exists():
             self.logger.error(f"Requirements file not found: {requirements_file}")
             return False
 
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "-r", str(requirements_file)], check=True)
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-r", str(requirements_file)],
+                check=True,
+            )
             self.logger.info("Dependencies installed successfully")
             return True
         except subprocess.CalledProcessError as e:
@@ -88,18 +93,31 @@ class DependencyManager:
         """Update dependencies to their latest versions."""
         self.logger.info("Updating dependencies...")
 
-        requirements_file = self.dev_requirements_file if dev else self.requirements_file
+        requirements_file = (
+            self.dev_requirements_file if dev else self.requirements_file
+        )
         if not requirements_file.exists():
             self.logger.error(f"Requirements file not found: {requirements_file}")
             return False
 
         try:
             # Update pip
-            subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip"], check=True)
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--upgrade", "pip"], check=True
+            )
 
             # Update dependencies
             subprocess.run(
-                [sys.executable, "-m", "pip", "install", "--upgrade", "-r", str(requirements_file)], check=True
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--upgrade",
+                    "-r",
+                    str(requirements_file),
+                ],
+                check=True,
             )
 
             self.logger.info("Dependencies updated successfully")
@@ -112,9 +130,16 @@ class DependencyManager:
         """Freeze current dependencies to requirements file."""
         self.logger.info("Freezing dependencies...")
 
-        requirements_file = self.dev_requirements_file if dev else self.requirements_file
+        requirements_file = (
+            self.dev_requirements_file if dev else self.requirements_file
+        )
         try:
-            result = subprocess.run([sys.executable, "-m", "pip", "freeze"], capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "freeze"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
 
             with open(requirements_file, "w") as f:
                 f.write(result.stdout)
@@ -131,7 +156,10 @@ class DependencyManager:
 
         try:
             result = subprocess.run(
-                [sys.executable, "-m", "pip", "list", "--outdated"], capture_output=True, text=True, check=True
+                [sys.executable, "-m", "pip", "list", "--outdated"],
+                capture_output=True,
+                text=True,
+                check=True,
             )
 
             if result.stdout.strip():
@@ -168,16 +196,28 @@ class DependencyManager:
 
         try:
             # Check both requirements files
-            for requirements_file in [self.requirements_file, self.dev_requirements_file]:
+            for requirements_file in [
+                self.requirements_file,
+                self.dev_requirements_file,
+            ]:
                 if requirements_file.exists():
                     result = subprocess.run(
-                        [sys.executable, "-m", "pip", "check", "-r", str(requirements_file)],
+                        [
+                            sys.executable,
+                            "-m",
+                            "pip",
+                            "check",
+                            "-r",
+                            str(requirements_file),
+                        ],
                         capture_output=True,
                         text=True,
                     )
 
                     if result.returncode != 0:
-                        self.logger.error(f"Dependency conflicts found in {requirements_file}:")
+                        self.logger.error(
+                            f"Dependency conflicts found in {requirements_file}:"
+                        )
                         print(result.stdout)
                         return False
 
@@ -192,9 +232,13 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Dependency Manager")
     parser.add_argument(
-        "command", choices=["install", "update", "freeze", "check", "clean", "verify"], help="Command to execute"
+        "command",
+        choices=["install", "update", "freeze", "check", "clean", "verify"],
+        help="Command to execute",
     )
-    parser.add_argument("--dev", action="store_true", help="Use development requirements")
+    parser.add_argument(
+        "--dev", action="store_true", help="Use development requirements"
+    )
 
     args = parser.parse_args()
     manager = DependencyManager()

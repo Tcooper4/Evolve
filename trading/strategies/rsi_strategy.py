@@ -13,10 +13,7 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 
-from .rsi_utils import (
-    calculate_rsi,
-    validate_rsi_parameters,
-)
+from .rsi_utils import calculate_rsi, validate_rsi_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +43,9 @@ class RSIStrategy:
             log_crossovers: Whether to log RSI crossover events
         """
         # Validate parameters
-        is_valid, error_msg = validate_rsi_parameters(rsi_period, oversold_threshold, overbought_threshold)
+        is_valid, error_msg = validate_rsi_parameters(
+            rsi_period, oversold_threshold, overbought_threshold
+        )
         if not is_valid:
             raise ValueError(f"Invalid RSI parameters: {error_msg}")
 
@@ -100,7 +99,9 @@ class RSIStrategy:
             return
 
         crossover_event = {
-            "timestamp": timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp),
+            "timestamp": timestamp.isoformat()
+            if isinstance(timestamp, datetime)
+            else str(timestamp),
             "rsi_value": round(rsi_value, 4),
             "crossover_type": crossover_type,
             "price": round(price, 4),
@@ -118,7 +119,12 @@ class RSIStrategy:
         self.crossover_log.append(crossover_event)
 
         # Log to console with emoji indicators
-        emoji_map = {"oversold": "📈", "overbought": "📉", "range_exit": "⚠️", "range_enter": "🔄"}
+        emoji_map = {
+            "oversold": "📈",
+            "overbought": "📉",
+            "range_exit": "⚠️",
+            "range_enter": "🔄",
+        }
 
         emoji = emoji_map.get(crossover_type, "📊")
         logger.info(
@@ -152,7 +158,9 @@ class RSIStrategy:
         """
         # Edge case fallback logic
         if data is None or data.empty or "Close" not in data.columns:
-            logger.warning("Invalid data provided to RSI strategy: data is None, empty, or missing 'Close' column")
+            logger.warning(
+                "Invalid data provided to RSI strategy: data is None, empty, or missing 'Close' column"
+            )
             return []  # Return empty signals list
 
         try:
@@ -167,7 +175,11 @@ class RSIStrategy:
                 current_rsi = data["RSI"].iloc[i]
                 prev_rsi = data["RSI"].iloc[i - 1]
                 current_price = data["Close"].iloc[i]
-                timestamp = data.index[i] if hasattr(data.index[i], "to_pydatetime") else datetime.now()
+                timestamp = (
+                    data.index[i]
+                    if hasattr(data.index[i], "to_pydatetime")
+                    else datetime.now()
+                )
 
                 # Skip if RSI is not in valid range
                 if not self.is_rsi_in_valid_range(current_rsi):
@@ -192,7 +204,10 @@ class RSIStrategy:
                     )
 
                 # Generate signals based on RSI thresholds
-                if current_rsi < self.oversold_threshold and prev_rsi >= self.oversold_threshold:
+                if (
+                    current_rsi < self.oversold_threshold
+                    and prev_rsi >= self.oversold_threshold
+                ):
                     # Oversold condition - buy signal
                     crossover_count += 1
                     self.log_rsi_crossover(
@@ -218,7 +233,10 @@ class RSIStrategy:
                         }
                     )
 
-                elif current_rsi > self.overbought_threshold and prev_rsi <= self.overbought_threshold:
+                elif (
+                    current_rsi > self.overbought_threshold
+                    and prev_rsi <= self.overbought_threshold
+                ):
                     # Overbought condition - sell signal
                     crossover_count += 1
                     self.log_rsi_crossover(
@@ -244,7 +262,9 @@ class RSIStrategy:
                         }
                     )
 
-            logger.info(f"RSI Strategy generated {len(signals)} signals with {crossover_count} crossovers")
+            logger.info(
+                f"RSI Strategy generated {len(signals)} signals with {crossover_count} crossovers"
+            )
             return signals
 
         except Exception as e:
@@ -328,7 +348,8 @@ class RSIStrategy:
         stats = {
             "total_crossovers": len(self.crossover_log),
             "crossover_types": {
-                crossover_type: crossover_types.count(crossover_type) for crossover_type in set(crossover_types)
+                crossover_type: crossover_types.count(crossover_type)
+                for crossover_type in set(crossover_types)
             },
             "rsi_statistics": {
                 "min": min(rsi_values),

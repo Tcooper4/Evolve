@@ -110,7 +110,9 @@ class MarketSimulator:
             f"impact={market_impact_factor}, commission={commission_rate}"
         )
 
-    def calculate_slippage(self, order_quantity: float, market_volume: float, price: float) -> float:
+    def calculate_slippage(
+        self, order_quantity: float, market_volume: float, price: float
+    ) -> float:
         """Calculate slippage based on order size and market conditions.
 
         Args:
@@ -134,12 +136,16 @@ class MarketSimulator:
         # Spread component
         spread_slippage = self.spread * np.random.uniform(0.5, 1.5)
 
-        total_slippage = slippage + volume_slippage + volatility_slippage + spread_slippage
+        total_slippage = (
+            slippage + volume_slippage + volatility_slippage + spread_slippage
+        )
 
         # Ensure slippage is positive
         return max(total_slippage, 0.0)
 
-    def calculate_market_impact(self, order_quantity: float, market_volume: float, price: float) -> float:
+    def calculate_market_impact(
+        self, order_quantity: float, market_volume: float, price: float
+    ) -> float:
         """Calculate market impact of the order.
 
         Args:
@@ -187,7 +193,11 @@ class MarketSimulator:
 class TradeExecutor:
     """Main trade execution engine."""
 
-    def __init__(self, market_simulator: Optional[MarketSimulator] = None, live_trading: bool = False):
+    def __init__(
+        self,
+        market_simulator: Optional[MarketSimulator] = None,
+        live_trading: bool = False,
+    ):
         """Initialize trade executor.
 
         Args:
@@ -228,7 +238,9 @@ class TradeExecutor:
         Returns:
             Order object
         """
-        order_id = f"order_{len(self.orders)}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        order_id = (
+            f"order_{len(self.orders)}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
 
         order = Order(
             id=order_id,
@@ -245,7 +257,9 @@ class TradeExecutor:
 
         return order
 
-    def execute_order(self, order: Order, market_price: float, market_volume: float = 1000000) -> ExecutionResult:
+    def execute_order(
+        self, order: Order, market_price: float, market_volume: float = 1000000
+    ) -> ExecutionResult:
         """Execute an order with market simulation.
 
         Args:
@@ -258,8 +272,12 @@ class TradeExecutor:
         """
         try:
             # Calculate execution price with slippage and market impact
-            slippage = self.market_simulator.calculate_slippage(order.quantity, market_volume, market_price)
-            market_impact = self.market_simulator.calculate_market_impact(order.quantity, market_volume, market_price)
+            slippage = self.market_simulator.calculate_slippage(
+                order.quantity, market_volume, market_price
+            )
+            market_impact = self.market_simulator.calculate_market_impact(
+                order.quantity, market_volume, market_price
+            )
 
             # Determine execution price based on order type
             if order.order_type == OrderType.MARKET:
@@ -276,7 +294,9 @@ class TradeExecutor:
 
             # Calculate commission
             order_value = order.quantity * execution_price
-            commission = self.market_simulator.calculate_commission(order_value, order.quantity)
+            commission = self.market_simulator.calculate_commission(
+                order_value, order.quantity
+            )
 
             # Calculate total cost
             total_cost = order_value + commission
@@ -351,11 +371,17 @@ class TradeExecutor:
 
         total_volume = sum(e.execution_quantity for e in successful_executions)
         total_commission = sum(e.commission for e in successful_executions)
-        total_slippage = sum(e.slippage * e.execution_quantity * e.execution_price for e in successful_executions)
-        total_market_impact = sum(e.market_impact * e.execution_quantity for e in successful_executions)
+        total_slippage = sum(
+            e.slippage * e.execution_quantity * e.execution_price
+            for e in successful_executions
+        )
+        total_market_impact = sum(
+            e.market_impact * e.execution_quantity for e in successful_executions
+        )
 
         avg_price = (
-            sum(e.execution_price * e.execution_quantity for e in successful_executions) / total_volume
+            sum(e.execution_price * e.execution_quantity for e in successful_executions)
+            / total_volume
             if total_volume > 0
             else 0.0
         )
@@ -372,7 +398,12 @@ class TradeExecutor:
         }
 
     def simulate_trade(
-        self, symbol: str, side: str, quantity: float, market_price: float, market_volume: float = 1000000
+        self,
+        symbol: str,
+        side: str,
+        quantity: float,
+        market_price: float,
+        market_volume: float = 1000000,
     ) -> ExecutionResult:
         """Simulate a complete trade execution.
 

@@ -64,11 +64,36 @@ class SystemMonitor:
         # Default configuration
         self.default_config = {
             "metrics": {
-                "cpu": {"enabled": True, "interval": 60, "threshold": 90.0, "warning_threshold": 80.0},
-                "memory": {"enabled": True, "interval": 60, "threshold": 85.0, "warning_threshold": 75.0},
-                "disk": {"enabled": True, "interval": 300, "threshold": 90.0, "warning_threshold": 80.0},
-                "network": {"enabled": True, "interval": 60, "threshold": 1000, "warning_threshold": 800},  # KB/s
-                "api": {"enabled": True, "interval": 30, "threshold": 1000, "warning_threshold": 500},  # ms
+                "cpu": {
+                    "enabled": True,
+                    "interval": 60,
+                    "threshold": 90.0,
+                    "warning_threshold": 80.0,
+                },
+                "memory": {
+                    "enabled": True,
+                    "interval": 60,
+                    "threshold": 85.0,
+                    "warning_threshold": 75.0,
+                },
+                "disk": {
+                    "enabled": True,
+                    "interval": 300,
+                    "threshold": 90.0,
+                    "warning_threshold": 80.0,
+                },
+                "network": {
+                    "enabled": True,
+                    "interval": 60,
+                    "threshold": 1000,
+                    "warning_threshold": 800,
+                },  # KB/s
+                "api": {
+                    "enabled": True,
+                    "interval": 30,
+                    "threshold": 1000,
+                    "warning_threshold": 500,
+                },  # ms
             },
             "alert_callbacks": {},
             "log_retention_days": 7,
@@ -106,16 +131,26 @@ class SystemMonitor:
         self.logger.setLevel(logging.INFO)
 
         # Metric log handler
-        metric_handler = RotatingFileHandler(log_dir / "metrics.log", maxBytes=10 * 1024 * 1024, backupCount=5)  # 10MB
+        metric_handler = RotatingFileHandler(
+            log_dir / "metrics.log", maxBytes=10 * 1024 * 1024, backupCount=5
+        )  # 10MB
         metric_handler.setFormatter(logging.Formatter("%(message)s"))  # Raw JSON
         self.logger.addHandler(metric_handler)
 
         # Alert log handler
-        alert_handler = RotatingFileHandler(log_dir / "alerts.log", maxBytes=10 * 1024 * 1024, backupCount=5)  # 10MB
-        alert_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        alert_handler = RotatingFileHandler(
+            log_dir / "alerts.log", maxBytes=10 * 1024 * 1024, backupCount=5
+        )  # 10MB
+        alert_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        )
         self.logger.addHandler(alert_handler)
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     async def start(self) -> None:
         """Start monitoring all enabled metrics."""
@@ -254,7 +289,13 @@ class SystemMonitor:
         Returns:
             Mock metric value
         """
-        mock_values = {"cpu": 75.0, "memory": 65.0, "disk": 70.0, "network": 500.0, "api": 200.0}
+        mock_values = {
+            "cpu": 75.0,
+            "memory": 65.0,
+            "disk": 70.0,
+            "network": 500.0,
+            "api": 200.0,
+        }
         return {
             "success": True,
             "result": mock_values.get(metric_name, 0.0),
@@ -262,7 +303,9 @@ class SystemMonitor:
             "timestamp": datetime.now().isoformat(),
         }
 
-    async def _evaluate_alert(self, metric_name: str, value: float, config: Dict) -> None:
+    async def _evaluate_alert(
+        self, metric_name: str, value: float, config: Dict
+    ) -> None:
         """Evaluate a metric value against thresholds.
 
         Args:
@@ -276,7 +319,11 @@ class SystemMonitor:
             value=value,
             timestamp=datetime.utcnow().isoformat(),
             status="ok",
-            tags={"agent_id": self.agent_id, "hostname": self.hostname, "platform": self.platform},
+            tags={
+                "agent_id": self.agent_id,
+                "hostname": self.hostname,
+                "platform": self.platform,
+            },
         )
 
         # Log metric

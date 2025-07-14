@@ -15,7 +15,9 @@ from pathlib import Path
 from typing import Dict, List
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -41,10 +43,19 @@ def check_init_files(test_dirs: List[Path]) -> Dict[str, List[str]]:
 def run_pytest_collect() -> Dict[str, List[str]]:
     """Run pytest --collect-only and capture output."""
     try:
-        result = subprocess.run(["pytest", "--collect-only", "-v"], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["pytest", "--collect-only", "-v"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         return {"success": True, "output": result.stdout.splitlines()}
     except subprocess.CalledProcessError as e:
-        return {"success": False, "output": e.stdout.splitlines(), "error": e.stderr.splitlines()}
+        return {
+            "success": False,
+            "output": e.stdout.splitlines(),
+            "error": e.stderr.splitlines(),
+        }
 
 
 def check_test_files(test_dirs: List[Path]) -> Dict[str, List[str]]:
@@ -61,7 +72,9 @@ def check_test_files(test_dirs: List[Path]) -> Dict[str, List[str]]:
                     if "import" in content:
                         # Basic import check
                         if "trading." not in content and "from trading" not in content:
-                            import_errors.append(f"{path}: No trading package imports found")
+                            import_errors.append(
+                                f"{path}: No trading package imports found"
+                            )
             except Exception as e:
                 import_errors.append(f"{path}: Error reading file - {str(e)}")
 

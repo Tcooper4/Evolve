@@ -77,8 +77,12 @@ class Task(BaseModel):
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
-            "scheduled_for": self.scheduled_for.isoformat() if self.scheduled_for else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "scheduled_for": self.scheduled_for.isoformat()
+            if self.scheduled_for
+            else None,
+            "completed_at": self.completed_at.isoformat()
+            if self.completed_at
+            else None,
             "dependencies": self.dependencies,
             "parameters": self.parameters,
             "result": self.result,

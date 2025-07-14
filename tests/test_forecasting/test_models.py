@@ -297,7 +297,9 @@ class TestXGBoostModel(TestModelBase):
             # Test prediction output length
             test_data = train_data.tail(5)
             predictions = model.predict(test_data)
-            assert len(predictions) == 5, f"Expected 5 predictions, got {len(predictions)}"
+            assert (
+                len(predictions) == 5
+            ), f"Expected 5 predictions, got {len(predictions)}"
 
             # Test prediction shape
             assert predictions.ndim == 1, f"Expected 1D array, got {predictions.ndim}D"
@@ -305,7 +307,9 @@ class TestXGBoostModel(TestModelBase):
             # Test MSE threshold on synthetic data
             synthetic_data = train_data.copy()
             synthetic_data["close"] = np.linspace(100, 200, len(synthetic_data))
-            synthetic_data["target"] = synthetic_data["close"] + np.random.normal(0, 1, len(synthetic_data))
+            synthetic_data["target"] = synthetic_data["close"] + np.random.normal(
+                0, 1, len(synthetic_data)
+            )
 
             model.fit(synthetic_data)
             synthetic_predictions = model.predict(synthetic_data.tail(20))
@@ -315,10 +319,14 @@ class TestXGBoostModel(TestModelBase):
             assert mse < 1000, f"MSE too high: {mse}, expected < 1000"
 
             # Test that predictions are finite
-            assert np.all(np.isfinite(predictions)), "Predictions contain NaN or infinite values"
+            assert np.all(
+                np.isfinite(predictions)
+            ), "Predictions contain NaN or infinite values"
 
             # Test that predictions are reasonable (not extreme values)
-            assert np.all(predictions > -1000) and np.all(predictions < 10000), "Predictions outside reasonable range"
+            assert np.all(predictions > -1000) and np.all(
+                predictions < 10000
+            ), "Predictions outside reasonable range"
 
         except ImportError:
             pytest.skip("XGBoost not available")
@@ -350,7 +358,9 @@ class TestXGBoostModel(TestModelBase):
             features, target = model.prepare_features(train_data)
             assert len(features) > 0, "Auto feature engineering should produce features"
             assert len(target) > 0, "Auto feature engineering should produce target"
-            assert len(features) == len(target), "Features and target should have same length"
+            assert len(features) == len(
+                target
+            ), "Features and target should have same length"
 
         except ImportError:
             pytest.skip("XGBoost not available")
@@ -484,7 +494,11 @@ class TestProphetModel(TestModelBase):
             config = {
                 "date_column": "date",
                 "target_column": "close",
-                "prophet_params": {"yearly_seasonality": True, "weekly_seasonality": True, "daily_seasonality": False},
+                "prophet_params": {
+                    "yearly_seasonality": True,
+                    "weekly_seasonality": True,
+                    "daily_seasonality": False,
+                },
             }
 
             model = ProphetModel(config)
@@ -508,7 +522,11 @@ class TestProphetModel(TestModelBase):
             config = {
                 "date_column": "date",
                 "target_column": "close",
-                "prophet_params": {"yearly_seasonality": True, "weekly_seasonality": True, "daily_seasonality": False},
+                "prophet_params": {
+                    "yearly_seasonality": True,
+                    "weekly_seasonality": True,
+                    "daily_seasonality": False,
+                },
             }
 
             model = ProphetModel(config)
@@ -537,7 +555,15 @@ class TestModelEvaluation:
         metrics = calculate_forecast_metrics(actual, predicted)
 
         # Verify all required metrics are present
-        required_metrics = ["RMSE", "MAE", "MAPE", "Directional_Accuracy", "Sharpe_Ratio", "Max_Drawdown", "Win_Rate"]
+        required_metrics = [
+            "RMSE",
+            "MAE",
+            "MAPE",
+            "Directional_Accuracy",
+            "Sharpe_Ratio",
+            "Max_Drawdown",
+            "Win_Rate",
+        ]
 
         for metric in required_metrics:
             assert metric in metrics

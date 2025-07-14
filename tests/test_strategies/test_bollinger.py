@@ -113,7 +113,11 @@ class TestBollingerStrategy:
         signals = strategy.generate_signals(sample_data)
 
         # Get non-NaN values
-        mask = bb_result["BBL_20_2.0"].notna() & bb_result["BBU_20_2.0"].notna() & signals.notna()
+        mask = (
+            bb_result["BBL_20_2.0"].notna()
+            & bb_result["BBU_20_2.0"].notna()
+            & signals.notna()
+        )
         lower_band = bb_result.loc[mask, "BBL_20_2.0"]
         upper_band = bb_result.loc[mask, "BBU_20_2.0"]
         prices = sample_data.loc[mask, "Close"]
@@ -122,12 +126,16 @@ class TestBollingerStrategy:
         # Check that price touching lower band generates buy signals
         lower_touch_mask = prices <= lower_band * 1.01  # Within 1% of lower band
         if lower_touch_mask.any():
-            assert (signal_values[lower_touch_mask] == 1).all(), "Lower band touch should generate buy signals"
+            assert (
+                signal_values[lower_touch_mask] == 1
+            ).all(), "Lower band touch should generate buy signals"
 
         # Check that price touching upper band generates sell signals
         upper_touch_mask = prices >= upper_band * 0.99  # Within 1% of upper band
         if upper_touch_mask.any():
-            assert (signal_values[upper_touch_mask] == -1).all(), "Upper band touch should generate sell signals"
+            assert (
+                signal_values[upper_touch_mask] == -1
+            ).all(), "Upper band touch should generate sell signals"
 
     def test_strategy_configuration(self, strategy):
         """Test that strategy configuration is correct."""
@@ -152,7 +160,11 @@ class TestBollingerStrategy:
         bb_result = strategy.calculate_bollinger_bands(sample_data["Close"])
 
         # Get non-NaN values
-        mask = bb_result["BBL_20_2.0"].notna() & bb_result["BBM_20_2.0"].notna() & bb_result["BBU_20_2.0"].notna()
+        mask = (
+            bb_result["BBL_20_2.0"].notna()
+            & bb_result["BBM_20_2.0"].notna()
+            & bb_result["BBU_20_2.0"].notna()
+        )
         lower_band = bb_result.loc[mask, "BBL_20_2.0"]
         middle_band = bb_result.loc[mask, "BBM_20_2.0"]
         upper_band = bb_result.loc[mask, "BBU_20_2.0"]
@@ -211,7 +223,13 @@ class TestBollingerStrategy:
 
         # Check performance metrics
         assert isinstance(performance, dict)
-        required_metrics = ["returns", "sharpe_ratio", "max_drawdown", "win_rate", "total_trades"]
+        required_metrics = [
+            "returns",
+            "sharpe_ratio",
+            "max_drawdown",
+            "win_rate",
+            "total_trades",
+        ]
 
         for metric in required_metrics:
             assert metric in performance
@@ -249,11 +267,15 @@ class TestBollingerStrategy:
         """Test that volatility affects Bollinger Bands width."""
         # Create high volatility data
         high_vol_data = sample_data.copy()
-        high_vol_data["Close"] = high_vol_data["Close"] + np.random.normal(0, 5, len(high_vol_data))
+        high_vol_data["Close"] = high_vol_data["Close"] + np.random.normal(
+            0, 5, len(high_vol_data)
+        )
 
         # Create low volatility data
         low_vol_data = sample_data.copy()
-        low_vol_data["Close"] = low_vol_data["Close"] + np.random.normal(0, 0.5, len(low_vol_data))
+        low_vol_data["Close"] = low_vol_data["Close"] + np.random.normal(
+            0, 0.5, len(low_vol_data)
+        )
 
         bb_high_vol = strategy.calculate_bollinger_bands(high_vol_data["Close"])
         bb_low_vol = strategy.calculate_bollinger_bands(low_vol_data["Close"])

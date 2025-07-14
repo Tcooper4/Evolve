@@ -53,7 +53,9 @@ class GoalStatusTracker:
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
@@ -74,7 +76,11 @@ class GoalStatusTracker:
         except Exception as e:
             error_msg = f"Error loading goals: {str(e)}"
             self.logger.error(error_msg)
-            return {"status": "Error", "message": error_msg, "timestamp": datetime.now().isoformat()}
+            return {
+                "status": "Error",
+                "message": error_msg,
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def save_goals(self, status: Dict[str, Any]) -> None:
         """Save goal status to JSON file."""
@@ -159,7 +165,9 @@ class GoalStatusTracker:
 
             # Rate limit logging to prevent spam
             if self._should_log_status(summary["current_status"]):
-                self.logger.info(f"Generated goal status summary: {summary['current_status']}")
+                self.logger.info(
+                    f"Generated goal status summary: {summary['current_status']}"
+                )
 
             return summary
 
@@ -187,7 +195,9 @@ class GoalStatusTracker:
         progress = goals_data.get("progress", 0.0)
 
         if status == "behind_schedule":
-            recommendations.append("Consider increasing resources or adjusting timeline")
+            recommendations.append(
+                "Consider increasing resources or adjusting timeline"
+            )
             recommendations.append("Review bottlenecks in current workflow")
         elif status == "on_track":
             recommendations.append("Continue current approach")
@@ -212,10 +222,22 @@ class GoalStatusTracker:
         target_date = goals_data.get("target_date")
 
         if status == "behind_schedule":
-            alerts.append({"type": "warning", "message": "Goal is behind schedule", "severity": "medium"})
+            alerts.append(
+                {
+                    "type": "warning",
+                    "message": "Goal is behind schedule",
+                    "severity": "medium",
+                }
+            )
 
         if progress < 0.1 and status != "not_started":
-            alerts.append({"type": "warning", "message": "Very low progress detected", "severity": "high"})
+            alerts.append(
+                {
+                    "type": "warning",
+                    "message": "Very low progress detected",
+                    "severity": "high",
+                }
+            )
 
         if target_date:
             try:
@@ -232,16 +254,24 @@ class GoalStatusTracker:
                     )
                 elif days_remaining < 30:
                     alerts.append(
-                        {"type": "warning", "message": f"Goal deadline in {days_remaining} days", "severity": "medium"}
+                        {
+                            "type": "warning",
+                            "message": f"Goal deadline in {days_remaining} days",
+                            "severity": "medium",
+                        }
                     )
             except ValueError as e:
-                logger.warning(f"Could not parse target date for alert calculation: {e}")
+                logger.warning(
+                    f"Could not parse target date for alert calculation: {e}"
+                )
                 logging.error(f"Error in {__file__}: {e}")
                 raise
 
         return alerts
 
-    def log_agent_contribution(self, agent_name: str, contribution: str, impact: str = "medium") -> None:
+    def log_agent_contribution(
+        self, agent_name: str, contribution: str, impact: str = "medium"
+    ) -> None:
         """Log agent contribution to goals."""
         try:
             contributions = self._load_contributions()
@@ -327,7 +357,11 @@ def load_goals() -> Dict[str, Any]:
     except Exception as e:
         error_msg = f"Error loading goals: {str(e)}"
         logger.error(error_msg)
-        return {"status": "Error", "message": error_msg, "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "Error",
+            "message": error_msg,
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def save_goals(status: Dict[str, Any]) -> None:
@@ -433,10 +467,22 @@ def _check_alerts(goals_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     target_date = goals_data.get("target_date")
 
     if status == "behind_schedule":
-        alerts.append({"type": "warning", "message": "Goal is behind schedule", "severity": "medium"})
+        alerts.append(
+            {
+                "type": "warning",
+                "message": "Goal is behind schedule",
+                "severity": "medium",
+            }
+        )
 
     if progress < 0.1 and status != "not_started":
-        alerts.append({"type": "warning", "message": "Very low progress detected", "severity": "high"})
+        alerts.append(
+            {
+                "type": "warning",
+                "message": "Very low progress detected",
+                "severity": "high",
+            }
+        )
 
     if target_date:
         try:
@@ -453,7 +499,11 @@ def _check_alerts(goals_data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 )
             elif days_remaining < 30:
                 alerts.append(
-                    {"type": "warning", "message": f"Goal deadline in {days_remaining} days", "severity": "medium"}
+                    {
+                        "type": "warning",
+                        "message": f"Goal deadline in {days_remaining} days",
+                        "severity": "medium",
+                    }
                 )
         except ValueError as e:
             logger.warning(f"Could not parse target date for alert calculation: {e}")
@@ -500,7 +550,9 @@ def update_goal_progress(
         raise
 
 
-def log_agent_contribution(agent_name: str, contribution: str, impact: str = "medium") -> None:
+def log_agent_contribution(
+    agent_name: str, contribution: str, impact: str = "medium"
+) -> None:
     """
     Log agent contribution to goals.
 

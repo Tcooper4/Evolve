@@ -17,11 +17,7 @@ import numpy as np
 import pandas as pd
 
 # Local imports
-from trading.agents.base_agent_interface import (
-    AgentConfig,
-    AgentResult,
-    BaseAgent,
-)
+from trading.agents.base_agent_interface import AgentConfig, AgentResult, BaseAgent
 from trading.memory.agent_memory import AgentMemory
 from trading.portfolio.portfolio_manager import (
     PortfolioManager,
@@ -199,7 +195,9 @@ class TradeSignal:
             data["timestamp"] = datetime.fromisoformat(data["timestamp"])
 
         # Convert max_holding_period
-        if "max_holding_period" in data and isinstance(data["max_holding_period"], (int, float)):
+        if "max_holding_period" in data and isinstance(
+            data["max_holding_period"], (int, float)
+        ):
             data["max_holding_period"] = timedelta(seconds=data["max_holding_period"])
 
         # Convert risk controls
@@ -257,19 +255,27 @@ class ExecutionAgent(BaseAgent):
         super().__init__(config)
 
         # Execution settings
-        self.execution_mode = ExecutionMode(config.custom_config.get("execution_mode", "simulation"))
+        self.execution_mode = ExecutionMode(
+            config.custom_config.get("execution_mode", "simulation")
+        )
         self.max_positions = config.custom_config.get("max_positions", 10)
         self.min_confidence = config.custom_config.get("min_confidence", 0.7)
         self.max_slippage = config.custom_config.get("max_slippage", 0.001)  # 10 bps
-        self.execution_delay = config.custom_config.get("execution_delay", 1.0)  # seconds
+        self.execution_delay = config.custom_config.get(
+            "execution_delay", 1.0
+        )  # seconds
 
         # Risk controls
         self.default_risk_controls = self._load_default_risk_controls()
-        self.risk_monitoring_enabled = config.custom_config.get("risk_monitoring_enabled", True)
+        self.risk_monitoring_enabled = config.custom_config.get(
+            "risk_monitoring_enabled", True
+        )
         self.auto_exit_enabled = config.custom_config.get("auto_exit_enabled", True)
 
         # Portfolio management
-        self.portfolio_manager = PortfolioManager(config.custom_config.get("portfolio_config", {}))
+        self.portfolio_manager = PortfolioManager(
+            config.custom_config.get("portfolio_config", {})
+        )
 
         # Memory for tracking
         self.memory = AgentMemory()
@@ -291,7 +297,9 @@ class ExecutionAgent(BaseAgent):
 
         # Risk monitoring state
         self.daily_pnl = 0.0
-        self.daily_reset_time = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        self.daily_reset_time = datetime.utcnow().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
 
         # Price history for ATR calculations
         self.price_history: Dict[str, List[float]] = {}
@@ -304,12 +312,16 @@ class ExecutionAgent(BaseAgent):
         }
 
         # Position sizer
-        self.position_sizer = PositionSizer(config.custom_config.get("position_sizing_config", {}))
+        self.position_sizer = PositionSizer(
+            config.custom_config.get("position_sizing_config", {})
+        )
 
         # Initialize execution providers (for future real execution)
         self._initialize_execution_providers()
 
-        self.logger.info(f"ExecutionAgent initialized in {self.execution_mode.value} mode with risk controls")
+        self.logger.info(
+            f"ExecutionAgent initialized in {self.execution_mode.value} mode with risk controls"
+        )
 
     def _load_default_risk_controls(self) -> RiskControls:
         """Load default risk controls from config."""
@@ -317,13 +329,25 @@ class ExecutionAgent(BaseAgent):
 
         # Default stop loss (2% or 2x ATR)
         stop_loss_config = risk_config.get(
-            "stop_loss", {"threshold_type": "percentage", "value": 0.02, "atr_multiplier": 2.0, "atr_period": 14}
+            "stop_loss",
+            {
+                "threshold_type": "percentage",
+                "value": 0.02,
+                "atr_multiplier": 2.0,
+                "atr_period": 14,
+            },
         )
         stop_loss = RiskThreshold.from_dict(stop_loss_config)
 
         # Default take profit (6% or 3x ATR)
         take_profit_config = risk_config.get(
-            "take_profit", {"threshold_type": "percentage", "value": 0.06, "atr_multiplier": 3.0, "atr_period": 14}
+            "take_profit",
+            {
+                "threshold_type": "percentage",
+                "value": 0.06,
+                "atr_multiplier": 3.0,
+                "atr_period": 14,
+            },
         )
         take_profit = RiskThreshold.from_dict(take_profit_config)
 
@@ -422,7 +446,9 @@ class ExecutionAgent(BaseAgent):
 
                 # Add to memory
                 self.memory.log_decision(
-                    agent_name=self.config.name, decision_type="trade_execution", details=result.to_dict()
+                    agent_name=self.config.name,
+                    decision_type="trade_execution",
+                    details=result.to_dict(),
                 )
 
             # Update portfolio if requested
@@ -445,7 +471,9 @@ class ExecutionAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Error in execution: {e}")
-            return AgentResult(success=False, message=f"Execution error: {str(e)}", error=e)
+            return AgentResult(
+                success=False, message=f"Execution error: {str(e)}", error=e
+            )
 
     async def _monitor_risk_limits(self, market_data: Dict[str, Any]) -> None:
         """Monitor and enforce risk limits.
@@ -458,17 +486,23 @@ class ExecutionAgent(BaseAgent):
             current_time = datetime.utcnow()
             if current_time.date() > self.daily_reset_time.date():
                 self.daily_pnl = 0.0
-                self.daily_reset_time = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+                self.daily_reset_time = current_time.replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
 
             # Check daily loss limit
             if abs(self.daily_pnl) > self.default_risk_controls.max_daily_loss:
                 await self._emergency_exit_all_positions(
-                    ExitReason.RISK_LIMIT, f"Daily loss limit exceeded: {self.daily_pnl:.2%}", market_data
+                    ExitReason.RISK_LIMIT,
+                    f"Daily loss limit exceeded: {self.daily_pnl:.2%}",
+                    market_data,
                 )
                 return
 
             # Check each open position for risk limits
-            for position in self.portfolio_manager.state.open_positions[:]:  # Copy to allow modification
+            for position in self.portfolio_manager.state.open_positions[
+                :
+            ]:  # Copy to allow modification
                 await self._check_position_risk_limits(position, market_data)
 
             # Check portfolio-level risk limits
@@ -477,7 +511,9 @@ class ExecutionAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error in risk monitoring: {e}")
 
-    async def _check_position_risk_limits(self, position: Position, market_data: Dict[str, Any]) -> None:
+    async def _check_position_risk_limits(
+        self, position: Position, market_data: Dict[str, Any]
+    ) -> None:
         """Check risk limits for a specific position.
 
         Args:
@@ -495,8 +531,12 @@ class ExecutionAgent(BaseAgent):
             risk_controls = self._get_position_risk_controls(position)
 
             # Check stop loss
-            stop_loss_price = self._calculate_stop_loss_price(position, risk_controls, market_data)
-            if self._should_exit_position(position, current_price, stop_loss_price, "stop_loss"):
+            stop_loss_price = self._calculate_stop_loss_price(
+                position, risk_controls, market_data
+            )
+            if self._should_exit_position(
+                position, current_price, stop_loss_price, "stop_loss"
+            ):
                 await self._exit_position(
                     position,
                     current_price,
@@ -507,8 +547,12 @@ class ExecutionAgent(BaseAgent):
                 return
 
             # Check take profit
-            take_profit_price = self._calculate_take_profit_price(position, risk_controls, market_data)
-            if self._should_exit_position(position, current_price, take_profit_price, "take_profit"):
+            take_profit_price = self._calculate_take_profit_price(
+                position, risk_controls, market_data
+            )
+            if self._should_exit_position(
+                position, current_price, take_profit_price, "take_profit"
+            ):
                 await self._exit_position(
                     position,
                     current_price,
@@ -557,7 +601,9 @@ class ExecutionAgent(BaseAgent):
             correlation = self._calculate_portfolio_correlation(market_data)
             if correlation > self.default_risk_controls.max_correlation:
                 await self._emergency_exit_all_positions(
-                    ExitReason.CORRELATION_LIMIT, f"Portfolio correlation too high: {correlation:.2%}", market_data
+                    ExitReason.CORRELATION_LIMIT,
+                    f"Portfolio correlation too high: {correlation:.2%}",
+                    market_data,
                 )
                 return
 
@@ -565,7 +611,9 @@ class ExecutionAgent(BaseAgent):
             portfolio_risk = self._calculate_portfolio_risk_exposure(market_data)
             if portfolio_risk > self.default_risk_controls.max_portfolio_risk:
                 await self._emergency_exit_all_positions(
-                    ExitReason.RISK_LIMIT, f"Portfolio risk too high: {portfolio_risk:.2%}", market_data
+                    ExitReason.RISK_LIMIT,
+                    f"Portfolio risk too high: {portfolio_risk:.2%}",
+                    market_data,
                 )
                 return
 
@@ -587,7 +635,10 @@ class ExecutionAgent(BaseAgent):
         return self.default_risk_controls
 
     def _calculate_stop_loss_price(
-        self, position: Position, risk_controls: RiskControls, market_data: Dict[str, Any]
+        self,
+        position: Position,
+        risk_controls: RiskControls,
+        market_data: Dict[str, Any],
     ) -> float:
         """Calculate stop loss price for a position.
 
@@ -608,7 +659,9 @@ class ExecutionAgent(BaseAgent):
                 return position.entry_price * (1 + threshold.value)
 
         elif threshold.threshold_type == RiskThresholdType.ATR_BASED:
-            atr = self._calculate_atr(position.symbol, threshold.atr_period, market_data)
+            atr = self._calculate_atr(
+                position.symbol, threshold.atr_period, market_data
+            )
             atr_distance = atr * threshold.atr_multiplier
 
             if position.direction == TradeDirection.LONG:
@@ -625,7 +678,10 @@ class ExecutionAgent(BaseAgent):
         return position.entry_price
 
     def _calculate_take_profit_price(
-        self, position: Position, risk_controls: RiskControls, market_data: Dict[str, Any]
+        self,
+        position: Position,
+        risk_controls: RiskControls,
+        market_data: Dict[str, Any],
     ) -> float:
         """Calculate take profit price for a position.
 
@@ -646,7 +702,9 @@ class ExecutionAgent(BaseAgent):
                 return position.entry_price * (1 - threshold.value)
 
         elif threshold.threshold_type == RiskThresholdType.ATR_BASED:
-            atr = self._calculate_atr(position.symbol, threshold.atr_period, market_data)
+            atr = self._calculate_atr(
+                position.symbol, threshold.atr_period, market_data
+            )
             atr_distance = atr * threshold.atr_multiplier
 
             if position.direction == TradeDirection.LONG:
@@ -663,7 +721,11 @@ class ExecutionAgent(BaseAgent):
         return position.entry_price
 
     def _should_exit_position(
-        self, position: Position, current_price: float, threshold_price: float, exit_type: str
+        self,
+        position: Position,
+        current_price: float,
+        threshold_price: float,
+        exit_type: str,
     ) -> bool:
         """Check if position should be exited based on price.
 
@@ -688,7 +750,12 @@ class ExecutionAgent(BaseAgent):
                 return current_price <= threshold_price
 
     async def _exit_position(
-        self, position: Position, exit_price: float, exit_reason: ExitReason, message: str, market_data: Dict[str, Any]
+        self,
+        position: Position,
+        exit_price: float,
+        exit_reason: ExitReason,
+        message: str,
+        market_data: Dict[str, Any],
     ) -> None:
         """Exit a position with detailed logging.
 
@@ -714,7 +781,9 @@ class ExecutionAgent(BaseAgent):
             holding_period = datetime.utcnow() - position.entry_time
 
             # Calculate risk metrics
-            risk_metrics = self._calculate_position_risk_metrics(position, exit_price, market_data)
+            risk_metrics = self._calculate_position_risk_metrics(
+                position, exit_price, market_data
+            )
 
             # Close position through portfolio manager
             self.portfolio_manager.close_position(position, exit_price)
@@ -732,7 +801,9 @@ class ExecutionAgent(BaseAgent):
                 pnl=pnl,
                 holding_period=holding_period,
                 risk_metrics=risk_metrics,
-                market_conditions=self._get_market_conditions(position.symbol, market_data),
+                market_conditions=self._get_market_conditions(
+                    position.symbol, market_data
+                ),
             )
 
             # Log exit event
@@ -752,7 +823,8 @@ class ExecutionAgent(BaseAgent):
             )
 
             self.logger.info(
-                f"Exited position {position.symbol}: {message} " f"(PnL: ${pnl:.2f}, Reason: {exit_reason.value})"
+                f"Exited position {position.symbol}: {message} "
+                f"(PnL: ${pnl:.2f}, Reason: {exit_reason.value})"
             )
 
         except Exception as e:
@@ -773,11 +845,21 @@ class ExecutionAgent(BaseAgent):
         # Exit all open positions
         for position in self.portfolio_manager.state.open_positions[:]:
             symbol = position.symbol
-            current_price = market_data.get(symbol, {}).get("price", position.entry_price)
+            current_price = market_data.get(symbol, {}).get(
+                "price", position.entry_price
+            )
 
-            await self._exit_position(position, current_price, exit_reason, f"Emergency exit: {message}", market_data)
+            await self._exit_position(
+                position,
+                current_price,
+                exit_reason,
+                f"Emergency exit: {message}",
+                market_data,
+            )
 
-    def _calculate_atr(self, symbol: str, period: int, market_data: Dict[str, Any]) -> float:
+    def _calculate_atr(
+        self, symbol: str, period: int, market_data: Dict[str, Any]
+    ) -> float:
         """Calculate Average True Range for a symbol.
 
         Args:
@@ -855,7 +937,9 @@ class ExecutionAgent(BaseAgent):
                     min_len = min(len(price_data[sym1]), len(price_data[sym2]))
 
                     if min_len > 10:
-                        corr = np.corrcoef(price_data[sym1][-min_len:], price_data[sym2][-min_len:])[0, 1]
+                        corr = np.corrcoef(
+                            price_data[sym1][-min_len:], price_data[sym2][-min_len:]
+                        )[0, 1]
 
                         if not np.isnan(corr):
                             correlations.append(corr)
@@ -881,7 +965,9 @@ class ExecutionAgent(BaseAgent):
 
             for position in self.portfolio_manager.state.open_positions:
                 symbol = position.symbol
-                current_price = market_data.get(symbol, {}).get("price", position.entry_price)
+                current_price = market_data.get(symbol, {}).get(
+                    "price", position.entry_price
+                )
                 position_value = position.size * current_price
                 total_exposure += position_value
 
@@ -908,10 +994,14 @@ class ExecutionAgent(BaseAgent):
             # Calculate basic metrics
             if position.direction == TradeDirection.LONG:
                 unrealized_pnl = (current_price - position.entry_price) * position.size
-                price_change = (current_price - position.entry_price) / position.entry_price
+                price_change = (
+                    current_price - position.entry_price
+                ) / position.entry_price
             else:
                 unrealized_pnl = (position.entry_price - current_price) * position.size
-                price_change = (position.entry_price - current_price) / position.entry_price
+                price_change = (
+                    position.entry_price - current_price
+                ) / position.entry_price
 
             # Calculate volatility
             volatility = market_data.get(position.symbol, {}).get("volatility", 0.0)
@@ -929,10 +1019,14 @@ class ExecutionAgent(BaseAgent):
             }
 
         except Exception as e:
-            self.logger.error(f"Error calculating risk metrics for {position.symbol}: {e}")
+            self.logger.error(
+                f"Error calculating risk metrics for {position.symbol}: {e}"
+            )
             return {}
 
-    def _calculate_portfolio_risk_metrics(self, market_data: Dict[str, Any]) -> Dict[str, float]:
+    def _calculate_portfolio_risk_metrics(
+        self, market_data: Dict[str, Any]
+    ) -> Dict[str, float]:
         """Calculate portfolio-level risk metrics.
 
         Args:
@@ -948,9 +1042,13 @@ class ExecutionAgent(BaseAgent):
 
             for position in self.portfolio_manager.state.open_positions:
                 symbol = position.symbol
-                current_price = market_data.get(symbol, {}).get("price", position.entry_price)
+                current_price = market_data.get(symbol, {}).get(
+                    "price", position.entry_price
+                )
 
-                metrics = self._calculate_position_risk_metrics(position, current_price, market_data)
+                metrics = self._calculate_position_risk_metrics(
+                    position, current_price, market_data
+                )
                 position_metrics.append(metrics)
 
                 total_pnl += metrics.get("unrealized_pnl", 0.0)
@@ -961,10 +1059,14 @@ class ExecutionAgent(BaseAgent):
             return {
                 "total_unrealized_pnl": total_pnl,
                 "total_exposure": total_exposure,
-                "exposure_ratio": total_exposure / portfolio_value if portfolio_value > 0 else 0.0,
+                "exposure_ratio": total_exposure / portfolio_value
+                if portfolio_value > 0
+                else 0.0,
                 "daily_pnl": self.daily_pnl,
                 "position_count": len(self.portfolio_manager.state.open_positions),
-                "portfolio_correlation": self._calculate_portfolio_correlation(market_data),
+                "portfolio_correlation": self._calculate_portfolio_correlation(
+                    market_data
+                ),
                 "portfolio_risk": self._calculate_portfolio_risk_exposure(market_data),
             }
 
@@ -972,7 +1074,9 @@ class ExecutionAgent(BaseAgent):
             self.logger.error(f"Error calculating portfolio risk metrics: {e}")
             return {}
 
-    def _get_market_conditions(self, symbol: str, market_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_market_conditions(
+        self, symbol: str, market_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Get market conditions for a symbol.
 
         Args:
@@ -1032,7 +1136,10 @@ class ExecutionAgent(BaseAgent):
                 self.exit_events = self.exit_events[-1000:]
 
             # Save to JSON file
-            log_entry = {"timestamp": datetime.utcnow().isoformat(), "exit_event": exit_event.to_dict()}
+            log_entry = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "exit_event": exit_event.to_dict(),
+            }
 
             with open(self.exit_log_path, "a") as f:
                 f.write(json.dumps(log_entry) + "\n")
@@ -1109,7 +1216,9 @@ class ExecutionAgent(BaseAgent):
             for reason in pnl_by_reason:
                 count = pnl_by_reason[reason]["count"]
                 if count > 0:
-                    pnl_by_reason[reason]["avg"] = pnl_by_reason[reason]["total"] / count
+                    pnl_by_reason[reason]["avg"] = (
+                        pnl_by_reason[reason]["total"] / count
+                    )
 
             return {
                 "total_exits": total_exits,
@@ -1198,7 +1307,9 @@ class ExecutionAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error updating global metrics: {e}")
 
-    async def _process_trade_signal(self, signal: TradeSignal, market_data: Dict[str, Any]) -> ExecutionResult:
+    async def _process_trade_signal(
+        self, signal: TradeSignal, market_data: Dict[str, Any]
+    ) -> ExecutionResult:
         """Process a single trade signal.
 
         Args:
@@ -1212,7 +1323,10 @@ class ExecutionAgent(BaseAgent):
             # Validate signal
             if not self._validate_signal(signal):
                 return ExecutionResult(
-                    success=False, signal=signal, message="Signal validation failed", error="Invalid signal parameters"
+                    success=False,
+                    signal=signal,
+                    message="Signal validation failed",
+                    error="Invalid signal parameters",
                 )
 
             # Check position limits
@@ -1248,7 +1362,11 @@ class ExecutionAgent(BaseAgent):
 
             # Calculate risk metrics
             risk_metrics = (
-                self._calculate_position_risk_metrics(position, execution_price, market_data) if position else None
+                self._calculate_position_risk_metrics(
+                    position, execution_price, market_data
+                )
+                if position
+                else None
             )
 
             return ExecutionResult(
@@ -1264,7 +1382,12 @@ class ExecutionAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Error processing trade signal: {e}")
-            return ExecutionResult(success=False, signal=signal, message="Signal processing failed", error=str(e))
+            return ExecutionResult(
+                success=False,
+                signal=signal,
+                message="Signal processing failed",
+                error=str(e),
+            )
 
     def _validate_signal(self, signal: TradeSignal) -> bool:
         """Validate trade signal parameters.
@@ -1328,7 +1451,9 @@ class ExecutionAgent(BaseAgent):
             self.logger.error(f"Error checking position limits: {e}")
             return False
 
-    def _calculate_execution_price(self, signal: TradeSignal, market_data: Dict[str, Any]) -> float:
+    def _calculate_execution_price(
+        self, signal: TradeSignal, market_data: Dict[str, Any]
+    ) -> float:
         """Calculate execution price with slippage simulation.
 
         Args:
@@ -1340,11 +1465,13 @@ class ExecutionAgent(BaseAgent):
         """
         try:
             # Get current market price
-            current_price = market_data.get(signal.symbol, {}).get("price", signal.entry_price)
+            current_price = market_data.get(signal.symbol, {}).get(
+                "price", signal.entry_price
+            )
 
             # Simulate slippage based on order size and market conditions
             volatility = market_data.get(signal.symbol, {}).get("volatility", 0.15)
-            volume = market_data.get(signal.symbol, {}).get("volume", 1000000)
+            market_data.get(signal.symbol, {}).get("volume", 1000000)
 
             # Calculate slippage factor
             slippage_factor = min(0.001, volatility * 0.01)  # Max 10 bps
@@ -1361,7 +1488,9 @@ class ExecutionAgent(BaseAgent):
             self.logger.error(f"Error calculating execution price: {e}")
             return signal.entry_price
 
-    async def _execute_simulation_trade(self, signal: TradeSignal, execution_price: float) -> Position:
+    async def _execute_simulation_trade(
+        self, signal: TradeSignal, execution_price: float
+    ) -> Position:
         """Execute trade in simulation mode.
 
         Args:
@@ -1373,7 +1502,9 @@ class ExecutionAgent(BaseAgent):
         """
         try:
             # Calculate position size
-            position_size, sizing_details = self._calculate_position_size(signal, execution_price)
+            position_size, sizing_details = self._calculate_position_size(
+                signal, execution_price
+            )
 
             # Create position through portfolio manager
             position = self.portfolio_manager.open_position(
@@ -1395,7 +1526,9 @@ class ExecutionAgent(BaseAgent):
             self.logger.error(f"Error executing simulation trade: {e}")
             raise
 
-    async def _execute_real_trade(self, signal: TradeSignal, execution_price: float) -> Position:
+    async def _execute_real_trade(
+        self, signal: TradeSignal, execution_price: float
+    ) -> Position:
         """Execute trade through real broker (placeholder).
 
         Args:
@@ -1410,7 +1543,10 @@ class ExecutionAgent(BaseAgent):
         return await self._execute_simulation_trade(signal, execution_price)
 
     def _calculate_position_size(
-        self, signal: TradeSignal, execution_price: float, market_data: Optional[Dict[str, Any]] = None
+        self,
+        signal: TradeSignal,
+        execution_price: float,
+        market_data: Optional[Dict[str, Any]] = None,
     ) -> Tuple[float, Dict[str, Any]]:
         """Calculate position size using the PositionSizer.
 
@@ -1474,9 +1610,15 @@ class ExecutionAgent(BaseAgent):
             # Return conservative fallback
             portfolio_value = self.portfolio_manager.state.equity
             conservative_size = min(0.01, portfolio_value * 0.01 / execution_price)
-            return conservative_size, {"strategy": "conservative_fallback", "error": str(e), "size": conservative_size}
+            return conservative_size, {
+                "strategy": "conservative_fallback",
+                "error": str(e),
+                "size": conservative_size,
+            }
 
-    def _get_stop_loss_price(self, signal: TradeSignal, market_data: Dict[str, Any]) -> float:
+    def _get_stop_loss_price(
+        self, signal: TradeSignal, market_data: Dict[str, Any]
+    ) -> float:
         """Get stop loss price for position sizing.
 
         Args:
@@ -1496,10 +1638,16 @@ class ExecutionAgent(BaseAgent):
             mock_position = type(
                 "Position",
                 (),
-                {"symbol": signal.symbol, "direction": signal.direction, "entry_price": signal.entry_price},
+                {
+                    "symbol": signal.symbol,
+                    "direction": signal.direction,
+                    "entry_price": signal.entry_price,
+                },
             )()
 
-            return self._calculate_stop_loss_price(mock_position, signal.risk_controls, market_data)
+            return self._calculate_stop_loss_price(
+                mock_position, signal.risk_controls, market_data
+            )
 
         # Default to 2% below entry price
         if signal.direction == TradeDirection.LONG:
@@ -1507,7 +1655,9 @@ class ExecutionAgent(BaseAgent):
         else:
             return signal.entry_price * 1.02
 
-    def _create_market_context(self, signal: TradeSignal, market_data: Dict[str, Any]) -> MarketContext:
+    def _create_market_context(
+        self, signal: TradeSignal, market_data: Dict[str, Any]
+    ) -> MarketContext:
         """Create market context for position sizing.
 
         Args:
@@ -1550,14 +1700,18 @@ class ExecutionAgent(BaseAgent):
 
         return SignalContext(
             confidence=signal.confidence,
-            forecast_certainty=signal.market_data.get("forecast_certainty", 0.5) if signal.market_data else 0.5,
+            forecast_certainty=signal.market_data.get("forecast_certainty", 0.5)
+            if signal.market_data
+            else 0.5,
             strategy_performance=strategy_performance.get("performance", 0.0),
             win_rate=strategy_performance.get("win_rate", 0.5),
             avg_win=strategy_performance.get("avg_win", 0.02),
             avg_loss=strategy_performance.get("avg_loss", -0.01),
             sharpe_ratio=strategy_performance.get("sharpe_ratio", 0.0),
             max_drawdown=strategy_performance.get("max_drawdown", 0.1),
-            signal_strength=signal.market_data.get("signal_strength", 0.5) if signal.market_data else 0.5,
+            signal_strength=signal.market_data.get("signal_strength", 0.5)
+            if signal.market_data
+            else 0.5,
         )
 
     def _create_portfolio_context(self) -> PortfolioContext:
@@ -1600,7 +1754,9 @@ class ExecutionAgent(BaseAgent):
                     strategy=strategy,
                     risk_per_trade=signal.market_data.get("risk_per_trade", 0.02),
                     max_position_size=signal.market_data.get("max_position_size", 0.2),
-                    confidence_multiplier=signal.market_data.get("confidence_multiplier", 1.0),
+                    confidence_multiplier=signal.market_data.get(
+                        "confidence_multiplier", 1.0
+                    ),
                 )
             except ValueError:
                 self.logger.warning(f"Invalid sizing strategy: {strategy_name}")
@@ -1644,7 +1800,9 @@ class ExecutionAgent(BaseAgent):
                 "max_drawdown": 0.1,
             }
 
-    def _calculate_symbol_correlation(self, symbol: str, market_data: Dict[str, Any]) -> float:
+    def _calculate_symbol_correlation(
+        self, symbol: str, market_data: Dict[str, Any]
+    ) -> float:
         """Calculate correlation between symbol and existing positions.
 
         Args:
@@ -1710,7 +1868,10 @@ class ExecutionAgent(BaseAgent):
             # Create correlation matrix from price history
             price_data = {}
             for symbol in symbols:
-                if symbol in self.price_history and len(self.price_history[symbol]) > 10:
+                if (
+                    symbol in self.price_history
+                    and len(self.price_history[symbol]) > 10
+                ):
                     price_data[symbol] = self.price_history[symbol]
 
             if len(price_data) < 2:
@@ -1740,7 +1901,9 @@ class ExecutionAgent(BaseAgent):
             min_fee = self.config.custom_config.get("min_fee", 1.0)
 
             # Calculate position size (returns tuple of size and details)
-            position_size, sizing_details = self._calculate_position_size(signal, execution_price)
+            position_size, sizing_details = self._calculate_position_size(
+                signal, execution_price
+            )
 
             # Calculate fees
             fee = max(min_fee, execution_price * position_size * base_fee)
@@ -1781,7 +1944,10 @@ class ExecutionAgent(BaseAgent):
                 self.execution_history = self.execution_history[-1000:]
 
             # Save to JSON file
-            log_entry = {"timestamp": datetime.utcnow().isoformat(), "execution_result": result.to_dict()}
+            log_entry = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "execution_result": result.to_dict(),
+            }
 
             with open(self.trade_log_path, "a") as f:
                 f.write(json.dumps(log_entry) + "\n")
@@ -1789,7 +1955,9 @@ class ExecutionAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error logging execution result: {e}")
 
-    def _generate_execution_summary(self, results: List[ExecutionResult]) -> Dict[str, Any]:
+    def _generate_execution_summary(
+        self, results: List[ExecutionResult]
+    ) -> Dict[str, Any]:
         """Generate execution summary.
 
         Args:
@@ -1822,7 +1990,9 @@ class ExecutionAgent(BaseAgent):
                 "failed_executions": len(failed),
                 "total_slippage": total_slippage,
                 "total_fees": total_fees,
-                "average_confidence": np.mean([r.signal.confidence for r in results]) if results else 0.0,
+                "average_confidence": np.mean([r.signal.confidence for r in results])
+                if results
+                else 0.0,
             }
 
         except Exception as e:

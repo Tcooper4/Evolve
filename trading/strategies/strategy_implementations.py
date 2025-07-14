@@ -41,7 +41,9 @@ class StrategySignal:
     metadata: Dict[str, Any]
 
 
-def momentum_strategy(data: pd.DataFrame, max_position_size: float = 1.0) -> StrategySignal:
+def momentum_strategy(
+    data: pd.DataFrame, max_position_size: float = 1.0
+) -> StrategySignal:
     """Momentum-based strategy.
 
     Args:
@@ -80,7 +82,9 @@ def momentum_strategy(data: pd.DataFrame, max_position_size: float = 1.0) -> Str
         risk_score = min(1.0, volatility * np.sqrt(252))
 
         # Position sizing
-        position_size = calculate_position_size(confidence, risk_score, max_position_size)
+        position_size = calculate_position_size(
+            confidence, risk_score, max_position_size
+        )
 
         return StrategySignal(
             strategy_name="momentum",
@@ -90,7 +94,11 @@ def momentum_strategy(data: pd.DataFrame, max_position_size: float = 1.0) -> Str
             position_size=position_size,
             risk_score=risk_score,
             timestamp=datetime.now(),
-            metadata={"current_momentum": current_momentum, "long_momentum": long_momentum, "volatility": volatility},
+            metadata={
+                "current_momentum": current_momentum,
+                "long_momentum": long_momentum,
+                "volatility": volatility,
+            },
         )
 
     except Exception as e:
@@ -98,7 +106,9 @@ def momentum_strategy(data: pd.DataFrame, max_position_size: float = 1.0) -> Str
         return create_fallback_signal("momentum")
 
 
-def mean_reversion_strategy(data: pd.DataFrame, max_position_size: float = 1.0) -> StrategySignal:
+def mean_reversion_strategy(
+    data: pd.DataFrame, max_position_size: float = 1.0
+) -> StrategySignal:
     """Mean reversion strategy.
 
     Args:
@@ -119,7 +129,9 @@ def mean_reversion_strategy(data: pd.DataFrame, max_position_size: float = 1.0) 
         current_sma = sma.iloc[-1]
 
         # Position within bands
-        band_position = (current_price - lower_band.iloc[-1]) / (upper_band.iloc[-1] - lower_band.iloc[-1])
+        band_position = (current_price - lower_band.iloc[-1]) / (
+            upper_band.iloc[-1] - lower_band.iloc[-1]
+        )
 
         # Signal generation
         if band_position < 0.2:  # Near lower band
@@ -140,7 +152,9 @@ def mean_reversion_strategy(data: pd.DataFrame, max_position_size: float = 1.0) 
         risk_score = min(1.0, volatility * np.sqrt(252))
 
         # Position sizing
-        position_size = calculate_position_size(confidence, risk_score, max_position_size)
+        position_size = calculate_position_size(
+            confidence, risk_score, max_position_size
+        )
 
         return StrategySignal(
             strategy_name="mean_reversion",
@@ -150,7 +164,11 @@ def mean_reversion_strategy(data: pd.DataFrame, max_position_size: float = 1.0) 
             position_size=position_size,
             risk_score=risk_score,
             timestamp=datetime.now(),
-            metadata={"band_position": band_position, "current_sma": current_sma, "volatility": volatility},
+            metadata={
+                "band_position": band_position,
+                "current_sma": current_sma,
+                "volatility": volatility,
+            },
         )
 
     except Exception as e:
@@ -158,7 +176,9 @@ def mean_reversion_strategy(data: pd.DataFrame, max_position_size: float = 1.0) 
         return create_fallback_signal("mean_reversion")
 
 
-def volatility_breakout_strategy(data: pd.DataFrame, max_position_size: float = 1.0) -> StrategySignal:
+def volatility_breakout_strategy(
+    data: pd.DataFrame, max_position_size: float = 1.0
+) -> StrategySignal:
     """Volatility breakout strategy.
 
     Args:
@@ -185,7 +205,9 @@ def volatility_breakout_strategy(data: pd.DataFrame, max_position_size: float = 
             signal_type = SignalType.BUY
             confidence = min(0.9, vol_ratio * 0.3)
             predicted_return = price_momentum * 252
-        elif vol_ratio > 1.5 and price_momentum < 0:  # High volatility + downward momentum
+        elif (
+            vol_ratio > 1.5 and price_momentum < 0
+        ):  # High volatility + downward momentum
             signal_type = SignalType.SELL
             confidence = min(0.9, vol_ratio * 0.3)
             predicted_return = price_momentum * 252
@@ -198,7 +220,9 @@ def volatility_breakout_strategy(data: pd.DataFrame, max_position_size: float = 
         risk_score = min(1.0, current_volatility * np.sqrt(252))
 
         # Position sizing
-        position_size = calculate_position_size(confidence, risk_score, max_position_size)
+        position_size = calculate_position_size(
+            confidence, risk_score, max_position_size
+        )
 
         return StrategySignal(
             strategy_name="volatility_breakout",
@@ -220,7 +244,9 @@ def volatility_breakout_strategy(data: pd.DataFrame, max_position_size: float = 
         return create_fallback_signal("volatility_breakout")
 
 
-def trend_following_strategy(data: pd.DataFrame, max_position_size: float = 1.0) -> StrategySignal:
+def trend_following_strategy(
+    data: pd.DataFrame, max_position_size: float = 1.0
+) -> StrategySignal:
     """Trend following strategy.
 
     Args:
@@ -235,7 +261,7 @@ def trend_following_strategy(data: pd.DataFrame, max_position_size: float = 1.0)
         sma_short = data["Close"].rolling(10).mean()
         sma_long = data["Close"].rolling(50).mean()
 
-        current_price = data["Close"].iloc[-1]
+        data["Close"].iloc[-1]
         current_sma_short = sma_short.iloc[-1]
         current_sma_long = sma_long.iloc[-1]
 
@@ -261,7 +287,9 @@ def trend_following_strategy(data: pd.DataFrame, max_position_size: float = 1.0)
         risk_score = min(1.0, volatility * np.sqrt(252))
 
         # Position sizing
-        position_size = calculate_position_size(confidence, risk_score, max_position_size)
+        position_size = calculate_position_size(
+            confidence, risk_score, max_position_size
+        )
 
         return StrategySignal(
             strategy_name="trend_following",
@@ -271,7 +299,11 @@ def trend_following_strategy(data: pd.DataFrame, max_position_size: float = 1.0)
             position_size=position_size,
             risk_score=risk_score,
             timestamp=datetime.now(),
-            metadata={"trend_strength": trend_strength, "sma_short": current_sma_short, "sma_long": current_sma_long},
+            metadata={
+                "trend_strength": trend_strength,
+                "sma_short": current_sma_short,
+                "sma_long": current_sma_long,
+            },
         )
 
     except Exception as e:
@@ -279,7 +311,9 @@ def trend_following_strategy(data: pd.DataFrame, max_position_size: float = 1.0)
         return create_fallback_signal("trend_following")
 
 
-def volume_price_strategy(data: pd.DataFrame, max_position_size: float = 1.0) -> StrategySignal:
+def volume_price_strategy(
+    data: pd.DataFrame, max_position_size: float = 1.0
+) -> StrategySignal:
     """Volume-price relationship strategy.
 
     Args:
@@ -293,7 +327,9 @@ def volume_price_strategy(data: pd.DataFrame, max_position_size: float = 1.0) ->
         # Calculate volume indicators
         avg_volume = data["Volume"].rolling(20).mean()
         current_volume = data["Volume"].iloc[-1]
-        volume_ratio = current_volume / avg_volume.iloc[-1] if avg_volume.iloc[-1] > 0 else 1.0
+        volume_ratio = (
+            current_volume / avg_volume.iloc[-1] if avg_volume.iloc[-1] > 0 else 1.0
+        )
 
         # Price change
         price_change = data["Close"].pct_change().iloc[-1]
@@ -317,7 +353,9 @@ def volume_price_strategy(data: pd.DataFrame, max_position_size: float = 1.0) ->
         risk_score = min(1.0, volatility * np.sqrt(252))
 
         # Position sizing
-        position_size = calculate_position_size(confidence, risk_score, max_position_size)
+        position_size = calculate_position_size(
+            confidence, risk_score, max_position_size
+        )
 
         return StrategySignal(
             strategy_name="volume_price",
@@ -327,7 +365,11 @@ def volume_price_strategy(data: pd.DataFrame, max_position_size: float = 1.0) ->
             position_size=position_size,
             risk_score=risk_score,
             timestamp=datetime.now(),
-            metadata={"volume_ratio": volume_ratio, "price_change": price_change, "current_volume": current_volume},
+            metadata={
+                "volume_ratio": volume_ratio,
+                "price_change": price_change,
+                "current_volume": current_volume,
+            },
         )
 
     except Exception as e:
@@ -335,7 +377,9 @@ def volume_price_strategy(data: pd.DataFrame, max_position_size: float = 1.0) ->
         return create_fallback_signal("volume_price")
 
 
-def calculate_position_size(confidence: float, risk_score: float, max_position_size: float) -> float:
+def calculate_position_size(
+    confidence: float, risk_score: float, max_position_size: float
+) -> float:
     """Calculate position size based on confidence and risk.
 
     Args:

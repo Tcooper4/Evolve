@@ -33,7 +33,9 @@ class PositionalEncoding(nn.Module):
         # Create positional encoding matrix
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model))
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model)
+        )
 
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
@@ -163,7 +165,9 @@ class TransformerForecaster(BaseModel):
             dropout=self.config["dropout"],
             batch_first=True,
         )
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=self.config["num_layers"])
+        self.transformer_encoder = nn.TransformerEncoder(
+            encoder_layer, num_layers=self.config["num_layers"]
+        )
 
         # Output projection
         self.output_proj = nn.Linear(self.config["d_model"], 1)
@@ -175,7 +179,14 @@ class TransformerForecaster(BaseModel):
             elif "bias" in name:
                 nn.init.zeros_(param)
 
-        return nn.ModuleList([self.input_proj, self.pos_encoder, self.transformer_encoder, self.output_proj])
+        return nn.ModuleList(
+            [
+                self.input_proj,
+                self.pos_encoder,
+                self.transformer_encoder,
+                self.output_proj,
+            ]
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model.
@@ -205,7 +216,9 @@ class TransformerForecaster(BaseModel):
         out = self.output_proj(x)
         return out
 
-    def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _prepare_data(
+        self, data: pd.DataFrame, is_training: bool
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepare data for training or prediction.
 
         Args:
@@ -222,7 +235,9 @@ class TransformerForecaster(BaseModel):
             raise ValidationError("Data contains missing values")
 
         # Check if all required columns exist
-        missing_cols = [col for col in self.config["feature_columns"] if col not in data.columns]
+        missing_cols = [
+            col for col in self.config["feature_columns"] if col not in data.columns
+        ]
         if missing_cols:
             raise ValidationError(f"Missing required columns: {missing_cols}")
 
@@ -303,16 +318,22 @@ class TransformerForecaster(BaseModel):
 
             # Check for missing values and handle them
             if data.isnull().any().any():
-                logging.warning("Data contains missing values, filling with forward fill")
+                logging.warning(
+                    "Data contains missing values, filling with forward fill"
+                )
                 data = data.fillna(method="ffill").fillna(method="bfill")
 
             # Check for required columns
             required_cols = self.config.get("feature_columns", ["close", "volume"])
             missing_cols = [col for col in required_cols if col not in data.columns]
             if missing_cols:
-                logging.warning(f"Missing columns {missing_cols}, using available columns")
+                logging.warning(
+                    f"Missing columns {missing_cols}, using available columns"
+                )
                 # Use available numeric columns
-                available_cols = data.select_dtypes(include=[np.number]).columns.tolist()
+                available_cols = data.select_dtypes(
+                    include=[np.number]
+                ).columns.tolist()
                 if len(available_cols) >= 2:
                     self.config["feature_columns"] = available_cols[:2]
                 else:
@@ -321,7 +342,7 @@ class TransformerForecaster(BaseModel):
                     )
 
             # Make initial prediction
-            predictions = self.predict(data)
+            self.predict(data)
 
             # Generate multi-step forecast with confidence intervals
             forecast_values = []
@@ -334,13 +355,19 @@ class TransformerForecaster(BaseModel):
                 forecast_values.append(pred[-1])
 
                 # Calculate confidence interval for this step
-                confidence_interval = self._calculate_confidence_interval(pred[-1], i, current_data)
+                confidence_interval = self._calculate_confidence_interval(
+                    pred[-1], i, current_data
+                )
                 confidence_intervals.append(confidence_interval)
 
                 # Update data for next iteration
                 new_row = current_data.iloc[-1].copy()
-                new_row[self.config.get("target_column", "close")] = pred[-1]  # Update with prediction
-                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                new_row[self.config.get("target_column", "close")] = pred[
+                    -1
+                ]  # Update with prediction
+                current_data = pd.concat(
+                    [current_data, pd.DataFrame([new_row])], ignore_index=True
+                )
                 current_data = current_data.iloc[1:]  # Remove oldest row
 
             return {
@@ -360,7 +387,9 @@ class TransformerForecaster(BaseModel):
             # Return fallback forecast instead of raising
             return self._generate_fallback_forecast(data, horizon)
 
-    def _calculate_confidence_interval(self, prediction: float, step: int, data: pd.DataFrame) -> Dict[str, float]:
+    def _calculate_confidence_interval(
+        self, prediction: float, step: int, data: pd.DataFrame
+    ) -> Dict[str, float]:
         """Calculate confidence interval for a prediction step.
 
         Args:
@@ -385,7 +414,9 @@ class TransformerForecaster(BaseModel):
                 volatility = 0.02  # Default volatility
 
             # Base confidence interval width
-            base_width = prediction * volatility * (1 + step * 0.1)  # Increases with horizon
+            base_width = (
+                prediction * volatility * (1 + step * 0.1)
+            )  # Increases with horizon
 
             # Model-specific confidence
             model_confidence = 0.85
@@ -400,9 +431,15 @@ class TransformerForecaster(BaseModel):
         except Exception as e:
             logging.error(f"Error calculating confidence interval: {e}")
             # Return simple confidence interval
-            return {"lower": prediction * 0.95, "upper": prediction * 1.05, "confidence_level": 0.95}
+            return {
+                "lower": prediction * 0.95,
+                "upper": prediction * 1.05,
+                "confidence_level": 0.95,
+            }
 
-    def _generate_fallback_forecast(self, data: pd.DataFrame, horizon: int) -> Dict[str, Any]:
+    def _generate_fallback_forecast(
+        self, data: pd.DataFrame, horizon: int
+    ) -> Dict[str, Any]:
         """Generate fallback forecast when main forecast fails.
 
         Args:
@@ -436,7 +473,11 @@ class TransformerForecaster(BaseModel):
 
                 # Simple confidence interval
                 confidence_intervals.append(
-                    {"lower": current_value * 0.98, "upper": current_value * 1.02, "confidence_level": 0.95}
+                    {
+                        "lower": current_value * 0.98,
+                        "upper": current_value * 1.02,
+                        "confidence_level": 0.95,
+                    }
                 )
 
             return {
@@ -457,7 +498,10 @@ class TransformerForecaster(BaseModel):
             # Ultimate fallback
             return {
                 "forecast": np.full(horizon, 100.0),
-                "confidence_intervals": [{"lower": 95.0, "upper": 105.0, "confidence_level": 0.95}] * horizon,
+                "confidence_intervals": [
+                    {"lower": 95.0, "upper": 105.0, "confidence_level": 0.95}
+                ]
+                * horizon,
                 "confidence": 0.1,
                 "model": "Transformer_Ultimate_Fallback",
                 "horizon": horizon,
@@ -480,7 +524,9 @@ class TransformerForecaster(BaseModel):
         with torch.no_grad():
             x_proj = self.input_proj(X_sample)
             x_pos = self.pos_encoder(x_proj)
-            attn_weights = self.transformer_encoder.layers[0].self_attn(x_pos, x_pos, x_pos)[1]
+            attn_weights = self.transformer_encoder.layers[0].self_attn(
+                x_pos, x_pos, x_pos
+            )[1]
             plt.imshow(attn_weights[0].cpu().numpy(), cmap="viridis")
             plt.title("Attention Heatmap")
             plt.colorbar()
@@ -492,7 +538,11 @@ class TransformerForecaster(BaseModel):
         import pandas as pd
 
         n = 100
-        df = pd.DataFrame({"close": np.sin(np.linspace(0, 10, n)), "volume": np.random.rand(n)})
+        df = pd.DataFrame(
+            {"close": np.sin(np.linspace(0, 10, n)), "volume": np.random.rand(n)}
+        )
         self.fit(df.iloc[:80], df.iloc[80:])
         y_pred = self.predict(df.iloc[80:])
-        logger.info(f'Synthetic test MSE: {((y_pred - df["close"].iloc[80:].values) ** 2).mean()}')
+        logger.info(
+            f'Synthetic test MSE: {((y_pred - df["close"].iloc[80:].values) ** 2).mean()}'
+        )

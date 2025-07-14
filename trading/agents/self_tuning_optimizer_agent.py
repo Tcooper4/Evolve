@@ -114,10 +114,14 @@ class SelfTuningOptimizerAgent(BaseAgent):
         self.genetic_optimizer = GeneticOptimizer()
 
         # Configuration
-        self.optimization_frequency = self.config_dict.get("optimization_frequency", "weekly")
+        self.optimization_frequency = self.config_dict.get(
+            "optimization_frequency", "weekly"
+        )
         self.performance_threshold = self.config_dict.get("performance_threshold", 0.1)
         self.volatility_threshold = self.config_dict.get("volatility_threshold", 0.03)
-        self.optimization_timeout = self.config_dict.get("optimization_timeout", 300)  # 5 minutes
+        self.optimization_timeout = self.config_dict.get(
+            "optimization_timeout", 300
+        )  # 5 minutes
         self.min_improvement = self.config_dict.get("min_improvement", 0.05)
 
         # Storage
@@ -147,16 +151,25 @@ class SelfTuningOptimizerAgent(BaseAgent):
                 strategy_performance = kwargs.get("strategy_performance")
                 market_data = kwargs.get("market_data")
 
-                if strategy_name is None or strategy_performance is None or market_data is None:
+                if (
+                    strategy_name is None
+                    or strategy_performance is None
+                    or market_data is None
+                ):
                     return AgentResult(
                         success=False,
                         error_message="Missing required parameters: strategy_name, strategy_performance, market_data",
                     )
 
-                triggers = await self.check_optimization_triggers(strategy_name, strategy_performance, market_data)
+                triggers = await self.check_optimization_triggers(
+                    strategy_name, strategy_performance, market_data
+                )
                 return AgentResult(
                     success=True,
-                    data={"triggers": [trigger.value for trigger in triggers], "trigger_count": len(triggers)},
+                    data={
+                        "triggers": [trigger.value for trigger in triggers],
+                        "trigger_count": len(triggers),
+                    },
                 )
 
             elif action == "optimize_parameters":
@@ -182,7 +195,11 @@ class SelfTuningOptimizerAgent(BaseAgent):
                     triggers = [OptimizationTrigger(t) for t in triggers]
 
                 result = await self.optimize_strategy_parameters(
-                    strategy_name, current_parameters, strategy_performance, market_data, triggers
+                    strategy_name,
+                    current_parameters,
+                    strategy_performance,
+                    market_data,
+                    triggers,
                 )
                 return AgentResult(
                     success=True,
@@ -204,23 +221,32 @@ class SelfTuningOptimizerAgent(BaseAgent):
 
                 if strategy_name is None or not constraints_data:
                     return AgentResult(
-                        success=False, error_message="Missing required parameters: strategy_name, constraints"
+                        success=False,
+                        error_message="Missing required parameters: strategy_name, constraints",
                     )
 
                 constraints = [ParameterConstraint(**c) for c in constraints_data]
                 self.set_parameter_constraints(strategy_name, constraints)
                 return AgentResult(
-                    success=True, data={"message": f"Set {len(constraints)} constraints for {strategy_name}"}
+                    success=True,
+                    data={
+                        "message": f"Set {len(constraints)} constraints for {strategy_name}"
+                    },
                 )
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
 
     async def check_optimization_triggers(
-        self, strategy_name: str, strategy_performance: pd.Series, market_data: pd.DataFrame
+        self,
+        strategy_name: str,
+        strategy_performance: pd.Series,
+        market_data: pd.DataFrame,
     ) -> List[OptimizationTrigger]:
         """
         Check if optimization should be triggered.
@@ -270,7 +296,9 @@ class SelfTuningOptimizerAgent(BaseAgent):
 
             # Check for significant decline
             if historical_performance != 0:
-                decline_ratio = (historical_performance - recent_performance) / abs(historical_performance)
+                decline_ratio = (historical_performance - recent_performance) / abs(
+                    historical_performance
+                )
                 return decline_ratio > self.performance_threshold
 
             return False
@@ -295,11 +323,15 @@ class SelfTuningOptimizerAgent(BaseAgent):
                     return True
 
             # Store current regime
-            self.market_regime_history.append({"timestamp": datetime.now(), "regime": current_regime})
+            self.market_regime_history.append(
+                {"timestamp": datetime.now(), "regime": current_regime}
+            )
 
             # Keep only recent history
             cutoff_date = datetime.now() - timedelta(days=30)
-            self.market_regime_history = [r for r in self.market_regime_history if r["timestamp"] > cutoff_date]
+            self.market_regime_history = [
+                r for r in self.market_regime_history if r["timestamp"] > cutoff_date
+            ]
 
             return False
 
@@ -360,7 +392,10 @@ class SelfTuningOptimizerAgent(BaseAgent):
             last_optimization = None
             for result in self.optimization_history:
                 if result.strategy_name == strategy_name:
-                    if last_optimization is None or result.timestamp > last_optimization:
+                    if (
+                        last_optimization is None
+                        or result.timestamp > last_optimization
+                    ):
                         last_optimization = result.timestamp
 
             if last_optimization is None:
@@ -412,16 +447,24 @@ class SelfTuningOptimizerAgent(BaseAgent):
             constraints = self._get_parameter_constraints(strategy_name)
 
             # Define optimization objective
-            objective = self._create_optimization_objective(strategy_name, strategy_performance, market_data, triggers)
+            objective = self._create_optimization_objective(
+                strategy_name, strategy_performance, market_data, triggers
+            )
 
             # Choose optimization method
-            optimization_method = self._choose_optimization_method(triggers, constraints)
+            optimization_method = self._choose_optimization_method(
+                triggers, constraints
+            )
 
             # Run optimization
             if optimization_method == "bayesian":
-                new_parameters = await self._run_bayesian_optimization(objective, current_parameters, constraints)
+                new_parameters = await self._run_bayesian_optimization(
+                    objective, current_parameters, constraints
+                )
             else:
-                new_parameters = await self._run_genetic_optimization(objective, current_parameters, constraints)
+                new_parameters = await self._run_genetic_optimization(
+                    objective, current_parameters, constraints
+                )
 
             # Evaluate improvement
             performance_improvement = self._evaluate_improvement(
@@ -429,7 +472,9 @@ class SelfTuningOptimizerAgent(BaseAgent):
             )
 
             # Calculate confidence
-            confidence = self._calculate_optimization_confidence(performance_improvement, triggers, market_data)
+            confidence = self._calculate_optimization_confidence(
+                performance_improvement, triggers, market_data
+            )
 
             # Create optimization result
             result = OptimizationResult(
@@ -450,7 +495,8 @@ class SelfTuningOptimizerAgent(BaseAgent):
             self._store_optimization_result(result)
 
             self.logger.info(
-                f"Optimization completed for {strategy_name}: " f"improvement = {performance_improvement:.4f}"
+                f"Optimization completed for {strategy_name}: "
+                f"improvement = {performance_improvement:.4f}"
             )
 
             return result
@@ -459,7 +505,9 @@ class SelfTuningOptimizerAgent(BaseAgent):
             self.logger.error(f"Error optimizing strategy parameters: {str(e)}")
             return False
 
-    def _get_parameter_constraints(self, strategy_name: str) -> List[ParameterConstraint]:
+    def _get_parameter_constraints(
+        self, strategy_name: str
+    ) -> List[ParameterConstraint]:
         """Get parameter constraints for a strategy."""
         try:
             if strategy_name in self.parameter_constraints:
@@ -507,7 +555,9 @@ class SelfTuningOptimizerAgent(BaseAgent):
             def objective(parameters):
                 try:
                     # Simulate strategy performance with new parameters
-                    simulated_performance = self._simulate_strategy_performance(strategy_name, parameters, market_data)
+                    simulated_performance = self._simulate_strategy_performance(
+                        strategy_name, parameters, market_data
+                    )
 
                     if simulated_performance is None or len(simulated_performance) < 10:
                         return 0.0
@@ -520,13 +570,19 @@ class SelfTuningOptimizerAgent(BaseAgent):
                     # Weight objectives based on triggers
                     if OptimizationTrigger.PERFORMANCE_DECLINE in triggers:
                         # Focus on improving returns
-                        score = 0.5 * total_return + 0.3 * sharpe_ratio - 0.2 * max_drawdown
+                        score = (
+                            0.5 * total_return + 0.3 * sharpe_ratio - 0.2 * max_drawdown
+                        )
                     elif OptimizationTrigger.VOLATILITY_SPIKE in triggers:
                         # Focus on risk management
-                        score = 0.3 * total_return + 0.5 * sharpe_ratio - 0.2 * max_drawdown
+                        score = (
+                            0.3 * total_return + 0.5 * sharpe_ratio - 0.2 * max_drawdown
+                        )
                     else:
                         # Balanced approach
-                        score = 0.4 * total_return + 0.4 * sharpe_ratio - 0.2 * max_drawdown
+                        score = (
+                            0.4 * total_return + 0.4 * sharpe_ratio - 0.2 * max_drawdown
+                        )
 
                     return score
 
@@ -556,7 +612,7 @@ class SelfTuningOptimizerAgent(BaseAgent):
 
             # Apply parameter-based adjustments
             period = parameters.get("period", 20)
-            threshold = parameters.get("threshold", 0.02)
+            parameters.get("threshold", 0.02)
 
             # Simple moving average strategy simulation
             sma = market_data["close"].rolling(window=period).mean()
@@ -573,7 +629,9 @@ class SelfTuningOptimizerAgent(BaseAgent):
             return None
 
     def _choose_optimization_method(
-        self, triggers: List[OptimizationTrigger], constraints: List[ParameterConstraint]
+        self,
+        triggers: List[OptimizationTrigger],
+        constraints: List[ParameterConstraint],
     ) -> str:
         """Choose optimization method based on triggers and constraints."""
         try:
@@ -582,7 +640,9 @@ class SelfTuningOptimizerAgent(BaseAgent):
                 return "genetic"
 
             # Use Bayesian optimization for continuous parameters
-            continuous_params = [c for c in constraints if c.parameter_type == "continuous"]
+            continuous_params = [
+                c for c in constraints if c.parameter_type == "continuous"
+            ]
             if len(continuous_params) > len(constraints) / 2:
                 return "bayesian"
 
@@ -594,7 +654,10 @@ class SelfTuningOptimizerAgent(BaseAgent):
             return "genetic"
 
     async def _run_bayesian_optimization(
-        self, objective: callable, current_parameters: Dict[str, Any], constraints: List[ParameterConstraint]
+        self,
+        objective: callable,
+        current_parameters: Dict[str, Any],
+        constraints: List[ParameterConstraint],
     ) -> Dict[str, Any]:
         """Run Bayesian optimization."""
         try:
@@ -602,16 +665,27 @@ class SelfTuningOptimizerAgent(BaseAgent):
             param_space = {}
             for constraint in constraints:
                 if constraint.parameter_type == "continuous":
-                    param_space[constraint.parameter_name] = [constraint.min_value, constraint.max_value]
+                    param_space[constraint.parameter_name] = [
+                        constraint.min_value,
+                        constraint.max_value,
+                    ]
                 else:
                     # Discrete parameters
-                    values = np.arange(constraint.min_value, constraint.max_value + 1, constraint.step_size or 1)
+                    values = np.arange(
+                        constraint.min_value,
+                        constraint.max_value + 1,
+                        constraint.step_size or 1,
+                    )
                     param_space[constraint.parameter_name] = values.tolist()
 
             # Run optimization
             with ThreadPoolExecutor() as executor:
                 best_params = await asyncio.get_event_loop().run_in_executor(
-                    executor, self.bayesian_optimizer.optimize, objective, param_space, n_trials=20
+                    executor,
+                    self.bayesian_optimizer.optimize,
+                    objective,
+                    param_space,
+                    n_trials=20,
                 )
 
             return best_params or current_parameters
@@ -621,7 +695,10 @@ class SelfTuningOptimizerAgent(BaseAgent):
             return current_parameters
 
     async def _run_genetic_optimization(
-        self, objective: callable, current_parameters: Dict[str, Any], constraints: List[ParameterConstraint]
+        self,
+        objective: callable,
+        current_parameters: Dict[str, Any],
+        constraints: List[ParameterConstraint],
     ) -> Dict[str, Any]:
         """Run genetic optimization."""
         try:
@@ -629,10 +706,17 @@ class SelfTuningOptimizerAgent(BaseAgent):
             param_space = {}
             for constraint in constraints:
                 if constraint.parameter_type == "continuous":
-                    param_space[constraint.parameter_name] = [constraint.min_value, constraint.max_value]
+                    param_space[constraint.parameter_name] = [
+                        constraint.min_value,
+                        constraint.max_value,
+                    ]
                 else:
                     # Discrete parameters
-                    values = np.arange(constraint.min_value, constraint.max_value + 1, constraint.step_size or 1)
+                    values = np.arange(
+                        constraint.min_value,
+                        constraint.max_value + 1,
+                        constraint.step_size or 1,
+                    )
                     param_space[constraint.parameter_name] = values.tolist()
 
             # Run optimization
@@ -685,7 +769,10 @@ class SelfTuningOptimizerAgent(BaseAgent):
             return 0.0
 
     def _calculate_optimization_confidence(
-        self, performance_improvement: float, triggers: List[OptimizationTrigger], market_data: pd.DataFrame
+        self,
+        performance_improvement: float,
+        triggers: List[OptimizationTrigger],
+        market_data: pd.DataFrame,
     ) -> float:
         """Calculate confidence in optimization result."""
         try:
@@ -714,7 +801,10 @@ class SelfTuningOptimizerAgent(BaseAgent):
     def _store_optimization_result(self, result: OptimizationResult):
         """Store optimization result in memory."""
         try:
-            self.memory.store("optimization_results", {"result": result.__dict__, "timestamp": datetime.now()})
+            self.memory.store(
+                "optimization_results",
+                {"result": result.__dict__, "timestamp": datetime.now()},
+            )
 
             # Save each successful tuning configuration to disk
             if result.performance_improvement > 0:
@@ -733,22 +823,32 @@ class SelfTuningOptimizerAgent(BaseAgent):
             # Load optimization history
             history_data = self.memory.get("optimization_history")
             if history_data:
-                self.optimization_history = [OptimizationResult(**r) for r in history_data.get("results", [])]
+                self.optimization_history = [
+                    OptimizationResult(**r) for r in history_data.get("results", [])
+                ]
 
             # Load parameter constraints
             constraints_data = self.memory.get("parameter_constraints")
             if constraints_data:
                 for strategy_name, constraints in constraints_data.items():
-                    self.parameter_constraints[strategy_name] = [ParameterConstraint(**c) for c in constraints]
+                    self.parameter_constraints[strategy_name] = [
+                        ParameterConstraint(**c) for c in constraints
+                    ]
 
         except Exception as e:
             self.logger.error(f"Error loading optimization data: {str(e)}")
 
-    def get_optimization_summary(self, strategy_name: Optional[str] = None) -> Dict[str, Any]:
+    def get_optimization_summary(
+        self, strategy_name: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Get summary of optimization activities."""
         try:
             if strategy_name:
-                filtered_results = [r for r in self.optimization_history if r.strategy_name == strategy_name]
+                filtered_results = [
+                    r
+                    for r in self.optimization_history
+                    if r.strategy_name == strategy_name
+                ]
             else:
                 filtered_results = self.optimization_history
 
@@ -780,14 +880,20 @@ class SelfTuningOptimizerAgent(BaseAgent):
             self.logger.error(f"Error getting optimization summary: {str(e)}")
             return {}
 
-    def set_parameter_constraints(self, strategy_name: str, constraints: List[ParameterConstraint]):
+    def set_parameter_constraints(
+        self, strategy_name: str, constraints: List[ParameterConstraint]
+    ):
         """Set parameter constraints for a strategy."""
         try:
             self.parameter_constraints[strategy_name] = constraints
 
             # Store in memory
             self.memory.store(
-                "parameter_constraints", {strategy_name: [c.__dict__ for c in constraints], "timestamp": datetime.now()}
+                "parameter_constraints",
+                {
+                    strategy_name: [c.__dict__ for c in constraints],
+                    "timestamp": datetime.now(),
+                },
             )
 
         except Exception as e:

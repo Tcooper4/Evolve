@@ -12,7 +12,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -53,7 +55,11 @@ class ReturnStatementFixer:
             "*.zip",
         }
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def should_scan_file(self, filepath: Path) -> bool:
         """Check if file should be scanned."""
@@ -130,12 +136,16 @@ class ReturnStatementFixer:
 
         # Skip abstract methods and properties
         if any(
-            decorator.id == "abstractmethod" for decorator in node.decorator_list if isinstance(decorator, ast.Name)
+            decorator.id == "abstractmethod"
+            for decorator in node.decorator_list
+            if isinstance(decorator, ast.Name)
         ):
             return analysis
 
         if any(
-            decorator.attr == "property" for decorator in node.decorator_list if isinstance(decorator, ast.Attribute)
+            decorator.attr == "property"
+            for decorator in node.decorator_list
+            if isinstance(decorator, ast.Attribute)
         ):
             return analysis
 
@@ -147,7 +157,8 @@ class ReturnStatementFixer:
 
                 # Check if it's a structured return
                 if isinstance(child.value, ast.Dict) and any(
-                    isinstance(k, ast.Constant) and k.value == "success" for k in child.value.keys
+                    isinstance(k, ast.Constant) and k.value == "success"
+                    for k in child.value.keys
                 ):
                     analysis["has_structured_return"] = True
                 elif (
@@ -172,19 +183,30 @@ class ReturnStatementFixer:
         timestamp = "datetime.now().isoformat()"
 
         # Determine return type based on function name and context
-        if any(keyword in function_name.lower() for keyword in ["get", "fetch", "load", "retrieve"]):
+        if any(
+            keyword in function_name.lower()
+            for keyword in ["get", "fetch", "load", "retrieve"]
+        ):
             return f"return {{'success': True, 'data': result, 'message': 'Data retrieved successfully', 'timestamp': {timestamp}}}"
-        elif any(keyword in function_name.lower() for keyword in ["set", "update", "save", "store"]):
-            return (
-                f"return {{'success': True, 'message': 'Operation completed successfully', 'timestamp': {timestamp}}}"
-            )
-        elif any(keyword in function_name.lower() for keyword in ["validate", "check", "verify"]):
-            return (
-                f"return {{'success': True, 'valid': True, 'message': 'Validation passed', 'timestamp': {timestamp}}}"
-            )
-        elif any(keyword in function_name.lower() for keyword in ["process", "execute", "run"]):
+        elif any(
+            keyword in function_name.lower()
+            for keyword in ["set", "update", "save", "store"]
+        ):
+            return f"return {{'success': True, 'message': 'Operation completed successfully', 'timestamp': {timestamp}}}"
+        elif any(
+            keyword in function_name.lower()
+            for keyword in ["validate", "check", "verify"]
+        ):
+            return f"return {{'success': True, 'valid': True, 'message': 'Validation passed', 'timestamp': {timestamp}}}"
+        elif any(
+            keyword in function_name.lower()
+            for keyword in ["process", "execute", "run"]
+        ):
             return f"return {{'success': True, 'result': result, 'message': 'Processing completed', 'timestamp': {timestamp}}}"
-        elif any(keyword in function_name.lower() for keyword in ["init", "setup", "configure"]):
+        elif any(
+            keyword in function_name.lower()
+            for keyword in ["init", "setup", "configure"]
+        ):
             return f"return {{'success': True, 'message': 'Initialization completed', 'timestamp': {timestamp}}}"
         else:
             return f"return {{'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': {timestamp}}}"
@@ -229,7 +251,10 @@ class ReturnStatementFixer:
                 last_indent = len(last_line) - len(last_line.lstrip())
 
                 # Generate appropriate return statement
-                if any(keyword in function_analysis["name"].lower() for keyword in ["init", "setup", "configure"]):
+                if any(
+                    keyword in function_analysis["name"].lower()
+                    for keyword in ["init", "setup", "configure"]
+                ):
                     return_stmt = f"{' ' * (last_indent + 4)}return {{'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}}"
                 else:
                     return_stmt = f"{' ' * (last_indent + 4)}return {{'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
@@ -261,7 +286,9 @@ class ReturnStatementFixer:
                     else:
                         # Return with value - wrap in structured format
                         indent = len(original_line) - len(original_line.lstrip())
-                        value_part = original_line[original_line.find("return") + 6 :].strip()
+                        value_part = original_line[
+                            original_line.find("return") + 6 :
+                        ].strip()
                         if value_part:
                             structured_return = f"{' ' * indent}return {{'success': True, 'result': {value_part}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
                             lines[return_line_idx] = structured_return
@@ -304,7 +331,9 @@ class ReturnStatementFixer:
                     lines = content.split("\n")
                     insert_pos = 0
                     for i, line in enumerate(lines):
-                        if line.strip().startswith("import ") or line.strip().startswith("from "):
+                        if line.strip().startswith(
+                            "import "
+                        ) or line.strip().startswith("from "):
                             insert_pos = i + 1
                         elif line.strip() and not line.strip().startswith("#"):
                             break

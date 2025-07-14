@@ -147,7 +147,9 @@ class RollingRetrainingAgent(BaseAgent):
 
             # Set last retrain date
             if self.model_history:
-                self.last_retrain_date = datetime.fromisoformat(self.model_history[-1]["retrain_date"])
+                self.last_retrain_date = datetime.fromisoformat(
+                    self.model_history[-1]["retrain_date"]
+                )
 
             logger.info(f"Loaded {len(self.model_history)} model versions")
 
@@ -170,7 +172,9 @@ class RollingRetrainingAgent(BaseAgent):
         except Exception as e:
             logger.error(f"Error saving history: {e}")
 
-    def prepare_data(self, data: pd.DataFrame, target_col: str = "returns") -> Tuple[pd.DataFrame, pd.Series]:
+    def prepare_data(
+        self, data: pd.DataFrame, target_col: str = "returns"
+    ) -> Tuple[pd.DataFrame, pd.Series]:
         """Prepare data for training."""
         try:
             # Create features
@@ -208,7 +212,9 @@ class RollingRetrainingAgent(BaseAgent):
             # Volatility features
             features["volatility_5d"] = features["returns"].rolling(5).std()
             features["volatility_20d"] = features["returns"].rolling(20).std()
-            features["volatility_ratio"] = features["volatility_5d"] / features["volatility_20d"]
+            features["volatility_ratio"] = (
+                features["volatility_5d"] / features["volatility_20d"]
+            )
 
             # Moving averages
             features["sma_5"] = data["Close"].rolling(5).mean()
@@ -230,7 +236,9 @@ class RollingRetrainingAgent(BaseAgent):
             # Technical indicators
             features["rsi"] = self._calculate_rsi(data["Close"])
             features["macd"] = self._calculate_macd(data["Close"])
-            features["bollinger_position"] = self._calculate_bollinger_position(data["Close"])
+            features["bollinger_position"] = self._calculate_bollinger_position(
+                data["Close"]
+            )
 
             # Time features
             features["day_of_week"] = data.index.dayofweek
@@ -259,7 +267,9 @@ class RollingRetrainingAgent(BaseAgent):
             logger.warning(f"Error calculating RSI: {e}")
             return pd.Series(index=prices.index, data=50)
 
-    def _calculate_macd(self, prices: pd.Series, fast: int = 12, slow: int = 26) -> pd.Series:
+    def _calculate_macd(
+        self, prices: pd.Series, fast: int = 12, slow: int = 26
+    ) -> pd.Series:
         """Calculate MACD indicator."""
         try:
             ema_fast = prices.ewm(span=fast).mean()
@@ -270,7 +280,9 @@ class RollingRetrainingAgent(BaseAgent):
             logger.warning(f"Error calculating MACD: {e}")
             return pd.Series(index=prices.index, data=0)
 
-    def _calculate_bollinger_position(self, prices: pd.Series, period: int = 20) -> pd.Series:
+    def _calculate_bollinger_position(
+        self, prices: pd.Series, period: int = 20
+    ) -> pd.Series:
         """Calculate position within Bollinger Bands."""
         try:
             sma = prices.rolling(period).mean()
@@ -284,7 +296,11 @@ class RollingRetrainingAgent(BaseAgent):
             return pd.Series(index=prices.index, data=0.5)
 
     def walk_forward_validation(
-        self, features: pd.DataFrame, target: pd.Series, model_factory: Callable, n_splits: int = 5
+        self,
+        features: pd.DataFrame,
+        target: pd.Series,
+        model_factory: Callable,
+        n_splits: int = 5,
     ) -> List[WalkForwardResult]:
         """Perform walk-forward validation."""
         try:
@@ -319,7 +335,9 @@ class RollingRetrainingAgent(BaseAgent):
                 # Get feature importance if available
                 feature_importance = {}
                 if hasattr(model, "feature_importances_"):
-                    feature_importance = dict(zip(features.columns, model.feature_importances_))
+                    feature_importance = dict(
+                        zip(features.columns, model.feature_importances_)
+                    )
 
                 # Create result
                 result = WalkForwardResult(
@@ -356,7 +374,9 @@ class RollingRetrainingAgent(BaseAgent):
             # Check performance degradation
             if self.performance_history:
                 recent_performance = self.performance_history[-1]["test_score"]
-                degradation = (recent_performance - current_performance) / recent_performance
+                degradation = (
+                    recent_performance - current_performance
+                ) / recent_performance
 
                 if degradation > self.retraining_config.performance_threshold:
                     logger.info(f"Performance degradation detected: {degradation:.2%}")
@@ -369,7 +389,9 @@ class RollingRetrainingAgent(BaseAgent):
             logger.error(f"Error checking retrain condition: {e}")
             return True
 
-    def retrain_model(self, data: pd.DataFrame, model_factory: Callable, target_col: str = "returns") -> pd.Series:
+    def retrain_model(
+        self, data: pd.DataFrame, model_factory: Callable, target_col: str = "returns"
+    ) -> pd.Series:
         """Retrain the model with new data."""
         try:
             logger.info("Starting model retraining...")
@@ -447,7 +469,9 @@ class RollingRetrainingAgent(BaseAgent):
             # Save history
             self._save_history()
 
-            logger.info(f"Model retraining completed. Version {model_version}, Test Score: {avg_test_score:.4f}")
+            logger.info(
+                f"Model retraining completed. Version {model_version}, Test Score: {avg_test_score:.4f}"
+            )
 
             return True
 
@@ -460,7 +484,9 @@ class RollingRetrainingAgent(BaseAgent):
         try:
             if len(self.model_history) > self.retraining_config.max_models:
                 # Remove oldest models
-                models_to_remove = self.model_history[: -self.retraining_config.max_models]
+                models_to_remove = self.model_history[
+                    : -self.retraining_config.max_models
+                ]
 
                 for model_record in models_to_remove:
                     model_path = model_record["model_path"]
@@ -469,7 +495,9 @@ class RollingRetrainingAgent(BaseAgent):
                         logger.info(f"Removed old model: {model_path}")
 
                 # Update history
-                self.model_history = self.model_history[-self.retraining_config.max_models :]
+                self.model_history = self.model_history[
+                    -self.retraining_config.max_models :
+                ]
 
         except Exception as e:
             logger.error(f"Error cleaning up old models: {e}")
@@ -518,13 +546,17 @@ class RollingRetrainingAgent(BaseAgent):
                 return {"message": "No performance history available"}
 
             # Calculate performance trends
-            recent_performance = [p["test_score"] for p in self.performance_history[-10:]]
+            recent_performance = [
+                p["test_score"] for p in self.performance_history[-10:]
+            ]
             avg_recent = np.mean(recent_performance)
             std_recent = np.std(recent_performance)
 
             # Performance trend
             if len(recent_performance) >= 2:
-                trend = (recent_performance[-1] - recent_performance[0]) / len(recent_performance)
+                trend = (recent_performance[-1] - recent_performance[0]) / len(
+                    recent_performance
+                )
             else:
                 trend = 0
 
@@ -541,8 +573,12 @@ class RollingRetrainingAgent(BaseAgent):
                 "performance_trend": trend,
                 "best_score": best_score,
                 "worst_score": worst_score,
-                "latest_model_version": self.model_history[-1]["version"] if self.model_history else None,
-                "last_retrain_date": self.last_retrain_date.isoformat() if self.last_retrain_date else None,
+                "latest_model_version": self.model_history[-1]["version"]
+                if self.model_history
+                else None,
+                "last_retrain_date": self.last_retrain_date.isoformat()
+                if self.last_retrain_date
+                else None,
             }
 
         except Exception as e:
@@ -555,16 +591,23 @@ class RollingRetrainingAgent(BaseAgent):
             if self.current_model is None:
                 self.load_latest_model()
 
-            if self.current_model is None or not hasattr(self.current_model, "feature_importances_"):
+            if self.current_model is None or not hasattr(
+                self.current_model, "feature_importances_"
+            ):
                 return {}
 
             # Get feature names from the latest walk-forward result
             if self.performance_history:
-                latest_wf_result = self.performance_history[-1]
+                self.performance_history[-1]
                 # This would need to be stored separately in practice
                 return {}
 
-            return dict(zip(self.current_model.feature_names_in_, self.current_model.feature_importances_))
+            return dict(
+                zip(
+                    self.current_model.feature_names_in_,
+                    self.current_model.feature_importances_,
+                )
+            )
 
         except Exception as e:
             logger.error(f"Error getting feature importance: {e}")
@@ -613,14 +656,19 @@ class RollingRetrainingAgent(BaseAgent):
                 current_performance = kwargs.get("current_performance")
 
                 if current_performance is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: current_performance")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: current_performance",
+                    )
 
                 should_retrain = self.should_retrain(current_performance)
                 return AgentResult(
                     success=True,
                     data={
                         "should_retrain": should_retrain,
-                        "last_retrain_date": self.last_retrain_date.isoformat() if self.last_retrain_date else None,
+                        "last_retrain_date": self.last_retrain_date.isoformat()
+                        if self.last_retrain_date
+                        else None,
                     },
                 )
 
@@ -630,7 +678,10 @@ class RollingRetrainingAgent(BaseAgent):
                 target_col = kwargs.get("target_col", "returns")
 
                 if data is None or model_factory is None:
-                    return AgentResult(success=False, error_message="Missing required parameters: data, model_factory")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: data, model_factory",
+                    )
 
                 performance = self.retrain_model(data, model_factory, target_col)
                 return AgentResult(
@@ -651,10 +702,13 @@ class RollingRetrainingAgent(BaseAgent):
 
                 if features is None or target is None or model_factory is None:
                     return AgentResult(
-                        success=False, error_message="Missing required parameters: features, target, model_factory"
+                        success=False,
+                        error_message="Missing required parameters: features, target, model_factory",
                     )
 
-                results = self.walk_forward_validation(features, target, model_factory, n_splits)
+                results = self.walk_forward_validation(
+                    features, target, model_factory, n_splits
+                )
                 return AgentResult(
                     success=True,
                     data={
@@ -669,25 +723,34 @@ class RollingRetrainingAgent(BaseAgent):
 
             elif action == "get_feature_importance":
                 importance = self.get_feature_importance()
-                return AgentResult(success=True, data={"feature_importance": importance})
+                return AgentResult(
+                    success=True, data={"feature_importance": importance}
+                )
 
             elif action == "predict":
                 features = kwargs.get("features")
 
                 if features is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: features")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: features",
+                    )
 
                 predictions = self.predict(features)
                 return AgentResult(
                     success=True,
                     data={
-                        "predictions": predictions.tolist() if hasattr(predictions, "tolist") else list(predictions),
+                        "predictions": predictions.tolist()
+                        if hasattr(predictions, "tolist")
+                        else list(predictions),
                         "prediction_count": len(predictions),
                     },
                 )
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)

@@ -61,9 +61,15 @@ class NotificationTTL(BaseModel):
     """Time-to-live configuration for notifications."""
 
     default_ttl_hours: int = Field(default=24, description="Default TTL in hours")
-    priority_ttl_hours: Dict[str, int] = Field(default_factory=dict, description="TTL by priority")
-    type_ttl_hours: Dict[str, int] = Field(default_factory=dict, description="TTL by notification type")
-    user_ttl_hours: Dict[str, int] = Field(default_factory=dict, description="TTL by user preference")
+    priority_ttl_hours: Dict[str, int] = Field(
+        default_factory=dict, description="TTL by priority"
+    )
+    type_ttl_hours: Dict[str, int] = Field(
+        default_factory=dict, description="TTL by notification type"
+    )
+    user_ttl_hours: Dict[str, int] = Field(
+        default_factory=dict, description="TTL by user preference"
+    )
     max_ttl_hours: int = Field(default=168, description="Maximum TTL in hours (1 week)")
     min_ttl_hours: int = Field(default=1, description="Minimum TTL in hours")
 
@@ -79,7 +85,9 @@ class NotificationTTL(BaseModel):
             raise ValueError("max_ttl_hours must be greater than min_ttl_hours")
         return v
 
-    def get_ttl_for_notification(self, priority: str = None, notification_type: str = None, user_id: str = None) -> int:
+    def get_ttl_for_notification(
+        self, priority: str = None, notification_type: str = None, user_id: str = None
+    ) -> int:
         """Get TTL in hours for a specific notification."""
         # Check user-specific TTL first
         if user_id and user_id in self.user_ttl_hours:
@@ -327,17 +335,20 @@ class NotificationCleanupService:
 
         # Start metrics collection task
         self._metrics_task = self.scheduler_service.schedule_task(
-            self._collect_metrics, interval=self.config.get("cleanup.metrics_interval", 60)
+            self._collect_metrics,
+            interval=self.config.get("cleanup.metrics_interval", 60),
         )
 
         # Start health check task
         self._health_task = self.scheduler_service.schedule_task(
-            self._check_health, interval=self.config.get("cleanup.health_check_interval", 60)
+            self._check_health,
+            interval=self.config.get("cleanup.health_check_interval", 60),
         )
 
         # Start cleanup task
         self._cleanup_task = self.scheduler_service.schedule_task(
-            self._cleanup_loop, interval=self.config.get("cleanup.cleanup_interval", 3600)
+            self._cleanup_loop,
+            interval=self.config.get("cleanup.cleanup_interval", 3600),
         )
 
         # Initialize metrics
@@ -373,7 +384,9 @@ class NotificationCleanupService:
             self.security_service.initialize()
 
             # Set up security policies
-            self.security_service.set_cleanup_policy(self.config.get("cleanup.security_level", 1))
+            self.security_service.set_cleanup_policy(
+                self.config.get("cleanup.security_level", 1)
+            )
 
         except Exception as e:
             logger.error(f"Error initializing security: {str(e)}")
@@ -386,7 +399,9 @@ class NotificationCleanupService:
             self.logging_service.initialize()
 
             # Set up logging
-            self.logging_service.set_cleanup_logging(self.config.get("cleanup.audit_level", 1))
+            self.logging_service.set_cleanup_logging(
+                self.config.get("cleanup.audit_level", 1)
+            )
 
         except Exception as e:
             logger.error(f"Error initializing logging: {str(e)}")
@@ -406,7 +421,9 @@ class NotificationCleanupService:
             self.metrics_service.record_metrics_load(len(metrics_data))
 
             # Audit
-            await self.audit_service.record_audit("metrics_load", "success", f"Loaded {len(metrics_data)} user metrics")
+            await self.audit_service.record_audit(
+                "metrics_load", "success", f"Loaded {len(metrics_data)} user metrics"
+            )
 
         except Exception as e:
             logger.error(f"Error loading user metrics: {str(e)}")
@@ -422,19 +439,29 @@ class NotificationCleanupService:
         try:
             # Collect operation metrics
             if self._active_operation:
-                self._active_operation.add_metric("queue_size", self._user_batch_queue.qsize())
+                self._active_operation.add_metric(
+                    "queue_size", self._user_batch_queue.qsize()
+                )
                 self._active_operation.add_metric("worker_count", len(self._workers))
                 self._active_operation.add_metric(
-                    "user_metrics", {user_id: metrics.dict() for user_id, metrics in self._user_metrics.items()}
+                    "user_metrics",
+                    {
+                        user_id: metrics.dict()
+                        for user_id, metrics in self._user_metrics.items()
+                    },
                 )
 
             # Record metrics
             self.metrics_service.record_cleanup_metrics(
-                self._user_batch_queue.qsize(), len(self._workers), len(self._user_metrics)
+                self._user_batch_queue.qsize(),
+                len(self._workers),
+                len(self._user_metrics),
             )
 
             # Audit
-            await self.audit_service.record_audit("metrics_collection", "success", "Collected cleanup metrics")
+            await self.audit_service.record_audit(
+                "metrics_collection", "success", "Collected cleanup metrics"
+            )
 
         except Exception as e:
             logger.error(f"Error collecting metrics: {str(e)}")
@@ -455,13 +482,17 @@ class NotificationCleanupService:
             worker_health = await self.worker_service.check_health()
 
             # Update health status
-            self.health_service.update_health({"queue": queue_health, "workers": worker_health})
+            self.health_service.update_health(
+                {"queue": queue_health, "workers": worker_health}
+            )
 
             # Record metrics
             self.metrics_service.record_health_check()
 
             # Audit
-            await self.audit_service.record_audit("health_check", "success", "Checked service health")
+            await self.audit_service.record_audit(
+                "health_check", "success", "Checked service health"
+            )
 
         except Exception as e:
             logger.error(f"Error checking health: {str(e)}")
@@ -480,14 +511,17 @@ class NotificationCleanupService:
 
             # Start cleanup task
             self._cleanup_task = self.scheduler_service.schedule_task(
-                self._cleanup_loop, interval=self.config.get("cleanup.cleanup_interval", 3600)
+                self._cleanup_loop,
+                interval=self.config.get("cleanup.cleanup_interval", 3600),
             )
 
             # Record metrics
             self.metrics_service.record_service_start()
 
             # Audit
-            await self.audit_service.record_audit("service_start", "success", "Started cleanup service")
+            await self.audit_service.record_audit(
+                "service_start", "success", "Started cleanup service"
+            )
 
             logger.info("Notification cleanup service started")
 
@@ -514,7 +548,9 @@ class NotificationCleanupService:
             self.metrics_service.record_service_stop()
 
             # Audit
-            await self.audit_service.record_audit("service_stop", "success", "Stopped cleanup service")
+            await self.audit_service.record_audit(
+                "service_stop", "success", "Stopped cleanup service"
+            )
 
             logger.info("Notification cleanup service stopped")
 
@@ -531,7 +567,10 @@ class NotificationCleanupService:
         """Main cleanup loop."""
         try:
             # Check if already running
-            if self._active_operation and self._active_operation.status == CleanupStatus.RUNNING:
+            if (
+                self._active_operation
+                and self._active_operation.status == CleanupStatus.RUNNING
+            ):
                 return
 
             # Start cleanup
@@ -541,7 +580,9 @@ class NotificationCleanupService:
             self.metrics_service.record_cleanup_loop()
 
             # Audit
-            await self.audit_service.record_audit("cleanup_loop", "success", "Completed cleanup loop")
+            await self.audit_service.record_audit(
+                "cleanup_loop", "success", "Completed cleanup loop"
+            )
 
         except Exception as e:
             logger.error(f"Error in cleanup loop: {str(e)}")
@@ -560,7 +601,8 @@ class NotificationCleanupService:
                 id=str(uuid4()),
                 status=CleanupStatus.RUNNING,
                 start_time=datetime.utcnow(),
-                expires_at=datetime.utcnow() + timedelta(seconds=self.config.get("cleanup.operation_timeout", 3600)),
+                expires_at=datetime.utcnow()
+                + timedelta(seconds=self.config.get("cleanup.operation_timeout", 3600)),
             )
 
             # Store operation
@@ -635,7 +677,9 @@ class NotificationCleanupService:
 
             # Audit
             await self.audit_service.record_audit(
-                "cleanup_resume", "success", f"Resumed cleanup operation {self._active_operation.id}"
+                "cleanup_resume",
+                "success",
+                f"Resumed cleanup operation {self._active_operation.id}",
             )
 
         except Exception as e:
@@ -661,7 +705,8 @@ class NotificationCleanupService:
                 batch = UserBatch(
                     id=str(uuid4()),
                     user_ids=user_ids[i : i + self._batch_size],
-                    expires_at=datetime.utcnow() + timedelta(seconds=self.config.get("cleanup.batch_timeout", 300)),
+                    expires_at=datetime.utcnow()
+                    + timedelta(seconds=self.config.get("cleanup.batch_timeout", 300)),
                 )
 
                 # Store batch
@@ -671,11 +716,15 @@ class NotificationCleanupService:
                 await self._user_batch_queue.enqueue(batch)
 
             # Record metrics
-            self.metrics_service.record_batch_creation(len(user_ids) // self._batch_size + 1)
+            self.metrics_service.record_batch_creation(
+                len(user_ids) // self._batch_size + 1
+            )
 
             # Audit
             await self.audit_service.record_audit(
-                "batch_creation", "success", f"Created {len(user_ids) // self._batch_size + 1} batches"
+                "batch_creation",
+                "success",
+                f"Created {len(user_ids) // self._batch_size + 1} batches",
             )
 
         except Exception as e:
@@ -701,7 +750,9 @@ class NotificationCleanupService:
                 key=lambda x: (
                     metrics[x].error_count if metrics[x] else 0,
                     metrics[x].total_notifications if metrics[x] else 0,
-                    metrics[x].last_cleanup.timestamp() if metrics[x] and metrics[x].last_cleanup else 0,
+                    metrics[x].last_cleanup.timestamp()
+                    if metrics[x] and metrics[x].last_cleanup
+                    else 0,
                 ),
                 reverse=True,
             )
@@ -738,7 +789,9 @@ class NotificationCleanupService:
 
             # Audit
             await self.audit_service.record_audit(
-                "batch_processing", "success", f"Processed batch {batch.id} with {len(batch.user_ids)} users"
+                "batch_processing",
+                "success",
+                f"Processed batch {batch.id} with {len(batch.user_ids)} users",
             )
 
         except Exception as e:
@@ -763,7 +816,9 @@ class NotificationCleanupService:
             for user_id in batch.user_ids:
                 try:
                     # Get notifications
-                    notifications = await self.notification_manager.get_user_notifications(user_id)
+                    notifications = (
+                        await self.notification_manager.get_user_notifications(user_id)
+                    )
 
                     # Process notifications
                     await self._process_batch_with_transaction(user_id, notifications)
@@ -797,7 +852,9 @@ class NotificationCleanupService:
 
             # Audit
             await self.audit_service.record_audit(
-                "user_batch_processing", "success", f"Processed {len(batch.user_ids)} users in batch {batch.id}"
+                "user_batch_processing",
+                "success",
+                f"Processed {len(batch.user_ids)} users in batch {batch.id}",
             )
 
         except Exception as e:
@@ -812,17 +869,25 @@ class NotificationCleanupService:
             self.metrics_service.record_user_batch_processing_error()
 
             # Audit
-            await self.audit_service.record_audit("user_batch_processing", "error", str(e))
+            await self.audit_service.record_audit(
+                "user_batch_processing", "error", str(e)
+            )
 
             raise
 
-    async def _process_batch_with_transaction(self, user_id: str, notifications: List[Dict[str, Any]]) -> None:
+    async def _process_batch_with_transaction(
+        self, user_id: str, notifications: List[Dict[str, Any]]
+    ) -> None:
         """Process notifications in a transaction."""
         try:
             # Start transaction
-            async with self.transaction_service.transaction(timeout=self._transaction_timeout) as transaction:
+            async with self.transaction_service.transaction(
+                timeout=self._transaction_timeout
+            ) as transaction:
                 # Delete notifications
-                await self.notification_manager.delete_notifications([n["id"] for n in notifications])
+                await self.notification_manager.delete_notifications(
+                    [n["id"] for n in notifications]
+                )
 
                 # Update metrics
                 if self._active_operation:
@@ -835,7 +900,9 @@ class NotificationCleanupService:
 
             # Audit
             await self.audit_service.record_audit(
-                "notification_deletion", "success", f"Deleted {len(notifications)} notifications for user {user_id}"
+                "notification_deletion",
+                "success",
+                f"Deleted {len(notifications)} notifications for user {user_id}",
             )
 
         except Exception as e:
@@ -845,7 +912,9 @@ class NotificationCleanupService:
             self.metrics_service.record_notification_deletion_error()
 
             # Audit
-            await self.audit_service.record_audit("notification_deletion", "error", str(e))
+            await self.audit_service.record_audit(
+                "notification_deletion", "error", str(e)
+            )
 
             raise
 
@@ -884,7 +953,9 @@ class NotificationCleanupService:
             self.metrics_service.record_user_metrics_update_error()
 
             # Audit
-            await self.audit_service.record_audit("user_metrics_update", "error", str(e))
+            await self.audit_service.record_audit(
+                "user_metrics_update", "error", str(e)
+            )
 
     async def _update_user_error(self, user_id: str) -> None:
         """Update user error count."""
@@ -906,7 +977,9 @@ class NotificationCleanupService:
 
             # Audit
             await self.audit_service.record_audit(
-                "user_error_update", "success", f"Updated error count for user {user_id}"
+                "user_error_update",
+                "success",
+                f"Updated error count for user {user_id}",
             )
 
         except Exception as e:
@@ -938,7 +1011,9 @@ class NotificationCleanupService:
 
             # Get processed users
             if self._active_operation:
-                processed_users = await self.persistence_service.get_processed_users(self._active_operation.id)
+                processed_users = await self.persistence_service.get_processed_users(
+                    self._active_operation.id
+                )
             else:
                 processed_users = []
 
@@ -973,7 +1048,9 @@ class NotificationCleanupService:
             self.metrics_service.record_cleanup_now()
 
             # Audit
-            await self.audit_service.record_audit("cleanup_now", "success", "Started immediate cleanup")
+            await self.audit_service.record_audit(
+                "cleanup_now", "success", "Started immediate cleanup"
+            )
 
         except Exception as e:
             logger.error(f"Error starting immediate cleanup: {str(e)}")
@@ -1009,7 +1086,9 @@ class NotificationCleanupService:
             self.metrics_service.record_metrics_check()
 
             # Audit
-            await self.audit_service.record_audit("metrics_check", "success", "Retrieved cleanup metrics")
+            await self.audit_service.record_audit(
+                "metrics_check", "success", "Retrieved cleanup metrics"
+            )
 
             return metrics
 
@@ -1034,7 +1113,9 @@ class NotificationCleanupService:
             self.metrics_service.record_health_check()
 
             # Audit
-            await self.audit_service.record_audit("health_check", "success", "Retrieved service health")
+            await self.audit_service.record_audit(
+                "health_check", "success", "Retrieved service health"
+            )
 
             return health
 
@@ -1049,7 +1130,9 @@ class NotificationCleanupService:
 
             return {}
 
-    async def cleanup_expired_notifications(self, ttl_config: Optional[NotificationTTL] = None) -> Dict[str, Any]:
+    async def cleanup_expired_notifications(
+        self, ttl_config: Optional[NotificationTTL] = None
+    ) -> Dict[str, Any]:
         """Clean up notifications that have exceeded their TTL.
 
         Args:
@@ -1073,7 +1156,9 @@ class NotificationCleanupService:
             for user_id in users:
                 try:
                     # Get user notifications
-                    notifications = await self.notification_manager.get_user_notifications(user_id)
+                    notifications = (
+                        await self.notification_manager.get_user_notifications(user_id)
+                    )
 
                     if not notifications:
                         continue
@@ -1081,12 +1166,16 @@ class NotificationCleanupService:
                     # Filter expired notifications
                     expired_notifications = []
                     for notification in notifications:
-                        if self._is_notification_expired(notification, ttl_config, user_id):
+                        if self._is_notification_expired(
+                            notification, ttl_config, user_id
+                        ):
                             expired_notifications.append(notification)
 
                     if expired_notifications:
                         # Delete expired notifications
-                        deleted_count = await self._delete_expired_notifications(user_id, expired_notifications)
+                        deleted_count = await self._delete_expired_notifications(
+                            user_id, expired_notifications
+                        )
 
                         total_deleted += deleted_count
                         user_results[user_id] = {
@@ -1101,7 +1190,9 @@ class NotificationCleanupService:
                     await self._update_user_metrics(user_id, len(expired_notifications))
 
                 except Exception as e:
-                    logger.error(f"Error processing user {user_id} for TTL cleanup: {e}")
+                    logger.error(
+                        f"Error processing user {user_id} for TTL cleanup: {e}"
+                    )
                     await self._update_user_error(user_id)
                     user_results[user_id] = {"error": str(e)}
 
@@ -1132,9 +1223,15 @@ class NotificationCleanupService:
             # Audit
             await self.audit_service.record_audit("ttl_cleanup", "error", str(e))
 
-            return {"success": False, "error": str(e), "timestamp": datetime.utcnow().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
 
-    def _is_notification_expired(self, notification: Dict[str, Any], ttl_config: NotificationTTL, user_id: str) -> bool:
+    def _is_notification_expired(
+        self, notification: Dict[str, Any], ttl_config: NotificationTTL, user_id: str
+    ) -> bool:
         """Check if a notification has expired based on TTL.
 
         Args:
@@ -1161,7 +1258,9 @@ class NotificationCleanupService:
             # Get TTL for this notification
             priority = notification.get("priority", "medium")
             notification_type = notification.get("type", "general")
-            ttl_hours = ttl_config.get_ttl_for_notification(priority, notification_type, user_id)
+            ttl_hours = ttl_config.get_ttl_for_notification(
+                priority, notification_type, user_id
+            )
 
             # Calculate expiration time
             expiration_time = created_dt + timedelta(hours=ttl_hours)
@@ -1174,7 +1273,9 @@ class NotificationCleanupService:
             # If we can't determine, assume it's expired
             return True
 
-    async def _delete_expired_notifications(self, user_id: str, expired_notifications: List[Dict[str, Any]]) -> int:
+    async def _delete_expired_notifications(
+        self, user_id: str, expired_notifications: List[Dict[str, Any]]
+    ) -> int:
         """Delete expired notifications for a user.
 
         Args:
@@ -1190,19 +1291,27 @@ class NotificationCleanupService:
             for notification in expired_notifications:
                 try:
                     # Delete notification
-                    await self.notification_manager.delete_notification(user_id, notification.get("id"))
+                    await self.notification_manager.delete_notification(
+                        user_id, notification.get("id")
+                    )
                     deleted_count += 1
 
                 except Exception as e:
-                    logger.error(f"Error deleting notification {notification.get('id')}: {e}")
+                    logger.error(
+                        f"Error deleting notification {notification.get('id')}: {e}"
+                    )
 
             return deleted_count
 
         except Exception as e:
-            logger.error(f"Error deleting expired notifications for user {user_id}: {e}")
+            logger.error(
+                f"Error deleting expired notifications for user {user_id}: {e}"
+            )
             return 0
 
-    async def configure_ttl_settings(self, ttl_config: NotificationTTL) -> Dict[str, Any]:
+    async def configure_ttl_settings(
+        self, ttl_config: NotificationTTL
+    ) -> Dict[str, Any]:
         """Configure TTL settings for the cleanup service.
 
         Args:
@@ -1226,7 +1335,9 @@ class NotificationCleanupService:
 
             # Audit
             await self.audit_service.record_audit(
-                "ttl_config_update", "success", f"TTL configuration updated: default={ttl_config.default_ttl_hours}h"
+                "ttl_config_update",
+                "success",
+                f"TTL configuration updated: default={ttl_config.default_ttl_hours}h",
             )
 
             return {
@@ -1245,7 +1356,11 @@ class NotificationCleanupService:
             # Audit
             await self.audit_service.record_audit("ttl_config_update", "error", str(e))
 
-            return {"success": False, "error": str(e), "timestamp": datetime.utcnow().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
 
     async def get_ttl_statistics(self) -> Dict[str, Any]:
         """Get TTL statistics and metrics.
@@ -1264,7 +1379,9 @@ class NotificationCleanupService:
             for user_id in users:
                 try:
                     # Get user notifications
-                    notifications = await self.notification_manager.get_user_notifications(user_id)
+                    notifications = (
+                        await self.notification_manager.get_user_notifications(user_id)
+                    )
 
                     if not notifications:
                         continue
@@ -1273,7 +1390,9 @@ class NotificationCleanupService:
 
                     # Count expired notifications
                     for notification in notifications:
-                        if self._is_notification_expired(notification, self._ttl_config, user_id):
+                        if self._is_notification_expired(
+                            notification, self._ttl_config, user_id
+                        ):
                             expired_notifications += 1
 
                         # Track TTL distribution
@@ -1283,10 +1402,16 @@ class NotificationCleanupService:
                         ttl_distribution[priority] += 1
 
                 except Exception as e:
-                    logger.error(f"Error getting TTL statistics for user {user_id}: {e}")
+                    logger.error(
+                        f"Error getting TTL statistics for user {user_id}: {e}"
+                    )
 
             # Calculate statistics
-            expiration_rate = (expired_notifications / total_notifications * 100) if total_notifications > 0 else 0
+            expiration_rate = (
+                (expired_notifications / total_notifications * 100)
+                if total_notifications > 0
+                else 0
+            )
 
             return {
                 "success": True,
@@ -1301,7 +1426,11 @@ class NotificationCleanupService:
         except Exception as e:
             logger.error(f"Error getting TTL statistics: {e}")
 
-            return {"success": False, "error": str(e), "timestamp": datetime.utcnow().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
 
     async def schedule_ttl_cleanup(self, interval_hours: int = 6) -> Dict[str, Any]:
         """Schedule periodic TTL cleanup.
@@ -1315,7 +1444,9 @@ class NotificationCleanupService:
         try:
             # Schedule TTL cleanup task
             await self.scheduler_service.schedule_periodic_task(
-                "ttl_cleanup", self.cleanup_expired_notifications, interval_hours=interval_hours
+                "ttl_cleanup",
+                self.cleanup_expired_notifications,
+                interval_hours=interval_hours,
             )
 
             # Record metrics
@@ -1323,7 +1454,9 @@ class NotificationCleanupService:
 
             # Audit
             await self.audit_service.record_audit(
-                "ttl_schedule", "success", f"TTL cleanup scheduled with {interval_hours}h interval"
+                "ttl_schedule",
+                "success",
+                f"TTL cleanup scheduled with {interval_hours}h interval",
             )
 
             return {
@@ -1342,4 +1475,8 @@ class NotificationCleanupService:
             # Audit
             await self.audit_service.record_audit("ttl_schedule", "error", str(e))
 
-            return {"success": False, "error": str(e), "timestamp": datetime.utcnow().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            }

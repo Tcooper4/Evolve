@@ -10,7 +10,6 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -40,7 +39,10 @@ class ToolResult:
 
 
 def tool(
-    name: Optional[str] = None, description: Optional[str] = None, category: str = "general", version: str = "1.0.0"
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    category: str = "general",
+    version: str = "1.0.0",
 ):
     """Decorator to register a function as a tool.
 
@@ -61,12 +63,17 @@ def tool(
                 else:
                     result = func(*args, **kwargs)
                 return ToolResult(
-                    success=True, data=result, execution_time=asyncio.get_event_loop().time() - start_time
+                    success=True,
+                    data=result,
+                    execution_time=asyncio.get_event_loop().time() - start_time,
                 )
             except Exception as e:
                 logger.error(f"Tool execution failed: {str(e)}")
                 return ToolResult(
-                    success=False, data=None, error=str(e), execution_time=asyncio.get_event_loop().time() - start_time
+                    success=False,
+                    data=None,
+                    error=str(e),
+                    execution_time=asyncio.get_event_loop().time() - start_time,
                 )
 
         # Get function metadata
@@ -75,10 +82,14 @@ def tool(
         required_parameters = []
 
         for name, param in sig.parameters.items():
-            param_type = param.annotation if param.annotation != inspect.Parameter.empty else Any
+            param_type = (
+                param.annotation if param.annotation != inspect.Parameter.empty else Any
+            )
             parameters[name] = {
                 "type": str(param_type),
-                "default": param.default if param.default != inspect.Parameter.empty else None,
+                "default": param.default
+                if param.default != inspect.Parameter.empty
+                else None,
             }
             if param.default == inspect.Parameter.empty:
                 required_parameters.append(name)
@@ -116,7 +127,11 @@ class ToolRegistry:
         if self.tools_dir:
             self._load_tools_from_dir()
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _load_tools_from_dir(self) -> None:
         """Load tools from the tools directory."""
@@ -170,7 +185,9 @@ class ToolRegistry:
         metadata = self.metadata[tool_name]
 
         # Validate required parameters
-        missing_params = [param for param in metadata.required_parameters if param not in args]
+        missing_params = [
+            param for param in metadata.required_parameters if param not in args
+        ]
         if missing_params:
             raise ValueError(f"Missing required parameters: {missing_params}")
 
@@ -180,7 +197,12 @@ class ToolRegistry:
             return result
         except Exception as e:
             logger.error(f"Tool execution failed: {str(e)}")
-            return ToolResult(success=False, data=None, error=str(e), metadata={"traceback": traceback.format_exc()})
+            return ToolResult(
+                success=False,
+                data=None,
+                error=str(e),
+                metadata={"traceback": traceback.format_exc()},
+            )
 
     def get_tool_metadata(self, tool_name: str) -> Optional[ToolMetadata]:
         """Get metadata for a tool.

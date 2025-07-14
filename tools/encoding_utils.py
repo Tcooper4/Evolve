@@ -82,7 +82,9 @@ def convert_to_utf8(file_path: str, original_encoding: str) -> bool:
         return False
 
 
-def read_with_fallback_encoding(file_path: str, preferred_encodings: Optional[List[str]] = None) -> Tuple[str, str]:
+def read_with_fallback_encoding(
+    file_path: str, preferred_encodings: Optional[List[str]] = None
+) -> Tuple[str, str]:
     """Read a file with robust Unicode encoding fallback when encountering malformed characters.
 
     Args:
@@ -121,7 +123,9 @@ def read_with_fallback_encoding(file_path: str, preferred_encodings: Optional[Li
         try:
             with open(file_path, "r", encoding=encoding, errors="replace") as f:
                 content = f.read()
-                logger.warning(f"Read {file_path} with {encoding} using replacement characters")
+                logger.warning(
+                    f"Read {file_path} with {encoding} using replacement characters"
+                )
                 return content, encoding
         except Exception as e:
             logger.debug(f"Error reading {file_path} with {encoding} (replace): {e}")
@@ -139,7 +143,9 @@ def read_with_fallback_encoding(file_path: str, preferred_encodings: Optional[Li
         raise
 
 
-def write_with_encoding_fallback(file_path: str, content: str, preferred_encoding: str = "utf-8") -> bool:
+def write_with_encoding_fallback(
+    file_path: str, content: str, preferred_encoding: str = "utf-8"
+) -> bool:
     """Write content to file with encoding fallback support.
 
     Args:
@@ -154,25 +160,35 @@ def write_with_encoding_fallback(file_path: str, content: str, preferred_encodin
         # Try preferred encoding first
         with open(file_path, "w", encoding=preferred_encoding, errors="strict") as f:
             f.write(content)
-        logger.info(f"Successfully wrote {file_path} with {preferred_encoding} encoding")
+        logger.info(
+            f"Successfully wrote {file_path} with {preferred_encoding} encoding"
+        )
         return True
     except UnicodeEncodeError as e:
         logger.warning(f"Failed to write {file_path} with {preferred_encoding}: {e}")
 
         # Try with replacement characters
         try:
-            with open(file_path, "w", encoding=preferred_encoding, errors="replace") as f:
+            with open(
+                file_path, "w", encoding=preferred_encoding, errors="replace"
+            ) as f:
                 f.write(content)
-            logger.warning(f"Wrote {file_path} with {preferred_encoding} using replacement characters")
+            logger.warning(
+                f"Wrote {file_path} with {preferred_encoding} using replacement characters"
+            )
             return True
         except Exception as e:
-            logger.error(f"Failed to write {file_path} with {preferred_encoding} (replace): {e}")
+            logger.error(
+                f"Failed to write {file_path} with {preferred_encoding} (replace): {e}"
+            )
 
             # Try UTF-8 as fallback
             try:
                 with open(file_path, "w", encoding="utf-8", errors="replace") as f:
                     f.write(content)
-                logger.warning(f"Wrote {file_path} with UTF-8 using replacement characters")
+                logger.warning(
+                    f"Wrote {file_path} with UTF-8 using replacement characters"
+                )
                 return True
             except Exception as e:
                 logger.error(f"Failed to write {file_path} with UTF-8: {e}")
@@ -211,7 +227,9 @@ def sanitize_unicode_content(content: str, remove_control_chars: bool = True) ->
     return content
 
 
-def convert_to_utf8_with_fallback(file_path: str, original_encoding: str = None) -> bool:
+def convert_to_utf8_with_fallback(
+    file_path: str, original_encoding: str = None
+) -> bool:
     """Convert a file to UTF-8 encoding with robust fallback handling.
 
     Args:
@@ -234,7 +252,9 @@ def convert_to_utf8_with_fallback(file_path: str, original_encoding: str = None)
         success = write_with_encoding_fallback(file_path, sanitized_content, "utf-8")
 
         if success:
-            logger.info(f"Successfully converted {file_path} from {used_encoding} to UTF-8")
+            logger.info(
+                f"Successfully converted {file_path} from {used_encoding} to UTF-8"
+            )
         else:
             logger.error(f"Failed to write {file_path} after conversion")
 
@@ -245,7 +265,9 @@ def convert_to_utf8_with_fallback(file_path: str, original_encoding: str = None)
 
 
 def scan_project_for_utf8(
-    root_dir: str = ".", convert: bool = False, file_extensions: Optional[List[str]] = None
+    root_dir: str = ".",
+    convert: bool = False,
+    file_extensions: Optional[List[str]] = None,
 ) -> List[Tuple[str, str]]:
     """Scan project files for non-UTF-8 encoding and optionally convert them.
 
@@ -270,7 +292,10 @@ def scan_project_for_utf8(
                     file_path = os.path.join(dirpath, file)
 
                     # Skip binary files and certain directories
-                    if any(skip_dir in file_path for skip_dir in [".git", "__pycache__", "venv"]):
+                    if any(
+                        skip_dir in file_path
+                        for skip_dir in [".git", "__pycache__", "venv"]
+                    ):
                         continue
 
                     if not is_utf8(file_path):
@@ -279,10 +304,14 @@ def scan_project_for_utf8(
 
                         if encoding:
                             non_utf8_files.append((file_path, encoding))
-                            logger.warning(f"Non-UTF8 file found: {file_path} ({encoding})")
+                            logger.warning(
+                                f"Non-UTF8 file found: {file_path} ({encoding})"
+                            )
 
                             if convert:
-                                success = convert_to_utf8_with_fallback(file_path, encoding)
+                                success = convert_to_utf8_with_fallback(
+                                    file_path, encoding
+                                )
                                 if success:
                                     logger.info(f"Converted to UTF-8: {file_path}")
                                 else:
@@ -298,7 +327,9 @@ def scan_project_for_utf8(
     else:
         logger.info(f"Found {len(non_utf8_files)} non-UTF-8 files.")
         if not convert:
-            logger.info("Run with convert=True to automatically convert files to UTF-8.")
+            logger.info(
+                "Run with convert=True to automatically convert files to UTF-8."
+            )
 
     return non_utf8_files
 
@@ -307,18 +338,26 @@ def main():
     """Main function to run the UTF-8 scanner."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Scan and convert files to UTF-8 encoding")
+    parser = argparse.ArgumentParser(
+        description="Scan and convert files to UTF-8 encoding"
+    )
     parser.add_argument("--root-dir", default=".", help="Root directory to scan")
-    parser.add_argument("--convert", action="store_true", help="Convert non-UTF-8 files")
+    parser.add_argument(
+        "--convert", action="store_true", help="Convert non-UTF-8 files"
+    )
     parser.add_argument("--extensions", nargs="+", help="File extensions to check")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
-    parser.add_argument("--fallback", action="store_true", help="Use robust fallback encoding")
+    parser.add_argument(
+        "--fallback", action="store_true", help="Use robust fallback encoding"
+    )
 
     args = parser.parse_args()
 
     # Configure logging
     log_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(level=log_level, format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.basicConfig(
+        level=log_level, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
 
     # Run scanner
     non_utf8_files = scan_project_for_utf8(

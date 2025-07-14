@@ -108,7 +108,9 @@ def get_logger(name: str) -> logging.Logger:
     log_path = Path(log_file)
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    file_handler = RotatingFileHandler(log_file, maxBytes=_get_max_bytes(), backupCount=_get_backup_count())
+    file_handler = RotatingFileHandler(
+        log_file, maxBytes=_get_max_bytes(), backupCount=_get_backup_count()
+    )
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
@@ -177,7 +179,11 @@ def log_llm_metrics(
 
 
 def log_backtest_metrics(
-    strategy: str, sharpe_ratio: float, win_rate: float, mse: float, metadata: Optional[Dict[str, Any]] = None
+    strategy: str,
+    sharpe_ratio: float,
+    win_rate: float,
+    mse: float,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Log backtest performance metrics.
 
@@ -202,7 +208,12 @@ def log_backtest_metrics(
     log_metrics(data)
 
 
-def log_agent_metrics(agent_id: str, action: str, confidence: float, metadata: Optional[Dict[str, Any]] = None) -> None:
+def log_agent_metrics(
+    agent_id: str,
+    action: str,
+    confidence: float,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> None:
     """Log agent decision metrics.
 
     Args:
@@ -211,7 +222,12 @@ def log_agent_metrics(agent_id: str, action: str, confidence: float, metadata: O
         confidence: Confidence score (0-1)
         metadata: Optional additional metadata
     """
-    data = {"type": "agent_metrics", "agent_id": agent_id, "action": action, "confidence": confidence}
+    data = {
+        "type": "agent_metrics",
+        "agent_id": agent_id,
+        "action": action,
+        "confidence": confidence,
+    }
 
     if metadata:
         data["metadata"] = metadata

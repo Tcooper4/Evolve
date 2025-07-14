@@ -38,7 +38,11 @@ class StrategyOptimizer(ABC):
             nn.Module: Neural network model
         """
         return nn.Sequential(
-            nn.Linear(self.state_dim, 128), nn.ReLU(), nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, self.action_dim)
+            nn.Linear(self.state_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, self.action_dim),
         ).to(self.device)
 
     def _prepare_state(self, state: np.ndarray) -> torch.Tensor:
@@ -54,7 +58,14 @@ class StrategyOptimizer(ABC):
             state = torch.FloatTensor(state)
         return state.to(self.device)
 
-    def fit(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray, done: bool) -> float:
+    def fit(
+        self,
+        state: np.ndarray,
+        action: int,
+        reward: float,
+        next_state: np.ndarray,
+        done: bool,
+    ) -> float:
         """Train the model on a single step.
 
         Args:
@@ -197,7 +208,12 @@ class StrategyOptimizer(ABC):
                 axes[0, 0].grid(True)
             else:
                 axes[0, 0].text(
-                    0.5, 0.5, "No loss history available", ha="center", va="center", transform=axes[0, 0].transAxes
+                    0.5,
+                    0.5,
+                    "No loss history available",
+                    ha="center",
+                    va="center",
+                    transform=axes[0, 0].transAxes,
                 )
                 axes[0, 0].set_title("Training Loss")
 
@@ -228,7 +244,12 @@ class StrategyOptimizer(ABC):
                 axes[1, 0].grid(True)
             else:
                 axes[1, 0].text(
-                    0.5, 0.5, "No Q-value history available", ha="center", va="center", transform=axes[1, 0].transAxes
+                    0.5,
+                    0.5,
+                    "No Q-value history available",
+                    ha="center",
+                    va="center",
+                    transform=axes[1, 0].transAxes,
                 )
                 axes[1, 0].set_title("Q-Value Distribution")
 
@@ -242,7 +263,12 @@ class StrategyOptimizer(ABC):
                 axes[1, 1].grid(True)
             else:
                 axes[1, 1].text(
-                    0.5, 0.5, "No action history available", ha="center", va="center", transform=axes[1, 1].transAxes
+                    0.5,
+                    0.5,
+                    "No action history available",
+                    ha="center",
+                    va="center",
+                    transform=axes[1, 1].transAxes,
                 )
                 axes[1, 1].set_title("Action Distribution")
 
@@ -273,7 +299,9 @@ class DQNStrategyOptimizer(StrategyOptimizer):
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
         # Initialize optimizer
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=config.get("learning_rate", 0.001))
+        self.optimizer = optim.Adam(
+            self.policy_net.parameters(), lr=config.get("learning_rate", 0.001)
+        )
 
         # Initialize memory
         self.memory = deque(maxlen=config.get("memory_size", 10000))

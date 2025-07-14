@@ -20,13 +20,19 @@ class TestRiskManager(unittest.TestCase):
         returns = pd.Series(np.random.normal(0.001, 0.02, len(dates)), index=dates)
 
         # Create synthetic benchmark returns
-        benchmark_returns = pd.Series(np.random.normal(0.0008, 0.015, len(dates)), index=dates)
+        benchmark_returns = pd.Series(
+            np.random.normal(0.0008, 0.015, len(dates)), index=dates
+        )
 
         cls.returns = returns
         cls.benchmark_returns = benchmark_returns
 
         # Create test config
-        cls.config = {"max_position_size": 0.2, "max_leverage": 1.0, "risk_free_rate": 0.02}
+        cls.config = {
+            "max_position_size": 0.2,
+            "max_leverage": 1.0,
+            "risk_free_rate": 0.02,
+        }
 
     def setUp(self):
         """Set up test case."""
@@ -97,7 +103,9 @@ class TestRiskManager(unittest.TestCase):
         covariance = returns.cov()
 
         # Optimize
-        weights = self.risk_manager.optimize_position_sizes(expected_returns, covariance)
+        weights = self.risk_manager.optimize_position_sizes(
+            expected_returns, covariance
+        )
 
         self.assertIsNotNone(weights)
         self.assertEqual(len(weights), n_assets)
@@ -131,7 +139,9 @@ class TestRiskManager(unittest.TestCase):
         self.risk_manager.cleanup_old_results(max_files=5)
 
         # Check number of remaining files
-        remaining_files = len([f for f in os.listdir(results_dir) if f.endswith(".json")])
+        remaining_files = len(
+            [f for f in os.listdir(results_dir) if f.endswith(".json")]
+        )
         self.assertLessEqual(remaining_files, 5)
 
     def test_report_export(self):
@@ -179,7 +189,11 @@ class TestRiskManager(unittest.TestCase):
             },
             {
                 "name": "Multiple Drawdowns",
-                "returns": [0.01] * 20 + [-0.3] * 3 + [0.02] * 20 + [-0.4] * 3 + [0.02] * 54,
+                "returns": [0.01] * 20
+                + [-0.3] * 3
+                + [0.02] * 20
+                + [-0.4] * 3
+                + [0.02] * 54,
                 "expected_max_dd": -0.4,
                 "expected_recovery": True,
             },
@@ -212,7 +226,9 @@ class TestRiskManager(unittest.TestCase):
             self.assertIsNotNone(metrics, "Metrics should be calculated")
 
             # Verify max drawdown is as expected
-            print(f"    Max drawdown: {metrics.max_drawdown:.3f} (expected < {scenario['expected_max_dd']:.1f})")
+            print(
+                f"    Max drawdown: {metrics.max_drawdown:.3f} (expected < {scenario['expected_max_dd']:.1f})"
+            )
             self.assertLess(
                 metrics.max_drawdown,
                 scenario["expected_max_dd"],
@@ -220,13 +236,27 @@ class TestRiskManager(unittest.TestCase):
             )
 
             # Test rolling metrics calculation
-            rolling_metrics = self.risk_manager.calculate_rolling_metrics(returns, window=20)
+            rolling_metrics = self.risk_manager.calculate_rolling_metrics(
+                returns, window=20
+            )
 
             # Verify rolling metrics structure
-            self.assertIsNotNone(rolling_metrics, "Rolling metrics should be calculated")
-            self.assertIn("max_drawdown", rolling_metrics.columns, "Should have max_drawdown column")
-            self.assertIn("volatility", rolling_metrics.columns, "Should have volatility column")
-            self.assertIn("sharpe_ratio", rolling_metrics.columns, "Should have sharpe_ratio column")
+            self.assertIsNotNone(
+                rolling_metrics, "Rolling metrics should be calculated"
+            )
+            self.assertIn(
+                "max_drawdown",
+                rolling_metrics.columns,
+                "Should have max_drawdown column",
+            )
+            self.assertIn(
+                "volatility", rolling_metrics.columns, "Should have volatility column"
+            )
+            self.assertIn(
+                "sharpe_ratio",
+                rolling_metrics.columns,
+                "Should have sharpe_ratio column",
+            )
 
             # Test drawdown reset logic
             drawdowns = rolling_metrics["max_drawdown"]
@@ -235,12 +265,18 @@ class TestRiskManager(unittest.TestCase):
                 # After recovery, drawdown should reset (close to 0)
                 final_drawdown = drawdowns.iloc[-1]
                 print(f"    Final drawdown: {final_drawdown:.3f}")
-                self.assertGreater(final_drawdown, -0.1, "Drawdown should reset after recovery")
+                self.assertGreater(
+                    final_drawdown, -0.1, "Drawdown should reset after recovery"
+                )
             else:
                 # No recovery scenario - drawdown should remain large
                 final_drawdown = drawdowns.iloc[-1]
                 print(f"    Final drawdown: {final_drawdown:.3f}")
-                self.assertLess(final_drawdown, -0.2, "Drawdown should remain large without recovery")
+                self.assertLess(
+                    final_drawdown,
+                    -0.2,
+                    "Drawdown should remain large without recovery",
+                )
 
         # Test risk management behavior during drawdown
         print(f"\n  🛡️ Testing risk management during drawdown...")
@@ -262,8 +298,16 @@ class TestRiskManager(unittest.TestCase):
         self.assertIn("kelly_fraction", limits, "Should have kelly_fraction")
 
         # Verify limits are conservative during drawdown
-        self.assertLess(limits["position_limit"], 0.5, "Position limit should be conservative during drawdown")
-        self.assertLess(limits["leverage_limit"], 1.0, "Leverage limit should be conservative during drawdown")
+        self.assertLess(
+            limits["position_limit"],
+            0.5,
+            "Position limit should be conservative during drawdown",
+        )
+        self.assertLess(
+            limits["leverage_limit"],
+            1.0,
+            "Leverage limit should be conservative during drawdown",
+        )
 
         print(f"    Position limit: {limits['position_limit']:.3f}")
         print(f"    Leverage limit: {limits['leverage_limit']:.3f}")
@@ -286,7 +330,9 @@ class TestRiskManager(unittest.TestCase):
 
         # Create recovery scenario with monitoring
         recovery_dates = pd.date_range(start="2023-01-01", periods=150)
-        recovery_returns = pd.Series([0.01] * 30 + [-0.5] * 5 + [0.02] * 115, index=recovery_dates)
+        recovery_returns = pd.Series(
+            [0.01] * 30 + [-0.5] * 5 + [0.02] * 115, index=recovery_dates
+        )
 
         # Monitor recovery progress
         recovery_metrics = []
@@ -312,7 +358,9 @@ class TestRiskManager(unittest.TestCase):
         print(f"    Recovery improvement: {final_dd - initial_dd:.3f}")
 
         # Verify recovery occurred
-        self.assertGreater(final_dd, initial_dd, "Drawdown should improve during recovery")
+        self.assertGreater(
+            final_dd, initial_dd, "Drawdown should improve during recovery"
+        )
 
         # Test risk reset after recovery
         print(f"\n  🔄 Testing risk reset after recovery...")
@@ -322,10 +370,14 @@ class TestRiskManager(unittest.TestCase):
 
         # Verify limits are more permissive after recovery
         self.assertGreater(
-            final_limits["position_limit"], limits["position_limit"], "Position limit should increase after recovery"
+            final_limits["position_limit"],
+            limits["position_limit"],
+            "Position limit should increase after recovery",
         )
         self.assertGreater(
-            final_limits["leverage_limit"], limits["leverage_limit"], "Leverage limit should increase after recovery"
+            final_limits["leverage_limit"],
+            limits["leverage_limit"],
+            "Leverage limit should increase after recovery",
         )
 
         print(f"    Post-recovery position limit: {final_limits['position_limit']:.3f}")
@@ -336,19 +388,25 @@ class TestRiskManager(unittest.TestCase):
 
         # Create scenario with persistent drawdown
         persistent_dates = pd.date_range(start="2023-01-01", periods=200)
-        persistent_returns = pd.Series([0.01] * 50 + [-0.4] * 10 + [-0.005] * 140, index=persistent_dates)
+        persistent_returns = pd.Series(
+            [0.01] * 50 + [-0.4] * 10 + [-0.005] * 140, index=persistent_dates
+        )
 
         # Update risk manager
         self.risk_manager.update_returns(persistent_returns)
 
         # Calculate rolling drawdown
-        rolling_dd = self.risk_manager.calculate_rolling_metrics(persistent_returns, window=30)
+        rolling_dd = self.risk_manager.calculate_rolling_metrics(
+            persistent_returns, window=30
+        )
 
         # Verify drawdown persists
         final_persistent_dd = rolling_dd["max_drawdown"].iloc[-1]
         print(f"    Persistent drawdown: {final_persistent_dd:.3f}")
 
-        self.assertLess(final_persistent_dd, -0.2, "Drawdown should persist without recovery")
+        self.assertLess(
+            final_persistent_dd, -0.2, "Drawdown should persist without recovery"
+        )
 
         # Test risk management adaptation
         print(f"\n  🎯 Testing risk management adaptation...")
@@ -358,9 +416,15 @@ class TestRiskManager(unittest.TestCase):
 
         # Verify adaptive limits are calculated
         self.assertIsNotNone(adaptive_limits, "Adaptive limits should be calculated")
-        self.assertIn("conservative_limit", adaptive_limits, "Should have conservative limit")
-        self.assertIn("aggressive_limit", adaptive_limits, "Should have aggressive limit")
-        self.assertIn("recommended_limit", adaptive_limits, "Should have recommended limit")
+        self.assertIn(
+            "conservative_limit", adaptive_limits, "Should have conservative limit"
+        )
+        self.assertIn(
+            "aggressive_limit", adaptive_limits, "Should have aggressive limit"
+        )
+        self.assertIn(
+            "recommended_limit", adaptive_limits, "Should have recommended limit"
+        )
 
         print(f"    Conservative limit: {adaptive_limits['conservative_limit']:.3f}")
         print(f"    Aggressive limit: {adaptive_limits['aggressive_limit']:.3f}")

@@ -76,7 +76,9 @@ class EdgeCaseHandler:
             # Check for signal clustering
             signal_ratio = buy_signals / total_signals if total_signals > 0 else 0
             if signal_ratio > 0.8 or signal_ratio < 0.2:
-                self.warnings.append(f"Signal imbalance detected: {signal_ratio:.1%} buy signals")
+                self.warnings.append(
+                    f"Signal imbalance detected: {signal_ratio:.1%} buy signals"
+                )
 
             return {
                 "status": "success",
@@ -122,7 +124,9 @@ class EdgeCaseHandler:
             invalid_trades = []
 
             for i, trade in enumerate(trades):
-                missing_fields = [field for field in required_fields if field not in trade]
+                missing_fields = [
+                    field for field in required_fields if field not in trade
+                ]
                 if missing_fields:
                     invalid_trades.append(f"Trade {i}: Missing fields {missing_fields}")
 
@@ -168,7 +172,9 @@ class EdgeCaseHandler:
                 "trade_count": 0,
             }
 
-    def create_fallback_chart(self, data: pd.DataFrame, chart_type: str = "equity") -> Dict[str, Any]:
+    def create_fallback_chart(
+        self, data: pd.DataFrame, chart_type: str = "equity"
+    ) -> Dict[str, Any]:
         """Create a fallback chart when no signals or trades are available.
 
         Args:
@@ -180,13 +186,19 @@ class EdgeCaseHandler:
         """
         try:
             if data.empty:
-                return {"status": "error", "message": "No data available for chart", "chart_data": None}
+                return {
+                    "status": "error",
+                    "message": "No data available for chart",
+                    "chart_data": None,
+                }
 
             if chart_type == "equity":
                 # Create simple price chart
                 chart_data = {
                     "x": data.index.tolist(),
-                    "y": data["close"].tolist() if "close" in data.columns else data.iloc[:, 0].tolist(),
+                    "y": data["close"].tolist()
+                    if "close" in data.columns
+                    else data.iloc[:, 0].tolist(),
                     "type": "scatter",
                     "mode": "lines",
                     "name": "Price",
@@ -202,7 +214,12 @@ class EdgeCaseHandler:
             elif chart_type == "performance":
                 # Create performance metrics placeholder
                 chart_data = {
-                    "metrics": {"total_return": 0.0, "sharpe_ratio": 0.0, "max_drawdown": 0.0, "win_rate": 0.0},
+                    "metrics": {
+                        "total_return": 0.0,
+                        "sharpe_ratio": 0.0,
+                        "max_drawdown": 0.0,
+                        "win_rate": 0.0,
+                    },
                     "message": "No performance data available",
                 }
 
@@ -214,11 +231,19 @@ class EdgeCaseHandler:
                 }
 
             else:
-                return {"status": "error", "message": f"Unknown chart type: {chart_type}", "chart_data": None}
+                return {
+                    "status": "error",
+                    "message": f"Unknown chart type: {chart_type}",
+                    "chart_data": None,
+                }
 
         except Exception as e:
             logger.error(f"Error creating fallback chart: {e}")
-            return {"status": "error", "message": f"Error creating fallback chart: {str(e)}", "chart_data": None}
+            return {
+                "status": "error",
+                "message": f"Error creating fallback chart: {str(e)}",
+                "chart_data": None,
+            }
 
     def generate_edge_case_report(self) -> Dict[str, Any]:
         """Generate a report of all edge cases encountered.

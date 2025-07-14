@@ -30,7 +30,6 @@ class FeatureVerificationError(Exception):
     """Custom exception for feature verification errors"""
 
 
-
 def verify_feature(func: Callable) -> Callable:
     """Decorator to verify feature generation"""
 
@@ -41,12 +40,18 @@ def verify_feature(func: Callable) -> Callable:
             result = func(*args, **kwargs)
             # Verify result
             if not isinstance(result, pd.Series):
-                raise FeatureVerificationError(f"Feature {func.__name__} must return a pandas Series")
+                raise FeatureVerificationError(
+                    f"Feature {func.__name__} must return a pandas Series"
+                )
             if result.isnull().all():
-                raise FeatureVerificationError(f"Feature {func.__name__} returned all null values")
+                raise FeatureVerificationError(
+                    f"Feature {func.__name__} returned all null values"
+                )
             # Log performance
             execution_time = time.time() - start_time
-            logger.info(f"Feature {func.__name__} generated in {execution_time:.2f} seconds")
+            logger.info(
+                f"Feature {func.__name__} generated in {execution_time:.2f} seconds"
+            )
             return {
                 "success": True,
                 "result": {
@@ -74,19 +79,29 @@ class FeatureGenerator:
         self.feature_configs = {}
         self._setup_logging()
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _setup_logging(self):
         """Setup logging configuration"""
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def register_feature(self, config: FeatureConfig):
         """Register a new feature configuration"""
@@ -94,7 +109,9 @@ class FeatureGenerator:
         self.logger.info(f"Registered feature: {config.name}")
 
     @verify_feature
-    def generate_feature(self, data: pd.DataFrame, feature_name: str, **kwargs) -> pd.Series:
+    def generate_feature(
+        self, data: pd.DataFrame, feature_name: str, **kwargs
+    ) -> pd.Series:
         """Generate a feature with verification"""
         if feature_name in self.feature_cache:
             return self.feature_cache[feature_name]
@@ -123,7 +140,9 @@ class FeatureGenerator:
             self.logger.error(f"Error generating feature {feature_name}: {str(e)}")
             raise
 
-    def _generate_feature_impl(self, data: pd.DataFrame, feature_name: str, **kwargs) -> pd.Series:
+    def _generate_feature_impl(
+        self, data: pd.DataFrame, feature_name: str, **kwargs
+    ) -> pd.Series:
         """Implementation of feature generation"""
         config = self.feature_configs[feature_name]
 
@@ -178,9 +197,13 @@ class FeatureGenerator:
         """Validate generated feature against rules"""
         for rule_name, rule_func in rules.items():
             if not rule_func(feature):
-                raise FeatureVerificationError(f"Feature failed validation rule: {rule_name}")
+                raise FeatureVerificationError(
+                    f"Feature failed validation rule: {rule_name}"
+                )
 
-    def _generate_custom_feature(self, data: pd.DataFrame, feature_name: str, **kwargs) -> pd.Series:
+    def _generate_custom_feature(
+        self, data: pd.DataFrame, feature_name: str, **kwargs
+    ) -> pd.Series:
         """Generate custom feature"""
         if "custom_func" not in kwargs:
             raise ValueError("Custom function not provided")
@@ -237,7 +260,10 @@ class FeatureGenerator:
     def _calculate_volume_profile(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate volume profile"""
         window = kwargs.get("window", 20)
-        return data["volume"].rolling(window=window).mean() / data["volume"].rolling(window=window).std()
+        return (
+            data["volume"].rolling(window=window).mean()
+            / data["volume"].rolling(window=window).std()
+        )
 
     def _calculate_price_channels(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate price channels"""
@@ -250,14 +276,17 @@ class FeatureGenerator:
         """Calculate support/resistance levels"""
         window = kwargs.get("window", 20)
         return (data["close"] - data["low"].rolling(window=window).min()) / (
-            data["high"].rolling(window=window).max() - data["low"].rolling(window=window).min()
+            data["high"].rolling(window=window).max()
+            - data["low"].rolling(window=window).min()
         )
 
     def _calculate_trend_strength(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate trend strength"""
         window = kwargs.get("window", 20)
         returns = data["close"].pct_change()
-        return returns.rolling(window=window).mean() / returns.rolling(window=window).std()
+        return (
+            returns.rolling(window=window).mean() / returns.rolling(window=window).std()
+        )
 
     def _calculate_market_regime(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate market regime"""
@@ -313,7 +342,8 @@ class FeatureGenerator:
 
         beta = self._calculate_beta(data, market_returns=market_returns, window=window)
         return returns.rolling(window=window).mean() - (
-            risk_free_rate + beta * (market_returns.rolling(window=window).mean() - risk_free_rate)
+            risk_free_rate
+            + beta * (market_returns.rolling(window=window).mean() - risk_free_rate)
         )
 
     def _calculate_sharpe_ratio(self, data: pd.DataFrame, **kwargs) -> pd.Series:
@@ -323,7 +353,10 @@ class FeatureGenerator:
         risk_free_rate = kwargs.get("risk_free_rate", 0.0)
 
         excess_returns = returns - risk_free_rate
-        return excess_returns.rolling(window=window).mean() / returns.rolling(window=window).std()
+        return (
+            excess_returns.rolling(window=window).mean()
+            / returns.rolling(window=window).std()
+        )
 
     def _calculate_sortino_ratio(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate Sortino ratio"""
@@ -360,7 +393,9 @@ class FeatureGenerator:
         confidence_level = kwargs.get("confidence_level", 0.95)
         returns = data["close"].pct_change()
 
-        var = self._calculate_var(data, window=window, confidence_level=confidence_level)
+        var = self._calculate_var(
+            data, window=window, confidence_level=confidence_level
+        )
         return returns[returns <= var].rolling(window=window).mean()
 
     def _calculate_position_size(self, data: pd.DataFrame, **kwargs) -> pd.Series:
@@ -409,8 +444,12 @@ class FeatureGenerator:
         if views is not None:
             omega = kwargs.get("omega", np.diag(np.diag(covariance)) * tau)
             bl_returns = np.linalg.inv(
-                np.linalg.inv(tau * covariance) + views.T.dot(np.linalg.inv(omega)).dot(views)
-            ).dot(np.linalg.inv(tau * covariance).dot(pi) + views.T.dot(np.linalg.inv(omega)).dot(views))
+                np.linalg.inv(tau * covariance)
+                + views.T.dot(np.linalg.inv(omega)).dot(views)
+            ).dot(
+                np.linalg.inv(tau * covariance).dot(pi)
+                + views.T.dot(np.linalg.inv(omega)).dot(views)
+            )
             return {
                 "success": True,
                 "result": pd.Series(bl_returns, index=data.index),
@@ -438,7 +477,7 @@ class FeatureGenerator:
     def _calculate_performance_metrics(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate comprehensive performance metrics"""
         window = kwargs.get("window", 20)
-        returns = data["close"].pct_change()
+        data["close"].pct_change()
 
         # Calculate various performance metrics
         sharpe = self._calculate_sharpe_ratio(data, window=window)
@@ -465,7 +504,7 @@ class FeatureGenerator:
     def _calculate_signal_metrics(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate signal quality metrics"""
         window = kwargs.get("window", 20)
-        returns = data["close"].pct_change()
+        data["close"].pct_change()
 
         # Calculate various signal metrics
         rsi = self._calculate_rsi(data, window=window)
@@ -479,7 +518,7 @@ class FeatureGenerator:
     def _calculate_portfolio_metrics(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate portfolio metrics"""
         window = kwargs.get("window", 20)
-        returns = data["close"].pct_change()
+        data["close"].pct_change()
 
         # Calculate various portfolio metrics
         sharpe = self._calculate_sharpe_ratio(data, window=window)

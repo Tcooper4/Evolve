@@ -32,10 +32,7 @@ except ImportError as e:
 
 # Import from consolidated trading.optimization module
 try:
-    from trading.optimization import (
-        OptimizationVisualizer,
-        StrategyOptimizer,
-    )
+    from trading.optimization import OptimizationVisualizer, StrategyOptimizer
 
     OPTIMIZATION_AVAILABLE = True
 except ImportError as e:
@@ -106,7 +103,9 @@ def load_strategy_data(symbol: Optional[str] = None) -> pd.DataFrame:
         raise ValueError("Symbol is required for data loading")
 
     if not DATA_PROVIDERS_AVAILABLE:
-        raise RuntimeError("Data providers not available. Please check data source configuration.")
+        raise RuntimeError(
+            "Data providers not available. Please check data source configuration."
+        )
 
     try:
         # Get date range from configuration
@@ -124,7 +123,13 @@ def load_strategy_data(symbol: Optional[str] = None) -> pd.DataFrame:
             interval = "1d"
 
         # Load data using the data providers
-        data = load_data(symbol=symbol, source=data_source, start_date=start_date, end_date=end_date, interval=interval)
+        data = load_data(
+            symbol=symbol,
+            source=data_source,
+            start_date=start_date,
+            end_date=end_date,
+            interval=interval,
+        )
 
         if data.empty:
             raise ValueError(f"No data available for symbol: {symbol}")
@@ -227,13 +232,15 @@ def main():
     # Check if optimization is available
     if not OPTIMIZATION_AVAILABLE:
         st.error("Optimization module not available")
-        st.info("Please check that the trading.optimization module is properly installed.")
+        st.info(
+            "Please check that the trading.optimization module is properly installed."
+        )
         return
 
     # Initialize components
     try:
-        strategy_switcher = StrategySwitcher()
-        memory_logger = MemoryLogger()
+        StrategySwitcher()
+        MemoryLogger()
 
         # Get optimizer config from configuration
         if CONFIG_AVAILABLE:
@@ -271,20 +278,26 @@ def main():
 
     # Symbol input (no hardcoded values)
     symbol_input = st.sidebar.text_input(
-        "Enter Symbol", placeholder="e.g., AAPL, MSFT, GOOGL", help="Enter any valid stock symbol"
+        "Enter Symbol",
+        placeholder="e.g., AAPL, MSFT, GOOGL",
+        help="Enter any valid stock symbol",
     )
 
     # Data source selection
     if DATA_PROVIDERS_AVAILABLE:
         if CONFIG_AVAILABLE:
-            available_sources = config.get("data.available_sources", ["auto", "yfinance", "alpha_vantage"])
+            available_sources = config.get(
+                "data.available_sources", ["auto", "yfinance", "alpha_vantage"]
+            )
             default_source = config.get("data.default_source", "auto")
         else:
             available_sources = ["auto", "yfinance", "alpha_vantage"]
             default_source = "auto"
 
         data_source = st.sidebar.selectbox(
-            "Data Source", available_sources, index=available_sources.index(default_source)
+            "Data Source",
+            available_sources,
+            index=available_sources.index(default_source),
         )
     else:
         st.sidebar.error("Data providers not available. Please configure data sources.")
@@ -301,9 +314,13 @@ def main():
 
     col1, col2 = st.sidebar.columns(2)
     with col1:
-        start_date_input = st.date_input("Start Date", value=start_date.date(), max_value=datetime.now().date())
+        start_date_input = st.date_input(
+            "Start Date", value=start_date.date(), max_value=datetime.now().date()
+        )
     with col2:
-        end_date_input = st.date_input("End Date", value=end_date.date(), max_value=datetime.now().date())
+        end_date_input = st.date_input(
+            "End Date", value=end_date.date(), max_value=datetime.now().date()
+        )
 
     # Load data button
     if st.sidebar.button("🔄 Load Data"):
@@ -318,7 +335,9 @@ def main():
                     source=data_source,
                     start_date=start_date_input.strftime("%Y-%m-%d"),
                     end_date=end_date_input.strftime("%Y-%m-%d"),
-                    interval=config.get("data.default_interval", "1d") if CONFIG_AVAILABLE else "1d",
+                    interval=config.get("data.default_interval", "1d")
+                    if CONFIG_AVAILABLE
+                    else "1d",
                 )
                 if not data.empty:
                     # Normalize column names
@@ -334,10 +353,14 @@ def main():
 
     # Strategy selection
     st.sidebar.subheader("📈 Strategy Selection")
-    strategy = st.sidebar.selectbox("Select Strategy", ["RSI", "MACD", "Bollinger", "SMA"])
+    strategy = st.sidebar.selectbox(
+        "Select Strategy", ["RSI", "MACD", "Bollinger", "SMA"]
+    )
 
     # Optimizer selection
-    optimizer_type = st.sidebar.selectbox("Select Optimizer", optimizer.get_available_optimizers())
+    optimizer_type = st.sidebar.selectbox(
+        "Select Optimizer", optimizer.get_available_optimizers()
+    )
 
     # Parameter space configuration
     st.sidebar.subheader("⚙️ Parameter Space")
@@ -363,8 +386,12 @@ def main():
             default_initial = 10
             default_iterations = 50
 
-        n_initial_points = st.sidebar.slider("Initial Random Points", 5, 20, default_initial)
-        n_iterations = st.sidebar.slider("Optimization Iterations", 10, 100, default_iterations)
+        n_initial_points = st.sidebar.slider(
+            "Initial Random Points", 5, 20, default_initial
+        )
+        n_iterations = st.sidebar.slider(
+            "Optimization Iterations", 10, 100, default_iterations
+        )
         settings = {"n_initial_points": n_initial_points, "n_iterations": n_iterations}
 
     elif optimizer_type == "Genetic":
@@ -380,7 +407,10 @@ def main():
         }
 
     # Check if data is loaded
-    if "optimization_data" not in st.session_state or st.session_state["optimization_data"].empty:
+    if (
+        "optimization_data" not in st.session_state
+        or st.session_state["optimization_data"].empty
+    ):
         st.sidebar.warning("No data loaded. Please load market data first.")
         data = None
         current_symbol = None
@@ -436,14 +466,18 @@ def main():
 
     # Load previous results
     st.sidebar.subheader("📁 Load Previous Results")
-    result_files = [f for f in os.listdir("optimization_results") if f.endswith(".json")]
+    result_files = [
+        f for f in os.listdir("optimization_results") if f.endswith(".json")
+    ]
 
     if result_files:
         selected_file = st.sidebar.selectbox("Select Results File", result_files)
 
         if st.sidebar.button("📂 Load Results"):
             try:
-                results = optimizer.load_optimization_results(f"optimization_results/{selected_file}")
+                results = optimizer.load_optimization_results(
+                    f"optimization_results/{selected_file}"
+                )
                 OptimizationVisualizer.display_optimization_summary(results)
             except Exception as e:
                 st.error(f"Failed to load results: {str(e)}")
@@ -471,7 +505,8 @@ def main():
             st.metric("Data Points", len(data))
         with col2:
             st.metric(
-                "Date Range", f"{data.index.min().strftime('%Y-%m-%d')} to {data.index.max().strftime('%Y-%m-%d')}"
+                "Date Range",
+                f"{data.index.min().strftime('%Y-%m-%d')} to {data.index.max().strftime('%Y-%m-%d')}",
             )
         with col3:
             # Safely get latest close price
@@ -520,11 +555,17 @@ def main():
                 try:
                     # Run a quick test with default parameters
                     test_results = optimizer.optimize_strategy(
-                        strategy=strategy, optimizer_type="Grid", param_space=param_space, training_data=data, n_jobs=1
+                        strategy=strategy,
+                        optimizer_type="Grid",
+                        param_space=param_space,
+                        training_data=data,
+                        n_jobs=1,
                     )
 
                     st.success("Quick test completed successfully!")
-                    st.write("Best parameters found:", test_results.get("best_params", "N/A"))
+                    st.write(
+                        "Best parameters found:", test_results.get("best_params", "N/A")
+                    )
                     st.write("Best score:", test_results.get("best_score", "N/A"))
 
                 except Exception as e:
@@ -532,7 +573,9 @@ def main():
                     logger.error(f"Quick test error: {e}")
     else:
         st.info("No data loaded. Please use the sidebar to load market data.")
-        st.info("Enter a symbol (e.g., AAPL, MSFT, GOOGL) and click 'Load Data' to begin.")
+        st.info(
+            "Enter a symbol (e.g., AAPL, MSFT, GOOGL) and click 'Load Data' to begin."
+        )
 
 
 if __name__ == "__main__":

@@ -19,7 +19,6 @@ class MarketAnalysisError(Exception):
     """Custom exception for market analysis errors."""
 
 
-
 class MarketAnalyzer:
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
@@ -27,17 +26,22 @@ class MarketAnalyzer:
         self.logger = logging.getLogger(self.__class__.__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
-        if "trend_threshold" in self.config and not isinstance(self.config["trend_threshold"], (int, float)):
+        if "trend_threshold" in self.config and not isinstance(
+            self.config["trend_threshold"], (int, float)
+        ):
             raise ValueError("trend_threshold must be a number")
         if "volatility_window" in self.config and (
-            not isinstance(self.config["volatility_window"], int) or self.config["volatility_window"] <= 0
+            not isinstance(self.config["volatility_window"], int)
+            or self.config["volatility_window"] <= 0
         ):
             raise ValueError("volatility_window must be a positive integer")
         if "correlation_threshold" in self.config and (
@@ -47,7 +51,10 @@ class MarketAnalyzer:
             raise ValueError("correlation_threshold must be between -1 and 1")
 
     def detect_market_regime(
-        self, data: pd.DataFrame, regime_type: str = "trend", market_data: Optional[pd.DataFrame] = None
+        self,
+        data: pd.DataFrame,
+        regime_type: str = "trend",
+        market_data: Optional[pd.DataFrame] = None,
     ) -> Dict[str, Any]:
         """Detect market regime with parameterization for different types.
 
@@ -69,7 +76,9 @@ class MarketAnalyzer:
                 return self._detect_volatility_regime(data)
             elif regime_type == "correlation":
                 if market_data is None:
-                    raise ValueError("Market data required for correlation regime detection")
+                    raise ValueError(
+                        "Market data required for correlation regime detection"
+                    )
                 return self._detect_correlation_regime(data, market_data)
             else:
                 raise ValueError(f"Unknown regime type: {regime_type}")
@@ -87,7 +96,11 @@ class MarketAnalyzer:
         if len(trend_strength.dropna()) == 0:
             raise ValueError("Insufficient data for trend analysis")
 
-        current_trend = "up" if trend_strength.iloc[-1] > self.config.get("trend_threshold", 0) else "down"
+        current_trend = (
+            "up"
+            if trend_strength.iloc[-1] > self.config.get("trend_threshold", 0)
+            else "down"
+        )
         trend_changes = np.diff(np.signbit(trend_strength.dropna()))
 
         trend_duration = len(data)
@@ -110,18 +123,26 @@ class MarketAnalyzer:
         """Detect volatility-based market regime."""
         returns = data["Close"].pct_change()
         current_volatility = returns.std() * np.sqrt(252)
-        historical_volatility = returns.rolling(window=self.config.get("volatility_window", 252)).std() * np.sqrt(252)
+        historical_volatility = returns.rolling(
+            window=self.config.get("volatility_window", 252)
+        ).std() * np.sqrt(252)
 
         hv_non_null = historical_volatility.dropna()
         if len(hv_non_null) < 2:
             raise ValueError("Insufficient data for volatility analysis")
 
         prev_volatility = hv_non_null.iloc[-2]
-        volatility_trend = "increasing" if current_volatility > prev_volatility else "decreasing"
+        volatility_trend = (
+            "increasing" if current_volatility > prev_volatility else "decreasing"
+        )
 
         vol_min = historical_volatility.min()
         vol_max = historical_volatility.max()
-        volatility_rank = (current_volatility - vol_min) / (vol_max - vol_min) if vol_max > vol_min else 0.5
+        volatility_rank = (
+            (current_volatility - vol_min) / (vol_max - vol_min)
+            if vol_max > vol_min
+            else 0.5
+        )
 
         # Determine volatility regime
         if volatility_rank > 0.7:
@@ -143,7 +164,9 @@ class MarketAnalyzer:
         log_metrics("volatility_regime", result)
         return result
 
-    def _detect_correlation_regime(self, data: pd.DataFrame, market_data: pd.DataFrame) -> Dict[str, Any]:
+    def _detect_correlation_regime(
+        self, data: pd.DataFrame, market_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """Detect correlation-based market regime."""
         if "Close" not in market_data.columns:
             raise KeyError("Missing 'Close' column in market data.")
@@ -157,7 +180,9 @@ class MarketAnalyzer:
         if len(rc_non_null) < 2:
             correlation_trend = "unknown"
         else:
-            correlation_trend = "increasing" if correlation > rc_non_null.iloc[-2] else "decreasing"
+            correlation_trend = (
+                "increasing" if correlation > rc_non_null.iloc[-2] else "decreasing"
+            )
 
         # Determine correlation regime
         if correlation > 0.7:
@@ -188,11 +213,15 @@ class MarketAnalyzer:
         """Analyze market volatility (deprecated, use detect_market_regime)."""
         return self.detect_market_regime(data, "volatility")
 
-    def analyze_correlation(self, data: pd.DataFrame, market_data: pd.DataFrame) -> Dict[str, Any]:
+    def analyze_correlation(
+        self, data: pd.DataFrame, market_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """Analyze correlation with market data (deprecated, use detect_market_regime)."""
         return self.detect_market_regime(data, "correlation", market_data)
 
-    def analyze_market_conditions(self, data: pd.DataFrame, market_data: pd.DataFrame) -> Dict[str, Any]:
+    def analyze_market_conditions(
+        self, data: pd.DataFrame, market_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """Analyze overall market conditions using unified regime detection."""
         try:
             trend = self.detect_market_regime(data, "trend")

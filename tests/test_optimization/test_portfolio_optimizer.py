@@ -96,7 +96,9 @@ class TestPortfolioOptimizer:
         """Test risk parity with CVaR risk measure."""
         with patch("trading.optimization.portfolio_optimizer.CVXPY_AVAILABLE", False):
             optimizer = PortfolioOptimizer()
-            result = optimizer.risk_parity_optimization(sample_returns, risk_measure="cvar")
+            result = optimizer.risk_parity_optimization(
+                sample_returns, risk_measure="cvar"
+            )
 
             assert result["risk_measure"] == "cvar"
             assert "risk_contributions" in result
@@ -106,11 +108,17 @@ class TestPortfolioOptimizer:
         with patch("trading.optimization.portfolio_optimizer.CVXPY_AVAILABLE", False):
             optimizer = PortfolioOptimizer()
             target_risk = 0.02
-            result = optimizer.risk_parity_optimization(sample_returns, target_risk=target_risk)
+            result = optimizer.risk_parity_optimization(
+                sample_returns, target_risk=target_risk
+            )
 
-            assert result["portfolio_volatility"] <= target_risk * 1.1  # Allow some tolerance
+            assert (
+                result["portfolio_volatility"] <= target_risk * 1.1
+            )  # Allow some tolerance
 
-    def test_enhanced_black_litterman_absolute_views(self, sample_returns, sample_market_caps):
+    def test_enhanced_black_litterman_absolute_views(
+        self, sample_returns, sample_market_caps
+    ):
         """Test enhanced Black-Litterman with absolute views."""
         views = {"AAPL": 0.05, "GOOGL": 0.03}
         confidence = {"AAPL": 0.6, "GOOGL": 0.5}
@@ -123,7 +131,9 @@ class TestPortfolioOptimizer:
         # Should return mean-variance result with BL constraints
         assert "weights" in result or "error" in result
 
-    def test_enhanced_black_litterman_relative_views(self, sample_returns, sample_market_caps):
+    def test_enhanced_black_litterman_relative_views(
+        self, sample_returns, sample_market_caps
+    ):
         """Test enhanced Black-Litterman with relative views."""
         views = {"AAPL vs GOOGL": 0.02, "MSFT vs TSLA": 0.01}
         confidence = {"AAPL vs GOOGL": 0.6, "MSFT vs TSLA": 0.5}
@@ -136,7 +146,9 @@ class TestPortfolioOptimizer:
         # Should return mean-variance result with BL constraints
         assert "weights" in result or "error" in result
 
-    def test_enhanced_black_litterman_ranking_views(self, sample_returns, sample_market_caps):
+    def test_enhanced_black_litterman_ranking_views(
+        self, sample_returns, sample_market_caps
+    ):
         """Test enhanced Black-Litterman with ranking views."""
         views = {"AAPL": 1, "GOOGL": 2, "MSFT": 3, "TSLA": 4}  # Ranking
         confidence = {"AAPL": 0.6, "GOOGL": 0.5, "MSFT": 0.4, "TSLA": 0.3}
@@ -149,7 +161,9 @@ class TestPortfolioOptimizer:
         # Should return mean-variance result with BL constraints
         assert "weights" in result or "error" in result
 
-    def test_enhanced_black_litterman_invalid_view_type(self, sample_returns, sample_market_caps):
+    def test_enhanced_black_litterman_invalid_view_type(
+        self, sample_returns, sample_market_caps
+    ):
         """Test enhanced Black-Litterman with invalid view type."""
         views = {"AAPL": 0.05}
         confidence = {"AAPL": 0.6}
@@ -169,12 +183,16 @@ class TestPortfolioOptimizer:
         Sigma = sample_returns.cov()
 
         # Test volatility risk measure
-        risk_contrib = optimizer._calculate_risk_contributions(weights, Sigma, "volatility")
+        risk_contrib = optimizer._calculate_risk_contributions(
+            weights, Sigma, "volatility"
+        )
         assert len(risk_contrib) == 4
         assert all(isinstance(v, float) for v in risk_contrib.values())
 
         # Test other risk measures
-        risk_contrib_other = optimizer._calculate_risk_contributions(weights, Sigma, "cvar")
+        risk_contrib_other = optimizer._calculate_risk_contributions(
+            weights, Sigma, "cvar"
+        )
         assert len(risk_contrib_other) == 4
 
     def test_compare_strategies(self, sample_returns):
@@ -186,7 +204,12 @@ class TestPortfolioOptimizer:
         assert len(comparison_df) > 0
 
         # Should include basic strategies
-        expected_strategies = ["Equal Weight", "Mean-Variance", "Risk Parity", "Min-CVaR"]
+        expected_strategies = [
+            "Equal Weight",
+            "Mean-Variance",
+            "Risk Parity",
+            "Min-CVaR",
+        ]
         for strategy in expected_strategies:
             if strategy in comparison_df.index:
                 assert "Return" in comparison_df.columns
@@ -199,7 +222,11 @@ class TestPortfolioOptimizer:
 
         # Mock market caps for Black-Litterman
         with patch.object(optimizer, "black_litterman_optimization") as mock_bl:
-            mock_bl.return_value = {"portfolio_return": 0.001, "portfolio_volatility": 0.02, "sharpe_ratio": 0.5}
+            mock_bl.return_value = {
+                "portfolio_return": 0.001,
+                "portfolio_volatility": 0.02,
+                "sharpe_ratio": 0.5,
+            }
 
             comparison_df = optimizer.compare_strategies(sample_returns)
 
@@ -214,8 +241,14 @@ class TestPortfolioOptimizer:
         optimizer = PortfolioOptimizer()
 
         # Mock enhanced Black-Litterman
-        with patch.object(optimizer, "enhanced_black_litterman_optimization") as mock_ebl:
-            mock_ebl.return_value = {"portfolio_return": 0.0012, "portfolio_volatility": 0.019, "sharpe_ratio": 0.55}
+        with patch.object(
+            optimizer, "enhanced_black_litterman_optimization"
+        ) as mock_ebl:
+            mock_ebl.return_value = {
+                "portfolio_return": 0.0012,
+                "portfolio_volatility": 0.019,
+                "sharpe_ratio": 0.55,
+            }
 
             comparison_df = optimizer.compare_strategies(sample_returns)
 
@@ -232,7 +265,9 @@ class TestPortfolioOptimizer:
             result = optimizer.risk_parity_optimization(sample_returns)
 
             if "iterations" in result:
-                assert result["iterations"] <= 100  # Should converge within max iterations
+                assert (
+                    result["iterations"] <= 100
+                )  # Should converge within max iterations
 
                 # Check risk contributions are roughly equal
                 risk_contrib = result["risk_contributions"]
@@ -248,18 +283,26 @@ class TestPortfolioOptimizer:
             optimizer = PortfolioOptimizer()
 
             # Test volatility risk measure
-            result_vol = optimizer.risk_parity_optimization(sample_returns, risk_measure="volatility")
+            result_vol = optimizer.risk_parity_optimization(
+                sample_returns, risk_measure="volatility"
+            )
             assert result_vol["risk_measure"] == "volatility"
 
             # Test CVaR risk measure
-            result_cvar = optimizer.risk_parity_optimization(sample_returns, risk_measure="cvar")
+            result_cvar = optimizer.risk_parity_optimization(
+                sample_returns, risk_measure="cvar"
+            )
             assert result_cvar["risk_measure"] == "cvar"
 
             # Test VaR risk measure
-            result_var = optimizer.risk_parity_optimization(sample_returns, risk_measure="var")
+            result_var = optimizer.risk_parity_optimization(
+                sample_returns, risk_measure="var"
+            )
             assert result_var["risk_measure"] == "var"
 
-    def test_enhanced_black_litterman_parameter_sensitivity(self, sample_returns, sample_market_caps):
+    def test_enhanced_black_litterman_parameter_sensitivity(
+        self, sample_returns, sample_market_caps
+    ):
         """Test enhanced Black-Litterman parameter sensitivity."""
         views = {"AAPL": 0.05}
         confidence = {"AAPL": 0.6}
@@ -285,10 +328,14 @@ class TestPortfolioOptimizer:
             optimizer = PortfolioOptimizer()
 
             # Test with invalid risk measure
-            result = optimizer.risk_parity_optimization(sample_returns, risk_measure="invalid")
+            result = optimizer.risk_parity_optimization(
+                sample_returns, risk_measure="invalid"
+            )
             assert "error" in result or "weights" in result  # Should handle gracefully
 
-    def test_enhanced_black_litterman_error_handling(self, sample_returns, sample_market_caps):
+    def test_enhanced_black_litterman_error_handling(
+        self, sample_returns, sample_market_caps
+    ):
         """Test enhanced Black-Litterman error handling."""
         optimizer = PortfolioOptimizer()
 
@@ -296,7 +343,9 @@ class TestPortfolioOptimizer:
         views = {"INVALID_ASSET": 0.05}
         confidence = {"INVALID_ASSET": 0.6}
 
-        result = optimizer.enhanced_black_litterman_optimization(sample_returns, sample_market_caps, views, confidence)
+        result = optimizer.enhanced_black_litterman_optimization(
+            sample_returns, sample_market_caps, views, confidence
+        )
 
         # Should handle missing assets gracefully
         assert "error" in result or "weights" in result
@@ -325,7 +374,9 @@ class TestPortfolioOptimizer:
 
     def test_risk_parity_with_single_asset(self):
         """Test risk parity with single asset (edge case)."""
-        single_asset_returns = pd.DataFrame({"AAPL": np.random.normal(0.001, 0.02, 100)})
+        single_asset_returns = pd.DataFrame(
+            {"AAPL": np.random.normal(0.001, 0.02, 100)}
+        )
 
         optimizer = PortfolioOptimizer()
         result = optimizer.risk_parity_optimization(single_asset_returns)
@@ -333,10 +384,14 @@ class TestPortfolioOptimizer:
         # Should handle single asset case
         assert "weights" in result or "error" in result
 
-    def test_enhanced_black_litterman_empty_views(self, sample_returns, sample_market_caps):
+    def test_enhanced_black_litterman_empty_views(
+        self, sample_returns, sample_market_caps
+    ):
         """Test enhanced Black-Litterman with empty views."""
         optimizer = PortfolioOptimizer()
-        result = optimizer.enhanced_black_litterman_optimization(sample_returns, sample_market_caps, {}, {})
+        result = optimizer.enhanced_black_litterman_optimization(
+            sample_returns, sample_market_caps, {}, {}
+        )
 
         # Should handle empty views gracefully
         assert "error" in result or "weights" in result
@@ -351,7 +406,9 @@ class TestPortfolioOptimizer:
                 weights_sum = sum(result["weights"].values())
                 assert abs(weights_sum - 1.0) < 1e-6
 
-    def test_enhanced_black_litterman_view_matrix_construction(self, sample_returns, sample_market_caps):
+    def test_enhanced_black_litterman_view_matrix_construction(
+        self, sample_returns, sample_market_caps
+    ):
         """Test view matrix construction in enhanced Black-Litterman."""
         views = {"AAPL": 0.05, "GOOGL": 0.03}
         confidence = {"AAPL": 0.6, "GOOGL": 0.5}
@@ -367,7 +424,11 @@ class TestPortfolioOptimizer:
         relative_views = {"AAPL vs GOOGL": 0.02}
         relative_confidence = {"AAPL vs GOOGL": 0.6}
         result_rel = optimizer.enhanced_black_litterman_optimization(
-            sample_returns, sample_market_caps, relative_views, relative_confidence, view_type="relative"
+            sample_returns,
+            sample_market_caps,
+            relative_views,
+            relative_confidence,
+            view_type="relative",
         )
 
         # Both should return results

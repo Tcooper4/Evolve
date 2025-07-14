@@ -93,7 +93,10 @@ class TailRiskEngine:
     """Comprehensive tail risk analysis engine."""
 
     def __init__(
-        self, confidence_levels: List[float] = None, lookback_period: int = 252, regime_threshold: float = 0.1
+        self,
+        confidence_levels: List[float] = None,
+        lookback_period: int = 252,
+        regime_threshold: float = 0.1,
     ):
         """Initialize tail risk engine.
 
@@ -115,7 +118,9 @@ class TailRiskEngine:
         self.bear_threshold = -0.05  # -5% negative return threshold
         self.crisis_threshold = -0.10  # -10% crisis threshold
 
-        logger.info(f"Initialized Tail Risk Engine with {len(self.confidence_levels)} confidence levels")
+        logger.info(
+            f"Initialized Tail Risk Engine with {len(self.confidence_levels)} confidence levels"
+        )
 
     def calculate_risk_metrics(self, returns: pd.Series) -> RiskMetrics:
         """Calculate comprehensive risk metrics.
@@ -144,7 +149,11 @@ class TailRiskEngine:
             cvar_95, cvar_99 = self._calculate_cvar(returns_clean)
 
             # Drawdown metrics
-            max_drawdown, avg_drawdown, drawdown_duration = self._calculate_drawdown_metrics(returns_clean)
+            (
+                max_drawdown,
+                avg_drawdown,
+                drawdown_duration,
+            ) = self._calculate_drawdown_metrics(returns_clean)
 
             # Tail risk metrics
             tail_dependence = self._calculate_tail_dependence(returns_clean)
@@ -190,7 +199,9 @@ class TailRiskEngine:
             return 0.0
 
         excess_returns = returns - (self.risk_free_rate / self.annualization_factor)
-        return (excess_returns.mean() / returns.std()) * np.sqrt(self.annualization_factor)
+        return (excess_returns.mean() / returns.std()) * np.sqrt(
+            self.annualization_factor
+        )
 
     def _calculate_sortino_ratio(self, returns: pd.Series) -> float:
         """Calculate Sortino ratio."""
@@ -203,7 +214,9 @@ class TailRiskEngine:
                 return 0.0
 
             excess_returns = returns - (self.risk_free_rate / self.annualization_factor)
-            return (excess_returns.mean() / downside_returns.std()) * np.sqrt(self.annualization_factor)
+            return (excess_returns.mean() / downside_returns.std()) * np.sqrt(
+                self.annualization_factor
+            )
 
     def _calculate_calmar_ratio(self, returns: pd.Series) -> float:
         """Calculate Calmar ratio."""
@@ -241,7 +254,9 @@ class TailRiskEngine:
 
         return cvar_95, cvar_99
 
-    def _calculate_drawdown_metrics(self, returns: pd.Series) -> Tuple[float, float, int]:
+    def _calculate_drawdown_metrics(
+        self, returns: pd.Series
+    ) -> Tuple[float, float, int]:
         """Calculate drawdown metrics."""
         if EMPYRICAL_AVAILABLE:
             max_dd = empyrical.max_drawdown(returns)
@@ -258,7 +273,11 @@ class TailRiskEngine:
 
             # Calculate drawdown duration
             dd_periods = (drawdown < 0).astype(int)
-            dd_duration = dd_periods.groupby((dd_periods != dd_periods.shift()).cumsum()).sum().max()
+            dd_duration = (
+                dd_periods.groupby((dd_periods != dd_periods.shift()).cumsum())
+                .sum()
+                .max()
+            )
 
         return max_dd, avg_dd, dd_duration
 
@@ -328,11 +347,15 @@ class TailRiskEngine:
         regimes = pd.Series("neutral", index=returns.index)
 
         # Bull market: high positive returns, low volatility
-        bull_condition = (rolling_mean > self.bull_threshold) & (rolling_vol < rolling_vol.quantile(0.7))
+        bull_condition = (rolling_mean > self.bull_threshold) & (
+            rolling_vol < rolling_vol.quantile(0.7)
+        )
         regimes[bull_condition] = "bull"
 
         # Bear market: negative returns, high volatility
-        bear_condition = (rolling_mean < self.bear_threshold) & (rolling_vol > rolling_vol.quantile(0.7))
+        bear_condition = (rolling_mean < self.bear_threshold) & (
+            rolling_vol > rolling_vol.quantile(0.7)
+        )
         regimes[bear_condition] = "bear"
 
         # Crisis: extreme negative returns
@@ -388,8 +411,12 @@ class TailRiskEngine:
                             return_mean=regime_returns.mean(),
                             return_vol=regime_returns.std(),
                             var_95=np.percentile(regime_returns, 5),
-                            max_drawdown=self._calculate_drawdown_metrics(regime_returns)[0],
-                            risk_score=self._calculate_regime_risk_score(regime_returns),
+                            max_drawdown=self._calculate_drawdown_metrics(
+                                regime_returns
+                            )[0],
+                            risk_score=self._calculate_regime_risk_score(
+                                regime_returns
+                            ),
                         )
                         regime_analysis.append(analysis)
 
@@ -413,7 +440,9 @@ class TailRiskEngine:
         risk_score = (abs(var_95) + max_dd + volatility) / 3
         return risk_score
 
-    def create_drawdown_heatmap(self, returns: pd.DataFrame, symbols: List[str]) -> plt.Figure:
+    def create_drawdown_heatmap(
+        self, returns: pd.DataFrame, symbols: List[str]
+    ) -> plt.Figure:
         """Create drawdown heatmap by market regime."""
         try:
             # Calculate drawdowns for each symbol
@@ -445,7 +474,9 @@ class TailRiskEngine:
                         regime_mask = regimes[symbol] == regime
                         if regime_mask.sum() > 0:
                             regime_dd = drawdowns[symbol][regime_mask]
-                            regime_drawdowns[regime][symbol] = abs(regime_dd.min()) if len(regime_dd) > 0 else 0.0
+                            regime_drawdowns[regime][symbol] = (
+                                abs(regime_dd.min()) if len(regime_dd) > 0 else 0.0
+                            )
                         else:
                             regime_drawdowns[regime][symbol] = 0.0
 
@@ -489,7 +520,9 @@ class TailRiskEngine:
             logger.error(f"Error creating drawdown heatmap: {e}")
             return fig
 
-    def generate_risk_report(self, returns: pd.Series, portfolio_name: str = "Portfolio") -> TailRiskReport:
+    def generate_risk_report(
+        self, returns: pd.Series, portfolio_name: str = "Portfolio"
+    ) -> TailRiskReport:
         """Generate comprehensive risk report.
 
         Args:
@@ -513,7 +546,9 @@ class TailRiskEngine:
             risk_decomposition = self._decompose_risk(returns)
 
             # Generate recommendations
-            recommendations = self._generate_recommendations(risk_metrics, regime_analysis)
+            recommendations = self._generate_recommendations(
+                risk_metrics, regime_analysis
+            )
 
             return TailRiskReport(
                 portfolio_metrics=risk_metrics,
@@ -547,13 +582,17 @@ class TailRiskEngine:
 
         return decomposition
 
-    def _generate_recommendations(self, risk_metrics: RiskMetrics, regime_analysis: List[RegimeAnalysis]) -> List[str]:
+    def _generate_recommendations(
+        self, risk_metrics: RiskMetrics, regime_analysis: List[RegimeAnalysis]
+    ) -> List[str]:
         """Generate risk management recommendations."""
         recommendations = []
 
         # VaR-based recommendations
         if risk_metrics.var_95 < -0.05:  # VaR > 5%
-            recommendations.append("Consider reducing position sizes to lower VaR exposure")
+            recommendations.append(
+                "Consider reducing position sizes to lower VaR exposure"
+            )
 
         if risk_metrics.max_drawdown > 0.20:  # Max drawdown > 20%
             recommendations.append("Implement stricter stop-loss mechanisms")
@@ -566,14 +605,18 @@ class TailRiskEngine:
         if bear_regimes:
             avg_bear_risk = np.mean([r.risk_score for r in bear_regimes])
             if avg_bear_risk > 0.1:
-                recommendations.append("Consider hedging strategies for bear market protection")
+                recommendations.append(
+                    "Consider hedging strategies for bear market protection"
+                )
 
         # Tail risk recommendations
         if risk_metrics.tail_risk_ratio > 2.0:
             recommendations.append("Implement tail risk hedging strategies")
 
         if risk_metrics.stress_test_loss < -0.15:
-            recommendations.append("Review stress test scenarios and adjust risk limits")
+            recommendations.append(
+                "Review stress test scenarios and adjust risk limits"
+            )
 
         # General recommendations
         recommendations.extend(
@@ -587,7 +630,9 @@ class TailRiskEngine:
         return recommendations[:5]  # Return top 5 recommendations
 
 
-def calculate_portfolio_risk(returns: pd.Series, confidence_level: float = 0.95) -> Dict[str, float]:
+def calculate_portfolio_risk(
+    returns: pd.Series, confidence_level: float = 0.95
+) -> Dict[str, float]:
     """Calculate portfolio risk metrics.
 
     Args:
@@ -604,8 +649,12 @@ def calculate_portfolio_risk(returns: pd.Series, confidence_level: float = 0.95)
         return {
             "volatility": risk_metrics.volatility,
             "sharpe_ratio": risk_metrics.sharpe_ratio,
-            "var": getattr(risk_metrics, f"var_{int(confidence_level*100)}", risk_metrics.var_95),
-            "cvar": getattr(risk_metrics, f"cvar_{int(confidence_level*100)}", risk_metrics.cvar_95),
+            "var": getattr(
+                risk_metrics, f"var_{int(confidence_level*100)}", risk_metrics.var_95
+            ),
+            "cvar": getattr(
+                risk_metrics, f"cvar_{int(confidence_level*100)}", risk_metrics.cvar_95
+            ),
             "max_drawdown": risk_metrics.max_drawdown,
             "tail_risk_ratio": risk_metrics.tail_risk_ratio,
         }

@@ -80,7 +80,9 @@ class DocumentationManager:
 
             # Generate documentation using pdoc
             result = subprocess.run(
-                ["pdoc", "--html", "--output-dir", str(self.api_dir), "trading"], capture_output=True, text=True
+                ["pdoc", "--html", "--output-dir", str(self.api_dir), "trading"],
+                capture_output=True,
+                text=True,
             )
 
             if result.returncode == 0:
@@ -135,7 +137,14 @@ class DocumentationManager:
             for example in examples:
                 # Create notebook
                 subprocess.run(
-                    ["jupyter", "nbconvert", "--to", "notebook", "--execute", f"examples/{example}"],
+                    [
+                        "jupyter",
+                        "nbconvert",
+                        "--to",
+                        "notebook",
+                        "--execute",
+                        f"examples/{example}",
+                    ],
                     capture_output=True,
                 )
 
@@ -154,7 +163,11 @@ class DocumentationManager:
             self.diagrams_dir.mkdir(parents=True, exist_ok=True)
 
             # Generate diagrams using Graphviz
-            diagrams = ["system_architecture.dot", "data_flow.dot", "component_interaction.dot"]
+            diagrams = [
+                "system_architecture.dot",
+                "data_flow.dot",
+                "component_interaction.dot",
+            ]
 
             for diagram in diagrams:
                 # Generate diagram
@@ -221,7 +234,9 @@ class DocumentationManager:
 
         try:
             # Check for broken links
-            result = subprocess.run(["mkdocs", "build", "--strict"], capture_output=True, text=True)
+            result = subprocess.run(
+                ["mkdocs", "build", "--strict"], capture_output=True, text=True
+            )
 
             if result.returncode == 0:
                 self.logger.info("Documentation validation passed")
@@ -268,10 +283,21 @@ def main():
     parser = argparse.ArgumentParser(description="Documentation Manager")
     parser.add_argument(
         "command",
-        choices=["api", "guides", "examples", "diagrams", "serve", "clean", "validate", "update"],
+        choices=[
+            "api",
+            "guides",
+            "examples",
+            "diagrams",
+            "serve",
+            "clean",
+            "validate",
+            "update",
+        ],
         help="Command to execute",
     )
-    parser.add_argument("--port", type=int, default=8000, help="Port for serving documentation")
+    parser.add_argument(
+        "--port", type=int, default=8000, help="Port for serving documentation"
+    )
 
     args = parser.parse_args()
     manager = DocumentationManager()

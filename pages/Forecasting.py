@@ -30,7 +30,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Page config
-st.set_page_config(page_title="Forecasting - Evolve AI Trading", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(
+    page_title="Forecasting - Evolve AI Trading",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
 # Custom CSS for clean styling
 st.markdown(
@@ -169,7 +173,9 @@ def load_available_models():
         return {}
 
 
-def calculate_forecast_metrics(actual: np.ndarray, predicted: np.ndarray) -> Dict[str, float]:
+def calculate_forecast_metrics(
+    actual: np.ndarray, predicted: np.ndarray
+) -> Dict[str, float]:
     """Calculate comprehensive forecast metrics."""
     try:
         # Basic error metrics
@@ -220,14 +226,18 @@ def generate_forecast_data(symbol: str, days: int, model: str) -> Dict[str, Any]
 
         # Generate forecast
         forecast_dates = pd.date_range(start=dates[-1], periods=days + 1, freq="D")[1:]
-        forecast_prices = historical_prices[-1] + np.cumsum(np.random.randn(days) * 0.015)
+        forecast_prices = historical_prices[-1] + np.cumsum(
+            np.random.randn(days) * 0.015
+        )
 
         # Generate confidence intervals
         confidence_lower = forecast_prices * 0.95
         confidence_upper = forecast_prices * 1.05
 
         # Calculate metrics
-        metrics = calculate_forecast_metrics(historical_prices[-30:], forecast_prices[:30])
+        metrics = calculate_forecast_metrics(
+            historical_prices[-30:], forecast_prices[:30]
+        )
 
         return {
             "symbol": symbol,
@@ -253,8 +263,16 @@ def plot_forecast_with_metrics(forecast_data: Dict[str, Any]):
         fig = make_subplots(
             rows=2,
             cols=2,
-            subplot_titles=("Price Forecast", "Performance Metrics", "Error Distribution", "Cumulative Returns"),
-            specs=[[{"secondary_y": False}, {"secondary_y": False}], [{"secondary_y": False}, {"secondary_y": False}]],
+            subplot_titles=(
+                "Price Forecast",
+                "Performance Metrics",
+                "Error Distribution",
+                "Cumulative Returns",
+            ),
+            specs=[
+                [{"secondary_y": False}, {"secondary_y": False}],
+                [{"secondary_y": False}, {"secondary_y": False}],
+            ],
         )
 
         # Historical and forecast data
@@ -315,14 +333,24 @@ def plot_forecast_with_metrics(forecast_data: Dict[str, Any]):
         metric_names = list(metrics.keys())
         metric_values = list(metrics.values())
 
-        fig.add_trace(go.Bar(x=metric_names, y=metric_values, name="Metrics", marker_color="#e74c3c"), row=1, col=2)
+        fig.add_trace(
+            go.Bar(
+                x=metric_names, y=metric_values, name="Metrics", marker_color="#e74c3c"
+            ),
+            row=1,
+            col=2,
+        )
 
         # Error distribution
         historical = forecast_data["historical_prices"]
         forecast = forecast_data["forecast_prices"]
         errors = historical[-len(forecast) :] - forecast
 
-        fig.add_trace(go.Histogram(x=errors, name="Errors", marker_color="#f39c12", nbinsx=20), row=2, col=1)
+        fig.add_trace(
+            go.Histogram(x=errors, name="Errors", marker_color="#f39c12", nbinsx=20),
+            row=2,
+            col=1,
+        )
 
         # Cumulative returns
         returns = np.diff(historical) / historical[:-1]
@@ -464,7 +492,9 @@ def create_new_model():
             height=150,
         )
 
-        model_name = st.text_input("Model Name (optional):", placeholder="e.g., Crypto_LSTM_v1")
+        model_name = st.text_input(
+            "Model Name (optional):", placeholder="e.g., Crypto_LSTM_v1"
+        )
 
         if st.button("Create Model", type="primary"):
             if requirements:
@@ -474,7 +504,9 @@ def create_new_model():
                     )
 
                     agent = get_model_creator_agent()
-                    model_spec, success, errors = agent.create_and_validate_model(requirements, model_name)
+                    model_spec, success, errors = agent.create_and_validate_model(
+                        requirements, model_name
+                    )
 
                     if success:
                         st.success(f"Model '{model_spec.name}' created successfully!")
@@ -530,7 +562,9 @@ def main():
         st.header("Forecast Settings")
 
         # Symbol input
-        symbol = st.text_input("Symbol", value="AAPL", placeholder="e.g., AAPL, TSLA, BTC-USD")
+        symbol = st.text_input(
+            "Symbol", value="AAPL", placeholder="e.g., AAPL, TSLA, BTC-USD"
+        )
 
         # Model selection
         available_models = load_available_models()
@@ -541,12 +575,14 @@ def main():
         forecast_days = st.slider("Forecast Period (days)", 1, 365, 30)
 
         # Confidence level
-        confidence_level = st.slider("Confidence Level", 0.8, 0.99, 0.95, 0.01)
+        st.slider("Confidence Level", 0.8, 0.99, 0.95, 0.01)
 
         # Generate forecast button
         if st.button("Generate Forecast", type="primary"):
             with st.spinner("Generating forecast..."):
-                forecast_data = generate_forecast_data(symbol, forecast_days, selected_model)
+                forecast_data = generate_forecast_data(
+                    symbol, forecast_days, selected_model
+                )
                 if forecast_data:
                     st.session_state.current_forecast = forecast_data
                     st.session_state.forecast_history.append(forecast_data)
@@ -573,9 +609,15 @@ def main():
                     df = pd.DataFrame(
                         {
                             "Date": st.session_state.current_forecast["forecast_dates"],
-                            "Forecast": st.session_state.current_forecast["forecast_prices"],
-                            "Lower_CI": st.session_state.current_forecast["confidence_lower"],
-                            "Upper_CI": st.session_state.current_forecast["confidence_upper"],
+                            "Forecast": st.session_state.current_forecast[
+                                "forecast_prices"
+                            ],
+                            "Lower_CI": st.session_state.current_forecast[
+                                "confidence_lower"
+                            ],
+                            "Upper_CI": st.session_state.current_forecast[
+                                "confidence_upper"
+                            ],
                         }
                     )
                     st.download_button(
@@ -589,7 +631,9 @@ def main():
                 if st.button("Export as JSON"):
                     st.download_button(
                         label="Download JSON",
-                        data=json.dumps(st.session_state.current_forecast, default=str, indent=2),
+                        data=json.dumps(
+                            st.session_state.current_forecast, default=str, indent=2
+                        ),
                         file_name=f"{symbol}_forecast_{datetime.now().strftime('%Y%m%d')}.json",
                         mime="application/json",
                     )
@@ -621,12 +665,16 @@ def main():
         # Forecast history
         if st.session_state.forecast_history:
             st.markdown("### Recent Forecasts")
-            for i, forecast in enumerate(reversed(st.session_state.forecast_history[-5:])):
+            for i, forecast in enumerate(
+                reversed(st.session_state.forecast_history[-5:])
+            ):
                 with st.expander(
                     f"{forecast['symbol']} - {forecast['model']} ({forecast['generated_at'].strftime('%Y-%m-%d %H:%M')})"
                 ):
                     st.markdown(f"**RMSE:** {forecast['metrics'].get('RMSE', 0):.4f}")
-                    st.markdown(f"**Sharpe Ratio:** {forecast['metrics'].get('Sharpe_Ratio', 0):.2f}")
+                    st.markdown(
+                        f"**Sharpe Ratio:** {forecast['metrics'].get('Sharpe_Ratio', 0):.2f}"
+                    )
 
     # Model creation section
     st.markdown("---")

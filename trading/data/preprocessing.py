@@ -11,7 +11,9 @@ logger.setLevel(logging.INFO)
 log_file = Path("memory/logs/preprocessing.log")
 log_file.parent.mkdir(parents=True, exist_ok=True)
 handler = logging.FileHandler(log_file)
-handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+)
 if not logger.hasHandlers():
     logger.addHandler(handler)
 
@@ -38,15 +40,24 @@ class DataPreprocessor:
                 raise ValueError("scaling_method must be 'standard' or 'minmax'")
 
         if "missing_value_method" in self.config:
-            if self.config["missing_value_method"] not in ["ffill", "bfill", "interpolate"]:
-                raise ValueError("missing_value_method must be 'ffill', 'bfill', or 'interpolate'")
+            if self.config["missing_value_method"] not in [
+                "ffill",
+                "bfill",
+                "interpolate",
+            ]:
+                raise ValueError(
+                    "missing_value_method must be 'ffill', 'bfill', or 'interpolate'"
+                )
 
         if "outlier_method" in self.config:
             if self.config["outlier_method"] not in ["zscore", "iqr"]:
                 raise ValueError("outlier_method must be 'zscore' or 'iqr'")
 
         if "outlier_threshold" in self.config:
-            if not isinstance(self.config["outlier_threshold"], (int, float)) or self.config["outlier_threshold"] <= 0:
+            if (
+                not isinstance(self.config["outlier_threshold"], (int, float))
+                or self.config["outlier_threshold"] <= 0
+            ):
                 raise ValueError("outlier_threshold must be a positive number")
 
     def _validate_input(self, data: pd.DataFrame) -> None:
@@ -71,7 +82,9 @@ class DataPreprocessor:
             try:
                 data.index = pd.to_datetime(data.index)
             except Exception as e:
-                raise ValueError(f"Data index must be convertible to DatetimeIndex: {e}")
+                raise ValueError(
+                    f"Data index must be convertible to DatetimeIndex: {e}"
+                )
         if not data.index.is_monotonic_increasing:
             logger.warning("Data index not sorted, sorting in ascending order")
             data.sort_index(inplace=True)
@@ -154,7 +167,12 @@ class DataPreprocessor:
 
     def _compute_feature_stats(self, data: pd.DataFrame) -> None:
         """Compute feature statistics."""
-        self._feature_stats = {"mean": data.mean(), "std": data.std(), "min": data.min(), "max": data.max()}
+        self._feature_stats = {
+            "mean": data.mean(),
+            "std": data.std(),
+            "min": data.min(),
+            "max": data.max(),
+        }
 
     def clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """Clean the data by handling missing values and outliers."""
@@ -223,10 +241,14 @@ class DataPreprocessor:
                 "date_range": {
                     "start": data.index.min().isoformat() if not data.empty else None,
                     "end": data.index.max().isoformat() if not data.empty else None,
-                    "duration_days": (data.index.max() - data.index.min()).days if len(data) > 1 else 0,
+                    "duration_days": (data.index.max() - data.index.min()).days
+                    if len(data) > 1
+                    else 0,
                 },
                 "outliers_detected": 0,
-                "infinite_values": np.isinf(data.select_dtypes(include=[np.number])).sum().sum(),
+                "infinite_values": np.isinf(data.select_dtypes(include=[np.number]))
+                .sum()
+                .sum(),
             }
 
             # Detect outliers using IQR method
@@ -234,7 +256,9 @@ class DataPreprocessor:
                 Q1 = data[col].quantile(0.25)
                 Q3 = data[col].quantile(0.75)
                 IQR = Q3 - Q1
-                outliers = ((data[col] < (Q1 - 1.5 * IQR)) | (data[col] > (Q3 + 1.5 * IQR))).sum()
+                outliers = (
+                    (data[col] < (Q1 - 1.5 * IQR)) | (data[col] > (Q3 + 1.5 * IQR))
+                ).sum()
                 metrics["outliers_detected"] += outliers
 
             logger.info(
@@ -266,7 +290,9 @@ class FeatureEngineering:
         # Initialize parameters with defaults
         self.ma_windows = self.config.get("ma_windows", [5, 10, 20, 50, 200])
         self.rsi_window = self.config.get("rsi_window", 14)
-        self.macd_params = self.config.get("macd_params", {"fast_period": 12, "slow_period": 26, "signal_period": 9})
+        self.macd_params = self.config.get(
+            "macd_params", {"fast_period": 12, "slow_period": 26, "signal_period": 9}
+        )
         self.bb_window = self.config.get("bb_window", 20)
         self.bb_std = self.config.get("bb_std", 2.0)
         self.fourier_periods = self.config.get("fourier_periods", [5, 10, 20])
@@ -281,54 +307,80 @@ class FeatureEngineering:
                 raise ValueError("ma_windows must be a list")
             if not all(isinstance(x, int) and x > 0 for x in self.config["ma_windows"]):
                 raise ValueError("ma_windows must contain positive integers")
-            if not all(x < y for x, y in zip(self.config["ma_windows"], self.config["ma_windows"][1:])):
+            if not all(
+                x < y
+                for x, y in zip(
+                    self.config["ma_windows"], self.config["ma_windows"][1:]
+                )
+            ):
                 raise ValueError("ma_windows must be in ascending order")
 
         # Validate RSI window
         if "rsi_window" in self.config:
-            if not isinstance(self.config["rsi_window"], int) or self.config["rsi_window"] <= 0:
+            if (
+                not isinstance(self.config["rsi_window"], int)
+                or self.config["rsi_window"] <= 0
+            ):
                 raise ValueError("rsi_window must be a positive integer")
 
         # Validate MACD parameters
         if "macd_params" in self.config:
             required_keys = {"fast_period", "slow_period", "signal_period"}
             if not all(key in self.config["macd_params"] for key in required_keys):
-                raise ValueError("macd_params must contain fast_period, slow_period, and signal_period")
+                raise ValueError(
+                    "macd_params must contain fast_period, slow_period, and signal_period"
+                )
             if not all(
-                isinstance(self.config["macd_params"][key], int) and self.config["macd_params"][key] > 0
+                isinstance(self.config["macd_params"][key], int)
+                and self.config["macd_params"][key] > 0
                 for key in required_keys
             ):
                 raise ValueError("MACD periods must be positive integers")
-            if self.config["macd_params"]["fast_period"] >= self.config["macd_params"]["slow_period"]:
+            if (
+                self.config["macd_params"]["fast_period"]
+                >= self.config["macd_params"]["slow_period"]
+            ):
                 raise ValueError("fast_period must be less than slow_period")
 
         # Validate Bollinger Bands parameters
         if "bb_window" in self.config:
-            if not isinstance(self.config["bb_window"], int) or self.config["bb_window"] <= 0:
+            if (
+                not isinstance(self.config["bb_window"], int)
+                or self.config["bb_window"] <= 0
+            ):
                 raise ValueError("bb_window must be a positive integer")
         if "bb_std" in self.config:
-            if not isinstance(self.config["bb_std"], (int, float)) or self.config["bb_std"] <= 0:
+            if (
+                not isinstance(self.config["bb_std"], (int, float))
+                or self.config["bb_std"] <= 0
+            ):
                 raise ValueError("bb_std must be a positive number")
 
         # Validate Fourier periods
         if "fourier_periods" in self.config:
             if not isinstance(self.config["fourier_periods"], list):
                 raise ValueError("fourier_periods must be a list")
-            if not all(isinstance(x, int) and x > 0 for x in self.config["fourier_periods"]):
+            if not all(
+                isinstance(x, int) and x > 0 for x in self.config["fourier_periods"]
+            ):
                 raise ValueError("fourier_periods must contain positive integers")
 
         # Validate lag periods
         if "lag_periods" in self.config:
             if not isinstance(self.config["lag_periods"], list):
                 raise ValueError("lag_periods must be a list")
-            if not all(isinstance(x, int) and x > 0 for x in self.config["lag_periods"]):
+            if not all(
+                isinstance(x, int) and x > 0 for x in self.config["lag_periods"]
+            ):
                 raise ValueError("lag_periods must contain positive integers")
 
         # Validate volume MA windows
         if "volume_ma_windows" in self.config:
             if not isinstance(self.config["volume_ma_windows"], list):
                 raise ValueError("volume_ma_windows must be a list")
-            if not all(isinstance(x, int) and x > 0 for x in self.config["volume_ma_windows"]):
+            if not all(
+                isinstance(x, int) and x > 0 for x in self.config["volume_ma_windows"]
+            ):
                 raise ValueError("volume_ma_windows must contain positive integers")
 
     def _validate_input(self, data: pd.DataFrame) -> None:
@@ -353,7 +405,9 @@ class FeatureEngineering:
             try:
                 data.index = pd.to_datetime(data.index)
             except Exception as e:
-                raise ValueError(f"Data index must be convertible to DatetimeIndex: {e}")
+                raise ValueError(
+                    f"Data index must be convertible to DatetimeIndex: {e}"
+                )
         if not data.index.is_monotonic_increasing:
             logger.warning("Data index not sorted, sorting in ascending order")
             data.sort_index(inplace=True)
@@ -371,7 +425,9 @@ class FeatureEngineering:
             max(self.volume_ma_windows),
         )
         if len(data) < min_required:
-            raise ValueError(f"Need at least {min_required} data points for feature calculation")
+            raise ValueError(
+                f"Need at least {min_required} data points for feature calculation"
+            )
 
     def calculate_moving_averages(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate moving averages."""
@@ -382,7 +438,9 @@ class FeatureEngineering:
             if window > len(data):
                 continue
             result[f"SMA_{window}"] = data["Close"].rolling(window=window).mean()
-            result[f"EMA_{window}"] = data["Close"].ewm(span=window, adjust=False).mean()
+            result[f"EMA_{window}"] = (
+                data["Close"].ewm(span=window, adjust=False).mean()
+            )
 
         return result
 
@@ -391,7 +449,9 @@ class FeatureEngineering:
         self._validate_input(data)
 
         if len(data) < self.rsi_window + 1:
-            raise ValueError(f"Need at least {self.rsi_window + 1} data points for RSI calculation")
+            raise ValueError(
+                f"Need at least {self.rsi_window + 1} data points for RSI calculation"
+            )
 
         delta = data["Close"].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=self.rsi_window).mean()
@@ -406,24 +466,37 @@ class FeatureEngineering:
         """Calculate MACD."""
         self._validate_input(data)
 
-        min_required = self.macd_params["slow_period"] + self.macd_params["signal_period"]
+        min_required = (
+            self.macd_params["slow_period"] + self.macd_params["signal_period"]
+        )
         if len(data) < min_required:
-            raise ValueError(f"Need at least {min_required} data points for MACD calculation")
+            raise ValueError(
+                f"Need at least {min_required} data points for MACD calculation"
+            )
 
-        exp1 = data["Close"].ewm(span=self.macd_params["fast_period"], adjust=False).mean()
-        exp2 = data["Close"].ewm(span=self.macd_params["slow_period"], adjust=False).mean()
+        exp1 = (
+            data["Close"].ewm(span=self.macd_params["fast_period"], adjust=False).mean()
+        )
+        exp2 = (
+            data["Close"].ewm(span=self.macd_params["slow_period"], adjust=False).mean()
+        )
         macd = exp1 - exp2
         signal = macd.ewm(span=self.macd_params["signal_period"], adjust=False).mean()
         histogram = macd - signal
 
-        return pd.DataFrame({"MACD": macd, "MACD_Signal": signal, "MACD_Histogram": histogram}, index=data.index)
+        return pd.DataFrame(
+            {"MACD": macd, "MACD_Signal": signal, "MACD_Histogram": histogram},
+            index=data.index,
+        )
 
     def calculate_bollinger_bands(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate Bollinger Bands."""
         self._validate_input(data)
 
         if len(data) < self.bb_window:
-            raise ValueError(f"Need at least {self.bb_window} data points for Bollinger Bands calculation")
+            raise ValueError(
+                f"Need at least {self.bb_window} data points for Bollinger Bands calculation"
+            )
 
         middle_band = data["Close"].rolling(window=self.bb_window).mean()
         std = data["Close"].rolling(window=self.bb_window).std()
@@ -432,7 +505,12 @@ class FeatureEngineering:
         bandwidth = (upper_band - lower_band) / middle_band
 
         return pd.DataFrame(
-            {"BB_Middle": middle_band, "BB_Upper": upper_band, "BB_Lower": lower_band, "BB_Bandwidth": bandwidth},
+            {
+                "BB_Middle": middle_band,
+                "BB_Upper": upper_band,
+                "BB_Lower": lower_band,
+                "BB_Bandwidth": bandwidth,
+            },
             index=data.index,
         )
 
@@ -451,7 +529,11 @@ class FeatureEngineering:
         result["Volume_Trend"] = data["Volume"].pct_change()
 
         # Volume Price Trend (VPT)
-        result["VPT"] = (data["Volume"] * (data["Close"] - data["Close"].shift(1)) / data["Close"].shift(1)).cumsum()
+        result["VPT"] = (
+            data["Volume"]
+            * (data["Close"] - data["Close"].shift(1))
+            / data["Close"].shift(1)
+        ).cumsum()
 
         # On-Balance Volume (OBV)
         result["OBV"] = (np.sign(data["Close"].diff()) * data["Volume"]).cumsum()
@@ -615,17 +697,29 @@ class DataValidator:
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
         if "outlier_threshold" in self.config:
-            if not isinstance(self.config["outlier_threshold"], (int, float)) or self.config["outlier_threshold"] <= 0:
+            if (
+                not isinstance(self.config["outlier_threshold"], (int, float))
+                or self.config["outlier_threshold"] <= 0
+            ):
                 raise ValueError("outlier_threshold must be a positive number")
 
         if "min_price" in self.config:
-            if not isinstance(self.config["min_price"], (int, float)) or self.config["min_price"] < 0:
+            if (
+                not isinstance(self.config["min_price"], (int, float))
+                or self.config["min_price"] < 0
+            ):
                 raise ValueError("min_price must be a non-negative number")
 
         if "max_price" in self.config:
-            if not isinstance(self.config["max_price"], (int, float)) or self.config["max_price"] <= 0:
+            if (
+                not isinstance(self.config["max_price"], (int, float))
+                or self.config["max_price"] <= 0
+            ):
                 raise ValueError("max_price must be a positive number")
-            if "min_price" in self.config and self.config["max_price"] <= self.config["min_price"]:
+            if (
+                "min_price" in self.config
+                and self.config["max_price"] <= self.config["min_price"]
+            ):
                 raise ValueError("max_price must be greater than min_price")
 
     def _validate_input(self, data: pd.DataFrame) -> None:
@@ -663,7 +757,9 @@ class DataValidator:
             raise ValueError(f"Infinite values found in columns: {inf_cols}")
 
         # Check for negative prices
-        neg_price_cols = data.columns[data[["Open", "High", "Low", "Close"]].lt(0).any()].tolist()
+        neg_price_cols = data.columns[
+            data[["Open", "High", "Low", "Close"]].lt(0).any()
+        ].tolist()
         if neg_price_cols:
             raise ValueError(f"Negative prices found in columns: {neg_price_cols}")
 
@@ -749,7 +845,11 @@ class DataValidator:
 
     def get_params(self) -> Dict[str, Any]:
         """Get validator parameters."""
-        return {"outlier_threshold": self.outlier_threshold, "min_price": self.min_price, "max_price": self.max_price}
+        return {
+            "outlier_threshold": self.outlier_threshold,
+            "min_price": self.min_price,
+            "max_price": self.max_price,
+        }
 
     def set_params(self, **params) -> "DataValidator":
         """Set validator parameters."""
@@ -777,7 +877,9 @@ class DataScaler:
         self.outlier_method = self.config.get("outlier_method", "zscore")
         self.outlier_threshold = self.config.get("outlier_threshold", 3.0)
         self.enable_outlier_clipping = self.config.get("enable_outlier_clipping", True)
-        self.enable_zscore_standardization = self.config.get("enable_zscore_standardization", True)
+        self.enable_zscore_standardization = self.config.get(
+            "enable_zscore_standardization", True
+        )
         self._feature_stats = {}
         self.is_fitted = False
 
@@ -785,14 +887,19 @@ class DataScaler:
         """Validate configuration parameters."""
         if "scaling_method" in self.config:
             if self.config["scaling_method"] not in ["standard", "minmax", "robust"]:
-                raise ValueError("scaling_method must be 'standard', 'minmax', or 'robust'")
+                raise ValueError(
+                    "scaling_method must be 'standard', 'minmax', or 'robust'"
+                )
 
         if "outlier_method" in self.config:
             if self.config["outlier_method"] not in ["zscore", "iqr", "mad"]:
                 raise ValueError("outlier_method must be 'zscore', 'iqr', or 'mad'")
 
         if "outlier_threshold" in self.config:
-            if not isinstance(self.config["outlier_threshold"], (int, float)) or self.config["outlier_threshold"] <= 0:
+            if (
+                not isinstance(self.config["outlier_threshold"], (int, float))
+                or self.config["outlier_threshold"] <= 0
+            ):
                 raise ValueError("outlier_threshold must be a positive number")
 
     def _validate_input(self, data: pd.DataFrame) -> None:
@@ -946,7 +1053,9 @@ class DataScaler:
                     if stats["max"] == stats["min"]:
                         result[col] = 0.0
                     else:
-                        result[col] = (result[col] - stats["min"]) / (stats["max"] - stats["min"])
+                        result[col] = (result[col] - stats["min"]) / (
+                            stats["max"] - stats["min"]
+                        )
                 elif self.scaling_method == "robust":
                     # Robust scaling using median and IQR
                     iqr = stats["q3"] - stats["q1"]
@@ -983,7 +1092,9 @@ class DataScaler:
                     if stats["max"] == stats["min"]:
                         result[col] = stats["min"]
                     else:
-                        result[col] = data[col] * (stats["max"] - stats["min"]) + stats["min"]
+                        result[col] = (
+                            data[col] * (stats["max"] - stats["min"]) + stats["min"]
+                        )
                 elif self.scaling_method == "robust":
                     iqr = stats["q3"] - stats["q1"]
                     if iqr == 0:
@@ -1002,7 +1113,9 @@ class DataScaler:
         return self._feature_stats.copy()
 
 
-def remove_outliers(df: pd.DataFrame, method: str = "iqr", columns: Optional[list] = None) -> pd.DataFrame:
+def remove_outliers(
+    df: pd.DataFrame, method: str = "iqr", columns: Optional[list] = None
+) -> pd.DataFrame:
     """Remove outliers using IQR or Z-score method.
 
     Args:
@@ -1039,7 +1152,9 @@ def remove_outliers(df: pd.DataFrame, method: str = "iqr", columns: Optional[lis
     return df
 
 
-def apply_agent_transformations(df: pd.DataFrame, agent_config: Optional[Dict[str, Any]] = None) -> pd.DataFrame:
+def apply_agent_transformations(
+    df: pd.DataFrame, agent_config: Optional[Dict[str, Any]] = None
+) -> pd.DataFrame:
     """Apply custom transformations defined by agents.
 
     Args:

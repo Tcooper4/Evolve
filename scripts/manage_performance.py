@@ -41,30 +41,21 @@ Examples:
 """
 
 import argparse
-import asyncio
 import cProfile
 import glob
 import json
 import logging
 import logging.config
-import os
 import pstats
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
-import aiohttp
 import line_profiler
 import matplotlib.pyplot as plt
 import memory_profiler
-import numpy as np
-import pandas as pd
-import psutil
-import seaborn as sns
 import yaml
-from scipy import stats
 
 
 class PerformanceManager:
@@ -236,7 +227,9 @@ class PerformanceManager:
         Raises:
             Exception: If line profiling fails
         """
-        self.logger.info(f"Profiling line-by-line performance for function: {func.__name__}")
+        self.logger.info(
+            f"Profiling line-by-line performance for function: {func.__name__}"
+        )
 
         try:
             # Create line profiler
@@ -278,16 +271,10 @@ class PerformanceManager:
             profile_data = []
             for file in profile_files:
                 stats = pstats.Stats(file)
-                profile_data.append({
-                    "file": file,
-                    "stats": stats
-                })
+                profile_data.append({"file": file, "stats": stats})
 
             # Analyze profiles
-            analysis = {
-                "timestamp": datetime.now().isoformat(),
-                "profiles": []
-            }
+            analysis = {"timestamp": datetime.now().isoformat(), "profiles": []}
 
             for data in profile_data:
                 stats = data["stats"]
@@ -296,23 +283,24 @@ class PerformanceManager:
                     "total_time": stats.total_tt,
                     "function_calls": stats.total_calls,
                     "primitive_calls": stats.prim_calls,
-                    "top_functions": []
+                    "top_functions": [],
                 }
 
                 # Get top functions by cumulative time
                 for func, (cc, nc, tt, ct, callers) in stats.stats.items():
                     if ct > 0:  # Only include functions that were called
-                        profile_analysis["top_functions"].append({
-                            "name": func,
-                            "calls": nc,
-                            "total_time": tt,
-                            "cumulative_time": ct
-                        })
+                        profile_analysis["top_functions"].append(
+                            {
+                                "name": func,
+                                "calls": nc,
+                                "total_time": tt,
+                                "cumulative_time": ct,
+                            }
+                        )
 
                 # Sort top functions by cumulative time
                 profile_analysis["top_functions"].sort(
-                    key=lambda x: x["cumulative_time"],
-                    reverse=True
+                    key=lambda x: x["cumulative_time"], reverse=True
                 )
 
                 analysis["profiles"].append(profile_analysis)
@@ -341,6 +329,7 @@ class PerformanceManager:
 
             # Get function source
             import inspect
+
             source = inspect.getsource(func)
 
             # Analyze source code
@@ -354,22 +343,27 @@ class PerformanceManager:
 
             # Compare results
             comparison = self._compare_performance(
-                original_result,
-                optimized_result,
-                func.__name__
+                original_result, optimized_result, func.__name__
             )
 
             # Save optimization report
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            report_file = self.reports_dir / f"optimization_report_{func.__name__}_{timestamp}.json"
+            report_file = (
+                self.reports_dir
+                / f"optimization_report_{func.__name__}_{timestamp}.json"
+            )
 
             with open(report_file, "w") as f:
-                json.dump({
-                    "timestamp": datetime.now().isoformat(),
-                    "function": func.__name__,
-                    "suggestions": optimization_suggestions,
-                    "comparison": comparison
-                }, f, indent=2)
+                json.dump(
+                    {
+                        "timestamp": datetime.now().isoformat(),
+                        "function": func.__name__,
+                        "suggestions": optimization_suggestions,
+                        "comparison": comparison,
+                    },
+                    f,
+                    indent=2,
+                )
 
             self.logger.info(f"Optimization report saved to {report_file}")
 
@@ -385,42 +379,52 @@ class PerformanceManager:
         try:
             # Check for list comprehensions
             if "for" in source and "[" in source and "]" in source:
-                suggestions.append({
-                    "type": "list_comprehension",
-                    "description": "Consider using list comprehension for better performance",
-                    "severity": "medium"
-                })
+                suggestions.append(
+                    {
+                        "type": "list_comprehension",
+                        "description": "Consider using list comprehension for better performance",
+                        "severity": "medium",
+                    }
+                )
 
             # Check for nested loops
             if source.count("for") > 1:
-                suggestions.append({
-                    "type": "nested_loops",
-                    "description": "Consider optimizing nested loops",
-                    "severity": "high"
-                })
+                suggestions.append(
+                    {
+                        "type": "nested_loops",
+                        "description": "Consider optimizing nested loops",
+                        "severity": "high",
+                    }
+                )
 
             # Check for string concatenation
             if "+" in source and '"' in source:
-                suggestions.append({
-                    "type": "string_concatenation",
-                    "description": "Consider using f-strings or str.join()",
-                    "severity": "low"
-                })
+                suggestions.append(
+                    {
+                        "type": "string_concatenation",
+                        "description": "Consider using f-strings or str.join()",
+                        "severity": "low",
+                    }
+                )
 
             # Check for global variables
             if "global" in source:
-                suggestions.append({
-                    "type": "global_variables",
-                    "description": "Consider avoiding global variables",
-                    "severity": "medium"
-                })
+                suggestions.append(
+                    {
+                        "type": "global_variables",
+                        "description": "Consider avoiding global variables",
+                        "severity": "medium",
+                    }
+                )
 
             return suggestions
         except Exception as e:
             self.logger.error(f"Failed to analyze source code: {e}")
             raise
 
-    def _apply_optimizations(self, func: callable, suggestions: List[Dict[str, Any]]) -> callable:
+    def _apply_optimizations(
+        self, func: callable, suggestions: List[Dict[str, Any]]
+    ) -> callable:
         """Apply optimizations to function.
 
         Note: This is a simplified version that returns the original function
@@ -448,18 +452,34 @@ class PerformanceManager:
             self.logger.error(f"Failed to apply optimizations: {e}")
             raise
 
-    def _compare_performance(self, original: Any, optimized: Any, func_name: str) -> Dict[str, Any]:
+    def _compare_performance(
+        self, original: Any, optimized: Any, func_name: str
+    ) -> Dict[str, Any]:
         """Compare original and optimized performance."""
         try:
             # Get performance metrics
-            original_stats = pstats.Stats(self.prof_dir / f"profile_{func_name}_original.prof")
-            optimized_stats = pstats.Stats(self.prof_dir / f"profile_{func_name}_optimized.prof")
+            original_stats = pstats.Stats(
+                self.prof_dir / f"profile_{func_name}_original.prof"
+            )
+            optimized_stats = pstats.Stats(
+                self.prof_dir / f"profile_{func_name}_optimized.prof"
+            )
 
             # Calculate improvements
             improvement = {
-                "total_time": (original_stats.total_tt - optimized_stats.total_tt) / original_stats.total_tt * 100,
-                "function_calls": (original_stats.total_calls - optimized_stats.total_calls) / original_stats.total_calls * 100,
-                "primitive_calls": (original_stats.prim_calls - optimized_stats.prim_calls) / original_stats.prim_calls * 100
+                "total_time": (original_stats.total_tt - optimized_stats.total_tt)
+                / original_stats.total_tt
+                * 100,
+                "function_calls": (
+                    original_stats.total_calls - optimized_stats.total_calls
+                )
+                / original_stats.total_calls
+                * 100,
+                "primitive_calls": (
+                    original_stats.prim_calls - optimized_stats.prim_calls
+                )
+                / original_stats.prim_calls
+                * 100,
             }
 
             return improvement
@@ -484,12 +504,14 @@ class PerformanceManager:
                 top_funcs = profile["top_functions"][:10]  # Top 10 functions
                 plt.barh(
                     [f["name"] for f in top_funcs],
-                    [f["cumulative_time"] for f in top_funcs]
+                    [f["cumulative_time"] for f in top_funcs],
                 )
                 plt.title("Top Functions by Cumulative Time")
                 plt.xlabel("Cumulative Time (seconds)")
                 plt.tight_layout()
-                plt.savefig(plots_dir / f"top_functions_{Path(profile['file']).stem}.png")
+                plt.savefig(
+                    plots_dir / f"top_functions_{Path(profile['file']).stem}.png"
+                )
                 plt.close()
 
             # Generate comparison plots
@@ -498,7 +520,7 @@ class PerformanceManager:
                 plt.figure(figsize=(10, 6))
                 plt.bar(
                     [Path(p["file"]).stem for p in analysis["profiles"]],
-                    [p["total_time"] for p in analysis["profiles"]]
+                    [p["total_time"] for p in analysis["profiles"]],
                 )
                 plt.title("Total Time Comparison")
                 plt.ylabel("Total Time (seconds)")
@@ -511,7 +533,7 @@ class PerformanceManager:
                 plt.figure(figsize=(10, 6))
                 plt.bar(
                     [Path(p["file"]).stem for p in analysis["profiles"]],
-                    [p["function_calls"] for p in analysis["profiles"]]
+                    [p["function_calls"] for p in analysis["profiles"]],
                 )
                 plt.title("Function Calls Comparison")
                 plt.ylabel("Number of Calls")
@@ -532,54 +554,33 @@ def main():
     parser.add_argument(
         "command",
         choices=["profile", "analyze", "optimize", "monitor", "report"],
-        help="Command to run"
+        help="Command to run",
     )
-    parser.add_argument(
-        "--function",
-        help="Function to profile or optimize"
-    )
+    parser.add_argument("--function", help="Function to profile or optimize")
     parser.add_argument(
         "--type",
         choices=["cpu", "memory", "line"],
         default="cpu",
-        help="Type of profiling"
+        help="Type of profiling",
     )
     parser.add_argument(
-        "--args",
-        type=json.loads,
-        help="Function arguments as JSON string"
+        "--args", type=json.loads, help="Function arguments as JSON string"
+    )
+    parser.add_argument("--profiles", help="Glob pattern for profile files")
+    parser.add_argument("--output", help="Output file path")
+    parser.add_argument(
+        "--duration", type=int, default=300, help="Monitoring duration in seconds"
     )
     parser.add_argument(
-        "--profiles",
-        help="Glob pattern for profile files"
-    )
-    parser.add_argument(
-        "--output",
-        help="Output file path"
-    )
-    parser.add_argument(
-        "--duration",
-        type=int,
-        default=300,
-        help="Monitoring duration in seconds"
-    )
-    parser.add_argument(
-        "--interval",
-        type=int,
-        default=60,
-        help="Monitoring interval in seconds"
+        "--interval", type=int, default=60, help="Monitoring interval in seconds"
     )
     parser.add_argument(
         "--format",
         choices=["json", "html", "pdf"],
         default="json",
-        help="Report format"
+        help="Report format",
     )
-    parser.add_argument(
-        "--help",
-        action="store_true",
-        help="Show usage examples"
-    )
+    parser.add_argument("--help", action="store_true", help="Show usage examples")
     args = parser.parse_args()
 
     if args.help:
@@ -604,6 +605,7 @@ def main():
     elif args.command == "report":
         # Implement reporting
         pass
+
 
 if __name__ == "__main__":
     main()

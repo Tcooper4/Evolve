@@ -17,7 +17,9 @@ logger.setLevel(logging.DEBUG)
 # Add file handler for debug logs
 debug_handler = logging.FileHandler("trading/portfolio/logs/portfolio_debug.log")
 debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+debug_formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 debug_handler.setFormatter(debug_formatter)
 logger.addHandler(debug_handler)
 
@@ -117,7 +119,11 @@ class LLMInterface:
 
         logger.info("Initialized LLMInterface")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def generate_trade_rationale(
         self, symbol: str, direction: str, strategy: str, market_data: Dict[str, Any]
@@ -139,7 +145,10 @@ class LLMInterface:
         try:
             # Prepare prompt
             prompt = self._create_trade_rationale_prompt(
-                symbol=symbol, direction=direction, strategy=strategy, market_data=market_data
+                symbol=symbol,
+                direction=direction,
+                strategy=strategy,
+                market_data=market_data,
             )
 
             # Call LLM
@@ -183,7 +192,10 @@ class LLMInterface:
             logger.error(f"Error generating trade rationale: {e}")
 
     def generate_daily_commentary(
-        self, portfolio_state: Dict[str, Any], trades: List[Dict[str, Any]], market_data: Dict[str, Any]
+        self,
+        portfolio_state: Dict[str, Any],
+        trades: List[Dict[str, Any]],
+        market_data: Dict[str, Any],
     ) -> Optional[DailyCommentary]:
         """Generate daily commentary using LLM.
 
@@ -271,7 +283,10 @@ Please provide:
 Format the response as a structured analysis."""
 
     def _create_daily_commentary_prompt(
-        self, portfolio_state: Dict[str, Any], trades: List[Dict[str, Any]], market_data: Dict[str, Any]
+        self,
+        portfolio_state: Dict[str, Any],
+        trades: List[Dict[str, Any]],
+        market_data: Dict[str, Any],
     ) -> str:
         """Create prompt for daily commentary generation.
 
@@ -352,7 +367,8 @@ Format the response as a comprehensive daily report."""
 
         return {
             "success": True,
-            "result": risk_factors or ["Market volatility", "Liquidity risk", "Execution risk"],
+            "result": risk_factors
+            or ["Market volatility", "Liquidity risk", "Execution risk"],
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }
@@ -375,7 +391,9 @@ Format the response as a comprehensive daily report."""
 
         return {"total_pnl": total_pnl, "strategy_pnl": strategy_pnl}
 
-    def _identify_strategy_shifts(self, trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _identify_strategy_shifts(
+        self, trades: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Identify strategy shifts from trades.
 
         Args:
@@ -420,7 +438,9 @@ Format the response as a comprehensive daily report."""
 
         return shifts
 
-    def _assess_risk(self, portfolio_state: Dict[str, Any], market_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _assess_risk(
+        self, portfolio_state: Dict[str, Any], market_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Assess portfolio risk.
 
         Args:
@@ -444,7 +464,9 @@ Format the response as a comprehensive daily report."""
             },
         }
 
-    def _calculate_var(self, portfolio_state: Dict[str, Any], confidence: float) -> float:
+    def _calculate_var(
+        self, portfolio_state: Dict[str, Any], confidence: float
+    ) -> float:
         """Calculate Value at Risk.
 
         Args:
@@ -476,7 +498,9 @@ Format the response as a comprehensive daily report."""
 
         return np.std(returns) * np.sqrt(252)
 
-    def _calculate_correlation(self, portfolio_state: Dict[str, Any]) -> Dict[str, float]:
+    def _calculate_correlation(
+        self, portfolio_state: Dict[str, Any]
+    ) -> Dict[str, float]:
         """Calculate position correlations.
 
         Args:
@@ -501,7 +525,9 @@ Format the response as a comprehensive daily report."""
         symbols = list(returns.keys())
         for i, sym1 in enumerate(symbols):
             for sym2 in symbols[i + 1 :]:
-                correlations[f"{sym1}-{sym2}"] = np.corrcoef([returns[sym1]], [returns[sym2]])[0, 1]
+                correlations[f"{sym1}-{sym2}"] = np.corrcoef(
+                    [returns[sym1]], [returns[sym2]]
+                )[0, 1]
 
         return correlations
 

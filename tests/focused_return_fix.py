@@ -12,7 +12,9 @@ import re
 from typing import Any, Dict, Tuple
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -45,7 +47,9 @@ class FocusedReturnFixer:
         self.fixed_files = 0
         self.fixed_functions = 0
 
-    def fix_function_return(self, content: str, function_name: str, line_number: int, fix_type: str) -> str:
+    def fix_function_return(
+        self, content: str, function_name: str, line_number: int, fix_type: str
+    ) -> str:
         """Fix a specific function's return statement."""
         lines = content.split("\n")
         function_line = line_number - 1
@@ -91,7 +95,9 @@ class FocusedReturnFixer:
                     structured_return = f"{' ' * indent}return {{'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
                 else:
                     # Extract return value and wrap in structured format
-                    value_part = original_line[original_line.find("return") + 6 :].strip()
+                    value_part = original_line[
+                        original_line.find("return") + 6 :
+                    ].strip()
                     if value_part:
                         structured_return = f"{' ' * indent}return {{'success': True, 'result': {value_part}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
                     else:
@@ -125,14 +131,19 @@ class FocusedReturnFixer:
                         if isinstance(child, ast.Return):
                             has_return = True
                             if isinstance(child.value, ast.Dict) and any(
-                                isinstance(k, ast.Constant) and k.value == "success" for k in child.value.keys
+                                isinstance(k, ast.Constant) and k.value == "success"
+                                for k in child.value.keys
                             ):
                                 has_structured_return = True
 
                     if not has_return:
-                        functions_to_fix.append((node.name, node.lineno, "missing_return"))
+                        functions_to_fix.append(
+                            (node.name, node.lineno, "missing_return")
+                        )
                     elif has_return and not has_structured_return:
-                        functions_to_fix.append((node.name, node.lineno, "unstructured_return"))
+                        functions_to_fix.append(
+                            (node.name, node.lineno, "unstructured_return")
+                        )
 
             if not functions_to_fix:
                 return False, 0
@@ -142,7 +153,9 @@ class FocusedReturnFixer:
             fixed_count = 0
 
             for func_name, line_num, fix_type in functions_to_fix:
-                content = self.fix_function_return(content, func_name, line_num, fix_type)
+                content = self.fix_function_return(
+                    content, func_name, line_num, fix_type
+                )
                 fixed_count += 1
 
             # Add datetime import if needed
@@ -152,7 +165,9 @@ class FocusedReturnFixer:
                     lines = content.split("\n")
                     insert_pos = 0
                     for i, line in enumerate(lines):
-                        if line.strip().startswith("import ") or line.strip().startswith("from "):
+                        if line.strip().startswith(
+                            "import "
+                        ) or line.strip().startswith("from "):
                             insert_pos = i + 1
                         elif line.strip() and not line.strip().startswith("#"):
                             break

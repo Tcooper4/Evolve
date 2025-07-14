@@ -23,10 +23,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import shared utilities
-from core.session_utils import (
-    initialize_session_state,
-    update_last_updated,
-)
+from core.session_utils import initialize_session_state, update_last_updated
 
 # Import FPDF for PDF generation
 try:
@@ -71,7 +68,11 @@ def load_strategy_log():
 def get_top_models(df):
     """Get top performing models for each metric."""
     # Group by model and calculate mean metrics
-    metrics_df = df.groupby("model").agg({"sharpe": "mean", "accuracy": "mean", "win_rate": "mean"}).round(3)
+    metrics_df = (
+        df.groupby("model")
+        .agg({"sharpe": "mean", "accuracy": "mean", "win_rate": "mean"})
+        .round(3)
+    )
 
     # Get top model for each metric
     top_models = {}
@@ -100,7 +101,9 @@ def plot_metric_timeseries(df, metric, timeframe):
                         y=subset[metric],
                         name=f"{model_name} ({'Agentic' if agentic else 'Manual'})",
                         mode="lines+markers",
-                        hovertemplate="<b>%{x}</b><br>" + f"{metric.title()}: %{{y:.2f}}<br>" + "<extra></extra>",
+                        hovertemplate="<b>%{x}</b><br>"
+                        + f"{metric.title()}: %{{y:.2f}}<br>"
+                        + "<extra></extra>",
                     )
                 )
 
@@ -133,7 +136,9 @@ def plot_metric_distribution(df, metric, timeframe):
                 boxpoints="all",
                 jitter=0.3,
                 pointpos=-1.8,
-                hovertemplate="<b>%{x}</b><br>" + f"{metric.title()}: %{{y:.2f}}<br>" + "<extra></extra>",
+                hovertemplate="<b>%{x}</b><br>"
+                + f"{metric.title()}: %{{y:.2f}}<br>"
+                + "<extra></extra>",
             )
         )
 
@@ -164,7 +169,9 @@ def generate_pdf_report(df, timeframe, selected_metric, top_models, leaderboard_
 
     # Add timestamp
     pdf.set_font("Arial", "I", 10)
-    pdf.cell(0, 10, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=True)
+    pdf.cell(
+        0, 10, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=True
+    )
     pdf.ln(10)
 
     # Add top models
@@ -225,13 +232,17 @@ def plot_regime_comparison(df, regime):
     for metric in metrics:
         agentic_mean = regime_data[regime_data["agentic"]][metric].mean()
         manual_mean = regime_data[~regime_data["agentic"]][metric].mean()
-        comparison_data.append({"metric": metric, "Agentic": agentic_mean, "Manual": manual_mean})
+        comparison_data.append(
+            {"metric": metric, "Agentic": agentic_mean, "Manual": manual_mean}
+        )
 
     comparison_df = pd.DataFrame(comparison_data)
 
     # Create bar plot
     fig = px.bar(
-        comparison_df.melt(id_vars="metric", var_name="Decision Type", value_name="Value"),
+        comparison_df.melt(
+            id_vars="metric", var_name="Decision Type", value_name="Value"
+        ),
         x="metric",
         y="Value",
         color="Decision Type",
@@ -248,7 +259,11 @@ def plot_sector_performance(df, group_by):
         st.warning(f"Column '{group_by}' not found in data")
 
     # Group by sector/asset class and calculate mean metrics
-    sector_metrics = df.groupby(group_by).agg({"sharpe": "mean", "accuracy": "mean", "win_rate": "mean"}).round(3)
+    sector_metrics = (
+        df.groupby(group_by)
+        .agg({"sharpe": "mean", "accuracy": "mean", "win_rate": "mean"})
+        .round(3)
+    )
 
     # Create heatmap
     fig = px.imshow(
@@ -272,7 +287,9 @@ def main():
     update_last_updated()
 
     st.title("⚡ Strategy History")
-    st.markdown("Comprehensive analysis of strategy performance history and decision tracking.")
+    st.markdown(
+        "Comprehensive analysis of strategy performance history and decision tracking."
+    )
 
     # Load data
     df = load_strategy_log()
@@ -284,26 +301,41 @@ def main():
     st.sidebar.header("🔧 Filters")
 
     # Timeframe filter
-    timeframe_options = ["All Time", "Last 30 Days", "Last 90 Days", "Last 6 Months", "Last Year"]
+    timeframe_options = [
+        "All Time",
+        "Last 30 Days",
+        "Last 90 Days",
+        "Last 6 Months",
+        "Last Year",
+    ]
     timeframe = st.sidebar.selectbox("📅 Timeframe", timeframe_options, index=0)
 
     # Apply timeframe filter
     if timeframe != "All Time":
-        days_map = {"Last 30 Days": 30, "Last 90 Days": 90, "Last 6 Months": 180, "Last Year": 365}
+        days_map = {
+            "Last 30 Days": 30,
+            "Last 90 Days": 90,
+            "Last 6 Months": 180,
+            "Last Year": 365,
+        }
         cutoff_date = datetime.now() - timedelta(days=days_map[timeframe])
         df = df[df["timestamp"] >= cutoff_date]
 
     # Model filter
     if "model" in df.columns:
         models = df["model"].unique()
-        selected_models = st.sidebar.multiselect("🎯 Models", models, default=list(models))
+        selected_models = st.sidebar.multiselect(
+            "🎯 Models", models, default=list(models)
+        )
         df = df[df["model"].isin(selected_models)]
     else:
         st.sidebar.warning("No model data available")
         selected_models = []
 
     # Agentic filter
-    agentic_filter = st.sidebar.selectbox("🤖 Decision Type", ["All", "Agentic", "Manual"])
+    agentic_filter = st.sidebar.selectbox(
+        "🤖 Decision Type", ["All", "Agentic", "Manual"]
+    )
     if agentic_filter != "All":
         agentic_bool = agentic_filter == "Agentic"
         df = df[df["agentic"] == agentic_bool]
@@ -327,10 +359,16 @@ def main():
     # Performance leaderboard
     st.subheader("📊 Performance Leaderboard")
     leaderboard_df = (
-        df.groupby("model").agg({"sharpe": "mean", "accuracy": "mean", "win_rate": "mean", "agentic": "sum"}).round(3)
+        df.groupby("model")
+        .agg(
+            {"sharpe": "mean", "accuracy": "mean", "win_rate": "mean", "agentic": "sum"}
+        )
+        .round(3)
     )
     leaderboard_df["total_decisions"] = df.groupby("model").size()
-    leaderboard_df["agentic_ratio"] = (leaderboard_df["agentic"] / leaderboard_df["total_decisions"]).round(3)
+    leaderboard_df["agentic_ratio"] = (
+        leaderboard_df["agentic"] / leaderboard_df["total_decisions"]
+    ).round(3)
     leaderboard_df = leaderboard_df.drop("agentic", axis=1)
 
     st.dataframe(leaderboard_df)
@@ -340,13 +378,21 @@ def main():
     selected_metric = st.selectbox("Select Metric", ["sharpe", "accuracy", "win_rate"])
 
     # Create tabs for different views
-    tab1, tab2, tab3, tab4 = st.tabs(["📈 Time Series", "📊 Distribution", "🔄 Regime Analysis", "📋 Export"])
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["📈 Time Series", "📊 Distribution", "🔄 Regime Analysis", "📋 Export"]
+    )
 
     with tab1:
-        st.plotly_chart(plot_metric_timeseries(df, selected_metric, timeframe), use_container_width=True)
+        st.plotly_chart(
+            plot_metric_timeseries(df, selected_metric, timeframe),
+            use_container_width=True,
+        )
 
     with tab2:
-        st.plotly_chart(plot_metric_distribution(df, selected_metric, timeframe), use_container_width=True)
+        st.plotly_chart(
+            plot_metric_distribution(df, selected_metric, timeframe),
+            use_container_width=True,
+        )
 
     with tab3:
         st.subheader("🔄 Regime Analysis")
@@ -355,7 +401,9 @@ def main():
         regimes = df["regime"].unique()
         if len(regimes) > 1:
             selected_regime = st.selectbox("Select Regime", regimes)
-            st.plotly_chart(plot_regime_comparison(df, selected_regime), use_container_width=True)
+            st.plotly_chart(
+                plot_regime_comparison(df, selected_regime), use_container_width=True
+            )
         else:
             st.info("Only one regime found in the data.")
 
@@ -380,7 +428,9 @@ def main():
 
         # PDF export
         if FPDF_AVAILABLE:
-            pdf_data = generate_pdf_report(df, timeframe, selected_metric, top_models, leaderboard_df)
+            pdf_data = generate_pdf_report(
+                df, timeframe, selected_metric, top_models, leaderboard_df
+            )
             if pdf_data:
                 st.download_button(
                     label="⬇ Download PDF Report",
@@ -400,7 +450,9 @@ def main():
         st.metric("Total Decisions", len(df))
     with col2:
         agentic_count = df["agentic"].sum()
-        st.metric("Agentic Decisions", f"{agentic_count} ({agentic_count/len(df)*100:.1f}%)")
+        st.metric(
+            "Agentic Decisions", f"{agentic_count} ({agentic_count/len(df)*100:.1f}%)"
+        )
     with col3:
         avg_sharpe = df["sharpe"].mean()
         st.metric("Avg Sharpe Ratio", f"{avg_sharpe:.3f}")

@@ -34,7 +34,9 @@ def detect_drift(ticker: str, threshold=0.2) -> dict:
     with open(WEIGHT_HISTORY_PATH, "r") as f:
         history = json.load(f)
 
-    records = [entry[ticker] for ts, entry in sorted(history.items()) if ticker in entry]
+    records = [
+        entry[ticker] for ts, entry in sorted(history.items()) if ticker in entry
+    ]
     if len(records) < 2:
         return {}
 

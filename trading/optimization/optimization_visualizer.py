@@ -20,7 +20,9 @@ class OptimizationVisualizer:
         """
         self.results = results
 
-    def plot_convergence(self, metric: str = "sharpe_ratio", title: str = "Optimization Convergence") -> go.Figure:
+    def plot_convergence(
+        self, metric: str = "sharpe_ratio", title: str = "Optimization Convergence"
+    ) -> go.Figure:
         """Plot optimization convergence.
 
         Args:
@@ -40,18 +42,30 @@ class OptimizationVisualizer:
         timestamps = [r.timestamp for r in sorted_results]
 
         # Plot metric values
-        fig.add_trace(go.Scatter(x=timestamps, y=values, mode="lines+markers", name=metric))
+        fig.add_trace(
+            go.Scatter(x=timestamps, y=values, mode="lines+markers", name=metric)
+        )
 
         # Add best value line
         best_value = max(values)
-        fig.add_hline(y=best_value, line_dash="dash", line_color="red", annotation_text=f"Best: {best_value:.2f}")
+        fig.add_hline(
+            y=best_value,
+            line_dash="dash",
+            line_color="red",
+            annotation_text=f"Best: {best_value:.2f}",
+        )
 
-        fig.update_layout(title=title, xaxis_title="Time", yaxis_title=metric, template="plotly_white")
+        fig.update_layout(
+            title=title, xaxis_title="Time", yaxis_title=metric, template="plotly_white"
+        )
 
         return fig
 
     def plot_metric_tradeoffs(
-        self, x_metric: str = "sharpe_ratio", y_metric: str = "max_drawdown", title: str = "Metric Tradeoffs"
+        self,
+        x_metric: str = "sharpe_ratio",
+        y_metric: str = "max_drawdown",
+        title: str = "Metric Tradeoffs",
     ) -> go.Figure:
         """Plot metric tradeoffs.
 
@@ -87,11 +101,18 @@ class OptimizationVisualizer:
             )
         )
 
-        fig.update_layout(title=title, xaxis_title=x_metric, yaxis_title=y_metric, template="plotly_white")
+        fig.update_layout(
+            title=title,
+            xaxis_title=x_metric,
+            yaxis_title=y_metric,
+            template="plotly_white",
+        )
 
         return fig
 
-    def plot_parameter_importance(self, study: optuna.Study, title: str = "Parameter Importance") -> go.Figure:
+    def plot_parameter_importance(
+        self, study: optuna.Study, title: str = "Parameter Importance"
+    ) -> go.Figure:
         """Plot parameter importance.
 
         Args:
@@ -105,13 +126,26 @@ class OptimizationVisualizer:
 
         fig = go.Figure()
 
-        fig.add_trace(go.Bar(x=list(importance.keys()), y=list(importance.values()), name="Importance"))
+        fig.add_trace(
+            go.Bar(
+                x=list(importance.keys()),
+                y=list(importance.values()),
+                name="Importance",
+            )
+        )
 
-        fig.update_layout(title=title, xaxis_title="Parameter", yaxis_title="Importance Score", template="plotly_white")
+        fig.update_layout(
+            title=title,
+            xaxis_title="Parameter",
+            yaxis_title="Importance Score",
+            template="plotly_white",
+        )
 
         return fig
 
-    def plot_parameter_distributions(self, title: str = "Parameter Distributions") -> go.Figure:
+    def plot_parameter_distributions(
+        self, title: str = "Parameter Distributions"
+    ) -> go.Figure:
         """Plot parameter distributions.
 
         Args:
@@ -126,7 +160,9 @@ class OptimizationVisualizer:
             param_names.update(result.parameters.keys())
 
         # Create subplots
-        fig = make_subplots(rows=len(param_names), cols=1, subplot_titles=list(param_names))
+        fig = make_subplots(
+            rows=len(param_names), cols=1, subplot_titles=list(param_names)
+        )
 
         # Plot each parameter
         for i, param in enumerate(param_names, 1):
@@ -134,11 +170,15 @@ class OptimizationVisualizer:
 
             fig.add_trace(go.Histogram(x=values, name=param), row=i, col=1)
 
-        fig.update_layout(title=title, height=300 * len(param_names), template="plotly_white")
+        fig.update_layout(
+            title=title, height=300 * len(param_names), template="plotly_white"
+        )
 
         return fig
 
-    def plot_equity_curves(self, n_curves: int = 5, title: str = "Top Equity Curves") -> go.Figure:
+    def plot_equity_curves(
+        self, n_curves: int = 5, title: str = "Top Equity Curves"
+    ) -> go.Figure:
         """Plot top equity curves.
 
         Args:
@@ -149,7 +189,9 @@ class OptimizationVisualizer:
             Plotly figure
         """
         # Sort results by Sharpe ratio
-        sorted_results = sorted(self.results, key=lambda x: x.metrics["sharpe_ratio"], reverse=True)[:n_curves]
+        sorted_results = sorted(
+            self.results, key=lambda x: x.metrics["sharpe_ratio"], reverse=True
+        )[:n_curves]
 
         fig = go.Figure()
 
@@ -163,11 +205,18 @@ class OptimizationVisualizer:
                 )
             )
 
-        fig.update_layout(title=title, xaxis_title="Date", yaxis_title="Equity", template="plotly_white")
+        fig.update_layout(
+            title=title,
+            xaxis_title="Date",
+            yaxis_title="Equity",
+            template="plotly_white",
+        )
 
         return fig
 
-    def plot_drawdowns(self, n_curves: int = 5, title: str = "Top Drawdowns") -> go.Figure:
+    def plot_drawdowns(
+        self, n_curves: int = 5, title: str = "Top Drawdowns"
+    ) -> go.Figure:
         """Plot top drawdowns.
 
         Args:
@@ -178,7 +227,9 @@ class OptimizationVisualizer:
             Plotly figure
         """
         # Sort results by Sharpe ratio
-        sorted_results = sorted(self.results, key=lambda x: x.metrics["sharpe_ratio"], reverse=True)[:n_curves]
+        sorted_results = sorted(
+            self.results, key=lambda x: x.metrics["sharpe_ratio"], reverse=True
+        )[:n_curves]
 
         fig = go.Figure()
 
@@ -193,7 +244,12 @@ class OptimizationVisualizer:
                 )
             )
 
-        fig.update_layout(title=title, xaxis_title="Date", yaxis_title="Drawdown", template="plotly_white")
+        fig.update_layout(
+            title=title,
+            xaxis_title="Date",
+            yaxis_title="Drawdown",
+            template="plotly_white",
+        )
 
         return fig
 
@@ -252,7 +308,9 @@ class OptimizationVisualizer:
 
         # Display optimization time
         if "optimization_time" in results:
-            st.write(f"**Optimization Time:** {results['optimization_time']:.2f} seconds")
+            st.write(
+                f"**Optimization Time:** {results['optimization_time']:.2f} seconds"
+            )
 
         # Display number of iterations
         if "n_iterations" in results:

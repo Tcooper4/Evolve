@@ -24,7 +24,10 @@ warnings.filterwarnings("ignore")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("logs/unified_interface.log"), logging.StreamHandler(sys.stdout)],
+    handlers=[
+        logging.FileHandler("logs/unified_interface.log"),
+        logging.StreamHandler(sys.stdout),
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -131,7 +134,11 @@ class UnifiedInterface:
             Dict[str, Any]: Default configuration
         """
         return {
-            "system": {"name": "Evolve Trading Platform", "version": "1.0.0", "mode": "production"},
+            "system": {
+                "name": "Evolve Trading Platform",
+                "version": "1.0.0",
+                "mode": "production",
+            },
             "logging": {"level": "INFO", "file": "logs/unified_interface.log"},
             "fallback": {"enabled": True, "mode": "automatic"},
         }
@@ -195,7 +202,9 @@ class UnifiedInterface:
             try:
                 import redis
 
-                redis_client = redis.Redis(host="localhost", port=6379, db=0, socket_connect_timeout=1)
+                redis_client = redis.Redis(
+                    host="localhost", port=6379, db=0, socket_connect_timeout=1
+                )
                 redis_client.ping()
                 logger.info("Redis connection established for logging")
             except Exception as e:
@@ -233,7 +242,9 @@ class UnifiedInterface:
                         if component_health.get("status") == "healthy":
                             health["healthy_components"] += 1
                         elif component_health.get("status") == "fallback":
-                            health["healthy_components"] += 1  # Fallback is considered healthy
+                            health[
+                                "healthy_components"
+                            ] += 1  # Fallback is considered healthy
 
                 except Exception as e:
                     logger.error(f"Error checking health of {name}: {e}")
@@ -273,18 +284,25 @@ class UnifiedInterface:
 
             # Setup Streamlit page
             st.set_page_config(
-                page_title="Evolve Trading Platform", page_icon="🚀", layout="wide", initial_sidebar_state="expanded"
+                page_title="Evolve Trading Platform",
+                page_icon="🚀",
+                layout="wide",
+                initial_sidebar_state="expanded",
             )
 
             # Main interface
             st.title("🚀 Evolve Trading Platform")
-            st.markdown("Production-ready AI-powered trading system with comprehensive analysis and automation.")
+            st.markdown(
+                "Production-ready AI-powered trading system with comprehensive analysis and automation."
+            )
 
             # Display system health
             self._display_system_health()
 
             # Tab navigation
-            tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Forecast", "🎯 Strategy", "💼 Portfolio", "📋 Logs", "⚙️ System"])
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(
+                ["📈 Forecast", "🎯 Strategy", "💼 Portfolio", "📋 Logs", "⚙️ System"]
+            )
 
             results = {}
 
@@ -314,7 +332,11 @@ class UnifiedInterface:
         except Exception as e:
             logger.error(f"Error running unified interface: {e}")
             st.error(f"System error: {str(e)}")
-            return {"status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "status": "error",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _display_system_health(self) -> None:
         """
@@ -325,9 +347,12 @@ class UnifiedInterface:
             col1, col2, col3, col4 = st.columns(4)
 
             with col1:
-                status_color = {"healthy": "🟢", "degraded": "🟡", "critical": "🔴", "unknown": "⚪"}.get(
-                    self.system_health["overall_status"], "⚪"
-                )
+                status_color = {
+                    "healthy": "🟢",
+                    "degraded": "🟡",
+                    "critical": "🔴",
+                    "unknown": "⚪",
+                }.get(self.system_health["overall_status"], "⚪")
 
                 st.metric(
                     label="System Status",
@@ -338,21 +363,27 @@ class UnifiedInterface:
             with col2:
                 st.metric(
                     label="Data Feed",
-                    value=self.system_health["components"].get("data_feed", {}).get("status", "unknown"),
+                    value=self.system_health["components"]
+                    .get("data_feed", {})
+                    .get("status", "unknown"),
                     delta="Active",
                 )
 
             with col3:
                 st.metric(
                     label="Model Engine",
-                    value=self.system_health["components"].get("model_monitor", {}).get("status", "unknown"),
+                    value=self.system_health["components"]
+                    .get("model_monitor", {})
+                    .get("status", "unknown"),
                     delta="Active",
                 )
 
             with col4:
                 st.metric(
                     label="Strategy Engine",
-                    value=self.system_health["components"].get("strategy_selector", {}).get("status", "unknown"),
+                    value=self.system_health["components"]
+                    .get("strategy_selector", {})
+                    .get("status", "unknown"),
                     delta="Active",
                 )
 
@@ -374,19 +405,29 @@ class UnifiedInterface:
             col1, col2 = st.columns(2)
 
             with col1:
-                symbol = st.text_input("Symbol", value="AAPL", help="Enter stock symbol")
-                timeframe = st.selectbox("Timeframe", ["1d", "1h", "4h", "1w"], help="Select data timeframe")
+                symbol = st.text_input(
+                    "Symbol", value="AAPL", help="Enter stock symbol"
+                )
+                timeframe = st.selectbox(
+                    "Timeframe", ["1d", "1h", "4h", "1w"], help="Select data timeframe"
+                )
 
             with col2:
                 model_type = st.selectbox(
-                    "Model", ["ensemble", "lstm", "xgboost", "prophet"], help="Select forecasting model"
+                    "Model",
+                    ["ensemble", "lstm", "xgboost", "prophet"],
+                    help="Select forecasting model",
                 )
-                days = st.slider("Forecast Days", 1, 30, 7, help="Number of days to forecast")
+                days = st.slider(
+                    "Forecast Days", 1, 30, 7, help="Number of days to forecast"
+                )
 
             # Generate forecast button
             if st.button("🚀 Generate Forecast", type="primary"):
                 with st.spinner("Generating forecast..."):
-                    result = self._generate_forecast(symbol, timeframe, model_type, days)
+                    result = self._generate_forecast(
+                        symbol, timeframe, model_type, days
+                    )
                     self._display_forecast_results(result)
                     return result
 
@@ -397,7 +438,9 @@ class UnifiedInterface:
             st.error(f"Error in forecast tab: {str(e)}")
             return {"status": "error", "error": str(e)}
 
-    def _generate_forecast(self, symbol: str, timeframe: str, model_type: str, days: int) -> Dict[str, Any]:
+    def _generate_forecast(
+        self, symbol: str, timeframe: str, model_type: str, days: int
+    ) -> Dict[str, Any]:
         """
         Generate a forecast using available components.
 
@@ -419,11 +462,15 @@ class UnifiedInterface:
                 end_date = datetime.now().strftime("%Y-%m-%d")
                 start_date = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
 
-                historical_data = data_feed.get_historical_data(symbol, start_date, end_date, timeframe)
+                historical_data = data_feed.get_historical_data(
+                    symbol, start_date, end_date, timeframe
+                )
 
                 if historical_data is not None and not historical_data.empty:
                     # Generate forecast (simplified for now)
-                    forecast_values = self._generate_simple_forecast(historical_data, days)
+                    forecast_values = self._generate_simple_forecast(
+                        historical_data, days
+                    )
 
                     result = {
                         "symbol": symbol,
@@ -454,7 +501,12 @@ class UnifiedInterface:
 
         except Exception as e:
             logger.error(f"Error generating forecast: {e}")
-            return {"symbol": symbol, "status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "symbol": symbol,
+                "status": "error",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _generate_simple_forecast(self, data: pd.DataFrame, days: int) -> List[float]:
         """
@@ -486,7 +538,9 @@ class UnifiedInterface:
             forecast_values = []
             for i in range(days):
                 forecast_price = current_price * (1 + trend * (i + 1) / 30)
-                forecast_values.append(max(forecast_price, 1.0))  # Ensure positive price
+                forecast_values.append(
+                    max(forecast_price, 1.0)
+                )  # Ensure positive price
 
             return forecast_values
 
@@ -508,10 +562,18 @@ class UnifiedInterface:
                 # Display forecast chart
                 if "forecast_values" in result:
                     forecast_df = pd.DataFrame(
-                        {"Day": range(1, len(result["forecast_values"]) + 1), "Forecast": result["forecast_values"]}
+                        {
+                            "Day": range(1, len(result["forecast_values"]) + 1),
+                            "Forecast": result["forecast_values"],
+                        }
                     )
 
-                    fig = px.line(forecast_df, x="Day", y="Forecast", title=f"Forecast for {result['symbol']}")
+                    fig = px.line(
+                        forecast_df,
+                        x="Day",
+                        y="Forecast",
+                        title=f"Forecast for {result['symbol']}",
+                    )
                     st.plotly_chart(fig, use_container_width=True)
 
                 # Display metrics
@@ -593,9 +655,12 @@ class UnifiedInterface:
             st.subheader("Component Status")
             for name, health in self.system_health.get("components", {}).items():
                 status = health.get("status", "unknown")
-                color = {"healthy": "green", "fallback": "orange", "error": "red", "unknown": "gray"}.get(
-                    status, "gray"
-                )
+                color = {
+                    "healthy": "green",
+                    "fallback": "orange",
+                    "error": "red",
+                    "unknown": "gray",
+                }.get(status, "gray")
 
                 st.markdown(f"- **{name}**: :{color}[{status}]")
 

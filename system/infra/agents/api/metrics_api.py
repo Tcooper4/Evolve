@@ -1,5 +1,3 @@
-import asyncio
-import json
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -21,19 +19,19 @@ class MetricsAPI:
         try:
             cpu_percent = psutil.cpu_percent(interval=1)
             memory = psutil.virtual_memory()
-            disk = psutil.disk_usage('/')
+            disk = psutil.disk_usage("/")
 
             metrics = {
-                'timestamp': datetime.now().isoformat(),
-                'cpu_usage': cpu_percent,
-                'memory_usage': memory.percent,
-                'memory_total': memory.total,
-                'memory_available': memory.available,
-                'disk_usage': disk.percent,
-                'disk_total': disk.total,
-                'disk_free': disk.free,
-                'active_tasks': len(await self.orchestrator.get_running_tasks()),
-                'system_status': self._get_system_status(cpu_percent, memory.percent)
+                "timestamp": datetime.now().isoformat(),
+                "cpu_usage": cpu_percent,
+                "memory_usage": memory.percent,
+                "memory_total": memory.total,
+                "memory_available": memory.available,
+                "disk_usage": disk.percent,
+                "disk_total": disk.total,
+                "disk_free": disk.free,
+                "active_tasks": len(await self.orchestrator.get_running_tasks()),
+                "system_status": self._get_system_status(cpu_percent, memory.percent),
             }
 
             # Store in history
@@ -54,14 +52,16 @@ class MetricsAPI:
                 return None
 
             metrics = {
-                'task_id': task.task_id,
-                'name': task.name,
-                'status': task.status,
-                'progress': task.progress,
-                'start_time': task.start_time.isoformat() if task.start_time else None,
-                'end_time': task.end_time.isoformat() if task.end_time else None,
-                'execution_time': (task.end_time - task.start_time).total_seconds() if task.end_time and task.start_time else None,
-                'error_message': task.error_message
+                "task_id": task.task_id,
+                "name": task.name,
+                "status": task.status,
+                "progress": task.progress,
+                "start_time": task.start_time.isoformat() if task.start_time else None,
+                "end_time": task.end_time.isoformat() if task.end_time else None,
+                "execution_time": (task.end_time - task.start_time).total_seconds()
+                if task.end_time and task.start_time
+                else None,
+                "error_message": task.error_message,
             }
 
             return metrics
@@ -77,13 +77,19 @@ class MetricsAPI:
 
             for agent in agents:
                 agent_metrics = {
-                    'agent_id': agent.agent_id,
-                    'name': agent.name,
-                    'status': agent.status,
-                    'active_tasks': len(agent.get_tasks()),
-                    'last_heartbeat': agent.last_heartbeat.isoformat() if agent.last_heartbeat else None,
-                    'cpu_usage': agent.cpu_usage if hasattr(agent, 'cpu_usage') else None,
-                    'memory_usage': agent.memory_usage if hasattr(agent, 'memory_usage') else None
+                    "agent_id": agent.agent_id,
+                    "name": agent.name,
+                    "status": agent.status,
+                    "active_tasks": len(agent.get_tasks()),
+                    "last_heartbeat": agent.last_heartbeat.isoformat()
+                    if agent.last_heartbeat
+                    else None,
+                    "cpu_usage": agent.cpu_usage
+                    if hasattr(agent, "cpu_usage")
+                    else None,
+                    "memory_usage": agent.memory_usage
+                    if hasattr(agent, "memory_usage")
+                    else None,
                 }
                 metrics.append(agent_metrics)
 
@@ -100,13 +106,17 @@ class MetricsAPI:
 
             for model in models:
                 model_metrics = {
-                    'model_id': model.model_id,
-                    'name': model.name,
-                    'type': model.type,
-                    'status': model.status,
-                    'accuracy': model.accuracy if hasattr(model, 'accuracy') else None,
-                    'last_trained': model.last_trained.isoformat() if model.last_trained else None,
-                    'training_time': model.training_time if hasattr(model, 'training_time') else None
+                    "model_id": model.model_id,
+                    "name": model.name,
+                    "type": model.type,
+                    "status": model.status,
+                    "accuracy": model.accuracy if hasattr(model, "accuracy") else None,
+                    "last_trained": model.last_trained.isoformat()
+                    if model.last_trained
+                    else None,
+                    "training_time": model.training_time
+                    if hasattr(model, "training_time")
+                    else None,
                 }
                 metrics.append(model_metrics)
 
@@ -126,11 +136,11 @@ class MetricsAPI:
     def _get_system_status(self, cpu_percent: float, memory_percent: float) -> str:
         """Determine system status based on resource usage"""
         if cpu_percent > 90 or memory_percent > 90:
-            return 'error'
+            return "error"
         elif cpu_percent > 70 or memory_percent > 70:
-            return 'warning'
+            return "warning"
         else:
-            return 'active'
+            return "active"
 
     async def get_all_metrics(self) -> Dict:
         """Get all metrics in one call"""
@@ -140,10 +150,10 @@ class MetricsAPI:
             model_metrics = await self.get_model_metrics()
 
             return {
-                'system': system_metrics,
-                'agents': agent_metrics,
-                'models': model_metrics,
-                'timestamp': datetime.now().isoformat()
+                "system": system_metrics,
+                "agents": agent_metrics,
+                "models": model_metrics,
+                "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
             logger.error(f"Error getting all metrics: {str(e)}")

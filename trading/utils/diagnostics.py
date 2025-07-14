@@ -53,7 +53,13 @@ class SystemDiagnostics:
         except Exception as e:
             issues.append(f"Pandas error: {str(e)}")
 
-        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "result": len(issues) == 0,
+            "issues": issues,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def check_forecasting_models(self) -> Tuple[bool, List[str]]:
         """Check forecasting model availability."""
@@ -73,7 +79,13 @@ class SystemDiagnostics:
         except Exception as e:
             issues.append(f"PyTorch error: {str(e)}")
 
-        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "result": len(issues) == 0,
+            "issues": issues,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def check_agent_communication(self) -> Tuple[bool, List[str]]:
         """Check agent communication channels."""
@@ -84,7 +96,7 @@ class SystemDiagnostics:
             "trading/agents",
             "trading/memory",
             "trading/models",
-            "trading/data"
+            "trading/data",
         ]
 
         for dir_path in required_dirs:
@@ -104,7 +116,13 @@ class SystemDiagnostics:
         except Exception as e:
             issues.append(f"Memory access error: {str(e)}")
 
-        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "result": len(issues) == 0,
+            "issues": issues,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def check_system_resources(self) -> Tuple[bool, List[str]]:
         """Check system resource availability."""
@@ -121,52 +139,55 @@ class SystemDiagnostics:
             issues.append(f"High memory usage: {memory.percent}%")
 
         # Check disk space
-        disk = psutil.disk_usage('/')
+        disk = psutil.disk_usage("/")
         if disk.percent > 90:
             issues.append(f"Low disk space: {disk.percent}% used")
 
-        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "result": len(issues) == 0,
+            "issues": issues,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def run_health_check(self) -> Dict[str, Any]:
         """Run all health checks."""
         results = {
-            'timestamp': datetime.now().isoformat(),
-            'status': 'healthy',
-            'checks': {},
-            'issues': []
+            "timestamp": datetime.now().isoformat(),
+            "status": "healthy",
+            "checks": {},
+            "issues": [],
         }
 
         # Run all checks
         checks = {
-            'data_loading': self.check_data_loading,
-            'forecasting_models': self.check_forecasting_models,
-            'agent_communication': self.check_agent_communication,
-            'system_resources': self.check_system_resources
+            "data_loading": self.check_data_loading,
+            "forecasting_models": self.check_forecasting_models,
+            "agent_communication": self.check_agent_communication,
+            "system_resources": self.check_system_resources,
         }
 
         for name, check_func in checks.items():
             is_healthy, issues = check_func()
-            results['checks'][name] = {
-                'status': 'healthy' if is_healthy else 'unhealthy',
-                'issues': issues
+            results["checks"][name] = {
+                "status": "healthy" if is_healthy else "unhealthy",
+                "issues": issues,
             }
             if issues:
-                results['issues'].extend(issues)
+                results["issues"].extend(issues)
 
         # Update overall status
-        if results['issues']:
-            results['status'] = 'unhealthy'
+        if results["issues"]:
+            results["status"] = "unhealthy"
 
         # Save results
         self.health_status = results
         self.last_check = datetime.now()
 
         # Log issues
-        if results['issues']:
-            error_logger.log_error(
-                "Health check failed",
-                context=results
-            )
+        if results["issues"]:
+            error_logger.log_error("Health check failed", context=results)
 
         return results
 
@@ -179,18 +200,19 @@ class SystemDiagnostics:
     def save_report(self, filepath: str = "health_report.json") -> None:
         """Save health check report to file."""
         report = {
-            'timestamp': datetime.now().isoformat(),
-            'health_status': self.health_status,
-            'system_info': {
-                'python_version': sys.version,
-                'platform': platform.platform(),
-                'processor': platform.processor(),
-                'memory': f"{psutil.virtual_memory().total / 1024 / 1024 / 1024:.1f} GB"
-            }
+            "timestamp": datetime.now().isoformat(),
+            "health_status": self.health_status,
+            "system_info": {
+                "python_version": sys.version,
+                "platform": platform.platform(),
+                "processor": platform.processor(),
+                "memory": f"{psutil.virtual_memory().total / 1024 / 1024 / 1024:.1f} GB",
+            },
         }
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(report, f, indent=2)
+
 
 # Create singleton instance
 diagnostics = SystemDiagnostics()

@@ -44,14 +44,21 @@ def sample_tasks():
             task_id="test_task_2",
             type="forecast",
             status=TaskStatus.FAILED,
-            metadata={"agent": "forecast_agent", "creation_time": "2024-01-01T11:00:00", "error": "Invalid input data"},
+            metadata={
+                "agent": "forecast_agent",
+                "creation_time": "2024-01-01T11:00:00",
+                "error": "Invalid input data",
+            },
             notes="Test task 2 failed due to invalid data",
         ),
         Task(
             task_id="test_task_3",
             type="strategy",
             status=TaskStatus.PENDING,
-            metadata={"agent": "strategy_agent", "creation_time": "2024-01-01T12:00:00"},
+            metadata={
+                "agent": "strategy_agent",
+                "creation_time": "2024-01-01T12:00:00",
+            },
             notes="Test task 3 is pending",
         ),
     ]
@@ -69,7 +76,9 @@ def test_task_metrics_calculation(populated_task_memory):
     """Test the calculation of task metrics."""
     # Get metrics
     total_tasks = len(populated_task_memory.tasks)
-    completed_tasks = len(populated_task_memory.get_tasks_by_status(TaskStatus.COMPLETED))
+    completed_tasks = len(
+        populated_task_memory.get_tasks_by_status(TaskStatus.COMPLETED)
+    )
     failed_tasks = len(populated_task_memory.get_tasks_by_status(TaskStatus.FAILED))
     pending_tasks = len(populated_task_memory.get_tasks_by_status(TaskStatus.PENDING))
 
@@ -108,7 +117,10 @@ def test_task_details(populated_task_memory):
 
 def test_status_distribution(populated_task_memory):
     """Test task status distribution calculation."""
-    status_counts = {status: len(populated_task_memory.get_tasks_by_status(status)) for status in TaskStatus}
+    status_counts = {
+        status: len(populated_task_memory.get_tasks_by_status(status))
+        for status in TaskStatus
+    }
 
     # Verify status distribution
     assert status_counts[TaskStatus.COMPLETED] == 1
@@ -124,7 +136,11 @@ def test_timeline_data(populated_task_memory):
     for task in completed_tasks:
         if "completion_time" in task.metadata:
             timeline_data.append(
-                {"task_id": task.task_id, "completion_time": task.metadata["completion_time"], "type": task.type}
+                {
+                    "task_id": task.task_id,
+                    "completion_time": task.metadata["completion_time"],
+                    "type": task.type,
+                }
             )
 
     # Verify timeline data

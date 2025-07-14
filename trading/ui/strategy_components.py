@@ -48,23 +48,31 @@ def create_strategy_form(
     start_date, end_date = create_date_range_selector(key=f"{key_prefix}_date_range")
 
     # Get strategy selection
-    selected_strategy = create_strategy_selector(default_strategy=default_strategy, key=f"{key_prefix}_strategy")
+    selected_strategy = create_strategy_selector(
+        default_strategy=default_strategy, key=f"{key_prefix}_strategy"
+    )
 
     # Get strategy parameters if a strategy is selected
     parameters = {}
     if selected_strategy:
         strategy_config = registry.get_strategy_config(selected_strategy)
         if strategy_config:
-            parameters = create_parameter_inputs(strategy_config.parameters, key_prefix=f"{key_prefix}_strategy")
+            parameters = create_parameter_inputs(
+                strategy_config.parameters, key_prefix=f"{key_prefix}_strategy"
+            )
 
     # Get asset selection
     selected_asset = create_asset_selector(
-        assets=["BTC/USD", "ETH/USD", "AAPL", "MSFT", "GOOGL"], default_asset=default_asset, key=f"{key_prefix}_asset"
+        assets=["BTC/USD", "ETH/USD", "AAPL", "MSFT", "GOOGL"],
+        default_asset=default_asset,
+        key=f"{key_prefix}_asset",
     )
 
     # Get timeframe selection
     selected_timeframe = create_timeframe_selector(
-        timeframes=["1h", "4h", "1d", "1w"], default_timeframe=default_timeframe, key=f"{key_prefix}_timeframe"
+        timeframes=["1h", "4h", "1d", "1w"],
+        default_timeframe=default_timeframe,
+        key=f"{key_prefix}_timeframe",
     )
 
     # Log form submission for agentic monitoring
@@ -97,17 +105,34 @@ def create_performance_chart(
     fig = go.Figure()
 
     # Add equity curve
-    fig.add_trace(go.Scatter(x=data.index, y=data["equity"], name="Strategy", line=dict(color="blue")))
+    fig.add_trace(
+        go.Scatter(
+            x=data.index, y=data["equity"], name="Strategy", line=dict(color="blue")
+        )
+    )
 
     # Add benchmark overlay if requested
     if show_benchmark and "benchmark" in data.columns:
         fig.add_trace(
-            go.Scatter(x=data.index, y=data["benchmark"], name="Benchmark", line=dict(color="gray", dash="dash"))
+            go.Scatter(
+                x=data.index,
+                y=data["benchmark"],
+                name="Benchmark",
+                line=dict(color="gray", dash="dash"),
+            )
         )
 
     # Add drawdown
     if "drawdown" in data.columns:
-        fig.add_trace(go.Scatter(x=data.index, y=data["drawdown"], name="Drawdown", line=dict(color="red"), yaxis="y2"))
+        fig.add_trace(
+            go.Scatter(
+                x=data.index,
+                y=data["drawdown"],
+                name="Drawdown",
+                line=dict(color="red"),
+                yaxis="y2",
+            )
+        )
 
     # Update layout
     fig.update_layout(
@@ -128,7 +153,9 @@ def create_performance_chart(
     return fig
 
 
-def create_performance_metrics(data: pd.DataFrame, strategy_config: StrategyConfig) -> Dict[str, float]:
+def create_performance_metrics(
+    data: pd.DataFrame, strategy_config: StrategyConfig
+) -> Dict[str, float]:
     """Calculate and display strategy performance metrics.
 
     Args:
@@ -167,7 +194,9 @@ def create_performance_metrics(data: pd.DataFrame, strategy_config: StrategyConf
     return metrics
 
 
-def create_trade_list(trades: pd.DataFrame, strategy_config: StrategyConfig) -> Dict[str, Any]:
+def create_trade_list(
+    trades: pd.DataFrame, strategy_config: StrategyConfig
+) -> Dict[str, Any]:
     """Display a list of trades with filtering options.
 
     Args:
@@ -188,13 +217,28 @@ def create_trade_list(trades: pd.DataFrame, strategy_config: StrategyConfig) -> 
             max_profit = st.number_input("Max Profit (%)", value=100.0, step=1.0)
 
         # Filter trades
-        filtered_trades = trades[(trades["profit_pct"] >= min_profit) & (trades["profit_pct"] <= max_profit)]
+        filtered_trades = trades[
+            (trades["profit_pct"] >= min_profit) & (trades["profit_pct"] <= max_profit)
+        ]
 
         # Display trades
         st.dataframe(
             filtered_trades[
-                ["entry_time", "exit_time", "entry_price", "exit_price", "profit_pct", "holding_period"]
-            ].style.format({"profit_pct": "{:.2f}%", "entry_price": "${:.2f}", "exit_price": "${:.2f}"})
+                [
+                    "entry_time",
+                    "exit_time",
+                    "entry_price",
+                    "exit_price",
+                    "profit_pct",
+                    "holding_period",
+                ]
+            ].style.format(
+                {
+                    "profit_pct": "{:.2f}%",
+                    "entry_price": "${:.2f}",
+                    "exit_price": "${:.2f}",
+                }
+            )
         )
 
         # Log trade list display for agentic monitoring
@@ -219,7 +263,10 @@ def create_trade_list(trades: pd.DataFrame, strategy_config: StrategyConfig) -> 
 
 
 def create_strategy_export(
-    data: pd.DataFrame, trades: pd.DataFrame, strategy_config: StrategyConfig, metrics: Dict[str, float]
+    data: pd.DataFrame,
+    trades: pd.DataFrame,
+    strategy_config: StrategyConfig,
+    metrics: Dict[str, float],
 ) -> Dict[str, Any]:
     """Create export options for strategy results.
 
@@ -236,7 +283,9 @@ def create_strategy_export(
         st.subheader("Export Results")
 
         # Create export options
-        export_format = st.radio("Select Export Format", ["CSV", "JSON", "Excel"], key=os.getenv("KEY", ""))
+        export_format = st.radio(
+            "Select Export Format", ["CSV", "JSON", "Excel"], key=os.getenv("KEY", "")
+        )
 
         if st.button("Export"):
             # Prepare export data

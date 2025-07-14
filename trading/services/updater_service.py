@@ -29,7 +29,9 @@ class UpdaterService(BaseService):
     Handles model update and retraining requests and communicates results via Redis.
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0):
+    def __init__(
+        self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0
+    ):
         """Initialize the UpdaterService."""
         super().__init__("updater", redis_host, redis_port, redis_db)
 
@@ -64,7 +66,11 @@ class UpdaterService(BaseService):
                 return self._handle_auto_update_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {"type": "error", "error": f"Unknown message type: {message_type}", "original_message": data}
+                return {
+                    "type": "error",
+                    "error": f"Unknown message type: {message_type}",
+                    "original_message": data,
+                }
 
         except Exception as e:
             logger.error(f"Error processing message: {e}")
@@ -87,7 +93,9 @@ class UpdaterService(BaseService):
 
             # Retrain the model using the agent
             result = self.agent.retrain_model(
-                model_id=model_id, new_data_period=new_data_period, retrain_type=retrain_type
+                model_id=model_id,
+                new_data_period=new_data_period,
+                retrain_type=retrain_type,
             )
 
             # Log to memory
@@ -112,8 +120,16 @@ class UpdaterService(BaseService):
         except Exception as e:
             tb = traceback.format_exc()
             ts = datetime.utcnow().isoformat() + "Z"
-            logger.error(f"Error retraining model: {e}\nTraceback:\n{tb}\nTimestamp: {ts}")
-            return {"type": "error", "error": str(e), "traceback": tb, "timestamp": ts, "status": "failed"}
+            logger.error(
+                f"Error retraining model: {e}\nTraceback:\n{tb}\nTimestamp: {ts}"
+            )
+            return {
+                "type": "error",
+                "error": str(e),
+                "traceback": tb,
+                "timestamp": ts,
+                "status": "failed",
+            }
 
     def _handle_tune_request(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle model tuning request."""
@@ -128,11 +144,15 @@ class UpdaterService(BaseService):
             if not model_id:
                 return {"type": "error", "error": "model_id is required"}
 
-            logger.info(f"Tuning model {model_id} with {optimization_method} optimization")
+            logger.info(
+                f"Tuning model {model_id} with {optimization_method} optimization"
+            )
 
             # Tune the model using the agent
             result = self.agent.tune_model(
-                model_id=model_id, tuning_params=tuning_params, optimization_method=optimization_method
+                model_id=model_id,
+                tuning_params=tuning_params,
+                optimization_method=optimization_method,
             )
 
             # Log to memory
@@ -149,7 +169,11 @@ class UpdaterService(BaseService):
                 },
             )
 
-            return {"type": "model_tuned", "result": result, "status": "success" if result.get("success") else "failed"}
+            return {
+                "type": "model_tuned",
+                "result": result,
+                "status": "success" if result.get("success") else "failed",
+            }
 
         except Exception as e:
             logger.error(f"Error tuning model: {e}")
@@ -166,13 +190,18 @@ class UpdaterService(BaseService):
             replacement_reason = replace_data.get("reason", "performance_improvement")
 
             if not old_model_id or not new_model_id:
-                return {"type": "error", "error": "Both old_model_id and new_model_id are required"}
+                return {
+                    "type": "error",
+                    "error": "Both old_model_id and new_model_id are required",
+                }
 
             logger.info(f"Replacing model {old_model_id} with {new_model_id}")
 
             # Replace the model using the agent
             result = self.agent.replace_model(
-                old_model_id=old_model_id, new_model_id=new_model_id, reason=replacement_reason
+                old_model_id=old_model_id,
+                new_model_id=new_model_id,
+                reason=replacement_reason,
             )
 
             # Log to memory
@@ -228,10 +257,14 @@ class UpdaterService(BaseService):
             timeframe = auto_data.get("timeframe", "1h")
             update_type = auto_data.get("update_type", "smart")
 
-            logger.info(f"Starting auto-update for {symbol} with {update_type} strategy")
+            logger.info(
+                f"Starting auto-update for {symbol} with {update_type} strategy"
+            )
 
             # Perform automatic update
-            result = self.agent.auto_update_models(symbol=symbol, timeframe=timeframe, update_type=update_type)
+            result = self.agent.auto_update_models(
+                symbol=symbol, timeframe=timeframe, update_type=update_type
+            )
 
             # Log to memory
             self.memory.log_decision(
@@ -247,7 +280,11 @@ class UpdaterService(BaseService):
                 },
             )
 
-            return {"type": "auto_update_completed", "result": result, "status": "success"}
+            return {
+                "type": "auto_update_completed",
+                "result": result,
+                "status": "success",
+            }
 
         except Exception as e:
             logger.error(f"Error in auto-update: {e}")
@@ -260,7 +297,9 @@ class UpdaterService(BaseService):
 
             # Get recent updates
             recent_updates = [
-                entry for entry in memory_stats.get("recent_decisions", []) if entry.get("agent_name") == "updater"
+                entry
+                for entry in memory_stats.get("recent_decisions", [])
+                if entry.get("agent_name") == "updater"
             ]
 
             # Count by type

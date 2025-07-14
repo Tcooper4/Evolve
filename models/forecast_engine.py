@@ -90,7 +90,9 @@ class ForecastEngine:
             from trading.models.xgboost_model import XGBoostModel
 
             # Initialize model instances with proper parameters
-            self.models[ModelType.LSTM] = LSTMModel(input_dim=1, hidden_dim=50, output_dim=1)
+            self.models[ModelType.LSTM] = LSTMModel(
+                input_dim=1, hidden_dim=50, output_dim=1
+            )
             self.models[ModelType.ARIMA] = ARIMAModel()
             self.models[ModelType.XGBOOST] = XGBoostModel()
             self.models[ModelType.RIDGE] = RidgeModel()
@@ -152,7 +154,9 @@ class ForecastEngine:
                 timestamp=datetime.now(),
             )
 
-            self.logger.info(f"Generated forecast using {model_type.value}: {len(forecast_values)} values")
+            self.logger.info(
+                f"Generated forecast using {model_type.value}: {len(forecast_values)} values"
+            )
             return result
 
         except Exception as e:
@@ -191,10 +195,14 @@ class ForecastEngine:
         # Generate individual forecasts
         for model_type in model_types:
             try:
-                forecast_result = self.generate_forecast(data, model_type, forecast_days)
+                forecast_result = self.generate_forecast(
+                    data, model_type, forecast_days
+                )
                 individual_forecasts[model_type.value] = forecast_result
             except Exception as e:
-                self.logger.warning(f"Failed to generate forecast with {model_type.value}: {e}")
+                self.logger.warning(
+                    f"Failed to generate forecast with {model_type.value}: {e}"
+                )
 
         if not individual_forecasts:
             raise ValueError("No successful individual forecasts generated")
@@ -203,7 +211,9 @@ class ForecastEngine:
         ensemble_forecast = self._combine_forecasts(individual_forecasts, weights)
 
         # Calculate ensemble confidence
-        ensemble_confidence = self._calculate_ensemble_confidence(individual_forecasts, weights)
+        ensemble_confidence = self._calculate_ensemble_confidence(
+            individual_forecasts, weights
+        )
 
         # Generate forecast dates
         forecast_dates = self._generate_forecast_dates(data, forecast_days)
@@ -224,7 +234,9 @@ class ForecastEngine:
             timestamp=datetime.now(),
         )
 
-        self.logger.info(f"Generated ensemble forecast using {len(individual_forecasts)} models")
+        self.logger.info(
+            f"Generated ensemble forecast using {len(individual_forecasts)} models"
+        )
         return result
 
     def _prepare_data(self, data: pd.DataFrame, model_type: ModelType) -> pd.DataFrame:
@@ -309,7 +321,9 @@ class ForecastEngine:
 
         return data
 
-    def _calculate_forecast_confidence(self, forecast_values: List[float], historical_data: pd.DataFrame) -> float:
+    def _calculate_forecast_confidence(
+        self, forecast_values: List[float], historical_data: pd.DataFrame
+    ) -> float:
         """
         Calculate confidence in the forecast.
 
@@ -327,16 +341,22 @@ class ForecastEngine:
         historical_volatility = historical_data["Close"].pct_change().std()
 
         # Calculate forecast volatility
-        forecast_volatility = np.std(np.diff(forecast_values) / forecast_values[:-1]) if len(forecast_values) > 1 else 0
+        forecast_volatility = (
+            np.std(np.diff(forecast_values) / forecast_values[:-1])
+            if len(forecast_values) > 1
+            else 0
+        )
 
         # Confidence based on volatility consistency
-        volatility_confidence = 1.0 - abs(forecast_volatility - historical_volatility) / max(
-            historical_volatility, 0.001
-        )
+        volatility_confidence = 1.0 - abs(
+            forecast_volatility - historical_volatility
+        ) / max(historical_volatility, 0.001)
         volatility_confidence = max(0.0, min(1.0, volatility_confidence))
 
         # Confidence based on forecast smoothness
-        smoothness_confidence = 1.0 - np.std(np.diff(forecast_values)) / np.mean(forecast_values)
+        smoothness_confidence = 1.0 - np.std(np.diff(forecast_values)) / np.mean(
+            forecast_values
+        )
         smoothness_confidence = max(0.0, min(1.0, smoothness_confidence))
 
         # Combined confidence
@@ -344,7 +364,9 @@ class ForecastEngine:
 
         return confidence
 
-    def _generate_forecast_dates(self, data: pd.DataFrame, forecast_days: int) -> List[datetime]:
+    def _generate_forecast_dates(
+        self, data: pd.DataFrame, forecast_days: int
+    ) -> List[datetime]:
         """
         Generate forecast dates.
 
@@ -390,7 +412,8 @@ class ForecastEngine:
             "forecast_min": np.min(forecast_values),
             "forecast_max": np.max(forecast_values),
             "forecast_range": np.max(forecast_values) - np.min(forecast_values),
-            "forecast_trend": (forecast_values[-1] - forecast_values[0]) / forecast_values[0]
+            "forecast_trend": (forecast_values[-1] - forecast_values[0])
+            / forecast_values[0]
             if forecast_values[0] != 0
             else 0,
         }
@@ -404,9 +427,13 @@ class ForecastEngine:
             )
 
             # If we have historical data for comparison
-            if not historical_data.empty and len(historical_data) >= len(forecast_values):
+            if not historical_data.empty and len(historical_data) >= len(
+                forecast_values
+            ):
                 # Use last n values from historical data for comparison
-                historical_values = historical_data["Close"].tail(len(forecast_values)).values
+                historical_values = (
+                    historical_data["Close"].tail(len(forecast_values)).values
+                )
 
                 # Calculate standardized metrics
                 mse = mean_squared_error(historical_values, forecast_values)
@@ -421,7 +448,13 @@ class ForecastEngine:
                         "mae": mae,
                         "rmse": rmse,
                         "r2_score": r2,
-                        "mape": np.mean(np.abs((historical_values - forecast_values) / historical_values)) * 100,
+                        "mape": np.mean(
+                            np.abs(
+                                (historical_values - forecast_values)
+                                / historical_values
+                            )
+                        )
+                        * 100,
                     }
                 )
 
@@ -439,12 +472,16 @@ class ForecastEngine:
         if not historical_data.empty:
             historical_mean = historical_data["Close"].mean()
             metrics["forecast_vs_historical_ratio"] = (
-                metrics["forecast_mean"] / historical_mean if historical_mean != 0 else 1.0
+                metrics["forecast_mean"] / historical_mean
+                if historical_mean != 0
+                else 1.0
             )
 
         return metrics
 
-    def _calculate_model_weights(self, model_types: List[ModelType]) -> Dict[str, float]:
+    def _calculate_model_weights(
+        self, model_types: List[ModelType]
+    ) -> Dict[str, float]:
         """
         Calculate weights for ensemble models.
 
@@ -475,7 +512,9 @@ class ForecastEngine:
             return []
 
         # Get the length of the shortest forecast
-        min_length = min(len(forecast.forecast_values) for forecast in individual_forecasts.values())
+        min_length = min(
+            len(forecast.forecast_values) for forecast in individual_forecasts.values()
+        )
 
         # Initialize ensemble forecast
         ensemble_forecast = [0.0] * min_length
@@ -553,7 +592,13 @@ class ForecastEngine:
         """
         return self.model_performance.get(model_type.value, {})
 
-    def detect_drift(self, y_true: List[float], y_pred: List[float], model_id: str, threshold: float = 0.1) -> bool:
+    def detect_drift(
+        self,
+        y_true: List[float],
+        y_pred: List[float],
+        model_id: str,
+        threshold: float = 0.1,
+    ) -> bool:
         """
         Detect model performance degradation (drift).
 
@@ -570,17 +615,23 @@ class ForecastEngine:
             from sklearn.metrics import mean_squared_error
 
             if not y_true or not y_pred or len(y_true) != len(y_pred):
-                self.logger.warning(f"Invalid data for drift detection in model {model_id}")
+                self.logger.warning(
+                    f"Invalid data for drift detection in model {model_id}"
+                )
                 return False
 
             # Calculate current MSE
             current_mse = mean_squared_error(y_true, y_pred)
 
             # Get historical MSE for comparison
-            historical_mse = self.model_performance.get(model_id, {}).get("historical_mse", current_mse)
+            historical_mse = self.model_performance.get(model_id, {}).get(
+                "historical_mse", current_mse
+            )
 
             # Calculate degradation ratio
-            degradation_ratio = current_mse / historical_mse if historical_mse > 0 else 1.0
+            degradation_ratio = (
+                current_mse / historical_mse if historical_mse > 0 else 1.0
+            )
 
             # Check if degradation exceeds threshold
             if degradation_ratio > (1 + threshold):
@@ -595,7 +646,9 @@ class ForecastEngine:
                 return True
 
             # Update historical performance
-            self.model_performance.setdefault(model_id, {})["historical_mse"] = current_mse
+            self.model_performance.setdefault(model_id, {})[
+                "historical_mse"
+            ] = current_mse
 
             return False
 
@@ -614,7 +667,9 @@ class ForecastEngine:
             self.logger.info(f"Triggering retrain for model {model_id}")
 
             # Log retrain event
-            self.model_performance.setdefault(model_id, {})["last_retrain"] = datetime.now()
+            self.model_performance.setdefault(model_id, {})[
+                "last_retrain"
+            ] = datetime.now()
             self.model_performance[model_id]["retrain_count"] = (
                 self.model_performance[model_id].get("retrain_count", 0) + 1
             )

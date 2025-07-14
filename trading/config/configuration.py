@@ -52,7 +52,11 @@ class ConfigManager:
         path = Path(config_type)
         if path.suffix in {".json", ".yaml", ".yml"} and path.exists():
             with open(path, "r") as f:
-                data = yaml.safe_load(f) if path.suffix in {".yaml", ".yml"} else json.load(f)
+                data = (
+                    yaml.safe_load(f)
+                    if path.suffix in {".yaml", ".yml"}
+                    else json.load(f)
+                )
             return self._parse_config(path.name, data)
 
         config_path = self.config_dir / f"{config_type}.json"
@@ -167,7 +171,10 @@ class ConfigManager:
                     value.validate()
                     results[key] = {"valid": True, "message": "Configuration is valid"}
                 else:
-                    results[key] = {"valid": True, "message": "No validation method available"}
+                    results[key] = {
+                        "valid": True,
+                        "message": "No validation method available",
+                    }
             except Exception as e:
                 results[key] = {"valid": False, "message": str(e)}
         return results
@@ -203,7 +210,9 @@ class ModelConfig:
             **kwargs: Additional model parameters
         """
         self.model_type = model_type
-        self.model_name = model_name or f"{model_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        self.model_name = (
+            model_name or f"{model_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
         self.d_model = d_model
         self.nhead = nhead
         self.num_layers = num_layers
@@ -509,7 +518,9 @@ class TrainingConfig:
             raise ValueError(f"Invalid validation_split: {self.validation_split}")
 
         if self.early_stopping_patience <= 0:
-            raise ValueError(f"Invalid early_stopping_patience: {self.early_stopping_patience}")
+            raise ValueError(
+                f"Invalid early_stopping_patience: {self.early_stopping_patience}"
+            )
 
         if self.scheduler_patience <= 0:
             raise ValueError(f"Invalid scheduler_patience: {self.scheduler_patience}")
@@ -755,16 +766,23 @@ class MonitoringConfig:
         if self.log_level not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
             raise ValueError(f"Invalid log level: {self.log_level}")
 
-        if not isinstance(self.metrics_port, int) or not 1 <= self.metrics_port <= 65535:
+        if (
+            not isinstance(self.metrics_port, int)
+            or not 1 <= self.metrics_port <= 65535
+        ):
             raise ValueError(f"Invalid metrics port: {self.metrics_port}")
 
         if self.alerting_enabled and not (self.alert_email or self.alert_webhook):
-            raise ValueError("Alert email or webhook must be provided when alerting is enabled")
+            raise ValueError(
+                "Alert email or webhook must be provided when alerting is enabled"
+            )
 
         if self.alert_email and not "@" in self.alert_email:
             raise ValueError(f"Invalid alert email: {self.alert_email}")
 
-        if self.alert_webhook and not self.alert_webhook.startswith(("http://", "https://")):
+        if self.alert_webhook and not self.alert_webhook.startswith(
+            ("http://", "https://")
+        ):
             raise ValueError(f"Invalid alert webhook URL: {self.alert_webhook}")
 
         return True

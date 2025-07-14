@@ -11,7 +11,9 @@ import numpy as np
 import pandas as pd
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -80,7 +82,9 @@ class DataPipeline:
                 return False
 
             load_time = time.time() - start_time
-            logger.info(f"✅ Successfully loaded {len(self.data)} rows from {file_path} in {load_time:.2f}s")
+            logger.info(
+                f"✅ Successfully loaded {len(self.data)} rows from {file_path} in {load_time:.2f}s"
+            )
             return True
 
         except Exception as e:
@@ -130,7 +134,9 @@ class DataPipeline:
 
             # Check for required columns (basic OHLCV)
             required_cols = ["open", "high", "low", "close", "volume"]
-            missing_cols = [col for col in required_cols if col not in self.data.columns]
+            missing_cols = [
+                col for col in required_cols if col not in self.data.columns
+            ]
             if missing_cols:
                 return False, f"Missing required columns: {missing_cols}"
 
@@ -140,7 +146,9 @@ class DataPipeline:
                 logger.warning(f"⚠️ Found NaN values: {nan_counts.to_dict()}")
 
             # Check data types
-            numeric_cols = self.data[required_cols].select_dtypes(include=[np.number]).columns
+            numeric_cols = (
+                self.data[required_cols].select_dtypes(include=[np.number]).columns
+            )
             if len(numeric_cols) != len(required_cols):
                 return False, "Not all required columns are numeric"
 
@@ -172,7 +180,9 @@ class DataPipeline:
             logger.info(f"🔧 Handling missing data with method: {missing_method}")
 
             if self.validator:
-                self.data = self.validator.handle_missing_data(self.data, method=missing_method)
+                self.data = self.validator.handle_missing_data(
+                    self.data, method=missing_method
+                )
             else:
                 self.data = self.data.fillna(method=missing_method)
 
@@ -183,7 +193,9 @@ class DataPipeline:
                 logger.info(f"🔧 Removing outliers from {columns} with {n_std} std")
 
                 if self.validator:
-                    self.data = self.validator.remove_outliers(self.data, columns, n_std)
+                    self.data = self.validator.remove_outliers(
+                        self.data, columns, n_std
+                    )
                 else:
                     self.data = self._remove_outliers_basic(self.data, columns, n_std)
 
@@ -200,9 +212,13 @@ class DataPipeline:
                 logger.info(f"🔧 Normalizing {columns} with method: {method}")
 
                 if self.validator:
-                    self.processed_data = self.validator.normalize_data(self.processed_data, columns, method)
+                    self.processed_data = self.validator.normalize_data(
+                        self.processed_data, columns, method
+                    )
                 else:
-                    self.processed_data = self._normalize_basic(self.processed_data, columns, method)
+                    self.processed_data = self._normalize_basic(
+                        self.processed_data, columns, method
+                    )
 
             preprocessing_time = time.time() - start_time
             logger.info(f"✅ Data preprocessing completed in {preprocessing_time:.2f}s")
@@ -214,7 +230,9 @@ class DataPipeline:
             logger.error(f"❌ Error preprocessing data: {str(e)}")
             return False
 
-    def _remove_outliers_basic(self, df: pd.DataFrame, columns: List[str], n_std: float) -> pd.DataFrame:
+    def _remove_outliers_basic(
+        self, df: pd.DataFrame, columns: List[str], n_std: float
+    ) -> pd.DataFrame:
         """Basic outlier removal."""
         df_cleaned = df.copy()
         for col in columns:
@@ -236,18 +254,24 @@ class DataPipeline:
         # Calculate returns
         if "close" in df_processed.columns:
             df_processed["returns"] = df_processed["close"].pct_change()
-            df_processed["log_returns"] = np.log(df_processed["close"] / df_processed["close"].shift(1))
+            df_processed["log_returns"] = np.log(
+                df_processed["close"] / df_processed["close"].shift(1)
+            )
 
         # Calculate volatility
         if "returns" in df_processed.columns:
-            df_processed["volatility"] = df_processed["returns"].rolling(window=20).std()
+            df_processed["volatility"] = (
+                df_processed["returns"].rolling(window=20).std()
+            )
 
         # Remove the first row which will have NaN values
         df_processed = df_processed.iloc[1:]
 
         return df_processed
 
-    def _normalize_basic(self, df: pd.DataFrame, columns: List[str], method: str) -> pd.DataFrame:
+    def _normalize_basic(
+        self, df: pd.DataFrame, columns: List[str], method: str
+    ) -> pd.DataFrame:
         """Basic normalization."""
         df_normalized = df.copy()
 
@@ -260,7 +284,9 @@ class DataPipeline:
                 elif method == "minmax":
                     min_val = df_normalized[col].min()
                     max_val = df_normalized[col].max()
-                    df_normalized[col] = (df_normalized[col] - min_val) / (max_val - min_val)
+                    df_normalized[col] = (df_normalized[col] - min_val) / (
+                        max_val - min_val
+                    )
 
         return df_normalized
 
@@ -310,7 +336,9 @@ class DataPipeline:
                 return False
 
             save_time = time.time() - start_time
-            logger.info(f"✅ Successfully saved processed data to {file_path} in {save_time:.2f}s")
+            logger.info(
+                f"✅ Successfully saved processed data to {file_path} in {save_time:.2f}s"
+            )
             return True
 
         except Exception as e:
@@ -384,16 +412,24 @@ class DataPipeline:
             Dictionary with pipeline statistics
         """
         stats = {
-            "pipeline_start_time": self.pipeline_start_time.isoformat() if self.pipeline_start_time else None,
-            "pipeline_end_time": self.pipeline_end_time.isoformat() if self.pipeline_end_time else None,
+            "pipeline_start_time": self.pipeline_start_time.isoformat()
+            if self.pipeline_start_time
+            else None,
+            "pipeline_end_time": self.pipeline_end_time.isoformat()
+            if self.pipeline_end_time
+            else None,
             "pipeline_duration": None,
             "data_shape": self.data.shape if self.data is not None else None,
-            "processed_data_shape": self.processed_data.shape if self.processed_data is not None else None,
+            "processed_data_shape": self.processed_data.shape
+            if self.processed_data is not None
+            else None,
             "success": self.processed_data is not None,
         }
 
         if self.pipeline_start_time and self.pipeline_end_time:
-            stats["pipeline_duration"] = str(self.pipeline_end_time - self.pipeline_start_time)
+            stats["pipeline_duration"] = str(
+                self.pipeline_end_time - self.pipeline_start_time
+            )
 
         return stats
 

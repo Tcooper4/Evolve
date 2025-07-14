@@ -108,17 +108,43 @@ class StrategySelectorAgent(BaseAgent):
 
         # Configuration
         self.performance_window = self.config_dict.get("performance_window", 30)
-        self.optimization_frequency = self.config_dict.get("optimization_frequency", "weekly")
-        self.min_performance_threshold = self.config_dict.get("min_performance_threshold", 0.5)
-        self.cross_validation_periods = self.config_dict.get("cross_validation_periods", 5)
+        self.optimization_frequency = self.config_dict.get(
+            "optimization_frequency", "weekly"
+        )
+        self.min_performance_threshold = self.config_dict.get(
+            "min_performance_threshold", 0.5
+        )
+        self.cross_validation_periods = self.config_dict.get(
+            "cross_validation_periods", 5
+        )
 
         # Strategy mappings
         self.strategy_mappings = {
-            "trending_up": [StrategyType.MACD, StrategyType.SMA, StrategyType.TREND_FOLLOWING],
-            "trending_down": [StrategyType.MACD, StrategyType.SMA, StrategyType.TREND_FOLLOWING],
-            "sideways": [StrategyType.RSI, StrategyType.BOLLINGER, StrategyType.MEAN_REVERSION],
-            "volatile": [StrategyType.VOLATILITY, StrategyType.BREAKOUT, StrategyType.BOLLINGER],
-            "low_volatility": [StrategyType.RSI, StrategyType.MEAN_REVERSION, StrategyType.PAIRS],
+            "trending_up": [
+                StrategyType.MACD,
+                StrategyType.SMA,
+                StrategyType.TREND_FOLLOWING,
+            ],
+            "trending_down": [
+                StrategyType.MACD,
+                StrategyType.SMA,
+                StrategyType.TREND_FOLLOWING,
+            ],
+            "sideways": [
+                StrategyType.RSI,
+                StrategyType.BOLLINGER,
+                StrategyType.MEAN_REVERSION,
+            ],
+            "volatile": [
+                StrategyType.VOLATILITY,
+                StrategyType.BREAKOUT,
+                StrategyType.BOLLINGER,
+            ],
+            "low_volatility": [
+                StrategyType.RSI,
+                StrategyType.MEAN_REVERSION,
+                StrategyType.PAIRS,
+            ],
         }
 
         # Parameter spaces for each strategy
@@ -182,13 +208,19 @@ class StrategySelectorAgent(BaseAgent):
                 forecast_horizon = kwargs.get("forecast_horizon")
                 risk_tolerance = kwargs.get("risk_tolerance", "medium")
 
-                if market_data is None or asset_symbol is None or forecast_horizon is None:
+                if (
+                    market_data is None
+                    or asset_symbol is None
+                    or forecast_horizon is None
+                ):
                     return AgentResult(
                         success=False,
                         error_message="Missing required parameters: market_data, asset_symbol, forecast_horizon",
                     )
 
-                recommendation = self.select_strategy(market_data, asset_symbol, forecast_horizon, risk_tolerance)
+                recommendation = self.select_strategy(
+                    market_data, asset_symbol, forecast_horizon, risk_tolerance
+                )
                 return AgentResult(
                     success=True,
                     data={
@@ -206,35 +238,53 @@ class StrategySelectorAgent(BaseAgent):
 
                 if market_data is None or market_regime is None:
                     return AgentResult(
-                        success=False, error_message="Missing required parameters: market_data, market_regime"
+                        success=False,
+                        error_message="Missing required parameters: market_data, market_regime",
                     )
 
-                recommendations = self.get_strategy_recommendations(market_data, market_regime, risk_tolerance)
+                recommendations = self.get_strategy_recommendations(
+                    market_data, market_regime, risk_tolerance
+                )
                 return AgentResult(
                     success=True,
-                    data={"recommendations": [rec.__dict__ for rec in recommendations], "count": len(recommendations)},
+                    data={
+                        "recommendations": [rec.__dict__ for rec in recommendations],
+                        "count": len(recommendations),
+                    },
                 )
 
             elif action == "update_performance":
                 performance_data = kwargs.get("performance")
 
                 if performance_data is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: performance")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: performance",
+                    )
 
                 performance = StrategyPerformance(**performance_data)
                 self.update_strategy_performance(performance)
                 return AgentResult(
-                    success=True, data={"message": f"Updated performance for {performance.strategy_name}"}
+                    success=True,
+                    data={
+                        "message": f"Updated performance for {performance.strategy_name}"
+                    },
                 )
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
 
     def select_strategy(
-        self, market_data: pd.DataFrame, asset_symbol: str, forecast_horizon: int, risk_tolerance: str = "medium"
+        self,
+        market_data: pd.DataFrame,
+        asset_symbol: str,
+        forecast_horizon: int,
+        risk_tolerance: str = "medium",
     ) -> StrategyRecommendation:
         """
         Select the best strategy for the given market conditions.
@@ -266,10 +316,14 @@ class StrategySelectorAgent(BaseAgent):
             # Optimize parameters for each strategy
             strategy_recommendations = []
             for strategy_type in compatible_strategies:
-                optimized_params = self._optimize_strategy_parameters(strategy_type, market_data, forecast_horizon)
+                optimized_params = self._optimize_strategy_parameters(
+                    strategy_type, market_data, forecast_horizon
+                )
 
                 # Evaluate strategy with optimized parameters
-                performance = self._evaluate_strategy(strategy_type, optimized_params, market_data, forecast_horizon)
+                performance = self._evaluate_strategy(
+                    strategy_type, optimized_params, market_data, forecast_horizon
+                )
 
                 if performance:
                     recommendation = StrategyRecommendation(
@@ -280,7 +334,9 @@ class StrategySelectorAgent(BaseAgent):
                         expected_sharpe=performance.sharpe_ratio,
                         expected_drawdown=performance.max_drawdown,
                         market_regime=market_regime,
-                        reasoning=self._generate_reasoning(strategy_type, market_regime, performance),
+                        reasoning=self._generate_reasoning(
+                            strategy_type, market_regime, performance
+                        ),
                     )
                     strategy_recommendations.append(recommendation)
 
@@ -288,7 +344,9 @@ class StrategySelectorAgent(BaseAgent):
                 return self._get_default_strategy(market_regime)
 
             # Select best strategy
-            best_recommendation = max(strategy_recommendations, key=lambda x: x.confidence_score)
+            best_recommendation = max(
+                strategy_recommendations, key=lambda x: x.confidence_score
+            )
 
             # Log selection
             self.logger.info(f"Selected strategy: {best_recommendation.strategy_name}")
@@ -354,20 +412,34 @@ class StrategySelectorAgent(BaseAgent):
             return 0.01
 
     def _get_compatible_strategies(
-        self, market_regime: str, volatility: float, trend_strength: float, risk_tolerance: str
+        self,
+        market_regime: str,
+        volatility: float,
+        trend_strength: float,
+        risk_tolerance: str,
     ) -> List[StrategyType]:
         """Get list of strategies compatible with market conditions."""
         try:
             # Get base strategies for market regime
-            base_strategies = self.strategy_mappings.get(market_regime, [StrategyType.RSI])
+            base_strategies = self.strategy_mappings.get(
+                market_regime, [StrategyType.RSI]
+            )
 
             # Filter based on volatility
             if volatility > 0.03:
                 # High volatility - prefer volatility and breakout strategies
-                compatible = [StrategyType.VOLATILITY, StrategyType.BREAKOUT, StrategyType.BOLLINGER]
+                compatible = [
+                    StrategyType.VOLATILITY,
+                    StrategyType.BREAKOUT,
+                    StrategyType.BOLLINGER,
+                ]
             elif volatility < 0.01:
                 # Low volatility - prefer mean reversion strategies
-                compatible = [StrategyType.RSI, StrategyType.MEAN_REVERSION, StrategyType.PAIRS]
+                compatible = [
+                    StrategyType.RSI,
+                    StrategyType.MEAN_REVERSION,
+                    StrategyType.PAIRS,
+                ]
             else:
                 # Medium volatility - use base strategies
                 compatible = base_strategies
@@ -375,12 +447,18 @@ class StrategySelectorAgent(BaseAgent):
             # Filter based on trend strength
             if trend_strength > 0.03:
                 # Strong trend - add trend following strategies
-                compatible.extend([StrategyType.MACD, StrategyType.SMA, StrategyType.TREND_FOLLOWING])
+                compatible.extend(
+                    [StrategyType.MACD, StrategyType.SMA, StrategyType.TREND_FOLLOWING]
+                )
 
             # Filter based on risk tolerance
             if risk_tolerance == "low":
                 # Low risk - prefer conservative strategies
-                compatible = [s for s in compatible if s in [StrategyType.SMA, StrategyType.MEAN_REVERSION]]
+                compatible = [
+                    s
+                    for s in compatible
+                    if s in [StrategyType.SMA, StrategyType.MEAN_REVERSION]
+                ]
             elif risk_tolerance == "high":
                 # High risk - prefer aggressive strategies
                 compatible.extend([StrategyType.BREAKOUT, StrategyType.VOLATILITY])
@@ -392,7 +470,10 @@ class StrategySelectorAgent(BaseAgent):
             return [StrategyType.RSI]
 
     def _optimize_strategy_parameters(
-        self, strategy_type: StrategyType, market_data: pd.DataFrame, forecast_horizon: int
+        self,
+        strategy_type: StrategyType,
+        market_data: pd.DataFrame,
+        forecast_horizon: int,
     ) -> Dict[str, Any]:
         """Optimize parameters for a specific strategy."""
         try:
@@ -405,11 +486,15 @@ class StrategySelectorAgent(BaseAgent):
             def objective(parameters):
                 try:
                     # Evaluate strategy with given parameters
-                    performance = self._evaluate_strategy(strategy_type, parameters, market_data, forecast_horizon)
+                    performance = self._evaluate_strategy(
+                        strategy_type, parameters, market_data, forecast_horizon
+                    )
 
                     if performance:
                         # Return negative score (minimize)
-                        return -(performance.sharpe_ratio - 0.5 * performance.max_drawdown)
+                        return -(
+                            performance.sharpe_ratio - 0.5 * performance.max_drawdown
+                        )
                     else:
                         return 0.0
 
@@ -429,7 +514,10 @@ class StrategySelectorAgent(BaseAgent):
 
             # Run genetic optimization
             best_params = self.genetic_optimizer.optimize(
-                objective=objective, param_space=param_space, population_size=30, generations=15
+                objective=objective,
+                param_space=param_space,
+                population_size=30,
+                generations=15,
             )
 
             return best_params or self._get_default_parameters(strategy_type)
@@ -439,7 +527,11 @@ class StrategySelectorAgent(BaseAgent):
             return self._get_default_parameters(strategy_type)
 
     def _evaluate_strategy(
-        self, strategy_type: StrategyType, parameters: Dict[str, Any], market_data: pd.DataFrame, forecast_horizon: int
+        self,
+        strategy_type: StrategyType,
+        parameters: Dict[str, Any],
+        market_data: pd.DataFrame,
+        forecast_horizon: int,
     ) -> Optional[StrategyPerformance]:
         """Evaluate strategy performance with given parameters."""
         try:
@@ -468,10 +560,16 @@ class StrategySelectorAgent(BaseAgent):
             # Calculate profit factor
             positive_returns = strategy_returns[strategy_returns > 0].sum()
             negative_returns = abs(strategy_returns[strategy_returns < 0].sum())
-            profit_factor = positive_returns / negative_returns if negative_returns > 0 else float("inf")
+            profit_factor = (
+                positive_returns / negative_returns
+                if negative_returns > 0
+                else float("inf")
+            )
 
             # Calculate confidence score
-            confidence_score = self._calculate_confidence_score(sharpe_ratio, max_drawdown, win_rate, profit_factor)
+            confidence_score = self._calculate_confidence_score(
+                sharpe_ratio, max_drawdown, win_rate, profit_factor
+            )
 
             return StrategyPerformance(
                 strategy_name=f"{strategy_type.value}_strategy",
@@ -491,7 +589,10 @@ class StrategySelectorAgent(BaseAgent):
             self.logger.error(f"Error evaluating strategy: {str(e)}")
 
     def _generate_signals(
-        self, strategy_type: StrategyType, parameters: Dict[str, Any], market_data: pd.DataFrame
+        self,
+        strategy_type: StrategyType,
+        parameters: Dict[str, Any],
+        market_data: pd.DataFrame,
     ) -> Optional[pd.Series]:
         """Generate trading signals for a strategy."""
         try:
@@ -515,7 +616,9 @@ class StrategySelectorAgent(BaseAgent):
             elif strategy_type == StrategyType.BOLLINGER:
                 strategy = BollingerStrategy()
                 return strategy.generate_signals(
-                    market_data, period=parameters.get("period", 20), std_dev=parameters.get("std_dev", 2.0)
+                    market_data,
+                    period=parameters.get("period", 20),
+                    std_dev=parameters.get("std_dev", 2.0),
                 )
 
             elif strategy_type == StrategyType.SMA:
@@ -540,11 +643,13 @@ class StrategySelectorAgent(BaseAgent):
             self.logger.error(f"Error generating signals: {str(e)}")
             return None
 
-    def _generate_breakout_signals(self, market_data: pd.DataFrame, parameters: Dict[str, Any]) -> pd.Series:
+    def _generate_breakout_signals(
+        self, market_data: pd.DataFrame, parameters: Dict[str, Any]
+    ) -> pd.Series:
         """Generate breakout strategy signals."""
         try:
             period = parameters.get("period", 20)
-            multiplier = parameters.get("multiplier", 2.0)
+            parameters.get("multiplier", 2.0)
             volume_threshold = parameters.get("volume_threshold", 1.5)
 
             # Calculate upper and lower bands
@@ -577,7 +682,9 @@ class StrategySelectorAgent(BaseAgent):
                 "timestamp": datetime.now().isoformat(),
             }
 
-    def _generate_volatility_signals(self, market_data: pd.DataFrame, parameters: Dict[str, Any]) -> pd.Series:
+    def _generate_volatility_signals(
+        self, market_data: pd.DataFrame, parameters: Dict[str, Any]
+    ) -> pd.Series:
         """Generate volatility-based strategy signals."""
         try:
             period = parameters.get("period", 20)
@@ -610,7 +717,11 @@ class StrategySelectorAgent(BaseAgent):
             }
 
     def _calculate_confidence_score(
-        self, sharpe_ratio: float, max_drawdown: float, win_rate: float, profit_factor: float
+        self,
+        sharpe_ratio: float,
+        max_drawdown: float,
+        win_rate: float,
+        profit_factor: float,
     ) -> float:
         """Calculate confidence score for strategy performance."""
         try:
@@ -618,10 +729,17 @@ class StrategySelectorAgent(BaseAgent):
             sharpe_score = max(0, min(1, (sharpe_ratio + 2) / 4))
             drawdown_score = max(0, min(1, 1 - abs(max_drawdown)))
             win_rate_score = win_rate
-            profit_factor_score = min(1, profit_factor / 3) if profit_factor < float("inf") else 1
+            profit_factor_score = (
+                min(1, profit_factor / 3) if profit_factor < float("inf") else 1
+            )
 
             # Weighted average
-            confidence = 0.3 * sharpe_score + 0.2 * drawdown_score + 0.3 * win_rate_score + 0.2 * profit_factor_score
+            confidence = (
+                0.3 * sharpe_score
+                + 0.2 * drawdown_score
+                + 0.3 * win_rate_score
+                + 0.2 * profit_factor_score
+            )
 
             return confidence
 
@@ -630,7 +748,10 @@ class StrategySelectorAgent(BaseAgent):
             return 0.5
 
     def _generate_reasoning(
-        self, strategy_type: StrategyType, market_regime: str, performance: StrategyPerformance
+        self,
+        strategy_type: StrategyType,
+        market_regime: str,
+        performance: StrategyPerformance,
     ) -> str:
         """Generate reasoning for strategy selection."""
         try:
@@ -650,7 +771,9 @@ class StrategySelectorAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Error generating reasoning: {str(e)}")
-            return f"Selected {strategy_type.value} strategy based on market conditions."
+            return (
+                f"Selected {strategy_type.value} strategy based on market conditions."
+            )
 
     def _get_default_strategy(self, market_regime: str) -> StrategyRecommendation:
         """Get default strategy when selection fails."""
@@ -690,7 +813,9 @@ class StrategySelectorAgent(BaseAgent):
             self.logger.error(f"Error getting default parameters: {str(e)}")
             return {}
 
-    def _store_strategy_selection(self, recommendation: StrategyRecommendation, market_data: pd.DataFrame):
+    def _store_strategy_selection(
+        self, recommendation: StrategyRecommendation, market_data: pd.DataFrame
+    ):
         """Store strategy selection in memory."""
         try:
             selection_data = {
@@ -720,7 +845,9 @@ class StrategySelectorAgent(BaseAgent):
             # Keep only recent performance
             cutoff_date = datetime.now() - timedelta(days=self.performance_window)
             self.strategy_performance[strategy_name] = [
-                p for p in self.strategy_performance[strategy_name] if p.timestamp > cutoff_date
+                p
+                for p in self.strategy_performance[strategy_name]
+                if p.timestamp > cutoff_date
             ]
 
             # Store in memory
@@ -728,7 +855,9 @@ class StrategySelectorAgent(BaseAgent):
             self.memory.store(
                 memory_key,
                 {
-                    "performance": [p.__dict__ for p in self.strategy_performance[strategy_name]],
+                    "performance": [
+                        p.__dict__ for p in self.strategy_performance[strategy_name]
+                    ],
                     "timestamp": datetime.now(),
                 },
             )
@@ -739,7 +868,10 @@ class StrategySelectorAgent(BaseAgent):
             self.logger.error(f"Error updating strategy performance: {str(e)}")
 
     def get_strategy_recommendations(
-        self, market_data: pd.DataFrame, market_regime: str, risk_tolerance: str = "medium"
+        self,
+        market_data: pd.DataFrame,
+        market_regime: str,
+        risk_tolerance: str = "medium",
     ) -> List[StrategyRecommendation]:
         """Get strategy recommendations for given market conditions.
 
@@ -753,7 +885,9 @@ class StrategySelectorAgent(BaseAgent):
         """
         try:
             if market_data.empty:
-                self.logger.warning("No market data provided for strategy recommendations")
+                self.logger.warning(
+                    "No market data provided for strategy recommendations"
+                )
                 return []
 
             # Get compatible strategies
@@ -765,9 +899,13 @@ class StrategySelectorAgent(BaseAgent):
 
             recommendations = []
             for strategy_type in compatible_strategies[:3]:  # Top 3 strategies
-                optimized_params = self._optimize_strategy_parameters(strategy_type, market_data, 30)
+                optimized_params = self._optimize_strategy_parameters(
+                    strategy_type, market_data, 30
+                )
 
-                performance = self._evaluate_strategy(strategy_type, optimized_params, market_data, 30)
+                performance = self._evaluate_strategy(
+                    strategy_type, optimized_params, market_data, 30
+                )
 
                 if performance:
                     recommendation = StrategyRecommendation(
@@ -778,11 +916,15 @@ class StrategySelectorAgent(BaseAgent):
                         expected_sharpe=performance.sharpe_ratio,
                         expected_drawdown=performance.max_drawdown,
                         market_regime=market_regime,
-                        reasoning=self._generate_reasoning(strategy_type, market_regime, performance),
+                        reasoning=self._generate_reasoning(
+                            strategy_type, market_regime, performance
+                        ),
                     )
                     recommendations.append(recommendation)
 
-            return sorted(recommendations, key=lambda x: x.confidence_score, reverse=True)
+            return sorted(
+                recommendations, key=lambda x: x.confidence_score, reverse=True
+            )
 
         except Exception as e:
             self.logger.error(f"Error getting strategy recommendations: {str(e)}")
@@ -796,7 +938,9 @@ class StrategySelectorAgent(BaseAgent):
                 with open(performance_file, "r") as f:
                     data = json.load(f)
                     for strategy_name, performance_list in data.items():
-                        self.strategy_performance[strategy_name] = [StrategyPerformance(**p) for p in performance_list]
+                        self.strategy_performance[strategy_name] = [
+                            StrategyPerformance(**p) for p in performance_list
+                        ]
 
         except Exception as e:
             self.logger.error(f"Error loading strategy performance: {str(e)}")
@@ -824,7 +968,9 @@ class StrategySelectorAgent(BaseAgent):
 
             # Extract metrics for plotting
             strategies = list(strategy_metrics.keys())
-            sharpe_ratios = [strategy_metrics[s].get("sharpe_ratio", 0) for s in strategies]
+            sharpe_ratios = [
+                strategy_metrics[s].get("sharpe_ratio", 0) for s in strategies
+            ]
             drawdowns = [strategy_metrics[s].get("max_drawdown", 0) for s in strategies]
 
             # Create comparison plot
@@ -853,6 +999,8 @@ class StrategySelectorAgent(BaseAgent):
             self.logger.info(f"Strategy comparison plot saved to {plot_path}")
 
         except ImportError:
-            self.logger.warning("Matplotlib not available for strategy comparison visualization")
+            self.logger.warning(
+                "Matplotlib not available for strategy comparison visualization"
+            )
         except Exception as e:
             self.logger.error(f"Error creating strategy comparison plot: {e}")

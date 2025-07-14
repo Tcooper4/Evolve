@@ -37,7 +37,9 @@ def render_logging_controls() -> None:
 
     if new_metrics != current_metrics:
         set_metric_logging(new_metrics)
-        st.sidebar.success("Metric logging " + ("enabled" if new_metrics else "disabled"))
+        st.sidebar.success(
+            "Metric logging " + ("enabled" if new_metrics else "disabled")
+        )
 
     # Metrics path
     current_path = get_settings()["METRICS_PATH"]
@@ -83,7 +85,9 @@ def render_metrics_viewer() -> None:
                 if metric_type == "llm_metrics":
                     st.line_chart(df.set_index("timestamp")["latency"])
                 elif metric_type == "backtest_metrics":
-                    st.line_chart(df.set_index("timestamp")[["sharpe_ratio", "win_rate"]])
+                    st.line_chart(
+                        df.set_index("timestamp")[["sharpe_ratio", "win_rate"]]
+                    )
                 elif metric_type == "agent_metrics":
                     st.line_chart(df.set_index("timestamp")["confidence"])
         else:
@@ -104,7 +108,10 @@ def render_log_viewer() -> None:
 
         if logs:
             # Filter logs by level
-            log_level = st.selectbox("Filter by Level", ["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+            log_level = st.selectbox(
+                "Filter by Level",
+                ["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+            )
 
             filtered_logs = logs
             if log_level != "ALL":

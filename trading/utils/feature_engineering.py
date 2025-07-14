@@ -93,23 +93,37 @@ class FeatureEngineer:
             # MACD features
             if "macd" in data.columns:
                 result["macd_signal_cross"] = (
-                    (data["macd"] > data["macd_signal"]) & (data["macd"].shift(1) <= data["macd_signal"].shift(1))
+                    (data["macd"] > data["macd_signal"])
+                    & (data["macd"].shift(1) <= data["macd_signal"].shift(1))
                 ).astype(int)
                 result["macd_negative_cross"] = (
-                    (data["macd"] < data["macd_signal"]) & (data["macd"].shift(1) >= data["macd_signal"].shift(1))
+                    (data["macd"] < data["macd_signal"])
+                    & (data["macd"].shift(1) >= data["macd_signal"].shift(1))
                 ).astype(int)
 
             # Bollinger Bands features
-            if all(col in data.columns for col in ["bb_upper", "bb_middle", "bb_lower"]):
-                result["bb_position"] = (data["close"] - data["bb_lower"]) / (data["bb_upper"] - data["bb_lower"])
-                result["bb_squeeze"] = (data["bb_upper"] - data["bb_lower"]) / data["bb_middle"]
-                result["bb_breakout_up"] = (data["close"] > data["bb_upper"]).astype(int)
-                result["bb_breakout_down"] = (data["close"] < data["bb_lower"]).astype(int)
+            if all(
+                col in data.columns for col in ["bb_upper", "bb_middle", "bb_lower"]
+            ):
+                result["bb_position"] = (data["close"] - data["bb_lower"]) / (
+                    data["bb_upper"] - data["bb_lower"]
+                )
+                result["bb_squeeze"] = (data["bb_upper"] - data["bb_lower"]) / data[
+                    "bb_middle"
+                ]
+                result["bb_breakout_up"] = (data["close"] > data["bb_upper"]).astype(
+                    int
+                )
+                result["bb_breakout_down"] = (data["close"] < data["bb_lower"]).astype(
+                    int
+                )
 
             # Moving average features
             if "sma_20" in data.columns and "sma_50" in data.columns:
                 result["sma_cross"] = (data["sma_20"] > data["sma_50"]).astype(int)
-                result["sma_distance"] = (data["sma_20"] - data["sma_50"]) / data["sma_50"]
+                result["sma_distance"] = (data["sma_20"] - data["sma_50"]) / data[
+                    "sma_50"
+                ]
 
             return result
         except Exception as e:
@@ -130,8 +144,12 @@ class FeatureEngineer:
                 result["year"] = data.index.year
 
                 # Cyclical encoding
-                result["day_of_week_sin"] = np.sin(2 * np.pi * result["day_of_week"] / 7)
-                result["day_of_week_cos"] = np.cos(2 * np.pi * result["day_of_week"] / 7)
+                result["day_of_week_sin"] = np.sin(
+                    2 * np.pi * result["day_of_week"] / 7
+                )
+                result["day_of_week_cos"] = np.cos(
+                    2 * np.pi * result["day_of_week"] / 7
+                )
                 result["month_sin"] = np.sin(2 * np.pi * result["month"] / 12)
                 result["month_cos"] = np.cos(2 * np.pi * result["month"] / 12)
 
@@ -140,7 +158,9 @@ class FeatureEngineer:
             logger.error(f"Error creating time features: {e}")
             return data
 
-    def create_lag_features(self, data: pd.DataFrame, columns: List[str], lags: List[int]) -> pd.DataFrame:
+    def create_lag_features(
+        self, data: pd.DataFrame, columns: List[str], lags: List[int]
+    ) -> pd.DataFrame:
         """Create lagged features."""
         try:
             result = data.copy()
@@ -156,7 +176,11 @@ class FeatureEngineer:
             return data
 
     def create_rolling_features(
-        self, data: pd.DataFrame, columns: List[str], windows: List[int], functions: List[str]
+        self,
+        data: pd.DataFrame,
+        columns: List[str],
+        windows: List[int],
+        functions: List[str],
     ) -> pd.DataFrame:
         """Create rolling window features."""
         try:
@@ -167,13 +191,21 @@ class FeatureEngineer:
                     for window in windows:
                         for func in functions:
                             if func == "mean":
-                                result[f"{column}_rolling_mean_{window}"] = data[column].rolling(window=window).mean()
+                                result[f"{column}_rolling_mean_{window}"] = (
+                                    data[column].rolling(window=window).mean()
+                                )
                             elif func == "std":
-                                result[f"{column}_rolling_std_{window}"] = data[column].rolling(window=window).std()
+                                result[f"{column}_rolling_std_{window}"] = (
+                                    data[column].rolling(window=window).std()
+                                )
                             elif func == "min":
-                                result[f"{column}_rolling_min_{window}"] = data[column].rolling(window=window).min()
+                                result[f"{column}_rolling_min_{window}"] = (
+                                    data[column].rolling(window=window).min()
+                                )
                             elif func == "max":
-                                result[f"{column}_rolling_max_{window}"] = data[column].rolling(window=window).max()
+                                result[f"{column}_rolling_max_{window}"] = (
+                                    data[column].rolling(window=window).max()
+                                )
                             elif func == "median":
                                 result[f"{column}_rolling_median_{window}"] = (
                                     data[column].rolling(window=window).median()
@@ -184,7 +216,9 @@ class FeatureEngineer:
             logger.error(f"Error creating rolling features: {e}")
             return data
 
-    def select_features(self, X: pd.DataFrame, y: pd.Series, method: str = "mutual_info", k: int = 10) -> pd.DataFrame:
+    def select_features(
+        self, X: pd.DataFrame, y: pd.Series, method: str = "mutual_info", k: int = 10
+    ) -> pd.DataFrame:
         """Select the best features using statistical methods."""
         try:
             # Remove NaN values
@@ -192,9 +226,13 @@ class FeatureEngineer:
             y_clean = y[X_clean.index]
 
             if method == "mutual_info":
-                selector = SelectKBest(score_func=mutual_info_regression, k=min(k, X_clean.shape[1]))
+                selector = SelectKBest(
+                    score_func=mutual_info_regression, k=min(k, X_clean.shape[1])
+                )
             elif method == "f_regression":
-                selector = SelectKBest(score_func=f_regression, k=min(k, X_clean.shape[1]))
+                selector = SelectKBest(
+                    score_func=f_regression, k=min(k, X_clean.shape[1])
+                )
             else:
                 logger.warning(f"Unknown feature selection method: {method}")
                 return X
@@ -206,7 +244,9 @@ class FeatureEngineer:
             selected_features = X_clean.columns[selector.get_support()].tolist()
 
             # Create result DataFrame
-            result = pd.DataFrame(X_selected, columns=selected_features, index=X_clean.index)
+            result = pd.DataFrame(
+                X_selected, columns=selected_features, index=X_clean.index
+            )
 
             # Store feature importance
             self.feature_importance = dict(zip(selected_features, selector.scores_))
@@ -240,11 +280,15 @@ def create_all_features(data: pd.DataFrame) -> pd.DataFrame:
 
         # Create lag features for price and volume
         price_volume_cols = ["close", "volume", "price_change"]
-        result = engineer.create_lag_features(result, price_volume_cols, [1, 2, 3, 5, 10])
+        result = engineer.create_lag_features(
+            result, price_volume_cols, [1, 2, 3, 5, 10]
+        )
 
         # Create rolling features
         numeric_cols = result.select_dtypes(include=[np.number]).columns.tolist()
-        result = engineer.create_rolling_features(result, numeric_cols[:5], [5, 10, 20], ["mean", "std"])
+        result = engineer.create_rolling_features(
+            result, numeric_cols[:5], [5, 10, 20], ["mean", "std"]
+        )
 
         return result
     except Exception as e:

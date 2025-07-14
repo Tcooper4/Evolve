@@ -29,7 +29,9 @@ warnings.filterwarnings("ignore")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -74,7 +76,9 @@ class InstitutionalUpgradeTester:
                     passed += 1
                     logger.info(f"✅ {test_name}: PASSED")
                 else:
-                    logger.error(f"❌ {test_name}: FAILED - {result.get('error', 'Unknown error')}")
+                    logger.error(
+                        f"❌ {test_name}: FAILED - {result.get('error', 'Unknown error')}"
+                    )
 
             except Exception as e:
                 logger.error(f"❌ {test_name}: ERROR - {e}")
@@ -92,7 +96,11 @@ class InstitutionalUpgradeTester:
             "failed": total - passed,
             "success_rate": (passed / total) * 100 if total > 0 else 0,
             "test_results": self.test_results,
-            "upgrade_status": "COMPLETE" if passed == total else "PARTIAL" if passed > total // 2 else "FAILED",
+            "upgrade_status": "COMPLETE"
+            if passed == total
+            else "PARTIAL"
+            if passed > total // 2
+            else "FAILED",
         }
 
         # Save report
@@ -139,7 +147,9 @@ class InstitutionalUpgradeTester:
             available_components = sum(components.values())
             total_components = len(components)
 
-            logger.info(f"Available Components: {available_components}/{total_components}")
+            logger.info(
+                f"Available Components: {available_components}/{total_components}"
+            )
 
             # Test tab functionality (simulated)
             tab_results = {
@@ -150,10 +160,13 @@ class InstitutionalUpgradeTester:
                 "system_tab": self._test_system_tab_simulation(),
             }
 
-            successful_tabs = sum(1 for result in tab_results.values() if result.get("success", False))
+            successful_tabs = sum(
+                1 for result in tab_results.values() if result.get("success", False)
+            )
 
             return {
-                "success": available_components >= total_components * 0.7 and successful_tabs >= 3,
+                "success": available_components >= total_components * 0.7
+                and successful_tabs >= 3,
                 "available_components": available_components,
                 "total_components": total_components,
                 "component_status": components,
@@ -212,8 +225,16 @@ class InstitutionalUpgradeTester:
         try:
             # Simulate strategy chain
             strategy_chain = [
-                {"strategy": "momentum", "weight": 0.4, "reason": "Compatible with bull regime and medium risk"},
-                {"strategy": "trend_following", "weight": 0.6, "reason": "Compatible with bull regime and medium risk"},
+                {
+                    "strategy": "momentum",
+                    "weight": 0.4,
+                    "reason": "Compatible with bull regime and medium risk",
+                },
+                {
+                    "strategy": "trend_following",
+                    "weight": 0.6,
+                    "reason": "Compatible with bull regime and medium risk",
+                },
             ]
 
             # Simulate regime analysis
@@ -259,9 +280,19 @@ class InstitutionalUpgradeTester:
             }
 
             # Simulate risk metrics
-            risk_metrics = {"volatility": 0.18, "var": -0.05, "beta": 1.1, "sharpe_ratio": 1.2, "max_drawdown": -0.08}
+            risk_metrics = {
+                "volatility": 0.18,
+                "var": -0.05,
+                "beta": 1.1,
+                "sharpe_ratio": 1.2,
+                "max_drawdown": -0.08,
+            }
 
-            return {"success": True, "portfolio_summary": portfolio_summary, "risk_metrics": risk_metrics}
+            return {
+                "success": True,
+                "portfolio_summary": portfolio_summary,
+                "risk_metrics": risk_metrics,
+            }
 
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -300,7 +331,11 @@ class InstitutionalUpgradeTester:
                 }
             ]
 
-            return {"success": True, "agent_interactions": agent_interactions, "strategy_decisions": strategy_decisions}
+            return {
+                "success": True,
+                "agent_interactions": agent_interactions,
+                "strategy_decisions": strategy_decisions,
+            }
 
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -333,7 +368,11 @@ class InstitutionalUpgradeTester:
                 "plotly_visualization": True,
             }
 
-            return {"success": True, "system_health": system_health, "capability_status": capability_status}
+            return {
+                "success": True,
+                "system_health": system_health,
+                "capability_status": capability_status,
+            }
 
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -384,13 +423,19 @@ class InstitutionalUpgradeTester:
             # Test strategy chain generation
             from trading.strategies.enhanced_strategy_engine import MarketRegime
 
-            regime_enum = MarketRegime(regime) if hasattr(MarketRegime, regime) else MarketRegime.NORMAL
+            regime_enum = (
+                MarketRegime(regime)
+                if hasattr(MarketRegime, regime)
+                else MarketRegime.NORMAL
+            )
             strategy_chain = engine.get_strategy_chain(regime_enum, "medium")
 
             logger.info(f"Strategy Chain: {len(strategy_chain)} strategies")
 
             # Test strategy execution
-            execution_result = engine.execute_strategy_chain(mock_data, regime_enum, "medium")
+            execution_result = engine.execute_strategy_chain(
+                mock_data, regime_enum, "medium"
+            )
 
             # Test performance history
             performance_history = engine.get_strategy_performance_history(limit=10)
@@ -456,13 +501,17 @@ class InstitutionalUpgradeTester:
                 execution_time=1.0,
             )
 
-            strategy_store_success = memory_manager.store_strategy_memory(strategy_memory)
+            strategy_store_success = memory_manager.store_strategy_memory(
+                strategy_memory
+            )
 
             # Test retrieving interactions
             interactions = memory_manager.get_agent_interactions(limit=10)
 
             # Test confidence boost calculation
-            confidence_boost = memory_manager.get_strategy_confidence_boost("test_strategy")
+            confidence_boost = memory_manager.get_strategy_confidence_boost(
+                "test_strategy"
+            )
 
             # Test strategy retirement check
             retirement_check = memory_manager.check_strategy_retirement("test_strategy")
@@ -530,7 +579,11 @@ class InstitutionalUpgradeTester:
                         "mae": np.random.normal(0.15, 0.05),
                         "r2": np.random.normal(0.75, 0.1),
                     },
-                    "feature_importance": ["price_momentum", "volume_trend", "volatility"],
+                    "feature_importance": [
+                        "price_momentum",
+                        "volume_trend",
+                        "volatility",
+                    ],
                     "timestamp": datetime.now().isoformat(),
                 }
                 model_traces.append(trace)
@@ -564,17 +617,28 @@ class InstitutionalUpgradeTester:
                 return {"success": False, "error": "Performance checker not available"}
 
             # Test strategy performance check
-            strategy_performance = {"sharpe_ratio": 0.8, "total_return": 0.12, "max_drawdown": -0.15, "win_rate": 0.55}
+            strategy_performance = {
+                "sharpe_ratio": 0.8,
+                "total_return": 0.12,
+                "max_drawdown": -0.15,
+                "win_rate": 0.55,
+            }
 
-            strategy_analysis = performance_checker.check_strategy_performance("test_strategy", strategy_performance)
+            strategy_analysis = performance_checker.check_strategy_performance(
+                "test_strategy", strategy_performance
+            )
 
             # Test improvement suggestions
-            improvements = performance_checker.suggest_improvements("test_strategy", strategy_performance)
+            improvements = performance_checker.suggest_improvements(
+                "test_strategy", strategy_performance
+            )
 
             # Test model performance check
             model_performance = {"mse": 0.02, "accuracy": 0.75, "sharpe_ratio": 0.9}
 
-            model_analysis = performance_checker.check_model_performance("test_model", model_performance)
+            model_analysis = performance_checker.check_model_performance(
+                "test_model", model_performance
+            )
 
             return {
                 "success": True,
@@ -624,7 +688,8 @@ class InstitutionalUpgradeTester:
                 "provider_status": provider_status,
                 "health_status": health.get("status", "unknown"),
                 "available_providers": health.get("available_providers", 0),
-                "historical_data_available": historical_data is not None and not historical_data.empty,
+                "historical_data_available": historical_data is not None
+                and not historical_data.empty,
                 "live_data_available": live_data is not None,
                 "current_provider": provider_status.get("current_provider", "unknown"),
             }
@@ -649,7 +714,11 @@ class InstitutionalUpgradeTester:
             # Test report generation
             test_data = {
                 "timestamp": datetime.now().isoformat(),
-                "forecast": {"symbol": "AAPL", "confidence": 0.85, "model_used": "ensemble"},
+                "forecast": {
+                    "symbol": "AAPL",
+                    "confidence": 0.85,
+                    "model_used": "ensemble",
+                },
                 "strategy": {"name": "momentum", "performance": {"sharpe_ratio": 1.2}},
                 "portfolio": {"total_value": 150000, "positions": 3},
             }
@@ -719,7 +788,9 @@ class InstitutionalUpgradeTester:
                 rl_health.get("overall_status", "unknown"),
             ]
 
-            healthy_components = sum(1 for status in health_components if status == "healthy")
+            healthy_components = sum(
+                1 for status in health_components if status == "healthy"
+            )
             total_components = len(health_components)
 
             overall_health = (
