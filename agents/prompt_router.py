@@ -141,7 +141,9 @@ class PromptProcessor:
             "market",
         ]
 
-    def process_prompt(self, prompt: str, context: Optional[PromptContext] = None) -> ProcessedPrompt:
+    def process_prompt(
+        self, prompt: str, context: Optional[PromptContext] = None
+    ) -> ProcessedPrompt:
         """
         Process a user prompt and extract information.
 
@@ -173,7 +175,9 @@ class PromptProcessor:
         extracted_parameters = self._extract_parameters(normalized_prompt)
 
         # Generate routing suggestions
-        routing_suggestions = self._generate_routing_suggestions(request_type, extracted_parameters)
+        routing_suggestions = self._generate_routing_suggestions(
+            request_type, extracted_parameters
+        )
 
         processing_time = (datetime.now() - start_time).total_seconds()
 
@@ -187,7 +191,9 @@ class PromptProcessor:
             processing_time=processing_time,
         )
 
-        self.logger.info(f"Processed prompt: {request_type.value} (confidence: {confidence:.2f})")
+        self.logger.info(
+            f"Processed prompt: {request_type.value} (confidence: {confidence:.2f})"
+        )
         return processed_prompt
 
     def _normalize_prompt(self, prompt: str) -> str:
@@ -311,7 +317,9 @@ class PromptProcessor:
                     if numbers:
                         parameters[param_name] = int(numbers[0])
                 else:
-                    parameters[param_name] = matches[0] if len(matches) == 1 else matches
+                    parameters[param_name] = (
+                        matches[0] if len(matches) == 1 else matches
+                    )
 
         return parameters
 
@@ -342,7 +350,9 @@ class PromptProcessor:
 
         return confidence
 
-    def _generate_routing_suggestions(self, request_type: RequestType, parameters: Dict[str, Any]) -> List[str]:
+    def _generate_routing_suggestions(
+        self, request_type: RequestType, parameters: Dict[str, Any]
+    ) -> List[str]:
         """
         Generate routing suggestions based on request type and parameters.
 
@@ -367,7 +377,9 @@ class PromptProcessor:
 
         elif request_type == RequestType.INVESTMENT:
             # Route investment queries to TopRankedForecastAgent
-            suggestions.extend(["TopRankedForecastAgent", "PortfolioManager", "RiskManager"])
+            suggestions.extend(
+                ["TopRankedForecastAgent", "PortfolioManager", "RiskManager"]
+            )
 
         elif request_type == RequestType.ANALYSIS:
             suggestions.extend(["AnalysisEngine", "DataAnalyzer"])
@@ -437,12 +449,16 @@ class PromptProcessor:
 
         # Add user preferences if available
         if context.user_preferences:
-            preferences_str = ", ".join([f"{k}: {v}" for k, v in context.user_preferences.items()])
+            preferences_str = ", ".join(
+                [f"{k}: {v}" for k, v in context.user_preferences.items()]
+            )
             enhanced_prompt += f" [User preferences: {preferences_str}]"
 
         # Add system state if available
         if context.system_state:
-            state_str = ", ".join([f"{k}: {v}" for k, v in context.system_state.items()])
+            state_str = ", ".join(
+                [f"{k}: {v}" for k, v in context.system_state.items()]
+            )
             enhanced_prompt += f" [System state: {state_str}]"
 
         return enhanced_prompt
@@ -463,7 +479,9 @@ class PromptRouterAgent:
         self.processor = get_prompt_processor()
         self.logger = logging.getLogger(__name__)
 
-    def handle_prompt(self, prompt: str, context: Optional[PromptContext] = None) -> Dict[str, Any]:
+    def handle_prompt(
+        self, prompt: str, context: Optional[PromptContext] = None
+    ) -> Dict[str, Any]:
         """
         Handle a user prompt and route to appropriate agent.
 
@@ -497,7 +515,9 @@ class PromptRouterAgent:
                 "fallback_used": True,
             }
 
-    def _handle_investment_query(self, prompt: str, processed: ProcessedPrompt) -> Dict[str, Any]:
+    def _handle_investment_query(
+        self, prompt: str, processed: ProcessedPrompt
+    ) -> Dict[str, Any]:
         """
         Handle investment-related queries with fallback to TopRankedForecastAgent.
 
@@ -532,7 +552,9 @@ class PromptRouterAgent:
             self.logger.error(f"Error in TopRankedForecastAgent: {e}")
             return self._fallback_investment_response(prompt, processed)
 
-    def _fallback_investment_response(self, prompt: str, processed: ProcessedPrompt) -> Dict[str, Any]:
+    def _fallback_investment_response(
+        self, prompt: str, processed: ProcessedPrompt
+    ) -> Dict[str, Any]:
         """
         Fallback response for investment queries when TopRankedForecastAgent is unavailable.
 
@@ -557,7 +579,9 @@ class PromptRouterAgent:
             ],
         }
 
-    def _handle_forecast_query(self, prompt: str, processed: ProcessedPrompt) -> Dict[str, Any]:
+    def _handle_forecast_query(
+        self, prompt: str, processed: ProcessedPrompt
+    ) -> Dict[str, Any]:
         """
         Handle forecast-related queries.
 
@@ -577,7 +601,9 @@ class PromptRouterAgent:
             "parameters": processed.extracted_parameters,
         }
 
-    def _handle_strategy_query(self, prompt: str, processed: ProcessedPrompt) -> Dict[str, Any]:
+    def _handle_strategy_query(
+        self, prompt: str, processed: ProcessedPrompt
+    ) -> Dict[str, Any]:
         """
         Handle strategy-related queries.
 
@@ -597,7 +623,9 @@ class PromptRouterAgent:
             "parameters": processed.extracted_parameters,
         }
 
-    def _handle_general_query(self, prompt: str, processed: ProcessedPrompt) -> Dict[str, Any]:
+    def _handle_general_query(
+        self, prompt: str, processed: ProcessedPrompt
+    ) -> Dict[str, Any]:
         """
         Handle general queries.
 

@@ -91,7 +91,9 @@ class LogManager:
                     file_date = datetime.fromtimestamp(log_file.stat().st_mtime)
                     if file_date < cutoff_date:
                         # Create archive name
-                        archive_name = f"{log_file.stem}_{file_date.strftime('%Y%m%d')}.log.gz"
+                        archive_name = (
+                            f"{log_file.stem}_{file_date.strftime('%Y%m%d')}.log.gz"
+                        )
                         archive_path = self.archive_dir / archive_name
 
                         # Compress and move file
@@ -152,7 +154,12 @@ class LogManager:
             return False
 
         cutoff_date = datetime.now() - timedelta(days=days)
-        analysis_results = {"error_count": 0, "warning_count": 0, "error_patterns": {}, "warning_patterns": {}}
+        analysis_results = {
+            "error_count": 0,
+            "warning_count": 0,
+            "error_patterns": {},
+            "warning_patterns": {},
+        }
 
         try:
             # Analyze current logs
@@ -190,7 +197,9 @@ class LogManager:
             self.logger.error(f"Failed to analyze logs: {e}")
             return False
 
-    def _analyze_log_file(self, log_file: Path, pattern: Optional[str], results: Dict[str, Any]):
+    def _analyze_log_file(
+        self, log_file: Path, pattern: Optional[str], results: Dict[str, Any]
+    ):
         """Analyze a single log file."""
         try:
             with open(log_file) as f:
@@ -198,7 +207,9 @@ class LogManager:
         except Exception as e:
             self.logger.error(f"Failed to analyze {log_file}: {e}")
 
-    def _analyze_log_content(self, file_obj, pattern: Optional[str], results: Dict[str, Any]):
+    def _analyze_log_content(
+        self, file_obj, pattern: Optional[str], results: Dict[str, Any]
+    ):
         """Analyze log content."""
         for line in file_obj:
             if pattern and pattern not in line:
@@ -261,8 +272,14 @@ class LogManager:
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Log Manager")
-    parser.add_argument("command", choices=["rotate", "clean", "analyze", "export"], help="Command to execute")
-    parser.add_argument("--days", type=int, default=7, help="Number of days for log operations")
+    parser.add_argument(
+        "command",
+        choices=["rotate", "clean", "analyze", "export"],
+        help="Command to execute",
+    )
+    parser.add_argument(
+        "--days", type=int, default=7, help="Number of days for log operations"
+    )
     parser.add_argument("--pattern", help="Pattern to search for in logs")
     parser.add_argument("--output-dir", help="Output directory for log export")
 
@@ -273,7 +290,9 @@ def main():
         "rotate": lambda: manager.rotate_logs(args.days),
         "clean": lambda: manager.clean_logs(args.days),
         "analyze": lambda: manager.analyze_logs(args.pattern, args.days),
-        "export": lambda: manager.export_logs(args.output_dir, args.days) if args.output_dir else False,
+        "export": lambda: manager.export_logs(args.output_dir, args.days)
+        if args.output_dir
+        else False,
     }
 
     if args.command in commands:

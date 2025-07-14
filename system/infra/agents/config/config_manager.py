@@ -101,7 +101,9 @@ class ConfigManager:
         """Get a secret from Vault or environment variables."""
         if self.use_vault and self.vault_client:
             try:
-                secret = self.vault_client.secrets.kv.v2.read_secret_version(path=secret_path)
+                secret = self.vault_client.secrets.kv.v2.read_secret_version(
+                    path=secret_path
+                )
                 return secret["data"]["data"]["value"]
             except Exception as e:
                 logger.error(f"Error reading secret from Vault: {str(e)}")

@@ -115,20 +115,32 @@ class TestSMAStrategy:
         short_sma_col = f"SMA_{strategy.short_window}"
         long_sma_col = f"SMA_{strategy.long_window}"
 
-        mask = sma_result[short_sma_col].notna() & sma_result[long_sma_col].notna() & signals.notna()
+        mask = (
+            sma_result[short_sma_col].notna()
+            & sma_result[long_sma_col].notna()
+            & signals.notna()
+        )
         short_sma = sma_result.loc[mask, short_sma_col]
         long_sma = sma_result.loc[mask, long_sma_col]
         signal_values = signals[mask]
 
         # Check bullish crossover (short SMA crosses above long SMA)
-        bullish_mask = (short_sma > long_sma) & (short_sma.shift(1) <= long_sma.shift(1))
+        bullish_mask = (short_sma > long_sma) & (
+            short_sma.shift(1) <= long_sma.shift(1)
+        )
         if bullish_mask.any():
-            assert (signal_values[bullish_mask] == 1).all(), "Bullish crossover should generate buy signals"
+            assert (
+                signal_values[bullish_mask] == 1
+            ).all(), "Bullish crossover should generate buy signals"
 
         # Check bearish crossover (short SMA crosses below long SMA)
-        bearish_mask = (short_sma < long_sma) & (short_sma.shift(1) >= long_sma.shift(1))
+        bearish_mask = (short_sma < long_sma) & (
+            short_sma.shift(1) >= long_sma.shift(1)
+        )
         if bearish_mask.any():
-            assert (signal_values[bearish_mask] == -1).all(), "Bearish crossover should generate sell signals"
+            assert (
+                signal_values[bearish_mask] == -1
+            ).all(), "Bearish crossover should generate sell signals"
 
     def test_strategy_configuration(self, strategy):
         """Test that strategy configuration is correct."""
@@ -159,7 +171,7 @@ class TestSMAStrategy:
         mask = sma_result[short_sma_col].notna() & sma_result[long_sma_col].notna()
         short_sma = sma_result.loc[mask, short_sma_col]
         long_sma = sma_result.loc[mask, long_sma_col]
-        prices = sample_data.loc[mask, "Close"]
+        sample_data.loc[mask, "Close"]
 
         # SMAs should be finite
         assert np.isfinite(short_sma).all()
@@ -199,7 +211,13 @@ class TestSMAStrategy:
 
         # Check performance metrics
         assert isinstance(performance, dict)
-        required_metrics = ["returns", "sharpe_ratio", "max_drawdown", "win_rate", "total_trades"]
+        required_metrics = [
+            "returns",
+            "sharpe_ratio",
+            "max_drawdown",
+            "win_rate",
+            "total_trades",
+        ]
 
         for metric in required_metrics:
             assert metric in performance
@@ -242,7 +260,11 @@ class TestSMAStrategy:
         long_sma_col = f"SMA_{strategy.long_window}"
 
         # Get non-NaN values
-        mask = sma_result[short_sma_col].notna() & sma_result[long_sma_col].notna() & signals.notna()
+        mask = (
+            sma_result[short_sma_col].notna()
+            & sma_result[long_sma_col].notna()
+            & signals.notna()
+        )
         short_sma = sma_result.loc[mask, short_sma_col]
         long_sma = sma_result.loc[mask, long_sma_col]
         signal_values = signals[mask]

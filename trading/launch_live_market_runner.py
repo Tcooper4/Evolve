@@ -22,10 +22,17 @@ def setup_logging() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.FileHandler("trading/live/logs/launcher.log"), logging.StreamHandler(sys.stdout)],
+        handlers=[
+            logging.FileHandler("trading/live/logs/launcher.log"),
+            logging.StreamHandler(sys.stdout),
+        ],
     )
 
-    return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+    return {
+        "success": True,
+        "message": "Initialization completed",
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 def load_config(config_path: str = "trading/live/config.json") -> Dict[str, Any]:
@@ -38,11 +45,27 @@ def load_config(config_path: str = "trading/live/config.json") -> Dict[str, Any]
         # Default configuration
         default_config = {
             "symbols": ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL"],
-            "market_data_config": {"cache_size": 1000, "update_threshold": 5, "max_retries": 3},
+            "market_data_config": {
+                "cache_size": 1000,
+                "update_threshold": 5,
+                "max_retries": 3,
+            },
             "triggers": {
-                "model_builder": {"trigger_type": "time_based", "interval_seconds": 3600, "enabled": True},
-                "performance_critic": {"trigger_type": "time_based", "interval_seconds": 1800, "enabled": True},
-                "execution_agent": {"trigger_type": "price_move", "price_move_threshold": 0.005, "enabled": True},
+                "model_builder": {
+                    "trigger_type": "time_based",
+                    "interval_seconds": 3600,
+                    "enabled": True,
+                },
+                "performance_critic": {
+                    "trigger_type": "time_based",
+                    "interval_seconds": 1800,
+                    "enabled": True,
+                },
+                "execution_agent": {
+                    "trigger_type": "price_move",
+                    "price_move_threshold": 0.005,
+                    "enabled": True,
+                },
             },
         }
 

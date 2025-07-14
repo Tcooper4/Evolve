@@ -78,7 +78,9 @@ class Task:
 class TaskMemory:
     """Persistent memory for agent tasks."""
 
-    def __init__(self, memory_file: Optional[Path] = None, backend: str = MEMORY_BACKEND):
+    def __init__(
+        self, memory_file: Optional[Path] = None, backend: str = MEMORY_BACKEND
+    ):
         """Initialize task memory.
 
         Args:
@@ -123,9 +125,17 @@ class TaskMemory:
             """
             )
             self.conn.commit()
-            return {"success": True, "message": "SQLite database initialized", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "SQLite database initialized",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _init_json(self) -> dict:
         """Initialize JSON storage."""
@@ -133,9 +143,17 @@ class TaskMemory:
             self.memory_file = self.memory_file.with_suffix(".json")
             if not self.memory_file.exists():
                 self._save_memory()
-            return {"success": True, "message": "JSON storage initialized", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "JSON storage initialized",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _load_memory(self) -> dict:
         """Load tasks from storage."""
@@ -144,7 +162,9 @@ class TaskMemory:
                 self._load_from_sqlite()
             else:
                 self._load_from_json()
-            self.logger.info(f"Loaded {len(self.tasks)} tasks from {self.backend} storage")
+            self.logger.info(
+                f"Loaded {len(self.tasks)} tasks from {self.backend} storage"
+            )
             return {
                 "success": True,
                 "message": f"Loaded {len(self.tasks)} tasks",
@@ -153,7 +173,11 @@ class TaskMemory:
         except Exception as e:
             self.logger.error(f"Error loading memory: {e}")
             self.tasks = {}
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _load_from_sqlite(self) -> dict:
         """Load tasks from SQLite database."""
@@ -179,7 +203,11 @@ class TaskMemory:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _load_from_json(self) -> dict:
         """Load tasks from JSON file."""
@@ -192,14 +220,21 @@ class TaskMemory:
                 }
             with open(self.memory_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            self.tasks = {task_id: Task.from_dict(task_data) for task_id, task_data in data.items()}
+            self.tasks = {
+                task_id: Task.from_dict(task_data)
+                for task_id, task_data in data.items()
+            }
             return {
                 "success": True,
                 "message": f"Loaded {len(self.tasks)} tasks from JSON",
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _save_memory(self) -> dict:
         """Save tasks to storage."""
@@ -208,7 +243,9 @@ class TaskMemory:
                 self._save_to_sqlite()
             else:
                 self._save_to_json()
-            self.logger.debug(f"Saved {len(self.tasks)} tasks to {self.backend} storage")
+            self.logger.debug(
+                f"Saved {len(self.tasks)} tasks to {self.backend} storage"
+            )
             return {
                 "success": True,
                 "message": f"Saved {len(self.tasks)} tasks",
@@ -216,31 +253,55 @@ class TaskMemory:
             }
         except Exception as e:
             self.logger.error(f"Error saving memory: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def add_task(self, task: Task) -> dict:
         """Add a new task to memory."""
         try:
             self.tasks[task.task_id] = task
             self._save_memory()
-            return {"success": True, "message": f"Task {task.task_id} added", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": f"Task {task.task_id} added",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def update_task(self, task_id: str, **kwargs) -> dict:
         """Update an existing task."""
         try:
             if task_id not in self.tasks:
-                return {"success": False, "error": f"Task {task_id} not found", "timestamp": datetime.now().isoformat()}
+                return {
+                    "success": False,
+                    "error": f"Task {task_id} not found",
+                    "timestamp": datetime.now().isoformat(),
+                }
             task = self.tasks[task_id]
             for key, value in kwargs.items():
                 if hasattr(task, key):
                     setattr(task, key, value)
             task.updated_at = datetime.now()
             self._save_memory()
-            return {"success": True, "message": f"Task {task_id} updated", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": f"Task {task_id} updated",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_task(self, task_id: str) -> dict:
         """Get a task by ID."""
@@ -254,9 +315,17 @@ class TaskMemory:
                     "timestamp": datetime.now().isoformat(),
                 }
             else:
-                return {"success": False, "error": f"Task {task_id} not found", "timestamp": datetime.now().isoformat()}
+                return {
+                    "success": False,
+                    "error": f"Task {task_id} not found",
+                    "timestamp": datetime.now().isoformat(),
+                }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_tasks_by_status(self, status: Union[TaskStatus, List[TaskStatus]]) -> dict:
         """Get tasks by status."""
@@ -265,7 +334,9 @@ class TaskMemory:
                 status_list = [status]
             else:
                 status_list = status
-            filtered_tasks = [task for task in self.tasks.values() if task.status in status_list]
+            filtered_tasks = [
+                task for task in self.tasks.values() if task.status in status_list
+            ]
             return {
                 "success": True,
                 "result": filtered_tasks,
@@ -273,12 +344,18 @@ class TaskMemory:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_tasks_by_agent(self, agent: str) -> dict:
         """Get tasks by agent."""
         try:
-            filtered_tasks = [task for task in self.tasks.values() if task.agent == agent]
+            filtered_tasks = [
+                task for task in self.tasks.values() if task.agent == agent
+            ]
             return {
                 "success": True,
                 "result": filtered_tasks,
@@ -286,12 +363,18 @@ class TaskMemory:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_tasks_by_type(self, task_type: str) -> dict:
         """Get tasks by type."""
         try:
-            filtered_tasks = [task for task in self.tasks.values() if task.task_type == task_type]
+            filtered_tasks = [
+                task for task in self.tasks.values() if task.task_type == task_type
+            ]
             return {
                 "success": True,
                 "result": filtered_tasks,
@@ -299,18 +382,34 @@ class TaskMemory:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def delete_task(self, task_id: str) -> dict:
         """Delete a task."""
         try:
             if task_id not in self.tasks:
-                return {"success": False, "error": f"Task {task_id} not found", "timestamp": datetime.now().isoformat()}
+                return {
+                    "success": False,
+                    "error": f"Task {task_id} not found",
+                    "timestamp": datetime.now().isoformat(),
+                }
             del self.tasks[task_id]
             self._save_memory()
-            return {"success": True, "message": f"Task {task_id} deleted", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": f"Task {task_id} deleted",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def clear_completed_tasks(self, older_than_days: int = 30) -> dict:
         """Clear completed tasks older than specified days."""
@@ -318,7 +417,10 @@ class TaskMemory:
             cutoff_date = datetime.now() - timedelta(days=older_than_days)
             tasks_to_remove = []
             for task_id, task in self.tasks.items():
-                if task.status == TaskStatus.COMPLETED and task.updated_at < cutoff_date:
+                if (
+                    task.status == TaskStatus.COMPLETED
+                    and task.updated_at < cutoff_date
+                ):
                     tasks_to_remove.append(task_id)
             for task_id in tasks_to_remove:
                 del self.tasks[task_id]
@@ -330,16 +432,28 @@ class TaskMemory:
                 "cleared_count": len(tasks_to_remove),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def __del__(self):
         """Cleanup method."""
         try:
             if hasattr(self, "conn") and self.conn:
                 self.conn.close()
-            return {"success": True, "message": "TaskMemory cleanup completed", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "TaskMemory cleanup completed",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
 
 if __name__ == "__main__":
@@ -351,7 +465,11 @@ if __name__ == "__main__":
 
     # Create test task
     task = Task(
-        task_id="test_001", task_type="forecast", status=TaskStatus.PENDING, agent="forecaster", notes="Test task"
+        task_id="test_001",
+        task_type="forecast",
+        status=TaskStatus.PENDING,
+        agent="forecaster",
+        notes="Test task",
     )
 
     # Add task
@@ -366,8 +484,12 @@ if __name__ == "__main__":
     pending_result = memory.get_tasks_by_status(TaskStatus.PENDING)
     completed_result = memory.get_tasks_by_status(TaskStatus.COMPLETED)
 
-    pending_tasks = pending_result.get("result", []) if pending_result.get("success") else []
-    completed_tasks = completed_result.get("result", []) if completed_result.get("success") else []
+    pending_tasks = (
+        pending_result.get("result", []) if pending_result.get("success") else []
+    )
+    completed_tasks = (
+        completed_result.get("result", []) if completed_result.get("success") else []
+    )
 
     memory.logger.info(f"Pending tasks: {len(pending_tasks)}")
     memory.logger.info(f"Completed tasks: {len(completed_tasks)}")

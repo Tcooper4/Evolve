@@ -58,7 +58,9 @@ def generate_market_summary(data: pd.DataFrame, config: SummaryConfig) -> str:
     return summary
 
 
-def generate_strategy_summary(performance_data: Dict[str, Any], config: SummaryConfig) -> str:
+def generate_strategy_summary(
+    performance_data: Dict[str, Any], config: SummaryConfig
+) -> str:
     """Generate strategy performance summary using LLM.
 
     Args:
@@ -93,7 +95,9 @@ def generate_strategy_summary(performance_data: Dict[str, Any], config: SummaryC
     return summary
 
 
-def generate_forecast_summary(forecast_data: Dict[str, Any], config: SummaryConfig) -> str:
+def generate_forecast_summary(
+    forecast_data: Dict[str, Any], config: SummaryConfig
+) -> str:
     """Generate forecast analysis summary using LLM.
 
     Args:
@@ -139,7 +143,7 @@ def generate_risk_summary(risk_data: Dict[str, Any], config: SummaryConfig) -> s
     """
     # Extract key metrics
     metrics = risk_data["metrics"]
-    drawdowns = risk_data["drawdowns"]
+    risk_data["drawdowns"]
 
     # Generate summary prompt
     prompt = f"""Analyze the following risk metrics and provide a concise summary:

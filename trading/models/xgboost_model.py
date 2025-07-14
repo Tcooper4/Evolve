@@ -59,7 +59,11 @@ class XGBoostModel(BaseModel):
         }
 
         # Try to load from config file
-        config_paths = ["config/xgboost_config.yaml", "config/models/xgboost.yaml", "trading/config/xgboost.yaml"]
+        config_paths = [
+            "config/xgboost_config.yaml",
+            "config/models/xgboost.yaml",
+            "trading/config/xgboost.yaml",
+        ]
 
         for config_path in config_paths:
             try:
@@ -109,10 +113,14 @@ class XGBoostModel(BaseModel):
 
             # Use the loaded hyperparameters
             self.model = xgb.XGBRegressor(**self.model_params)
-            logger.info(f"XGBoost model initialized with parameters: {self.model_params}")
+            logger.info(
+                f"XGBoost model initialized with parameters: {self.model_params}"
+            )
         except ImportError as e:
             logger.error(f"XGBoost not available: {e}")
-            raise ImportError("XGBoost is required for this model. Install with: pip install xgboost")
+            raise ImportError(
+                "XGBoost is required for this model. Install with: pip install xgboost"
+            )
 
     def prepare_features(self, data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
         """Prepare features for XGBoost model.
@@ -160,7 +168,9 @@ class XGBoostModel(BaseModel):
             logger.error(f"Error preparing features: {e}")
             raise
 
-    def _auto_engineer_features(self, data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
+    def _auto_engineer_features(
+        self, data: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, pd.Series]:
         """Automatically engineer features using cross-validation to find optimal lags."""
         try:
             from sklearn.metrics import mean_squared_error
@@ -169,7 +179,11 @@ class XGBoostModel(BaseModel):
             logger.info("Starting auto feature engineering...")
 
             # Define candidate lag ranges
-            lag_ranges = {"short": list(range(1, 6)), "medium": list(range(5, 16, 2)), "long": list(range(15, 31, 5))}
+            lag_ranges = {
+                "short": list(range(1, 6)),
+                "medium": list(range(5, 16, 2)),
+                "long": list(range(15, 31, 5)),
+            }
 
             # Define candidate rolling windows
             rolling_windows = [5, 10, 20, 30]
@@ -216,8 +230,14 @@ class XGBoostModel(BaseModel):
                     # Evaluate with cross-validation
                     cv_scores = []
                     for train_idx, val_idx in tscv.split(features_clean):
-                        X_train, X_val = features_clean.iloc[train_idx], features_clean.iloc[val_idx]
-                        y_train, y_val = target_clean.iloc[train_idx], target_clean.iloc[val_idx]
+                        X_train, X_val = (
+                            features_clean.iloc[train_idx],
+                            features_clean.iloc[val_idx],
+                        )
+                        y_train, y_val = (
+                            target_clean.iloc[train_idx],
+                            target_clean.iloc[val_idx],
+                        )
 
                         # Quick XGBoost fit
                         import xgboost as xgb
@@ -240,13 +260,17 @@ class XGBoostModel(BaseModel):
                         )
 
             if best_features is None:
-                logger.warning("Auto feature engineering failed, using default features")
+                logger.warning(
+                    "Auto feature engineering failed, using default features"
+                )
                 return self.prepare_features(data)
 
             target = data["close"].shift(-1)[best_features.index]
             self.feature_names = best_features.columns.tolist()
 
-            logger.info(f"Auto feature engineering completed. Best CV score: {best_score:.4f}")
+            logger.info(
+                f"Auto feature engineering completed. Best CV score: {best_score:.4f}"
+            )
             return best_features, target
 
         except Exception as e:
@@ -287,7 +311,9 @@ class XGBoostModel(BaseModel):
             features, target = self.prepare_features(data)
 
             if len(features) < 50:
-                raise ValueError("Insufficient data for training (need at least 50 samples)")
+                raise ValueError(
+                    "Insufficient data for training (need at least 50 samples)"
+                )
 
             # Train model
             self.model.fit(features, target)
@@ -303,7 +329,9 @@ class XGBoostModel(BaseModel):
             return {
                 "mse": mse,
                 "mae": mae,
-                "feature_importance": dict(zip(self.feature_names, self.model.feature_importances_)),
+                "feature_importance": dict(
+                    zip(self.feature_names, self.model.feature_importances_)
+                ),
             }
 
         except Exception as e:
@@ -336,7 +364,9 @@ class XGBoostModel(BaseModel):
             if expected_features and actual_features != expected_features:
                 missing_features = expected_features - actual_features
                 extra_features = actual_features - expected_features
-                raise ValueError(f"Feature mismatch. Missing: {missing_features}, Extra: {extra_features}")
+                raise ValueError(
+                    f"Feature mismatch. Missing: {missing_features}, Extra: {extra_features}"
+                )
 
             # Validate feature order
             if self.feature_names and list(features.columns) != self.feature_names:

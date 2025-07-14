@@ -18,7 +18,9 @@ import pandas as pd
 import streamlit as st
 
 # Add the system directory to the path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "system", "infra", "agents"))
+sys.path.append(
+    os.path.join(os.path.dirname(__file__), "..", "system", "infra", "agents")
+)
 
 
 def main():
@@ -37,7 +39,8 @@ def main():
         st.header("Alert Configuration")
 
         alert_section = st.selectbox(
-            "Alert Section", ["General Settings", "Strategy Alerts", "Test Preview", "Alert History"]
+            "Alert Section",
+            ["General Settings", "Strategy Alerts", "Test Preview", "Alert History"],
         )
 
     # Main content based on selection
@@ -85,7 +88,13 @@ def get_default_alert_settings():
             "portfolio_drawdown": 0.1,
             "risk_level": 0.05,
         },
-        "strategies": {"default": {"email_alerts": True, "telegram_alerts": True, "slack_alerts": False}},
+        "strategies": {
+            "default": {
+                "email_alerts": True,
+                "telegram_alerts": True,
+                "slack_alerts": False,
+            }
+        },
     }
 
 
@@ -99,36 +108,48 @@ def render_general_settings():
         st.subheader("Email Configuration")
 
         email_enabled = st.checkbox(
-            "Enable Email Alerts", value=st.session_state.alert_settings.get("email", {}).get("enabled", True)
+            "Enable Email Alerts",
+            value=st.session_state.alert_settings.get("email", {}).get("enabled", True),
         )
 
         if email_enabled:
             smtp_server = st.text_input(
                 "SMTP Server",
-                value=st.session_state.alert_settings.get("email", {}).get("smtp_server", "smtp.gmail.com"),
+                value=st.session_state.alert_settings.get("email", {}).get(
+                    "smtp_server", "smtp.gmail.com"
+                ),
             )
 
             smtp_port = st.number_input(
                 "SMTP Port",
-                value=st.session_state.alert_settings.get("email", {}).get("smtp_port", 587),
+                value=st.session_state.alert_settings.get("email", {}).get(
+                    "smtp_port", 587
+                ),
                 min_value=1,
                 max_value=65535,
             )
 
             sender_email = st.text_input(
                 "Sender Email",
-                value=st.session_state.alert_settings.get("email", {}).get("sender_email", ""),
+                value=st.session_state.alert_settings.get("email", {}).get(
+                    "sender_email", ""
+                ),
                 type="default",
             )
 
             recipient_email = st.text_input(
                 "Recipient Email",
-                value=st.session_state.alert_settings.get("email", {}).get("recipient_email", ""),
+                value=st.session_state.alert_settings.get("email", {}).get(
+                    "recipient_email", ""
+                ),
                 type="default",
             )
 
             use_tls = st.checkbox(
-                "Use TLS", value=st.session_state.alert_settings.get("email", {}).get("use_tls", True)
+                "Use TLS",
+                value=st.session_state.alert_settings.get("email", {}).get(
+                    "use_tls", True
+                ),
             )
 
             # Update settings
@@ -150,18 +171,27 @@ def render_general_settings():
         st.subheader("Telegram Configuration")
 
         telegram_enabled = st.checkbox(
-            "Enable Telegram Alerts", value=st.session_state.alert_settings.get("telegram", {}).get("enabled", False)
+            "Enable Telegram Alerts",
+            value=st.session_state.alert_settings.get("telegram", {}).get(
+                "enabled", False
+            ),
         )
 
         if telegram_enabled:
             bot_token = st.text_input(
                 "Bot Token",
-                value=st.session_state.alert_settings.get("telegram", {}).get("bot_token", ""),
+                value=st.session_state.alert_settings.get("telegram", {}).get(
+                    "bot_token", ""
+                ),
                 type="password",
             )
 
             chat_id = st.text_input(
-                "Chat ID", value=st.session_state.alert_settings.get("telegram", {}).get("chat_id", ""), type="default"
+                "Chat ID",
+                value=st.session_state.alert_settings.get("telegram", {}).get(
+                    "chat_id", ""
+                ),
+                type="default",
             )
 
             # Update settings
@@ -169,7 +199,11 @@ def render_general_settings():
                 st.session_state.alert_settings["telegram"] = {}
 
             st.session_state.alert_settings["telegram"].update(
-                {"enabled": telegram_enabled, "bot_token": bot_token, "chat_id": chat_id}
+                {
+                    "enabled": telegram_enabled,
+                    "bot_token": bot_token,
+                    "chat_id": chat_id,
+                }
             )
 
     # Alert thresholds
@@ -182,7 +216,9 @@ def render_general_settings():
             "Model Performance Threshold",
             min_value=0.0,
             max_value=1.0,
-            value=st.session_state.alert_settings.get("thresholds", {}).get("model_performance", 0.8),
+            value=st.session_state.alert_settings.get("thresholds", {}).get(
+                "model_performance", 0.8
+            ),
             step=0.05,
         )
 
@@ -191,7 +227,9 @@ def render_general_settings():
             "Prediction Confidence Threshold",
             min_value=0.0,
             max_value=1.0,
-            value=st.session_state.alert_settings.get("thresholds", {}).get("prediction_confidence", 0.7),
+            value=st.session_state.alert_settings.get("thresholds", {}).get(
+                "prediction_confidence", 0.7
+            ),
             step=0.05,
         )
 
@@ -200,7 +238,9 @@ def render_general_settings():
             "Portfolio Drawdown Threshold",
             min_value=0.0,
             max_value=0.5,
-            value=st.session_state.alert_settings.get("thresholds", {}).get("portfolio_drawdown", 0.1),
+            value=st.session_state.alert_settings.get("thresholds", {}).get(
+                "portfolio_drawdown", 0.1
+            ),
             step=0.01,
         )
 
@@ -209,7 +249,9 @@ def render_general_settings():
             "Risk Level Threshold",
             min_value=0.0,
             max_value=0.2,
-            value=st.session_state.alert_settings.get("thresholds", {}).get("risk_level", 0.05),
+            value=st.session_state.alert_settings.get("thresholds", {}).get(
+                "risk_level", 0.05
+            ),
             step=0.01,
         )
 
@@ -248,20 +290,28 @@ def render_strategy_alerts():
 
     if selected_strategy:
         # Get current settings for selected strategy
-        strategy_settings = st.session_state.alert_settings.get("strategies", {}).get(selected_strategy, {})
+        strategy_settings = st.session_state.alert_settings.get("strategies", {}).get(
+            selected_strategy, {}
+        )
 
         st.subheader(f"Alert Settings for {selected_strategy}")
 
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            email_alerts = st.checkbox("Email Alerts", value=strategy_settings.get("email_alerts", True))
+            email_alerts = st.checkbox(
+                "Email Alerts", value=strategy_settings.get("email_alerts", True)
+            )
 
         with col2:
-            telegram_alerts = st.checkbox("Telegram Alerts", value=strategy_settings.get("telegram_alerts", True))
+            telegram_alerts = st.checkbox(
+                "Telegram Alerts", value=strategy_settings.get("telegram_alerts", True)
+            )
 
         with col3:
-            slack_alerts = st.checkbox("Slack Alerts", value=strategy_settings.get("slack_alerts", False))
+            slack_alerts = st.checkbox(
+                "Slack Alerts", value=strategy_settings.get("slack_alerts", False)
+            )
 
         # Update strategy settings
         if "strategies" not in st.session_state.alert_settings:
@@ -293,12 +343,23 @@ def render_test_preview():
             "confidence": 0.85,
             "timestamp": datetime.now(),
         },
-        "performance_alert": {"metric": "Sharpe Ratio", "value": 1.75, "threshold": 1.5, "status": "above"},
-        "system_alert": {"component": "Data Feed", "message": "Connection timeout detected", "alert_type": "warning"},
+        "performance_alert": {
+            "metric": "Sharpe Ratio",
+            "value": 1.75,
+            "threshold": 1.5,
+            "status": "above",
+        },
+        "system_alert": {
+            "component": "Data Feed",
+            "message": "Connection timeout detected",
+            "alert_type": "warning",
+        },
     }
 
     # Alert type selection
-    alert_type = st.selectbox("Select Alert Type to Preview", list(sample_alerts.keys()))
+    alert_type = st.selectbox(
+        "Select Alert Type to Preview", list(sample_alerts.keys())
+    )
 
     if alert_type == "trading_signal":
         render_trading_signal_preview(sample_alerts["trading_signal"])
@@ -313,7 +374,9 @@ def render_test_preview():
     col1, col2 = st.columns(2)
 
     with col1:
-        test_channel = st.selectbox("Test Channel", ["Email", "Telegram", "All Channels"])
+        test_channel = st.selectbox(
+            "Test Channel", ["Email", "Telegram", "All Channels"]
+        )
 
     with col2:
         if st.button("📤 Send Test Alert"):
@@ -364,7 +427,9 @@ def render_system_alert_preview(alert_data):
     """Render system alert preview."""
     st.subheader("⚙️ System Alert Preview")
 
-    alert_emoji = {"info": "ℹ️", "warning": "⚠️", "error": "❌", "success": "✅"}.get(alert_data["alert_type"], "📢")
+    alert_emoji = {"info": "ℹ️", "warning": "⚠️", "error": "❌", "success": "✅"}.get(
+        alert_data["alert_type"], "📢"
+    )
 
     preview_html = f"""
     <div style="border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 10px 0; background-color: #f9f9f9;">
@@ -396,10 +461,14 @@ def render_alert_history():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        alert_type_filter = st.selectbox("Filter by Type", ["All"] + list(df["type"].unique()))
+        alert_type_filter = st.selectbox(
+            "Filter by Type", ["All"] + list(df["type"].unique())
+        )
 
     with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df["status"].unique()))
+        status_filter = st.selectbox(
+            "Filter by Status", ["All"] + list(df["status"].unique())
+        )
 
     with col3:
         date_filter = st.date_input("Filter by Date", value=datetime.now().date())
@@ -431,7 +500,9 @@ def render_alert_history():
         st.metric("Failed", len(df[df["status"] == "failed"]))
 
     with col4:
-        success_rate = len(df[df["status"] == "sent"]) / len(df) * 100 if len(df) > 0 else 0
+        success_rate = (
+            len(df[df["status"] == "sent"]) / len(df) * 100 if len(df) > 0 else 0
+        )
         st.metric("Success Rate", f"{success_rate:.1f}%")
 
 

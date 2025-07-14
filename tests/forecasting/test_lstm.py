@@ -10,7 +10,9 @@ import pandas as pd
 import pytest
 
 # Add the models directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "trading", "models"))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "..", "trading", "models")
+)
 
 
 def test_lstm_empty_df():
@@ -53,7 +55,9 @@ def test_lstm_missing_columns():
         model = LSTMModel()
 
         # Create DataFrame without 'Close' column
-        data = pd.DataFrame({"Open": [100, 101, 102], "High": [105, 106, 107], "Low": [95, 96, 97]})
+        data = pd.DataFrame(
+            {"Open": [100, 101, 102], "High": [105, 106, 107], "Low": [95, 96, 97]}
+        )
 
         result = model.forecast(data)
 
@@ -73,7 +77,10 @@ def test_lstm_correct_output_shape():
 
         # Create sample data
         data = pd.DataFrame(
-            {"Close": np.random.randn(100).cumsum() + 100, "Volume": np.random.randint(1000, 10000, 100)}
+            {
+                "Close": np.random.randn(100).cumsum() + 100,
+                "Volume": np.random.randint(1000, 10000, 100),
+            }
         )
 
         result = model.forecast(data)
@@ -103,7 +110,10 @@ def test_lstm_exception_fallback():
 
         # Create problematic data that might cause exceptions
         data = pd.DataFrame(
-            {"Close": [np.nan, np.inf, -np.inf, 100, 101], "Volume": [0, 0, 0, 1000, 1000]}  # Contains invalid values
+            {
+                "Close": [np.nan, np.inf, -np.inf, 100, 101],
+                "Volume": [0, 0, 0, 1000, 1000],
+            }  # Contains invalid values
         )
 
         result = model.forecast(data)
@@ -159,7 +169,11 @@ def test_lstm_training_data():
         # Create realistic training data
         dates = pd.date_range("2023-01-01", periods=100, freq="D")
         data = pd.DataFrame(
-            {"Close": np.random.randn(100).cumsum() + 100, "Volume": np.random.randint(1000, 10000, 100)}, index=dates
+            {
+                "Close": np.random.randn(100).cumsum() + 100,
+                "Volume": np.random.randint(1000, 10000, 100),
+            },
+            index=dates,
         )
 
         result = model.forecast(data)
@@ -203,7 +217,12 @@ def test_lstm_hyperparameters():
         from lstm_model import LSTMModel
 
         # Test with different hyperparameters
-        hyperparams = {"sequence_length": 20, "units": 50, "dropout": 0.2, "learning_rate": 0.001}
+        hyperparams = {
+            "sequence_length": 20,
+            "units": 50,
+            "dropout": 0.2,
+            "learning_rate": 0.001,
+        }
 
         model = LSTMModel(**hyperparams)
 

@@ -57,7 +57,9 @@ class HybridSignal:
 
 
 def combine_weighted_average(
-    signals: List[StrategySignal], strategy_weights: Dict[str, float], confidence_threshold: float = 0.6
+    signals: List[StrategySignal],
+    strategy_weights: Dict[str, float],
+    confidence_threshold: float = 0.6,
 ) -> HybridSignal:
     """Combine signals using weighted average method.
 
@@ -103,7 +105,9 @@ def combine_weighted_average(
         elif avg_return > 0.05:  # 5% annual return threshold
             signal_type = SignalType.BUY if avg_return < 0.15 else SignalType.STRONG_BUY
         elif avg_return < -0.05:  # -5% annual return threshold
-            signal_type = SignalType.SELL if avg_return > -0.15 else SignalType.STRONG_SELL
+            signal_type = (
+                SignalType.SELL if avg_return > -0.15 else SignalType.STRONG_SELL
+            )
         else:
             signal_type = SignalType.HOLD
 
@@ -132,7 +136,9 @@ def combine_weighted_average(
 
 
 def combine_voting(
-    signals: List[StrategySignal], strategy_weights: Dict[str, float], confidence_threshold: float = 0.6
+    signals: List[StrategySignal],
+    strategy_weights: Dict[str, float],
+    confidence_threshold: float = 0.6,
 ) -> HybridSignal:
     """Combine signals using voting method.
 
@@ -268,9 +274,13 @@ def combine_ensemble_model(
         if avg_confidence < confidence_threshold:
             signal_type = SignalType.HOLD
         elif predicted_return > 0.05:
-            signal_type = SignalType.BUY if predicted_return < 0.15 else SignalType.STRONG_BUY
+            signal_type = (
+                SignalType.BUY if predicted_return < 0.15 else SignalType.STRONG_BUY
+            )
         elif predicted_return < -0.05:
-            signal_type = SignalType.SELL if predicted_return > -0.15 else SignalType.STRONG_SELL
+            signal_type = (
+                SignalType.SELL if predicted_return > -0.15 else SignalType.STRONG_SELL
+            )
         else:
             signal_type = SignalType.HOLD
 
@@ -298,7 +308,9 @@ def combine_ensemble_model(
         return create_fallback_hybrid_signal()
 
 
-def calculate_ensemble_position_size(confidence: float, risk_score: float, max_position_size: float = 1.0) -> float:
+def calculate_ensemble_position_size(
+    confidence: float, risk_score: float, max_position_size: float = 1.0
+) -> float:
     """Calculate position size for ensemble signal.
 
     Args:

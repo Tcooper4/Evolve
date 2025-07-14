@@ -28,7 +28,6 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-
 # Add project root to path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
@@ -37,7 +36,10 @@ sys.path.insert(0, str(project_root))
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("logs/forecasting_pipeline.log"), logging.StreamHandler()],
+    handlers=[
+        logging.FileHandler("logs/forecasting_pipeline.log"),
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -45,7 +47,9 @@ logger = logging.getLogger(__name__)
 class ForecastingPipelineLauncher:
     """Launches the complete Evolve forecasting pipeline."""
 
-    def __init__(self, mode: str = "production", port: int = 8501, host: str = "localhost"):
+    def __init__(
+        self, mode: str = "production", port: int = 8501, host: str = "localhost"
+    ):
         """Initialize the launcher.
 
         Args:
@@ -131,9 +135,9 @@ class ForecastingPipelineLauncher:
 
             # Setup Slack alerts
             if os.getenv("SLACK_WEBHOOK_URL"):
-                from trading.utils.notifications import SlackNotifier
+                from trading.utils.notifications import NotificationSystem
 
-                slack_notifier = SlackNotifier(os.getenv("SLACK_WEBHOOK_URL"))
+                slack_notifier = NotificationSystem(os.getenv("SLACK_WEBHOOK_URL"))
                 trade_logger.add_notifier(slack_notifier)
                 logger.info("✅ Slack notifications configured")
 
@@ -155,7 +159,11 @@ class ForecastingPipelineLauncher:
         except Exception as e:
             logger.warning(f"⚠️ Live trade logging setup failed: {e}")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def setup_redis_consul(self) -> bool:
         """Setup Redis and Consul connections.
@@ -261,7 +269,9 @@ class ForecastingPipelineLauncher:
             if self.mode == "development":
                 cmd.extend(["--logger.level", "debug"])
 
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            process = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            )
 
             # Wait a moment to check if it started successfully
             time.sleep(3)
@@ -361,18 +371,31 @@ class ForecastingPipelineLauncher:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(description="Evolve Forecasting Pipeline Launcher")
-    parser.add_argument("--mode", choices=["production", "development"], default="production", help="Deployment mode")
+    parser.add_argument(
+        "--mode",
+        choices=["production", "development"],
+        default="production",
+        help="Deployment mode",
+    )
     parser.add_argument("--port", type=int, default=8501, help="Port for web interface")
     parser.add_argument("--host", default="localhost", help="Host for web interface")
 
     args = parser.parse_args()
 
     # Create launcher and run
-    launcher = ForecastingPipelineLauncher(mode=args.mode, port=args.port, host=args.host)
+    launcher = ForecastingPipelineLauncher(
+        mode=args.mode, port=args.port, host=args.host
+    )
 
     try:
         launcher.run()
-        return {"status": "completed", "mode": args.mode, "port": args.port, "host": args.host, "exit_code": 0}
+        return {
+            "status": "completed",
+            "mode": args.mode,
+            "port": args.port,
+            "host": args.host,
+            "exit_code": 0,
+        }
     except Exception as e:
         logger.error(f"Pipeline execution failed: {e}")
         return {

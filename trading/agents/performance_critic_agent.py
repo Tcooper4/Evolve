@@ -66,12 +66,15 @@ class PerformanceCriticAgent(BaseAgent):
 
     # Agent metadata
     version = "1.0.0"
-    description = (
-        "Evaluates model performance based on financial metrics including Sharpe ratio, drawdown, and win rate"
-    )
+    description = "Evaluates model performance based on financial metrics including Sharpe ratio, drawdown, and win rate"
     author = "Evolve Trading System"
     tags = ["performance", "evaluation", "metrics", "risk"]
-    capabilities = ["model_evaluation", "performance_analysis", "risk_assessment", "benchmark_comparison"]
+    capabilities = [
+        "model_evaluation",
+        "performance_analysis",
+        "risk_assessment",
+        "benchmark_comparison",
+    ]
     dependencies = ["trading.backtesting", "trading.evaluation", "trading.strategies"]
 
     def _setup(self) -> None:
@@ -99,7 +102,11 @@ class PerformanceCriticAgent(BaseAgent):
 
         self.logger.info("PerformanceCriticAgent initialized")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the model evaluation logic.
@@ -112,10 +119,15 @@ class PerformanceCriticAgent(BaseAgent):
         """
         request = kwargs.get("request")
         if not request:
-            return AgentResult(success=False, error_message="ModelEvaluationRequest is required")
+            return AgentResult(
+                success=False, error_message="ModelEvaluationRequest is required"
+            )
 
         if not isinstance(request, ModelEvaluationRequest):
-            return AgentResult(success=False, error_message="Request must be a ModelEvaluationRequest instance")
+            return AgentResult(
+                success=False,
+                error_message="Request must be a ModelEvaluationRequest instance",
+            )
 
         try:
             result = self.evaluate_model(request)
@@ -133,7 +145,10 @@ class PerformanceCriticAgent(BaseAgent):
                     },
                 )
             else:
-                return AgentResult(success=False, error_message=result.error_message or "Model evaluation failed")
+                return AgentResult(
+                    success=False,
+                    error_message=result.error_message or "Model evaluation failed",
+                )
 
         except Exception as e:
             return AgentResult(success=False, error_message=str(e))
@@ -155,7 +170,12 @@ class PerformanceCriticAgent(BaseAgent):
             return False
 
         # Validate required fields
-        if not request.model_id or not request.model_path or not request.model_type or not request.test_data_path:
+        if (
+            not request.model_id
+            or not request.model_path
+            or not request.model_type
+            or not request.test_data_path
+        ):
             return False
 
         # Validate model path exists
@@ -188,13 +208,19 @@ class PerformanceCriticAgent(BaseAgent):
         try:
             # Load model and test data
             model = self._load_model(request.model_path, request.model_type)
-            test_data = self._load_test_data(request.test_data_path, request.evaluation_period)
+            test_data = self._load_test_data(
+                request.test_data_path, request.evaluation_period
+            )
 
             # Generate predictions
-            predictions = self._generate_predictions(model, test_data, request.model_type)
+            predictions = self._generate_predictions(
+                model, test_data, request.model_type
+            )
 
             # Calculate performance metrics
-            performance_metrics = self._calculate_performance_metrics(predictions, test_data)
+            performance_metrics = self._calculate_performance_metrics(
+                predictions, test_data
+            )
 
             # Calculate risk metrics
             risk_metrics = self._calculate_risk_metrics(predictions, test_data)
@@ -214,10 +240,14 @@ class PerformanceCriticAgent(BaseAgent):
             # Compare with benchmark if provided
             benchmark_comparison = None
             if request.benchmark_symbol:
-                benchmark_comparison = self._compare_with_benchmark(predictions, test_data, request.benchmark_symbol)
+                benchmark_comparison = self._compare_with_benchmark(
+                    predictions, test_data, request.benchmark_symbol
+                )
 
             # Generate recommendations
-            recommendations = self._generate_recommendations(performance_metrics, risk_metrics, trading_metrics)
+            recommendations = self._generate_recommendations(
+                performance_metrics, risk_metrics, trading_metrics
+            )
 
             result = ModelEvaluationResult(
                 request_id=request_id,
@@ -341,7 +371,9 @@ class PerformanceCriticAgent(BaseAgent):
 
         return data
 
-    def _generate_predictions(self, model: Any, test_data: pd.DataFrame, model_type: str) -> pd.Series:
+    def _generate_predictions(
+        self, model: Any, test_data: pd.DataFrame, model_type: str
+    ) -> pd.Series:
         """Generate predictions using the model.
 
         Args:
@@ -365,7 +397,9 @@ class PerformanceCriticAgent(BaseAgent):
             # Generate predictions from single model
             return pd.Series(model.predict(test_data), index=test_data.index)
 
-    def _calculate_performance_metrics(self, predictions: pd.Series, test_data: pd.DataFrame) -> Dict[str, float]:
+    def _calculate_performance_metrics(
+        self, predictions: pd.Series, test_data: pd.DataFrame
+    ) -> Dict[str, float]:
         """Calculate performance metrics.
 
         Args:
@@ -394,10 +428,13 @@ class PerformanceCriticAgent(BaseAgent):
             "total_return": total_return,
             "annualized_return": annualized_return,
             "volatility": actual_returns.std() * np.sqrt(252),
-            "information_ratio": (actual_returns.mean() - predicted_returns.mean()) / actual_returns.std(),
+            "information_ratio": (actual_returns.mean() - predicted_returns.mean())
+            / actual_returns.std(),
         }
 
-    def _calculate_risk_metrics(self, predictions: pd.Series, test_data: pd.DataFrame) -> Dict[str, float]:
+    def _calculate_risk_metrics(
+        self, predictions: pd.Series, test_data: pd.DataFrame
+    ) -> Dict[str, float]:
         """Calculate risk metrics.
 
         Args:
@@ -421,7 +458,11 @@ class PerformanceCriticAgent(BaseAgent):
 
         # Calculate Sortino ratio
         risk_free_rate = self.config.get("risk_free_rate", 0.02) / 252
-        sortino_ratio = (actual_returns.mean() - risk_free_rate) / downside_deviation if downside_deviation > 0 else 0
+        sortino_ratio = (
+            (actual_returns.mean() - risk_free_rate) / downside_deviation
+            if downside_deviation > 0
+            else 0
+        )
 
         return {
             "max_drawdown": max_drawdown,
@@ -432,7 +473,9 @@ class PerformanceCriticAgent(BaseAgent):
             "calmar_ratio": self._calculate_calmar_ratio(actual_returns, max_drawdown),
         }
 
-    def _calculate_trading_metrics(self, predictions: pd.Series, test_data: pd.DataFrame) -> Dict[str, Any]:
+    def _calculate_trading_metrics(
+        self, predictions: pd.Series, test_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """Calculate trading-specific metrics.
 
         Args:
@@ -464,7 +507,9 @@ class PerformanceCriticAgent(BaseAgent):
             "largest_loss": min(trades) if trades else 0,
         }
 
-    def _generate_trading_signals(self, predictions: pd.Series, test_data: pd.DataFrame) -> pd.Series:
+    def _generate_trading_signals(
+        self, predictions: pd.Series, test_data: pd.DataFrame
+    ) -> pd.Series:
         """Generate trading signals from predictions.
 
         Args:
@@ -521,7 +566,13 @@ class PerformanceCriticAgent(BaseAgent):
         """
         # This is a simplified implementation
         # In practice, you'd track actual trade entries/exits
-        return [0.01, -0.005, 0.02, -0.01, 0.015]  # Placeholder, actual implementation needed
+        return [
+            0.01,
+            -0.005,
+            0.02,
+            -0.01,
+            0.015,
+        ]  # Placeholder, actual implementation needed
 
     def _calculate_avg_win(self, trades: List[float]) -> float:
         """Calculate average winning trade.
@@ -584,7 +635,10 @@ class PerformanceCriticAgent(BaseAgent):
         }
 
     def _generate_recommendations(
-        self, performance_metrics: Dict[str, float], risk_metrics: Dict[str, float], trading_metrics: Dict[str, Any]
+        self,
+        performance_metrics: Dict[str, float],
+        risk_metrics: Dict[str, float],
+        trading_metrics: Dict[str, Any],
     ) -> List[str]:
         """Generate recommendations based on performance analysis.
 
@@ -605,23 +659,33 @@ class PerformanceCriticAgent(BaseAgent):
             win_rate = trading_metrics.get("win_rate", 0)
 
             if sharpe_ratio < self.thresholds["min_sharpe_ratio"]:
-                recommendations.append("Sharpe ratio below threshold - consider risk management improvements")
+                recommendations.append(
+                    "Sharpe ratio below threshold - consider risk management improvements"
+                )
 
             if total_return < 0:
-                recommendations.append("Negative total return - review strategy logic and market conditions")
+                recommendations.append(
+                    "Negative total return - review strategy logic and market conditions"
+                )
 
             if win_rate < self.thresholds["min_win_rate"]:
-                recommendations.append("Low win rate - consider improving entry/exit criteria")
+                recommendations.append(
+                    "Low win rate - consider improving entry/exit criteria"
+                )
 
             # Risk-based recommendations
             max_drawdown = risk_metrics.get("max_drawdown", 0)
             volatility = risk_metrics.get("volatility", 0)
 
             if max_drawdown < self.thresholds["max_drawdown"]:
-                recommendations.append("High drawdown - implement stricter risk controls")
+                recommendations.append(
+                    "High drawdown - implement stricter risk controls"
+                )
 
             if volatility > self.thresholds["max_volatility"]:
-                recommendations.append("High volatility - consider position sizing adjustments")
+                recommendations.append(
+                    "High volatility - consider position sizing adjustments"
+                )
 
             # Add qualitative feedback for model health
             qualitative_feedback = self._generate_qualitative_feedback(
@@ -636,7 +700,10 @@ class PerformanceCriticAgent(BaseAgent):
             return ["Error generating recommendations"]
 
     def _generate_qualitative_feedback(
-        self, performance_metrics: Dict[str, float], risk_metrics: Dict[str, float], trading_metrics: Dict[str, Any]
+        self,
+        performance_metrics: Dict[str, float],
+        risk_metrics: Dict[str, float],
+        trading_metrics: Dict[str, Any],
     ) -> List[str]:
         """
         Generate qualitative feedback for model instability or overfitting signals.
@@ -653,15 +720,21 @@ class PerformanceCriticAgent(BaseAgent):
 
         try:
             # Check for overfitting signals
-            overfitting_signals = self._detect_overfitting_signals(performance_metrics, risk_metrics, trading_metrics)
+            overfitting_signals = self._detect_overfitting_signals(
+                performance_metrics, risk_metrics, trading_metrics
+            )
             qualitative_feedback.extend(overfitting_signals)
 
             # Check for model instability
-            instability_signals = self._detect_instability_signals(performance_metrics, risk_metrics, trading_metrics)
+            instability_signals = self._detect_instability_signals(
+                performance_metrics, risk_metrics, trading_metrics
+            )
             qualitative_feedback.extend(instability_signals)
 
             # Check for data quality issues
-            data_quality_signals = self._detect_data_quality_issues(performance_metrics, risk_metrics, trading_metrics)
+            data_quality_signals = self._detect_data_quality_issues(
+                performance_metrics, risk_metrics, trading_metrics
+            )
             qualitative_feedback.extend(data_quality_signals)
 
             # Check for market regime issues
@@ -671,7 +744,9 @@ class PerformanceCriticAgent(BaseAgent):
             qualitative_feedback.extend(market_regime_signals)
 
             # Check for strategy robustness
-            robustness_signals = self._assess_strategy_robustness(performance_metrics, risk_metrics, trading_metrics)
+            robustness_signals = self._assess_strategy_robustness(
+                performance_metrics, risk_metrics, trading_metrics
+            )
             qualitative_feedback.extend(robustness_signals)
 
             return qualitative_feedback
@@ -681,7 +756,10 @@ class PerformanceCriticAgent(BaseAgent):
             return ["Error in qualitative analysis"]
 
     def _detect_overfitting_signals(
-        self, performance_metrics: Dict[str, float], risk_metrics: Dict[str, float], trading_metrics: Dict[str, Any]
+        self,
+        performance_metrics: Dict[str, float],
+        risk_metrics: Dict[str, float],
+        trading_metrics: Dict[str, Any],
     ) -> List[str]:
         """
         Detect overfitting signals in model performance.
@@ -720,7 +798,8 @@ class PerformanceCriticAgent(BaseAgent):
             # Check for unrealistic returns
             if total_return > 2.0:  # >200% return
                 overfitting_signals.append(
-                    "WARNING: Extremely high total return ({:.1%}) may indicate overfitting " "or data snooping bias."
+                    "WARNING: Extremely high total return ({:.1%}) may indicate overfitting "
+                    "or data snooping bias."
                 )
 
             # Check for too many trades (potential over-optimization)
@@ -745,7 +824,10 @@ class PerformanceCriticAgent(BaseAgent):
             return ["Error in overfitting detection"]
 
     def _detect_instability_signals(
-        self, performance_metrics: Dict[str, float], risk_metrics: Dict[str, float], trading_metrics: Dict[str, Any]
+        self,
+        performance_metrics: Dict[str, float],
+        risk_metrics: Dict[str, float],
+        trading_metrics: Dict[str, Any],
     ) -> List[str]:
         """
         Detect model instability signals.
@@ -806,7 +888,10 @@ class PerformanceCriticAgent(BaseAgent):
             return ["Error in instability detection"]
 
     def _detect_data_quality_issues(
-        self, performance_metrics: Dict[str, float], risk_metrics: Dict[str, float], trading_metrics: Dict[str, Any]
+        self,
+        performance_metrics: Dict[str, float],
+        risk_metrics: Dict[str, float],
+        trading_metrics: Dict[str, Any],
     ) -> List[str]:
         """
         Detect data quality issues that might affect model performance.
@@ -852,7 +937,10 @@ class PerformanceCriticAgent(BaseAgent):
             return ["Error in data quality detection"]
 
     def _detect_market_regime_issues(
-        self, performance_metrics: Dict[str, float], risk_metrics: Dict[str, float], trading_metrics: Dict[str, Any]
+        self,
+        performance_metrics: Dict[str, float],
+        risk_metrics: Dict[str, float],
+        trading_metrics: Dict[str, Any],
     ) -> List[str]:
         """
         Detect market regime issues that might affect model performance.
@@ -880,7 +968,8 @@ class PerformanceCriticAgent(BaseAgent):
             volatility = risk_metrics.get("volatility", 0)
             if volatility > 0.25:
                 market_regime_signals.append(
-                    "INFO: High volatility period ({:.1%}) detected. Model may need " "volatility regime adjustments."
+                    "INFO: High volatility period ({:.1%}) detected. Model may need "
+                    "volatility regime adjustments."
                 )
 
             # Check for low volume conditions
@@ -893,7 +982,10 @@ class PerformanceCriticAgent(BaseAgent):
             return ["Error in market regime detection"]
 
     def _assess_strategy_robustness(
-        self, performance_metrics: Dict[str, float], risk_metrics: Dict[str, float], trading_metrics: Dict[str, Any]
+        self,
+        performance_metrics: Dict[str, float],
+        risk_metrics: Dict[str, float],
+        trading_metrics: Dict[str, Any],
     ) -> List[str]:
         """
         Assess strategy robustness and provide recommendations.
@@ -915,8 +1007,14 @@ class PerformanceCriticAgent(BaseAgent):
             win_rate = trading_metrics.get("win_rate", 0)
 
             # Good balance indicators
-            if 0.5 <= sharpe_ratio <= 2.0 and max_drawdown > -0.15 and 0.4 <= win_rate <= 0.7:
-                robustness_signals.append("POSITIVE: Well-balanced performance metrics suggest robust strategy design.")
+            if (
+                0.5 <= sharpe_ratio <= 2.0
+                and max_drawdown > -0.15
+                and 0.4 <= win_rate <= 0.7
+            ):
+                robustness_signals.append(
+                    "POSITIVE: Well-balanced performance metrics suggest robust strategy design."
+                )
 
             # Check for sustainable performance
             if sharpe_ratio > 1.0 and max_drawdown > -0.1:
@@ -937,7 +1035,9 @@ class PerformanceCriticAgent(BaseAgent):
                 )
 
             if max_drawdown < -0.2:
-                robustness_signals.append("IMPROVEMENT: High drawdown indicates need for better risk controls.")
+                robustness_signals.append(
+                    "IMPROVEMENT: High drawdown indicates need for better risk controls."
+                )
 
             return robustness_signals
 
@@ -946,7 +1046,10 @@ class PerformanceCriticAgent(BaseAgent):
             return ["Error in robustness assessment"]
 
     def _calculate_model_health_score(
-        self, performance_metrics: Dict[str, float], risk_metrics: Dict[str, float], trading_metrics: Dict[str, Any]
+        self,
+        performance_metrics: Dict[str, float],
+        risk_metrics: Dict[str, float],
+        trading_metrics: Dict[str, Any],
     ) -> Dict[str, Any]:
         """
         Calculate a comprehensive model health score.
@@ -1008,7 +1111,12 @@ class PerformanceCriticAgent(BaseAgent):
 
         except Exception as e:
             self.logger.error(f"Error calculating model health score: {e}")
-            return {"overall_score": 0.0, "health_status": "ERROR", "score_breakdown": {}, "error": str(e)}
+            return {
+                "overall_score": 0.0,
+                "health_status": "ERROR",
+                "score_breakdown": {},
+                "error": str(e),
+            }
 
     def _store_evaluation_result(self, result: ModelEvaluationResult) -> None:
         """Store evaluation result in memory.
@@ -1065,12 +1173,12 @@ class PerformanceCriticAgent(BaseAgent):
         # Calculate trends
         if len(evaluations) > 1:
             previous = evaluations[-2]
-            sharpe_trend = latest.performance_metrics.get("sharpe_ratio", 0) - previous.performance_metrics.get(
+            sharpe_trend = latest.performance_metrics.get(
                 "sharpe_ratio", 0
-            )
-            return_trend = latest.performance_metrics.get("total_return", 0) - previous.performance_metrics.get(
+            ) - previous.performance_metrics.get("sharpe_ratio", 0)
+            return_trend = latest.performance_metrics.get(
                 "total_return", 0
-            )
+            ) - previous.performance_metrics.get("total_return", 0)
         else:
             sharpe_trend = 0
             return_trend = 0

@@ -53,7 +53,7 @@ class CatBoostModel(BaseModel):
                 raise RuntimeError("Model must be fitted before forecasting.")
 
             # Make initial prediction
-            predictions = self.predict(data)
+            self.predict(data)
 
             # Generate multi-step forecast
             forecast_values = []
@@ -67,7 +67,9 @@ class CatBoostModel(BaseModel):
                 # Update data for next iteration
                 new_row = current_data.iloc[-1].copy()
                 new_row[self.target_column] = pred[-1]  # Update with prediction
-                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                current_data = pd.concat(
+                    [current_data, pd.DataFrame([new_row])], ignore_index=True
+                )
                 current_data = current_data.iloc[1:]  # Remove oldest row
 
             return {
@@ -92,7 +94,9 @@ class CatBoostModel(BaseModel):
 
     def shap_interpret(self, X_sample):
         logger.info("CatBoost SHAP summary plot:")
-        shap_values = self.model.get_feature_importance(Pool(X_sample, np.zeros(X_sample.shape[0])))
+        shap_values = self.model.get_feature_importance(
+            Pool(X_sample, np.zeros(X_sample.shape[0]))
+        )
         import matplotlib.pyplot as plt
 
         plt.bar(self.feature_columns, shap_values)

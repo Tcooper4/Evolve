@@ -110,7 +110,11 @@ class ArxivModelDiscoverer:
                 logger.info(f"Searching Arxiv for: {term}")
 
                 # Search Arxiv
-                search = arxiv.Search(query=term, max_results=max_results, sort_by=arxiv.SortCriterion.SubmittedDate)
+                search = arxiv.Search(
+                    query=term,
+                    max_results=max_results,
+                    sort_by=arxiv.SortCriterion.SubmittedDate,
+                )
 
                 for result in search.results():
                     # Extract model information
@@ -141,7 +145,9 @@ class ArxivModelDiscoverer:
                     source="arxiv",
                     model_id=f"arxiv_{result.entry_id.split('/')[-1]}",
                     title=title,
-                    description=abstract[:500] + "..." if len(abstract) > 500 else abstract,
+                    description=abstract[:500] + "..."
+                    if len(abstract) > 500
+                    else abstract,
                     url=result.entry_id,
                     framework=framework,
                     model_type=model_type,
@@ -214,7 +220,9 @@ class HuggingFaceModelDiscoverer:
                 logger.info(f"Searching Hugging Face for: {term}")
 
                 # Search models
-                models = self.api.list_models(search=term, limit=max_results, sort="downloads", direction=-1)
+                models = self.api.list_models(
+                    search=term, limit=max_results, sort="downloads", direction=-1
+                )
 
                 for model in models:
                     model_info = self._extract_model_info(model)
@@ -306,9 +314,7 @@ class GitHubModelDiscoverer:
                 logger.info(f"Searching GitHub for: {term}")
 
                 # Use GitHub search API
-                search_url = (
-                    f"https://api.github.com/search/repositories?q={term}&sort=stars&order=desc&per_page={max_results}"
-                )
+                search_url = f"https://api.github.com/search/repositories?q={term}&sort=stars&order=desc&per_page={max_results}"
 
                 response = requests.get(search_url)
                 if response.status_code == 200:
@@ -342,7 +348,9 @@ class GitHubModelDiscoverer:
                     source="github",
                     model_id=f"github_{repo['id']}",
                     title=title,
-                    description=description[:500] + "..." if len(description) > 500 else description,
+                    description=description[:500] + "..."
+                    if len(description) > 500
+                    else description,
                     url=repo["html_url"],
                     framework=framework,
                     model_type=model_type,
@@ -411,7 +419,9 @@ class ModelBenchmarker:
             # Create and train model
             model = self._create_model(model_discovery)
             if not model:
-                return self._create_failed_benchmark(model_discovery.model_id, "Model creation failed")
+                return self._create_failed_benchmark(
+                    model_discovery.model_id, "Model creation failed"
+                )
 
             # Train model
             start_time = time.time()
@@ -431,7 +441,9 @@ class ModelBenchmarker:
 
             # Determine if model is approved
             is_approved = self._evaluate_performance(metrics)
-            rejection_reason = None if is_approved else self._get_rejection_reason(metrics)
+            rejection_reason = (
+                None if is_approved else self._get_rejection_reason(metrics)
+            )
 
             result = BenchmarkResult(
                 model_id=model_discovery.model_id,
@@ -544,7 +556,9 @@ class ModelBenchmarker:
             logger.error(f"Error creating model: {e}")
             return None
 
-    def _calculate_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+    def _calculate_metrics(
+        self, y_true: np.ndarray, y_pred: np.ndarray
+    ) -> Dict[str, float]:
         """Calculate comprehensive metrics."""
         try:
             # Basic regression metrics
@@ -557,7 +571,9 @@ class ModelBenchmarker:
             pred_returns = np.diff(y_pred) / y_pred[:-1]
 
             # Sharpe ratio
-            sharpe_ratio = np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0
+            sharpe_ratio = (
+                np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0
+            )
 
             # Max drawdown
             cumulative = np.cumprod(1 + returns)
@@ -609,8 +625,12 @@ class ModelBenchmarker:
                 "rmse": max(0, 1 - metrics["rmse"] / 0.1),  # Lower is better
                 "mae": max(0, 1 - metrics["mae"] / 0.08),
                 "mape": max(0, 1 - metrics["mape"] / 10),
-                "sharpe_ratio": min(1, max(0, metrics["sharpe_ratio"] / 2)),  # Higher is better
-                "max_drawdown": max(0, 1 - metrics["max_drawdown"] / 0.3),  # Lower is better
+                "sharpe_ratio": min(
+                    1, max(0, metrics["sharpe_ratio"] / 2)
+                ),  # Higher is better
+                "max_drawdown": max(
+                    0, 1 - metrics["max_drawdown"] / 0.3
+                ),  # Lower is better
                 "win_rate": metrics["win_rate"],
                 "profit_factor": min(1, metrics["profit_factor"] / 3),
             }
@@ -626,7 +646,9 @@ class ModelBenchmarker:
                 "profit_factor": 0.05,
             }
 
-            overall_score = sum(normalized_metrics[metric] * weights[metric] for metric in weights)
+            overall_score = sum(
+                normalized_metrics[metric] * weights[metric] for metric in weights
+            )
             return overall_score
 
         except Exception as e:
@@ -656,10 +678,14 @@ class ModelBenchmarker:
         for metric, threshold in self.performance_thresholds.items():
             if metric in ["rmse", "mae", "mape", "max_drawdown"]:
                 if metrics[metric] > threshold:
-                    reasons.append(f"{metric.upper()} too high: {metrics[metric]:.4f} > {threshold}")
+                    reasons.append(
+                        f"{metric.upper()} too high: {metrics[metric]:.4f} > {threshold}"
+                    )
             else:
                 if metrics[metric] < threshold:
-                    reasons.append(f"{metric.upper()} too low: {metrics[metric]:.4f} < {threshold}")
+                    reasons.append(
+                        f"{metric.upper()} too low: {metrics[metric]:.4f} < {threshold}"
+                    )
 
         return "; ".join(reasons)
 
@@ -725,21 +751,27 @@ class ModelDiscoveryAgent:
             # Discover from Arxiv
             if ARXIV_AVAILABLE:
                 logger.info("Discovering models from Arxiv...")
-                arxiv_discoveries = self.arxiv_discoverer.search_models(max_results_per_source)
+                arxiv_discoveries = self.arxiv_discoverer.search_models(
+                    max_results_per_source
+                )
                 discoveries.extend(arxiv_discoveries)
                 logger.info(f"Found {len(arxiv_discoveries)} models on Arxiv")
 
             # Discover from Hugging Face
             if HUGGINGFACE_AVAILABLE:
                 logger.info("Discovering models from Hugging Face...")
-                hf_discoveries = self.hf_discoverer.search_models(max_results_per_source)
+                hf_discoveries = self.hf_discoverer.search_models(
+                    max_results_per_source
+                )
                 discoveries.extend(hf_discoveries)
                 logger.info(f"Found {len(hf_discoveries)} models on Hugging Face")
 
             # Discover from GitHub
             if GITHUB_AVAILABLE:
                 logger.info("Discovering models from GitHub...")
-                github_discoveries = self.github_discoverer.search_models(max_results_per_source)
+                github_discoveries = self.github_discoverer.search_models(
+                    max_results_per_source
+                )
                 discoveries.extend(github_discoveries)
                 logger.info(f"Found {len(github_discoveries)} models on GitHub")
 
@@ -753,7 +785,9 @@ class ModelDiscoveryAgent:
             self.discovery_stats["total_discovered"] += len(unique_discoveries)
             self.discovery_stats["last_discovery_run"] = datetime.now()
 
-            logger.info(f"Discovery completed. Found {len(unique_discoveries)} unique models")
+            logger.info(
+                f"Discovery completed. Found {len(unique_discoveries)} unique models"
+            )
 
             return unique_discoveries
 
@@ -761,7 +795,9 @@ class ModelDiscoveryAgent:
             logger.error(f"Error in model discovery: {e}")
             return []
 
-    def benchmark_discoveries(self, discoveries: List[ModelDiscovery]) -> List[BenchmarkResult]:
+    def benchmark_discoveries(
+        self, discoveries: List[ModelDiscovery]
+    ) -> List[BenchmarkResult]:
         """Benchmark discovered models."""
         try:
             logger.info(f"Starting benchmark of {len(discoveries)} models")
@@ -790,8 +826,12 @@ class ModelDiscoveryAgent:
 
             # Update stats
             self.discovery_stats["total_benchmarked"] += len(benchmark_results)
-            self.discovery_stats["total_approved"] += sum(1 for r in benchmark_results if r.is_approved)
-            self.discovery_stats["total_rejected"] += sum(1 for r in benchmark_results if not r.is_approved)
+            self.discovery_stats["total_approved"] += sum(
+                1 for r in benchmark_results if r.is_approved
+            )
+            self.discovery_stats["total_rejected"] += sum(
+                1 for r in benchmark_results if not r.is_approved
+            )
 
             logger.info(
                 f"Benchmark completed. Approved: {self.discovery_stats['total_approved']}, Rejected: {self.discovery_stats['total_rejected']}"
@@ -803,7 +843,9 @@ class ModelDiscoveryAgent:
             logger.error(f"Error in benchmarking: {e}")
             return []
 
-    def integrate_approved_models(self, benchmark_results: List[BenchmarkResult]) -> List[str]:
+    def integrate_approved_models(
+        self, benchmark_results: List[BenchmarkResult]
+    ) -> List[str]:
         """Integrate approved models into the model pool."""
         try:
             logger.info("Integrating approved models into model pool")
@@ -814,7 +856,14 @@ class ModelDiscoveryAgent:
             for result in approved_models:
                 try:
                     # Find corresponding discovery
-                    discovery = next((d for d in self.discovered_models if d.model_id == result.model_id), None)
+                    discovery = next(
+                        (
+                            d
+                            for d in self.discovered_models
+                            if d.model_id == result.model_id
+                        ),
+                        None,
+                    )
 
                     if discovery:
                         # Register model in the system
@@ -824,15 +873,21 @@ class ModelDiscoveryAgent:
                             discovery.integration_status = "integrated"
                             integrated_ids.append(result.model_id)
                             self.integrated_models.append(discovery)
-                            logger.info(f"Successfully integrated model: {result.model_id}")
+                            logger.info(
+                                f"Successfully integrated model: {result.model_id}"
+                            )
                         else:
                             discovery.integration_status = "failed"
-                            logger.warning(f"Failed to integrate model: {result.model_id}")
+                            logger.warning(
+                                f"Failed to integrate model: {result.model_id}"
+                            )
 
                 except Exception as e:
                     logger.error(f"Error integrating model {result.model_id}: {e}")
 
-            logger.info(f"Integration completed. Successfully integrated {len(integrated_ids)} models")
+            logger.info(
+                f"Integration completed. Successfully integrated {len(integrated_ids)} models"
+            )
 
             return integrated_ids
 
@@ -840,7 +895,9 @@ class ModelDiscoveryAgent:
             logger.error(f"Error in model integration: {e}")
             return []
 
-    def _register_model_in_pool(self, discovery: ModelDiscovery, result: BenchmarkResult) -> bool:
+    def _register_model_in_pool(
+        self, discovery: ModelDiscovery, result: BenchmarkResult
+    ) -> bool:
         """Register model in the system's model pool."""
         try:
             # This would integrate with the existing model registry
@@ -861,7 +918,9 @@ class ModelDiscoveryAgent:
             logger.error(f"Error registering model in pool: {e}")
             return False
 
-    def _remove_duplicates(self, discoveries: List[ModelDiscovery]) -> List[ModelDiscovery]:
+    def _remove_duplicates(
+        self, discoveries: List[ModelDiscovery]
+    ) -> List[ModelDiscovery]:
         """Remove duplicate discoveries based on title similarity."""
         unique_discoveries = []
         seen_titles = set()
@@ -887,7 +946,9 @@ class ModelDiscoveryAgent:
 
     def get_top_performing_models(self, n: int = 10) -> List[BenchmarkResult]:
         """Get top performing models."""
-        sorted_results = sorted(self.benchmark_results.values(), key=lambda x: x.overall_score, reverse=True)
+        sorted_results = sorted(
+            self.benchmark_results.values(), key=lambda x: x.overall_score, reverse=True
+        )
         return sorted_results[:n]
 
     def get_rejected_models(self) -> List[BenchmarkResult]:
@@ -895,6 +956,8 @@ class ModelDiscoveryAgent:
         return [r for r in self.benchmark_results.values() if not r.is_approved]
 
 
-def get_model_discovery_agent(config: Optional[Dict[str, Any]] = None) -> ModelDiscoveryAgent:
+def get_model_discovery_agent(
+    config: Optional[Dict[str, Any]] = None
+) -> ModelDiscoveryAgent:
     """Get the model discovery agent instance."""
     return ModelDiscoveryAgent(config)

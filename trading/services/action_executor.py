@@ -54,7 +54,9 @@ class ActionExecutor:
         else:
             return self._get_general_analysis(symbol, timeframe, period)
 
-    def _get_model_recommendation(self, symbol: str, timeframe: str, period: str) -> Dict[str, Any]:
+    def _get_model_recommendation(
+        self, symbol: str, timeframe: str, period: str
+    ) -> Dict[str, Any]:
         """Get the best model recommendation for a symbol."""
         try:
             # Build multiple models
@@ -62,14 +64,21 @@ class ActionExecutor:
             for model_type in ["lstm", "xgboost", "ensemble"]:
                 result = self.client.build_model(model_type, symbol, timeframe)
                 if result and result.get("status") == "success":
-                    models.append({"model_type": model_type, "model_info": result.get("model_info", {})})
+                    models.append(
+                        {
+                            "model_type": model_type,
+                            "model_info": result.get("model_info", {}),
+                        }
+                    )
 
             # Evaluate all models
             evaluations = []
             for model in models:
                 model_id = model["model_info"].get("model_id")
                 if model_id:
-                    eval_result = self.client.evaluate_model(model_id, symbol, timeframe, period)
+                    eval_result = self.client.evaluate_model(
+                        model_id, symbol, timeframe, period
+                    )
                     if eval_result and eval_result.get("status") == "success":
                         evaluations.append(
                             {
@@ -110,7 +119,9 @@ class ActionExecutor:
                 "period": period,
             }
 
-    def _get_trading_signal(self, symbol: str, timeframe: str, period: str) -> Dict[str, Any]:
+    def _get_trading_signal(
+        self, symbol: str, timeframe: str, period: str
+    ) -> Dict[str, Any]:
         """Get trading signal for a symbol."""
         try:
             # First get the best model
@@ -121,7 +132,11 @@ class ActionExecutor:
 
             best_model = model_result.get("best_model")
             if not best_model:
-                return {"action": "trading_signal", "error": "No suitable model found", "symbol": symbol}
+                return {
+                    "action": "trading_signal",
+                    "error": "No suitable model found",
+                    "symbol": symbol,
+                }
 
             # Generate forecast using the best model
             model_id = best_model["model_id"]
@@ -144,7 +159,9 @@ class ActionExecutor:
             logger.error(f"Error getting trading signal: {e}")
             return {"action": "trading_signal", "error": str(e), "symbol": symbol}
 
-    def _get_market_analysis(self, symbol: str, timeframe: str, period: str) -> Dict[str, Any]:
+    def _get_market_analysis(
+        self, symbol: str, timeframe: str, period: str
+    ) -> Dict[str, Any]:
         """Get comprehensive market analysis."""
         try:
             # Get model recommendation
@@ -156,9 +173,16 @@ class ActionExecutor:
             # Generate plots
             plots = []
             for plot_type in ["price_chart", "volume_analysis", "technical_indicators"]:
-                plot_result = self.client.generate_plot(plot_type, f"{symbol}_{timeframe}")
+                plot_result = self.client.generate_plot(
+                    plot_type, f"{symbol}_{timeframe}"
+                )
                 if plot_result and plot_result.get("status") == "success":
-                    plots.append({"type": plot_type, "path": plot_result.get("result", {}).get("save_path")})
+                    plots.append(
+                        {
+                            "type": plot_type,
+                            "path": plot_result.get("result", {}).get("save_path"),
+                        }
+                    )
 
             return {
                 "action": "market_analysis",
@@ -174,7 +198,9 @@ class ActionExecutor:
             logger.error(f"Error getting market analysis: {e}")
             return {"action": "market_analysis", "error": str(e), "symbol": symbol}
 
-    def _get_general_analysis(self, symbol: str, timeframe: str, period: str) -> Dict[str, Any]:
+    def _get_general_analysis(
+        self, symbol: str, timeframe: str, period: str
+    ) -> Dict[str, Any]:
         """Get general analysis for any query."""
         try:
             # Combine multiple analyses
@@ -194,7 +220,9 @@ class ActionExecutor:
             logger.error(f"Error getting general analysis: {e}")
             return {"action": "general_analysis", "error": str(e), "symbol": symbol}
 
-    def _generate_forecast(self, model_id: str, symbol: str, timeframe: str) -> Dict[str, Any]:
+    def _generate_forecast(
+        self, model_id: str, symbol: str, timeframe: str
+    ) -> Dict[str, Any]:
         """Generate forecast using a specific model."""
         # This would integrate with your existing forecasting system
         # For now, return a mock forecast
@@ -208,7 +236,9 @@ class ActionExecutor:
             "time_horizon": "1d",
         }
 
-    def _generate_signal(self, forecast: Dict[str, Any], evaluation: Dict[str, Any]) -> Dict[str, Any]:
+    def _generate_signal(
+        self, forecast: Dict[str, Any], evaluation: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Generate trading signal based on forecast and model evaluation."""
         prediction = forecast.get("prediction", "neutral")
         confidence = forecast.get("confidence", 0.5)
@@ -233,7 +263,9 @@ class ActionExecutor:
             "reasoning": f"Model predicts {prediction} with {confidence:.1%} confidence",
         }
 
-    def _get_market_data(self, symbol: str, timeframe: str, period: str) -> Dict[str, Any]:
+    def _get_market_data(
+        self, symbol: str, timeframe: str, period: str
+    ) -> Dict[str, Any]:
         """Get market data analysis."""
         # This would integrate with your data providers
         # For now, return mock data

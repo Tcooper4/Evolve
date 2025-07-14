@@ -124,7 +124,9 @@ class OptimizerConsolidator:
         if self.optimizers_dir.exists():
             self._consolidate_optimizers_directory(results)
 
-    def _consolidate_directory(self, source_dir: Path, results: Dict[str, Any], dir_name: str) -> None:
+    def _consolidate_directory(
+        self, source_dir: Path, results: Dict[str, Any], dir_name: str
+    ) -> None:
         """Consolidate files from a directory."""
         logger.info(f"Consolidating {dir_name}/ directory...")
 
@@ -138,11 +140,21 @@ class OptimizerConsolidator:
             if dir_name == "optimizer":
                 # Handle optimizer/ subdirectories
                 if relative_path.parts[0] == "core":
-                    target_path = self.trading_optimization_dir / "core" / relative_path.name
+                    target_path = (
+                        self.trading_optimization_dir / "core" / relative_path.name
+                    )
                 elif relative_path.parts[0] == "strategies":
-                    target_path = self.trading_optimization_dir / "strategies" / relative_path.name
+                    target_path = (
+                        self.trading_optimization_dir
+                        / "strategies"
+                        / relative_path.name
+                    )
                 elif relative_path.parts[0] == "visualization":
-                    target_path = self.trading_optimization_dir / "visualization" / relative_path.name
+                    target_path = (
+                        self.trading_optimization_dir
+                        / "visualization"
+                        / relative_path.name
+                    )
                 else:
                     target_path = self.trading_optimization_dir / relative_path.name
             else:
@@ -175,7 +187,9 @@ class OptimizerConsolidator:
                 target_path = self.trading_optimization_dir / file_path.name
                 self._move_file(file_path, target_path, results)
 
-    def _move_file(self, source_path: Path, target_path: Path, results: Dict[str, Any]) -> None:
+    def _move_file(
+        self, source_path: Path, target_path: Path, results: Dict[str, Any]
+    ) -> None:
         """Move a file to target location."""
         try:
             shutil.move(str(source_path), str(target_path))
@@ -186,7 +200,9 @@ class OptimizerConsolidator:
             logger.error(error_msg)
             results["errors"].append(error_msg)
 
-    def _merge_files(self, source_path: Path, target_path: Path, results: Dict[str, Any]) -> None:
+    def _merge_files(
+        self, source_path: Path, target_path: Path, results: Dict[str, Any]
+    ) -> None:
         """Merge two files, keeping the best parts of each."""
         try:
             with open(source_path, "r", encoding="utf-8") as f:
@@ -242,7 +258,10 @@ class OptimizerConsolidator:
         for py_file in self.root_dir.rglob("*.py"):
             try:
                 # Skip files in backup and __pycache__ directories
-                if any(part in ["backup", "__pycache__", ".git", ".venv"] for part in py_file.parts):
+                if any(
+                    part in ["backup", "__pycache__", ".git", ".venv"]
+                    for part in py_file.parts
+                ):
                     continue
 
                 with open(py_file, "r", encoding="utf-8") as f:
@@ -312,7 +331,11 @@ class OptimizerConsolidator:
             ]
 
         # Check if consolidation is needed
-        if self.optimize_dir.exists() or self.optimizer_dir.exists() or self.optimizers_dir.exists():
+        if (
+            self.optimize_dir.exists()
+            or self.optimizer_dir.exists()
+            or self.optimizers_dir.exists()
+        ):
             status["consolidation_needed"] = True
 
         return status
@@ -352,7 +375,6 @@ class OptimizerConsolidator:
 
             sys.path.insert(0, str(self.root_dir))
 
-
             logger.info("Successfully imported trading.optimization")
 
         except ImportError as e:
@@ -363,7 +385,9 @@ class OptimizerConsolidator:
         return errors
 
 
-def run_optimizer_consolidation(create_backup: bool = True, root_dir: Optional[str] = None) -> Dict[str, Any]:
+def run_optimizer_consolidation(
+    create_backup: bool = True, root_dir: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Run the optimizer consolidation process.
 

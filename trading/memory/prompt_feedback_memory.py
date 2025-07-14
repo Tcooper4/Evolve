@@ -58,7 +58,11 @@ class PromptFeedbackMemory:
 
         logger.info("Prompt feedback memory system initialized")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def store_interaction(
         self,
@@ -101,7 +105,9 @@ class PromptFeedbackMemory:
             prompt_type = self._categorize_prompt(prompt)
             self.feedback_stats[prompt_type].append(user_feedback)
 
-        logger.info(f"Stored interaction: {prompt[:50]}... with feedback {user_feedback}")
+        logger.info(
+            f"Stored interaction: {prompt[:50]}... with feedback {user_feedback}"
+        )
 
     def _categorize_prompt(self, prompt: str) -> str:
         """Categorize prompt by type."""
@@ -113,7 +119,9 @@ class PromptFeedbackMemory:
             return "optimization"
         elif any(word in prompt_lower for word in ["strategy", "backtest", "trade"]):
             return "strategy"
-        elif any(word in prompt_lower for word in ["portfolio", "position", "holdings"]):
+        elif any(
+            word in prompt_lower for word in ["portfolio", "position", "holdings"]
+        ):
             return "portfolio"
         elif any(word in prompt_lower for word in ["risk", "volatility", "drawdown"]):
             return "risk"
@@ -134,13 +142,15 @@ class PromptFeedbackMemory:
         successful_interactions = [
             interaction
             for interaction in self.interactions
-            if interaction.user_feedback and interaction.user_feedback >= self.feedback_threshold
+            if interaction.user_feedback
+            and interaction.user_feedback >= self.feedback_threshold
         ]
 
         unsuccessful_interactions = [
             interaction
             for interaction in self.interactions
-            if interaction.user_feedback and interaction.user_feedback < self.feedback_threshold
+            if interaction.user_feedback
+            and interaction.user_feedback < self.feedback_threshold
         ]
 
         # Extract patterns
@@ -154,7 +164,9 @@ class PromptFeedbackMemory:
             "total_interactions": len(self.interactions),
             "successful_interactions": len(successful_interactions),
             "unsuccessful_interactions": len(unsuccessful_interactions),
-            "success_rate": len(successful_interactions) / len(self.interactions) if self.interactions else 0,
+            "success_rate": len(successful_interactions) / len(self.interactions)
+            if self.interactions
+            else 0,
             "patterns_learned": len(self.patterns),
             "feedback_by_category": self._get_feedback_by_category(),
         }
@@ -162,7 +174,9 @@ class PromptFeedbackMemory:
         logger.info(f"Pattern learning completed: {insights}")
         return insights
 
-    def _extract_patterns(self, interactions: List[PromptInteraction]) -> Dict[str, Any]:
+    def _extract_patterns(
+        self, interactions: List[PromptInteraction]
+    ) -> Dict[str, Any]:
         """Extract patterns from interactions."""
         if not interactions:
             return {}
@@ -206,7 +220,9 @@ class PromptFeedbackMemory:
         else:
             return "general"
 
-    def _update_patterns(self, successful_patterns: Dict[str, Any], unsuccessful_patterns: Dict[str, Any]) -> None:
+    def _update_patterns(
+        self, successful_patterns: Dict[str, Any], unsuccessful_patterns: Dict[str, Any]
+    ) -> None:
         """Update pattern database."""
         # Update keyword patterns
         all_keywords = set(successful_patterns.get("common_keywords", {}).keys()) | set(
@@ -214,8 +230,12 @@ class PromptFeedbackMemory:
         )
 
         for keyword in all_keywords:
-            successful_count = successful_patterns.get("common_keywords", {}).get(keyword, 0)
-            unsuccessful_count = unsuccessful_patterns.get("common_keywords", {}).get(keyword, 0)
+            successful_count = successful_patterns.get("common_keywords", {}).get(
+                keyword, 0
+            )
+            unsuccessful_count = unsuccessful_patterns.get("common_keywords", {}).get(
+                keyword, 0
+            )
             total_count = successful_count + unsuccessful_count
 
             if total_count >= 3:  # Minimum threshold
@@ -291,10 +311,16 @@ class PromptFeedbackMemory:
         return {
             "total_interactions": len(self.interactions),
             "total_patterns": len(self.patterns),
-            "average_feedback": np.mean(self.feedback_stats["overall"]) if self.feedback_stats["overall"] else 0,
+            "average_feedback": np.mean(self.feedback_stats["overall"])
+            if self.feedback_stats["overall"]
+            else 0,
             "feedback_by_category": self._get_feedback_by_category(),
             "recent_interactions": len(
-                [i for i in self.interactions if i.timestamp > datetime.now() - timedelta(days=7)]
+                [
+                    i
+                    for i in self.interactions
+                    if i.timestamp > datetime.now() - timedelta(days=7)
+                ]
             ),
             "top_patterns": self._get_top_patterns(),
         }
@@ -342,4 +368,8 @@ class PromptFeedbackMemory:
 
         except Exception as e:
             logger.error(f"Error in memory loop: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }

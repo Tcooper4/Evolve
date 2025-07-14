@@ -110,7 +110,11 @@ CORS(
 )
 
 # Initialize rate limiter
-limiter = Limiter(app=app, key_func=get_remote_address, default_limits=[f"{os.getenv('RATE_LIMIT', '100')}/hour"])
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=[f"{os.getenv('RATE_LIMIT', '100')}/hour"],
+)
 
 # Setup logging
 log_handler = logging.handlers.RotatingFileHandler(
@@ -118,7 +122,9 @@ log_handler = logging.handlers.RotatingFileHandler(
     maxBytes=int(os.getenv("LOG_MAX_SIZE", 10485760)),
     backupCount=int(os.getenv("LOG_BACKUP_COUNT", 5)),
 )
-log_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+log_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+)
 app.logger.addHandler(log_handler)
 app.logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
@@ -366,10 +372,22 @@ def health_check():
         redis_client.ping()
         # Check Ray connection
         ray.is_initialized()
-        return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()}), 200
+        return (
+            jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()}),
+            200,
+        )
     except Exception as e:
         app.logger.error(f"Health check failed: {str(e)}")
-        return jsonify({"status": "unhealthy", "error": str(e), "timestamp": datetime.now().isoformat()}), 500
+        return (
+            jsonify(
+                {
+                    "status": "unhealthy",
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                }
+            ),
+            500,
+        )
 
 
 @app.route("/ready")
@@ -388,10 +406,22 @@ def ready_check():
                 ),
                 503,
             )
-        return jsonify({"status": "ready", "timestamp": datetime.now().isoformat()}), 200
+        return (
+            jsonify({"status": "ready", "timestamp": datetime.now().isoformat()}),
+            200,
+        )
     except Exception as e:
         app.logger.error(f"Readiness check failed: {str(e)}")
-        return jsonify({"status": "not ready", "error": str(e), "timestamp": datetime.now().isoformat()}), 503
+        return (
+            jsonify(
+                {
+                    "status": "not ready",
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                }
+            ),
+            503,
+        )
 
 
 @app.route("/login")
@@ -416,7 +446,11 @@ def login():
 
     # Generate token
     token = jwt.encode(
-        {"username": username, "is_admin": is_admin(username), "exp": datetime.utcnow() + timedelta(hours=24)},
+        {
+            "username": username,
+            "is_admin": is_admin(username),
+            "exp": datetime.utcnow() + timedelta(hours=24),
+        },
         app.config["JWT_SECRET"],
     )
 
@@ -658,7 +692,9 @@ def run_app():
                 # Record startup failure
                 logger.error("Application startup failed - exiting")
             except Exception as metric_error:
-                logger.error(f"Failed to record startup failure metrics: {metric_error}")
+                logger.error(
+                    f"Failed to record startup failure metrics: {metric_error}"
+                )
 
             # Exit with error code
             import sys
@@ -697,7 +733,9 @@ def run_app():
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
-            logger.error(f"Server startup failure details: {json.dumps(error_details, indent=2)}")
+            logger.error(
+                f"Server startup failure details: {json.dumps(error_details, indent=2)}"
+            )
 
             # Try to send notification about server failure
             try:
@@ -714,7 +752,9 @@ def run_app():
                 )
                 loop.close()
             except Exception as notify_error:
-                logger.error(f"Failed to send server failure notification: {notify_error}")
+                logger.error(
+                    f"Failed to send server failure notification: {notify_error}"
+                )
 
             # Exit with error code
             import sys
@@ -753,7 +793,9 @@ def run_app():
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-        logger.error(f"Unexpected startup error details: {json.dumps(error_details, indent=2)}")
+        logger.error(
+            f"Unexpected startup error details: {json.dumps(error_details, indent=2)}"
+        )
 
         # Exit with error code
         import sys
@@ -769,7 +811,9 @@ if __name__ == "__main__":
 
 @app.get("/api/notifications")
 @login_required
-async def get_notifications(request: Request, limit: int = 10, offset: int = 0, unread_only: bool = False):
+async def get_notifications(
+    request: Request, limit: int = 10, offset: int = 0, unread_only: bool = False
+):
     try:
         user_id = request.state.user["username"]
         notifications = await notification_manager.get_user_notifications(
@@ -795,7 +839,9 @@ async def mark_notification_as_read(request: Request, notification_id: str):
         return {"message": "Notification marked as read"}
     except Exception as e:
         logger.error(f"Error marking notification as read: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to mark notification as read")
+        raise HTTPException(
+            status_code=500, detail="Failed to mark notification as read"
+        )
 
 
 @app.post("/api/notifications/read-all")
@@ -803,7 +849,9 @@ async def mark_notification_as_read(request: Request, notification_id: str):
 async def mark_all_notifications_as_read(request: Request):
     try:
         user_id = request.state.user["username"]
-        notifications = await notification_manager.get_user_notifications(user_id=user_id, unread_only=True)
+        notifications = await notification_manager.get_user_notifications(
+            user_id=user_id, unread_only=True
+        )
 
         for notification in notifications:
             await notification_manager.mark_as_read(notification["id"], user_id)
@@ -811,7 +859,9 @@ async def mark_all_notifications_as_read(request: Request):
         return {"message": "All notifications marked as read"}
     except Exception as e:
         logger.error(f"Error marking all notifications as read: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to mark all notifications as read")
+        raise HTTPException(
+            status_code=500, detail="Failed to mark all notifications as read"
+        )
 
 
 @app.delete("/api/notifications/{notification_id}")
@@ -819,7 +869,9 @@ async def mark_all_notifications_as_read(request: Request):
 async def delete_notification(request: Request, notification_id: str):
     try:
         user_id = request.state.user["username"]
-        success = await notification_manager.delete_notification(notification_id, user_id)
+        success = await notification_manager.delete_notification(
+            notification_id, user_id
+        )
 
         if not success:
             raise HTTPException(status_code=404, detail="Notification not found")
@@ -835,7 +887,9 @@ async def delete_notification(request: Request, notification_id: str):
 async def clear_all_notifications(request: Request):
     try:
         user_id = request.state.user["username"]
-        notifications = await notification_manager.get_user_notifications(user_id=user_id)
+        notifications = await notification_manager.get_user_notifications(
+            user_id=user_id
+        )
 
         for notification in notifications:
             await notification_manager.delete_notification(notification["id"], user_id)
@@ -908,7 +962,7 @@ async def delete_task(request: Request, task_id: str):
             raise HTTPException(status_code=404, detail="Task not found")
 
         # Delete task
-        success = await task_api.delete_task(task_id)
+        await task_api.delete_task(task_id)
 
         # Send notification
         await notification_manager.create_notification(
@@ -936,7 +990,7 @@ async def execute_task(request: Request, task_id: str):
             raise HTTPException(status_code=404, detail="Task not found")
 
         # Execute task
-        success = await task_api.execute_task(task_id)
+        await task_api.execute_task(task_id)
 
         # Send notification
         await notification_manager.create_notification(
@@ -964,7 +1018,7 @@ async def stop_task(request: Request, task_id: str):
             raise HTTPException(status_code=404, detail="Task not found")
 
         # Stop task
-        success = await task_api.stop_task(task_id)
+        await task_api.stop_task(task_id)
 
         # Send notification
         await notification_manager.create_notification(

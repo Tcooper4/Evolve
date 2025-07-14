@@ -61,7 +61,11 @@ class BaseAgent(ABC):
         if self.config:
             # Include key config items for identification
             key_configs = ["model_type", "strategy", "risk_level", "enabled"]
-            config_items = [f"{k}={v}" for k, v in self.config.items() if k in key_configs and v is not None]
+            config_items = [
+                f"{k}={v}"
+                for k, v in self.config.items()
+                if k in key_configs and v is not None
+            ]
             if config_items:
                 config_summary = f" ({', '.join(config_items)})"
 
@@ -115,7 +119,9 @@ class BaseAgent(ABC):
         Returns:
             AgentResult: Error result
         """
-        return AgentResult(success=False, message=f"Error in {self.name}: {str(error)}", error=error)
+        return AgentResult(
+            success=False, message=f"Error in {self.name}: {str(error)}", error=error
+        )
 
     def log_execution(self, result: AgentResult):
         """

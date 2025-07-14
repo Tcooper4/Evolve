@@ -31,7 +31,9 @@ class DataLoader:
         self.config = config or {}
         self.logger = logging.getLogger(__name__)
 
-    def load_historical_data(self, symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
+    def load_historical_data(
+        self, symbol: str, start_date: str, end_date: str
+    ) -> pd.DataFrame:
         """
         Load historical data for a given symbol and date range.
 
@@ -61,7 +63,9 @@ class DataLoader:
             self.logger.error(f"Error loading historical data for {symbol}: {e}")
             return self._create_sample_data(symbol, start_date, end_date)
 
-    def _create_sample_data(self, symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
+    def _create_sample_data(
+        self, symbol: str, start_date: str, end_date: str
+    ) -> pd.DataFrame:
         """
         Create sample data for testing and fallback scenarios.
 
@@ -87,7 +91,8 @@ class DataLoader:
                 {
                     "timestamp": dates,
                     "Open": prices * (1 + np.random.normal(0, 0.005, len(dates))),
-                    "High": prices * (1 + np.abs(np.random.normal(0, 0.01, len(dates)))),
+                    "High": prices
+                    * (1 + np.abs(np.random.normal(0, 0.01, len(dates)))),
                     "Low": prices * (1 - np.abs(np.random.normal(0, 0.01, len(dates)))),
                     "Close": prices,
                     "Volume": np.random.normal(1000000, 200000, len(dates)),
@@ -161,7 +166,9 @@ class DataLoader:
             processed_data = data.copy()
 
             # Sort by timestamp
-            processed_data = processed_data.sort_values("timestamp").reset_index(drop=True)
+            processed_data = processed_data.sort_values("timestamp").reset_index(
+                drop=True
+            )
 
             # Add technical indicators
             processed_data = self._add_technical_indicators(processed_data)

@@ -54,25 +54,39 @@ class UnifiedLogger:
 
         # Setup loggers
         self.performance_logger = self._setup_logger(
-            "performance", self.log_dir / "performance.log", max_bytes=10 * 1024 * 1024, backup_count=5  # 10MB
+            "performance",
+            self.log_dir / "performance.log",
+            max_bytes=10 * 1024 * 1024,
+            backup_count=5,  # 10MB
         )
 
         self.strategy_logger = self._setup_logger(
-            "strategy", self.log_dir / "strategy.log", max_bytes=10 * 1024 * 1024, backup_count=5  # 10MB
+            "strategy",
+            self.log_dir / "strategy.log",
+            max_bytes=10 * 1024 * 1024,
+            backup_count=5,  # 10MB
         )
 
         # Setup daily rotating logs
         self.daily_performance_logger = self._setup_daily_logger(
-            "daily_performance", self.log_dir / "daily_performance.log", backup_count=30  # Keep 30 days
+            "daily_performance",
+            self.log_dir / "daily_performance.log",
+            backup_count=30,  # Keep 30 days
         )
 
         self.daily_strategy_logger = self._setup_daily_logger(
-            "daily_strategy", self.log_dir / "daily_strategy.log", backup_count=30  # Keep 30 days
+            "daily_strategy",
+            self.log_dir / "daily_strategy.log",
+            backup_count=30,  # Keep 30 days
         )
         return None
 
     def _setup_logger(
-        self, name: str, log_file: Path, max_bytes: int = 10 * 1024 * 1024, backup_count: int = 5
+        self,
+        name: str,
+        log_file: Path,
+        max_bytes: int = 10 * 1024 * 1024,
+        backup_count: int = 5,
     ) -> logging.Logger:
         """Setup a rotating file logger.
 
@@ -89,16 +103,22 @@ class UnifiedLogger:
         logger.setLevel(logging.INFO)
 
         # Create rotating file handler
-        handler = RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count, encoding="utf-8")
+        handler = RotatingFileHandler(
+            log_file, maxBytes=max_bytes, backupCount=backup_count, encoding="utf-8"
+        )
 
         # Create JSON formatter
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
 
         logger.addHandler(handler)
         return logger
 
-    def _setup_daily_logger(self, name: str, log_file: Path, backup_count: int = 30) -> logging.Logger:
+    def _setup_daily_logger(
+        self, name: str, log_file: Path, backup_count: int = 30
+    ) -> logging.Logger:
         """Setup a daily rotating file logger.
 
         Args:
@@ -114,11 +134,17 @@ class UnifiedLogger:
 
         # Create daily rotating file handler
         handler = TimedRotatingFileHandler(
-            log_file, when="midnight", interval=1, backupCount=backup_count, encoding="utf-8"
+            log_file,
+            when="midnight",
+            interval=1,
+            backupCount=backup_count,
+            encoding="utf-8",
         )
 
         # Create JSON formatter
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
 
         logger.addHandler(handler)
@@ -149,7 +175,10 @@ class UnifiedLogger:
         self.daily_strategy_logger.info(json.dumps(asdict(decision)))
 
     def get_performance_history(
-        self, start_date: Optional[str] = None, end_date: Optional[str] = None, strategy: Optional[str] = None
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        strategy: Optional[str] = None,
     ) -> pd.DataFrame:
         """Get performance history.
 
@@ -194,7 +223,10 @@ class UnifiedLogger:
         return df
 
     def get_strategy_history(
-        self, start_date: Optional[str] = None, end_date: Optional[str] = None, ticker: Optional[str] = None
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        ticker: Optional[str] = None,
     ) -> pd.DataFrame:
         """Get strategy decision history.
 
@@ -251,21 +283,26 @@ class UnifiedLogger:
         for log_file in self.log_dir.glob("performance.log.*"):
             if log_file.suffix.isdigit():
                 archive_path = (
-                    archive_dir / f"performance_{datetime.now().strftime('%Y%m%d')}_{log_file.suffix[1:]}.log"
+                    archive_dir
+                    / f"performance_{datetime.now().strftime('%Y%m%d')}_{log_file.suffix[1:]}.log"
                 )
                 log_file.rename(archive_path)
 
         # Archive strategy logs
         for log_file in self.log_dir.glob("strategy.log.*"):
             if log_file.suffix.isdigit():
-                archive_path = archive_dir / f"strategy_{datetime.now().strftime('%Y%m%d')}_{log_file.suffix[1:]}.log"
+                archive_path = (
+                    archive_dir
+                    / f"strategy_{datetime.now().strftime('%Y%m%d')}_{log_file.suffix[1:]}.log"
+                )
                 log_file.rename(archive_path)
 
         # Archive daily logs
         for log_file in self.log_dir.glob("daily_*.log.*"):
             if log_file.suffix.isdigit():
                 archive_path = (
-                    archive_dir / f"{log_file.stem}_{datetime.now().strftime('%Y%m%d')}_{log_file.suffix[1:]}.log"
+                    archive_dir
+                    / f"{log_file.stem}_{datetime.now().strftime('%Y%m%d')}_{log_file.suffix[1:]}.log"
                 )
                 log_file.rename(archive_path)
 

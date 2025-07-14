@@ -12,7 +12,9 @@ from pathlib import Path
 from typing import Any, Dict
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +38,12 @@ class AutoRepair:
         """Initialize the auto-repair system."""
         self.repair_log = []
         self.system_info = self._get_system_info()
-        self.repair_status = {"packages": False, "dlls": False, "transformers": False, "environment": False}
+        self.repair_status = {
+            "packages": False,
+            "dlls": False,
+            "transformers": False,
+            "environment": False,
+        }
 
     def _get_system_info(self) -> Dict[str, str]:
         """Get system information for diagnostics."""
@@ -64,7 +71,9 @@ class AutoRepair:
                 try:
                     current_version = version(package)
                     if current_version < min_version:
-                        outdated.append(f"{package} (current: {current_version}, required: {min_version})")
+                        outdated.append(
+                            f"{package} (current: {current_version}, required: {min_version})"
+                        )
                 except PackageNotFoundError:
                     missing.append(package)
 
@@ -81,7 +90,11 @@ class AutoRepair:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def check_dlls(self) -> Dict[str, Any]:
         """Check for common DLL issues."""
@@ -115,7 +128,11 @@ class AutoRepair:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def check_transformers(self) -> Dict[str, Any]:
         """Check for Hugging Face transformer issues."""
@@ -137,19 +154,33 @@ class AutoRepair:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def repair_packages(self) -> Dict[str, Any]:
         """Attempt to repair package issues."""
         try:
             # Upgrade pip first
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "--upgrade", "pip"]
+            )
 
             # Install/upgrade required packages
             repaired_count = 0
             for package, version in self.REQUIRED_PACKAGES.items():
                 try:
-                    subprocess.check_call([sys.executable, "-m", "pip", "install", f"{package}>={version}"])
+                    subprocess.check_call(
+                        [
+                            sys.executable,
+                            "-m",
+                            "pip",
+                            "install",
+                            f"{package}>={version}",
+                        ]
+                    )
                     repaired_count += 1
                 except subprocess.CalledProcessError as e:
                     logger.error(f"Failed to install {package}: {e}")
@@ -165,18 +196,26 @@ class AutoRepair:
             }
         except Exception as e:
             logger.error(f"Package repair failed: {str(e)}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def repair_dlls(self) -> Dict[str, Any]:
         """Attempt to repair DLL issues."""
         try:
             if platform.system() == "Windows":
                 # Reinstall numpy to fix DLL issues
-                subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "numpy"])
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "uninstall", "-y", "numpy"]
+                )
                 subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy"])
 
                 # Reinstall torch to fix OpenMP issues
-                subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "torch"])
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "uninstall", "-y", "torch"]
+                )
                 subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
 
             self.repair_status["dlls"] = True
@@ -189,7 +228,11 @@ class AutoRepair:
             }
         except Exception as e:
             logger.error(f"DLL repair failed: {str(e)}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def repair_transformers(self) -> Dict[str, Any]:
         """Attempt to repair transformer issues."""
@@ -200,8 +243,12 @@ class AutoRepair:
                 shutil.rmtree(cache_dir)
 
             # Reinstall transformers
-            subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "transformers"])
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "transformers"])
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "uninstall", "-y", "transformers"]
+            )
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "transformers"]
+            )
 
             self.repair_status["transformers"] = True
 
@@ -213,7 +260,11 @@ class AutoRepair:
             }
         except Exception as e:
             logger.error(f"Transformers repair failed: {str(e)}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def repair_environment(self) -> Dict[str, Any]:
         """Attempt to repair the Python environment."""
@@ -236,7 +287,11 @@ class AutoRepair:
             }
         except Exception as e:
             logger.error(f"Environment repair failed: {str(e)}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def run_repair(self) -> Dict[str, Any]:
         """Run all repair checks and fixes."""
@@ -284,7 +339,11 @@ class AutoRepair:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_repair_status(self) -> Dict[str, Any]:
         """Get current repair status."""

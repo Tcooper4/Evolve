@@ -45,15 +45,29 @@ class FallbackStrategySelector:
                 "name": "RSI Strategy",
                 "description": "Relative Strength Index mean reversion strategy",
                 "parameters": {"period": 14, "overbought": 70, "oversold": 30},
-                "performance": {"sharpe_ratio": 0.85, "win_rate": 0.62, "max_drawdown": 0.12, "avg_return": 0.08},
+                "performance": {
+                    "sharpe_ratio": 0.85,
+                    "win_rate": 0.62,
+                    "max_drawdown": 0.12,
+                    "avg_return": 0.08,
+                },
                 "best_regime": "mean_reversion",
                 "risk_level": "medium",
             },
             "macd": {
                 "name": "MACD Strategy",
                 "description": "Moving Average Convergence Divergence trend following",
-                "parameters": {"fast_period": 12, "slow_period": 26, "signal_period": 9},
-                "performance": {"sharpe_ratio": 0.92, "win_rate": 0.58, "max_drawdown": 0.15, "avg_return": 0.12},
+                "parameters": {
+                    "fast_period": 12,
+                    "slow_period": 26,
+                    "signal_period": 9,
+                },
+                "performance": {
+                    "sharpe_ratio": 0.92,
+                    "win_rate": 0.58,
+                    "max_drawdown": 0.15,
+                    "avg_return": 0.12,
+                },
                 "best_regime": "trending",
                 "risk_level": "medium",
             },
@@ -61,7 +75,12 @@ class FallbackStrategySelector:
                 "name": "Bollinger Bands Strategy",
                 "description": "Bollinger Bands volatility-based strategy",
                 "parameters": {"period": 20, "std_dev": 2},
-                "performance": {"sharpe_ratio": 0.78, "win_rate": 0.55, "max_drawdown": 0.18, "avg_return": 0.09},
+                "performance": {
+                    "sharpe_ratio": 0.78,
+                    "win_rate": 0.55,
+                    "max_drawdown": 0.18,
+                    "avg_return": 0.09,
+                },
                 "best_regime": "volatile",
                 "risk_level": "high",
             },
@@ -69,7 +88,12 @@ class FallbackStrategySelector:
                 "name": "SMA Crossover Strategy",
                 "description": "Simple Moving Average crossover strategy",
                 "parameters": {"fast_period": 10, "slow_period": 30},
-                "performance": {"sharpe_ratio": 0.75, "win_rate": 0.52, "max_drawdown": 0.20, "avg_return": 0.07},
+                "performance": {
+                    "sharpe_ratio": 0.75,
+                    "win_rate": 0.52,
+                    "max_drawdown": 0.20,
+                    "avg_return": 0.07,
+                },
                 "best_regime": "trending",
                 "risk_level": "low",
             },
@@ -90,13 +114,18 @@ class FallbackStrategySelector:
             Optional[Dict[str, Any]]: Selected strategy configuration
         """
         try:
-            logger.info(f"Selecting strategy for regime: {regime}, risk: {risk_tolerance}")
+            logger.info(
+                f"Selecting strategy for regime: {regime}, risk: {risk_tolerance}"
+            )
 
             # Filter strategies based on regime and risk tolerance
             suitable_strategies = []
 
             for strategy_name, strategy_config in self._strategies.items():
-                if strategy_config["best_regime"] == regime and strategy_config["risk_level"] == risk_tolerance:
+                if (
+                    strategy_config["best_regime"] == regime
+                    and strategy_config["risk_level"] == risk_tolerance
+                ):
                     suitable_strategies.append((strategy_name, strategy_config))
 
             # If no exact match, find closest matches
@@ -130,7 +159,9 @@ class FallbackStrategySelector:
                     "fallback_mode": True,
                 }
 
-                logger.info(f"Selected strategy: {strategy_name} with Sharpe {best_sharpe:.2f}")
+                logger.info(
+                    f"Selected strategy: {strategy_name} with Sharpe {best_sharpe:.2f}"
+                )
                 return result
 
             return None
@@ -190,7 +221,9 @@ class FallbackStrategySelector:
             logger.error(f"Error getting strategy performance for {strategy_name}: {e}")
             return None
 
-    def optimize_strategy_parameters(self, strategy_name: str, market_data: pd.DataFrame) -> Optional[Dict[str, Any]]:
+    def optimize_strategy_parameters(
+        self, strategy_name: str, market_data: pd.DataFrame
+    ) -> Optional[Dict[str, Any]]:
         """
         Optimize strategy parameters (fallback implementation).
 
@@ -221,9 +254,17 @@ class FallbackStrategySelector:
             elif strategy_name == "macd":
                 # Adjust MACD parameters based on volatility
                 if volatility > 0.03:
-                    optimized_params = {"fast_period": 8, "slow_period": 21, "signal_period": 7}
+                    optimized_params = {
+                        "fast_period": 8,
+                        "slow_period": 21,
+                        "signal_period": 7,
+                    }
                 else:
-                    optimized_params = {"fast_period": 15, "slow_period": 30, "signal_period": 12}
+                    optimized_params = {
+                        "fast_period": 15,
+                        "slow_period": 30,
+                        "signal_period": 12,
+                    }
 
             elif strategy_name == "bollinger":
                 # Adjust Bollinger parameters based on volatility
@@ -249,7 +290,9 @@ class FallbackStrategySelector:
             return result
 
         except Exception as e:
-            logger.error(f"Error optimizing strategy parameters for {strategy_name}: {e}")
+            logger.error(
+                f"Error optimizing strategy parameters for {strategy_name}: {e}"
+            )
             return None
 
     def get_system_health(self) -> Dict[str, Any]:
@@ -269,4 +312,9 @@ class FallbackStrategySelector:
             }
         except Exception as e:
             logger.error(f"Error getting fallback strategy selector health: {e}")
-            return {"status": "error", "available_strategies": 0, "fallback_mode": True, "error": str(e)}
+            return {
+                "status": "error",
+                "available_strategies": 0,
+                "fallback_mode": True,
+                "error": str(e),
+            }

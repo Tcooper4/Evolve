@@ -125,7 +125,9 @@ class StrategyDiscovery:
             for class_name, strategy_class in strategy_classes.items():
                 if class_name not in self.discovered_strategies:
                     self.discovered_strategies[class_name] = strategy_class
-                    logger.info(f"📦 Discovered strategy: {class_name} from {module_name}")
+                    logger.info(
+                        f"📦 Discovered strategy: {class_name} from {module_name}"
+                    )
 
                     self.discovery_log.append(
                         {
@@ -137,7 +139,9 @@ class StrategyDiscovery:
                         }
                     )
                 else:
-                    logger.warning(f"⚠️  Strategy {class_name} already discovered, skipping duplicate")
+                    logger.warning(
+                        f"⚠️  Strategy {class_name} already discovered, skipping duplicate"
+                    )
 
         except ImportError as e:
             logger.error(f"❌ Failed to import module {file_path}: {e}")
@@ -152,15 +156,26 @@ class StrategyDiscovery:
 
         for name, obj in inspect.getmembers(module):
             # Check if it's a class that inherits from BaseStrategy
-            if inspect.isclass(obj) and issubclass(obj, BaseStrategy) and obj != BaseStrategy:
+            if (
+                inspect.isclass(obj)
+                and issubclass(obj, BaseStrategy)
+                and obj != BaseStrategy
+            ):
                 strategy_classes[name] = obj
 
         return strategy_classes
 
-    def discover_strategies_by_pattern(self, patterns: List[str] = None) -> Dict[str, Type[BaseStrategy]]:
+    def discover_strategies_by_pattern(
+        self, patterns: List[str] = None
+    ) -> Dict[str, Type[BaseStrategy]]:
         """Discover strategies using multiple file patterns."""
         if patterns is None:
-            patterns = ["*_strategy.py", "*_signals.py", "*_indicator.py", "strategy_*.py"]
+            patterns = [
+                "*_strategy.py",
+                "*_signals.py",
+                "*_indicator.py",
+                "strategy_*.py",
+            ]
 
         all_strategies = {}
 
@@ -194,18 +209,24 @@ class StrategyDiscovery:
                 required_methods = ["generate_signals", "get_parameter_space"]
                 for method in required_methods:
                     if not hasattr(instance, method):
-                        validation_result["errors"].append(f"Missing required method: {method}")
+                        validation_result["errors"].append(
+                            f"Missing required method: {method}"
+                        )
                         validation_result["valid"] = False
 
                 # Check if methods are callable
                 if hasattr(instance, "generate_signals"):
                     if not callable(instance.generate_signals):
-                        validation_result["errors"].append("generate_signals is not callable")
+                        validation_result["errors"].append(
+                            "generate_signals is not callable"
+                        )
                         validation_result["valid"] = False
 
                 if hasattr(instance, "get_parameter_space"):
                     if not callable(instance.get_parameter_space):
-                        validation_result["errors"].append("get_parameter_space is not callable")
+                        validation_result["errors"].append(
+                            "get_parameter_space is not callable"
+                        )
                         validation_result["valid"] = False
 
                 # Check for description
@@ -235,8 +256,14 @@ class RSIStrategy(BaseStrategy):
 
         # Calculate RSI
         delta = data["Close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=self.parameters["period"]).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=self.parameters["period"]).mean()
+        gain = (
+            (delta.where(delta > 0, 0)).rolling(window=self.parameters["period"]).mean()
+        )
+        loss = (
+            (-delta.where(delta < 0, 0))
+            .rolling(window=self.parameters["period"])
+            .mean()
+        )
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
 
@@ -294,7 +321,11 @@ class MACDStrategy(BaseStrategy):
 
     def get_parameter_space(self) -> Dict[str, Any]:
         """Get MACD parameter space."""
-        return {"fast_period": (5, 20), "slow_period": (20, 50), "signal_period": (5, 20)}
+        return {
+            "fast_period": (5, 20),
+            "slow_period": (20, 50),
+            "signal_period": (5, 20),
+        }
 
 
 class BollingerBandsStrategy(BaseStrategy):
@@ -340,7 +371,12 @@ class CCIStrategy(BaseStrategy):
 
     def __init__(self):
         super().__init__("CCI", "Commodity Channel Index strategy")
-        self.parameters = {"period": 20, "constant": 0.015, "oversold_threshold": -100.0, "overbought_threshold": 100.0}
+        self.parameters = {
+            "period": 20,
+            "constant": 0.015,
+            "oversold_threshold": -100.0,
+            "overbought_threshold": 100.0,
+        }
 
     def generate_signals(self, data: pd.DataFrame, **kwargs) -> pd.DataFrame:
         """Generate CCI signals."""
@@ -362,13 +398,15 @@ class CCIStrategy(BaseStrategy):
 
         # Buy signal when CCI crosses above oversold threshold
         signals.loc[
-            (cci > self.parameters["oversold_threshold"]) & (cci.shift(1) <= self.parameters["oversold_threshold"]),
+            (cci > self.parameters["oversold_threshold"])
+            & (cci.shift(1) <= self.parameters["oversold_threshold"]),
             "signal",
         ] = 1
 
         # Sell signal when CCI crosses below overbought threshold
         signals.loc[
-            (cci < self.parameters["overbought_threshold"]) & (cci.shift(1) >= self.parameters["overbought_threshold"]),
+            (cci < self.parameters["overbought_threshold"])
+            & (cci.shift(1) >= self.parameters["overbought_threshold"]),
             "signal",
         ] = -1
 
@@ -389,7 +427,11 @@ class ATRStrategy(BaseStrategy):
 
     def __init__(self):
         super().__init__("ATR", "Average True Range strategy")
-        self.parameters = {"period": 14, "multiplier": 2.0, "volatility_threshold": 0.02}
+        self.parameters = {
+            "period": 14,
+            "multiplier": 2.0,
+            "volatility_threshold": 0.02,
+        }
 
     def generate_signals(self, data: pd.DataFrame, **kwargs) -> pd.DataFrame:
         """Generate ATR signals."""
@@ -409,7 +451,9 @@ class ATRStrategy(BaseStrategy):
         lower_band = middle_band - (self.parameters["multiplier"] * atr)
 
         # Calculate volatility filter
-        volatility = data["Close"].pct_change().rolling(window=self.parameters["period"]).std()
+        volatility = (
+            data["Close"].pct_change().rolling(window=self.parameters["period"]).std()
+        )
 
         # Generate signals
         signals = pd.DataFrame(index=data.index)
@@ -420,18 +464,26 @@ class ATRStrategy(BaseStrategy):
         signals["signal"] = 0
 
         # Buy signal when price touches lower band and volatility is high enough
-        buy_condition = (data["Close"] <= lower_band) & (volatility >= self.parameters["volatility_threshold"])
+        buy_condition = (data["Close"] <= lower_band) & (
+            volatility >= self.parameters["volatility_threshold"]
+        )
         signals.loc[buy_condition, "signal"] = 1
 
         # Sell signal when price touches upper band and volatility is high enough
-        sell_condition = (data["Close"] >= upper_band) & (volatility >= self.parameters["volatility_threshold"])
+        sell_condition = (data["Close"] >= upper_band) & (
+            volatility >= self.parameters["volatility_threshold"]
+        )
         signals.loc[sell_condition, "signal"] = -1
 
         return signals
 
     def get_parameter_space(self) -> Dict[str, Any]:
         """Get ATR parameter space."""
-        return {"period": (10, 20), "multiplier": (1.0, 3.0), "volatility_threshold": (0.01, 0.05)}
+        return {
+            "period": (10, 20),
+            "multiplier": (1.0, 3.0),
+            "volatility_threshold": (0.01, 0.05),
+        }
 
 
 class StrategyRegistry:
@@ -446,7 +498,13 @@ class StrategyRegistry:
 
     def _register_default_strategies(self):
         """Register default strategies."""
-        default_strategies = [RSIStrategy(), MACDStrategy(), BollingerBandsStrategy(), CCIStrategy(), ATRStrategy()]
+        default_strategies = [
+            RSIStrategy(),
+            MACDStrategy(),
+            BollingerBandsStrategy(),
+            CCIStrategy(),
+            ATRStrategy(),
+        ]
 
         for strategy in default_strategies:
             self.register_strategy(strategy)
@@ -463,7 +521,9 @@ class StrategyRegistry:
                     self.register_strategy(strategy_instance)
                     logger.info(f"✅ Auto-registered discovered strategy: {class_name}")
                 except Exception as e:
-                    logger.error(f"❌ Failed to register discovered strategy {class_name}: {e}")
+                    logger.error(
+                        f"❌ Failed to register discovered strategy {class_name}: {e}"
+                    )
 
         except Exception as e:
             logger.error(f"❌ Strategy discovery failed: {e}")
@@ -486,7 +546,10 @@ class StrategyRegistry:
         return list(self.strategies.keys())
 
     def execute_strategy(
-        self, strategy_name: str, data: pd.DataFrame, parameters: Optional[Dict[str, Any]] = None
+        self,
+        strategy_name: str,
+        data: pd.DataFrame,
+        parameters: Optional[Dict[str, Any]] = None,
     ) -> StrategyResult:
         """Execute a strategy."""
         strategy = self.get_strategy(strategy_name)
@@ -518,7 +581,9 @@ class StrategyRegistry:
 
         return result
 
-    def _calculate_performance_metrics(self, data: pd.DataFrame, signals: pd.DataFrame) -> Dict[str, float]:
+    def _calculate_performance_metrics(
+        self, data: pd.DataFrame, signals: pd.DataFrame
+    ) -> Dict[str, float]:
         """Calculate performance metrics for strategy results."""
         # Simple performance calculation
         if "signal" not in signals.columns:
@@ -530,8 +595,14 @@ class StrategyRegistry:
 
         # Calculate metrics
         total_return = strategy_returns.sum()
-        sharpe_ratio = strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() > 0 else 0
-        max_drawdown = (strategy_returns.cumsum() - strategy_returns.cumsum().expanding().max()).min()
+        sharpe_ratio = (
+            strategy_returns.mean() / strategy_returns.std()
+            if strategy_returns.std() > 0
+            else 0
+        )
+        max_drawdown = (
+            strategy_returns.cumsum() - strategy_returns.cumsum().expanding().max()
+        ).min()
 
         return {
             "total_return": total_return,

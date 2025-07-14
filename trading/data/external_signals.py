@@ -66,7 +66,14 @@ class SignalValidator:
         """
         try:
             # Required fields
-            required_fields = ["source", "symbol", "timestamp", "signal_type", "value", "confidence"]
+            required_fields = [
+                "source",
+                "symbol",
+                "timestamp",
+                "signal_type",
+                "value",
+                "confidence",
+            ]
             for field in required_fields:
                 if field not in data:
                     return False, f"Missing required field: {field}"
@@ -121,7 +128,13 @@ class SignalValidator:
         """
         try:
             # Required fields for sentiment data
-            required_fields = ["symbol", "timestamp", "sentiment_score", "sentiment_label", "source"]
+            required_fields = [
+                "symbol",
+                "timestamp",
+                "sentiment_score",
+                "sentiment_label",
+                "source",
+            ]
             for field in required_fields:
                 if field not in data:
                     return False, f"Missing required field: {field}"
@@ -182,7 +195,10 @@ class SignalValidator:
                     return False, f"Missing required field: {field}"
             if not isinstance(data["symbol"], str):
                 return False, "symbol must be a string"
-            if not isinstance(data["option_type"], str) or data["option_type"] not in ["call", "put"]:
+            if not isinstance(data["option_type"], str) or data["option_type"] not in [
+                "call",
+                "put",
+            ]:
                 return False, "option_type must be 'call' or 'put'"
             if not isinstance(data["strike"], (int, float)) or data["strike"] <= 0:
                 return False, "strike must be a positive number"
@@ -209,10 +225,19 @@ class SignalValidator:
             return False, f"Validation error: {str(e)}"
 
     @staticmethod
-    def validate_macro_indicator_data(data: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+    def validate_macro_indicator_data(
+        data: Dict[str, Any]
+    ) -> tuple[bool, Optional[str]]:
         """Validate macro indicator data against expected schema."""
         try:
-            required_fields = ["name", "value", "unit", "frequency", "last_updated", "source"]
+            required_fields = [
+                "name",
+                "value",
+                "unit",
+                "frequency",
+                "last_updated",
+                "source",
+            ]
             for field in required_fields:
                 if field not in data:
                     return False, f"Missing required field: {field}"
@@ -262,13 +287,18 @@ class NewsSentimentCollector:
             api_keys: Dictionary containing API keys for news services
         """
         self.api_keys = api_keys or {}
-        self.sources = {"newsapi": "https://newsapi.org/v2/everything", "gnews": "https://gnews.io/api/v4/search"}
+        self.sources = {
+            "newsapi": "https://newsapi.org/v2/everything",
+            "gnews": "https://gnews.io/api/v4/search",
+        }
 
         # Rate limiting
         self.last_request = {}
         self.rate_limit_delay = 1.0  # seconds
 
-    def get_news_sentiment(self, symbol: str, days_back: int = 7) -> List[SentimentData]:
+    def get_news_sentiment(
+        self, symbol: str, days_back: int = 7
+    ) -> List[SentimentData]:
         """Get news sentiment for a symbol.
 
         Args:
@@ -296,14 +326,18 @@ class NewsSentimentCollector:
             if is_valid:
                 validated.append(record)
             else:
-                logger.warning(f"Invalid news sentiment record for {symbol}: {err} | Data: {record}")
+                logger.warning(
+                    f"Invalid news sentiment record for {symbol}: {err} | Data: {record}"
+                )
 
         # Aggregate and normalize sentiment
         aggregated_data = self._aggregate_sentiment(validated)
 
         return aggregated_data
 
-    def _get_newsapi_sentiment(self, symbol: str, days_back: int) -> List[SentimentData]:
+    def _get_newsapi_sentiment(
+        self, symbol: str, days_back: int
+    ) -> List[SentimentData]:
         """Get sentiment from NewsAPI."""
         try:
             self._rate_limit("newsapi")
@@ -338,7 +372,9 @@ class NewsSentimentCollector:
                     sentiment_data.append(
                         SentimentData(
                             symbol=symbol,
-                            timestamp=datetime.fromisoformat(article["publishedAt"].replace("Z", "+00:00")),
+                            timestamp=datetime.fromisoformat(
+                                article["publishedAt"].replace("Z", "+00:00")
+                            ),
                             sentiment_score=sentiment_score,
                             sentiment_label=self._get_sentiment_label(sentiment_score),
                             volume=1,
@@ -386,7 +422,9 @@ class NewsSentimentCollector:
                     sentiment_data.append(
                         SentimentData(
                             symbol=symbol,
-                            timestamp=datetime.fromisoformat(article["publishedAt"]["dateTime"]),
+                            timestamp=datetime.fromisoformat(
+                                article["publishedAt"]["dateTime"]
+                            ),
                             sentiment_score=sentiment_score,
                             sentiment_label=self._get_sentiment_label(sentiment_score),
                             volume=1,
@@ -464,7 +502,9 @@ class NewsSentimentCollector:
         else:
             return "neutral"
 
-    def _aggregate_sentiment(self, sentiment_data: List[SentimentData]) -> List[SentimentData]:
+    def _aggregate_sentiment(
+        self, sentiment_data: List[SentimentData]
+    ) -> List[SentimentData]:
         """Aggregate sentiment data by time periods."""
         if not sentiment_data:
             return []
@@ -476,7 +516,9 @@ class NewsSentimentCollector:
 
         # Aggregate by hour
         aggregated = (
-            df.groupby("hour").agg({"sentiment_score": "mean", "volume": "sum", "confidence": "mean"}).reset_index()
+            df.groupby("hour")
+            .agg({"sentiment_score": "mean", "volume": "sum", "confidence": "mean"})
+            .reset_index()
         )
 
         # Convert back to SentimentData objects
@@ -512,9 +554,18 @@ class TwitterSentimentCollector:
 
     def __init__(self):
         """Initialize Twitter sentiment collector."""
-        self.search_terms = ["stock", "trading", "investing", "market", "bullish", "bearish"]
+        self.search_terms = [
+            "stock",
+            "trading",
+            "investing",
+            "market",
+            "bullish",
+            "bearish",
+        ]
 
-    def get_twitter_sentiment(self, symbol: str, max_tweets: int = 100) -> List[SentimentData]:
+    def get_twitter_sentiment(
+        self, symbol: str, max_tweets: int = 100
+    ) -> List[SentimentData]:
         """Get Twitter sentiment for a symbol.
 
         Args:
@@ -564,7 +615,9 @@ class TwitterSentimentCollector:
                 if is_valid:
                     validated.append(record)
                 else:
-                    logger.warning(f"Invalid twitter sentiment record for {symbol}: {err} | Data: {record}")
+                    logger.warning(
+                        f"Invalid twitter sentiment record for {symbol}: {err} | Data: {record}"
+                    )
 
             # Aggregate sentiment
             aggregated_data = self._aggregate_sentiment(validated)
@@ -595,13 +648,19 @@ class TwitterSentimentCollector:
         negative_word_count = sum(1 for word in negative_words if word in text_lower)
 
         # Calculate combined sentiment
-        total_signals = positive_emoji_count + negative_emoji_count + positive_word_count + negative_word_count
+        total_signals = (
+            positive_emoji_count
+            + negative_emoji_count
+            + positive_word_count
+            + negative_word_count
+        )
 
         if total_signals == 0:
             return 0.0
 
         sentiment_score = (
-            (positive_emoji_count + positive_word_count) - (negative_emoji_count + negative_word_count)
+            (positive_emoji_count + positive_word_count)
+            - (negative_emoji_count + negative_word_count)
         ) / total_signals
 
         return max(-1.0, min(1.0, sentiment_score))
@@ -615,7 +674,9 @@ class TwitterSentimentCollector:
         else:
             return "neutral"
 
-    def _aggregate_sentiment(self, sentiment_data: List[SentimentData]) -> List[SentimentData]:
+    def _aggregate_sentiment(
+        self, sentiment_data: List[SentimentData]
+    ) -> List[SentimentData]:
         """Aggregate sentiment data by time periods."""
         if not sentiment_data:
             return []
@@ -627,7 +688,9 @@ class TwitterSentimentCollector:
 
         # Aggregate by hour
         aggregated = (
-            df.groupby("hour").agg({"sentiment_score": "mean", "volume": "sum", "confidence": "mean"}).reset_index()
+            df.groupby("hour")
+            .agg({"sentiment_score": "mean", "volume": "sum", "confidence": "mean"})
+            .reset_index()
         )
 
         # Convert back to SentimentData objects
@@ -651,21 +714,27 @@ class TwitterSentimentCollector:
 class RedditSentimentCollector:
     """Collects Reddit sentiment from WallStreetBets and other subreddits."""
 
-    def __init__(self, client_id: Optional[str] = None, client_secret: Optional[str] = None):
+    def __init__(
+        self, client_id: Optional[str] = None, client_secret: Optional[str] = None
+    ):
         """Initialize Reddit sentiment collector."""
         self.reddit = None
 
         if REDDIT_AVAILABLE and client_id and client_secret:
             try:
                 self.reddit = praw.Reddit(
-                    client_id=client_id, client_secret=client_secret, user_agent="EvolveTradingBot/1.0"
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    user_agent="EvolveTradingBot/1.0",
                 )
             except Exception as e:
                 logger.error(f"Failed to initialize Reddit client: {e}")
 
         self.subreddits = ["wallstreetbets", "stocks", "investing", "options"]
 
-    def get_reddit_sentiment(self, symbol: str, max_posts: int = 50) -> List[SentimentData]:
+    def get_reddit_sentiment(
+        self, symbol: str, max_posts: int = 50
+    ) -> List[SentimentData]:
         """Get Reddit sentiment for a symbol.
 
         Args:
@@ -688,7 +757,9 @@ class RedditSentimentCollector:
 
                     # Search for posts about the symbol
                     search_query = f"{symbol}"
-                    posts = subreddit.search(search_query, limit=max_posts // len(self.subreddits))
+                    posts = subreddit.search(
+                        search_query, limit=max_posts // len(self.subreddits)
+                    )
 
                     for post in posts:
                         # Analyze post title and content
@@ -696,14 +767,18 @@ class RedditSentimentCollector:
                         content_sentiment = self._analyze_text_sentiment(post.selftext)
 
                         # Combine sentiment
-                        combined_sentiment = title_sentiment * 0.7 + content_sentiment * 0.3
+                        combined_sentiment = (
+                            title_sentiment * 0.7 + content_sentiment * 0.3
+                        )
 
                         sentiment_data.append(
                             SentimentData(
                                 symbol=symbol,
                                 timestamp=datetime.fromtimestamp(post.created_utc),
                                 sentiment_score=combined_sentiment,
-                                sentiment_label=self._get_sentiment_label(combined_sentiment),
+                                sentiment_label=self._get_sentiment_label(
+                                    combined_sentiment
+                                ),
                                 volume=post.score,  # Use upvotes as volume
                                 source=f"reddit_{subreddit_name}",
                                 confidence=0.6,
@@ -721,7 +796,9 @@ class RedditSentimentCollector:
                 if is_valid:
                     validated.append(record)
                 else:
-                    logger.warning(f"Invalid reddit sentiment record for {symbol}: {err} | Data: {record}")
+                    logger.warning(
+                        f"Invalid reddit sentiment record for {symbol}: {err} | Data: {record}"
+                    )
 
             # Aggregate sentiment
             aggregated_data = self._aggregate_sentiment(validated)
@@ -793,7 +870,9 @@ class RedditSentimentCollector:
         else:
             return "neutral"
 
-    def _aggregate_sentiment(self, sentiment_data: List[SentimentData]) -> List[SentimentData]:
+    def _aggregate_sentiment(
+        self, sentiment_data: List[SentimentData]
+    ) -> List[SentimentData]:
         """Aggregate sentiment data by time periods."""
         if not sentiment_data:
             return []
@@ -805,7 +884,9 @@ class RedditSentimentCollector:
 
         # Aggregate by hour
         aggregated = (
-            df.groupby("hour").agg({"sentiment_score": "mean", "volume": "sum", "confidence": "mean"}).reset_index()
+            df.groupby("hour")
+            .agg({"sentiment_score": "mean", "volume": "sum", "confidence": "mean"})
+            .reset_index()
         )
 
         # Convert back to SentimentData objects
@@ -874,11 +955,15 @@ class MacroIndicatorCollector:
                             "last_updated": data.index[-1] if not data.empty else None,
                             "source": "FRED",
                         }
-                        is_valid, err = SignalValidator.validate_macro_indicator_data(meta)
+                        is_valid, err = SignalValidator.validate_macro_indicator_data(
+                            meta
+                        )
                         if is_valid:
                             indicator_data[indicator_name] = data
                         else:
-                            logger.warning(f"Invalid macro indicator meta for {indicator_name}: {err} | Meta: {meta}")
+                            logger.warning(
+                                f"Invalid macro indicator meta for {indicator_name}: {err} | Meta: {meta}"
+                            )
                 except Exception as e:
                     logger.error(f"Error getting {indicator_name}: {e}")
                     continue
@@ -974,10 +1059,14 @@ class OptionsFlowCollector:
             if is_valid:
                 validated.append(record)
             else:
-                logger.warning(f"Invalid options flow record for {symbol}: {err} | Data: {record}")
+                logger.warning(
+                    f"Invalid options flow record for {symbol}: {err} | Data: {record}"
+                )
         return validated
 
-    def _get_tradier_options_flow(self, symbol: str, days_back: int) -> List[Dict[str, Any]]:
+    def _get_tradier_options_flow(
+        self, symbol: str, days_back: int
+    ) -> List[Dict[str, Any]]:
         """Get options flow from Tradier API."""
         try:
             # This would require actual Tradier API integration
@@ -989,7 +1078,9 @@ class OptionsFlowCollector:
             logger.error(f"Error getting Tradier options flow: {e}")
             return []
 
-    def _generate_simulated_options_flow(self, symbol: str, days_back: int) -> List[Dict[str, Any]]:
+    def _generate_simulated_options_flow(
+        self, symbol: str, days_back: int
+    ) -> List[Dict[str, Any]]:
         """Generate simulated options flow data for demonstration."""
         try:
             options_data = []
@@ -999,8 +1090,12 @@ class OptionsFlowCollector:
                 date = datetime.now() - timedelta(days=i)
 
                 # Simulate unusual options activity
-                for _ in range(np.random.randint(1, 5)):  # 1-4 unusual activities per day
-                    strike = np.random.choice([50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100])
+                for _ in range(
+                    np.random.randint(1, 5)
+                ):  # 1-4 unusual activities per day
+                    strike = np.random.choice(
+                        [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+                    )
                     option_type = np.random.choice(["call", "put"])
                     volume = np.random.randint(100, 1000)
                     premium = np.random.uniform(1.0, 10.0)
@@ -1068,21 +1163,33 @@ class ExternalSignalsManager:
                     return cached_data
             # Collect all signals
             signals = {
-                "news_sentiment": self.news_collector.get_news_sentiment(symbol, days_back),
-                "twitter_sentiment": self.twitter_collector.get_twitter_sentiment(symbol),
+                "news_sentiment": self.news_collector.get_news_sentiment(
+                    symbol, days_back
+                ),
+                "twitter_sentiment": self.twitter_collector.get_twitter_sentiment(
+                    symbol
+                ),
                 "reddit_sentiment": self.reddit_collector.get_reddit_sentiment(symbol),
-                "macro_indicators": self.macro_collector.get_macro_indicators(days_back),
-                "options_flow": self.options_collector.get_options_flow(symbol, days_back),
+                "macro_indicators": self.macro_collector.get_macro_indicators(
+                    days_back
+                ),
+                "options_flow": self.options_collector.get_options_flow(
+                    symbol, days_back
+                ),
             }
             # Final validation and filtering
             for key in ["news_sentiment", "twitter_sentiment", "reddit_sentiment"]:
                 valid = []
                 for record in signals.get(key, []):
-                    is_valid, err = SignalValidator.validate_sentiment_data(asdict(record))
+                    is_valid, err = SignalValidator.validate_sentiment_data(
+                        asdict(record)
+                    )
                     if is_valid:
                         valid.append(record)
                     else:
-                        logger.warning(f"Manager: Invalid {key} record for {symbol}: {err} | Data: {record}")
+                        logger.warning(
+                            f"Manager: Invalid {key} record for {symbol}: {err} | Data: {record}"
+                        )
                 signals[key] = valid
             # Macro indicators: validate meta only (series already validated in collector)
             macro_valid = {}
@@ -1100,7 +1207,9 @@ class ExternalSignalsManager:
                     if is_valid:
                         macro_valid[name] = series
                     else:
-                        logger.warning(f"Manager: Invalid macro indicator meta for {name}: {err} | Meta: {meta}")
+                        logger.warning(
+                            f"Manager: Invalid macro indicator meta for {name}: {err} | Meta: {meta}"
+                        )
             signals["macro_indicators"] = macro_valid
             # Options flow
             options_valid = []
@@ -1109,7 +1218,9 @@ class ExternalSignalsManager:
                 if is_valid:
                     options_valid.append(record)
                 else:
-                    logger.warning(f"Manager: Invalid options flow record for {symbol}: {err} | Data: {record}")
+                    logger.warning(
+                        f"Manager: Invalid options flow record for {symbol}: {err} | Data: {record}"
+                    )
             signals["options_flow"] = options_valid
             # Cache the results
             self.signal_cache[cache_key] = (datetime.now(), signals)
@@ -1135,7 +1246,11 @@ class ExternalSignalsManager:
             features = []
 
             # Process sentiment signals
-            for sentiment_type in ["news_sentiment", "twitter_sentiment", "reddit_sentiment"]:
+            for sentiment_type in [
+                "news_sentiment",
+                "twitter_sentiment",
+                "reddit_sentiment",
+            ]:
                 sentiment_data = signals.get(sentiment_type, [])
 
                 for data in sentiment_data:
@@ -1184,7 +1299,9 @@ class ExternalSignalsManager:
                         "volume": option["volume"],
                         "premium": option["premium"],
                         "sentiment_score": sentiment_score,
-                        "sentiment_label": "positive" if sentiment_score > 0 else "negative",
+                        "sentiment_label": "positive"
+                        if sentiment_score > 0
+                        else "negative",
                         "confidence": 0.7,
                     }
                 )
@@ -1202,7 +1319,9 @@ class ExternalSignalsManager:
             logger.error(f"Error creating signal features for {symbol}: {e}")
             return pd.DataFrame()
 
-    def get_aggregated_sentiment(self, symbol: str, days_back: int = 7) -> Dict[str, float]:
+    def get_aggregated_sentiment(
+        self, symbol: str, days_back: int = 7
+    ) -> Dict[str, float]:
         """Get aggregated sentiment scores across all sources.
 
         Args:
@@ -1218,7 +1337,11 @@ class ExternalSignalsManager:
             # Aggregate sentiment from all sources
             all_sentiment = []
 
-            for sentiment_type in ["news_sentiment", "twitter_sentiment", "reddit_sentiment"]:
+            for sentiment_type in [
+                "news_sentiment",
+                "twitter_sentiment",
+                "reddit_sentiment",
+            ]:
                 sentiment_data = signals.get(sentiment_type, [])
                 all_sentiment.extend(sentiment_data)
 
@@ -1240,7 +1363,9 @@ class ExternalSignalsManager:
                 weighted_sentiment += data.sentiment_score * weight
                 total_weight += weight
 
-            overall_sentiment = weighted_sentiment / total_weight if total_weight > 0 else 0.0
+            overall_sentiment = (
+                weighted_sentiment / total_weight if total_weight > 0 else 0.0
+            )
 
             # Calculate source-specific sentiment
             news_sentiment = (
@@ -1252,7 +1377,8 @@ class ExternalSignalsManager:
                 np.mean(
                     [
                         d.sentiment_score
-                        for d in signals.get("twitter_sentiment", []) + signals.get("reddit_sentiment", [])
+                        for d in signals.get("twitter_sentiment", [])
+                        + signals.get("reddit_sentiment", [])
                     ]
                 )
                 if (signals.get("twitter_sentiment") or signals.get("reddit_sentiment"))
@@ -1264,7 +1390,9 @@ class ExternalSignalsManager:
                 "news_sentiment": news_sentiment,
                 "social_sentiment": social_sentiment,
                 "sentiment_volume": sum(d.volume for d in all_sentiment),
-                "sentiment_confidence": np.mean([d.confidence for d in all_sentiment]) if all_sentiment else 0.0,
+                "sentiment_confidence": np.mean([d.confidence for d in all_sentiment])
+                if all_sentiment
+                else 0.0,
             }
 
         except Exception as e:
@@ -1278,6 +1406,8 @@ class ExternalSignalsManager:
             }
 
 
-def get_external_signals_manager(config: Optional[Dict[str, Any]] = None) -> ExternalSignalsManager:
+def get_external_signals_manager(
+    config: Optional[Dict[str, Any]] = None
+) -> ExternalSignalsManager:
     """Get the external signals manager instance."""
     return ExternalSignalsManager(config)

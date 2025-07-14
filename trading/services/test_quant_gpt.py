@@ -27,7 +27,11 @@ def test_direct_quant_gpt():
 
     try:
         # Initialize QuantGPT
-        quant_gpt = QuantGPT(openai_api_key=os.getenv("OPENAI_API_KEY"), redis_host="localhost", redis_port=6379)
+        quant_gpt = QuantGPT(
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            redis_host="localhost",
+            redis_port=6379,
+        )
 
         # Test queries
         test_queries = [
@@ -81,7 +85,11 @@ def test_service_client():
         client = ServiceClient(redis_host="localhost", redis_port=6379)
 
         # Test queries
-        test_queries = ["What's the best model for MSFT?", "Should I buy AMZN now?", "Analyze ETHUSDT market"]
+        test_queries = [
+            "What's the best model for MSFT?",
+            "Should I buy AMZN now?",
+            "Analyze ETHUSDT market",
+        ]
 
         for i, query in enumerate(test_queries, 1):
             logger.info(f"\n📝 Service Test Query {i}: {query}")
@@ -104,9 +112,13 @@ def test_service_client():
                         logger.info(f"Symbol: {parsed.get('symbol', 'N/A')}")
                         logger.info("✅ Service test passed")
                     else:
-                        logger.error(f"❌ Query failed: {query_result.get('error', 'Unknown error')}")
+                        logger.error(
+                            f"❌ Query failed: {query_result.get('error', 'Unknown error')}"
+                        )
                 else:
-                    logger.error(f"❌ Service error: {result.get('error', 'Unknown error')}")
+                    logger.error(
+                        f"❌ Service error: {result.get('error', 'Unknown error')}"
+                    )
             else:
                 logger.error("❌ No response from service")
 
@@ -136,7 +148,11 @@ def test_query_parsing():
     logger.info("=" * 50)
 
     try:
-        quant_gpt = QuantGPT(openai_api_key=os.getenv("OPENAI_API_KEY"), redis_host="localhost", redis_port=6379)
+        quant_gpt = QuantGPT(
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            redis_host="localhost",
+            redis_port=6379,
+        )
 
         # Test various query formats
         test_cases = [
@@ -174,7 +190,9 @@ def test_query_parsing():
                 if intent == expected_intent:
                     logger.info(f"✅ Intent: {intent}")
                 else:
-                    logger.error(f"❌ Intent mismatch: expected {expected_intent}, got {intent}")
+                    logger.error(
+                        f"❌ Intent mismatch: expected {expected_intent}, got {intent}"
+                    )
 
                 # Check symbol
                 symbol = parsed.get("symbol")
@@ -182,7 +200,9 @@ def test_query_parsing():
                 if symbol == expected_symbol:
                     logger.info(f"✅ Symbol: {symbol}")
                 else:
-                    logger.error(f"❌ Symbol mismatch: expected {expected_symbol}, got {symbol}")
+                    logger.error(
+                        f"❌ Symbol mismatch: expected {expected_symbol}, got {symbol}"
+                    )
 
                 # Check other parameters
                 for param in ["timeframe", "period"]:
@@ -192,11 +212,15 @@ def test_query_parsing():
                         if value == expected_value:
                             logger.info(f"✅ {param}: {value}")
                         else:
-                            logger.error(f"❌ {param} mismatch: expected {expected_value}, got {value}")
+                            logger.error(
+                                f"❌ {param} mismatch: expected {expected_value}, got {value}"
+                            )
 
                 logger.info("✅ Parsing test passed")
             else:
-                logger.error(f"❌ Parsing test failed: {result.get('error', 'Unknown error')}")
+                logger.error(
+                    f"❌ Parsing test failed: {result.get('error', 'Unknown error')}"
+                )
 
         quant_gpt.close()
         return True

@@ -18,7 +18,9 @@ class ModelEvaluator:
     def __init__(self):
         self.evaluation_results = {}
 
-    def evaluate_regression(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+    def evaluate_regression(
+        self, y_true: np.ndarray, y_pred: np.ndarray
+    ) -> Dict[str, float]:
         """Evaluate regression model performance."""
         try:
             # Remove NaN values
@@ -34,7 +36,8 @@ class ModelEvaluator:
                 "rmse": np.sqrt(mean_squared_error(y_true_clean, y_pred_clean)),
                 "mae": mean_absolute_error(y_true_clean, y_pred_clean),
                 "r2": r2_score(y_true_clean, y_pred_clean),
-                "mape": np.mean(np.abs((y_true_clean - y_pred_clean) / y_true_clean)) * 100,
+                "mape": np.mean(np.abs((y_true_clean - y_pred_clean) / y_true_clean))
+                * 100,
             }
 
             return metrics
@@ -43,7 +46,10 @@ class ModelEvaluator:
             return {}
 
     def evaluate_classification(
-        self, y_true: np.ndarray, y_pred: np.ndarray, y_prob: Optional[np.ndarray] = None
+        self,
+        y_true: np.ndarray,
+        y_pred: np.ndarray,
+        y_prob: Optional[np.ndarray] = None,
     ) -> Dict[str, float]:
         """Evaluate classification model performance."""
         try:
@@ -116,13 +122,22 @@ class ModelEvaluator:
             return {}
 
     def cross_validate(
-        self, model, X: np.ndarray, y: np.ndarray, cv: int = 5, scoring: str = "neg_mean_squared_error"
+        self,
+        model,
+        X: np.ndarray,
+        y: np.ndarray,
+        cv: int = 5,
+        scoring: str = "neg_mean_squared_error",
     ) -> Dict[str, float]:
         """Perform cross-validation."""
         try:
             scores = cross_val_score(model, X, y, cv=cv, scoring=scoring)
 
-            return {"cv_mean": scores.mean(), "cv_std": scores.std(), "cv_scores": scores.tolist()}
+            return {
+                "cv_mean": scores.mean(),
+                "cv_std": scores.std(),
+                "cv_scores": scores.tolist(),
+            }
         except Exception as e:
             logger.error(f"Error in cross-validation: {e}")
             return {}
@@ -185,7 +200,9 @@ class ModelValidator:
             logger.error(f"Error validating model outputs: {e}")
             return False
 
-    def validate_model_performance(self, metrics: Dict[str, float], thresholds: Dict[str, float]) -> Dict[str, bool]:
+    def validate_model_performance(
+        self, metrics: Dict[str, float], thresholds: Dict[str, float]
+    ) -> Dict[str, bool]:
         """Validate model performance against thresholds."""
         try:
             validation_results = {}
@@ -211,7 +228,9 @@ class ModelMonitor:
         self.monitoring_data = {}
         self.drift_threshold = 0.1
 
-    def detect_data_drift(self, reference_data: np.ndarray, current_data: np.ndarray) -> Dict[str, float]:
+    def detect_data_drift(
+        self, reference_data: np.ndarray, current_data: np.ndarray
+    ) -> Dict[str, float]:
         """Detect data drift between reference and current data."""
         try:
             drift_metrics = {}

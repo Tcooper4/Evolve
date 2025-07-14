@@ -17,7 +17,9 @@ from trading.data.providers.yfinance_provider import YFinanceProvider
 from trading.models.ensemble_model import EnsembleModel
 
 # Configure logging for the example
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -53,13 +55,17 @@ def forecast_aapl():
         logger.info("=" * 30)
         logger.info(f"Current Price: ${data['close'].iloc[-1]:.2f}")
         logger.info(f"Predicted Price (30d): ${forecast['predicted_price']:.2f}")
-        logger.info(f"Price Change: {((forecast['predicted_price'] / data['close'].iloc[-1]) - 1) * 100:.2f}%")
+        logger.info(
+            f"Price Change: {((forecast['predicted_price'] / data['close'].iloc[-1]) - 1) * 100:.2f}%"
+        )
 
         if "confidence" in forecast:
             logger.info(f"Confidence: {forecast['confidence']:.2%}")
 
         if "lower" in forecast and "upper" in forecast:
-            logger.info(f"Confidence Interval: ${forecast['lower']:.2f} - ${forecast['upper']:.2f}")
+            logger.info(
+                f"Confidence Interval: ${forecast['lower']:.2f} - ${forecast['upper']:.2f}"
+            )
 
         logger.info("\n✅ Forecast completed successfully!")
         return forecast
@@ -90,7 +96,10 @@ def forecast_multiple_tickers():
             results[ticker] = {
                 "current_price": data["close"].iloc[-1],
                 "predicted_price": forecast["predicted_price"],
-                "change_pct": ((forecast["predicted_price"] / data["close"].iloc[-1]) - 1) * 100,
+                "change_pct": (
+                    (forecast["predicted_price"] / data["close"].iloc[-1]) - 1
+                )
+                * 100,
             }
 
             logger.info(f"  Current: ${results[ticker]['current_price']:.2f}")

@@ -130,12 +130,16 @@ class SimulatedExecutionEngine:
         self.min_latency = 0.001  # 1ms
         self.max_latency = 0.100  # 100ms
 
-        logger.info(f"Initialized Simulated Execution Engine with ${initial_cash:,.2f} initial cash")
+        logger.info(
+            f"Initialized Simulated Execution Engine with ${initial_cash:,.2f} initial cash"
+        )
 
     def _generate_order_id(self) -> str:
         """Generate unique order ID."""
         self.order_counter += 1
-        return f"SIM_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{self.order_counter:06d}"
+        return (
+            f"SIM_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{self.order_counter:06d}"
+        )
 
     def _simulate_latency(self) -> float:
         """Simulate execution latency."""
@@ -180,7 +184,9 @@ class SimulatedExecutionEngine:
         if symbol not in self.market_data:
             self.market_data[symbol] = []
 
-        self.market_data[symbol].append({"timestamp": datetime.now(), "price": price, "volume": volume})
+        self.market_data[symbol].append(
+            {"timestamp": datetime.now(), "price": price, "volume": volume}
+        )
 
         # Keep only recent data
         if len(self.market_data[symbol]) > 1000:
@@ -226,7 +232,9 @@ class SimulatedExecutionEngine:
                         position.cost_basis = 0.0
                 else:
                     # Full cover + new long position
-                    realized_pl = (position.average_price - price) * abs(position.quantity)
+                    realized_pl = (position.average_price - price) * abs(
+                        position.quantity
+                    )
                     position.realized_pl += realized_pl
                     remaining_quantity = quantity + position.quantity
                     position.quantity = remaining_quantity
@@ -323,7 +331,9 @@ class SimulatedExecutionEngine:
         current_price = self.last_prices[symbol]
 
         # Calculate execution price with slippage
-        slippage = self._calculate_slippage(symbol, order_status.side, order_status.quantity)
+        slippage = self._calculate_slippage(
+            symbol, order_status.side, order_status.quantity
+        )
 
         if order_status.side == "buy":
             execution_price = current_price + slippage
@@ -341,13 +351,18 @@ class SimulatedExecutionEngine:
                 return
             self.cash -= total_cost
         else:  # sell
-            if symbol not in self.positions or self.positions[symbol].quantity < order_status.quantity:
+            if (
+                symbol not in self.positions
+                or self.positions[symbol].quantity < order_status.quantity
+            ):
                 order_status.status = "rejected"
                 return
             self.cash += trade_value - commission
 
         # Execute the trade
-        self._update_position(symbol, order_status.quantity, execution_price, order_status.side)
+        self._update_position(
+            symbol, order_status.quantity, execution_price, order_status.side
+        )
 
         # Update order status
         order_status.status = "filled"
@@ -461,7 +476,9 @@ class SimulatedExecutionEngine:
 
         total_trades = len(self.trade_history)
         total_pnl = sum(trade.get("pnl", 0.0) for trade in self.trade_history)
-        winning_trades = sum(1 for trade in self.trade_history if trade.get("pnl", 0.0) > 0)
+        winning_trades = sum(
+            1 for trade in self.trade_history if trade.get("pnl", 0.0) > 0
+        )
         win_rate = winning_trades / total_trades if total_trades > 0 else 0.0
 
         return {
@@ -477,7 +494,12 @@ class SimulatedExecutionEngine:
 class AlpacaTradingInterface:
     """Alpaca trading interface for real order placement."""
 
-    def __init__(self, api_key: Optional[str] = None, secret_key: Optional[str] = None, paper_trading: bool = True):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        secret_key: Optional[str] = None,
+        paper_trading: bool = True,
+    ):
         """Initialize Alpaca interface.
 
         Args:
@@ -499,11 +521,15 @@ class AlpacaTradingInterface:
         self.api = tradeapi.REST(
             self.api_key,
             self.secret_key,
-            "https://paper-api.alpaca.markets" if paper_trading else "https://api.alpaca.markets",
+            "https://paper-api.alpaca.markets"
+            if paper_trading
+            else "https://api.alpaca.markets",
             api_version="v2",
         )
 
-        logger.info(f"Initialized Alpaca Trading Interface (Paper Trading: {paper_trading})")
+        logger.info(
+            f"Initialized Alpaca Trading Interface (Paper Trading: {paper_trading})"
+        )
 
     def place_order(self, order_request: OrderRequest) -> OrderStatus:
         """Place order through Alpaca."""
@@ -529,9 +555,15 @@ class AlpacaTradingInterface:
                 filled_quantity=float(alpaca_order.filled_qty),
                 order_type=alpaca_order.type,
                 status=alpaca_order.status,
-                limit_price=float(alpaca_order.limit_price) if alpaca_order.limit_price else None,
-                stop_price=float(alpaca_order.stop_price) if alpaca_order.stop_price else None,
-                filled_price=float(alpaca_order.filled_avg_price) if alpaca_order.filled_avg_price else None,
+                limit_price=float(alpaca_order.limit_price)
+                if alpaca_order.limit_price
+                else None,
+                stop_price=float(alpaca_order.stop_price)
+                if alpaca_order.stop_price
+                else None,
+                filled_price=float(alpaca_order.filled_avg_price)
+                if alpaca_order.filled_avg_price
+                else None,
                 created_at=alpaca_order.created_at,
                 filled_at=alpaca_order.filled_at,
                 client_order_id=alpaca_order.client_order_id,
@@ -566,9 +598,15 @@ class AlpacaTradingInterface:
                 filled_quantity=float(alpaca_order.filled_qty),
                 order_type=alpaca_order.type,
                 status=alpaca_order.status,
-                limit_price=float(alpaca_order.limit_price) if alpaca_order.limit_price else None,
-                stop_price=float(alpaca_order.stop_price) if alpaca_order.stop_price else None,
-                filled_price=float(alpaca_order.filled_avg_price) if alpaca_order.filled_avg_price else None,
+                limit_price=float(alpaca_order.limit_price)
+                if alpaca_order.limit_price
+                else None,
+                stop_price=float(alpaca_order.stop_price)
+                if alpaca_order.stop_price
+                else None,
+                filled_price=float(alpaca_order.filled_avg_price)
+                if alpaca_order.filled_avg_price
+                else None,
                 created_at=alpaca_order.created_at,
                 filled_at=alpaca_order.filled_at,
                 client_order_id=alpaca_order.client_order_id,
@@ -629,7 +667,9 @@ class AlpacaTradingInterface:
 class LiveTradingInterface:
     """Main live trading interface that manages both simulated and real trading."""
 
-    def __init__(self, mode: str = "simulated", alpaca_config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, mode: str = "simulated", alpaca_config: Optional[Dict[str, Any]] = None
+    ):
         """Initialize live trading interface.
 
         Args:
@@ -685,7 +725,9 @@ class LiveTradingInterface:
 
             self.order_history.append(order_status)
 
-            logger.info(f"Placed {order_status.side} order for {order_status.quantity} {order_status.symbol}")
+            logger.info(
+                f"Placed {order_status.side} order for {order_status.quantity} {order_status.symbol}"
+            )
 
             return order_status
 
@@ -701,9 +743,13 @@ class LiveTradingInterface:
 
             # Check position size
             if order_request.side == "buy":
-                order_value = order_request.quantity * (order_request.limit_price or 100.0)
+                order_value = order_request.quantity * (
+                    order_request.limit_price or 100.0
+                )
                 if order_value > account_info.buying_power * self.max_position_size:
-                    logger.warning(f"Order value {order_value} exceeds max position size")
+                    logger.warning(
+                        f"Order value {order_value} exceeds max position size"
+                    )
                     return False
 
             # Check daily loss limit
@@ -759,7 +805,9 @@ class LiveTradingInterface:
     def _calculate_performance_from_history(self) -> Dict[str, Any]:
         """Calculate performance from order history."""
         total_trades = len(self.order_history)
-        filled_orders = [order for order in self.order_history if order.status == "filled"]
+        filled_orders = [
+            order for order in self.order_history if order.status == "filled"
+        ]
 
         total_pnl = 0.0
         for order in filled_orders:
@@ -774,7 +822,8 @@ class LiveTradingInterface:
             "total_trades": total_trades,
             "filled_trades": len(filled_orders),
             "total_pnl": total_pnl,
-            "win_rate": len([o for o in filled_orders if o.filled_price > 0]) / len(filled_orders)
+            "win_rate": len([o for o in filled_orders if o.filled_price > 0])
+            / len(filled_orders)
             if filled_orders
             else 0.0,
         }

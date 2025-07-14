@@ -32,7 +32,12 @@ class StartupMonitor:
         self.startup_log = []
 
     def log_init_step(
-        self, component: str, success: bool, duration: float, details: Optional[str] = None, error: Optional[str] = None
+        self,
+        component: str,
+        success: bool,
+        duration: float,
+        details: Optional[str] = None,
+        error: Optional[str] = None,
     ):
         """Log initialization step result."""
         step_result = {
@@ -52,15 +57,21 @@ class StartupMonitor:
             if details:
                 logger.debug(f"  {component} details: {details}")
         else:
-            logger.error(f"✗ {component} initialization failed in {duration:.3f}s: {error}")
+            logger.error(
+                f"✗ {component} initialization failed in {duration:.3f}s: {error}"
+            )
 
     def check_dependency(self, name: str, check_func, description: str = "") -> bool:
         """Check if a dependency is available."""
         start_time = time.time()
         try:
-            result = check_func()
+            check_func()
             duration = time.time() - start_time
-            self.dependencies[name] = {"available": True, "duration": duration, "description": description}
+            self.dependencies[name] = {
+                "available": True,
+                "duration": duration,
+                "description": description,
+            }
             logger.info(f"✓ Dependency {name} available ({duration:.3f}s)")
             return True
         except Exception as e:
@@ -85,7 +96,9 @@ class StartupMonitor:
             "components_initialized": successful_inits,
             "total_components": total_inits,
             "success_rate": successful_inits / total_inits if total_inits > 0 else 0,
-            "dependencies_available": sum(1 for d in self.dependencies.values() if d["available"]),
+            "dependencies_available": sum(
+                1 for d in self.dependencies.values() if d["available"]
+            ),
             "total_dependencies": len(self.dependencies),
             "init_results": self.init_results,
             "dependencies": self.dependencies,
@@ -114,8 +127,12 @@ def run_system_checks() -> Dict[str, Any]:
     monitor = StartupMonitor()
 
     # Check dependencies
-    monitor.check_dependency("config", lambda: config.get("model_dir"), "Configuration system")
-    monitor.check_dependency("logging", lambda: logging.getLogger().handlers, "Logging system")
+    monitor.check_dependency(
+        "config", lambda: config.get("model_dir"), "Configuration system"
+    )
+    monitor.check_dependency(
+        "logging", lambda: logging.getLogger().handlers, "Logging system"
+    )
     monitor.check_dependency("streamlit", lambda: st.session_state, "Streamlit session")
 
     # Run repair and health checks
@@ -149,13 +166,21 @@ def run_system_checks() -> Dict[str, Any]:
     if health_result["status"] != "healthy":
         error_logger.log_error("Health check failed", context=health_result)
 
-    results = {"repair": repair_result, "health": health_result, "startup_summary": monitor.get_startup_summary()}
+    results = {
+        "repair": repair_result,
+        "health": health_result,
+        "startup_summary": monitor.get_startup_summary(),
+    }
 
     # Log startup summary
     summary = monitor.get_startup_summary()
     logger.info(f"System startup completed in {summary['total_startup_time']:.3f}s")
-    logger.info(f"Components: {summary['components_initialized']}/{summary['total_components']} successful")
-    logger.info(f"Dependencies: {summary['dependencies_available']}/{summary['total_dependencies']} available")
+    logger.info(
+        f"Components: {summary['components_initialized']}/{summary['total_components']} successful"
+    )
+    logger.info(
+        f"Dependencies: {summary['dependencies_available']}/{summary['total_dependencies']} available"
+    )
 
     return results
 
@@ -168,7 +193,14 @@ def initialize_components() -> Dict[str, Any]:
     """
     monitor = StartupMonitor()
 
-    results = {"llm": None, "router": None, "updater": None, "memory": None, "errors": [], "startup_summary": None}
+    results = {
+        "llm": None,
+        "router": None,
+        "updater": None,
+        "memory": None,
+        "errors": [],
+        "startup_summary": None,
+    }
 
     # Initialize LLM
     llm_start = time.time()
@@ -177,7 +209,10 @@ def initialize_components() -> Dict[str, Any]:
         st.session_state.llm = results["llm"]
         llm_duration = time.time() - llm_start
         monitor.log_init_step(
-            "LLMInterface", True, llm_duration, f"Provider: {getattr(results['llm'], 'provider', 'unknown')}"
+            "LLMInterface",
+            True,
+            llm_duration,
+            f"Provider: {getattr(results['llm'], 'provider', 'unknown')}",
         )
     except Exception as e:
         llm_duration = time.time() - llm_start
@@ -192,7 +227,12 @@ def initialize_components() -> Dict[str, Any]:
         # results["router"] = AgentRouter()  # Commented out as AgentRouter is moved to archive
         # st.session_state.router = results["router"]
         router_duration = time.time() - router_start
-        monitor.log_init_step("AgentRouter", True, router_duration, "Router initialization skipped (moved to archive)")
+        monitor.log_init_step(
+            "AgentRouter",
+            True,
+            router_duration,
+            "Router initialization skipped (moved to archive)",
+        )
     except Exception as e:
         router_duration = time.time() - router_start
         error_msg = f"Failed to initialize AgentRouter: {str(e)}"
@@ -226,21 +266,28 @@ def initialize_components() -> Dict[str, Any]:
         st.session_state.memory = results["memory"]
         memory_duration = time.time() - memory_start
         monitor.log_init_step(
-            "PerformanceMemory", True, memory_duration, f"Memory size: {getattr(results['memory'], 'size', 'unknown')}"
+            "PerformanceMemory",
+            True,
+            memory_duration,
+            f"Memory size: {getattr(results['memory'], 'size', 'unknown')}",
         )
     except Exception as e:
         memory_duration = time.time() - memory_start
         error_msg = f"Failed to initialize PerformanceMemory: {str(e)}"
         error_logger.log_error(error_msg)
         results["errors"].append(error_msg)
-        monitor.log_init_step("PerformanceMemory", False, memory_duration, error=error_msg)
+        monitor.log_init_step(
+            "PerformanceMemory", False, memory_duration, error=error_msg
+        )
 
     # Add startup summary to results
     results["startup_summary"] = monitor.get_startup_summary()
 
     # Log final summary
     summary = monitor.get_startup_summary()
-    logger.info(f"Component initialization completed in {summary['total_startup_time']:.3f}s")
+    logger.info(
+        f"Component initialization completed in {summary['total_startup_time']:.3f}s"
+    )
     logger.info(f"Success rate: {summary['success_rate']:.1%}")
 
     return results
@@ -257,7 +304,9 @@ def get_system_status() -> Dict[str, Any]:
         "health_status": st.session_state.get("health_status", "unknown"),
         "repair_status": st.session_state.get("repair_status", "unknown"),
         "llm_provider": st.session_state.get("llm_provider", "unknown"),
-        "model_count": len(list(Path(config.get("model_dir", "trading/models")).glob("*.pkl"))),
+        "model_count": len(
+            list(Path(config.get("model_dir", "trading/models")).glob("*.pkl"))
+        ),
         "last_check": st.session_state.get("last_system_check", None),
         "startup_time": st.session_state.get("startup_time", None),
         "component_status": {},

@@ -45,7 +45,10 @@ class PerformanceMonitor:
     """Monitors system performance metrics and triggers alerts."""
 
     def __init__(
-        self, config: Optional[Dict] = None, log_file_path: Optional[Union[str, Path]] = None, debug: bool = False
+        self,
+        config: Optional[Dict] = None,
+        log_file_path: Optional[Union[str, Path]] = None,
+        debug: bool = False,
     ):
         """Initialize the performance monitor.
 
@@ -66,7 +69,9 @@ class PerformanceMonitor:
             log_file = log_dir / "performance.log"
 
         file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
         self.logger.addHandler(file_handler)
 
         # Default configuration
@@ -80,7 +85,10 @@ class PerformanceMonitor:
                 "disk_io_percent": 90.0,
                 "net_io_percent": 90.0,
             },
-            "alert_severities": {"warning": 0.8, "critical": 0.9},  # 80% of threshold  # 90% of threshold
+            "alert_severities": {
+                "warning": 0.8,
+                "critical": 0.9,
+            },  # 80% of threshold  # 90% of threshold
             "metric_history_window": 3600,  # 1 hour
             "alert_callbacks": {},  # Map of severity to callback functions
         }
@@ -223,7 +231,9 @@ class PerformanceMonitor:
             metrics.append(
                 Metric(
                     name="disk_io_percent",
-                    value=(disk_io.read_bytes + disk_io.write_bytes) / 1024 / 1024,  # MB
+                    value=(disk_io.read_bytes + disk_io.write_bytes)
+                    / 1024
+                    / 1024,  # MB
                     timestamp=timestamp,
                     tags={"hostname": self.hostname, "platform": self.platform},
                     unit="MB",
@@ -262,7 +272,9 @@ class PerformanceMonitor:
         window = timedelta(seconds=self.config["metric_history_window"])
         cutoff = datetime.utcnow() - window
         self.metrics[metric.name] = [
-            m for m in self.metrics[metric.name] if datetime.fromisoformat(m.timestamp) > cutoff
+            m
+            for m in self.metrics[metric.name]
+            if datetime.fromisoformat(m.timestamp) > cutoff
         ]
 
         # Store on disk
@@ -282,8 +294,12 @@ class PerformanceMonitor:
             return
 
         # Calculate severity thresholds
-        warning_threshold = metric.threshold * self.config["alert_severities"]["warning"]
-        critical_threshold = metric.threshold * self.config["alert_severities"]["critical"]
+        warning_threshold = (
+            metric.threshold * self.config["alert_severities"]["warning"]
+        )
+        critical_threshold = (
+            metric.threshold * self.config["alert_severities"]["critical"]
+        )
 
         # Determine severity
         severity = None
@@ -324,7 +340,9 @@ class PerformanceMonitor:
         Args:
             alert: Alert to store
         """
-        alert_file = self.alerts_dir / f"alerts_{datetime.utcnow().strftime('%Y%m%d')}.jsonl"
+        alert_file = (
+            self.alerts_dir / f"alerts_{datetime.utcnow().strftime('%Y%m%d')}.jsonl"
+        )
         with open(alert_file, "a") as f:
             f.write(json.dumps(asdict(alert)) + "\n")
 
@@ -379,7 +397,9 @@ class PerformanceMonitor:
             "timestamp": datetime.utcnow().isoformat(),
             "hostname": self.hostname,
             "platform": self.platform,
-            "metrics": {name: asdict(metric) for name, metric in latest_metrics.items()},
+            "metrics": {
+                name: asdict(metric) for name, metric in latest_metrics.items()
+            },
             "alerts": alert_counts,
             "monitoring_active": self.active,
         }

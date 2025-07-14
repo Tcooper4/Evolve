@@ -194,7 +194,9 @@ def merge_dictionaries(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str
     return result
 
 
-def flatten_dict(d: Dict[str, Any], parent_key: str = "", sep: str = "_") -> Dict[str, Any]:
+def flatten_dict(
+    d: Dict[str, Any], parent_key: str = "", sep: str = "_"
+) -> Dict[str, Any]:
     """Flatten a nested dictionary."""
     items = []
     for k, v in d.items():
@@ -222,9 +224,13 @@ def retry_on_failure(max_attempts: int = 3, delay: float = 1.0):
                     return func(*args, **kwargs)
                 except Exception as e:
                     if attempt == max_attempts - 1:
-                        logger.error(f"Function {func.__name__} failed after {max_attempts} attempts: {e}")
+                        logger.error(
+                            f"Function {func.__name__} failed after {max_attempts} attempts: {e}"
+                        )
                         raise
-                    logger.warning(f"Attempt {attempt + 1} failed for {func.__name__}: {e}")
+                    logger.warning(
+                        f"Attempt {attempt + 1} failed for {func.__name__}: {e}"
+                    )
                     time.sleep(delay)
             return None
 

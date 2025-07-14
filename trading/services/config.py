@@ -34,11 +34,26 @@ class QuantGPTConfig:
 
     # Trading Context
     available_symbols: List[str] = field(
-        default_factory=lambda: ["BTCUSDT", "ETHUSDT", "NVDA", "TSLA", "AAPL", "GOOGL", "MSFT", "AMZN"]
+        default_factory=lambda: [
+            "BTCUSDT",
+            "ETHUSDT",
+            "NVDA",
+            "TSLA",
+            "AAPL",
+            "GOOGL",
+            "MSFT",
+            "AMZN",
+        ]
     )
-    available_timeframes: List[str] = field(default_factory=lambda: ["1m", "5m", "15m", "1h", "4h", "1d"])
-    available_periods: List[str] = field(default_factory=lambda: ["7d", "14d", "30d", "90d", "180d", "1y"])
-    available_models: List[str] = field(default_factory=lambda: ["lstm", "xgboost", "ensemble", "transformer", "tcn"])
+    available_timeframes: List[str] = field(
+        default_factory=lambda: ["1m", "5m", "15m", "1h", "4h", "1d"]
+    )
+    available_periods: List[str] = field(
+        default_factory=lambda: ["7d", "14d", "30d", "90d", "180d", "1y"]
+    )
+    available_models: List[str] = field(
+        default_factory=lambda: ["lstm", "xgboost", "ensemble", "transformer", "tcn"]
+    )
 
     # Performance Settings
     cache_enabled: bool = True
@@ -67,8 +82,12 @@ class QuantGPTConfig:
         # OpenAI
         config.openai_api_key = os.getenv("OPENAI_API_KEY")
         config.openai_model = os.getenv("OPENAI_MODEL", config.openai_model)
-        config.openai_temperature = float(os.getenv("OPENAI_TEMPERATURE", config.openai_temperature))
-        config.openai_max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", config.openai_max_tokens))
+        config.openai_temperature = float(
+            os.getenv("OPENAI_TEMPERATURE", config.openai_temperature)
+        )
+        config.openai_max_tokens = int(
+            os.getenv("OPENAI_MAX_TOKENS", config.openai_max_tokens)
+        )
 
         # Redis
         config.redis_host = os.getenv("REDIS_HOST", config.redis_host)
@@ -83,9 +102,15 @@ class QuantGPTConfig:
         config.retry_delay = float(os.getenv("RETRY_DELAY", config.retry_delay))
 
         # Rate Limiting
-        config.rate_limit_enabled = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
-        config.rate_limit_calls = int(os.getenv("RATE_LIMIT_CALLS", config.rate_limit_calls))
-        config.rate_limit_period = int(os.getenv("RATE_LIMIT_PERIOD", config.rate_limit_period))
+        config.rate_limit_enabled = (
+            os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
+        )
+        config.rate_limit_calls = int(
+            os.getenv("RATE_LIMIT_CALLS", config.rate_limit_calls)
+        )
+        config.rate_limit_period = int(
+            os.getenv("RATE_LIMIT_PERIOD", config.rate_limit_period)
+        )
 
         # Logging
         config.log_level = os.getenv("LOG_LEVEL", config.log_level)

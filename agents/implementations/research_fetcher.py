@@ -36,7 +36,12 @@ class ResearchPaper:
 class ArxivResearchFetcher:
     """Fetches research papers from arXiv API."""
 
-    def __init__(self, search_terms: Optional[List[str]] = None, max_results: int = 100, days_back: int = 30):
+    def __init__(
+        self,
+        search_terms: Optional[List[str]] = None,
+        max_results: int = 100,
+        days_back: int = 30,
+    ):
         """Initialize research fetcher.
 
         Args:
@@ -63,7 +68,9 @@ class ArxivResearchFetcher:
         self.cache_file = Path("agents/research_cache.json")
         self._load_cache()
 
-        logger.info(f"Initialized ArxivResearchFetcher with {len(self.search_terms)} search terms")
+        logger.info(
+            f"Initialized ArxivResearchFetcher with {len(self.search_terms)} search terms"
+        )
 
     def _load_cache(self):
         """Load cached papers."""
@@ -85,7 +92,9 @@ class ArxivResearchFetcher:
         except Exception as e:
             logger.error(f"Error saving cache: {e}")
 
-    def _calculate_relevance_score(self, title: str, abstract: str, categories: List[str]) -> float:
+    def _calculate_relevance_score(
+        self, title: str, abstract: str, categories: List[str]
+    ) -> float:
         """Calculate relevance score for a paper."""
         score = 0.0
 
@@ -140,7 +149,13 @@ class ArxivResearchFetcher:
         complexity_indicators = {
             "low": ["simple", "linear", "regression", "basic", "traditional"],
             "medium": ["neural", "network", "ensemble", "gradient", "optimization"],
-            "high": ["transformer", "attention", "reinforcement", "complex", "advanced"],
+            "high": [
+                "transformer",
+                "attention",
+                "reinforcement",
+                "complex",
+                "advanced",
+            ],
         }
 
         text_lower = (title + " " + abstract).lower()
@@ -152,10 +167,18 @@ class ArxivResearchFetcher:
         # Return complexity with highest score
         return max(scores, key=scores.get)
 
-    def _assess_potential_impact(self, title: str, abstract: str, relevance_score: float) -> str:
+    def _assess_potential_impact(
+        self, title: str, abstract: str, relevance_score: float
+    ) -> str:
         """Assess potential impact of the research."""
         impact_indicators = {
-            "high": ["novel", "breakthrough", "state-of-the-art", "sota", "improvement"],
+            "high": [
+                "novel",
+                "breakthrough",
+                "state-of-the-art",
+                "sota",
+                "improvement",
+            ],
             "medium": ["proposed", "method", "approach", "framework", "model"],
             "low": ["review", "survey", "analysis", "comparison", "study"],
         }
@@ -182,7 +205,9 @@ class ArxivResearchFetcher:
                 return [ResearchPaper(**paper) for paper in self.paper_cache[cache_key]]
 
             # Build query
-            query = f"search_query=all:{search_term}&start=0&max_results={self.max_results}"
+            query = (
+                f"search_query=all:{search_term}&start=0&max_results={self.max_results}"
+            )
             url = f"{self.base_url}?{query}"
 
             async with aiohttp.ClientSession() as session:
@@ -192,20 +217,26 @@ class ArxivResearchFetcher:
                         papers = self._parse_arxiv_xml(xml_content, search_term)
 
                         # Cache results
-                        self.paper_cache[cache_key] = [paper.__dict__ for paper in papers]
+                        self.paper_cache[cache_key] = [
+                            paper.__dict__ for paper in papers
+                        ]
                         self._save_cache()
 
                         logger.info(f"Fetched {len(papers)} papers for '{search_term}'")
                         return papers
                     else:
-                        logger.error(f"Failed to fetch papers for '{search_term}': {response.status}")
+                        logger.error(
+                            f"Failed to fetch papers for '{search_term}': {response.status}"
+                        )
                         return []
 
         except Exception as e:
             logger.error(f"Error fetching papers for '{search_term}': {e}")
             return []
 
-    def _parse_arxiv_xml(self, xml_content: str, search_term: str) -> List[ResearchPaper]:
+    def _parse_arxiv_xml(
+        self, xml_content: str, search_term: str
+    ) -> List[ResearchPaper]:
         """Parse arXiv XML response."""
         papers = []
 
@@ -241,9 +272,15 @@ class ArxivResearchFetcher:
                     categories = re.findall(category_pattern, entry)
 
                     # Calculate scores
-                    relevance_score = self._calculate_relevance_score(title, abstract, categories)
-                    implementation_complexity = self._assess_implementation_complexity(title, abstract)
-                    potential_impact = self._assess_potential_impact(title, abstract, relevance_score)
+                    relevance_score = self._calculate_relevance_score(
+                        title, abstract, categories
+                    )
+                    implementation_complexity = self._assess_implementation_complexity(
+                        title, abstract
+                    )
+                    potential_impact = self._assess_potential_impact(
+                        title, abstract, relevance_score
+                    )
 
                     # Only include relevant papers
                     if relevance_score > 0.3:
@@ -293,7 +330,9 @@ class ArxivResearchFetcher:
                 unique_papers[paper.arxiv_id] = paper
 
         # Sort by relevance and return top papers
-        sorted_papers = sorted(unique_papers.values(), key=lambda x: x.relevance_score, reverse=True)
+        sorted_papers = sorted(
+            unique_papers.values(), key=lambda x: x.relevance_score, reverse=True
+        )
 
         logger.info(f"Fetched {len(sorted_papers)} unique relevant papers")
         return sorted_papers[: self.max_results]

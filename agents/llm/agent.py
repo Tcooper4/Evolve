@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-
 # Import core components
 from models.forecast_router import ForecastRouter
 from trading.data.providers.fallback_provider import FallbackDataProvider
@@ -37,16 +36,30 @@ class AgentConfig:
 class LLMAgent:
     """LLM Agent for processing prompts with tools and memory."""
 
-    def __init__(self, config: AgentConfig, model_loader=None, memory_manager=None, tool_registry=None):
+    def __init__(
+        self,
+        config: AgentConfig,
+        model_loader=None,
+        memory_manager=None,
+        tool_registry=None,
+    ):
         """Initialize LLM agent."""
         self.config = config
         self.model_loader = model_loader
         self.memory_manager = memory_manager
         self.tool_registry = tool_registry
-        self.metrics = {"prompts_processed": 0, "tokens_used": 0, "tool_calls": 0, "memory_hits": 0}
+        self.metrics = {
+            "prompts_processed": 0,
+            "tokens_used": 0,
+            "tool_calls": 0,
+            "memory_hits": 0,
+        }
 
     async def process_prompt(
-        self, prompt: str, context: Optional[Dict[str, Any]] = None, tools: Optional[List[str]] = None
+        self,
+        prompt: str,
+        context: Optional[Dict[str, Any]] = None,
+        tools: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Process a prompt asynchronously."""
         self.metrics["prompts_processed"] += 1
@@ -54,7 +67,11 @@ class LLMAgent:
         # Simple placeholder implementation
         return {
             "content": f"Processed prompt: {prompt}",
-            "metadata": {"tokens": len(prompt.split()), "tool_calls": 0, "memory_hits": 0},
+            "metadata": {
+                "tokens": len(prompt.split()),
+                "tool_calls": 0,
+                "memory_hits": 0,
+            },
         }
 
     def get_metrics(self) -> Dict[str, Any]:
@@ -63,7 +80,12 @@ class LLMAgent:
 
     def reset_metrics(self) -> None:
         """Reset agent metrics."""
-        self.metrics = {"prompts_processed": 0, "tokens_used": 0, "tool_calls": 0, "memory_hits": 0}
+        self.metrics = {
+            "prompts_processed": 0,
+            "tokens_used": 0,
+            "tool_calls": 0,
+            "memory_hits": 0,
+        }
 
 
 @dataclass
@@ -251,7 +273,10 @@ class PromptAgent:
                 timeframe = f"{int(timeframe_match.group(1)) * 30}d"
 
         # Determine intent
-        if any(word in prompt_lower for word in ["create model", "build model", "new model", "custom model"]):
+        if any(
+            word in prompt_lower
+            for word in ["create model", "build model", "new model", "custom model"]
+        ):
             intent = "create_model"
         elif any(word in prompt_lower for word in ["forecast", "predict", "price"]):
             intent = "forecast"
@@ -280,7 +305,10 @@ class PromptAgent:
         create_new_model = False
 
         # Check for dynamic model creation requests
-        if any(phrase in prompt_lower for phrase in ["create model", "build model", "new model", "custom model"]):
+        if any(
+            phrase in prompt_lower
+            for phrase in ["create model", "build model", "new model", "custom model"]
+        ):
             create_new_model = True
             model = "dynamic"
         else:
@@ -367,18 +395,24 @@ class PromptAgent:
             end_date = datetime.now()
             start_date = end_date - timedelta(days=365)  # 1 year of data
 
-            data = self.data_provider.get_historical_data(symbol, start_date, end_date, "1d")
+            data = self.data_provider.get_historical_data(
+                symbol, start_date, end_date, "1d"
+            )
 
             if data is None or data.empty:
                 return AgentResponse(
                     success=False,
                     message=f"Unable to get data for {symbol}",
-                    recommendations=["Try a different symbol or check data availability"],
+                    recommendations=[
+                        "Try a different symbol or check data availability"
+                    ],
                 )
 
             # Generate forecast
             horizon = int(timeframe.replace("d", ""))
-            forecast_result = self.forecast_router.get_forecast(data=data, horizon=horizon, model_type=model.lower())
+            forecast_result = self.forecast_router.get_forecast(
+                data=data, horizon=horizon, model_type=model.lower()
+            )
 
             # Create response
             message = f"Forecast for {symbol} using {model} model:\n"
@@ -430,7 +464,9 @@ class PromptAgent:
             strategy = params["strategy"]
 
             # Get strategy analysis
-            strategy_analysis = self.strategy_gatekeeper.analyze_strategy(strategy, symbol)
+            strategy_analysis = self.strategy_gatekeeper.analyze_strategy(
+                strategy, symbol
+            )
 
             message = f"Strategy Analysis for {strategy} on {symbol}:\n"
             message += f"Health Score: {strategy_analysis.get('health_score', 'N/A')}\n"
@@ -457,7 +493,9 @@ class PromptAgent:
             return AgentResponse(
                 success=False,
                 message=f"Strategy analysis failed: {str(e)}",
-                recommendations=["Try a different strategy or check symbol availability"],
+                recommendations=[
+                    "Try a different strategy or check symbol availability"
+                ],
             )
 
     def _handle_backtest_request(self, params: Dict[str, Any]) -> AgentResponse:
@@ -477,13 +515,17 @@ class PromptAgent:
             end_date = datetime.now()
             start_date = end_date - timedelta(days=365)
 
-            data = self.data_provider.get_historical_data(symbol, start_date, end_date, "1d")
+            data = self.data_provider.get_historical_data(
+                symbol, start_date, end_date, "1d"
+            )
 
             if data is None or data.empty:
                 return AgentResponse(
                     success=False,
                     message=f"Unable to get data for {symbol}",
-                    recommendations=["Try a different symbol or check data availability"],
+                    recommendations=[
+                        "Try a different symbol or check data availability"
+                    ],
                 )
 
             # Run backtest
@@ -503,14 +545,20 @@ class PromptAgent:
 
             recommendations = []
             if sharpe < 1.0:
-                recommendations.append("Sharpe ratio below 1.0 - consider strategy optimization")
+                recommendations.append(
+                    "Sharpe ratio below 1.0 - consider strategy optimization"
+                )
             if max_dd > 0.2:
-                recommendations.append("High drawdown - implement better risk management")
+                recommendations.append(
+                    "High drawdown - implement better risk management"
+                )
             if total_return < 0.05:
                 recommendations.append("Low returns - consider alternative strategies")
 
             if not recommendations:
-                recommendations.append("Strategy performing well - consider live trading")
+                recommendations.append(
+                    "Strategy performing well - consider live trading"
+                )
 
             next_actions = []
             if sharpe >= 1.0 and total_return > 0.1:
@@ -523,7 +571,11 @@ class PromptAgent:
             return AgentResponse(
                 success=True,
                 message=message,
-                data={"metrics": metrics, "equity_curve": equity_curve, "trade_log": trade_log},
+                data={
+                    "metrics": metrics,
+                    "equity_curve": equity_curve,
+                    "trade_log": trade_log,
+                },
                 recommendations=recommendations,
                 next_actions=next_actions,
             )
@@ -581,7 +633,11 @@ class PromptAgent:
                     "Review execution quality",
                 ]
 
-                next_actions = ["Monitor position", "Set up alerts", "Plan exit strategy"]
+                next_actions = [
+                    "Monitor position",
+                    "Set up alerts",
+                    "Plan exit strategy",
+                ]
             else:
                 message = f"Trade execution failed: {execution_result.error_message}"
                 recommendations = ["Check market conditions", "Verify order parameters"]
@@ -590,7 +646,10 @@ class PromptAgent:
             return AgentResponse(
                 success=execution_result.success,
                 message=message,
-                data={"execution_result": execution_result, "current_price": current_price},
+                data={
+                    "execution_result": execution_result,
+                    "current_price": current_price,
+                },
                 recommendations=recommendations,
                 next_actions=next_actions,
             )
@@ -625,7 +684,9 @@ class PromptAgent:
 
             # Run optimization
             optimization_result = self.optimizer.optimize_strategy(
-                strategy=strategy, current_parameters={"period": 14, "threshold": 0.05}, current_metrics=current_metrics
+                strategy=strategy,
+                current_parameters={"period": 14, "threshold": 0.05},
+                current_metrics=current_metrics,
             )
 
             if optimization_result:
@@ -695,7 +756,11 @@ class PromptAgent:
                 "Review technical indicators",
             ]
 
-            next_actions = ["Generate price forecast", "Run technical analysis", "Check fundamental data"]
+            next_actions = [
+                "Generate price forecast",
+                "Run technical analysis",
+                "Check fundamental data",
+            ]
 
             return AgentResponse(
                 success=True,
@@ -741,7 +806,9 @@ class PromptAgent:
             model_name = f"dynamic_{symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
             # Create and validate model
-            model_spec, success, errors = self.model_creator.create_and_validate_model(requirements, model_name)
+            model_spec, success, errors = self.model_creator.create_and_validate_model(
+                requirements, model_name
+            )
 
             if success:
                 # Run full evaluation
@@ -752,7 +819,9 @@ class PromptAgent:
                 message += f"Type: {model_spec.model_type}\n"
                 message += f"Performance Grade: {evaluation.performance_grade}\n"
                 message += f"RMSE: {evaluation.metrics.get('rmse', 'N/A'):.4f}\n"
-                message += f"Sharpe: {evaluation.metrics.get('sharpe_ratio', 'N/A'):.4f}\n"
+                message += (
+                    f"Sharpe: {evaluation.metrics.get('sharpe_ratio', 'N/A'):.4f}\n"
+                )
 
                 recommendations = evaluation.recommendations
 
@@ -765,7 +834,10 @@ class PromptAgent:
                 return AgentResponse(
                     success=True,
                     message=message,
-                    data={"model_spec": asdict(model_spec), "evaluation": asdict(evaluation)},
+                    data={
+                        "model_spec": asdict(model_spec),
+                        "evaluation": asdict(evaluation),
+                    },
                     recommendations=recommendations,
                     next_actions=next_actions,
                 )
@@ -773,7 +845,10 @@ class PromptAgent:
                 return AgentResponse(
                     success=False,
                     message=f"Model creation failed: {', '.join(errors)}",
-                    recommendations=["Try a different model description", "Use an existing model instead"],
+                    recommendations=[
+                        "Try a different model description",
+                        "Use an existing model instead",
+                    ],
                 )
 
         except Exception as e:
@@ -781,7 +856,10 @@ class PromptAgent:
             return AgentResponse(
                 success=False,
                 message=f"Model creation failed: {str(e)}",
-                recommendations=["Try a simpler model description", "Use an existing model"],
+                recommendations=[
+                    "Try a simpler model description",
+                    "Use an existing model",
+                ],
             )
 
     def _generate_model_requirements(self, prompt: str, symbol: str) -> str:
@@ -819,7 +897,9 @@ class PromptAgent:
             complexity = "moderate"
 
         # Generate requirements
-        requirements = f"Create a {complexity} {model_type} for forecasting {symbol} stock prices"
+        requirements = (
+            f"Create a {complexity} {model_type} for forecasting {symbol} stock prices"
+        )
 
         # Add specific requirements based on prompt
         if "accurate" in prompt_lower or "precise" in prompt_lower:
@@ -831,7 +911,9 @@ class PromptAgent:
 
         return requirements
 
-    def _handle_general_request(self, prompt: str, params: Dict[str, Any]) -> AgentResponse:
+    def _handle_general_request(
+        self, prompt: str, params: Dict[str, Any]
+    ) -> AgentResponse:
         """Handle general request with full pipeline.
 
         Args:
@@ -870,8 +952,12 @@ class PromptAgent:
 
             if "strategy" in results:
                 message += "🎯 STRATEGY:\n"
-                message += f"Health Score: {results['strategy'].get('health_score', 'N/A')}\n"
-                message += f"Risk Level: {results['strategy'].get('risk_level', 'N/A')}\n\n"
+                message += (
+                    f"Health Score: {results['strategy'].get('health_score', 'N/A')}\n"
+                )
+                message += (
+                    f"Risk Level: {results['strategy'].get('risk_level', 'N/A')}\n\n"
+                )
 
             if "backtest" in results:
                 metrics = results["backtest"]["metrics"]
@@ -888,21 +974,39 @@ class PromptAgent:
                 sharpe = metrics.get("sharpe_ratio", 0)
 
                 if sharpe >= 1.0:
-                    recommendations.append("✅ Strategy performing well - consider live trading")
+                    recommendations.append(
+                        "✅ Strategy performing well - consider live trading"
+                    )
                 elif sharpe >= 0.5:
-                    recommendations.append("⚠️ Strategy needs optimization - run parameter tuning")
+                    recommendations.append(
+                        "⚠️ Strategy needs optimization - run parameter tuning"
+                    )
                 else:
-                    recommendations.append("❌ Strategy underperforming - try alternative approach")
+                    recommendations.append(
+                        "❌ Strategy underperforming - try alternative approach"
+                    )
 
             recommendations.extend(
-                ["Monitor performance regularly", "Set up automated alerts", "Review and adjust parameters monthly"]
+                [
+                    "Monitor performance regularly",
+                    "Set up automated alerts",
+                    "Review and adjust parameters monthly",
+                ]
             )
 
             # Suggest next actions
-            next_actions = ["Execute paper trade", "Set up performance monitoring", "Schedule regular reviews"]
+            next_actions = [
+                "Execute paper trade",
+                "Set up performance monitoring",
+                "Schedule regular reviews",
+            ]
 
             return AgentResponse(
-                success=True, message=message, data=results, recommendations=recommendations, next_actions=next_actions
+                success=True,
+                message=message,
+                data=results,
+                recommendations=recommendations,
+                next_actions=next_actions,
             )
 
         except Exception as e:

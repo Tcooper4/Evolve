@@ -25,7 +25,12 @@ class CacheManager:
     cache invalidation, and performance metrics.
     """
 
-    def __init__(self, redis_client: redis.Redis = None, cache_enabled: bool = True, ttl: int = 3600):
+    def __init__(
+        self,
+        redis_client: redis.Redis = None,
+        cache_enabled: bool = True,
+        ttl: int = 3600,
+    ):
         """
         Initialize cache manager.
 
@@ -175,7 +180,9 @@ class CacheManager:
             Dictionary with cache statistics
         """
         total_requests = self._cache_stats["hits"] + self._cache_stats["misses"]
-        hit_rate = self._cache_stats["hits"] / total_requests if total_requests > 0 else 0
+        hit_rate = (
+            self._cache_stats["hits"] / total_requests if total_requests > 0 else 0
+        )
 
         return {
             **self._cache_stats,

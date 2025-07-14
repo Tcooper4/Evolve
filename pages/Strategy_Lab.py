@@ -131,7 +131,11 @@ def load_available_strategies():
             "description": "Relative Strength Index mean reversion strategy",
             "best_for": "Range-bound markets",
             "parameters": ["rsi_period", "oversold_threshold", "overbought_threshold"],
-            "default_params": {"rsi_period": 14, "oversold_threshold": 30, "overbought_threshold": 70},
+            "default_params": {
+                "rsi_period": 14,
+                "oversold_threshold": 30,
+                "overbought_threshold": 70,
+            },
             "performance": {"sharpe": 1.2, "win_rate": 0.65, "max_dd": 0.08},
             "status": "Active",
         },
@@ -139,7 +143,11 @@ def load_available_strategies():
             "description": "Moving Average Convergence Divergence crossover strategy",
             "best_for": "Trending markets",
             "parameters": ["fast_period", "slow_period", "signal_period"],
-            "default_params": {"fast_period": 12, "slow_period": 26, "signal_period": 9},
+            "default_params": {
+                "fast_period": 12,
+                "slow_period": 26,
+                "signal_period": 9,
+            },
             "performance": {"sharpe": 1.1, "win_rate": 0.58, "max_dd": 0.12},
             "status": "Active",
         },
@@ -187,7 +195,12 @@ def load_available_strategies():
             "description": "Stochastic oscillator mean reversion",
             "best_for": "Oversold/overbought conditions",
             "parameters": ["k_period", "d_period", "oversold", "overbought"],
-            "default_params": {"k_period": 14, "d_period": 3, "oversold": 20, "overbought": 80},
+            "default_params": {
+                "k_period": 14,
+                "d_period": 3,
+                "oversold": 20,
+                "overbought": 80,
+            },
             "performance": {"sharpe": 1.0, "win_rate": 0.58, "max_dd": 0.14},
             "status": "Active",
         },
@@ -245,7 +258,9 @@ def calculate_max_drawdown(returns: np.ndarray) -> float:
     return np.min(drawdown)
 
 
-def generate_strategy_backtest(strategy_name: str, symbol: str, params: Dict[str, Any]) -> Dict[str, Any]:
+def generate_strategy_backtest(
+    strategy_name: str, symbol: str, params: Dict[str, Any]
+) -> Dict[str, Any]:
     """Generate mock strategy backtest results."""
     try:
         # Generate mock price data
@@ -259,7 +274,7 @@ def generate_strategy_backtest(strategy_name: str, symbol: str, params: Dict[str
         # Generate strategy signals based on strategy type
         if "RSI" in strategy_name:
             # RSI-like signals
-            rsi_period = params.get("rsi_period", 14)
+            params.get("rsi_period", 14)
             oversold = params.get("oversold_threshold", 30)
             overbought = params.get("overbought_threshold", 70)
 
@@ -401,7 +416,14 @@ def plot_strategy_results(backtest_data: Dict[str, Any]):
 
         # Returns distribution
         fig.add_trace(
-            go.Histogram(x=backtest_data["returns"], name="Returns", marker_color="#3498db", nbinsx=30), row=2, col=1
+            go.Histogram(
+                x=backtest_data["returns"],
+                name="Returns",
+                marker_color="#3498db",
+                nbinsx=30,
+            ),
+            row=2,
+            col=1,
         )
 
         # Drawdown
@@ -423,12 +445,16 @@ def plot_strategy_results(backtest_data: Dict[str, Any]):
         )
 
         # Monthly returns heatmap
-        returns_df = pd.DataFrame({"date": backtest_data["dates"], "returns": backtest_data["returns"]})
+        returns_df = pd.DataFrame(
+            {"date": backtest_data["dates"], "returns": backtest_data["returns"]}
+        )
         returns_df["date"] = pd.to_datetime(returns_df["date"])
         returns_df["year"] = returns_df["date"].dt.year
         returns_df["month"] = returns_df["date"].dt.month
 
-        monthly_returns = returns_df.groupby(["year", "month"])["returns"].sum().unstack()
+        monthly_returns = (
+            returns_df.groupby(["year", "month"])["returns"].sum().unstack()
+        )
 
         fig.add_trace(
             go.Heatmap(
@@ -569,7 +595,9 @@ def display_strategy_metrics(metrics: Dict[str, float]):
         logger.error(f"Error displaying metrics: {e}")
 
 
-def optimize_strategy_parameters(strategy_name: str, symbol: str, base_params: Dict[str, Any]):
+def optimize_strategy_parameters(
+    strategy_name: str, symbol: str, base_params: Dict[str, Any]
+):
     """Optimize strategy parameters using various techniques."""
     st.markdown(
         """
@@ -587,11 +615,18 @@ def optimize_strategy_parameters(strategy_name: str, symbol: str, base_params: D
         st.subheader("Optimization Settings")
 
         optimization_method = st.selectbox(
-            "Optimization Method", ["Grid Search", "Bayesian Optimization", "Genetic Algorithm", "Random Search"]
+            "Optimization Method",
+            [
+                "Grid Search",
+                "Bayesian Optimization",
+                "Genetic Algorithm",
+                "Random Search",
+            ],
         )
 
         optimization_metric = st.selectbox(
-            "Optimization Metric", ["Sharpe Ratio", "Total Return", "Calmar Ratio", "Win Rate"]
+            "Optimization Metric",
+            ["Sharpe Ratio", "Total Return", "Calmar Ratio", "Win Rate"],
         )
 
         max_iterations = st.slider("Max Iterations", 10, 1000, 100)
@@ -614,7 +649,11 @@ def optimize_strategy_parameters(strategy_name: str, symbol: str, base_params: D
                     for i in range(max_iterations):
                         score = 1.0 + np.random.normal(0, 0.1)
                         optimization_results["optimization_history"].append(
-                            {"iteration": i + 1, "score": score, "params": base_params.copy()}
+                            {
+                                "iteration": i + 1,
+                                "score": score,
+                                "params": base_params.copy(),
+                            }
                         )
 
                     st.session_state.optimization_results = optimization_results
@@ -626,7 +665,10 @@ def optimize_strategy_parameters(strategy_name: str, symbol: str, base_params: D
     with col2:
         st.subheader("Optimization Results")
 
-        if "optimization_results" in st.session_state and st.session_state.optimization_results:
+        if (
+            "optimization_results" in st.session_state
+            and st.session_state.optimization_results
+        ):
             results = st.session_state.optimization_results
 
             st.markdown(
@@ -653,7 +695,9 @@ def optimize_strategy_parameters(strategy_name: str, symbol: str, base_params: D
 def main():
     """Main strategy lab function."""
     st.title("Strategy Laboratory")
-    st.markdown("Develop, test, and optimize trading strategies with advanced analytics")
+    st.markdown(
+        "Develop, test, and optimize trading strategies with advanced analytics"
+    )
 
     # Initialize session state
     initialize_session_state()
@@ -670,10 +714,12 @@ def main():
         selected_strategy = st.selectbox("Strategy", strategy_options, index=0)
 
         # Symbol input
-        symbol = st.text_input("Symbol", value="AAPL", placeholder="e.g., AAPL, TSLA, BTC-USD")
+        symbol = st.text_input(
+            "Symbol", value="AAPL", placeholder="e.g., AAPL, TSLA, BTC-USD"
+        )
 
         # Backtest period
-        backtest_days = st.slider("Backtest Period (days)", 30, 1000, 252)
+        st.slider("Backtest Period (days)", 30, 1000, 252)
 
         # Show strategy info
         if selected_strategy in strategies:
@@ -707,7 +753,9 @@ def main():
                             break
 
                     if valid_params:
-                        backtest_data = generate_strategy_backtest(selected_strategy, symbol, params)
+                        backtest_data = generate_strategy_backtest(
+                            selected_strategy, symbol, params
+                        )
                         if backtest_data:
                             st.session_state.current_strategy = backtest_data
                             st.session_state.strategy_history.append(backtest_data)

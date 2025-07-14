@@ -77,7 +77,10 @@ class AutomationHealth:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "health.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "health.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def setup_metrics(self):
@@ -89,8 +92,12 @@ class AutomationHealth:
             self.disk_usage = Gauge("system_disk_usage", "Disk usage percentage")
 
             # Service metrics
-            self.service_status = Gauge("service_status", "Service status (1=healthy, 0=unhealthy)", ["service"])
-            self.service_latency = Gauge("service_latency_seconds", "Service response latency", ["service"])
+            self.service_status = Gauge(
+                "service_status", "Service status (1=healthy, 0=unhealthy)", ["service"]
+            )
+            self.service_latency = Gauge(
+                "service_latency_seconds", "Service response latency", ["service"]
+            )
 
             # Start metrics server
             start_http_server(self.config.metrics_port)
@@ -130,9 +137,15 @@ class AutomationHealth:
             status = HealthStatus(
                 service="system",
                 status="healthy" if is_healthy else "unhealthy",
-                message="System is healthy" if is_healthy else "System resources critical",
+                message="System is healthy"
+                if is_healthy
+                else "System resources critical",
                 timestamp=datetime.now(),
-                metrics={"cpu_usage": cpu_percent, "memory_usage": memory.percent, "disk_usage": disk.percent},
+                metrics={
+                    "cpu_usage": cpu_percent,
+                    "memory_usage": memory.percent,
+                    "disk_usage": disk.percent,
+                },
                 details={
                     "cpu_count": psutil.cpu_count(),
                     "memory_total": memory.total,
@@ -151,7 +164,9 @@ class AutomationHealth:
 
     @sleep_and_retry
     @limits(calls=100, period=60)
-    async def check_service_health(self, service: str, config: Dict[str, Any]) -> HealthStatus:
+    async def check_service_health(
+        self, service: str, config: Dict[str, Any]
+    ) -> HealthStatus:
         """Check service health."""
         try:
             start_time = time.time()
@@ -167,7 +182,10 @@ class AutomationHealth:
                 )
             elif config["type"] == "tcp":
                 status = await self._check_tcp_health(
-                    service, config["host"], config["port"], config.get("timeout", self.config.timeout)
+                    service,
+                    config["host"],
+                    config["port"],
+                    config.get("timeout", self.config.timeout),
                 )
             elif config["type"] == "dns":
                 status = await self._check_dns_health(
@@ -194,7 +212,10 @@ class AutomationHealth:
                 )
             elif config["type"] == "elasticsearch":
                 status = await self._check_elasticsearch_health(
-                    service, config["host"], config["port"], config.get("timeout", self.config.timeout)
+                    service,
+                    config["host"],
+                    config["port"],
+                    config.get("timeout", self.config.timeout),
                 )
             else:
                 raise ValueError(f"Unsupported service type: {config['type']}")
@@ -203,7 +224,9 @@ class AutomationHealth:
             latency = time.time() - start_time
 
             # Update metrics
-            self.service_status.labels(service=service).set(1 if status.status == "healthy" else 0)
+            self.service_status.labels(service=service).set(
+                1 if status.status == "healthy" else 0
+            )
             self.service_latency.labels(service=service).set(latency)
 
             # Add latency to metrics
@@ -217,12 +240,19 @@ class AutomationHealth:
             raise
 
     async def _check_http_health(
-        self, service: str, url: str, method: str = "GET", headers: Dict[str, str] = {}, timeout: int = 10
+        self,
+        service: str,
+        url: str,
+        method: str = "GET",
+        headers: Dict[str, str] = {},
+        timeout: int = 10,
     ) -> HealthStatus:
         """Check HTTP service health."""
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.request(method, url, headers=headers, timeout=timeout) as response:
+                async with session.request(
+                    method, url, headers=headers, timeout=timeout
+                ) as response:
                     is_healthy = response.status < 400
 
                     return HealthStatus(
@@ -230,13 +260,23 @@ class AutomationHealth:
                         status="healthy" if is_healthy else "unhealthy",
                         message=f"HTTP {response.status}",
                         timestamp=datetime.now(),
-                        metrics={"status_code": response.status, "response_time": response.elapsed.total_seconds()},
+                        metrics={
+                            "status_code": response.status,
+                            "response_time": response.elapsed.total_seconds(),
+                        },
                     )
 
         except Exception as e:
-            return HealthStatus(service=service, status="unhealthy", message=str(e), timestamp=datetime.now())
+            return HealthStatus(
+                service=service,
+                status="unhealthy",
+                message=str(e),
+                timestamp=datetime.now(),
+            )
 
-    async def _check_tcp_health(self, service: str, host: str, port: int, timeout: int = 10) -> HealthStatus:
+    async def _check_tcp_health(
+        self, service: str, host: str, port: int, timeout: int = 10
+    ) -> HealthStatus:
         """Check TCP service health."""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -254,7 +294,12 @@ class AutomationHealth:
             )
 
         except Exception as e:
-            return HealthStatus(service=service, status="unhealthy", message=str(e), timestamp=datetime.now())
+            return HealthStatus(
+                service=service,
+                status="unhealthy",
+                message=str(e),
+                timestamp=datetime.now(),
+            )
 
     async def _check_dns_health(
         self, service: str, domain: str, record_type: str = "A", timeout: int = 10
@@ -276,14 +321,26 @@ class AutomationHealth:
             )
 
         except Exception as e:
-            return HealthStatus(service=service, status="unhealthy", message=str(e), timestamp=datetime.now())
+            return HealthStatus(
+                service=service,
+                status="unhealthy",
+                message=str(e),
+                timestamp=datetime.now(),
+            )
 
     async def _check_redis_health(
-        self, service: str, host: str, port: int, password: Optional[str] = None, timeout: int = 10
+        self,
+        service: str,
+        host: str,
+        port: int,
+        password: Optional[str] = None,
+        timeout: int = 10,
     ) -> HealthStatus:
         """Check Redis service health."""
         try:
-            client = redis.Redis(host=host, port=port, password=password, socket_timeout=timeout)
+            client = redis.Redis(
+                host=host, port=port, password=password, socket_timeout=timeout
+            )
 
             # Test connection
             client.ping()
@@ -304,9 +361,16 @@ class AutomationHealth:
             )
 
         except Exception as e:
-            return HealthStatus(service=service, status="unhealthy", message=str(e), timestamp=datetime.now())
+            return HealthStatus(
+                service=service,
+                status="unhealthy",
+                message=str(e),
+                timestamp=datetime.now(),
+            )
 
-    async def _check_mongodb_health(self, service: str, uri: str, timeout: int = 10) -> HealthStatus:
+    async def _check_mongodb_health(
+        self, service: str, uri: str, timeout: int = 10
+    ) -> HealthStatus:
         """Check MongoDB service health."""
         try:
             client = pymongo.MongoClient(uri, serverSelectionTimeoutMS=timeout * 1000)
@@ -330,9 +394,16 @@ class AutomationHealth:
             )
 
         except Exception as e:
-            return HealthStatus(service=service, status="unhealthy", message=str(e), timestamp=datetime.now())
+            return HealthStatus(
+                service=service,
+                status="unhealthy",
+                message=str(e),
+                timestamp=datetime.now(),
+            )
 
-    async def _check_postgresql_health(self, service: str, uri: str, timeout: int = 10) -> HealthStatus:
+    async def _check_postgresql_health(
+        self, service: str, uri: str, timeout: int = 10
+    ) -> HealthStatus:
         """Check PostgreSQL service health."""
         try:
             engine = create_engine(uri, connect_args={"connect_timeout": timeout})
@@ -370,9 +441,16 @@ class AutomationHealth:
             )
 
         except Exception as e:
-            return HealthStatus(service=service, status="unhealthy", message=str(e), timestamp=datetime.now())
+            return HealthStatus(
+                service=service,
+                status="unhealthy",
+                message=str(e),
+                timestamp=datetime.now(),
+            )
 
-    async def _check_elasticsearch_health(self, service: str, host: str, port: int, timeout: int = 10) -> HealthStatus:
+    async def _check_elasticsearch_health(
+        self, service: str, host: str, port: int, timeout: int = 10
+    ) -> HealthStatus:
         """Check Elasticsearch service health."""
         try:
             client = Elasticsearch([f"http://{host}:{port}"], timeout=timeout)
@@ -396,7 +474,12 @@ class AutomationHealth:
             )
 
         except Exception as e:
-            return HealthStatus(service=service, status="unhealthy", message=str(e), timestamp=datetime.now())
+            return HealthStatus(
+                service=service,
+                status="unhealthy",
+                message=str(e),
+                timestamp=datetime.now(),
+            )
 
     @sleep_and_retry
     @limits(calls=100, period=60)
@@ -416,7 +499,9 @@ class AutomationHealth:
             logger.error(f"Failed to check all health: {str(e)}")
             raise
 
-    async def get_health_status(self, service: Optional[str] = None) -> Union[HealthStatus, Dict[str, HealthStatus]]:
+    async def get_health_status(
+        self, service: Optional[str] = None
+    ) -> Union[HealthStatus, Dict[str, HealthStatus]]:
         """Get health status."""
         try:
             if service:

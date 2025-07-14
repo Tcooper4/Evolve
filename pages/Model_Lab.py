@@ -120,7 +120,12 @@ def load_model_templates():
             "complexity": "Medium",
             "training_time": "10-30 minutes",
             "parameters": ["layers", "units", "dropout", "learning_rate"],
-            "default_params": {"layers": 2, "units": 64, "dropout": 0.2, "learning_rate": 0.001},
+            "default_params": {
+                "layers": 2,
+                "units": 64,
+                "dropout": 0.2,
+                "learning_rate": 0.001,
+            },
         },
         "Transformer": {
             "description": "Attention-based transformer model",
@@ -136,14 +141,23 @@ def load_model_templates():
             "complexity": "Medium",
             "training_time": "5-15 minutes",
             "parameters": ["n_estimators", "max_depth", "learning_rate"],
-            "default_params": {"n_estimators": 100, "max_depth": 6, "learning_rate": 0.1},
+            "default_params": {
+                "n_estimators": 100,
+                "max_depth": 6,
+                "learning_rate": 0.1,
+            },
         },
         "Ensemble": {
             "description": "Combination of multiple models",
             "best_for": "Maximum accuracy and robustness",
             "complexity": "High",
             "training_time": "30-90 minutes",
-            "parameters": ["models", "weights", "voting_method", "weight_update_frequency"],
+            "parameters": [
+                "models",
+                "weights",
+                "voting_method",
+                "weight_update_frequency",
+            ],
             "default_params": {
                 "models": ["LSTM", "XGBoost"],
                 "weights": [0.6, 0.4],
@@ -236,7 +250,9 @@ def get_model_registry():
     return st.session_state.model_registry
 
 
-def synthesize_model(model_type: str, parameters: Dict[str, Any], requirements: str) -> Dict[str, Any]:
+def synthesize_model(
+    model_type: str, parameters: Dict[str, Any], requirements: str
+) -> Dict[str, Any]:
     """Synthesize a new model based on requirements."""
     try:
         # Mock model synthesis process
@@ -300,18 +316,40 @@ def plot_model_performance_comparison(models: Dict[str, Any]):
         fig = make_subplots(
             rows=2,
             cols=2,
-            subplot_titles=("Model Accuracy", "RMSE Comparison", "MAE Comparison", "Performance Overview"),
-            specs=[[{"secondary_y": False}, {"secondary_y": False}], [{"secondary_y": False}, {"secondary_y": False}]],
+            subplot_titles=(
+                "Model Accuracy",
+                "RMSE Comparison",
+                "MAE Comparison",
+                "Performance Overview",
+            ),
+            specs=[
+                [{"secondary_y": False}, {"secondary_y": False}],
+                [{"secondary_y": False}, {"secondary_y": False}],
+            ],
         )
 
         # Accuracy comparison
-        fig.add_trace(go.Bar(x=model_names, y=accuracies, name="Accuracy", marker_color="#2ecc71"), row=1, col=1)
+        fig.add_trace(
+            go.Bar(
+                x=model_names, y=accuracies, name="Accuracy", marker_color="#2ecc71"
+            ),
+            row=1,
+            col=1,
+        )
 
         # RMSE comparison
-        fig.add_trace(go.Bar(x=model_names, y=rmse_values, name="RMSE", marker_color="#e74c3c"), row=1, col=2)
+        fig.add_trace(
+            go.Bar(x=model_names, y=rmse_values, name="RMSE", marker_color="#e74c3c"),
+            row=1,
+            col=2,
+        )
 
         # MAE comparison
-        fig.add_trace(go.Bar(x=model_names, y=mae_values, name="MAE", marker_color="#3498db"), row=2, col=1)
+        fig.add_trace(
+            go.Bar(x=model_names, y=mae_values, name="MAE", marker_color="#3498db"),
+            row=2,
+            col=1,
+        )
 
         # Performance overview (scatter plot)
         fig.add_trace(
@@ -329,7 +367,12 @@ def plot_model_performance_comparison(models: Dict[str, Any]):
         )
 
         # Update layout
-        fig.update_layout(height=600, showlegend=True, title_text="Model Performance Comparison", title_x=0.5)
+        fig.update_layout(
+            height=600,
+            showlegend=True,
+            title_text="Model Performance Comparison",
+            title_x=0.5,
+        )
 
         st.plotly_chart(fig, use_container_width=True)
 
@@ -429,7 +472,9 @@ def display_model_details(model_data: Dict[str, Any]):
             st.markdown("### 🎛️ Ensemble Weight Controls")
 
             weights = model_data["parameters"]["weights"]
-            models = model_data["parameters"].get("models", [f"Model_{i}" for i in range(len(weights))])
+            models = model_data["parameters"].get(
+                "models", [f"Model_{i}" for i in range(len(weights))]
+            )
 
             # Create weight sliders
             new_weights = []
@@ -527,7 +572,9 @@ def main():
         if st.button("Evaluate Model"):
             if selected_model in model_registry:
                 # Mock evaluation
-                model_registry[selected_model]["accuracy"] = np.random.uniform(0.8, 0.95)
+                model_registry[selected_model]["accuracy"] = np.random.uniform(
+                    0.8, 0.95
+                )
                 model_registry[selected_model]["performance"] = {
                     "rmse": np.random.uniform(0.015, 0.035),
                     "mae": np.random.uniform(0.012, 0.028),
@@ -557,14 +604,18 @@ def main():
             st.markdown(f"**Training time:** {template['training_time']}")
 
         requirements = st.text_area(
-            "Model Requirements", placeholder="Describe what you want the model to do...", height=100
+            "Model Requirements",
+            placeholder="Describe what you want the model to do...",
+            height=100,
         )
 
         if st.button("Synthesize Model"):
             if requirements and synthesis_type:
                 try:
                     template = templates[synthesis_type]
-                    result = synthesize_model(synthesis_type, template["default_params"], requirements)
+                    result = synthesize_model(
+                        synthesis_type, template["default_params"], requirements
+                    )
                     st.success(f"Model synthesis initiated: {result['model_name']}")
                     st.rerun()
                 except Exception as e:
@@ -592,8 +643,12 @@ def main():
         st.markdown("### Model Registry")
 
         # Summary statistics
-        active_models = sum(1 for m in model_registry.values() if m["status"] == "Active")
-        training_models = sum(1 for m in model_registry.values() if m["status"] == "Training")
+        active_models = sum(
+            1 for m in model_registry.values() if m["status"] == "Active"
+        )
+        training_models = sum(
+            1 for m in model_registry.values() if m["status"] == "Training"
+        )
         avg_accuracy = np.mean([m.get("accuracy", 0) for m in model_registry.values()])
 
         st.metric("Total Models", len(model_registry))
@@ -607,8 +662,12 @@ def main():
             for synthesis in st.session_state.synthesis_history[-3:]:
                 with st.expander(f"{synthesis['model_name']} ({synthesis['status']})"):
                     st.markdown(f"**Type:** {synthesis['model_type']}")
-                    st.markdown(f"**Created:** {synthesis['created_at'].strftime('%Y-%m-%d %H:%M')}")
-                    st.markdown(f"**Requirements:** {synthesis['requirements'][:100]}...")
+                    st.markdown(
+                        f"**Created:** {synthesis['created_at'].strftime('%Y-%m-%d %H:%M')}"
+                    )
+                    st.markdown(
+                        f"**Requirements:** {synthesis['requirements'][:100]}..."
+                    )
 
     # Model synthesis section
     st.markdown("---")
@@ -637,13 +696,19 @@ def main():
             if nl_requirements:
                 try:
                     # Mock AI model creation
-                    model_name = f"AI_Synthesized_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    f"AI_Synthesized_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
                     # Determine model type based on requirements
                     requirements_lower = nl_requirements.lower()
-                    if "deep learning" in requirements_lower or "neural" in requirements_lower:
+                    if (
+                        "deep learning" in requirements_lower
+                        or "neural" in requirements_lower
+                    ):
                         model_type = "LSTM"
-                    elif "ensemble" in requirements_lower or "multiple" in requirements_lower:
+                    elif (
+                        "ensemble" in requirements_lower
+                        or "multiple" in requirements_lower
+                    ):
                         model_type = "Ensemble"
                     elif "volatility" in requirements_lower:
                         model_type = "GARCH"
@@ -677,7 +742,9 @@ def main():
                 if isinstance(default_value, int):
                     value = st.number_input(param, value=default_value, min_value=1)
                 elif isinstance(default_value, float):
-                    value = st.number_input(param, value=float(default_value), format="%.3f")
+                    value = st.number_input(
+                        param, value=float(default_value), format="%.3f"
+                    )
                 else:
                     value = st.text_input(param, value=str(default_value))
 
@@ -686,7 +753,9 @@ def main():
         if st.button("Create from Template"):
             try:
                 result = synthesize_model(
-                    template_type, template["default_params"], f"Created from {template_type} template"
+                    template_type,
+                    template["default_params"],
+                    f"Created from {template_type} template",
                 )
                 st.success(f"Template model created: {result['model_name']}")
                 st.rerun()

@@ -57,7 +57,9 @@ class MonitoringManager:
         self.memory_usage = Gauge("memory_usage", "Memory usage percentage")
         self.disk_usage = Gauge("disk_usage", "Disk usage percentage")
         self.request_count = Counter("request_count", "Total number of requests")
-        self.request_latency = Histogram("request_latency", "Request latency in seconds")
+        self.request_latency = Histogram(
+            "request_latency", "Request latency in seconds"
+        )
         self.error_count = Counter("error_count", "Total number of errors")
 
     def _load_config(self, config_path: str) -> dict:
@@ -146,12 +148,15 @@ class MonitoringManager:
                 "application": {
                     "requests": self.request_count._value.get(),
                     "errors": self.error_count._value.get(),
-                    "latency": self.request_latency._sum.get() / max(self.request_latency._count.get(), 1),
+                    "latency": self.request_latency._sum.get()
+                    / max(self.request_latency._count.get(), 1),
                 },
             }
 
             # Save to file
-            metrics_file = self.metrics_dir / f"metrics_{datetime.now().strftime('%Y%m%d')}.json"
+            metrics_file = (
+                self.metrics_dir / f"metrics_{datetime.now().strftime('%Y%m%d')}.json"
+            )
             with open(metrics_file, "a") as f:
                 f.write(json.dumps(metrics) + "\n")
         except Exception as e:
@@ -182,13 +187,19 @@ class MonitoringManager:
             stats = {
                 "system": {
                     "cpu": self._calculate_stats([m["system"]["cpu"] for m in metrics]),
-                    "memory": self._calculate_stats([m["system"]["memory"] for m in metrics]),
-                    "disk": self._calculate_stats([m["system"]["disk"] for m in metrics]),
+                    "memory": self._calculate_stats(
+                        [m["system"]["memory"] for m in metrics]
+                    ),
+                    "disk": self._calculate_stats(
+                        [m["system"]["disk"] for m in metrics]
+                    ),
                 },
                 "application": {
                     "requests": sum(m["application"]["requests"] for m in metrics),
                     "errors": sum(m["application"]["errors"] for m in metrics),
-                    "latency": self._calculate_stats([m["application"]["latency"] for m in metrics]),
+                    "latency": self._calculate_stats(
+                        [m["application"]["latency"] for m in metrics]
+                    ),
                 },
             }
 
@@ -219,7 +230,11 @@ class MonitoringManager:
 
     def _calculate_stats(self, values: List[float]) -> Dict[str, float]:
         """Calculate statistics for a list of values."""
-        return {"avg": sum(values) / len(values), "max": max(values), "min": min(values)}
+        return {
+            "avg": sum(values) / len(values),
+            "max": max(values),
+            "min": min(values),
+        }
 
     def clean_metrics(self, days: int = 30):
         """Clean old metrics files."""
@@ -244,9 +259,15 @@ class MonitoringManager:
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Monitoring Manager")
-    parser.add_argument("command", choices=["start", "analyze", "clean"], help="Command to execute")
-    parser.add_argument("--port", type=int, default=9090, help="Port for monitoring server")
-    parser.add_argument("--days", type=int, default=7, help="Number of days for analysis/cleaning")
+    parser.add_argument(
+        "command", choices=["start", "analyze", "clean"], help="Command to execute"
+    )
+    parser.add_argument(
+        "--port", type=int, default=9090, help="Port for monitoring server"
+    )
+    parser.add_argument(
+        "--days", type=int, default=7, help="Number of days for analysis/cleaning"
+    )
 
     args = parser.parse_args()
     manager = MonitoringManager()

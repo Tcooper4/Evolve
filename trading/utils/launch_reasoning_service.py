@@ -5,10 +5,14 @@ Reasoning Service Launcher
 Launches the real-time reasoning monitoring service.
 """
 
+import asyncio
+import json
 import logging
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -21,10 +25,17 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.FileHandler("logs/reasoning_service.log"), logging.StreamHandler()],
+        handlers=[
+            logging.FileHandler("logs/reasoning_service.log"),
+            logging.StreamHandler(),
+        ],
     )
 
-    return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+    return {
+        "success": True,
+        "message": "Initialization completed",
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 def main():

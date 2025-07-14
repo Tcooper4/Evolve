@@ -33,14 +33,18 @@ class TestRegimeDetector:
         data = pd.DataFrame(index=dates)
 
         # First regime: Low volatility bull market
-        data.loc[:"2020-06-30", "close"] = 100 + np.cumsum(np.random.normal(0.001, 0.01, 181))
+        data.loc[:"2020-06-30", "close"] = 100 + np.cumsum(
+            np.random.normal(0.001, 0.01, 181)
+        )
         data.loc[:"2020-06-30", "volume"] = np.random.randint(1000000, 5000000, 181)
 
         # Second regime: High volatility bear market
-        data.loc["2020-07-01":"2020-12-31", "close"] = data.loc["2020-06-30", "close"] + np.cumsum(
-            np.random.normal(-0.002, 0.03, 184)
+        data.loc["2020-07-01":"2020-12-31", "close"] = data.loc[
+            "2020-06-30", "close"
+        ] + np.cumsum(np.random.normal(-0.002, 0.03, 184))
+        data.loc["2020-07-01":"2020-12-31", "volume"] = np.random.randint(
+            2000000, 8000000, 184
         )
-        data.loc["2020-07-01":"2020-12-31", "volume"] = np.random.randint(2000000, 8000000, 184)
 
         # Third regime: Moderate volatility sideways
         data.loc["2021-01-01":, "close"] = data.loc["2020-12-31", "close"] + np.cumsum(
@@ -50,8 +54,12 @@ class TestRegimeDetector:
 
         # Add OHLC columns
         data["open"] = data["close"] * (1 + np.random.normal(0, 0.005, len(data)))
-        data["high"] = data[["open", "close"]].max(axis=1) * (1 + np.abs(np.random.normal(0, 0.01, len(data))))
-        data["low"] = data[["open", "close"]].min(axis=1) * (1 - np.abs(np.random.normal(0, 0.01, len(data))))
+        data["high"] = data[["open", "close"]].max(axis=1) * (
+            1 + np.abs(np.random.normal(0, 0.01, len(data)))
+        )
+        data["low"] = data[["open", "close"]].min(axis=1) * (
+            1 - np.abs(np.random.normal(0, 0.01, len(data)))
+        )
 
         return data
 
@@ -137,12 +145,20 @@ class TestRegimeDetector:
 
         # Test different characteristic combinations
         test_cases = [
-            {"mean_volatility": 0.3, "mean_returns": -0.08, "mean_trend_strength": -0.03},
+            {
+                "mean_volatility": 0.3,
+                "mean_returns": -0.08,
+                "mean_trend_strength": -0.03,
+            },
             {"mean_volatility": 0.1, "mean_returns": 0.08, "mean_trend_strength": 0.03},
             {"mean_volatility": 0.2, "mean_returns": 0.02, "mean_trend_strength": 0.01},
         ]
 
-        expected_regimes = ["High Volatility Bear Market", "Low Volatility Bull Market", "Moderate Bull Market"]
+        expected_regimes = [
+            "High Volatility Bear Market",
+            "Low Volatility Bull Market",
+            "Moderate Bull Market",
+        ]
 
         for characteristics, expected_regime in zip(test_cases, expected_regimes):
             regime_name = detector._classify_regime(characteristics)
@@ -161,7 +177,9 @@ class TestRegimeDetector:
 
         # Test confidence calculation for each regime
         for label in np.unique(cluster_labels):
-            confidence = detector._calculate_regime_confidence(features_scaled, cluster_labels, label)
+            confidence = detector._calculate_regime_confidence(
+                features_scaled, cluster_labels, label
+            )
             assert 0 <= confidence <= 1
 
     def test_get_current_regime(self, sample_data):
@@ -186,7 +204,9 @@ class TestRegimeDetector:
         detector = RegimeDetector()
 
         # Create small dataset
-        small_data = pd.DataFrame({"close": np.random.randn(50), "volume": np.random.randint(1000, 10000, 50)})
+        small_data = pd.DataFrame(
+            {"close": np.random.randn(50), "volume": np.random.randint(1000, 10000, 50)}
+        )
 
         regimes = detector.detect_regimes(small_data)
         assert regimes == []  # Should return empty list for insufficient data
@@ -218,7 +238,9 @@ class TestWalkForwardOptimizer:
                 self.params = params
 
             def generate_signals(self, data):
-                return pd.Series(np.random.choice([-1, 0, 1], len(data)), index=data.index)
+                return pd.Series(
+                    np.random.choice([-1, 0, 1], len(data)), index=data.index
+                )
 
             def evaluate_performance(self, signals, data):
                 class MockMetrics:
@@ -234,7 +256,9 @@ class TestWalkForwardOptimizer:
 
     def test_walk_forward_optimizer_initialization(self):
         """Test walk-forward optimizer initialization."""
-        optimizer = WalkForwardOptimizer(training_window=200, validation_window=50, step_size=25)
+        optimizer = WalkForwardOptimizer(
+            training_window=200, validation_window=50, step_size=25
+        )
 
         assert optimizer.training_window == 200
         assert optimizer.validation_window == 50
@@ -244,7 +268,9 @@ class TestWalkForwardOptimizer:
 
     def test_generate_windows(self, sample_data):
         """Test window generation."""
-        optimizer = WalkForwardOptimizer(training_window=100, validation_window=30, step_size=20)
+        optimizer = WalkForwardOptimizer(
+            training_window=100, validation_window=30, step_size=20
+        )
 
         windows = optimizer._generate_windows(sample_data.index)
 
@@ -316,7 +342,9 @@ class TestWalkForwardOptimizer:
         optimizer = WalkForwardOptimizer()
         param_space = {"window": [10, 20, 30], "threshold": [0.01, 0.02, 0.03]}
 
-        best_params = optimizer._optimize_strategy(sample_data, mock_strategy_class, param_space, "bayesian")
+        best_params = optimizer._optimize_strategy(
+            sample_data, mock_strategy_class, param_space, "bayesian"
+        )
 
         assert isinstance(best_params, dict)
         assert "window" in best_params
@@ -327,7 +355,9 @@ class TestWalkForwardOptimizer:
         optimizer = WalkForwardOptimizer()
         params = {"window": 20, "threshold": 0.02}
 
-        performance = optimizer._evaluate_strategy(sample_data, mock_strategy_class, params)
+        performance = optimizer._evaluate_strategy(
+            sample_data, mock_strategy_class, params
+        )
 
         assert isinstance(performance, dict)
         assert "sharpe_ratio" in performance
@@ -337,11 +367,15 @@ class TestWalkForwardOptimizer:
 
     def test_walk_forward_analysis(self, sample_data, mock_strategy_class):
         """Test complete walk-forward analysis."""
-        optimizer = WalkForwardOptimizer(training_window=100, validation_window=30, step_size=50)
+        optimizer = WalkForwardOptimizer(
+            training_window=100, validation_window=30, step_size=50
+        )
 
         param_space = {"window": [10, 20, 30], "threshold": [0.01, 0.02, 0.03]}
 
-        results = optimizer.run_walk_forward_analysis(sample_data, mock_strategy_class, param_space)
+        results = optimizer.run_walk_forward_analysis(
+            sample_data, mock_strategy_class, param_space
+        )
 
         assert isinstance(results, list)
         assert len(results) > 0
@@ -361,11 +395,15 @@ class TestWalkForwardOptimizer:
 
     def test_analyze_results(self, sample_data, mock_strategy_class):
         """Test results analysis."""
-        optimizer = WalkForwardOptimizer(training_window=100, validation_window=30, step_size=50)
+        optimizer = WalkForwardOptimizer(
+            training_window=100, validation_window=30, step_size=50
+        )
 
         # Run analysis first
         param_space = {"window": [10, 20], "threshold": [0.01, 0.02]}
-        optimizer.run_walk_forward_analysis(sample_data, mock_strategy_class, param_space)
+        optimizer.run_walk_forward_analysis(
+            sample_data, mock_strategy_class, param_space
+        )
 
         analysis = optimizer.analyze_results()
 
@@ -383,11 +421,15 @@ class TestWalkForwardOptimizer:
 
     def test_parameter_stability_analysis(self, sample_data, mock_strategy_class):
         """Test parameter stability analysis."""
-        optimizer = WalkForwardOptimizer(training_window=100, validation_window=30, step_size=50)
+        optimizer = WalkForwardOptimizer(
+            training_window=100, validation_window=30, step_size=50
+        )
 
         # Run analysis first
         param_space = {"window": [10, 20], "threshold": [0.01, 0.02]}
-        optimizer.run_walk_forward_analysis(sample_data, mock_strategy_class, param_space)
+        optimizer.run_walk_forward_analysis(
+            sample_data, mock_strategy_class, param_space
+        )
 
         stability = optimizer._analyze_parameter_stability()
 
@@ -402,11 +444,15 @@ class TestWalkForwardOptimizer:
 
     def test_plot_results(self, sample_data, mock_strategy_class):
         """Test results plotting."""
-        optimizer = WalkForwardOptimizer(training_window=100, validation_window=30, step_size=50)
+        optimizer = WalkForwardOptimizer(
+            training_window=100, validation_window=30, step_size=50
+        )
 
         # Run analysis first
         param_space = {"window": [10, 20], "threshold": [0.01, 0.02]}
-        optimizer.run_walk_forward_analysis(sample_data, mock_strategy_class, param_space)
+        optimizer.run_walk_forward_analysis(
+            sample_data, mock_strategy_class, param_space
+        )
 
         # Test plotting (should not raise errors)
         try:
@@ -416,11 +462,15 @@ class TestWalkForwardOptimizer:
 
     def test_export_results(self, sample_data, mock_strategy_class, tmp_path):
         """Test results export."""
-        optimizer = WalkForwardOptimizer(training_window=100, validation_window=30, step_size=50)
+        optimizer = WalkForwardOptimizer(
+            training_window=100, validation_window=30, step_size=50
+        )
 
         # Run analysis first
         param_space = {"window": [10, 20], "threshold": [0.01, 0.02]}
-        optimizer.run_walk_forward_analysis(sample_data, mock_strategy_class, param_space)
+        optimizer.run_walk_forward_analysis(
+            sample_data, mock_strategy_class, param_space
+        )
 
         # Export results
         export_file = tmp_path / "walk_forward_results.json"
@@ -466,7 +516,9 @@ class TestBacktestOptimizer:
                 self.params = params
 
             def generate_signals(self, data):
-                return pd.Series(np.random.choice([-1, 0, 1], len(data)), index=data.index)
+                return pd.Series(
+                    np.random.choice([-1, 0, 1], len(data)), index=data.index
+                )
 
             def evaluate_performance(self, signals, data):
                 class MockMetrics:
@@ -505,7 +557,9 @@ class TestBacktestOptimizer:
         optimizer = BacktestOptimizer(config)
         param_space = {"window": [10, 20], "threshold": [0.01, 0.02]}
 
-        results = optimizer.run_comprehensive_backtest(sample_data, mock_strategy_class, param_space)
+        results = optimizer.run_comprehensive_backtest(
+            sample_data, mock_strategy_class, param_space
+        )
 
         assert isinstance(results, dict)
         assert "walk_forward_results" in results
@@ -540,7 +594,9 @@ class TestBacktestOptimizer:
         optimizer = BacktestOptimizer()
 
         # Create small dataset
-        small_data = pd.DataFrame({"close": np.random.randn(10), "volume": np.random.randint(1000, 10000, 10)})
+        small_data = pd.DataFrame(
+            {"close": np.random.randn(10), "volume": np.random.randint(1000, 10000, 10)}
+        )
 
         recommendations = optimizer.get_regime_recommendations(small_data)
         assert "Insufficient data" in recommendations[0]
@@ -562,11 +618,15 @@ class TestBacktestOptimizer:
 
     def test_walk_forward_with_regime_detection(self, sample_data, mock_strategy_class):
         """Test walk-forward analysis with regime detection."""
-        optimizer = BacktestOptimizer({"training_window": 100, "validation_window": 30, "step_size": 50})
+        optimizer = BacktestOptimizer(
+            {"training_window": 100, "validation_window": 30, "step_size": 50}
+        )
 
         param_space = {"window": [10, 20], "threshold": [0.01, 0.02]}
 
-        results = optimizer.run_comprehensive_backtest(sample_data, mock_strategy_class, param_space)
+        results = optimizer.run_comprehensive_backtest(
+            sample_data, mock_strategy_class, param_space
+        )
 
         # Check that regimes were detected
         assert len(results["regimes"]) > 0
@@ -604,11 +664,15 @@ class TestBacktestOptimizer:
     def test_walk_forward_edge_cases(self, sample_data, mock_strategy_class):
         """Test walk-forward analysis edge cases."""
         # Test with very small windows
-        optimizer = WalkForwardOptimizer(training_window=10, validation_window=5, step_size=5)
+        optimizer = WalkForwardOptimizer(
+            training_window=10, validation_window=5, step_size=5
+        )
 
         param_space = {"window": [5], "threshold": [0.01]}
 
-        results = optimizer.run_walk_forward_analysis(sample_data, mock_strategy_class, param_space)
+        results = optimizer.run_walk_forward_analysis(
+            sample_data, mock_strategy_class, param_space
+        )
 
         # Should still produce some results
         assert len(results) > 0
@@ -619,11 +683,18 @@ class TestBacktestOptimizer:
 
         # Mock the evaluation method to return specific metrics
         def mock_evaluate(data, strategy_class, params):
-            return {"sharpe_ratio": 1.5, "total_return": 0.2, "max_drawdown": -0.1, "win_rate": 0.6}
+            return {
+                "sharpe_ratio": 1.5,
+                "total_return": 0.2,
+                "max_drawdown": -0.1,
+                "win_rate": 0.6,
+            }
 
         with patch.object(optimizer, "_evaluate_strategy", mock_evaluate):
             param_space = {"window": [10], "threshold": [0.01]}
-            results = optimizer.run_walk_forward_analysis(sample_data, mock_strategy_class, param_space)
+            results = optimizer.run_walk_forward_analysis(
+                sample_data, mock_strategy_class, param_space
+            )
 
             # Check that metrics are reasonable
             for result in results:

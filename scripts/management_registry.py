@@ -20,7 +20,9 @@ class ManagementRegistry:
         self.manager_configs = {}
         self.health_status = {}
 
-    def register_manager(self, manager_name: str, manager_config: Dict[str, Any]) -> bool:
+    def register_manager(
+        self, manager_name: str, manager_config: Dict[str, Any]
+    ) -> bool:
         """Register a management component.
 
         Args:
@@ -61,7 +63,9 @@ class ManagementRegistry:
         """
         return list(self.managers.keys())
 
-    def update_health_status(self, manager_name: str, status: str, details: Dict[str, Any] = None) -> bool:
+    def update_health_status(
+        self, manager_name: str, status: str, details: Dict[str, Any] = None
+    ) -> bool:
         """Update health status for a manager.
 
         Args:
@@ -81,7 +85,9 @@ class ManagementRegistry:
             logger.info(f"Updated health status for manager {manager_name}: {status}")
             return True
         except Exception as e:
-            logger.error(f"Failed to update health status for manager {manager_name}: {e}")
+            logger.error(
+                f"Failed to update health status for manager {manager_name}: {e}"
+            )
             return False
 
     def get_system_health(self) -> Dict[str, Any]:
@@ -110,7 +116,9 @@ class ManagementRegistry:
             "healthy": healthy_count,
             "warning": warning_count,
             "error": error_count,
-            "health_percentage": (healthy_count / total_managers * 100) if total_managers > 0 else 0,
+            "health_percentage": (healthy_count / total_managers * 100)
+            if total_managers > 0
+            else 0,
             "timestamp": datetime.now().isoformat(),
         }
 

@@ -83,7 +83,9 @@ class Registry:
                         "benchmark_support": False,
                         **config,
                     }
-                    self._strategies[config["name"]] = StrategyConfig(**config_with_defaults)
+                    self._strategies[config["name"]] = StrategyConfig(
+                        **config_with_defaults
+                    )
             logger.info(f"Loaded {len(self._strategies)} strategy configurations")
         except Exception as e:
             logger.error(f"Failed to load strategy configurations: {e}")
@@ -92,13 +94,21 @@ class Registry:
     def get_available_models(self, category: Optional[str] = None) -> List[ModelConfig]:
         """Get list of available models, optionally filtered by category."""
         if category:
-            return [model for model in self._models.values() if model.category == category]
+            return [
+                model for model in self._models.values() if model.category == category
+            ]
         return list(self._models.values())
 
-    def get_available_strategies(self, category: Optional[str] = None) -> List[StrategyConfig]:
+    def get_available_strategies(
+        self, category: Optional[str] = None
+    ) -> List[StrategyConfig]:
         """Get list of available strategies, optionally filtered by category."""
         if category:
-            return [strategy for strategy in self._strategies.values() if strategy.category == category]
+            return [
+                strategy
+                for strategy in self._strategies.values()
+                if strategy.category == category
+            ]
         return list(self._strategies.values())
 
     def get_model_config(self, model_name: str) -> Optional[ModelConfig]:
@@ -109,14 +119,18 @@ class Registry:
         """Get configuration for a specific strategy."""
         return self._strategies.get(strategy_name)
 
-    def get_model_parameters(self, model_name: str) -> Dict[str, Union[str, float, int, bool]]:
+    def get_model_parameters(
+        self, model_name: str
+    ) -> Dict[str, Union[str, float, int, bool]]:
         """Get parameters for a specific model."""
         model = self.get_model_config(model_name)
         if not model:
             raise ValueError(f"Model not found: {model_name}")
         return model.parameters
 
-    def get_strategy_parameters(self, strategy_name: str) -> Dict[str, Union[str, float, int, bool]]:
+    def get_strategy_parameters(
+        self, strategy_name: str
+    ) -> Dict[str, Union[str, float, int, bool]]:
         """Get parameters for a specific strategy."""
         strategy = self.get_strategy_config(strategy_name)
         if not strategy:

@@ -28,7 +28,9 @@ class ErrorLogger:
         file_handler.setLevel(logging.ERROR)
 
         # Create formatter
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         file_handler.setFormatter(formatter)
 
         # Add handler to logger
@@ -39,7 +41,10 @@ class ErrorLogger:
         self.error_count = 0
 
     def log_error(
-        self, message: str, context: Optional[Dict[str, Any]] = None, traceback_str: Optional[str] = None
+        self,
+        message: str,
+        context: Optional[Dict[str, Any]] = None,
+        traceback_str: Optional[str] = None,
     ) -> None:
         """Log an error with context and traceback.
 
@@ -58,11 +63,19 @@ class ErrorLogger:
             "message": message,
             "context": context or {},
             "traceback": traceback_str,
-            "system_info": {"python_version": sys.version, "platform": sys.platform, "cwd": os.getcwd()},
+            "system_info": {
+                "python_version": sys.version,
+                "platform": sys.platform,
+                "cwd": os.getcwd(),
+            },
         }
 
         # Log to file
-        self.logger.error(f"Error: {message}\n" f"Context: {json.dumps(context or {})}\n" f"Traceback: {traceback_str}")
+        self.logger.error(
+            f"Error: {message}\n"
+            f"Context: {json.dumps(context or {})}\n"
+            f"Traceback: {traceback_str}"
+        )
 
         # Update last error
         self.last_error = error_data

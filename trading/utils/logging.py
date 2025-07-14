@@ -30,7 +30,11 @@ class LoggingManager:
         self.loggers = {}
 
     def setup_logger(
-        self, name: str, level: str = "INFO", log_to_file: bool = True, log_to_console: bool = True
+        self,
+        name: str,
+        level: str = "INFO",
+        log_to_file: bool = True,
+        log_to_console: bool = True,
     ) -> Dict[str, Any]:
         """
         Setup a logger with file and console handlers.
@@ -46,7 +50,11 @@ class LoggingManager:
         """
         try:
             if name in self.loggers:
-                return {"success": True, "message": f"Logger {name} already exists", "logger": self.loggers[name]}
+                return {
+                    "success": True,
+                    "message": f"Logger {name} already exists",
+                    "logger": self.loggers[name],
+                }
 
             logger = logging.getLogger(name)
             logger.setLevel(getattr(logging, level.upper()))
@@ -54,12 +62,16 @@ class LoggingManager:
             # Clear existing handlers
             logger.handlers.clear()
 
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
 
             # File handler
             if log_to_file:
                 log_file = self.log_dir / f"{name}.log"
-                file_handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=self.max_log_size, backupCount=5)
+                file_handler = logging.handlers.RotatingFileHandler(
+                    log_file, maxBytes=self.max_log_size, backupCount=5
+                )
                 file_handler.setFormatter(formatter)
                 logger.addHandler(file_handler)
 
@@ -79,10 +91,18 @@ class LoggingManager:
             }
 
         except Exception as e:
-            return {"success": False, "error": f"Failed to setup logger {name}: {str(e)}", "logger": None}
+            return {
+                "success": False,
+                "error": f"Failed to setup logger {name}: {str(e)}",
+                "logger": None,
+            }
 
     def log_event(
-        self, logger_name: str, level: str, message: str, metadata: Optional[Dict[str, Any]] = None
+        self,
+        logger_name: str,
+        level: str,
+        message: str,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Log an event with metadata.
@@ -139,7 +159,11 @@ class LoggingManager:
             Dictionary with log statistics
         """
         try:
-            stats = {"total_loggers": len(self.loggers), "log_files": [], "total_log_size": 0}
+            stats = {
+                "total_loggers": len(self.loggers),
+                "log_files": [],
+                "total_log_size": 0,
+            }
 
             loggers_to_check = [logger_name] if logger_name else self.loggers.keys()
 
@@ -149,13 +173,21 @@ class LoggingManager:
                     if log_file.exists():
                         file_size = log_file.stat().st_size
                         stats["log_files"].append(
-                            {"name": name, "size_mb": file_size / (1024 * 1024), "path": str(log_file)}
+                            {
+                                "name": name,
+                                "size_mb": file_size / (1024 * 1024),
+                                "path": str(log_file),
+                            }
                         )
                         stats["total_log_size"] += file_size
 
             stats["total_log_size_mb"] = stats["total_log_size"] / (1024 * 1024)
 
-            return {"success": True, "stats": stats, "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "stats": stats,
+                "timestamp": datetime.now().isoformat(),
+            }
 
         except Exception as e:
             return {
@@ -181,7 +213,9 @@ class LoggingManager:
 
             for log_file in self.log_dir.glob("*.log*"):
                 if log_file.is_file():
-                    file_age = current_time - datetime.fromtimestamp(log_file.stat().st_mtime)
+                    file_age = current_time - datetime.fromtimestamp(
+                        log_file.stat().st_mtime
+                    )
 
                     if file_age.days > max_age_days:
                         file_size = log_file.stat().st_size
@@ -214,7 +248,12 @@ def setup_logging(name: str, **kwargs) -> Dict[str, Any]:
     return logging_manager.setup_logger(name, **kwargs)
 
 
-def log_event(logger_name: str, level: str, message: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def log_event(
+    logger_name: str,
+    level: str,
+    message: str,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Log an event with status return."""
     return logging_manager.log_event(logger_name, level, message, metadata)
 

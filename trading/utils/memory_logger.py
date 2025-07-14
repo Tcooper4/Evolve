@@ -34,7 +34,9 @@ class MemoryLogger:
         file_handler.setLevel(logging.INFO)
 
         # Configure formatter
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         file_handler.setFormatter(formatter)
 
         # Add handler if not already added
@@ -49,7 +51,11 @@ class MemoryLogger:
             operation: Type of operation (e.g., 'read', 'write', 'update')
             details: Operation details
         """
-        log_entry = {"timestamp": datetime.utcnow().isoformat(), "operation": operation, "details": details}
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "operation": operation,
+            "details": details,
+        }
 
         self.logger.info(f"Memory operation: {json.dumps(log_entry)}")
 
@@ -59,7 +65,11 @@ class MemoryLogger:
         Args:
             metrics: Dictionary of performance metrics
         """
-        log_entry = {"timestamp": datetime.utcnow().isoformat(), "type": "performance_metrics", "metrics": metrics}
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "type": "performance_metrics",
+            "metrics": metrics,
+        }
 
         self.logger.info(f"Performance metrics: {json.dumps(log_entry)}")
 
@@ -95,7 +105,11 @@ class MemoryLogger:
                 for line in lines[-limit:]:
                     try:
                         # Extract JSON from log line
-                        if "Memory operation:" in line or "Performance metrics:" in line or "Memory error:" in line:
+                        if (
+                            "Memory operation:" in line
+                            or "Performance metrics:" in line
+                            or "Memory error:" in line
+                        ):
                             json_start = line.find("{")
                             if json_start != -1:
                                 json_str = line[json_start:]
@@ -134,7 +148,9 @@ class MemoryLogger:
             return {
                 "total_entries": len(lines),
                 "file_size": os.path.getsize(self.log_file),
-                "last_modified": datetime.fromtimestamp(os.path.getmtime(self.log_file)).isoformat(),
+                "last_modified": datetime.fromtimestamp(
+                    os.path.getmtime(self.log_file)
+                ).isoformat(),
             }
         except Exception as e:
             self.logger.error(f"Failed to get log stats: {e}")

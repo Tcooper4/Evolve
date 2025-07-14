@@ -25,7 +25,9 @@ class PerformanceMetrics:
         """Calculate cumulative returns."""
         return (1 + returns).cumprod() - 1
 
-    def calculate_sharpe_ratio(self, returns: pd.Series, risk_free_rate: float = 0.02) -> float:
+    def calculate_sharpe_ratio(
+        self, returns: pd.Series, risk_free_rate: float = 0.02
+    ) -> float:
         """Calculate Sharpe ratio."""
         try:
             excess_returns = returns - risk_free_rate / 252  # Daily risk-free rate
@@ -33,7 +35,9 @@ class PerformanceMetrics:
         except:
             return 0.0
 
-    def calculate_sortino_ratio(self, returns: pd.Series, risk_free_rate: float = 0.02) -> float:
+    def calculate_sortino_ratio(
+        self, returns: pd.Series, risk_free_rate: float = 0.02
+    ) -> float:
         """Calculate Sortino ratio."""
         try:
             excess_returns = returns - risk_free_rate / 252
@@ -43,7 +47,9 @@ class PerformanceMetrics:
         except:
             return 0.0
 
-    def calculate_max_drawdown(self, cumulative_returns: pd.Series) -> Tuple[float, pd.Timestamp, pd.Timestamp]:
+    def calculate_max_drawdown(
+        self, cumulative_returns: pd.Series
+    ) -> Tuple[float, pd.Timestamp, pd.Timestamp]:
         """Calculate maximum drawdown and its period."""
         try:
             rolling_max = cumulative_returns.expanding().max()
@@ -58,7 +64,9 @@ class PerformanceMetrics:
         except:
             return 0.0, None, None
 
-    def calculate_calmar_ratio(self, returns: pd.Series, cumulative_returns: pd.Series) -> float:
+    def calculate_calmar_ratio(
+        self, returns: pd.Series, cumulative_returns: pd.Series
+    ) -> float:
         """Calculate Calmar ratio."""
         try:
             max_dd, _, _ = self.calculate_max_drawdown(cumulative_returns)
@@ -100,7 +108,12 @@ class PerformanceMetrics:
         except:
             return 0.0
 
-    def calculate_alpha(self, returns: pd.Series, market_returns: pd.Series, risk_free_rate: float = 0.02) -> float:
+    def calculate_alpha(
+        self,
+        returns: pd.Series,
+        market_returns: pd.Series,
+        risk_free_rate: float = 0.02,
+    ) -> float:
         """Calculate alpha."""
         try:
             beta = self.calculate_beta(returns, market_returns)
@@ -111,7 +124,10 @@ class PerformanceMetrics:
             return 0.0
 
     def calculate_all_metrics(
-        self, returns: pd.Series, market_returns: Optional[pd.Series] = None, risk_free_rate: float = 0.02
+        self,
+        returns: pd.Series,
+        market_returns: Optional[pd.Series] = None,
+        risk_free_rate: float = 0.02,
     ) -> Dict[str, float]:
         """Calculate all performance metrics."""
         try:
@@ -124,7 +140,9 @@ class PerformanceMetrics:
                 "sharpe_ratio": self.calculate_sharpe_ratio(returns, risk_free_rate),
                 "sortino_ratio": self.calculate_sortino_ratio(returns, risk_free_rate),
                 "max_drawdown": self.calculate_max_drawdown(cumulative_returns)[0],
-                "calmar_ratio": self.calculate_calmar_ratio(returns, cumulative_returns),
+                "calmar_ratio": self.calculate_calmar_ratio(
+                    returns, cumulative_returns
+                ),
                 "win_rate": self.calculate_win_rate(returns),
                 "profit_factor": self.calculate_profit_factor(returns),
                 "skewness": returns.skew(),
@@ -133,7 +151,9 @@ class PerformanceMetrics:
 
             if market_returns is not None:
                 metrics["beta"] = self.calculate_beta(returns, market_returns)
-                metrics["alpha"] = self.calculate_alpha(returns, market_returns, risk_free_rate)
+                metrics["alpha"] = self.calculate_alpha(
+                    returns, market_returns, risk_free_rate
+                )
 
             self.metrics = metrics
             return metrics
@@ -149,14 +169,18 @@ class RiskMetrics:
     def __init__(self):
         self.risk_metrics = {}
 
-    def calculate_var(self, returns: pd.Series, confidence_level: float = 0.05) -> float:
+    def calculate_var(
+        self, returns: pd.Series, confidence_level: float = 0.05
+    ) -> float:
         """Calculate Value at Risk."""
         try:
             return np.percentile(returns, confidence_level * 100)
         except:
             return 0.0
 
-    def calculate_cvar(self, returns: pd.Series, confidence_level: float = 0.05) -> float:
+    def calculate_cvar(
+        self, returns: pd.Series, confidence_level: float = 0.05
+    ) -> float:
         """Calculate Conditional Value at Risk (Expected Shortfall)."""
         try:
             var = self.calculate_var(returns, confidence_level)
@@ -182,7 +206,9 @@ class RiskMetrics:
         except:
             return 0.0
 
-    def calculate_all_risk_metrics(self, returns: pd.Series, cumulative_returns: pd.Series) -> Dict[str, float]:
+    def calculate_all_risk_metrics(
+        self, returns: pd.Series, cumulative_returns: pd.Series
+    ) -> Dict[str, float]:
         """Calculate all risk metrics."""
         try:
             risk_metrics = {
@@ -226,8 +252,12 @@ class TradingMetrics:
 
             # PnL metrics
             total_pnl = trades["pnl"].sum()
-            avg_win = trades[trades["pnl"] > 0]["pnl"].mean() if winning_trades > 0 else 0
-            avg_loss = trades[trades["pnl"] < 0]["pnl"].mean() if losing_trades > 0 else 0
+            avg_win = (
+                trades[trades["pnl"] > 0]["pnl"].mean() if winning_trades > 0 else 0
+            )
+            avg_loss = (
+                trades[trades["pnl"] < 0]["pnl"].mean() if losing_trades > 0 else 0
+            )
 
             # Risk metrics
             max_win = trades["pnl"].max()
@@ -252,7 +282,9 @@ class TradingMetrics:
                 "avg_loss": avg_loss,
                 "max_win": max_win,
                 "max_loss": max_loss,
-                "profit_factor": abs(avg_win * winning_trades / (avg_loss * losing_trades))
+                "profit_factor": abs(
+                    avg_win * winning_trades / (avg_loss * losing_trades)
+                )
                 if avg_loss != 0
                 else float("inf"),
                 "avg_duration": avg_duration,
@@ -277,7 +309,9 @@ def calculate_sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.02) -> 
     return metrics.calculate_sharpe_ratio(returns, risk_free_rate)
 
 
-def calculate_max_drawdown(cumulative_returns: pd.Series) -> Tuple[float, pd.Timestamp, pd.Timestamp]:
+def calculate_max_drawdown(
+    cumulative_returns: pd.Series,
+) -> Tuple[float, pd.Timestamp, pd.Timestamp]:
     """Calculate maximum drawdown."""
     metrics = PerformanceMetrics()
     return metrics.calculate_max_drawdown(cumulative_returns)

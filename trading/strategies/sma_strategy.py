@@ -67,10 +67,17 @@ class SMAStrategy:
         if not self.config.asymmetric_windows:
             return self.config.short_window, self.config.long_window
 
-        short_window = max(5, int(self.config.base_window * self.config.short_window_ratio))
-        long_window = max(short_window + 5, int(self.config.base_window * self.config.long_window_ratio))
+        short_window = max(
+            5, int(self.config.base_window * self.config.short_window_ratio)
+        )
+        long_window = max(
+            short_window + 5,
+            int(self.config.base_window * self.config.long_window_ratio),
+        )
 
-        logger.info(f"Using asymmetric windows: short={short_window}, long={long_window}")
+        logger.info(
+            f"Using asymmetric windows: short={short_window}, long={long_window}"
+        )
         return short_window, long_window
 
     def calculate_sma(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
@@ -89,7 +96,9 @@ class SMAStrategy:
         if self.config.enable_smoothing:
             short_sma = self._apply_smoothing(short_sma)
             long_sma = self._apply_smoothing(long_sma)
-            logger.debug(f"Applied EMA smoothing with period {self.config.smoothing_period}")
+            logger.debug(
+                f"Applied EMA smoothing with period {self.config.smoothing_period}"
+            )
 
         return short_sma, long_sma
 
@@ -108,7 +117,9 @@ class SMAStrategy:
             logger.warning(f"Failed to apply smoothing: {e}, returning original series")
             return series
 
-    def _calculate_crossover_strength(self, short_sma: pd.Series, long_sma: pd.Series) -> pd.Series:
+    def _calculate_crossover_strength(
+        self, short_sma: pd.Series, long_sma: pd.Series
+    ) -> pd.Series:
         """Calculate the strength of SMA crossover.
 
         Args:
@@ -127,7 +138,9 @@ class SMAStrategy:
 
         return crossover_strength
 
-    def _detect_crossover_points(self, short_sma: pd.Series, long_sma: pd.Series) -> Tuple[pd.Series, pd.Series]:
+    def _detect_crossover_points(
+        self, short_sma: pd.Series, long_sma: pd.Series
+    ) -> Tuple[pd.Series, pd.Series]:
         """Detect crossover points with enhanced logic.
 
         Args:
@@ -138,18 +151,30 @@ class SMAStrategy:
             Tuple of (bullish_crossovers, bearish_crossovers)
         """
         # Calculate crossover points
-        bullish_cross = (short_sma > long_sma) & (short_sma.shift(1) <= long_sma.shift(1))
-        bearish_cross = (short_sma < long_sma) & (short_sma.shift(1) >= long_sma.shift(1))
+        bullish_cross = (short_sma > long_sma) & (
+            short_sma.shift(1) <= long_sma.shift(1)
+        )
+        bearish_cross = (short_sma < long_sma) & (
+            short_sma.shift(1) >= long_sma.shift(1)
+        )
 
         # Apply confirmation filter
         if self.config.confirmation_periods > 1:
-            bullish_cross = self._confirm_trend_change(bullish_cross, short_sma, long_sma, "bullish")
-            bearish_cross = self._confirm_trend_change(bearish_cross, short_sma, long_sma, "bearish")
+            bullish_cross = self._confirm_trend_change(
+                bullish_cross, short_sma, long_sma, "bullish"
+            )
+            bearish_cross = self._confirm_trend_change(
+                bearish_cross, short_sma, long_sma, "bearish"
+            )
 
         return bullish_cross, bearish_cross
 
     def _confirm_trend_change(
-        self, crossover_points: pd.Series, short_sma: pd.Series, long_sma: pd.Series, trend_type: str
+        self,
+        crossover_points: pd.Series,
+        short_sma: pd.Series,
+        long_sma: pd.Series,
+        trend_type: str,
     ) -> pd.Series:
         """Confirm trend changes over multiple periods.
 
@@ -186,7 +211,9 @@ class SMAStrategy:
         """Generate trading signals based on SMA crossover with enhanced features."""
         # Edge case fallback logic
         if data is None or data.empty:
-            logger.warning("Invalid data provided to SMA strategy: data is None or empty")
+            logger.warning(
+                "Invalid data provided to SMA strategy: data is None or empty"
+            )
             return pd.DataFrame()  # Return empty DataFrame
 
         if not isinstance(data, pd.DataFrame):
@@ -208,10 +235,14 @@ class SMAStrategy:
         signals["long_sma"] = long_sma
 
         # Calculate crossover strength
-        signals["crossover_strength"] = self._calculate_crossover_strength(short_sma, long_sma)
+        signals["crossover_strength"] = self._calculate_crossover_strength(
+            short_sma, long_sma
+        )
 
         # Detect crossover points
-        bullish_cross, bearish_cross = self._detect_crossover_points(short_sma, long_sma)
+        bullish_cross, bearish_cross = self._detect_crossover_points(
+            short_sma, long_sma
+        )
 
         # Generate signals
         signals.loc[bullish_cross, "signal"] = 1
@@ -251,10 +282,14 @@ class SMAStrategy:
 
         # Apply EMA smoothing to the signal column
         raw_signals = signals["signal"].replace(0, np.nan)
-        smoothed_signals = calculate_ema(raw_signals.fillna(method="ffill"), self.config.smoothing_period)
+        smoothed_signals = calculate_ema(
+            raw_signals.fillna(method="ffill"), self.config.smoothing_period
+        )
 
         # Convert back to discrete signals
-        smoothed["smoothed_signal"] = np.where(smoothed_signals > 0.5, 1, np.where(smoothed_signals < -0.5, -1, 0))
+        smoothed["smoothed_signal"] = np.where(
+            smoothed_signals > 0.5, 1, np.where(smoothed_signals < -0.5, -1, 0)
+        )
 
         return smoothed
 
@@ -285,7 +320,8 @@ class SMAStrategy:
         # Use smoothed signals if available, otherwise use regular signals
         signal_column = (
             "smoothed_signal"
-            if self.config.enable_smoothing and "smoothed_signal" in self.signals.columns
+            if self.config.enable_smoothing
+            and "smoothed_signal" in self.signals.columns
             else "signal"
         )
         positions["position"] = self.signals[signal_column].cumsum()
@@ -332,7 +368,11 @@ class SMAStrategy:
             self.positions = None
             self.smoothed_signals = None
 
-            return {"status": "success", "parameters_updated": True, "config": self.get_parameters()}
+            return {
+                "status": "success",
+                "parameters_updated": True,
+                "config": self.get_parameters(),
+            }
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
@@ -346,7 +386,9 @@ class SMAStrategy:
         # Signal frequency
         total_periods = len(self.signals)
         signal_periods = len(self.signals[self.signals["signal"] != 0])
-        metrics["signal_frequency"] = signal_periods / total_periods if total_periods > 0 else 0
+        metrics["signal_frequency"] = (
+            signal_periods / total_periods if total_periods > 0 else 0
+        )
 
         # Crossover strength statistics
         if "crossover_strength" in self.signals.columns:

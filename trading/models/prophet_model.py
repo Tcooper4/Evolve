@@ -53,11 +53,15 @@ if PROPHET_AVAILABLE:
 
             # Add changepoint control
             if "changepoint_prior_scale" not in prophet_params:
-                prophet_params["changepoint_prior_scale"] = config.get("changepoint_prior_scale", 0.05)
+                prophet_params["changepoint_prior_scale"] = config.get(
+                    "changepoint_prior_scale", 0.05
+                )
 
             # Add seasonality control
             if "seasonality_prior_scale" not in prophet_params:
-                prophet_params["seasonality_prior_scale"] = config.get("seasonality_prior_scale", 10.0)
+                prophet_params["seasonality_prior_scale"] = config.get(
+                    "seasonality_prior_scale", 10.0
+                )
 
             self.model = Prophet(**prophet_params)
             self.fitted = False
@@ -84,27 +88,41 @@ if PROPHET_AVAILABLE:
 
                 # Validate Prophet model has required methods
                 if not hasattr(self.model, "add_seasonality"):
-                    raise ValueError("Prophet model not properly initialized with seasonal components.")
+                    raise ValueError(
+                        "Prophet model not properly initialized with seasonal components."
+                    )
 
                 # Validate input data
                 if train_data is None or train_data.empty:
                     raise ValueError("Training data is empty or None")
 
-                required_columns = [self.config["date_column"], self.config["target_column"]]
-                missing_columns = [col for col in required_columns if col not in train_data.columns]
+                required_columns = [
+                    self.config["date_column"],
+                    self.config["target_column"],
+                ]
+                missing_columns = [
+                    col for col in required_columns if col not in train_data.columns
+                ]
                 if missing_columns:
                     raise ValueError(f"Missing required columns: {missing_columns}")
 
                 # Check for NaN values
                 if train_data[required_columns].isnull().any().any():
-                    logger.warning("NaN values found in training data, attempting to clean")
+                    logger.warning(
+                        "NaN values found in training data, attempting to clean"
+                    )
                     train_data = train_data.dropna(subset=required_columns)
                     if train_data.empty:
-                        raise ValueError("No valid data remaining after removing NaN values")
+                        raise ValueError(
+                            "No valid data remaining after removing NaN values"
+                        )
 
                 # Prepare data for Prophet
                 df = train_data[required_columns].rename(
-                    columns={self.config["date_column"]: "ds", self.config["target_column"]: "y"}
+                    columns={
+                        self.config["date_column"]: "ds",
+                        self.config["target_column"]: "y",
+                    }
                 )
 
                 # Validate Prophet data format
@@ -121,7 +139,9 @@ if PROPHET_AVAILABLE:
                 self.fitted = True
                 self.history = df
 
-                logger.info(f"Prophet model fitted successfully with {len(df)} data points")
+                logger.info(
+                    f"Prophet model fitted successfully with {len(df)} data points"
+                )
 
                 return {"train_loss": [], "val_loss": []}
 
@@ -145,29 +165,41 @@ if PROPHET_AVAILABLE:
                         if not isinstance(holidays, pd.DataFrame):
                             raise ValueError("Holidays must be a pandas DataFrame")
                         required_holiday_cols = ["ds", "holiday"]
-                        missing_cols = [col for col in required_holiday_cols if col not in holidays.columns]
+                        missing_cols = [
+                            col
+                            for col in required_holiday_cols
+                            if col not in holidays.columns
+                        ]
                         if missing_cols:
-                            raise ValueError(f"Holidays DataFrame missing required columns: {missing_cols}")
+                            raise ValueError(
+                                f"Holidays DataFrame missing required columns: {missing_cols}"
+                            )
 
                         # Validate holiday dates
                         if holidays["ds"].dtype != "datetime64[ns]":
                             try:
                                 holidays["ds"] = pd.to_datetime(holidays["ds"])
                             except (ValueError, TypeError) as e:
-                                raise ValueError(f"Holiday dates must be convertible to datetime: {e}")
+                                raise ValueError(
+                                    f"Holiday dates must be convertible to datetime: {e}"
+                                )
 
                 # Validate seasonality configuration
                 if "seasonality_mode" in prophet_params:
                     seasonality_mode = prophet_params["seasonality_mode"]
                     valid_modes = ["additive", "multiplicative"]
                     if seasonality_mode not in valid_modes:
-                        raise ValueError(f"Seasonality mode must be one of {valid_modes}, got {seasonality_mode}")
+                        raise ValueError(
+                            f"Seasonality mode must be one of {valid_modes}, got {seasonality_mode}"
+                        )
 
                 # Validate yearly_seasonality
                 if "yearly_seasonality" in prophet_params:
                     yearly_seasonality = prophet_params["yearly_seasonality"]
                     if not isinstance(yearly_seasonality, (bool, int)):
-                        raise ValueError("yearly_seasonality must be boolean or integer")
+                        raise ValueError(
+                            "yearly_seasonality must be boolean or integer"
+                        )
                     if isinstance(yearly_seasonality, int) and yearly_seasonality < 1:
                         raise ValueError("yearly_seasonality integer must be >= 1")
 
@@ -175,7 +207,9 @@ if PROPHET_AVAILABLE:
                 if "weekly_seasonality" in prophet_params:
                     weekly_seasonality = prophet_params["weekly_seasonality"]
                     if not isinstance(weekly_seasonality, (bool, int)):
-                        raise ValueError("weekly_seasonality must be boolean or integer")
+                        raise ValueError(
+                            "weekly_seasonality must be boolean or integer"
+                        )
                     if isinstance(weekly_seasonality, int) and weekly_seasonality < 1:
                         raise ValueError("weekly_seasonality integer must be >= 1")
 
@@ -190,14 +224,24 @@ if PROPHET_AVAILABLE:
                 # Validate changepoint_prior_scale
                 if "changepoint_prior_scale" in prophet_params:
                     changepoint_prior_scale = prophet_params["changepoint_prior_scale"]
-                    if not isinstance(changepoint_prior_scale, (int, float)) or changepoint_prior_scale <= 0:
-                        raise ValueError("changepoint_prior_scale must be a positive number")
+                    if (
+                        not isinstance(changepoint_prior_scale, (int, float))
+                        or changepoint_prior_scale <= 0
+                    ):
+                        raise ValueError(
+                            "changepoint_prior_scale must be a positive number"
+                        )
 
                 # Validate seasonality_prior_scale
                 if "seasonality_prior_scale" in prophet_params:
                     seasonality_prior_scale = prophet_params["seasonality_prior_scale"]
-                    if not isinstance(seasonality_prior_scale, (int, float)) or seasonality_prior_scale <= 0:
-                        raise ValueError("seasonality_prior_scale must be a positive number")
+                    if (
+                        not isinstance(seasonality_prior_scale, (int, float))
+                        or seasonality_prior_scale <= 0
+                    ):
+                        raise ValueError(
+                            "seasonality_prior_scale must be a positive number"
+                        )
 
                 logger.info("Prophet configuration validation passed")
 
@@ -215,7 +259,9 @@ if PROPHET_AVAILABLE:
             """
             try:
                 if not HOLIDAYS_AVAILABLE:
-                    logger.warning("Holidays package not available, skipping holiday addition")
+                    logger.warning(
+                        "Holidays package not available, skipping holiday addition"
+                    )
                     return None
 
                 # Get holidays for the specified country
@@ -234,7 +280,9 @@ if PROPHET_AVAILABLE:
                         holiday_names.append(name)
 
                 if holiday_dates:
-                    holidays_df = pd.DataFrame({"ds": holiday_dates, "holiday": holiday_names})
+                    holidays_df = pd.DataFrame(
+                        {"ds": holiday_dates, "holiday": holiday_names}
+                    )
                     logger.info(f"Added {len(holidays_df)} holidays for {country}")
                     return holidays_df
                 else:
@@ -253,7 +301,9 @@ if PROPHET_AVAILABLE:
             """
             try:
                 if not self.fitted:
-                    raise ValueError("Model must be fitted before adding custom holidays")
+                    raise ValueError(
+                        "Model must be fitted before adding custom holidays"
+                    )
 
                 if holidays_df is None or holidays_df.empty:
                     logger.warning("Empty holidays DataFrame provided")
@@ -261,7 +311,9 @@ if PROPHET_AVAILABLE:
 
                 # Validate holiday DataFrame
                 required_cols = ["ds", "holiday"]
-                missing_cols = [col for col in required_cols if col not in holidays_df.columns]
+                missing_cols = [
+                    col for col in required_cols if col not in holidays_df.columns
+                ]
                 if missing_cols:
                     raise ValueError(f"Missing required columns: {missing_cols}")
 
@@ -269,7 +321,9 @@ if PROPHET_AVAILABLE:
                 holidays_df["ds"] = pd.to_datetime(holidays_df["ds"])
 
                 # Add holidays to the model
-                self.model.add_country_holidays(country_name="custom", holidays_df=holidays_df)
+                self.model.add_country_holidays(
+                    country_name="custom", holidays_df=holidays_df
+                )
                 logger.info(f"Added {len(holidays_df)} custom holidays")
 
             except Exception as e:
@@ -289,7 +343,9 @@ if PROPHET_AVAILABLE:
             try:
                 # Check if input dataframe is empty or has NaNs
                 if data is None or data.empty:
-                    logger.warning("Prophet predict: Input dataframe is empty, returning empty result")
+                    logger.warning(
+                        "Prophet predict: Input dataframe is empty, returning empty result"
+                    )
                     return np.array([])
 
                 # Check for required columns
@@ -301,23 +357,33 @@ if PROPHET_AVAILABLE:
 
                 # Check for NaN values
                 if data[self.config["date_column"]].isnull().any():
-                    logger.warning("Prophet predict: NaN values found in date column, attempting to clean")
+                    logger.warning(
+                        "Prophet predict: NaN values found in date column, attempting to clean"
+                    )
                     data = data.dropna(subset=[self.config["date_column"]])
                     if data.empty:
-                        logger.warning("Prophet predict: No valid data after cleaning, returning empty result")
+                        logger.warning(
+                            "Prophet predict: No valid data after cleaning, returning empty result"
+                        )
                         return np.array([])
 
                 # Validate data size
                 if len(data) < 2:
-                    logger.warning("Prophet predict: Insufficient data points, returning empty result")
+                    logger.warning(
+                        "Prophet predict: Insufficient data points, returning empty result"
+                    )
                     return np.array([])
 
                 if not self.fitted:
-                    logger.warning("Prophet predict: Model not fitted, returning empty result")
+                    logger.warning(
+                        "Prophet predict: Model not fitted, returning empty result"
+                    )
                     return np.array([])
 
                 # Prepare data for prediction
-                future = data[[self.config["date_column"]]].rename(columns={self.config["date_column"]: "ds"})
+                future = data[[self.config["date_column"]]].rename(
+                    columns={self.config["date_column"]: "ds"}
+                )
 
                 # Validate date format
                 if future["ds"].dtype != "datetime64[ns]":
@@ -347,7 +413,9 @@ if PROPHET_AVAILABLE:
 
                 # Create future dates for forecasting
                 last_date = data[self.config["date_column"]].iloc[-1]
-                future_dates = pd.date_range(start=last_date, periods=horizon + 1, freq="D")[1:]
+                future_dates = pd.date_range(
+                    start=last_date, periods=horizon + 1, freq="D"
+                )[1:]
                 future_df = pd.DataFrame({"ds": future_dates})
 
                 # Generate forecast
@@ -375,7 +443,9 @@ if PROPHET_AVAILABLE:
             pass  # Prophet is always in inference mode after fitting
 
         def shap_interpret(self, X_sample):
-            logger.warning("SHAP not supported for Prophet. Showing component plots instead.")
+            logger.warning(
+                "SHAP not supported for Prophet. Showing component plots instead."
+            )
             self.model.plot_components(self.model.predict(self.history))
 
         def save(self, path: str):

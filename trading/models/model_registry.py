@@ -94,7 +94,12 @@ class ModelRegistry:
                         "class": "XGBoostModel",
                         "module": "trading.models.xgboost_model",
                         "description": "XGBoost gradient boosting model",
-                        "parameters": {"n_estimators": 100, "max_depth": 6, "learning_rate": 0.1, "subsample": 0.8},
+                        "parameters": {
+                            "n_estimators": 100,
+                            "max_depth": 6,
+                            "learning_rate": 0.1,
+                            "subsample": 0.8,
+                        },
                     },
                 },
                 "ensembles": {
@@ -195,7 +200,9 @@ class ModelRegistry:
         """
         return self.registry["ensembles"].get(ensemble_name)
 
-    def update_model_parameters(self, model_name: str, parameters: Dict[str, Any]) -> bool:
+    def update_model_parameters(
+        self, model_name: str, parameters: Dict[str, Any]
+    ) -> bool:
         """Update parameters for a model.
 
         Args:

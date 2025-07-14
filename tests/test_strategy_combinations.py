@@ -74,8 +74,19 @@ class TestStrategyCombinations:
         """Get comprehensive strategy configurations for testing."""
         return {
             "rsi": {"period": 14, "overbought": 70, "oversold": 30, "smooth_period": 3},
-            "macd": {"fast_period": 12, "slow_period": 26, "signal_period": 9, "smooth_period": 3},
-            "bollinger": {"window": 20, "num_std": 2.0, "min_volume": 1000.0, "min_price": 1.0, "smooth_period": 3},
+            "macd": {
+                "fast_period": 12,
+                "slow_period": 26,
+                "signal_period": 9,
+                "smooth_period": 3,
+            },
+            "bollinger": {
+                "window": 20,
+                "num_std": 2.0,
+                "min_volume": 1000.0,
+                "min_price": 1.0,
+                "smooth_period": 3,
+            },
             "sma": {"short_window": 10, "long_window": 30, "smooth_period": 3},
             "ema": {"short_window": 12, "long_window": 26, "smooth_period": 3},
         }
@@ -87,7 +98,11 @@ class TestStrategyCombinations:
             "strategies": ["bollinger", "macd", "rsi"],
             "weights": [0.4, 0.3, 0.3],
             "consensus_threshold": 0.6,
-            "risk_management": {"max_position_size": 0.1, "stop_loss": 0.05, "take_profit": 0.15},
+            "risk_management": {
+                "max_position_size": 0.1,
+                "stop_loss": 0.05,
+                "take_profit": 0.15,
+            },
         }
 
     def test_rsi_macd_combination(self, sample_data, strategy_configs):
@@ -108,8 +123,12 @@ class TestStrategyCombinations:
         assert "signal" in macd_signals.columns, "MACD should have signal column"
 
         # Test signal values
-        assert rsi_signals["signal"].isin([-1, 0, 1]).all(), "RSI signals should be -1, 0, or 1"
-        assert macd_signals["signal"].isin([-1, 0, 1]).all(), "MACD signals should be -1, 0, or 1"
+        assert (
+            rsi_signals["signal"].isin([-1, 0, 1]).all()
+        ), "RSI signals should be -1, 0, or 1"
+        assert (
+            macd_signals["signal"].isin([-1, 0, 1]).all()
+        ), "MACD signals should be -1, 0, or 1"
 
         # Test RSI-specific columns
         assert "rsi" in rsi_signals.columns, "RSI should have RSI column"
@@ -117,8 +136,12 @@ class TestStrategyCombinations:
         assert "oversold" in rsi_signals.columns, "RSI should have oversold column"
 
         # Test MACD-specific columns
-        macd_cols = [col for col in macd_signals.columns if "MACD" in col or "signal" in col]
-        assert len(macd_cols) >= 3, "MACD should have MACD line, signal line, and histogram"
+        macd_cols = [
+            col for col in macd_signals.columns if "MACD" in col or "signal" in col
+        ]
+        assert (
+            len(macd_cols) >= 3
+        ), "MACD should have MACD line, signal line, and histogram"
 
         # Test combination logic with multiple approaches
         combined_signals = pd.DataFrame(index=sample_data.index)
@@ -127,8 +150,12 @@ class TestStrategyCombinations:
 
         # Approach 1: Both must agree for signal
         combined_signals["consensus_signal"] = 0
-        buy_condition = (combined_signals["rsi_signal"] == 1) & (combined_signals["macd_signal"] == 1)
-        sell_condition = (combined_signals["rsi_signal"] == -1) & (combined_signals["macd_signal"] == -1)
+        buy_condition = (combined_signals["rsi_signal"] == 1) & (
+            combined_signals["macd_signal"] == 1
+        )
+        sell_condition = (combined_signals["rsi_signal"] == -1) & (
+            combined_signals["macd_signal"] == -1
+        )
 
         combined_signals.loc[buy_condition, "consensus_signal"] = 1
         combined_signals.loc[sell_condition, "consensus_signal"] = -1
@@ -223,9 +250,13 @@ class TestStrategyCombinations:
         combined_signals["breakout_signal"] = 0
 
         # Buy breakout: price below lower band and RSI oversold
-        breakout_buy = (sample_data["close"] < combined_signals["bb_lower"]) & (combined_signals["rsi_value"] < 30)
+        breakout_buy = (sample_data["close"] < combined_signals["bb_lower"]) & (
+            combined_signals["rsi_value"] < 30
+        )
         # Sell breakout: price above upper band and RSI overbought
-        breakout_sell = (sample_data["close"] > combined_signals["bb_upper"]) & (combined_signals["rsi_value"] > 70)
+        breakout_sell = (sample_data["close"] > combined_signals["bb_upper"]) & (
+            combined_signals["rsi_value"] > 70
+        )
 
         combined_signals.loc[breakout_buy, "breakout_signal"] = 1
         combined_signals.loc[breakout_sell, "breakout_signal"] = -1
@@ -234,9 +265,13 @@ class TestStrategyCombinations:
         combined_signals["mean_reversion"] = 0
 
         # Buy mean reversion: price near lower band and RSI starting to rise
-        mean_buy = (sample_data["close"] <= combined_signals["bb_lower"] * 1.02) & (combined_signals["rsi_value"] > 25)
+        mean_buy = (sample_data["close"] <= combined_signals["bb_lower"] * 1.02) & (
+            combined_signals["rsi_value"] > 25
+        )
         # Sell mean reversion: price near upper band and RSI starting to fall
-        mean_sell = (sample_data["close"] >= combined_signals["bb_upper"] * 0.98) & (combined_signals["rsi_value"] < 75)
+        mean_sell = (sample_data["close"] >= combined_signals["bb_upper"] * 0.98) & (
+            combined_signals["rsi_value"] < 75
+        )
 
         combined_signals.loc[mean_buy, "mean_reversion"] = 1
         combined_signals.loc[mean_sell, "mean_reversion"] = -1
@@ -275,7 +310,9 @@ class TestStrategyCombinations:
 
         # Test moving average columns
         sma_cols = [col for col in sma_signals.columns if "SMA" in col]
-        ema_cols = [col for col in ema_signals.columns if "SMA" in col]  # Using SMA for EMA test
+        ema_cols = [
+            col for col in ema_signals.columns if "SMA" in col
+        ]  # Using SMA for EMA test
         assert len(sma_cols) >= 2, "SMA should have at least 2 moving averages"
         assert len(ema_cols) >= 2, "EMA should have at least 2 moving averages"
 
@@ -286,8 +323,12 @@ class TestStrategyCombinations:
 
         # Strategy 1: Both must agree for trend confirmation
         combined_signals["trend_confirmed"] = 0
-        both_buy = (combined_signals["sma_signal"] == 1) & (combined_signals["ema_signal"] == 1)
-        both_sell = (combined_signals["sma_signal"] == -1) & (combined_signals["ema_signal"] == -1)
+        both_buy = (combined_signals["sma_signal"] == 1) & (
+            combined_signals["ema_signal"] == 1
+        )
+        both_sell = (combined_signals["sma_signal"] == -1) & (
+            combined_signals["ema_signal"] == -1
+        )
 
         combined_signals.loc[both_buy, "trend_confirmed"] = 1
         combined_signals.loc[both_sell, "trend_confirmed"] = -1
@@ -313,8 +354,11 @@ class TestStrategyCombinations:
         # Strong downtrend: both moving averages showing sell signals
         strong_downtrend = both_sell
         # Weak trend: mixed signals
-        weak_trend = (combined_signals["sma_signal"] != combined_signals["ema_signal"]) & (
-            (combined_signals["sma_signal"] != 0) | (combined_signals["ema_signal"] != 0)
+        weak_trend = (
+            combined_signals["sma_signal"] != combined_signals["ema_signal"]
+        ) & (
+            (combined_signals["sma_signal"] != 0)
+            | (combined_signals["ema_signal"] != 0)
         )
 
         combined_signals.loc[strong_uptrend, "trend_strength"] = 2
@@ -337,7 +381,9 @@ class TestStrategyCombinations:
         trend_strength_counts = combined_signals["trend_strength"].value_counts()
         logger.info(f"SMA + EMA trend strength: {trend_strength_counts.to_dict()}")
 
-    def test_hybrid_strategy_combination(self, sample_data, strategy_configs, hybrid_config):
+    def test_hybrid_strategy_combination(
+        self, sample_data, strategy_configs, hybrid_config
+    ):
         """Test hybrid strategy with multiple components and advanced logic."""
         logger.info("Testing comprehensive hybrid strategy combination")
 
@@ -366,7 +412,9 @@ class TestStrategyCombinations:
         for name, signal_df in signals.items():
             assert not signal_df.empty, f"{name} signals should not be empty"
             assert "signal" in signal_df.columns, f"{name} should have signal column"
-            assert signal_df["signal"].isin([-1, 0, 1]).all(), f"{name} signals should be -1, 0, or 1"
+            assert (
+                signal_df["signal"].isin([-1, 0, 1]).all()
+            ), f"{name} signals should be -1, 0, or 1"
 
         # Create comprehensive hybrid combination
         hybrid_signals = pd.DataFrame(index=sample_data.index)
@@ -391,10 +439,16 @@ class TestStrategyCombinations:
         )
 
         # Strategy 2: Majority voting
-        signal_columns = [f"{name}_signal" for name in strategy_names if f"{name}_signal" in hybrid_signals.columns]
+        signal_columns = [
+            f"{name}_signal"
+            for name in strategy_names
+            if f"{name}_signal" in hybrid_signals.columns
+        ]
         if signal_columns:
             majority_signal = hybrid_signals[signal_columns].sum(axis=1)
-            hybrid_signals["majority_vote"] = np.where(majority_signal > 0, 1, np.where(majority_signal < 0, -1, 0))
+            hybrid_signals["majority_vote"] = np.where(
+                majority_signal > 0, 1, np.where(majority_signal < 0, -1, 0)
+            )
 
         # Strategy 3: Risk-adjusted signals
         hybrid_signals["risk_adjusted"] = 0
@@ -424,17 +478,28 @@ class TestStrategyCombinations:
         hybrid_signals.loc[strong_downtrend, "trend_momentum"] = -1
 
         # Verify all hybrid strategies produce reasonable signals
-        hybrid_strategies = ["weighted_consensus", "majority_vote", "risk_adjusted", "trend_momentum"]
+        hybrid_strategies = [
+            "weighted_consensus",
+            "majority_vote",
+            "risk_adjusted",
+            "trend_momentum",
+        ]
 
         for strategy in hybrid_strategies:
             if strategy in hybrid_signals.columns:
-                assert hybrid_signals[strategy].isin([-1, 0, 1]).all(), f"{strategy} signals should be -1, 0, or 1"
+                assert (
+                    hybrid_signals[strategy].isin([-1, 0, 1]).all()
+                ), f"{strategy} signals should be -1, 0, or 1"
 
                 signal_counts = hybrid_signals[strategy].value_counts()
                 logger.info(f"Hybrid {strategy}: {signal_counts.to_dict()}")
 
-                assert signal_counts.get(1, 0) > 0, f"{strategy} should have buy signals"
-                assert signal_counts.get(-1, 0) > 0, f"{strategy} should have sell signals"
+                assert (
+                    signal_counts.get(1, 0) > 0
+                ), f"{strategy} should have buy signals"
+                assert (
+                    signal_counts.get(-1, 0) > 0
+                ), f"{strategy} should have sell signals"
 
     def test_multi_strategy_engine(self, sample_data, strategy_configs):
         """Test multi-strategy engine with comprehensive validation."""
@@ -445,13 +510,21 @@ class TestStrategyCombinations:
 
         # Register strategies
         bollinger_config = BollingerConfig(**strategy_configs["bollinger"])
-        strategy_manager.register_strategy("bollinger", BollingerStrategy(bollinger_config))
-        strategy_manager.register_strategy("macd", MACDStrategy(**strategy_configs["macd"]))
-        strategy_manager.register_strategy("sma", SMAStrategy(**strategy_configs["sma"]))
+        strategy_manager.register_strategy(
+            "bollinger", BollingerStrategy(bollinger_config)
+        )
+        strategy_manager.register_strategy(
+            "macd", MACDStrategy(**strategy_configs["macd"])
+        )
+        strategy_manager.register_strategy(
+            "sma", SMAStrategy(**strategy_configs["sma"])
+        )
 
         # Test strategy registration
         registered_strategies = strategy_manager.get_registered_strategies()
-        assert "bollinger" in registered_strategies, "Bollinger strategy should be registered"
+        assert (
+            "bollinger" in registered_strategies
+        ), "Bollinger strategy should be registered"
         assert "macd" in registered_strategies, "MACD strategy should be registered"
         assert "sma" in registered_strategies, "SMA strategy should be registered"
 
@@ -464,7 +537,9 @@ class TestStrategyCombinations:
 
         for strategy_name, signals in all_signals.items():
             assert not signals.empty, f"{strategy_name} signals should not be empty"
-            assert "signal" in signals.columns, f"{strategy_name} should have signal column"
+            assert (
+                "signal" in signals.columns
+            ), f"{strategy_name} should have signal column"
 
         # Test strategy comparison
         comparison = strategy_manager.compare_strategies(sample_data)
@@ -490,13 +565,20 @@ class TestStrategyCombinations:
 
         # Test MACD strategy with invalid parameters
         with pytest.raises(ValueError):
-            invalid_macd_config = {"fast_period": -1, "slow_period": 26, "signal_period": 9}
+            invalid_macd_config = {
+                "fast_period": -1,
+                "slow_period": 26,
+                "signal_period": 9,
+            }
             macd_strategy = MACDStrategy(**invalid_macd_config)
             macd_strategy.generate_signals(sample_data)
 
         # Test SMA strategy with invalid parameters
         with pytest.raises(ValueError):
-            invalid_sma_config = {"short_window": 30, "long_window": 10}  # Short window > long window
+            invalid_sma_config = {
+                "short_window": 30,
+                "long_window": 10,
+            }  # Short window > long window
             sma_strategy = SMAStrategy(**invalid_sma_config)
             sma_strategy.generate_signals(sample_data)
 
@@ -515,7 +597,9 @@ class TestStrategyCombinations:
 
         for strategy_name, params in valid_params.items():
             validation_result = validator.validate_parameters(strategy_name, params)
-            assert validation_result["valid"], f"{strategy_name} parameters should be valid"
+            assert validation_result[
+                "valid"
+            ], f"{strategy_name} parameters should be valid"
 
         logger.info("Comprehensive strategy parameter validation tests passed")
 
@@ -551,11 +635,15 @@ class TestStrategyCombinations:
             signal_distribution = signal_df["signal"].value_counts()
 
             # Signal frequency
-            signal_frequency = total_signals / len(signal_df) if len(signal_df) > 0 else 0
+            signal_frequency = (
+                total_signals / len(signal_df) if len(signal_df) > 0 else 0
+            )
 
             # Signal persistence (consecutive signals)
             signal_changes = signal_df["signal"].diff().abs()
-            avg_signal_persistence = signal_changes.mean() if len(signal_changes) > 0 else 0
+            avg_signal_persistence = (
+                signal_changes.mean() if len(signal_changes) > 0 else 0
+            )
 
             # Calculate returns if price data available
             returns = None
@@ -581,19 +669,33 @@ class TestStrategyCombinations:
                         "total_return": returns.sum(),
                         "avg_return": returns.mean(),
                         "return_std": returns.std(),
-                        "sharpe_ratio": returns.mean() / returns.std() if returns.std() > 0 else 0,
-                        "max_drawdown": (returns.cumsum() - returns.cumsum().expanding().max()).min(),
-                        "win_rate": len(returns[returns > 0]) / len(returns) if len(returns) > 0 else 0,
+                        "sharpe_ratio": returns.mean() / returns.std()
+                        if returns.std() > 0
+                        else 0,
+                        "max_drawdown": (
+                            returns.cumsum() - returns.cumsum().expanding().max()
+                        ).min(),
+                        "win_rate": len(returns[returns > 0]) / len(returns)
+                        if len(returns) > 0
+                        else 0,
                     }
                 )
 
         # Verify performance metrics
         for name, metrics in performance.items():
             # Basic validation
-            assert metrics["total_signals"] >= 0, f"{name} total signals should be non-negative"
-            assert metrics["buy_signals"] >= 0, f"{name} buy signals should be non-negative"
-            assert metrics["sell_signals"] >= 0, f"{name} sell signals should be non-negative"
-            assert 0 <= metrics["signal_ratio"] <= 1, f"{name} signal ratio should be between 0 and 1"
+            assert (
+                metrics["total_signals"] >= 0
+            ), f"{name} total signals should be non-negative"
+            assert (
+                metrics["buy_signals"] >= 0
+            ), f"{name} buy signals should be non-negative"
+            assert (
+                metrics["sell_signals"] >= 0
+            ), f"{name} sell signals should be non-negative"
+            assert (
+                0 <= metrics["signal_ratio"] <= 1
+            ), f"{name} signal ratio should be between 0 and 1"
 
             # Signal distribution validation
             signal_dist = metrics["signal_distribution"]
@@ -603,17 +705,27 @@ class TestStrategyCombinations:
 
             # Return metrics validation (if available)
             if "returns" in metrics and metrics["returns"] is not None:
-                assert isinstance(metrics["total_return"], (int, float)), f"{name} total return should be numeric"
-                assert isinstance(metrics["avg_return"], (int, float)), f"{name} avg return should be numeric"
-                assert metrics["return_std"] >= 0, f"{name} return std should be non-negative"
-                assert 0 <= metrics["win_rate"] <= 1, f"{name} win rate should be between 0 and 1"
+                assert isinstance(
+                    metrics["total_return"], (int, float)
+                ), f"{name} total return should be numeric"
+                assert isinstance(
+                    metrics["avg_return"], (int, float)
+                ), f"{name} avg return should be numeric"
+                assert (
+                    metrics["return_std"] >= 0
+                ), f"{name} return std should be non-negative"
+                assert (
+                    0 <= metrics["win_rate"] <= 1
+                ), f"{name} win rate should be between 0 and 1"
 
         # Compare strategies
         logger.info("Strategy Performance Comparison:")
         for name, metrics in performance.items():
             logger.info(f"\n{name}:")
             logger.info(f"  Total Signals: {metrics['total_signals']}")
-            logger.info(f"  Buy/Sell Ratio: {metrics['buy_signals']}/{metrics['sell_signals']}")
+            logger.info(
+                f"  Buy/Sell Ratio: {metrics['buy_signals']}/{metrics['sell_signals']}"
+            )
             logger.info(f"  Signal Frequency: {metrics['signal_ratio']:.3f}")
 
             if "total_return" in metrics:
@@ -624,7 +736,11 @@ class TestStrategyCombinations:
         # Find best performing strategy
         if any("total_return" in metrics for metrics in performance.values()):
             best_strategy = max(
-                [(name, metrics) for name, metrics in performance.items() if "total_return" in metrics],
+                [
+                    (name, metrics)
+                    for name, metrics in performance.items()
+                    if "total_return" in metrics
+                ],
                 key=lambda x: x[1]["total_return"],
             )
             logger.info(
@@ -649,7 +765,9 @@ class TestStrategyCombinations:
             macd_strategy.generate_signals(small_data)
 
         # Test with missing columns
-        incomplete_data = sample_data[["open", "high"]].copy()  # Missing close and volume
+        incomplete_data = sample_data[
+            ["open", "high"]
+        ].copy()  # Missing close and volume
         with pytest.raises(ValueError):
             bollinger_config = BollingerConfig(**strategy_configs["bollinger"])
             bollinger_strategy = BollingerStrategy(bollinger_config)
@@ -698,17 +816,25 @@ class TestStrategyCombinations:
 
                 # Calculate performance metric
                 total_signals = len(signals[signals["signal"] != 0])
-                signal_frequency = total_signals / len(signals) if len(signals) > 0 else 0
+                signal_frequency = (
+                    total_signals / len(signals) if len(signals) > 0 else 0
+                )
 
                 bollinger_performance.append(
-                    {"params": params, "signal_frequency": signal_frequency, "total_signals": total_signals}
+                    {
+                        "params": params,
+                        "signal_frequency": signal_frequency,
+                        "total_signals": total_signals,
+                    }
                 )
             except Exception as e:
                 logger.warning(f"Failed to test Bollinger params {params}: {e}")
 
         # Find optimal parameters
         if bollinger_performance:
-            optimal_bollinger = max(bollinger_performance, key=lambda x: x["signal_frequency"])
+            optimal_bollinger = max(
+                bollinger_performance, key=lambda x: x["signal_frequency"]
+            )
             logger.info(f"Optimal Bollinger parameters: {optimal_bollinger['params']}")
 
         # Test MACD parameter optimization
@@ -725,10 +851,16 @@ class TestStrategyCombinations:
                 signals = strategy.generate_signals(sample_data)
 
                 total_signals = len(signals[signals["signal"] != 0])
-                signal_frequency = total_signals / len(signals) if len(signals) > 0 else 0
+                signal_frequency = (
+                    total_signals / len(signals) if len(signals) > 0 else 0
+                )
 
                 macd_performance.append(
-                    {"params": params, "signal_frequency": signal_frequency, "total_signals": total_signals}
+                    {
+                        "params": params,
+                        "signal_frequency": signal_frequency,
+                        "total_signals": total_signals,
+                    }
                 )
             except Exception as e:
                 logger.warning(f"Failed to test MACD params {params}: {e}")
@@ -760,7 +892,10 @@ class TestStrategyCombinations:
         consecutive_count = 0
 
         for i in range(1, len(risk_managed_signals)):
-            if signal_changes.iloc[i] == 0 and risk_managed_signals["signal"].iloc[i] != 0:
+            if (
+                signal_changes.iloc[i] == 0
+                and risk_managed_signals["signal"].iloc[i] != 0
+            ):
                 consecutive_count += 1
                 if consecutive_count > max_consecutive:
                     risk_managed_signals["signal"].iloc[i] = 0
@@ -776,18 +911,26 @@ class TestStrategyCombinations:
         # Rule 3: Price volatility filtering
         if "close" in sample_data.columns:
             price_volatility = sample_data["close"].pct_change().rolling(20).std()
-            high_volatility_mask = price_volatility > price_volatility.quantile(0.9)  # Top 10%
+            high_volatility_mask = price_volatility > price_volatility.quantile(
+                0.9
+            )  # Top 10%
             risk_managed_signals.loc[high_volatility_mask, "signal"] = 0
 
         # Compare original vs risk-managed signals
         original_signals = len(signals[signals["signal"] != 0])
-        risk_managed_count = len(risk_managed_signals[risk_managed_signals["signal"] != 0])
+        risk_managed_count = len(
+            risk_managed_signals[risk_managed_signals["signal"] != 0]
+        )
 
         logger.info(f"Original signals: {original_signals}")
         logger.info(f"Risk-managed signals: {risk_managed_count}")
-        logger.info(f"Risk management reduced signals by: {original_signals - risk_managed_count}")
+        logger.info(
+            f"Risk management reduced signals by: {original_signals - risk_managed_count}"
+        )
 
         # Verify risk management worked
-        assert risk_managed_count <= original_signals, "Risk management should not increase signals"
+        assert (
+            risk_managed_count <= original_signals
+        ), "Risk management should not increase signals"
 
         logger.info("Risk management integration tests completed")

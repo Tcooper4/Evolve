@@ -14,9 +14,19 @@ def test_import(module_name: str, description: str = None) -> Dict:
     """Test importing a module."""
     try:
         __import__(module_name)
-        return {"module": module_name, "description": description or module_name, "status": "SUCCESS", "error": None}
+        return {
+            "module": module_name,
+            "description": description or module_name,
+            "status": "SUCCESS",
+            "error": None,
+        }
     except Exception as e:
-        return {"module": module_name, "description": description or module_name, "status": "FAILED", "error": str(e)}
+        return {
+            "module": module_name,
+            "description": description or module_name,
+            "status": "FAILED",
+            "error": str(e),
+        }
 
 
 def test_core_functionality() -> Dict:

@@ -29,7 +29,8 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("Diagnostics")
 show_log = st.sidebar.checkbox("Show Debug Log Viewer", value=False)
 edge_case = st.sidebar.selectbox(
-    "Simulate Edge Case", ["None", "Missing Ticker", "Ambiguous Timeframe", "Multiple Actions"]
+    "Simulate Edge Case",
+    ["None", "Missing Ticker", "Ambiguous Timeframe", "Multiple Actions"],
 )
 
 # --- Main UI ---
@@ -37,7 +38,10 @@ st.title("🧠 NLP Prompt & LLM Tester")
 st.write("Test PromptProcessor and LLMProcessor with real-time feedback.")
 
 # Input
-query = st.text_area("Enter a natural language query:", "Show me the forecast for AAPL next week using the LSTM model.")
+query = st.text_area(
+    "Enter a natural language query:",
+    "Show me the forecast for AAPL next week using the LSTM model.",
+)
 
 if st.button("Process Query"):
     # --- PromptProcessor ---
@@ -55,7 +59,14 @@ if st.button("Process Query"):
     if hasattr(processor, "classify_intent"):
         intent = processor.classify_intent(query)
     # --- LLMProcessor ---
-    llm = LLMProcessor({"model": model, "temperature": temperature, "moderation": moderation, "max_tokens": 512})
+    llm = LLMProcessor(
+        {
+            "model": model,
+            "temperature": temperature,
+            "moderation": moderation,
+            "max_tokens": 512,
+        }
+    )
     # Standard response
     try:
         response = llm.process(query)

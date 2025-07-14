@@ -37,17 +37,29 @@ class CommentaryService:
         self.logger = logging.getLogger(__name__)
 
         # Initialize components
-        self.commentary_engine = create_commentary_engine(self.config.get("engine_config", {}))
-        self.commentary_agent = create_commentary_agent(self.config.get("agent_config", {}))
+        self.commentary_engine = create_commentary_engine(
+            self.config.get("engine_config", {})
+        )
+        self.commentary_agent = create_commentary_agent(
+            self.config.get("agent_config", {})
+        )
         self.memory = AgentMemory()
 
         # Service statistics
-        self.stats = {"total_requests": 0, "successful_requests": 0, "failed_requests": 0, "commentary_types": {}}
+        self.stats = {
+            "total_requests": 0,
+            "successful_requests": 0,
+            "failed_requests": 0,
+            "commentary_types": {},
+        }
 
         self.logger.info("CommentaryService initialized successfully")
 
     async def explain_trade(
-        self, symbol: str, trade_data: Dict[str, Any], market_data: Optional[pd.DataFrame] = None
+        self,
+        symbol: str,
+        trade_data: Dict[str, Any],
+        market_data: Optional[pd.DataFrame] = None,
     ) -> Dict[str, Any]:
         """
         Explain a trading decision.
@@ -62,7 +74,9 @@ class CommentaryService:
         """
         try:
             self.stats["total_requests"] += 1
-            self.stats["commentary_types"]["trade"] = self.stats["commentary_types"].get("trade", 0) + 1
+            self.stats["commentary_types"]["trade"] = (
+                self.stats["commentary_types"].get("trade", 0) + 1
+            )
 
             request = CommentaryRequest(
                 commentary_type=CommentaryType.TRADE_EXPLANATION,
@@ -95,7 +109,9 @@ class CommentaryService:
                 "timestamp": datetime.now().isoformat(),
             }
 
-    async def analyze_performance(self, symbol: str, performance_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def analyze_performance(
+        self, symbol: str, performance_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Analyze trading performance.
 
@@ -108,7 +124,9 @@ class CommentaryService:
         """
         try:
             self.stats["total_requests"] += 1
-            self.stats["commentary_types"]["performance"] = self.stats["commentary_types"].get("performance", 0) + 1
+            self.stats["commentary_types"]["performance"] = (
+                self.stats["commentary_types"].get("performance", 0) + 1
+            )
 
             request = CommentaryRequest(
                 commentary_type=CommentaryType.PERFORMANCE_ANALYSIS,
@@ -141,7 +159,10 @@ class CommentaryService:
             }
 
     async def assess_risk(
-        self, symbol: str, trade_data: Optional[Dict[str, Any]] = None, portfolio_data: Optional[Dict[str, Any]] = None
+        self,
+        symbol: str,
+        trade_data: Optional[Dict[str, Any]] = None,
+        portfolio_data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Assess trading risks.
@@ -156,7 +177,9 @@ class CommentaryService:
         """
         try:
             self.stats["total_requests"] += 1
-            self.stats["commentary_types"]["risk"] = self.stats["commentary_types"].get("risk", 0) + 1
+            self.stats["commentary_types"]["risk"] = (
+                self.stats["commentary_types"].get("risk", 0) + 1
+            )
 
             request = CommentaryRequest(
                 commentary_type=CommentaryType.RISK_ASSESSMENT,
@@ -190,7 +213,10 @@ class CommentaryService:
             }
 
     async def generate_daily_summary(
-        self, portfolio_data: Dict[str, Any], trades: List[Dict[str, Any]], market_data: Optional[Dict[str, Any]] = None
+        self,
+        portfolio_data: Dict[str, Any],
+        trades: List[Dict[str, Any]],
+        market_data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Generate daily trading summary.
@@ -205,7 +231,9 @@ class CommentaryService:
         """
         try:
             self.stats["total_requests"] += 1
-            self.stats["commentary_types"]["daily"] = self.stats["commentary_types"].get("daily", 0) + 1
+            self.stats["commentary_types"]["daily"] = (
+                self.stats["commentary_types"].get("daily", 0) + 1
+            )
 
             request = CommentaryRequest(
                 commentary_type=CommentaryType.DAILY_SUMMARY,
@@ -245,7 +273,10 @@ class CommentaryService:
         return {
             "service_stats": self.stats,
             "engine_stats": engine_stats,
-            "success_rate": (self.stats["successful_requests"] / max(self.stats["total_requests"], 1)) * 100,
+            "success_rate": (
+                self.stats["successful_requests"] / max(self.stats["total_requests"], 1)
+            )
+            * 100,
             "total_commentaries": engine_stats.get("total_commentaries", 0),
         }
 
@@ -266,6 +297,8 @@ class CommentaryService:
 # Convenience function for creating commentary service
 
 
-def create_commentary_service(config: Optional[Dict[str, Any]] = None) -> CommentaryService:
+def create_commentary_service(
+    config: Optional[Dict[str, Any]] = None
+) -> CommentaryService:
     """Create a configured commentary service."""
     return CommentaryService(config)

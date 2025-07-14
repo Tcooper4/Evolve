@@ -66,7 +66,10 @@ class AutomationCore:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "automation.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "automation.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def setup_cache(self):
@@ -76,7 +79,10 @@ class AutomationCore:
     def setup_redis(self):
         """Setup Redis connection."""
         self.redis = redis.Redis(
-            host=self.config.redis_host, port=self.config.redis_port, db=self.config.redis_db, decode_responses=True
+            host=self.config.redis_host,
+            port=self.config.redis_port,
+            db=self.config.redis_db,
+            decode_responses=True,
         )
 
     def setup_task_manager(self):
@@ -143,7 +149,11 @@ class AutomationCore:
         try:
             async with self.lock:
                 task = await self.task_manager.update_task(
-                    task_id=task_id, status=status, priority=priority, parameters=parameters, metadata=metadata
+                    task_id=task_id,
+                    status=status,
+                    priority=priority,
+                    parameters=parameters,
+                    metadata=metadata,
                 )
                 if task:
                     # Update cache
@@ -168,7 +178,9 @@ class AutomationCore:
                 except Exception as e:
                     if attempt == self.config.max_retries - 1:
                         raise
-                    logger.warning(f"Task {task_id} attempt {attempt + 1} failed: {str(e)}")
+                    logger.warning(
+                        f"Task {task_id} attempt {attempt + 1} failed: {str(e)}"
+                    )
                     await asyncio.sleep(2**attempt)  # Exponential backoff
 
             return False

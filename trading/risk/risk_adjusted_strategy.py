@@ -12,7 +12,10 @@ from trading.risk_analyzer import RiskAnalyzer
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("trading/risk/logs/risk_strategy.log"), logging.StreamHandler()],
+    handlers=[
+        logging.FileHandler("trading/risk/logs/risk_strategy.log"),
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -44,7 +47,11 @@ class PositionAdjustment:
 class RiskAdjustedStrategy:
     """Strategy with dynamic risk-based adjustments."""
 
-    def __init__(self, config: Optional[StrategyConfig] = None, risk_analyzer: Optional[RiskAnalyzer] = None):
+    def __init__(
+        self,
+        config: Optional[StrategyConfig] = None,
+        risk_analyzer: Optional[RiskAnalyzer] = None,
+    ):
         """Initialize risk-adjusted strategy.
 
         Args:
@@ -76,13 +83,17 @@ class RiskAdjustedStrategy:
             PositionAdjustment object
         """
         # Get risk assessment
-        assessment = self.risk_analyzer.analyze_risk(returns, forecast_confidence, historical_error)
+        assessment = self.risk_analyzer.analyze_risk(
+            returns, forecast_confidence, historical_error
+        )
 
         # Calculate risk score
         risk_score = assessment.forecast_risk_score
 
         # Calculate adjustments
-        adjustments = self._calculate_adjustments(assessment, current_position_size, current_signal)
+        adjustments = self._calculate_adjustments(
+            assessment, current_position_size, current_signal
+        )
 
         # Check for fallback mode
         fallback_mode = risk_score > self.config.fallback_threshold
@@ -100,7 +111,10 @@ class RiskAdjustedStrategy:
         return adjustment
 
     def _calculate_adjustments(
-        self, assessment: "RiskAssessment", current_position_size: float, current_signal: float
+        self,
+        assessment: "RiskAssessment",
+        current_position_size: float,
+        current_signal: float,
     ) -> Dict[str, float]:
         """Calculate position adjustments.
 
@@ -128,10 +142,15 @@ class RiskAdjustedStrategy:
         )
 
         # Calculate new position size
-        new_position_size = current_position_size * adjustment * self.config.base_position_size
+        new_position_size = (
+            current_position_size * adjustment * self.config.base_position_size
+        )
 
         # Apply limits
-        new_position_size = min(max(new_position_size, self.config.min_position_size), self.config.max_position_size)
+        new_position_size = min(
+            max(new_position_size, self.config.min_position_size),
+            self.config.max_position_size,
+        )
 
         # Adjust signal threshold based on risk
         signal_threshold = 0.5 * (1 + assessment.forecast_risk_score)
@@ -168,7 +187,10 @@ class RiskAdjustedStrategy:
             True if trade should be entered
         """
         if adjustment.fallback_mode:
-            return abs(signal) > adjustment.signal_threshold and adjustment.risk_score < self.config.fallback_threshold
+            return (
+                abs(signal) > adjustment.signal_threshold
+                and adjustment.risk_score < self.config.fallback_threshold
+            )
         else:
             return abs(signal) > adjustment.signal_threshold
 

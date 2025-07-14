@@ -196,13 +196,19 @@ class AgentRegistry:
             try:
                 fallback_agent = strategy(name, **kwargs)
                 if fallback_agent is not None:
-                    logger.info(f"Successfully created fallback agent for '{name}' using {strategy.__name__}")
+                    logger.info(
+                        f"Successfully created fallback agent for '{name}' using {strategy.__name__}"
+                    )
                     return fallback_agent
             except Exception as e:
-                logger.debug(f"Fallback strategy {strategy.__name__} failed for '{name}': {e}")
+                logger.debug(
+                    f"Fallback strategy {strategy.__name__} failed for '{name}': {e}"
+                )
                 continue
 
-        logger.error(f"No fallback available for agent '{name}' - all strategies failed")
+        logger.error(
+            f"No fallback available for agent '{name}' - all strategies failed"
+        )
         return None
 
     def _try_base_agent_fallback(self, name: str, **kwargs) -> Optional[Any]:
@@ -256,7 +262,11 @@ class AgentRegistry:
         matching_agents = []
 
         for name, metadata in self.metadata.items():
-            if query in name or query in metadata.description.lower() or query in metadata.class_name.lower():
+            if (
+                query in name
+                or query in metadata.description.lower()
+                or query in metadata.class_name.lower()
+            ):
                 matching_agents.append(name)
 
         return matching_agents
@@ -383,7 +393,9 @@ def _populate_all_agents():
     registry = get_registry()
     for agent_name in registry.list_agents():
         if agent_name not in ALL_AGENTS:
-            ALL_AGENTS[agent_name] = lambda name=agent_name, **kwargs: get_agent(name, **kwargs)
+            ALL_AGENTS[agent_name] = lambda name=agent_name, **kwargs: get_agent(
+                name, **kwargs
+            )
 
 
 # Initialize ALL_AGENTS when module is imported

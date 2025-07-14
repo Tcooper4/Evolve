@@ -120,7 +120,9 @@ class TestRealWorldScenario(unittest.TestCase):
 
             except Exception as e:
                 task.status = TaskStatus.FAILED
-                task.metadata.update({"error": str(e), "completion_time": datetime.now().isoformat()})
+                task.metadata.update(
+                    {"error": str(e), "completion_time": datetime.now().isoformat()}
+                )
 
             self.task_memory.update_task(task)
 
@@ -137,7 +139,11 @@ class TestRealWorldScenario(unittest.TestCase):
                 task_id=task_id,
                 type="forecast",
                 status=TaskStatus.PENDING,
-                metadata={"agent": "forecast_agent", "creation_time": datetime.now().isoformat(), "forecast_id": i},
+                metadata={
+                    "agent": "forecast_agent",
+                    "creation_time": datetime.now().isoformat(),
+                    "forecast_id": i,
+                },
                 notes=f"Generating forecast {i}",
             )
             self.task_memory.add_task(task)
@@ -160,7 +166,9 @@ class TestRealWorldScenario(unittest.TestCase):
 
             except Exception as e:
                 task.status = TaskStatus.FAILED
-                task.metadata.update({"error": str(e), "completion_time": datetime.now().isoformat()})
+                task.metadata.update(
+                    {"error": str(e), "completion_time": datetime.now().isoformat()}
+                )
 
             self.task_memory.update_task(task)
 
@@ -205,7 +213,9 @@ class TestRealWorldScenario(unittest.TestCase):
 
             except Exception as e:
                 task.status = TaskStatus.FAILED
-                task.metadata.update({"error": str(e), "completion_time": datetime.now().isoformat()})
+                task.metadata.update(
+                    {"error": str(e), "completion_time": datetime.now().isoformat()}
+                )
 
             self.task_memory.update_task(task)
 
@@ -218,7 +228,10 @@ class TestRealWorldScenario(unittest.TestCase):
             task_id=task_id,
             type="performance_analysis",
             status=TaskStatus.PENDING,
-            metadata={"agent": "analysis_agent", "creation_time": datetime.now().isoformat()},
+            metadata={
+                "agent": "analysis_agent",
+                "creation_time": datetime.now().isoformat(),
+            },
             notes="Analyzing system performance",
         )
         self.task_memory.add_task(task)
@@ -238,7 +251,9 @@ class TestRealWorldScenario(unittest.TestCase):
 
         except Exception as e:
             task.status = TaskStatus.FAILED
-            task.metadata.update({"error": str(e), "completion_time": datetime.now().isoformat()})
+            task.metadata.update(
+                {"error": str(e), "completion_time": datetime.now().isoformat()}
+            )
 
         self.task_memory.update_task(task)
         return [task]
@@ -250,7 +265,10 @@ class TestRealWorldScenario(unittest.TestCase):
             task_id=task_id,
             type="self_improvement",
             status=TaskStatus.PENDING,
-            metadata={"agent": "self_improving_agent", "creation_time": datetime.now().isoformat()},
+            metadata={
+                "agent": "self_improving_agent",
+                "creation_time": datetime.now().isoformat(),
+            },
             notes="Running self-improvement cycle",
         )
         self.task_memory.add_task(task)
@@ -270,7 +288,9 @@ class TestRealWorldScenario(unittest.TestCase):
 
         except Exception as e:
             task.status = TaskStatus.FAILED
-            task.metadata.update({"error": str(e), "completion_time": datetime.now().isoformat()})
+            task.metadata.update(
+                {"error": str(e), "completion_time": datetime.now().isoformat()}
+            )
 
         self.task_memory.update_task(task)
         return [task]

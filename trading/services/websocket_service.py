@@ -65,7 +65,9 @@ class WebSocketService:
             },
         )
 
-        logger.info(f"WebSocket connection established. Total connections: {len(self.active_connections)}")
+        logger.info(
+            f"WebSocket connection established. Total connections: {len(self.active_connections)}"
+        )
 
     async def disconnect(self, websocket: WebSocket) -> None:
         """Handle WebSocket disconnection."""
@@ -73,9 +75,13 @@ class WebSocketService:
         if websocket in self.connection_subscriptions:
             del self.connection_subscriptions[websocket]
 
-        logger.info(f"WebSocket connection closed. Total connections: {len(self.active_connections)}")
+        logger.info(
+            f"WebSocket connection closed. Total connections: {len(self.active_connections)}"
+        )
 
-    async def send_personal_message(self, websocket: WebSocket, message: Dict[str, Any]) -> None:
+    async def send_personal_message(
+        self, websocket: WebSocket, message: Dict[str, Any]
+    ) -> None:
         """Send message to specific WebSocket connection."""
         try:
             await websocket.send_text(json.dumps(message))
@@ -83,7 +89,9 @@ class WebSocketService:
             logger.error(f"Error sending personal message: {str(e)}")
             await self.disconnect(websocket)
 
-    async def broadcast(self, message: Dict[str, Any], message_type: str = None) -> None:
+    async def broadcast(
+        self, message: Dict[str, Any], message_type: str = None
+    ) -> None:
         """Broadcast message to all connected clients."""
         if message_type:
             message["type"] = message_type
@@ -102,7 +110,9 @@ class WebSocketService:
         for connection in disconnected:
             await self.disconnect(connection)
 
-    async def broadcast_to_subscribers(self, message: Dict[str, Any], message_type: str) -> None:
+    async def broadcast_to_subscribers(
+        self, message: Dict[str, Any], message_type: str
+    ) -> None:
         """Broadcast message to subscribers of specific message type."""
         message["type"] = message_type
         message["timestamp"] = datetime.now().isoformat()
@@ -144,7 +154,11 @@ class WebSocketService:
         except json.JSONDecodeError:
             await self.send_personal_message(
                 websocket,
-                {"type": "error", "data": {"message": "Invalid JSON format"}, "timestamp": datetime.now().isoformat()},
+                {
+                    "type": "error",
+                    "data": {"message": "Invalid JSON format"},
+                    "timestamp": datetime.now().isoformat(),
+                },
             )
         except Exception as e:
             logger.error(f"Error handling WebSocket message: {str(e)}")
@@ -157,7 +171,9 @@ class WebSocketService:
                 },
             )
 
-    async def _handle_agent_status(self, websocket: WebSocket, data: Dict[str, Any]) -> None:
+    async def _handle_agent_status(
+        self, websocket: WebSocket, data: Dict[str, Any]
+    ) -> None:
         """Handle agent status request."""
         agent_id = data.get("data", {}).get("agent_id")
 
@@ -206,10 +222,16 @@ class WebSocketService:
 
             await self.send_personal_message(
                 websocket,
-                {"type": "agent_status", "data": {"agents": agent_statuses}, "timestamp": datetime.now().isoformat()},
+                {
+                    "type": "agent_status",
+                    "data": {"agents": agent_statuses},
+                    "timestamp": datetime.now().isoformat(),
+                },
             )
 
-    async def _handle_agent_metrics(self, websocket: WebSocket, data: Dict[str, Any]) -> None:
+    async def _handle_agent_metrics(
+        self, websocket: WebSocket, data: Dict[str, Any]
+    ) -> None:
         """Handle agent metrics request."""
         agent_id = data.get("data", {}).get("agent_id")
 
@@ -230,12 +252,16 @@ class WebSocketService:
                     websocket,
                     {
                         "type": "error",
-                        "data": {"message": f"Agent not found or no metrics available: {agent_id}"},
+                        "data": {
+                            "message": f"Agent not found or no metrics available: {agent_id}"
+                        },
                         "timestamp": datetime.now().isoformat(),
                     },
                 )
 
-    async def _handle_agent_execution(self, websocket: WebSocket, data: Dict[str, Any]) -> None:
+    async def _handle_agent_execution(
+        self, websocket: WebSocket, data: Dict[str, Any]
+    ) -> None:
         """Handle agent execution request."""
         agent_id = data.get("data", {}).get("agent_id")
         task_data = data.get("data", {}).get("task_data", {})
@@ -250,7 +276,11 @@ class WebSocketService:
                         websocket,
                         {
                             "type": "agent_execution",
-                            "data": {"agent_id": agent_id, "result": result, "status": "completed"},
+                            "data": {
+                                "agent_id": agent_id,
+                                "result": result,
+                                "status": "completed",
+                            },
                             "timestamp": datetime.now().isoformat(),
                         },
                     )
@@ -259,7 +289,11 @@ class WebSocketService:
                         websocket,
                         {
                             "type": "agent_execution",
-                            "data": {"agent_id": agent_id, "error": str(e), "status": "failed"},
+                            "data": {
+                                "agent_id": agent_id,
+                                "error": str(e),
+                                "status": "failed",
+                            },
                             "timestamp": datetime.now().isoformat(),
                         },
                     )
@@ -273,7 +307,9 @@ class WebSocketService:
                     },
                 )
 
-    async def _handle_system_status(self, websocket: WebSocket, data: Dict[str, Any]) -> None:
+    async def _handle_system_status(
+        self, websocket: WebSocket, data: Dict[str, Any]
+    ) -> None:
         """Handle system status request."""
         agents = self.agent_manager.get_all_agents()
         active_agents = [a for a in agents.values() if a.status == "active"]
@@ -292,7 +328,9 @@ class WebSocketService:
             },
         )
 
-    async def _handle_subscribe(self, websocket: WebSocket, data: Dict[str, Any]) -> None:
+    async def _handle_subscribe(
+        self, websocket: WebSocket, data: Dict[str, Any]
+    ) -> None:
         """Handle subscription request."""
         message_types = data.get("data", {}).get("message_types", [])
 
@@ -307,13 +345,17 @@ class WebSocketService:
                 "type": "subscription_confirmed",
                 "data": {
                     "message_types": message_types,
-                    "current_subscriptions": self.connection_subscriptions.get(websocket, []),
+                    "current_subscriptions": self.connection_subscriptions.get(
+                        websocket, []
+                    ),
                 },
                 "timestamp": datetime.now().isoformat(),
             },
         )
 
-    async def _handle_unsubscribe(self, websocket: WebSocket, data: Dict[str, Any]) -> None:
+    async def _handle_unsubscribe(
+        self, websocket: WebSocket, data: Dict[str, Any]
+    ) -> None:
         """Handle unsubscription request."""
         message_types = data.get("data", {}).get("message_types", [])
 
@@ -328,13 +370,17 @@ class WebSocketService:
                 "type": "unsubscription_confirmed",
                 "data": {
                     "message_types": message_types,
-                    "current_subscriptions": self.connection_subscriptions.get(websocket, []),
+                    "current_subscriptions": self.connection_subscriptions.get(
+                        websocket, []
+                    ),
                 },
                 "timestamp": datetime.now().isoformat(),
             },
         )
 
-    async def broadcast_agent_update(self, agent_id: str, update_type: str, data: Dict[str, Any]) -> None:
+    async def broadcast_agent_update(
+        self, agent_id: str, update_type: str, data: Dict[str, Any]
+    ) -> None:
         """Broadcast agent update to subscribers."""
         message = {
             "type": f"agent_{update_type}",
@@ -344,9 +390,15 @@ class WebSocketService:
 
         await self.broadcast_to_subscribers(message, f"agent_{update_type}")
 
-    async def broadcast_system_update(self, update_type: str, data: Dict[str, Any]) -> None:
+    async def broadcast_system_update(
+        self, update_type: str, data: Dict[str, Any]
+    ) -> None:
         """Broadcast system update to subscribers."""
-        message = {"type": f"system_{update_type}", "data": data, "timestamp": datetime.now().isoformat()}
+        message = {
+            "type": f"system_{update_type}",
+            "data": data,
+            "timestamp": datetime.now().isoformat(),
+        }
 
         await self.broadcast_to_subscribers(message, f"system_{update_type}")
 
@@ -355,7 +407,11 @@ class WebSocketService:
         return {
             "total_connections": len(self.active_connections),
             "subscription_counts": {
-                msg_type: sum(1 for subs in self.connection_subscriptions.values() if msg_type in subs)
+                msg_type: sum(
+                    1
+                    for subs in self.connection_subscriptions.values()
+                    if msg_type in subs
+                )
                 for msg_type in self.message_types.keys()
             },
             "timestamp": datetime.now().isoformat(),

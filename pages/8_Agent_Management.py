@@ -22,20 +22,31 @@ def main():
         # Agent type selection
         agent_type = st.selectbox(
             "Agent Type",
-            ["All", "Trading Agent", "Analysis Agent", "Risk Agent", "Execution Agent", "ML Agent", "Custom Agent"],
+            [
+                "All",
+                "Trading Agent",
+                "Analysis Agent",
+                "Risk Agent",
+                "Execution Agent",
+                "ML Agent",
+                "Custom Agent",
+            ],
         )
 
         # Agent status
-        agent_status = st.selectbox("Status", ["All", "Active", "Inactive", "Training", "Testing", "Maintenance"])
+        st.selectbox(
+            "Status",
+            ["All", "Active", "Inactive", "Training", "Testing", "Maintenance"],
+        )
 
         # Performance filter
-        min_performance = st.slider("Min Performance Score", 0.0, 1.0, 0.5)
+        st.slider("Min Performance Score", 0.0, 1.0, 0.5)
 
         # Actions
         st.subheader("Actions")
         create_agent = st.button("➕ Create New Agent", type="primary")
-        deploy_agents = st.button("🚀 Deploy Selected")
-        stop_agents = st.button("⏹️ Stop Selected")
+        st.button("🚀 Deploy Selected")
+        st.button("⏹️ Stop Selected")
 
         # Agent monitoring
         st.subheader("Monitoring")
@@ -49,7 +60,9 @@ def main():
 
     # Agent table
     st.subheader("📋 Agent List")
-    st.warning("No agents available. Please connect to a real agent database or service.")
+    st.warning(
+        "No agents available. Please connect to a real agent database or service."
+    )
 
     # Agent creation form
     if create_agent:
@@ -63,22 +76,43 @@ def main():
                 agent_name = st.text_input("Agent Name")
                 agent_type_new = st.selectbox(
                     "Agent Type",
-                    ["Trading Agent", "Analysis Agent", "Risk Agent", "Execution Agent", "ML Agent", "Custom Agent"],
+                    [
+                        "Trading Agent",
+                        "Analysis Agent",
+                        "Risk Agent",
+                        "Execution Agent",
+                        "ML Agent",
+                        "Custom Agent",
+                    ],
                 )
                 agent_strategy = st.selectbox(
-                    "Strategy", ["Bollinger Bands", "Moving Average", "RSI", "MACD", "Custom Strategy", "ML Strategy"]
+                    "Strategy",
+                    [
+                        "Bollinger Bands",
+                        "Moving Average",
+                        "RSI",
+                        "MACD",
+                        "Custom Strategy",
+                        "ML Strategy",
+                    ],
                 )
 
             with col2:
-                initial_balance = st.number_input("Initial Balance", value=100000, step=10000)
-                risk_tolerance = st.select_slider("Risk Tolerance", options=["Conservative", "Moderate", "Aggressive"])
+                initial_balance = st.number_input(
+                    "Initial Balance", value=100000, step=10000
+                )
+                risk_tolerance = st.select_slider(
+                    "Risk Tolerance", options=["Conservative", "Moderate", "Aggressive"]
+                )
                 auto_trading = st.checkbox("Enable Auto Trading", value=False)
 
             submitted = st.form_submit_button("Create Agent")
 
             if submitted:
                 if agent_name:
-                    st.success(f"Agent '{agent_name}' creation requested. Please implement real agent creation.")
+                    st.success(
+                        f"Agent '{agent_name}' creation requested. Please implement real agent creation."
+                    )
                 else:
                     st.error("Please provide an agent name.")
 

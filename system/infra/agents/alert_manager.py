@@ -2,11 +2,8 @@ import datetime
 import json
 import logging
 import os
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from pathlib import Path
-from typing import Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 
@@ -68,14 +65,24 @@ class AlertManager:
         email_config = config.get("alerts", {}).get("email", {})
 
         # SMTP settings
-        email_config["smtp_server"] = os.getenv("SMTP_HOST", email_config.get("smtp_server", "smtp.gmail.com"))
-        email_config["smtp_port"] = int(os.getenv("SMTP_PORT", email_config.get("smtp_port", 587)))
+        email_config["smtp_server"] = os.getenv(
+            "SMTP_HOST", email_config.get("smtp_server", "smtp.gmail.com")
+        )
+        email_config["smtp_port"] = int(
+            os.getenv("SMTP_PORT", email_config.get("smtp_port", 587))
+        )
         email_config["use_tls"] = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
 
         # Email credentials
-        email_config["sender_email"] = os.getenv("EMAIL_SENDER", email_config.get("sender_email", ""))
-        email_config["recipient_email"] = os.getenv("EMAIL_RECIPIENT", email_config.get("recipient_email", ""))
-        email_config["password"] = os.getenv("EMAIL_PASSWORD", email_config.get("password", ""))
+        email_config["sender_email"] = os.getenv(
+            "EMAIL_SENDER", email_config.get("sender_email", "")
+        )
+        email_config["recipient_email"] = os.getenv(
+            "EMAIL_RECIPIENT", email_config.get("recipient_email", "")
+        )
+        email_config["password"] = os.getenv(
+            "EMAIL_PASSWORD", email_config.get("password", "")
+        )
 
         # Update config with environment overrides
         if "alerts" not in config:
@@ -88,7 +95,9 @@ class AlertManager:
         """Setup logging for alert system."""
         log_config = self.config["logging"]
         logging.basicConfig(
-            level=getattr(logging, log_config["level"]), format=log_config["format"], filename=log_config["file"]
+            level=getattr(logging, log_config["level"]),
+            format=log_config["format"],
+            filename=log_config["file"],
         )
         self.logger = logging.getLogger("AlertManager")
 
@@ -97,7 +106,9 @@ class AlertManager:
         email_config = self.config.get("alerts", {}).get("email", {})
 
         required_fields = ["smtp_server", "smtp_port", "sender_email", "password"]
-        missing_fields = [field for field in required_fields if not email_config.get(field)]
+        missing_fields = [
+            field for field in required_fields if not email_config.get(field)
+        ]
 
         if missing_fields:
             self.logger.warning(f"Missing email configuration fields: {missing_fields}")
@@ -106,13 +117,19 @@ class AlertManager:
         return True
 
     def send_alert(
-        self, subject: str, message: str, alert_type: str = "info", recipients: Optional[List[str]] = None
+        self,
+        subject: str,
+        message: str,
+        alert_type: str = "info",
+        recipients: Optional[List[str]] = None,
     ) -> bool:
         """Send an alert via email."""
         try:
             # Validate email configuration
             if not self._validate_email_config():
-                self.logger.error("Email configuration is incomplete. Cannot send alert.")
+                self.logger.error(
+                    "Email configuration is incomplete. Cannot send alert."
+                )
                 return False
 
             email_config = self.config["alerts"]["email"]
@@ -134,7 +151,9 @@ class AlertManager:
 
             # Send email with proper error handling
             try:
-                with smtplib.SMTP(email_config["smtp_server"], email_config["smtp_port"]) as server:
+                with smtplib.SMTP(
+                    email_config["smtp_server"], email_config["smtp_port"]
+                ) as server:
                     if email_config.get("use_tls", True):
                         server.starttls()
 
@@ -146,7 +165,9 @@ class AlertManager:
                 return True
 
             except smtplib.SMTPAuthenticationError:
-                self.logger.error("SMTP authentication failed. Check email credentials.")
+                self.logger.error(
+                    "SMTP authentication failed. Check email credentials."
+                )
                 return False
             except smtplib.SMTPConnectError:
                 self.logger.error(
@@ -161,7 +182,9 @@ class AlertManager:
             self.logger.error(f"Failed to send alert: {str(e)}")
             return False
 
-    def check_model_performance(self, model_name: str, metrics: Dict[str, float]) -> bool:
+    def check_model_performance(
+        self, model_name: str, metrics: Dict[str, float]
+    ) -> bool:
         """Check if model performance meets thresholds."""
         thresholds = self.config["alerts"]["thresholds"]
 
@@ -174,7 +197,9 @@ class AlertManager:
             return False
         return True
 
-    def check_prediction_confidence(self, model_name: str, confidence: float, prediction: float) -> bool:
+    def check_prediction_confidence(
+        self, model_name: str, confidence: float, prediction: float
+    ) -> bool:
         """Check if prediction confidence meets threshold."""
         thresholds = self.config["alerts"]["thresholds"]
 
@@ -187,9 +212,13 @@ class AlertManager:
             return False
         return True
 
-    def send_system_alert(self, component: str, message: str, alert_type: str = "error") -> None:
+    def send_system_alert(
+        self, component: str, message: str, alert_type: str = "error"
+    ) -> None:
         """Send a system-level alert."""
-        self.send_alert(subject=f"System Alert: {component}", message=message, alert_type=alert_type)
+        self.send_alert(
+            subject=f"System Alert: {component}", message=message, alert_type=alert_type
+        )
 
     def send_backup_alert(self, backup_path: str, success: bool, message: str) -> None:
         """Send a backup-related alert."""
@@ -227,7 +256,11 @@ class AlertManager:
                 # Create default settings
                 default_settings = {
                     "strategy_alerts": {
-                        "default": {"email_alerts": True, "telegram_alerts": True, "slack_alerts": False}
+                        "default": {
+                            "email_alerts": True,
+                            "telegram_alerts": True,
+                            "slack_alerts": False,
+                        }
                     }
                 }
                 with open(settings_path, "w") as f:
@@ -235,7 +268,13 @@ class AlertManager:
                 return default_settings["strategy_alerts"]
         except Exception as e:
             self.logger.error(f"Failed to load strategy alerts: {e}")
-            return {"default": {"email_alerts": True, "telegram_alerts": True, "slack_alerts": False}}
+            return {
+                "default": {
+                    "email_alerts": True,
+                    "telegram_alerts": True,
+                    "slack_alerts": False,
+                }
+            }
 
     def _save_strategy_alerts(self):
         """Save strategy-specific alert settings."""
@@ -255,7 +294,9 @@ class AlertManager:
         except Exception as e:
             self.logger.error(f"Failed to save strategy alerts: {e}")
 
-    def update_strategy_alerts(self, strategy_name: str, alert_settings: Dict[str, bool]):
+    def update_strategy_alerts(
+        self, strategy_name: str, alert_settings: Dict[str, bool]
+    ):
         """Update alert settings for a specific strategy.
 
         Args:
@@ -277,7 +318,9 @@ class AlertManager:
             True if alert is enabled, False otherwise
         """
         # Get strategy settings, fallback to default
-        strategy_settings = self.strategy_alerts.get(strategy_name, self.strategy_alerts.get("default", {}))
+        strategy_settings = self.strategy_alerts.get(
+            strategy_name, self.strategy_alerts.get("default", {})
+        )
         return strategy_settings.get(alert_type, True)
 
     def send_multi_channel_alert(
@@ -315,7 +358,9 @@ class AlertManager:
             and self.telegram_alerts
             and self.telegram_alerts.enabled
         ):
-            results["telegram"] = self.telegram_alerts.send_alert(subject, message, alert_type)
+            results["telegram"] = self.telegram_alerts.send_alert(
+                subject, message, alert_type
+            )
         else:
             results["telegram"] = False
             self.logger.debug(f"Telegram alerts disabled for strategy: {strategy_name}")
@@ -335,4 +380,6 @@ if __name__ == "__main__":
     alert_manager = AlertManager()
 
     # Send a test alert
-    alert_manager.send_alert(subject="Test Alert", message="This is a test alert message.", alert_type="info")
+    alert_manager.send_alert(
+        subject="Test Alert", message="This is a test alert message.", alert_type="info"
+    )

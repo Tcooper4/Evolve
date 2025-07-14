@@ -8,10 +8,7 @@ import streamlit as st
 
 from trading.risk.risk_analyzer import RiskAnalyzer
 from trading.risk.risk_logger import RiskLogger
-from trading.risk.risk_metrics import (
-    plot_drawdown_heatmap,
-    plot_risk_metrics,
-)
+from trading.risk.risk_metrics import plot_drawdown_heatmap, plot_risk_metrics
 
 # Page config
 st.set_page_config(page_title="Risk Dashboard", page_icon="📊", layout="wide")
@@ -24,13 +21,19 @@ risk_logger = RiskLogger()
 st.sidebar.title("Risk Dashboard Settings")
 
 # Time range selection
-time_range = st.sidebar.selectbox("Time Range", ["1D", "1W", "1M", "3M", "6M", "1Y", "All"], index=2)
+time_range = st.sidebar.selectbox(
+    "Time Range", ["1D", "1W", "1M", "3M", "6M", "1Y", "All"], index=2
+)
 
 # Model selection
-model_name = st.sidebar.selectbox("Model", ["All Models", "Model 1", "Model 2", "Model 3"])
+model_name = st.sidebar.selectbox(
+    "Model", ["All Models", "Model 1", "Model 2", "Model 3"]
+)
 
 # Metric frequency
-frequency = st.sidebar.selectbox("Metric Frequency", ["Daily", "Weekly", "Monthly"], index=0)
+frequency = st.sidebar.selectbox(
+    "Metric Frequency", ["Daily", "Weekly", "Monthly"], index=0
+)
 
 # Main content
 st.title("Risk Dashboard")
@@ -52,7 +55,9 @@ def load_metrics():
         for date in dates:
             # Generate realistic risk metrics with some correlation
             base_volatility = np.random.uniform(0.15, 0.25)  # 15-25% volatility
-            market_regime = np.random.choice(["bull", "bear", "sideways"], p=[0.4, 0.2, 0.4])
+            market_regime = np.random.choice(
+                ["bull", "bear", "sideways"], p=[0.4, 0.2, 0.4]
+            )
 
             # Adjust metrics based on market regime
             if market_regime == "bull":
@@ -123,7 +128,9 @@ if not metrics_df.empty and "metrics" in metrics_df.columns:
             # Add timestamp
             metrics["timestamp"] = row.get("timestamp")
             # Add to flattened dataframe
-            flattened_df = pd.concat([flattened_df, pd.DataFrame([metrics])], ignore_index=True)
+            flattened_df = pd.concat(
+                [flattened_df, pd.DataFrame([metrics])], ignore_index=True
+            )
 
     # Use flattened dataframe for plotting
     plot_df = flattened_df
@@ -185,7 +192,9 @@ with tab2:
                 st.subheader("Current Regime")
                 st.write(f"**Regime:** {latest_assessment.regime}")
                 st.write(f"**Risk Level:** {latest_assessment.risk_level}")
-                st.write(f"**Forecast Risk Score:** {latest_assessment.forecast_risk_score:.2f}")
+                st.write(
+                    f"**Forecast Risk Score:** {latest_assessment.forecast_risk_score:.2f}"
+                )
 
             with col2:
                 st.subheader("Regime Metrics")
@@ -220,12 +229,19 @@ with tab3:
             with col1:
                 if st.button("Export CSV"):
                     csv = metrics_df.to_csv(index=False)
-                    st.download_button("Download CSV", csv, "risk_metrics.csv", "text/csv")
+                    st.download_button(
+                        "Download CSV", csv, "risk_metrics.csv", "text/csv"
+                    )
 
             with col2:
                 if st.button("Export JSON"):
                     json_str = metrics_df.to_json(orient="records", indent=2)
-                    st.download_button("Download JSON", json_str, "risk_metrics.json", "application/json")
+                    st.download_button(
+                        "Download JSON",
+                        json_str,
+                        "risk_metrics.json",
+                        "application/json",
+                    )
 
             with col3:
                 if st.button("Export Charts"):
@@ -240,4 +256,6 @@ with tab3:
 
 # Footer
 st.markdown("---")
-st.markdown("Risk Dashboard | Last Updated: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+st.markdown(
+    "Risk Dashboard | Last Updated: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+)

@@ -102,24 +102,32 @@ class TestLIMEExplainer:
         for _ in range(5):
             # Reset seed before each run
             np.random.seed(fixed_seed)
-            result = explainer._calculate_feature_importance(mock_model, sample_data, method="lime")
+            result = explainer._calculate_feature_importance(
+                mock_model, sample_data, method="lime"
+            )
             results.append(result)
 
         # All results should be identical with fixed seed
         first_result = results[0]
         for result in results[1:]:
-            assert result == first_result, "LIME explanations should be identical with fixed seed"
+            assert (
+                result == first_result
+            ), "LIME explanations should be identical with fixed seed"
 
         # Check structure
         assert isinstance(first_result, dict)
         assert len(first_result) == len(sample_data.columns)
 
-    def test_explanation_variance_without_seed(self, explainer, mock_model, sample_data):
+    def test_explanation_variance_without_seed(
+        self, explainer, mock_model, sample_data
+    ):
         """Test that LIME explanations vary without fixed seed."""
         # Run LIME explainer multiple times without fixed seed
         results = []
         for _ in range(5):
-            result = explainer._calculate_feature_importance(mock_model, sample_data, method="lime")
+            result = explainer._calculate_feature_importance(
+                mock_model, sample_data, method="lime"
+            )
             results.append(result)
 
         # Results should vary (this is expected behavior for LIME)
@@ -136,7 +144,9 @@ class TestLIMEExplainer:
 
     def test_feature_importance_structure(self, explainer, mock_model, sample_data):
         """Test that LIME feature importance has correct structure."""
-        result = explainer._calculate_feature_importance(mock_model, sample_data, method="lime")
+        result = explainer._calculate_feature_importance(
+            mock_model, sample_data, method="lime"
+        )
 
         # Check structure
         assert isinstance(result, dict)
@@ -158,13 +168,19 @@ class TestLIMEExplainer:
 
         # Test with None model
         with pytest.raises(ValueError, match="Model cannot be None"):
-            explainer._calculate_feature_importance(None, pd.DataFrame({"test": [1]}), method="lime")
+            explainer._calculate_feature_importance(
+                None, pd.DataFrame({"test": [1]}), method="lime"
+            )
 
     def test_single_row_data(self, explainer, mock_model):
         """Test handling of single row data."""
-        single_row_data = pd.DataFrame({"feature1": [1.0], "feature2": [2.0], "feature3": [3.0]})
+        single_row_data = pd.DataFrame(
+            {"feature1": [1.0], "feature2": [2.0], "feature3": [3.0]}
+        )
 
-        result = explainer._calculate_feature_importance(mock_model, single_row_data, method="lime")
+        result = explainer._calculate_feature_importance(
+            mock_model, single_row_data, method="lime"
+        )
 
         assert isinstance(result, dict)
         assert len(result) == len(single_row_data.columns)
@@ -173,10 +189,16 @@ class TestLIMEExplainer:
         """Test handling of large datasets."""
         # Create large dataset
         large_data = pd.DataFrame(
-            {"feature1": np.random.random(1000), "feature2": np.random.random(1000), "feature3": np.random.random(1000)}
+            {
+                "feature1": np.random.random(1000),
+                "feature2": np.random.random(1000),
+                "feature3": np.random.random(1000),
+            }
         )
 
-        result = explainer._calculate_feature_importance(mock_model, large_data, method="lime")
+        result = explainer._calculate_feature_importance(
+            mock_model, large_data, method="lime"
+        )
 
         assert isinstance(result, dict)
         assert len(result) == len(large_data.columns)
@@ -193,7 +215,9 @@ class TestLIMEExplainer:
         )
 
         # Should handle missing values gracefully
-        result = explainer._calculate_feature_importance(mock_model, data_with_nans, method="lime")
+        result = explainer._calculate_feature_importance(
+            mock_model, data_with_nans, method="lime"
+        )
 
         assert isinstance(result, dict)
         assert len(result) == len(data_with_nans.columns)
@@ -202,10 +226,16 @@ class TestLIMEExplainer:
         """Test handling of categorical features."""
         # Create data with categorical features
         categorical_data = pd.DataFrame(
-            {"feature1": ["A", "B", "A", "B"], "feature2": [1.0, 2.0, 3.0, 4.0], "feature3": ["X", "Y", "X", "Y"]}
+            {
+                "feature1": ["A", "B", "A", "B"],
+                "feature2": [1.0, 2.0, 3.0, 4.0],
+                "feature3": ["X", "Y", "X", "Y"],
+            }
         )
 
-        result = explainer._calculate_feature_importance(mock_model, categorical_data, method="lime")
+        result = explainer._calculate_feature_importance(
+            mock_model, categorical_data, method="lime"
+        )
 
         assert isinstance(result, dict)
         assert len(result) == len(categorical_data.columns)
@@ -217,7 +247,9 @@ class TestLIMEExplainer:
         error_model.predict = Mock(side_effect=Exception("Prediction error"))
 
         with pytest.raises(Exception, match="Prediction error"):
-            explainer._calculate_feature_importance(error_model, sample_data, method="lime")
+            explainer._calculate_feature_importance(
+                error_model, sample_data, method="lime"
+            )
 
     def test_data_type_validation(self, explainer, mock_model):
         """Test validation of data types."""
@@ -225,13 +257,17 @@ class TestLIMEExplainer:
         numpy_data = np.random.random((100, 3))
 
         with pytest.raises(ValueError, match="Features must be a pandas DataFrame"):
-            explainer._calculate_feature_importance(mock_model, numpy_data, method="lime")
+            explainer._calculate_feature_importance(
+                mock_model, numpy_data, method="lime"
+            )
 
         # Test with list instead of DataFrame
         list_data = [[1, 2, 3], [4, 5, 6]]
 
         with pytest.raises(ValueError, match="Features must be a pandas DataFrame"):
-            explainer._calculate_feature_importance(mock_model, list_data, method="lime")
+            explainer._calculate_feature_importance(
+                mock_model, list_data, method="lime"
+            )
 
     def test_explanation_consistency(self, explainer, mock_model, sample_data):
         """Test that explanations are consistent across different data subsets."""
@@ -239,8 +275,12 @@ class TestLIMEExplainer:
         subset1 = sample_data.iloc[:50]
         subset2 = sample_data.iloc[50:]
 
-        result1 = explainer._calculate_feature_importance(mock_model, subset1, method="lime")
-        result2 = explainer._calculate_feature_importance(mock_model, subset2, method="lime")
+        result1 = explainer._calculate_feature_importance(
+            mock_model, subset1, method="lime"
+        )
+        result2 = explainer._calculate_feature_importance(
+            mock_model, subset2, method="lime"
+        )
 
         # Both should have same structure
         assert isinstance(result1, dict)
@@ -250,7 +290,9 @@ class TestLIMEExplainer:
 
     def test_feature_importance_bounds(self, explainer, mock_model, sample_data):
         """Test that feature importance values are within reasonable bounds."""
-        result = explainer._calculate_feature_importance(mock_model, sample_data, method="lime")
+        result = explainer._calculate_feature_importance(
+            mock_model, sample_data, method="lime"
+        )
 
         for feature, importance in result.items():
             # Importance should be finite
@@ -265,7 +307,9 @@ class TestLIMEExplainer:
 
         # Time the explanation
         start_time = time.time()
-        result = explainer._calculate_feature_importance(mock_model, sample_data, method="lime")
+        result = explainer._calculate_feature_importance(
+            mock_model, sample_data, method="lime"
+        )
         end_time = time.time()
 
         execution_time = end_time - start_time
@@ -288,11 +332,17 @@ class TestLIMEExplainer:
 
         # Create large dataset
         large_data = pd.DataFrame(
-            {"feature1": np.random.random(2000), "feature2": np.random.random(2000), "feature3": np.random.random(2000)}
+            {
+                "feature1": np.random.random(2000),
+                "feature2": np.random.random(2000),
+                "feature3": np.random.random(2000),
+            }
         )
 
         # Run explainer
-        result = explainer._calculate_feature_importance(mock_model, large_data, method="lime")
+        result = explainer._calculate_feature_importance(
+            mock_model, large_data, method="lime"
+        )
 
         # Get final memory usage
         final_memory = process.memory_info().rss
@@ -313,7 +363,9 @@ class TestLIMEExplainer:
 
         def run_explainer():
             try:
-                result = explainer._calculate_feature_importance(mock_model, sample_data, method="lime")
+                result = explainer._calculate_feature_importance(
+                    mock_model, sample_data, method="lime"
+                )
                 results.append(result)
             except Exception as e:
                 errors.append(str(e))
@@ -344,7 +396,9 @@ class TestLIMEExplainer:
         explanations = []
 
         for _ in range(10):
-            result = explainer._calculate_feature_importance(mock_model, sample_data, method="lime")
+            result = explainer._calculate_feature_importance(
+                mock_model, sample_data, method="lime"
+            )
             explanations.append(result)
 
         # Check that all explanations have same features
@@ -375,7 +429,9 @@ class TestLIMEExplainer:
 
         # Should handle temporary failures gracefully
         try:
-            result = explainer._calculate_feature_importance(unreliable_model, sample_data, method="lime")
+            result = explainer._calculate_feature_importance(
+                unreliable_model, sample_data, method="lime"
+            )
             assert isinstance(result, dict)
         except Exception:
             # It's acceptable for LIME to fail with unreliable models
@@ -384,7 +440,9 @@ class TestLIMEExplainer:
     def test_explanation_comparison(self, explainer, mock_model, sample_data):
         """Test comparison between different explanation methods."""
         # Test LIME vs SHAP (if available)
-        lime_result = explainer._calculate_feature_importance(mock_model, sample_data, method="lime")
+        lime_result = explainer._calculate_feature_importance(
+            mock_model, sample_data, method="lime"
+        )
 
         # Both should return dictionaries with same keys
         assert isinstance(lime_result, dict)
@@ -394,13 +452,17 @@ class TestLIMEExplainer:
         for feature in sample_data.columns:
             assert feature in lime_result
 
-    def test_top_n_features_with_expected_sign(self, explainer, mock_model, sample_data):
+    def test_top_n_features_with_expected_sign(
+        self, explainer, mock_model, sample_data
+    ):
         """Test that LIME explanation highlights top N features with expected sign."""
         # Create a mock model that returns predictable outputs
         mock_model.predict = Mock(return_value=np.array([0.8, 0.9, 0.7, 0.6, 0.5]))
 
         # Get LIME explanation
-        result = explainer._calculate_feature_importance(mock_model, sample_data, method="lime")
+        result = explainer._calculate_feature_importance(
+            mock_model, sample_data, method="lime"
+        )
 
         # Verify result structure
         assert isinstance(result, dict)
@@ -415,9 +477,15 @@ class TestLIMEExplainer:
 
         # Verify top features have non-zero importance
         for feature_name, importance in top_features:
-            assert abs(importance) > 0, f"Top feature {feature_name} should have non-zero importance"
-            assert not np.isnan(importance), f"Feature {feature_name} importance should not be NaN"
-            assert not np.isinf(importance), f"Feature {feature_name} importance should not be infinite"
+            assert (
+                abs(importance) > 0
+            ), f"Top feature {feature_name} should have non-zero importance"
+            assert not np.isnan(
+                importance
+            ), f"Feature {feature_name} importance should not be NaN"
+            assert not np.isinf(
+                importance
+            ), f"Feature {feature_name} importance should not be infinite"
 
         # Test that importance values have expected signs (positive or negative)
         for feature_name, importance in result.items():
@@ -428,15 +496,21 @@ class TestLIMEExplainer:
 
             # Test that we can identify positive and negative contributions
             if importance > 0:
-                assert importance > 0, f"Positive importance {importance} for {feature_name}"
+                assert (
+                    importance > 0
+                ), f"Positive importance {importance} for {feature_name}"
             elif importance < 0:
-                assert importance < 0, f"Negative importance {importance} for {feature_name}"
+                assert (
+                    importance < 0
+                ), f"Negative importance {importance} for {feature_name}"
 
         # Test that top features are actually the most important
         if len(sorted_features) >= 2:
             top_importance = abs(sorted_features[0][1])
             second_importance = abs(sorted_features[1][1])
-            assert top_importance >= second_importance, "Top feature should have highest absolute importance"
+            assert (
+                top_importance >= second_importance
+            ), "Top feature should have highest absolute importance"
 
         # Test with different N values
         for n in [1, 2, len(sample_data.columns)]:

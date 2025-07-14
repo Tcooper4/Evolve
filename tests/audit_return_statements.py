@@ -85,7 +85,9 @@ class ReturnStatementAuditor:
 
         except Exception as e:
             logger.error(f"Error auditing {file_path}: {e}")
-            self.issues.append({"file": file_path, "type": "parse_error", "error": str(e)})
+            self.issues.append(
+                {"file": file_path, "type": "parse_error", "error": str(e)}
+            )
 
     def _analyze_ast(self, file_path: str, tree: ast.AST, content: str):
         """Analyze AST for function definitions and return statements."""
@@ -113,7 +115,9 @@ class ReturnStatementAuditor:
         has_side_effects = self._has_side_effects(func_node)
 
         # Determine if function needs a return statement
-        needs_return = self._function_needs_return(func_node, has_return, has_only_logging, has_side_effects)
+        needs_return = self._function_needs_return(
+            func_node, has_return, has_only_logging, has_side_effects
+        )
 
         # Track return values for usage analysis
         if has_return:
@@ -142,7 +146,9 @@ class ReturnStatementAuditor:
         else:
             self.passing_functions.append(f"{file_path}:{func_name}")
 
-    def _extract_return_values(self, func_node: ast.FunctionDef) -> List[Dict[str, Any]]:
+    def _extract_return_values(
+        self, func_node: ast.FunctionDef
+    ) -> List[Dict[str, Any]]:
         """Extract return values from function."""
         return_values = []
 
@@ -182,7 +188,10 @@ class ReturnStatementAuditor:
             return True
 
         # Check file path
-        if any(indicator in file_path_lower for indicator in ["pipeline", "workflow", "process"]):
+        if any(
+            indicator in file_path_lower
+            for indicator in ["pipeline", "workflow", "process"]
+        ):
             return True
 
         # Check function body for pipeline patterns
@@ -309,7 +318,9 @@ class ReturnStatementAuditor:
                     )
 
                 # Check if pipeline function returns meaningful data
-                meaningful_returns = self._check_meaningful_pipeline_returns(info["return_values"])
+                meaningful_returns = self._check_meaningful_pipeline_returns(
+                    info["return_values"]
+                )
                 if not meaningful_returns:
                     pipeline_issues.append(
                         {
@@ -322,7 +333,9 @@ class ReturnStatementAuditor:
 
         self.issues.extend(pipeline_issues)
 
-    def _check_meaningful_pipeline_returns(self, return_values: List[Dict[str, Any]]) -> bool:
+    def _check_meaningful_pipeline_returns(
+        self, return_values: List[Dict[str, Any]]
+    ) -> bool:
         """Check if pipeline function returns meaningful data."""
         for return_info in return_values:
             value = return_info.get("value", "")
@@ -341,11 +354,17 @@ class ReturnStatementAuditor:
                 r"metadata",
             ]
 
-            if any(re.search(pattern, value, re.IGNORECASE) for pattern in meaningful_patterns):
+            if any(
+                re.search(pattern, value, re.IGNORECASE)
+                for pattern in meaningful_patterns
+            ):
                 return True
 
             # Check for data structures
-            if any(keyword in value.lower() for keyword in ["dict", "list", "dataframe", "series", "array"]):
+            if any(
+                keyword in value.lower()
+                for keyword in ["dict", "list", "dataframe", "series", "array"]
+            ):
                 return True
 
         return False
@@ -357,7 +376,9 @@ class ReturnStatementAuditor:
                 return True
         return False
 
-    def _has_only_logging_statements(self, func_node: ast.FunctionDef, content: str) -> bool:
+    def _has_only_logging_statements(
+        self, func_node: ast.FunctionDef, content: str
+    ) -> bool:
         """Check if function only contains logging/print statements."""
         lines = content.split("\n")
         func_start = func_node.lineno - 1
@@ -367,9 +388,18 @@ class ReturnStatementAuditor:
         func_content = "\n".join(func_lines)
 
         # Check for logging patterns
-        logging_patterns = [r"logger\.", r"print\(", r"st\.", r"logging\.", r"console\.", r"print\s*\("]
+        logging_patterns = [
+            r"logger\.",
+            r"print\(",
+            r"st\.",
+            r"logging\.",
+            r"console\.",
+            r"print\s*\(",
+        ]
 
-        has_logging = any(re.search(pattern, func_content) for pattern in logging_patterns)
+        has_logging = any(
+            re.search(pattern, func_content) for pattern in logging_patterns
+        )
 
         # Check if function has other meaningful operations
         has_other_ops = self._has_meaningful_operations(func_node)
@@ -437,7 +467,11 @@ class ReturnStatementAuditor:
         return any(pattern in func_str for pattern in side_effect_patterns)
 
     def _function_needs_return(
-        self, func_node: ast.FunctionDef, has_return: bool, has_only_logging: bool, has_side_effects: bool
+        self,
+        func_node: ast.FunctionDef,
+        has_return: bool,
+        has_only_logging: bool,
+        has_side_effects: bool,
     ) -> bool:
         """Determine if a function needs a return statement."""
         # If it already has a return, it's fine
@@ -454,7 +488,17 @@ class ReturnStatementAuditor:
 
         # Check if function name suggests it should return something
         func_name = func_node.name.lower()
-        return_indicators = ["get", "fetch", "load", "read", "calculate", "compute", "process", "validate", "check"]
+        return_indicators = [
+            "get",
+            "fetch",
+            "load",
+            "read",
+            "calculate",
+            "compute",
+            "process",
+            "validate",
+            "check",
+        ]
 
         return any(indicator in func_name for indicator in return_indicators)
 
@@ -472,7 +516,9 @@ class ReturnStatementAuditor:
                 "functions_with_issues": len(self.issues),
                 "pipeline_functions": pipeline_functions_count,
                 "unused_return_values": unused_returns_count,
-                "coverage_percentage": (len(self.passing_functions) / total_functions * 100)
+                "coverage_percentage": (
+                    len(self.passing_functions) / total_functions * 100
+                )
                 if total_functions > 0
                 else 0,
             },
@@ -480,7 +526,9 @@ class ReturnStatementAuditor:
             "unused_returns": self.unused_returns,
             "pipeline_analysis": {
                 "pipeline_functions": list(self.pipeline_functions),
-                "pipeline_issues": [issue for issue in self.issues if "pipeline" in str(issue)],
+                "pipeline_issues": [
+                    issue for issue in self.issues if "pipeline" in str(issue)
+                ],
                 "recommendations": self._generate_pipeline_recommendations(),
             },
             "recommendations": self._generate_recommendations(),
@@ -493,9 +541,13 @@ class ReturnStatementAuditor:
         recommendations = []
 
         # Check for unused pipeline returns
-        unused_pipeline_returns = [ur for ur in self.unused_returns if ur["is_pipeline"]]
+        unused_pipeline_returns = [
+            ur for ur in self.unused_returns if ur["is_pipeline"]
+        ]
         if unused_pipeline_returns:
-            recommendations.append(f"Found {len(unused_pipeline_returns)} pipeline functions with unused return values")
+            recommendations.append(
+                f"Found {len(unused_pipeline_returns)} pipeline functions with unused return values"
+            )
             recommendations.append(
                 "Consider using return values for pipeline continuation or remove unnecessary returns"
             )
@@ -504,14 +556,17 @@ class ReturnStatementAuditor:
         pipeline_functions_without_meaningful_returns = [
             func
             for func, info in self.return_value_usage.items()
-            if info["is_pipeline"] and not self._check_meaningful_pipeline_returns(info["return_values"])
+            if info["is_pipeline"]
+            and not self._check_meaningful_pipeline_returns(info["return_values"])
         ]
 
         if pipeline_functions_without_meaningful_returns:
             recommendations.append(
                 f"Found {len(pipeline_functions_without_meaningful_returns)} pipeline functions without meaningful returns"
             )
-            recommendations.append("Pipeline functions should return meaningful data for downstream processing")
+            recommendations.append(
+                "Pipeline functions should return meaningful data for downstream processing"
+            )
 
         return recommendations
 
@@ -520,15 +575,25 @@ class ReturnStatementAuditor:
         recommendations = []
 
         if self.issues:
-            recommendations.append(f"Found {len(self.issues)} functions with return statement issues")
-            recommendations.append("Review and fix functions that need return statements")
+            recommendations.append(
+                f"Found {len(self.issues)} functions with return statement issues"
+            )
+            recommendations.append(
+                "Review and fix functions that need return statements"
+            )
 
         if self.unused_returns:
-            recommendations.append(f"Found {len(self.unused_returns)} unused return values")
-            recommendations.append("Consider removing unused return statements or using return values")
+            recommendations.append(
+                f"Found {len(self.unused_returns)} unused return values"
+            )
+            recommendations.append(
+                "Consider removing unused return statements or using return values"
+            )
 
         recommendations.append("Ensure all pipeline functions return meaningful data")
-        recommendations.append("Use return values for error handling and status reporting")
+        recommendations.append(
+            "Use return values for error handling and status reporting"
+        )
 
         return recommendations
 
@@ -550,7 +615,9 @@ def main():
     if report["issues"]:
         print("\n=== Issues Found ===")
         for issue in report["issues"]:
-            print(f"- {issue['file']}:{issue['line']} - {issue['function']} - {issue['type']}")
+            print(
+                f"- {issue['file']}:{issue['line']} - {issue['function']} - {issue['type']}"
+            )
 
     if report["unused_returns"]:
         print("\n=== Unused Return Values ===")

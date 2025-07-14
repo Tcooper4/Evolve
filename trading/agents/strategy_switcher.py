@@ -70,16 +70,30 @@ class StrategySwitcher:
         self.config = config or {}
         self.log_path = Path(self.config.get("log_path", STRATEGY_SWITCH_LOG_PATH))
         self.lock_path = self.log_path.with_suffix(".lock")
-        self.lock_timeout = self.config.get("lock_timeout", STRATEGY_SWITCH_LOCK_TIMEOUT)
-        self.backend = StrategySwitchBackend(self.config.get("backend", STRATEGY_SWITCH_BACKEND))
-        self.api_endpoint = self.config.get("api_endpoint", STRATEGY_SWITCH_API_ENDPOINT)
+        self.lock_timeout = self.config.get(
+            "lock_timeout", STRATEGY_SWITCH_LOCK_TIMEOUT
+        )
+        self.backend = StrategySwitchBackend(
+            self.config.get("backend", STRATEGY_SWITCH_BACKEND)
+        )
+        self.api_endpoint = self.config.get(
+            "api_endpoint", STRATEGY_SWITCH_API_ENDPOINT
+        )
 
         # Strategy switching parameters
-        self.switch_threshold = self.config.get("switch_threshold", STRATEGY_SWITCH_THRESHOLD)
-        self.performance_window = self.config.get("performance_window", STRATEGY_PERFORMANCE_WINDOW)
-        self.min_performance = self.config.get("min_performance", STRATEGY_MIN_PERFORMANCE)
+        self.switch_threshold = self.config.get(
+            "switch_threshold", STRATEGY_SWITCH_THRESHOLD
+        )
+        self.performance_window = self.config.get(
+            "performance_window", STRATEGY_PERFORMANCE_WINDOW
+        )
+        self.min_performance = self.config.get(
+            "min_performance", STRATEGY_MIN_PERFORMANCE
+        )
         self.max_drawdown = self.config.get("max_drawdown", STRATEGY_MAX_DRAWDOWN)
-        self.switch_cooldown = self.config.get("switch_cooldown", STRATEGY_SWITCH_COOLDOWN)
+        self.switch_cooldown = self.config.get(
+            "switch_cooldown", STRATEGY_SWITCH_COOLDOWN
+        )
 
         # Initialize backend
         self._init_backend()
@@ -165,7 +179,9 @@ class StrategySwitcher:
         """
         try:
             if self.backend == StrategySwitchBackend.SQLITE:
-                self.cursor.execute("SELECT * FROM strategy_switches ORDER BY timestamp DESC")
+                self.cursor.execute(
+                    "SELECT * FROM strategy_switches ORDER BY timestamp DESC"
+                )
                 rows = self.cursor.fetchall()
                 return [
                     {
@@ -287,7 +303,12 @@ class StrategySwitcher:
                         last_used = excluded.last_used,
                         success_count = success_count + ?
                 """,
-                    (strategy, datetime.now().isoformat(), 1 if success else 0, 1 if success else 0),
+                    (
+                        strategy,
+                        datetime.now().isoformat(),
+                        1 if success else 0,
+                        1 if success else 0,
+                    ),
                 )
                 self.conn.commit()
 
@@ -297,7 +318,8 @@ class StrategySwitcher:
 
             elif self.backend == StrategySwitchBackend.API:
                 response = requests.post(
-                    f"{self.api_endpoint}/working-strategy", json={"strategy": strategy, "success": success}
+                    f"{self.api_endpoint}/working-strategy",
+                    json={"strategy": strategy, "success": success},
                 )
                 response.raise_for_status()
 
@@ -305,7 +327,10 @@ class StrategySwitcher:
             logger.error(f"Error updating working strategy: {e}")
 
     def switch_strategy_if_needed(
-        self, current_strategy: str, metrics: Dict[str, float], agent_id: Optional[str] = None
+        self,
+        current_strategy: str,
+        metrics: Dict[str, float],
+        agent_id: Optional[str] = None,
     ) -> Optional[str]:
         """Check if strategy switch is needed and perform it.
 
@@ -344,8 +369,13 @@ class StrategySwitcher:
 
             # If drift detection fails or no better strategy found,
             # fall back to last known working strategy
-            if self.last_working_strategy and self.last_working_strategy != current_strategy:
-                logger.info(f"Falling back to last known working strategy: {self.last_working_strategy}")
+            if (
+                self.last_working_strategy
+                and self.last_working_strategy != current_strategy
+            ):
+                logger.info(
+                    f"Falling back to last known working strategy: {self.last_working_strategy}"
+                )
                 return self.last_working_strategy
 
             return None
@@ -367,7 +397,9 @@ class StrategySwitcher:
         # This is a placeholder implementation
         return metrics.get("drift_score", 0) > 0.5
 
-    def _get_best_strategy(self, metrics: Dict[str, float], available_models: List[str]) -> Optional[str]:
+    def _get_best_strategy(
+        self, metrics: Dict[str, float], available_models: List[str]
+    ) -> Optional[str]:
         """Get the best strategy based on metrics.
 
         Args:

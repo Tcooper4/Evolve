@@ -27,7 +27,9 @@ class PerformanceCriticService(BaseService):
     Handles model evaluation requests and communicates results via Redis.
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0):
+    def __init__(
+        self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0
+    ):
         """Initialize the PerformanceCriticService."""
         super().__init__("performance_critic", redis_host, redis_port, redis_db)
 
@@ -60,7 +62,11 @@ class PerformanceCriticService(BaseService):
                 return self._handle_best_models_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {"type": "error", "error": f"Unknown message type: {message_type}", "original_message": data}
+                return {
+                    "type": "error",
+                    "error": f"Unknown message type: {message_type}",
+                    "original_message": data,
+                }
 
         except Exception as e:
             logger.error(f"Error processing message: {e}")
@@ -85,7 +91,11 @@ class PerformanceCriticService(BaseService):
 
             # Evaluate the model using the agent
             evaluation = self.agent.evaluate_model(
-                model_id=model_id, symbol=symbol, timeframe=timeframe, period=period, metrics=metrics
+                model_id=model_id,
+                symbol=symbol,
+                timeframe=timeframe,
+                period=period,
+                metrics=metrics,
             )
 
             # Log to memory
@@ -102,7 +112,11 @@ class PerformanceCriticService(BaseService):
                 },
             )
 
-            return {"type": "model_evaluated", "evaluation": evaluation, "status": "success"}
+            return {
+                "type": "model_evaluated",
+                "evaluation": evaluation,
+                "status": "success",
+            }
 
         except Exception as e:
             logger.error(f"Error evaluating model: {e}")
@@ -120,7 +134,10 @@ class PerformanceCriticService(BaseService):
             period = compare_data.get("period", "30d")
 
             if not model_ids or len(model_ids) < 2:
-                return {"type": "error", "error": "At least 2 model_ids are required for comparison"}
+                return {
+                    "type": "error",
+                    "error": "At least 2 model_ids are required for comparison",
+                }
 
             logger.info(f"Comparing models: {model_ids}")
 
@@ -142,7 +159,11 @@ class PerformanceCriticService(BaseService):
                 },
             )
 
-            return {"type": "models_compared", "comparison": comparison, "status": "success"}
+            return {
+                "type": "models_compared",
+                "comparison": comparison,
+                "status": "success",
+            }
 
         except Exception as e:
             logger.error(f"Error comparing models: {e}")
@@ -163,7 +184,11 @@ class PerformanceCriticService(BaseService):
             # Get evaluation history
             history = self.agent.get_evaluation_history(model_id=model_id, limit=limit)
 
-            return {"type": "evaluation_history", "history": history, "model_id": model_id}
+            return {
+                "type": "evaluation_history",
+                "history": history,
+                "model_id": model_id,
+            }
 
         except Exception as e:
             logger.error(f"Error getting evaluation history: {e}")
@@ -181,7 +206,9 @@ class PerformanceCriticService(BaseService):
             metric = best_data.get("metric", "overall_score")
 
             # Get best models
-            best_models = self.agent.get_best_models(symbol=symbol, timeframe=timeframe, limit=limit, metric=metric)
+            best_models = self.agent.get_best_models(
+                symbol=symbol, timeframe=timeframe, limit=limit, metric=metric
+            )
 
             return {
                 "type": "best_models",
@@ -204,12 +231,16 @@ class PerformanceCriticService(BaseService):
             recent_evaluations = [
                 entry
                 for entry in memory_stats.get("recent_decisions", [])
-                if entry.get("agent_name") == "performance_critic" and entry.get("decision_type") == "evaluate_model"
+                if entry.get("agent_name") == "performance_critic"
+                and entry.get("decision_type") == "evaluate_model"
             ]
 
             return {
                 "total_evaluations": len(recent_evaluations),
-                "average_score": sum(eval.get("details", {}).get("evaluation_score", 0) for eval in recent_evaluations)
+                "average_score": sum(
+                    eval.get("details", {}).get("evaluation_score", 0)
+                    for eval in recent_evaluations
+                )
                 / max(len(recent_evaluations), 1),
                 "memory_entries": memory_stats.get("total_entries", 0),
                 "recent_evaluations": recent_evaluations[:5],

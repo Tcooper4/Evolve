@@ -104,7 +104,11 @@ class MultiStrategyHybridEngine:
 
         logger.info("Multi-Strategy Hybrid Engine initialized successfully")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _initialize_default_strategies(self):
         """Initialize default trading strategies."""
@@ -117,7 +121,11 @@ class MultiStrategyHybridEngine:
                 "volume_price": self._volume_price_strategy,
             }
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _initialize_ensemble_model(self):
         """Initialize the ensemble model."""
@@ -134,14 +142,22 @@ class MultiStrategyHybridEngine:
             elif self.ensemble_method == "weighted_average":
                 # Initialize equal weights
                 n_strategies = len(self.strategies)
-                self.strategy_weights = {name: 1.0 / n_strategies for name in self.strategies.keys()}
+                self.strategy_weights = {
+                    name: 1.0 / n_strategies for name in self.strategies.keys()
+                }
 
-            logger.info(f"Ensemble model initialized with method: {self.ensemble_method}")
+            logger.info(
+                f"Ensemble model initialized with method: {self.ensemble_method}"
+            )
 
         except Exception as e:
             logger.error(f"Error initializing ensemble model: {e}")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _momentum_strategy(self, data: pd.DataFrame) -> StrategySignal:
         """Momentum-based strategy."""
@@ -208,7 +224,9 @@ class MultiStrategyHybridEngine:
             current_sma = sma.iloc[-1]
 
             # Position within bands
-            band_position = (current_price - lower_band.iloc[-1]) / (upper_band.iloc[-1] - lower_band.iloc[-1])
+            band_position = (current_price - lower_band.iloc[-1]) / (
+                upper_band.iloc[-1] - lower_band.iloc[-1]
+            )
 
             # Signal generation
             if band_position < 0.2:  # Near lower band
@@ -239,7 +257,11 @@ class MultiStrategyHybridEngine:
                 position_size=position_size,
                 risk_score=risk_score,
                 timestamp=datetime.now(),
-                metadata={"band_position": band_position, "current_sma": current_sma, "volatility": volatility},
+                metadata={
+                    "band_position": band_position,
+                    "current_sma": current_sma,
+                    "volatility": volatility,
+                },
             )
 
         except Exception as e:
@@ -259,7 +281,7 @@ class MultiStrategyHybridEngine:
 
             # Price action
             current_return = returns.iloc[-1]
-            recent_returns = returns.tail(5)
+            returns.tail(5)
 
             # Signal generation
             if vol_ratio > 1.5 and current_return > 0:
@@ -417,7 +439,11 @@ class MultiStrategyHybridEngine:
                 position_size=position_size,
                 risk_score=risk_score,
                 timestamp=datetime.now(),
-                metadata={"volume_ratio": volume_ratio, "price_trend": price_trend, "volume_trend": volume_trend},
+                metadata={
+                    "volume_ratio": volume_ratio,
+                    "price_trend": price_trend,
+                    "volume_trend": volume_trend,
+                },
             )
 
         except Exception as e:
@@ -508,7 +534,9 @@ class MultiStrategyHybridEngine:
             total_weight = 0.0
 
             for signal in signals:
-                weight = self.strategy_weights.get(signal.strategy_name, 1.0 / len(signals))
+                weight = self.strategy_weights.get(
+                    signal.strategy_name, 1.0 / len(signals)
+                )
                 weighted_return += signal.predicted_return * weight
                 weighted_confidence += signal.confidence * weight
                 weighted_risk += signal.risk_score * weight
@@ -546,7 +574,10 @@ class MultiStrategyHybridEngine:
                 strategy_weights=self.strategy_weights.copy(),
                 individual_signals=signals,
                 timestamp=datetime.now(),
-                metadata={"ensemble_method": self.ensemble_method, "n_strategies": len(signals)},
+                metadata={
+                    "ensemble_method": self.ensemble_method,
+                    "n_strategies": len(signals),
+                },
             )
 
         except Exception as e:
@@ -631,9 +662,11 @@ class MultiStrategyHybridEngine:
                 alpha = 0.1  # Learning rate
                 for strategy_name in self.strategy_weights:
                     if strategy_name in new_weights:
-                        self.strategy_weights[strategy_name] = (1 - alpha) * self.strategy_weights[
+                        self.strategy_weights[strategy_name] = (
+                            1 - alpha
+                        ) * self.strategy_weights[strategy_name] + alpha * new_weights[
                             strategy_name
-                        ] + alpha * new_weights[strategy_name]
+                        ]
 
                 # Normalize weights
                 total_weight = sum(self.strategy_weights.values())
@@ -678,9 +711,13 @@ class MultiStrategyHybridEngine:
                     alpha = 0.05  # Slower learning rate for error-based updates
                     for strategy_name in self.strategy_weights:
                         if strategy_name in new_weights:
-                            self.strategy_weights[strategy_name] = (1 - alpha) * self.strategy_weights[
+                            self.strategy_weights[strategy_name] = (
+                                1 - alpha
+                            ) * self.strategy_weights[
                                 strategy_name
-                            ] + alpha * new_weights[strategy_name]
+                            ] + alpha * new_weights[
+                                strategy_name
+                            ]
 
                     # Normalize weights
                     total_weight = sum(self.strategy_weights.values())
@@ -693,7 +730,9 @@ class MultiStrategyHybridEngine:
             logger.error(f"Error updating weights based on error: {e}")
 
     def auto_update_weights(
-        self, recent_performance: Dict[str, float] = None, error_history: Dict[str, List[float]] = None
+        self,
+        recent_performance: Dict[str, float] = None,
+        error_history: Dict[str, List[float]] = None,
     ):
         """Automatically update weights based on both performance and error history."""
         try:
@@ -727,7 +766,9 @@ class MultiStrategyHybridEngine:
             # Signal distribution
             signal_distribution = {}
             for signal_type in set(signal_types):
-                signal_distribution[signal_type] = signal_types.count(signal_type) / len(signal_types)
+                signal_distribution[signal_type] = signal_types.count(
+                    signal_type
+                ) / len(signal_types)
 
             # Performance metrics
             avg_confidence = np.mean(confidences)

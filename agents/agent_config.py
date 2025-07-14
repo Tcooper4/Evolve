@@ -95,7 +95,9 @@ class AgentConfig:
         if self.retry_delay < 0:
             raise ValueError("Retry delay cannot be negative")
 
-    def get_agent_setting(self, agent_name: str, setting_name: str, default: Any = None) -> Any:
+    def get_agent_setting(
+        self, agent_name: str, setting_name: str, default: Any = None
+    ) -> Any:
         """Get agent-specific setting."""
         agent_config = self.agent_settings.get(agent_name, {})
         return agent_config.get(setting_name, default)
@@ -193,7 +195,9 @@ class AgentConfig:
         }
 
     @classmethod
-    def load_from_file(cls, file_path: str = "config/agent_config.json") -> "AgentConfig":
+    def load_from_file(
+        cls, file_path: str = "config/agent_config.json"
+    ) -> "AgentConfig":
         """Load configuration from file."""
         try:
             if os.path.exists(file_path):
@@ -207,11 +211,21 @@ class AgentConfig:
                 if "openai_config" in config_data:
                     openai_config = config_data["openai_config"]
                     config.openai_api_key = openai_config.get("api_key")
-                    config.openai_model = openai_config.get("model", config.openai_model)
-                    config.openai_fallback_model = openai_config.get("fallback_model", config.openai_fallback_model)
-                    config.openai_timeout = openai_config.get("timeout", config.openai_timeout)
-                    config.openai_max_tokens = openai_config.get("max_tokens", config.openai_max_tokens)
-                    config.openai_temperature = openai_config.get("temperature", config.openai_temperature)
+                    config.openai_model = openai_config.get(
+                        "model", config.openai_model
+                    )
+                    config.openai_fallback_model = openai_config.get(
+                        "fallback_model", config.openai_fallback_model
+                    )
+                    config.openai_timeout = openai_config.get(
+                        "timeout", config.openai_timeout
+                    )
+                    config.openai_max_tokens = openai_config.get(
+                        "max_tokens", config.openai_max_tokens
+                    )
+                    config.openai_temperature = openai_config.get(
+                        "temperature", config.openai_temperature
+                    )
 
                 if "agent_settings" in config_data:
                     config.agent_settings = config_data["agent_settings"]
@@ -263,10 +277,30 @@ def save_agent_config(file_path: str = "config/agent_config.json"):
 
 # Default configurations for common agents
 DEFAULT_AGENT_CONFIGS = {
-    "prompt_router": {"timeout": 45, "max_tokens": 6000, "enable_fallback": True, "max_retries": 5},
-    "model_builder": {"timeout": 120, "max_tokens": 8000, "enable_fallback": True, "max_retries": 3},
-    "voice_prompt": {"timeout": 30, "max_tokens": 2000, "enable_fallback": True, "max_retries": 2},
-    "performance_critic": {"timeout": 60, "max_tokens": 4000, "enable_fallback": True, "max_retries": 3},
+    "prompt_router": {
+        "timeout": 45,
+        "max_tokens": 6000,
+        "enable_fallback": True,
+        "max_retries": 5,
+    },
+    "model_builder": {
+        "timeout": 120,
+        "max_tokens": 8000,
+        "enable_fallback": True,
+        "max_retries": 3,
+    },
+    "voice_prompt": {
+        "timeout": 30,
+        "max_tokens": 2000,
+        "enable_fallback": True,
+        "max_retries": 2,
+    },
+    "performance_critic": {
+        "timeout": 60,
+        "max_tokens": 4000,
+        "enable_fallback": True,
+        "max_retries": 3,
+    },
 }
 
 

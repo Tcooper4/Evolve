@@ -105,9 +105,13 @@ class RegimeDetectionAgent(BaseAgent):
             "lookback_periods", {"short": 20, "medium": 50, "long": 200}
         )
 
-        self.volatility_thresholds = self.config.custom_config.get("volatility_thresholds", {"low": 0.15, "high": 0.35})
+        self.volatility_thresholds = self.config.custom_config.get(
+            "volatility_thresholds", {"low": 0.15, "high": 0.35}
+        )
 
-        self.trend_thresholds = self.config.custom_config.get("trend_thresholds", {"weak": 0.1, "strong": 0.3})
+        self.trend_thresholds = self.config.custom_config.get(
+            "trend_thresholds", {"weak": 0.1, "strong": 0.3}
+        )
 
         # Regime-specific strategy recommendations
         self.regime_strategies = {
@@ -144,7 +148,9 @@ class RegimeDetectionAgent(BaseAgent):
 
             if data is None:
                 return AgentResult(
-                    success=False, error_message="No data provided for regime detection", error_type="MissingData"
+                    success=False,
+                    error_message="No data provided for regime detection",
+                    error_type="MissingData",
                 )
 
             # Detect regime
@@ -168,7 +174,9 @@ class RegimeDetectionAgent(BaseAgent):
         except Exception as e:
             return self.handle_error(e)
 
-    def detect_regime(self, data: pd.DataFrame, symbol: str = "UNKNOWN") -> RegimeResult:
+    def detect_regime(
+        self, data: pd.DataFrame, symbol: str = "UNKNOWN"
+    ) -> RegimeResult:
         """
         Detect the current market regime.
 
@@ -198,7 +206,9 @@ class RegimeDetectionAgent(BaseAgent):
             confidences.append(trend_confidence)
 
             # Method 3: Momentum-based detection
-            momentum_regime, momentum_confidence = self._momentum_based_detection(metrics)
+            momentum_regime, momentum_confidence = self._momentum_based_detection(
+                metrics
+            )
             regime_votes.append(momentum_regime)
             confidences.append(momentum_confidence)
 
@@ -216,10 +226,14 @@ class RegimeDetectionAgent(BaseAgent):
             transition_prob = self._calculate_transition_probability(final_regime)
 
             # Get recommended strategies
-            recommended_strategies = self.regime_strategies.get(final_regime, ["defensive"])
+            recommended_strategies = self.regime_strategies.get(
+                final_regime, ["defensive"]
+            )
 
             # Generate reasoning
-            reasoning = self._generate_regime_reasoning(final_regime, metrics, confidences)
+            reasoning = self._generate_regime_reasoning(
+                final_regime, metrics, confidences
+            )
 
             # Create result
             result = RegimeResult(
@@ -273,7 +287,9 @@ class RegimeDetectionAgent(BaseAgent):
             df["Volatility"] = df["close"].rolling(20).std()
 
             # Volatility (rolling standard deviation)
-            volatility = np.std(returns[-self.lookback_periods["short"] :]) * np.sqrt(252)
+            volatility = np.std(returns[-self.lookback_periods["short"] :]) * np.sqrt(
+                252
+            )
 
             # Trend strength (linear regression slope)
             x = np.arange(len(close_prices[-self.lookback_periods["medium"] :]))
@@ -282,9 +298,9 @@ class RegimeDetectionAgent(BaseAgent):
             trend_strength = abs(trend_slope) / np.mean(y)
 
             # Momentum (rate of change)
-            momentum = (close_prices[-1] - close_prices[-self.lookback_periods["short"]]) / close_prices[
-                -self.lookback_periods["short"]
-            ]
+            momentum = (
+                close_prices[-1] - close_prices[-self.lookback_periods["short"]]
+            ) / close_prices[-self.lookback_periods["short"]]
 
             # Volume trend (if available)
             volume_trend = 0.0
@@ -293,10 +309,16 @@ class RegimeDetectionAgent(BaseAgent):
                 if len(volume) >= self.lookback_periods["short"]:
                     recent_volume = np.mean(volume[-self.lookback_periods["short"] :])
                     historical_volume = np.mean(
-                        volume[-self.lookback_periods["medium"] : -self.lookback_periods["short"]]
+                        volume[
+                            -self.lookback_periods["medium"] : -self.lookback_periods[
+                                "short"
+                            ]
+                        ]
                     )
                     volume_trend = (
-                        (recent_volume - historical_volume) / historical_volume if historical_volume > 0 else 0
+                        (recent_volume - historical_volume) / historical_volume
+                        if historical_volume > 0
+                        else 0
                     )
 
             # Correlation (autocorrelation of returns)
@@ -323,7 +345,9 @@ class RegimeDetectionAgent(BaseAgent):
             self.logger.error(f"Error calculating regime metrics: {e}")
             return RegimeMetrics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
-    def _volatility_based_detection(self, metrics: RegimeMetrics) -> Tuple[MarketRegime, float]:
+    def _volatility_based_detection(
+        self, metrics: RegimeMetrics
+    ) -> Tuple[MarketRegime, float]:
         """Detect regime based on volatility."""
         vol = metrics.volatility
 
@@ -334,7 +358,9 @@ class RegimeDetectionAgent(BaseAgent):
         else:
             return MarketRegime.NORMAL, 0.6
 
-    def _trend_based_detection(self, metrics: RegimeMetrics) -> Tuple[MarketRegime, float]:
+    def _trend_based_detection(
+        self, metrics: RegimeMetrics
+    ) -> Tuple[MarketRegime, float]:
         """Detect regime based on trend strength and momentum."""
         trend_strength = metrics.trend_strength
         momentum = metrics.momentum
@@ -355,7 +381,9 @@ class RegimeDetectionAgent(BaseAgent):
             else:
                 return MarketRegime.BEAR, 0.6
 
-    def _momentum_based_detection(self, metrics: RegimeMetrics) -> Tuple[MarketRegime, float]:
+    def _momentum_based_detection(
+        self, metrics: RegimeMetrics
+    ) -> Tuple[MarketRegime, float]:
         """Detect regime based on momentum and price action."""
         momentum = metrics.momentum
         correlation = metrics.correlation
@@ -381,7 +409,9 @@ class RegimeDetectionAgent(BaseAgent):
         # In practice, this would use a trained model
         return MarketRegime.UNKNOWN, 0.5
 
-    def _combine_regime_votes(self, votes: List[MarketRegime], confidences: List[float]) -> MarketRegime:
+    def _combine_regime_votes(
+        self, votes: List[MarketRegime], confidences: List[float]
+    ) -> MarketRegime:
         """Combine regime votes using weighted voting."""
         if not votes:
             return MarketRegime.UNKNOWN
@@ -414,11 +444,15 @@ class RegimeDetectionAgent(BaseAgent):
 
         # Adjust based on current regime stability
         if current_regime in [MarketRegime.VOLATILE, MarketRegime.SIDEWAYS]:
-            transition_prob *= 1.5  # Higher transition probability for volatile/sideways
+            transition_prob *= (
+                1.5  # Higher transition probability for volatile/sideways
+            )
 
         return min(1.0, transition_prob)
 
-    def _generate_regime_reasoning(self, regime: MarketRegime, metrics: RegimeMetrics, confidences: List[float]) -> str:
+    def _generate_regime_reasoning(
+        self, regime: MarketRegime, metrics: RegimeMetrics, confidences: List[float]
+    ) -> str:
         """Generate reasoning for regime detection."""
         reasoning_parts = []
 
@@ -470,7 +504,9 @@ class RegimeDetectionAgent(BaseAgent):
                 ],
                 "confidence_explanation": f"Confidence {result.confidence:.1%} based on multiple detection methods",
             },
-            confidence_level=ConfidenceLevel.HIGH if result.confidence > 0.8 else ConfidenceLevel.MEDIUM,
+            confidence_level=ConfidenceLevel.HIGH
+            if result.confidence > 0.8
+            else ConfidenceLevel.MEDIUM,
             metadata=result.metadata,
         )
 
@@ -522,17 +558,23 @@ class RegimeDetectionAgent(BaseAgent):
         avg_confidence = np.mean([r.confidence for r in self.regime_history])
 
         # Calculate average transition probability
-        avg_transition_prob = np.mean([r.transition_probability for r in self.regime_history])
+        avg_transition_prob = np.mean(
+            [r.transition_probability for r in self.regime_history]
+        )
 
         return {
             "total_detections": len(self.regime_history),
             "regime_distribution": regime_counts,
             "average_confidence": avg_confidence,
             "average_transition_probability": avg_transition_prob,
-            "recent_regime": self.regime_history[-1].regime.value if self.regime_history else "unknown",
+            "recent_regime": self.regime_history[-1].regime.value
+            if self.regime_history
+            else "unknown",
         }
 
-    def update_performance_by_regime(self, regime: MarketRegime, performance_metrics: Dict[str, float]):
+    def update_performance_by_regime(
+        self, regime: MarketRegime, performance_metrics: Dict[str, float]
+    ):
         """Update performance metrics for a specific regime."""
         if regime not in self.performance_by_regime:
             self.performance_by_regime[regime] = {}
@@ -542,12 +584,15 @@ class RegimeDetectionAgent(BaseAgent):
         for metric, value in performance_metrics.items():
             if metric in self.performance_by_regime[regime]:
                 self.performance_by_regime[regime][metric] = (
-                    alpha * value + (1 - alpha) * self.performance_by_regime[regime][metric]
+                    alpha * value
+                    + (1 - alpha) * self.performance_by_regime[regime][metric]
                 )
             else:
                 self.performance_by_regime[regime][metric] = value
 
-        self.logger.debug(f"Updated performance for {regime.value} regime: {performance_metrics}")
+        self.logger.debug(
+            f"Updated performance for {regime.value} regime: {performance_metrics}"
+        )
 
 
 # Convenience function for creating regime detection agent

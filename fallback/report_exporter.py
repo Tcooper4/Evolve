@@ -44,7 +44,9 @@ class FallbackReportExporter:
         except Exception as e:
             logger.error(f"Error creating export directory: {e}")
 
-    def export_report(self, data: Dict[str, Any], format: str = "json", filename: Optional[str] = None) -> str:
+    def export_report(
+        self, data: Dict[str, Any], format: str = "json", filename: Optional[str] = None
+    ) -> str:
         """
         Export a report in the specified format (fallback implementation).
 
@@ -62,7 +64,9 @@ class FallbackReportExporter:
             # Generate filename if not provided
             if filename is None:
                 # Use microsecond precision to avoid overwrites
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # Include milliseconds
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[
+                    :-3
+                ]  # Include milliseconds
                 filename = f"fallback_report_{timestamp}.{format}"
 
             filepath = os.path.join(self._export_dir, filename)
@@ -257,26 +261,38 @@ class FallbackReportExporter:
                 summary.append("FORECAST SUMMARY:")
                 summary.append(f"  Symbol: {forecast_data.get('symbol', 'Unknown')}")
                 summary.append(f"  Model: {forecast_data.get('model', 'Unknown')}")
-                summary.append(f"  Confidence: {forecast_data.get('confidence', 0):.1%}")
+                summary.append(
+                    f"  Confidence: {forecast_data.get('confidence', 0):.1%}"
+                )
                 summary.append("")
 
             if "strategy" in data:
                 strategy_data = data["strategy"]
                 summary.append("STRATEGY SUMMARY:")
-                summary.append(f"  Strategy: {strategy_data.get('strategy', 'Unknown')}")
+                summary.append(
+                    f"  Strategy: {strategy_data.get('strategy', 'Unknown')}"
+                )
                 summary.append(f"  Signal: {strategy_data.get('signal', 'Unknown')}")
-                summary.append(f"  Performance: {strategy_data.get('performance', 'Unknown')}")
+                summary.append(
+                    f"  Performance: {strategy_data.get('performance', 'Unknown')}"
+                )
                 summary.append("")
 
             if "portfolio" in data:
                 portfolio_data = data["portfolio"]
                 summary.append("PORTFOLIO SUMMARY:")
-                summary.append(f"  Total Value: ${portfolio_data.get('total_value', 0):,.2f}")
-                summary.append(f"  Positions: {len(portfolio_data.get('positions', []))}")
+                summary.append(
+                    f"  Total Value: ${portfolio_data.get('total_value', 0):,.2f}"
+                )
+                summary.append(
+                    f"  Positions: {len(portfolio_data.get('positions', []))}"
+                )
                 summary.append(f"  Cash: ${portfolio_data.get('cash', 0):,.2f}")
                 summary.append("")
 
-            summary.append("NOTE: This is a fallback report generated due to system limitations.")
+            summary.append(
+                "NOTE: This is a fallback report generated due to system limitations."
+            )
 
             return "\n".join(summary)
 
@@ -301,7 +317,10 @@ class FallbackReportExporter:
 
             if os.path.exists(self._export_dir):
                 files = os.listdir(self._export_dir)
-                files.sort(key=lambda x: os.path.getmtime(os.path.join(self._export_dir, x)), reverse=True)
+                files.sort(
+                    key=lambda x: os.path.getmtime(os.path.join(self._export_dir, x)),
+                    reverse=True,
+                )
 
                 for filename in files[:limit]:
                     filepath = os.path.join(self._export_dir, filename)
@@ -312,8 +331,12 @@ class FallbackReportExporter:
                             "filename": filename,
                             "filepath": filepath,
                             "size": stat.st_size,
-                            "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
-                            "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                            "created": datetime.fromtimestamp(
+                                stat.st_ctime
+                            ).isoformat(),
+                            "modified": datetime.fromtimestamp(
+                                stat.st_mtime
+                            ).isoformat(),
                         }
                     )
 
@@ -331,7 +354,11 @@ class FallbackReportExporter:
             Dict[str, Any]: Health status information
         """
         try:
-            export_count = len(os.listdir(self._export_dir)) if os.path.exists(self._export_dir) else 0
+            export_count = (
+                len(os.listdir(self._export_dir))
+                if os.path.exists(self._export_dir)
+                else 0
+            )
 
             return {
                 "status": self._status,

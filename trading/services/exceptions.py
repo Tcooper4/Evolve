@@ -14,7 +14,13 @@ from typing import Any, Dict
 class QuantGPTException(Exception):
     """Base exception for QuantGPT system."""
 
-    def __init__(self, message: str, error_code: str = None, details: Dict[str, Any] = None, recoverable: bool = True):
+    def __init__(
+        self,
+        message: str,
+        error_code: str = None,
+        details: Dict[str, Any] = None,
+        recoverable: bool = True,
+    ):
         super().__init__(message)
         self.message = message
         self.error_code = error_code or "UNKNOWN_ERROR"
@@ -45,7 +51,9 @@ class AgentExecutionError(QuantGPTException):
         self.fallback_attempted = False
         self.recovery_suggestions = []
 
-    def add_execution_step(self, step_name: str, step_result: str, step_details: Dict[str, Any] = None):
+    def add_execution_step(
+        self, step_name: str, step_result: str, step_details: Dict[str, Any] = None
+    ):
         """Add an execution step to the context."""
         self.execution_steps.append(
             {
@@ -63,7 +71,11 @@ class AgentExecutionError(QuantGPTException):
     def add_recovery_suggestion(self, suggestion: str, priority: int = 1):
         """Add a recovery suggestion."""
         self.recovery_suggestions.append(
-            {"suggestion": suggestion, "priority": priority, "timestamp": datetime.now().isoformat()}
+            {
+                "suggestion": suggestion,
+                "priority": priority,
+                "timestamp": datetime.now().isoformat(),
+            }
         )
 
     def get_context_summary(self) -> Dict[str, Any]:
@@ -77,7 +89,9 @@ class AgentExecutionError(QuantGPTException):
             "execution_steps_count": len(self.execution_steps),
             "recovery_suggestions_count": len(self.recovery_suggestions),
             "timestamp": self.timestamp.isoformat(),
-            "execution_context_keys": list(self.execution_context.keys()) if self.execution_context else [],
+            "execution_context_keys": list(self.execution_context.keys())
+            if self.execution_context
+            else [],
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -133,7 +147,13 @@ class AgentCommunicationError(AgentExecutionError):
         details: Dict[str, Any] = None,
     ):
         super().__init__(
-            message, agent_id, agent_type, communication_context, "AGENT_COMMUNICATION_ERROR", details, recoverable=True
+            message,
+            agent_id,
+            agent_type,
+            communication_context,
+            "AGENT_COMMUNICATION_ERROR",
+            details,
+            recoverable=True,
         )
 
 
@@ -149,7 +169,13 @@ class AgentOrchestrationError(AgentExecutionError):
         details: Dict[str, Any] = None,
     ):
         super().__init__(
-            message, agent_id, agent_type, orchestration_context, "AGENT_ORCHESTRATION_ERROR", details, recoverable=True
+            message,
+            agent_id,
+            agent_type,
+            orchestration_context,
+            "AGENT_ORCHESTRATION_ERROR",
+            details,
+            recoverable=True,
         )
 
 
@@ -166,7 +192,13 @@ class AgentTimeoutError(AgentExecutionError):
         details: Dict[str, Any] = None,
     ):
         super().__init__(
-            message, agent_id, agent_type, timeout_context, "AGENT_TIMEOUT_ERROR", details, recoverable=True
+            message,
+            agent_id,
+            agent_type,
+            timeout_context,
+            "AGENT_TIMEOUT_ERROR",
+            details,
+            recoverable=True,
         )
         self.timeout_duration = timeout_duration
 
@@ -184,7 +216,13 @@ class AgentResourceError(AgentExecutionError):
         details: Dict[str, Any] = None,
     ):
         super().__init__(
-            message, agent_id, agent_type, resource_context, "AGENT_RESOURCE_ERROR", details, recoverable=True
+            message,
+            agent_id,
+            agent_type,
+            resource_context,
+            "AGENT_RESOURCE_ERROR",
+            details,
+            recoverable=True,
         )
         self.resource_type = resource_type
 
@@ -202,7 +240,13 @@ class AgentValidationError(AgentExecutionError):
         details: Dict[str, Any] = None,
     ):
         super().__init__(
-            message, agent_id, agent_type, validation_context, "AGENT_VALIDATION_ERROR", details, recoverable=True
+            message,
+            agent_id,
+            agent_type,
+            validation_context,
+            "AGENT_VALIDATION_ERROR",
+            details,
+            recoverable=True,
         )
         self.validation_field = validation_field
 
@@ -218,7 +262,9 @@ class QueryParsingError(QuantGPTException):
 class ActionExecutionError(QuantGPTException):
     """Raised when action execution fails."""
 
-    def __init__(self, message: str, action: str = None, details: Dict[str, Any] = None):
+    def __init__(
+        self, message: str, action: str = None, details: Dict[str, Any] = None
+    ):
         super().__init__(message, "ACTION_EXECUTION_ERROR", details, recoverable=True)
         self.action = action
 
@@ -227,13 +273,17 @@ class CommentaryGenerationError(QuantGPTException):
     """Raised when commentary generation fails."""
 
     def __init__(self, message: str, details: Dict[str, Any] = None):
-        super().__init__(message, "COMMENTARY_GENERATION_ERROR", details, recoverable=True)
+        super().__init__(
+            message, "COMMENTARY_GENERATION_ERROR", details, recoverable=True
+        )
 
 
 class ServiceConnectionError(QuantGPTException):
     """Raised when service connection fails."""
 
-    def __init__(self, message: str, service: str = None, details: Dict[str, Any] = None):
+    def __init__(
+        self, message: str, service: str = None, details: Dict[str, Any] = None
+    ):
         super().__init__(message, "SERVICE_CONNECTION_ERROR", details, recoverable=True)
         self.service = service
 
@@ -241,7 +291,9 @@ class ServiceConnectionError(QuantGPTException):
 class RateLimitExceededError(QuantGPTException):
     """Raised when rate limit is exceeded."""
 
-    def __init__(self, message: str, retry_after: int = None, details: Dict[str, Any] = None):
+    def __init__(
+        self, message: str, retry_after: int = None, details: Dict[str, Any] = None
+    ):
         super().__init__(message, "RATE_LIMIT_EXCEEDED", details, recoverable=True)
         self.retry_after = retry_after
 
@@ -249,7 +301,13 @@ class RateLimitExceededError(QuantGPTException):
 class ValidationError(QuantGPTException):
     """Raised when input validation fails."""
 
-    def __init__(self, message: str, field: str = None, value: Any = None, details: Dict[str, Any] = None):
+    def __init__(
+        self,
+        message: str,
+        field: str = None,
+        value: Any = None,
+        details: Dict[str, Any] = None,
+    ):
         super().__init__(message, "VALIDATION_ERROR", details, recoverable=True)
         self.field = field
         self.value = value
@@ -258,7 +316,9 @@ class ValidationError(QuantGPTException):
 class ConfigurationError(QuantGPTException):
     """Raised when configuration is invalid."""
 
-    def __init__(self, message: str, config_key: str = None, details: Dict[str, Any] = None):
+    def __init__(
+        self, message: str, config_key: str = None, details: Dict[str, Any] = None
+    ):
         super().__init__(message, "CONFIGURATION_ERROR", details, recoverable=False)
         self.config_key = config_key
 
@@ -266,7 +326,13 @@ class ConfigurationError(QuantGPTException):
 class ModelBuildError(QuantGPTException):
     """Raised when model building fails."""
 
-    def __init__(self, message: str, model_type: str = None, symbol: str = None, details: Dict[str, Any] = None):
+    def __init__(
+        self,
+        message: str,
+        model_type: str = None,
+        symbol: str = None,
+        details: Dict[str, Any] = None,
+    ):
         super().__init__(message, "MODEL_BUILD_ERROR", details, recoverable=True)
         self.model_type = model_type
         self.symbol = symbol
@@ -275,7 +341,9 @@ class ModelBuildError(QuantGPTException):
 class ModelEvaluationError(QuantGPTException):
     """Raised when model evaluation fails."""
 
-    def __init__(self, message: str, model_id: str = None, details: Dict[str, Any] = None):
+    def __init__(
+        self, message: str, model_id: str = None, details: Dict[str, Any] = None
+    ):
         super().__init__(message, "MODEL_EVALUATION_ERROR", details, recoverable=True)
         self.model_id = model_id
 
@@ -283,7 +351,13 @@ class ModelEvaluationError(QuantGPTException):
 class DataProviderError(QuantGPTException):
     """Raised when data provider fails."""
 
-    def __init__(self, message: str, provider: str = None, symbol: str = None, details: Dict[str, Any] = None):
+    def __init__(
+        self,
+        message: str,
+        provider: str = None,
+        symbol: str = None,
+        details: Dict[str, Any] = None,
+    ):
         super().__init__(message, "DATA_PROVIDER_ERROR", details, recoverable=True)
         self.provider = provider
         self.symbol = symbol
@@ -303,7 +377,11 @@ def capture_agent_context(func):
             e.add_execution_step(
                 step_name=func.__name__,
                 step_result="failed",
-                step_details={"args": str(args), "kwargs": str(kwargs), "function_module": func.__module__},
+                step_details={
+                    "args": str(args),
+                    "kwargs": str(kwargs),
+                    "function_module": func.__module__,
+                },
             )
             raise
         except Exception as e:
@@ -323,7 +401,9 @@ def capture_agent_context(func):
     return wrapper
 
 
-def handle_agent_exception(exception: AgentExecutionError, logger=None) -> Dict[str, Any]:
+def handle_agent_exception(
+    exception: AgentExecutionError, logger=None
+) -> Dict[str, Any]:
     """Handle agent exception and return recovery information."""
     if logger:
         logger.error(f"Agent execution error: {exception.message}")
@@ -332,10 +412,16 @@ def handle_agent_exception(exception: AgentExecutionError, logger=None) -> Dict[
     # Determine recovery strategy
     recovery_strategy = {
         "should_retry": exception.recoverable and not exception.fallback_attempted,
-        "should_fallback": exception.recoverable and len(exception.recovery_suggestions) > 0,
+        "should_fallback": exception.recoverable
+        and len(exception.recovery_suggestions) > 0,
         "should_escalate": not exception.recoverable or exception.fallback_attempted,
         "suggestions": [
-            s["suggestion"] for s in sorted(exception.recovery_suggestions, key=lambda x: x["priority"], reverse=True)
+            s["suggestion"]
+            for s in sorted(
+                exception.recovery_suggestions,
+                key=lambda x: x["priority"],
+                reverse=True,
+            )
         ],
     }
 

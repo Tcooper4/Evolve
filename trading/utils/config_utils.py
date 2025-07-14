@@ -11,6 +11,7 @@ import os
 import threading
 import time
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
@@ -104,11 +105,6 @@ class ConfigFileHandler(FileSystemEventHandler):
         if not event.is_directory:
             logger.info(f"Config file changed: {event.src_path}")
             self.callback()
-            return {
-                "success": True,
-                "message": "Config file modification handled",
-                "timestamp": datetime.now().isoformat(),
-            }
 
 
 class ConfigManager:
@@ -125,14 +121,11 @@ class ConfigManager:
         self.observers: Dict[str, Observer] = {}
         self._lock = threading.Lock()
 
-        return {
-            "success": True,
-            "message": "Config Manager initialized successfully",
-            "timestamp": datetime.now().isoformat(),
-        }
-
     def load_config(
-        self, filename: str, hot_reload: bool = False, callback: Optional[Callable[[], None]] = None
+        self,
+        filename: str,
+        hot_reload: bool = False,
+        callback: Optional[Callable[[], None]] = None,
     ) -> Dict[str, Any]:
         """Load a configuration file with optional hot-reload.
 
@@ -186,7 +179,9 @@ class ConfigManager:
             logger.error(f"Error loading config file {file_path}: {e}")
             raise
 
-    def _setup_hot_reload(self, file_path: Path, callback: Optional[Callable[[], None]]) -> None:
+    def _setup_hot_reload(
+        self, file_path: Path, callback: Optional[Callable[[], None]]
+    ) -> None:
         """Set up hot-reload for a config file.
 
         Args:
@@ -198,17 +193,16 @@ class ConfigManager:
                 callback = lambda: self._reload_config(file_path)
 
             observer = Observer()
-            observer.schedule(ConfigFileHandler(callback), str(file_path.parent), recursive=False)
+            observer.schedule(
+                ConfigFileHandler(callback), str(file_path.parent), recursive=False
+            )
             observer.start()
 
             self.observers[str(file_path)] = observer
             logger.info(f"Hot-reload enabled for {file_path}")
 
-            return {"success": True, "message": "Hot-reload setup completed", "timestamp": datetime.now().isoformat()}
-
         except Exception as e:
             logger.error(f"Error setting up hot-reload: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
 
     def _reload_config(self, file_path: Path) -> None:
         """Reload a configuration file.
@@ -227,11 +221,8 @@ class ConfigManager:
 
             logger.info(f"Config reloaded: {file_path}")
 
-            return {"success": True, "message": "Config reloaded successfully", "timestamp": datetime.now().isoformat()}
-
         except Exception as e:
             logger.error(f"Error reloading config {file_path}: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
 
     def get_config(self, filename: str) -> Dict[str, Any]:
         """Get a loaded configuration.
@@ -259,7 +250,11 @@ class ConfigManager:
                 }
 
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def stop_hot_reload(self, filename: str) -> None:
         """Stop hot-reload for a specific file.
@@ -284,7 +279,11 @@ class ConfigManager:
             }
 
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def stop_all_hot_reload(self) -> None:
         """Stop all hot-reload observers."""
@@ -303,7 +302,11 @@ class ConfigManager:
             }
 
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
 
 def hot_reload_config(func: Callable) -> Callable:
@@ -327,13 +330,17 @@ def hot_reload_config(func: Callable) -> Callable:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     return wrapper
 
 
 # Create singleton instance
-config_manager = ConfigManager()
+# config_manager = ConfigManager()  # Removed to prevent import errors
 
 
 def load_config(config_file: str) -> Dict[str, Any]:
@@ -382,7 +389,11 @@ def load_config(config_file: str) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Error loading config {config_file}: {e}")
-        return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def save_config(config: TradingConfig, config_file: str) -> Dict:
@@ -418,11 +429,19 @@ def save_config(config: TradingConfig, config_file: str) -> Dict:
 
         logger.info(f"Config saved to {config_file}")
 
-        return {"success": True, "message": f"Config saved to {config_file}", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": f"Config saved to {config_file}",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     except Exception as e:
         logger.error(f"Error saving config {config_file}: {e}")
-        return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def update_config(config: TradingConfig, updates: Dict[str, Any]) -> Dict[str, Any]:
@@ -452,7 +471,11 @@ def update_config(config: TradingConfig, updates: Dict[str, Any]) -> Dict[str, A
 
     except Exception as e:
         logger.error(f"Error updating config: {e}")
-        return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def get_env_config() -> Dict[str, Any]:
@@ -480,13 +503,17 @@ def get_env_config() -> Dict[str, Any]:
         config["ensemble_size"] = int(os.getenv("TRADING_ENSEMBLE_SIZE", "3"))
 
         # Risk settings
-        config["max_position_size"] = float(os.getenv("TRADING_MAX_POSITION_SIZE", "0.1"))
+        config["max_position_size"] = float(
+            os.getenv("TRADING_MAX_POSITION_SIZE", "0.1")
+        )
         config["max_drawdown"] = float(os.getenv("TRADING_MAX_DRAWDOWN", "0.2"))
         config["stop_loss"] = float(os.getenv("TRADING_STOP_LOSS", "0.05"))
         config["take_profit"] = float(os.getenv("TRADING_TAKE_PROFIT", "0.1"))
 
         # Portfolio settings
-        config["initial_capital"] = float(os.getenv("TRADING_INITIAL_CAPITAL", "100000.0"))
+        config["initial_capital"] = float(
+            os.getenv("TRADING_INITIAL_CAPITAL", "100000.0")
+        )
         config["rebalance_frequency"] = os.getenv("TRADING_REBALANCE_FREQUENCY", "1D")
         config["max_leverage"] = float(os.getenv("TRADING_MAX_LEVERAGE", "1.0"))
 
@@ -510,7 +537,11 @@ def get_env_config() -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Error loading environment config: {e}")
-        return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def create_default_config(config_file: str) -> Dict:
@@ -536,7 +567,11 @@ def create_default_config(config_file: str) -> Dict:
 
     except Exception as e:
         logger.error(f"Error creating default config: {e}")
-        return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def validate_config(config: TradingConfig) -> Dict:
@@ -588,8 +623,16 @@ def validate_config(config: TradingConfig) -> Dict:
 
         logger.info("Config validation passed")
 
-        return {"success": True, "message": "Config validation passed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Config validation passed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     except Exception as e:
         logger.error(f"Error validating config: {e}")
-        return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }

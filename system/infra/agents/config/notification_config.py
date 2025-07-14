@@ -57,12 +57,16 @@ class SecurityConfig(BaseModel):
 class EmailConfig(BaseModel):
     """Email notification configuration."""
 
-    smtp_server: str = Field(default_factory=lambda: os.getenv("SMTP_HOST", "smtp.gmail.com"))
+    smtp_server: str = Field(
+        default_factory=lambda: os.getenv("SMTP_HOST", "smtp.gmail.com")
+    )
     smtp_port: int = Field(default_factory=lambda: int(os.getenv("SMTP_PORT", "587")))
     use_tls: bool = True
     use_ssl: bool = False
     sender_email: str = Field(default_factory=lambda: os.getenv("EMAIL_FROM", ""))
-    sender_password: str = Field(default_factory=lambda: os.getenv("EMAIL_PASSWORD", ""))
+    sender_password: str = Field(
+        default_factory=lambda: os.getenv("EMAIL_PASSWORD", "")
+    )
     timeout: int = 30
     max_connections: int = 5
     retry_attempts: int = 3
@@ -81,7 +85,9 @@ class SlackConfig(BaseModel):
     """Slack notification configuration."""
 
     webhook_url: str = Field(default_factory=lambda: os.getenv("SLACK_WEBHOOK_URL", ""))
-    channel: str = Field(default_factory=lambda: os.getenv("SLACK_DEFAULT_CHANNEL", "#notifications"))
+    channel: str = Field(
+        default_factory=lambda: os.getenv("SLACK_DEFAULT_CHANNEL", "#notifications")
+    )
     username: str = "Automation Bot"
     timeout: int = 10
     retry_attempts: int = 3
@@ -139,7 +145,9 @@ class NotificationConfig(BaseModel):
     """Main notification configuration."""
 
     version: str = "1.0.0"
-    environment: str = Field(default_factory=lambda: os.getenv("ENVIRONMENT", "production"))
+    environment: str = Field(
+        default_factory=lambda: os.getenv("ENVIRONMENT", "production")
+    )
 
     # Channel configurations
     email: Optional[EmailConfig] = None
@@ -164,7 +172,11 @@ class NotificationConfig(BaseModel):
     def validate_config(cls, values):
         """Validate the entire configuration."""
         # Ensure at least one channel is enabled
-        enabled_channels = [channel for channel, config in values.get("channels", {}).items() if config.enabled]
+        enabled_channels = [
+            channel
+            for channel, config in values.get("channels", {}).items()
+            if config.enabled
+        ]
         if not enabled_channels:
             raise ValueError("At least one notification channel must be enabled")
 
@@ -177,7 +189,9 @@ class NotificationConfig(BaseModel):
         return values
 
 
-def load_notification_config(config_path: str = "config/notification_config.yaml") -> NotificationConfig:
+def load_notification_config(
+    config_path: str = "config/notification_config.yaml",
+) -> NotificationConfig:
     """Load notification configuration from YAML file."""
     try:
         with open(config_path, "r") as f:
@@ -189,7 +203,9 @@ def load_notification_config(config_path: str = "config/notification_config.yaml
         return NotificationConfig()
 
 
-def save_notification_config(config: NotificationConfig, config_path: str = "config/notification_config.yaml") -> None:
+def save_notification_config(
+    config: NotificationConfig, config_path: str = "config/notification_config.yaml"
+) -> None:
     """Save notification configuration to YAML file."""
     try:
         # Create directory if it doesn't exist
@@ -219,10 +235,18 @@ DEFAULT_CONFIG = NotificationConfig(
         "teams": ChannelConfig(enabled=False),
     },
     priorities={
-        "low": PriorityConfig(retry_attempts=1, retry_delay=600, timeout=60, rate_limit=100),
-        "medium": PriorityConfig(retry_attempts=2, retry_delay=300, timeout=30, rate_limit=50),
-        "high": PriorityConfig(retry_attempts=3, retry_delay=60, timeout=15, rate_limit=25),
-        "critical": PriorityConfig(retry_attempts=5, retry_delay=30, timeout=10, rate_limit=10),
+        "low": PriorityConfig(
+            retry_attempts=1, retry_delay=600, timeout=60, rate_limit=100
+        ),
+        "medium": PriorityConfig(
+            retry_attempts=2, retry_delay=300, timeout=30, rate_limit=50
+        ),
+        "high": PriorityConfig(
+            retry_attempts=3, retry_delay=60, timeout=15, rate_limit=25
+        ),
+        "critical": PriorityConfig(
+            retry_attempts=5, retry_delay=30, timeout=10, rate_limit=10
+        ),
     },
 )
 
@@ -249,10 +273,18 @@ EXAMPLE_CONFIG = NotificationConfig(
         "teams": ChannelConfig(enabled=False),
     },
     priorities={
-        "low": PriorityConfig(retry_attempts=1, retry_delay=600, timeout=60, rate_limit=100),
-        "medium": PriorityConfig(retry_attempts=2, retry_delay=300, timeout=30, rate_limit=50),
-        "high": PriorityConfig(retry_attempts=3, retry_delay=60, timeout=15, rate_limit=25),
-        "critical": PriorityConfig(retry_attempts=5, retry_delay=30, timeout=10, rate_limit=10),
+        "low": PriorityConfig(
+            retry_attempts=1, retry_delay=600, timeout=60, rate_limit=100
+        ),
+        "medium": PriorityConfig(
+            retry_attempts=2, retry_delay=300, timeout=30, rate_limit=50
+        ),
+        "high": PriorityConfig(
+            retry_attempts=3, retry_delay=60, timeout=15, rate_limit=25
+        ),
+        "critical": PriorityConfig(
+            retry_attempts=5, retry_delay=30, timeout=10, rate_limit=10
+        ),
     },
     retention_days=60,
     max_notifications_per_user=2000,

@@ -5,10 +5,12 @@ Provides isolated, timeout-protected, and memory-limited execution
 for user-defined models and strategies to protect system stability.
 """
 
+import asyncio
 import json
 import logging
 import os
 import random
+import signal
 import subprocess
 import sys
 import tempfile
@@ -17,8 +19,8 @@ import traceback
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
+from typing import Any, Dict, List, Optional, Union
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -127,7 +129,11 @@ class SafeExecutor:
         )
 
     def execute_model(
-        self, model_code: str, model_name: str, input_data: Dict[str, Any] = None, model_type: str = "custom"
+        self,
+        model_code: str,
+        model_name: str,
+        input_data: Dict[str, Any] = None,
+        model_type: str = "custom",
     ) -> ExecutionResult:
         """
         Execute a user-defined model safely with retry logic and fallback.
@@ -151,9 +157,13 @@ class SafeExecutor:
 
             # Execute with retry logic
             if self.enable_retry:
-                result = self._execute_with_retry(model_code, model_name, input_data, model_type)
+                result = self._execute_with_retry(
+                    model_code, model_name, input_data, model_type
+                )
             else:
-                result = self._execute_single_attempt(model_code, model_name, input_data, model_type)
+                result = self._execute_single_attempt(
+                    model_code, model_name, input_data, model_type
+                )
 
             # Log execution
             if self.log_executions:
@@ -175,7 +185,9 @@ class SafeExecutor:
         except Exception as e:
             logger.error(f"Error executing model {model_name}: {e}")
             return ExecutionResult(
-                status=ExecutionStatus.SYSTEM_ERROR, error=f"System error: {str(e)}", logs=[traceback.format_exc()]
+                status=ExecutionStatus.SYSTEM_ERROR,
+                error=f"System error: {str(e)}",
+                logs=[traceback.format_exc()],
             )
 
     def execute_strategy(
@@ -198,11 +210,17 @@ class SafeExecutor:
             ExecutionResult with status and output
         """
         # Prepare input data
-        input_data = {"market_data": market_data or {}, "parameters": parameters or {}, "strategy_name": strategy_name}
+        input_data = {
+            "market_data": market_data or {},
+            "parameters": parameters or {},
+            "strategy_name": strategy_name,
+        }
 
         return {
             "success": True,
-            "result": self.execute_model(strategy_code, strategy_name, input_data, "strategy"),
+            "result": self.execute_model(
+                strategy_code, strategy_name, input_data, "strategy"
+            ),
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }
@@ -227,11 +245,17 @@ class SafeExecutor:
             ExecutionResult with status and output
         """
         # Prepare input data
-        input_data = {"price_data": price_data or {}, "parameters": parameters or {}, "indicator_name": indicator_name}
+        input_data = {
+            "price_data": price_data or {},
+            "parameters": parameters or {},
+            "indicator_name": indicator_name,
+        }
 
         return {
             "success": True,
-            "result": self.execute_model(indicator_code, indicator_name, input_data, "indicator"),
+            "result": self.execute_model(
+                indicator_code, indicator_name, input_data, "indicator"
+            ),
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }
@@ -256,7 +280,10 @@ class SafeExecutor:
             ]
 
             for dangerous_import in dangerous_imports:
-                if f"import {dangerous_import}" in model_code or f"from {dangerous_import}" in model_code:
+                if (
+                    f"import {dangerous_import}" in model_code
+                    or f"from {dangerous_import}" in model_code
+                ):
                     return ExecutionResult(
                         status=ExecutionStatus.VALIDATION_ERROR,
                         error=f"Dangerous import detected: {dangerous_import}",
@@ -300,7 +327,9 @@ class SafeExecutor:
                 logs=[traceback.format_exc()],
             )
 
-    def _create_execution_environment(self, model_code: str, input_data: Dict[str, Any]) -> ExecutionResult:
+    def _create_execution_environment(
+        self, model_code: str, input_data: Dict[str, Any]
+    ) -> ExecutionResult:
         """Create isolated execution environment."""
         try:
             # Create temporary directory
@@ -314,7 +343,9 @@ class SafeExecutor:
             with open(script_path, "w") as f:
                 f.write(wrapper_code)
 
-            return ExecutionResult(status=ExecutionStatus.SUCCESS, return_value=str(script_path))
+            return ExecutionResult(
+                status=ExecutionStatus.SUCCESS, return_value=str(script_path)
+            )
 
         except Exception as e:
             return ExecutionResult(
@@ -323,7 +354,9 @@ class SafeExecutor:
                 logs=[traceback.format_exc()],
             )
 
-    def _create_wrapper_script(self, model_code: str, input_data: Dict[str, Any]) -> str:
+    def _create_wrapper_script(
+        self, model_code: str, input_data: Dict[str, Any]
+    ) -> str:
         """Create a wrapper script for safe execution."""
         wrapper = f'''#!/usr/bin/env python3
 """
@@ -452,7 +485,11 @@ finally:
         return wrapper
 
     def _execute_with_retry(
-        self, model_code: str, model_name: str, input_data: Dict[str, Any], model_type: str
+        self,
+        model_code: str,
+        model_name: str,
+        input_data: Dict[str, Any],
+        model_type: str,
     ) -> ExecutionResult:
         """
         Execute with retry logic and exponential backoff.
@@ -471,7 +508,9 @@ finally:
                     )
                     time.sleep(delay)
 
-                result = self._execute_single_attempt(model_code, model_name, input_data, model_type)
+                result = self._execute_single_attempt(
+                    model_code, model_name, input_data, model_type
+                )
 
                 if result.status == ExecutionStatus.SUCCESS:
                     result.retry_count = retry_count
@@ -490,12 +529,18 @@ finally:
                 last_error = str(e)
                 retry_count = attempt
                 self.retry_count += 1
-                logger.warning(f"Exception during attempt {attempt + 1} for {model_name}: {e}")
+                logger.warning(
+                    f"Exception during attempt {attempt + 1} for {model_name}: {e}"
+                )
 
         # All retries exhausted, try sandbox fallback
         if self.enable_sandbox:
-            logger.warning(f"All retries exhausted for {model_name}, attempting sandbox fallback")
-            return self._execute_sandbox_fallback(model_code, model_name, input_data, model_type, retry_count)
+            logger.warning(
+                f"All retries exhausted for {model_name}, attempting sandbox fallback"
+            )
+            return self._execute_sandbox_fallback(
+                model_code, model_name, input_data, model_type, retry_count
+            )
 
         # No fallback available
         return ExecutionResult(
@@ -506,7 +551,11 @@ finally:
         )
 
     def _execute_single_attempt(
-        self, model_code: str, model_name: str, input_data: Dict[str, Any], model_type: str
+        self,
+        model_code: str,
+        model_name: str,
+        input_data: Dict[str, Any],
+        model_type: str,
     ) -> ExecutionResult:
         """
         Execute a single attempt without retry logic.
@@ -517,10 +566,17 @@ finally:
             return env_result
 
         # Execute in isolated process
-        return self._execute_isolated_process(env_result.return_value, model_name, model_type)  # script_path
+        return self._execute_isolated_process(
+            env_result.return_value, model_name, model_type
+        )  # script_path
 
     def _execute_sandbox_fallback(
-        self, model_code: str, model_name: str, input_data: Dict[str, Any], model_type: str, retry_count: int
+        self,
+        model_code: str,
+        model_name: str,
+        input_data: Dict[str, Any],
+        model_type: str,
+        retry_count: int,
     ) -> ExecutionResult:
         """
         Execute in sandbox mode with reduced restrictions as fallback.
@@ -547,7 +603,9 @@ finally:
             result.fallback_used = True
             result.retry_count = retry_count
             result.status = (
-                ExecutionStatus.SANDBOX_FALLBACK if result.status == ExecutionStatus.SUCCESS else result.status
+                ExecutionStatus.SANDBOX_FALLBACK
+                if result.status == ExecutionStatus.SUCCESS
+                else result.status
             )
 
             # Clean up sandbox script
@@ -568,7 +626,9 @@ finally:
                 logs=[traceback.format_exc()],
             )
 
-    def _create_sandbox_script(self, model_code: str, input_data: Dict[str, Any]) -> str:
+    def _create_sandbox_script(
+        self, model_code: str, input_data: Dict[str, Any]
+    ) -> str:
         """
         Create a sandbox script with relaxed restrictions.
         """
@@ -788,7 +848,8 @@ except Exception as e:
             "failed_executions": self.error_count,
             "success_rate": self.success_count / max(self.execution_count, 1),
             "total_execution_time": self.total_execution_time,
-            "average_execution_time": self.total_execution_time / max(self.execution_count, 1),
+            "average_execution_time": self.total_execution_time
+            / max(self.execution_count, 1),
             "timeout_seconds": self.timeout_seconds,
             "memory_limit_mb": self.memory_limit_mb,
             "max_retries": self.max_retries,
@@ -801,7 +862,7 @@ except Exception as e:
         """Clean up temporary files and resources."""
         try:
             # Clean up temporary files
-            temp_pattern = Path(tempfile.gettempdir()) / "safe_exec_*"
+            Path(tempfile.gettempdir()) / "safe_exec_*"
             for temp_dir in Path(tempfile.gettempdir()).glob("safe_exec_*"):
                 if temp_dir.is_dir():
                     import shutil
@@ -825,7 +886,10 @@ def get_safe_executor() -> SafeExecutor:
 
 
 def execute_model_safely(
-    model_code: str, model_name: str, input_data: Dict[str, Any] = None, model_type: str = "custom"
+    model_code: str,
+    model_name: str,
+    input_data: Dict[str, Any] = None,
+    model_type: str = "custom",
 ) -> ExecutionResult:
     """
     Convenience function to execute a model safely.
@@ -842,14 +906,19 @@ def execute_model_safely(
     executor = get_safe_executor()
     return {
         "success": True,
-        "result": executor.execute_model(model_code, model_name, input_data, model_type),
+        "result": executor.execute_model(
+            model_code, model_name, input_data, model_type
+        ),
         "message": "Operation completed successfully",
         "timestamp": datetime.now().isoformat(),
     }
 
 
 def execute_strategy_safely(
-    strategy_code: str, strategy_name: str, market_data: Dict[str, Any] = None, parameters: Dict[str, Any] = None
+    strategy_code: str,
+    strategy_name: str,
+    market_data: Dict[str, Any] = None,
+    parameters: Dict[str, Any] = None,
 ) -> ExecutionResult:
     """
     Convenience function to execute a strategy safely.
@@ -866,14 +935,19 @@ def execute_strategy_safely(
     executor = get_safe_executor()
     return {
         "success": True,
-        "result": executor.execute_strategy(strategy_code, strategy_name, market_data, parameters),
+        "result": executor.execute_strategy(
+            strategy_code, strategy_name, market_data, parameters
+        ),
         "message": "Operation completed successfully",
         "timestamp": datetime.now().isoformat(),
     }
 
 
 def execute_indicator_safely(
-    indicator_code: str, indicator_name: str, price_data: Dict[str, Any] = None, parameters: Dict[str, Any] = None
+    indicator_code: str,
+    indicator_name: str,
+    price_data: Dict[str, Any] = None,
+    parameters: Dict[str, Any] = None,
 ) -> ExecutionResult:
     """
     Convenience function to execute an indicator safely.
@@ -890,7 +964,9 @@ def execute_indicator_safely(
     executor = get_safe_executor()
     return {
         "success": True,
-        "result": executor.execute_indicator(indicator_code, indicator_name, price_data, parameters),
+        "result": executor.execute_indicator(
+            indicator_code, indicator_name, price_data, parameters
+        ),
         "message": "Operation completed successfully",
         "timestamp": datetime.now().isoformat(),
     }

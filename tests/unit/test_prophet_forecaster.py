@@ -141,7 +141,10 @@ class TestProphetForecaster:
         # Should fail gracefully with clear error message
         assert result["success"] is False
         assert "error" in result
-        assert any(keyword in result["error"].lower() for keyword in ["insufficient", "at least", "minimum", "data"])
+        assert any(
+            keyword in result["error"].lower()
+            for keyword in ["insufficient", "at least", "minimum", "data"]
+        )
 
     def test_constant_series_handling(self, prophet_model, constant_time_series):
         """Test handling of constant time series."""
@@ -155,7 +158,10 @@ class TestProphetForecaster:
             assert len(forecast_result["predictions"]) == 5
         else:
             # If it fails, should be due to constant series
-            assert any(keyword in result.get("error", "").lower() for keyword in ["constant", "variance", "unique"])
+            assert any(
+                keyword in result.get("error", "").lower()
+                for keyword in ["constant", "variance", "unique"]
+            )
 
     def test_nan_series_handling(self, prophet_model, nan_time_series):
         """Test handling of time series with NaN values."""
@@ -164,7 +170,10 @@ class TestProphetForecaster:
         # Should fail gracefully with clear error message
         assert result["success"] is False
         assert "error" in result
-        assert any(keyword in result["error"].lower() for keyword in ["nan", "missing", "invalid"])
+        assert any(
+            keyword in result["error"].lower()
+            for keyword in ["nan", "missing", "invalid"]
+        )
 
     def test_model_summary(self, prophet_model, synthetic_time_series):
         """Test that model summary is generated correctly."""
@@ -211,7 +220,9 @@ class TestProphetForecaster:
         prophet_model.fit(synthetic_time_series)
 
         if hasattr(prophet_model, "predict_with_confidence"):
-            result = prophet_model.predict_with_confidence(synthetic_time_series, horizon=10)
+            result = prophet_model.predict_with_confidence(
+                synthetic_time_series, horizon=10
+            )
             assert result["success"] is True
             assert "predictions" in result
             assert "lower" in result
@@ -264,7 +275,9 @@ class TestProphetForecaster:
 
         assert forecast1["success"] is True
         assert forecast2["success"] is True
-        np.testing.assert_array_almost_equal(forecast1["predictions"], forecast2["predictions"], decimal=10)
+        np.testing.assert_array_almost_equal(
+            forecast1["predictions"], forecast2["predictions"], decimal=10
+        )
 
     def test_trend_detection(self, prophet_model):
         """Test that model correctly identifies trends."""
@@ -290,7 +303,9 @@ class TestProphetForecaster:
             assert not np.isnan(forecast["predictions"]).any()
 
     @pytest.mark.parametrize("horizon", [1, 5, 10, 30])
-    def test_different_forecast_horizons(self, prophet_model, synthetic_time_series, horizon):
+    def test_different_forecast_horizons(
+        self, prophet_model, synthetic_time_series, horizon
+    ):
         """Test forecasting with different horizons."""
         prophet_model.fit(synthetic_time_series)
 
@@ -318,7 +333,9 @@ class TestProphetForecaster:
 
         if hasattr(prophet_model, "detect_changepoints"):
             changepoints = prophet_model.detect_changepoints(synthetic_time_series)
-            assert isinstance(changepoints, list) or isinstance(changepoints, np.ndarray)
+            assert isinstance(changepoints, list) or isinstance(
+                changepoints, np.ndarray
+            )
 
     def test_holiday_effects(self, prophet_model, synthetic_time_series):
         """Test holiday effects handling."""
@@ -327,7 +344,10 @@ class TestProphetForecaster:
         if hasattr(prophet_model, "add_holidays"):
             # Add holiday effects
             holidays = pd.DataFrame(
-                {"ds": pd.to_datetime(["2023-01-01", "2023-07-04"]), "holiday": ["New Year", "Independence Day"]}
+                {
+                    "ds": pd.to_datetime(["2023-01-01", "2023-07-04"]),
+                    "holiday": ["New Year", "Independence Day"],
+                }
             )
             prophet_model.add_holidays(holidays)
 
@@ -394,7 +414,9 @@ class TestProphetForecaster:
         prophet_model.fit(synthetic_time_series)
 
         if hasattr(prophet_model, "predict_with_uncertainty"):
-            result = prophet_model.predict_with_uncertainty(synthetic_time_series, horizon=10)
+            result = prophet_model.predict_with_uncertainty(
+                synthetic_time_series, horizon=10
+            )
             assert result["success"] is True
             assert "uncertainty" in result or "std" in result
 
@@ -403,7 +425,9 @@ class TestProphetForecaster:
         prophet_model.fit(synthetic_time_series)
 
         if hasattr(prophet_model, "cross_validate"):
-            cv_results = prophet_model.cross_validate(synthetic_time_series, initial=50, period=10, horizon=5)
+            cv_results = prophet_model.cross_validate(
+                synthetic_time_series, initial=50, period=10, horizon=5
+            )
             assert isinstance(cv_results, dict)
             assert "metrics" in cv_results or "predictions" in cv_results
 

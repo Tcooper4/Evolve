@@ -258,7 +258,9 @@ class ModelParameterTuner:
                         )
                     elif config.param_type == "bool":
                         value = st.checkbox(
-                            config.display_name, value=bool(config.default_value), help=config.description
+                            config.display_name,
+                            value=bool(config.default_value),
+                            help=config.description,
                         )
                     elif config.param_type == "select":
                         value = st.selectbox(
@@ -280,7 +282,9 @@ class ModelParameterTuner:
             if validation_result["valid"]:
                 st.success("✅ Parameters are valid")
             else:
-                st.error(f"❌ Parameter validation failed: {validation_result['message']}")
+                st.error(
+                    f"❌ Parameter validation failed: {validation_result['message']}"
+                )
 
             # Add parameter summary
             if st.checkbox("Show parameter summary"):
@@ -293,7 +297,9 @@ class ModelParameterTuner:
             st.error(f"Error rendering parameter tuner: {str(e)}")
             return {}
 
-    def _validate_parameters(self, model_type: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_parameters(
+        self, model_type: str, parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Validate model parameters.
 
         Args:
@@ -307,23 +313,38 @@ class ModelParameterTuner:
             if model_type == "transformer":
                 # Validate transformer parameters
                 if parameters.get("d_model", 0) % parameters.get("nhead", 1) != 0:
-                    return {"valid": False, "message": "Model dimension must be divisible by number of heads"}
+                    return {
+                        "valid": False,
+                        "message": "Model dimension must be divisible by number of heads",
+                    }
 
                 if parameters.get("num_layers", 0) > 8:
-                    return {"valid": False, "message": "Too many layers may cause overfitting"}
+                    return {
+                        "valid": False,
+                        "message": "Too many layers may cause overfitting",
+                    }
 
             elif model_type == "lstm":
                 # Validate LSTM parameters
                 if parameters.get("hidden_size", 0) > 256:
-                    return {"valid": False, "message": "Hidden size too large may cause overfitting"}
+                    return {
+                        "valid": False,
+                        "message": "Hidden size too large may cause overfitting",
+                    }
 
             elif model_type == "xgboost":
                 # Validate XGBoost parameters
                 if parameters.get("max_depth", 0) > 15:
-                    return {"valid": False, "message": "Max depth too large may cause overfitting"}
+                    return {
+                        "valid": False,
+                        "message": "Max depth too large may cause overfitting",
+                    }
 
                 if parameters.get("learning_rate", 0) > 0.3:
-                    return {"valid": False, "message": "Learning rate too high may cause instability"}
+                    return {
+                        "valid": False,
+                        "message": "Learning rate too high may cause instability",
+                    }
 
             return {"valid": True, "message": "Parameters are valid"}
 
@@ -440,7 +461,9 @@ class ModelParameterTuner:
             logger.error(f"Error getting default parameters: {e}")
             return {}
 
-    def save_parameter_preset(self, model_type: str, parameters: Dict[str, Any], preset_name: str):
+    def save_parameter_preset(
+        self, model_type: str, parameters: Dict[str, Any], preset_name: str
+    ):
         """Save a parameter preset.
 
         Args:
@@ -456,7 +479,9 @@ class ModelParameterTuner:
             logger.error(f"Error saving parameter preset: {e}")
             st.error(f"Error saving preset: {str(e)}")
 
-    def load_parameter_preset(self, model_type: str, preset_name: str) -> Dict[str, Any]:
+    def load_parameter_preset(
+        self, model_type: str, preset_name: str
+    ) -> Dict[str, Any]:
         """Load a parameter preset.
 
         Args:
@@ -496,7 +521,10 @@ class ModelParameterTuner:
             logger.error(f"Could not save optimization history: {e}")
 
     def add_optimization_result(
-        self, model_type: str, parameters: Dict[str, Any], performance_metrics: Dict[str, float]
+        self,
+        model_type: str,
+        parameters: Dict[str, Any],
+        performance_metrics: Dict[str, float],
     ):
         """Add optimization result to history.
 
@@ -515,7 +543,9 @@ class ModelParameterTuner:
         self._save_optimization_history()
         logger.info(f"Added optimization result for {model_type}")
 
-    def get_optimization_history(self, model_type: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_optimization_history(
+        self, model_type: Optional[str] = None, limit: int = 50
+    ) -> List[Dict[str, Any]]:
         """Get optimization history.
 
         Args:
@@ -526,7 +556,9 @@ class ModelParameterTuner:
             List of optimization results
         """
         if model_type:
-            filtered = [r for r in self.optimization_history if r["model_type"] == model_type]
+            filtered = [
+                r for r in self.optimization_history if r["model_type"] == model_type
+            ]
         else:
             filtered = self.optimization_history
 

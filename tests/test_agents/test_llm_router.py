@@ -61,7 +61,11 @@ class TestLLMRouter:
 
         for user_input, expected_intent in test_cases:
             with patch.object(mock_router, "detect_intent") as mock_detect:
-                mock_detect.return_value = {"intent": expected_intent, "confidence": 0.9, "entities": ["AAPL"]}
+                mock_detect.return_value = {
+                    "intent": expected_intent,
+                    "confidence": 0.9,
+                    "entities": ["AAPL"],
+                }
 
                 result = mock_router.route_intent(user_input)
 
@@ -72,9 +76,15 @@ class TestLLMRouter:
     @patch("openai.ChatCompletion.create")
     def test_entity_extraction(self, mock_openai, mock_router):
         """Test that the router correctly extracts entities from user input."""
-        mock_openai.return_value = {"choices": [{"message": {"content": "AAPL, TSLA, GOOGL"}}]}
+        mock_openai.return_value = {
+            "choices": [{"message": {"content": "AAPL, TSLA, GOOGL"}}]
+        }
 
-        test_inputs = ["Buy AAPL and TSLA", "Analyze GOOGL performance", "Sell all my positions"]
+        test_inputs = [
+            "Buy AAPL and TSLA",
+            "Analyze GOOGL performance",
+            "Sell all my positions",
+        ]
 
         for user_input in test_inputs:
             with patch.object(mock_router, "extract_entities") as mock_extract:
@@ -103,14 +113,28 @@ class TestLLMRouter:
     def test_strategy_selection(self, mock_openai, mock_router, sample_market_data):
         """Test that the router selects appropriate strategies based on market conditions."""
         mock_openai.return_value = {
-            "choices": [{"message": {"content": "RSI strategy is recommended due to oversold conditions."}}]
+            "choices": [
+                {
+                    "message": {
+                        "content": "RSI strategy is recommended due to oversold conditions."
+                    }
+                }
+            ]
         }
 
         # Test different market conditions
         market_conditions = [
             {"volatility": "high", "trend": "upward", "expected_strategy": "momentum"},
-            {"volatility": "low", "trend": "sideways", "expected_strategy": "mean_reversion"},
-            {"volatility": "high", "trend": "downward", "expected_strategy": "defensive"},
+            {
+                "volatility": "low",
+                "trend": "sideways",
+                "expected_strategy": "mean_reversion",
+            },
+            {
+                "volatility": "high",
+                "trend": "downward",
+                "expected_strategy": "defensive",
+            },
         ]
 
         for condition in market_conditions:
@@ -145,7 +169,13 @@ class TestLLMRouter:
     def test_context_awareness(self, mock_openai, mock_router):
         """Test that the router maintains context across interactions."""
         mock_openai.return_value = {
-            "choices": [{"message": {"content": "Based on previous analysis, continue with BUY recommendation."}}]
+            "choices": [
+                {
+                    "message": {
+                        "content": "Based on previous analysis, continue with BUY recommendation."
+                    }
+                }
+            ]
         }
 
         # Simulate conversation context
@@ -178,7 +208,11 @@ class TestLLMRouter:
 
         for user_input in test_inputs:
             with patch.object(mock_router, "route_intent") as mock_route:
-                mock_route.return_value = {"intent": "buy", "confidence": 0.8, "entities": ["AAPL"]}
+                mock_route.return_value = {
+                    "intent": "buy",
+                    "confidence": 0.8,
+                    "entities": ["AAPL"],
+                }
 
                 result = mock_router.route_intent(user_input)
 
@@ -190,7 +224,13 @@ class TestLLMRouter:
     def test_multi_entity_handling(self, mock_openai, mock_router):
         """Test that the router handles multiple entities correctly."""
         mock_openai.return_value = {
-            "choices": [{"message": {"content": "AAPL, TSLA, GOOGL are all recommended for purchase."}}]
+            "choices": [
+                {
+                    "message": {
+                        "content": "AAPL, TSLA, GOOGL are all recommended for purchase."
+                    }
+                }
+            ]
         }
 
         user_input = "Buy AAPL, TSLA, and GOOGL"
@@ -208,10 +248,18 @@ class TestLLMRouter:
     def test_strategy_validation(self, mock_router):
         """Test that the router validates strategy recommendations."""
         # Test valid strategy
-        valid_strategy = {"strategy": "RSI", "confidence": 0.8, "parameters": {"period": 14}}
+        valid_strategy = {
+            "strategy": "RSI",
+            "confidence": 0.8,
+            "parameters": {"period": 14},
+        }
 
         # Test invalid strategy
-        invalid_strategy = {"strategy": "INVALID_STRATEGY", "confidence": 0.8, "parameters": {}}
+        invalid_strategy = {
+            "strategy": "INVALID_STRATEGY",
+            "confidence": 0.8,
+            "parameters": {},
+        }
 
         # Valid strategy should pass validation
         assert mock_router._validate_strategy(valid_strategy)
@@ -223,11 +271,22 @@ class TestLLMRouter:
     def test_adaptive_learning(self, mock_openai, mock_router):
         """Test that the router learns from user feedback."""
         mock_openai.return_value = {
-            "choices": [{"message": {"content": "Learning from feedback to improve recommendations."}}]
+            "choices": [
+                {
+                    "message": {
+                        "content": "Learning from feedback to improve recommendations."
+                    }
+                }
+            ]
         }
 
         # Simulate user feedback
-        feedback = {"intent": "buy", "entities": ["AAPL"], "user_satisfaction": 0.9, "actual_outcome": "positive"}
+        feedback = {
+            "intent": "buy",
+            "entities": ["AAPL"],
+            "user_satisfaction": 0.9,
+            "actual_outcome": "positive",
+        }
 
         with patch.object(mock_router, "learn_from_feedback") as mock_learn:
             mock_learn.return_value = True
@@ -269,9 +328,18 @@ class TestLLMRouter:
                 result = mock_router.route_with_fallback("Buy AAPL")
 
                 # Verify fallback was used
-                self.assertTrue(result["fallback_used"], "Fallback should be used when primary fails")
-                self.assertEqual(result["intent"], "buy", "Fallback should provide valid intent")
-                self.assertGreater(result["confidence"], 0.5, "Fallback should provide reasonable confidence")
+                self.assertTrue(
+                    result["fallback_used"],
+                    "Fallback should be used when primary fails",
+                )
+                self.assertEqual(
+                    result["intent"], "buy", "Fallback should provide valid intent"
+                )
+                self.assertGreater(
+                    result["confidence"],
+                    0.5,
+                    "Fallback should provide reasonable confidence",
+                )
 
                 # Verify fallback was called
                 mock_fallback.assert_called_once()
@@ -297,8 +365,13 @@ class TestLLMRouter:
                 result = mock_router.route_with_fallback("Analyze TSLA")
 
                 # Verify fallback was used
-                self.assertTrue(result["fallback_used"], "Fallback should be used when primary times out")
-                self.assertEqual(result["intent"], "analyze", "Fallback should provide valid intent")
+                self.assertTrue(
+                    result["fallback_used"],
+                    "Fallback should be used when primary times out",
+                )
+                self.assertEqual(
+                    result["intent"], "analyze", "Fallback should provide valid intent"
+                )
 
                 # Verify fallback was called
                 mock_fallback.assert_called_once()
@@ -309,7 +382,11 @@ class TestLLMRouter:
 
         # Mock primary route with low confidence
         with patch.object(mock_router, "route_intent") as mock_primary:
-            mock_primary.return_value = {"intent": "buy", "confidence": 0.3, "entities": ["GOOGL"]}  # Below threshold
+            mock_primary.return_value = {
+                "intent": "buy",
+                "confidence": 0.3,
+                "entities": ["GOOGL"],
+            }  # Below threshold
 
             # Mock fallback route
             with patch.object(mock_router, "route_fallback") as mock_fallback:
@@ -321,11 +398,20 @@ class TestLLMRouter:
                 }
 
                 # Test fallback activation
-                result = mock_router.route_with_fallback("Buy GOOGL", confidence_threshold=0.5)
+                result = mock_router.route_with_fallback(
+                    "Buy GOOGL", confidence_threshold=0.5
+                )
 
                 # Verify fallback was used due to low confidence
-                self.assertTrue(result["fallback_used"], "Fallback should be used when confidence is low")
-                self.assertGreater(result["confidence"], 0.5, "Fallback should provide higher confidence")
+                self.assertTrue(
+                    result["fallback_used"],
+                    "Fallback should be used when confidence is low",
+                )
+                self.assertGreater(
+                    result["confidence"],
+                    0.5,
+                    "Fallback should provide higher confidence",
+                )
 
                 # Verify fallback was called
                 mock_fallback.assert_called_once()
@@ -355,7 +441,10 @@ class TestLLMRouter:
                 result = mock_router.route_with_fallback("Buy MSFT")
 
                 # Verify fallback was used due to invalid response
-                self.assertTrue(result["fallback_used"], "Fallback should be used when response is invalid")
+                self.assertTrue(
+                    result["fallback_used"],
+                    "Fallback should be used when response is invalid",
+                )
                 self.assertIn(
                     result["intent"],
                     ["buy", "sell", "analyze", "report", "optimize"],
@@ -389,9 +478,15 @@ class TestLLMRouter:
                     result = mock_router.route_with_fallback_chain("Sell NVDA")
 
                     # Verify second fallback was used
-                    self.assertTrue(result["fallback_used"], "Fallback chain should be used")
-                    self.assertEqual(result["fallback_level"], 2, "Should use second fallback level")
-                    self.assertEqual(result["intent"], "sell", "Should provide valid intent")
+                    self.assertTrue(
+                        result["fallback_used"], "Fallback chain should be used"
+                    )
+                    self.assertEqual(
+                        result["fallback_level"], 2, "Should use second fallback level"
+                    )
+                    self.assertEqual(
+                        result["intent"], "sell", "Should provide valid intent"
+                    )
 
                     # Verify fallback chain was called
                     mock_fallback1.assert_called_once()
@@ -417,8 +512,16 @@ class TestLLMRouter:
             self.assertIn("fallback_success_rate", performance)
             self.assertIn("avg_fallback_latency", performance)
 
-            self.assertGreaterEqual(performance["fallback_success_rate"], 0.8, "Fallback success rate should be high")
-            self.assertLess(performance["avg_fallback_latency"], 1.0, "Fallback latency should be reasonable")
+            self.assertGreaterEqual(
+                performance["fallback_success_rate"],
+                0.8,
+                "Fallback success rate should be high",
+            )
+            self.assertLess(
+                performance["avg_fallback_latency"],
+                1.0,
+                "Fallback latency should be reasonable",
+            )
 
             print("  ✅ Fallback performance monitoring working")
 
@@ -432,7 +535,9 @@ class TestLLMRouter:
             # Test circuit breaker activation
             should_use_fallback = mock_router.should_use_fallback()
 
-            self.assertTrue(should_use_fallback, "Should use fallback when circuit breaker is open")
+            self.assertTrue(
+                should_use_fallback, "Should use fallback when circuit breaker is open"
+            )
             print("  ✅ Circuit breaker logic working")
 
         print("✅ Fallback LLM trigger test completed")

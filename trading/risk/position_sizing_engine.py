@@ -77,17 +77,28 @@ class PositionSizingEngine:
 
         # Kelly Criterion parameters
         self.kelly_config = self.config.get(
-            "kelly_config", {"fraction": 0.25, "max_leverage": 2.0, "min_size": 0.01}  # Use fractional Kelly
+            "kelly_config",
+            {
+                "fraction": 0.25,
+                "max_leverage": 2.0,
+                "min_size": 0.01,
+            },  # Use fractional Kelly
         )
 
         # Volatility parameters
         self.volatility_config = self.config.get(
-            "volatility_config", {"lookback_period": 252, "target_volatility": 0.15, "volatility_floor": 0.05}
+            "volatility_config",
+            {
+                "lookback_period": 252,
+                "target_volatility": 0.15,
+                "volatility_floor": 0.05,
+            },
         )
 
         # Drawdown parameters
         self.drawdown_config = self.config.get(
-            "drawdown_config", {"max_drawdown": 0.10, "drawdown_lookback": 252, "recovery_factor": 0.5}
+            "drawdown_config",
+            {"max_drawdown": 0.10, "drawdown_lookback": 252, "recovery_factor": 0.5},
         )
 
         # Portfolio constraints
@@ -107,7 +118,11 @@ class PositionSizingEngine:
 
         logger.info("Position Sizing Engine initialized")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def calculate_position_size(
         self,
@@ -150,7 +165,9 @@ class PositionSizingEngine:
                 base_size = self._fixed_sizing(returns)
 
             # Apply constraints
-            constrained_size = self._apply_constraints(base_size, symbol, portfolio_context)
+            constrained_size = self._apply_constraints(
+                base_size, symbol, portfolio_context
+            )
 
             # Calculate risk metrics
             risk_metrics = self._calculate_risk_metrics(returns, constrained_size)
@@ -164,7 +181,9 @@ class PositionSizingEngine:
                 sizing_method=method,
                 confidence=confidence,
                 risk_metrics=risk_metrics,
-                constraints=self._get_applied_constraints(constrained_size, symbol, portfolio_context),
+                constraints=self._get_applied_constraints(
+                    constrained_size, symbol, portfolio_context
+                ),
                 timestamp=datetime.now(),
                 metadata={
                     "base_size": base_size,
@@ -176,7 +195,8 @@ class PositionSizingEngine:
             self.sizing_history.append(position_size)
 
             logger.info(
-                f"Calculated position size for {symbol}: {constrained_size:.2%} " f"using {method.value} method"
+                f"Calculated position size for {symbol}: {constrained_size:.2%} "
+                f"using {method.value} method"
             )
 
             return position_size
@@ -225,7 +245,8 @@ class PositionSizingEngine:
             # Apply fractional Kelly and constraints
             fractional_kelly = kelly_fraction * self.kelly_config["fraction"]
             constrained_kelly = max(
-                self.kelly_config["min_size"], min(fractional_kelly, self.kelly_config["max_leverage"])
+                self.kelly_config["min_size"],
+                min(fractional_kelly, self.kelly_config["max_leverage"]),
             )
 
             return constrained_kelly
@@ -272,7 +293,9 @@ class PositionSizingEngine:
         """
         return 0.05  # 5% fixed allocation
 
-    def _risk_parity_sizing(self, returns: pd.Series, portfolio_context: Optional[Dict[str, Any]]) -> float:
+    def _risk_parity_sizing(
+        self, returns: pd.Series, portfolio_context: Optional[Dict[str, Any]]
+    ) -> float:
         """Calculate risk parity position size.
 
         Args:
@@ -293,7 +316,9 @@ class PositionSizingEngine:
             portfolio_vol_target = portfolio_context.get("target_volatility", 0.15)
 
             # Risk parity: equal risk contribution
-            target_risk_contribution = portfolio_vol_target / len(portfolio_context.get("assets", [1]))
+            target_risk_contribution = portfolio_vol_target / len(
+                portfolio_context.get("assets", [1])
+            )
 
             size = target_risk_contribution / asset_vol
 
@@ -332,7 +357,9 @@ class PositionSizingEngine:
             logger.debug(f"Max drawdown calculation failed: {e}")
             return 0.05
 
-    def _hybrid_sizing(self, returns: pd.Series, portfolio_context: Optional[Dict[str, Any]]) -> float:
+    def _hybrid_sizing(
+        self, returns: pd.Series, portfolio_context: Optional[Dict[str, Any]]
+    ) -> float:
         """Calculate hybrid position size combining multiple methods.
 
         Args:
@@ -350,7 +377,9 @@ class PositionSizingEngine:
 
             # Weighted average
             weights = [0.4, 0.4, 0.2]  # Kelly, Volatility, Drawdown
-            hybrid_size = kelly_size * weights[0] + vol_size * weights[1] + dd_size * weights[2]
+            hybrid_size = (
+                kelly_size * weights[0] + vol_size * weights[1] + dd_size * weights[2]
+            )
 
             return max(0.01, min(hybrid_size, self.max_position_size))
 
@@ -358,7 +387,9 @@ class PositionSizingEngine:
             logger.error(f"Error in hybrid sizing: {e}")
             return 0.05
 
-    def _apply_constraints(self, base_size: float, symbol: str, portfolio_context: Optional[Dict[str, Any]]) -> float:
+    def _apply_constraints(
+        self, base_size: float, symbol: str, portfolio_context: Optional[Dict[str, Any]]
+    ) -> float:
         """Apply portfolio constraints to position size.
 
         Args:
@@ -377,12 +408,18 @@ class PositionSizingEngine:
 
             # Sector exposure constraint
             if "sector_exposures" in portfolio_context:
-                sector = portfolio_context.get("sector_exposures", {}).get(symbol, "Unknown")
-                current_sector_exposure = portfolio_context.get("current_sector_exposures", {}).get(sector, 0)
+                sector = portfolio_context.get("sector_exposures", {}).get(
+                    symbol, "Unknown"
+                )
+                current_sector_exposure = portfolio_context.get(
+                    "current_sector_exposures", {}
+                ).get(sector, 0)
                 max_sector_exposure = self.constraints["max_sector_exposure"]
 
                 if current_sector_exposure + constrained_size > max_sector_exposure:
-                    constrained_size = max(0, max_sector_exposure - current_sector_exposure)
+                    constrained_size = max(
+                        0, max_sector_exposure - current_sector_exposure
+                    )
 
             # Liquidity constraint
             if "liquidity" in portfolio_context:
@@ -399,7 +436,9 @@ class PositionSizingEngine:
             "timestamp": datetime.now().isoformat(),
         }
 
-    def _calculate_risk_metrics(self, returns: pd.Series, position_size: float) -> Dict[str, float]:
+    def _calculate_risk_metrics(
+        self, returns: pd.Series, position_size: float
+    ) -> Dict[str, float]:
         """Calculate risk metrics for position.
 
         Args:
@@ -411,7 +450,11 @@ class PositionSizingEngine:
         """
         try:
             volatility = returns.std() * np.sqrt(252)
-            sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252) if returns.std() > 0 else 0
+            sharpe_ratio = (
+                returns.mean() / returns.std() * np.sqrt(252)
+                if returns.std() > 0
+                else 0
+            )
             max_drawdown = self._calculate_max_drawdown(returns)
             var_95 = np.percentile(returns, 5)
 
@@ -478,7 +521,9 @@ class PositionSizingEngine:
             return_stability = 1 - returns.std()  # Lower volatility = higher confidence
             return_stability = max(0, min(1, return_stability))
 
-            confidence = data_quality * 0.4 + base_confidence * 0.4 + return_stability * 0.2
+            confidence = (
+                data_quality * 0.4 + base_confidence * 0.4 + return_stability * 0.2
+            )
 
             return max(0, min(1, confidence))
 
@@ -487,7 +532,10 @@ class PositionSizingEngine:
             return 0.5
 
     def _get_applied_constraints(
-        self, final_size: float, symbol: str, portfolio_context: Optional[Dict[str, Any]]
+        self,
+        final_size: float,
+        symbol: str,
+        portfolio_context: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """Get information about applied constraints.
 
@@ -499,13 +547,20 @@ class PositionSizingEngine:
         Returns:
             Applied constraints information
         """
-        constraints_info = {"max_position_size": self.max_position_size, "max_portfolio_risk": self.max_portfolio_risk}
+        constraints_info = {
+            "max_position_size": self.max_position_size,
+            "max_portfolio_risk": self.max_portfolio_risk,
+        }
 
         if portfolio_context:
             constraints_info.update(
                 {
-                    "sector_exposure": portfolio_context.get("current_sector_exposures", {}),
-                    "liquidity_available": portfolio_context.get("liquidity", {}).get(symbol, 0),
+                    "sector_exposure": portfolio_context.get(
+                        "current_sector_exposures", {}
+                    ),
+                    "liquidity_available": portfolio_context.get("liquidity", {}).get(
+                        symbol, 0
+                    ),
                 }
             )
 
@@ -529,7 +584,9 @@ class PositionSizingEngine:
         else:
             return {}
 
-    def _create_default_position(self, symbol: str, method: SizingMethod) -> PositionSize:
+    def _create_default_position(
+        self, symbol: str, method: SizingMethod
+    ) -> PositionSize:
         """Create default position size when calculation fails.
 
         Args:
@@ -582,10 +639,14 @@ class PositionSizingEngine:
 
             # Calculate portfolio metrics
             portfolio_return = (constrained_weights * expected_returns).sum()
-            portfolio_vol = np.sqrt(constrained_weights.T @ covariance_matrix @ constrained_weights)
+            portfolio_vol = np.sqrt(
+                constrained_weights.T @ covariance_matrix @ constrained_weights
+            )
 
             # Calculate diversification score
-            diversification_score = self._calculate_diversification_score(constrained_weights, covariance_matrix)
+            diversification_score = self._calculate_diversification_score(
+                constrained_weights, covariance_matrix
+            )
 
             allocation = PortfolioAllocation(
                 allocations=dict(zip(assets.keys(), constrained_weights)),
@@ -610,7 +671,9 @@ class PositionSizingEngine:
             logger.error(f"Error optimizing portfolio allocation: {e}")
             return self._create_default_allocation(assets)
 
-    def _apply_portfolio_constraints(self, weights: np.ndarray, assets: Dict[str, pd.Series]) -> np.ndarray:
+    def _apply_portfolio_constraints(
+        self, weights: np.ndarray, assets: Dict[str, pd.Series]
+    ) -> np.ndarray:
         """Apply portfolio-level constraints.
 
         Args:
@@ -630,7 +693,9 @@ class PositionSizingEngine:
 
         return constrained_weights
 
-    def _calculate_diversification_score(self, weights: np.ndarray, covariance_matrix: np.ndarray) -> float:
+    def _calculate_diversification_score(
+        self, weights: np.ndarray, covariance_matrix: np.ndarray
+    ) -> float:
         """Calculate portfolio diversification score.
 
         Args:
@@ -659,7 +724,9 @@ class PositionSizingEngine:
             logger.error(f"Error calculating diversification score: {e}")
             return 0.5
 
-    def _create_default_allocation(self, assets: Dict[str, pd.Series]) -> PortfolioAllocation:
+    def _create_default_allocation(
+        self, assets: Dict[str, pd.Series]
+    ) -> PortfolioAllocation:
         """Create default portfolio allocation.
 
         Args:
@@ -682,7 +749,9 @@ class PositionSizingEngine:
             metadata={"note": "Default equal-weighted allocation"},
         )
 
-    def get_sizing_history(self, symbol: Optional[str] = None, days: int = 30) -> List[PositionSize]:
+    def get_sizing_history(
+        self, symbol: Optional[str] = None, days: int = 30
+    ) -> List[PositionSize]:
         """Get position sizing history.
 
         Args:

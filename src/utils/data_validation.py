@@ -81,7 +81,11 @@ class DataValidator:
         self._generate_validation_summary(df)
 
         is_valid = len(self.validation_results["errors"]) == 0
-        error_message = "; ".join(self.validation_results["errors"]) if not is_valid else "Data validation successful"
+        error_message = (
+            "; ".join(self.validation_results["errors"])
+            if not is_valid
+            else "Data validation successful"
+        )
 
         if is_valid:
             logger.info("✅ Data validation completed successfully")
@@ -109,7 +113,9 @@ class DataValidator:
             low_close_valid = (df["low"] <= df["close"]).all()
             self.validation_results["checks"]["low_close_valid"] = low_close_valid
 
-            return all([high_open_valid, high_close_valid, low_open_valid, low_close_valid])
+            return all(
+                [high_open_valid, high_close_valid, low_open_valid, low_close_valid]
+            )
 
         except Exception as e:
             logger.error(f"Error validating price relationships: {str(e)}")
@@ -151,7 +157,9 @@ class DataValidator:
             extreme_moves = (price_changes > 0.5).sum()  # >50% moves
             self.validation_results["summary"]["extreme_moves"] = extreme_moves
             if extreme_moves > 0:
-                self._add_warning(f"Found {extreme_moves} extreme price movements (>50%)")
+                self._add_warning(
+                    f"Found {extreme_moves} extreme price movements (>50%)"
+                )
 
             # Check for duplicate timestamps
             if isinstance(df.index, pd.DatetimeIndex):
@@ -246,18 +254,24 @@ class DataValidator:
         # Calculate returns
         if "close" in df_processed.columns:
             df_processed["returns"] = df_processed["close"].pct_change()
-            df_processed["log_returns"] = np.log(df_processed["close"] / df_processed["close"].shift(1))
+            df_processed["log_returns"] = np.log(
+                df_processed["close"] / df_processed["close"].shift(1)
+            )
             logger.info("📊 Calculated returns and log returns")
 
         # Calculate volatility (20-day rolling standard deviation of returns)
         if "returns" in df_processed.columns:
-            df_processed["volatility"] = df_processed["returns"].rolling(window=20).std()
+            df_processed["volatility"] = (
+                df_processed["returns"].rolling(window=20).std()
+            )
             logger.info("📈 Calculated volatility")
 
         # Calculate price ranges
         if all(col in df_processed.columns for col in ["high", "low", "close"]):
             df_processed["daily_range"] = df_processed["high"] - df_processed["low"]
-            df_processed["daily_range_pct"] = df_processed["daily_range"] / df_processed["close"]
+            df_processed["daily_range_pct"] = (
+                df_processed["daily_range"] / df_processed["close"]
+            )
             logger.info("📊 Calculated daily price ranges")
 
         # Calculate volume changes
@@ -268,10 +282,14 @@ class DataValidator:
         # Remove the first row which will have NaN values
         df_processed = df_processed.iloc[1:]
 
-        logger.info(f"✅ Data preprocessing completed. Final shape: {df_processed.shape}")
+        logger.info(
+            f"✅ Data preprocessing completed. Final shape: {df_processed.shape}"
+        )
         return df_processed
 
-    def handle_missing_data(self, df: pd.DataFrame, method: str = "ffill") -> pd.DataFrame:
+    def handle_missing_data(
+        self, df: pd.DataFrame, method: str = "ffill"
+    ) -> pd.DataFrame:
         """
         Handle missing data in the dataframe.
 
@@ -301,7 +319,9 @@ class DataValidator:
         logger.info("✅ Missing data handling completed")
         return df_cleaned
 
-    def remove_outliers(self, df: pd.DataFrame, columns: List[str], n_std: float = 3.0) -> pd.DataFrame:
+    def remove_outliers(
+        self, df: pd.DataFrame, columns: List[str], n_std: float = 3.0
+    ) -> pd.DataFrame:
         """
         Remove outliers from specified columns using standard deviation method.
 
@@ -336,7 +356,9 @@ class DataValidator:
         logger.info(f"✅ Removed {outliers_removed} outliers")
         return df_cleaned
 
-    def normalize_data(self, df: pd.DataFrame, columns: List[str], method: str = "zscore") -> pd.DataFrame:
+    def normalize_data(
+        self, df: pd.DataFrame, columns: List[str], method: str = "zscore"
+    ) -> pd.DataFrame:
         """
         Normalize specified columns in the dataframe.
 
@@ -363,7 +385,9 @@ class DataValidator:
             elif method == "minmax":
                 min_val = df_normalized[col].min()
                 max_val = df_normalized[col].max()
-                df_normalized[col] = (df_normalized[col] - min_val) / (max_val - min_val)
+                df_normalized[col] = (df_normalized[col] - min_val) / (
+                    max_val - min_val
+                )
             else:
                 raise ValueError(f"Unknown normalization method: {method}")
 
@@ -408,12 +432,16 @@ def validate_data_for_forecasting(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any
         if isinstance(df.index, pd.DatetimeIndex):
             days_of_data = (df.index.max() - df.index.min()).days
             if days_of_data < 30:
-                validation_summary["warnings"].append("Limited historical data for forecasting")
+                validation_summary["warnings"].append(
+                    "Limited historical data for forecasting"
+                )
 
         # Check for recent data gaps
         if isinstance(df.index, pd.DatetimeIndex):
             recent_data = df.tail(10)
             if recent_data.isna().any().any():
-                validation_summary["warnings"].append("Recent data contains missing values")
+                validation_summary["warnings"].append(
+                    "Recent data contains missing values"
+                )
 
     return is_valid, validation_summary

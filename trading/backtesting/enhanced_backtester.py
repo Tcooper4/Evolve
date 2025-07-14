@@ -26,9 +26,7 @@ from trading.backtesting.performance_analysis import PerformanceAnalyzer
 from trading.backtesting.risk_metrics import RiskMetricsEngine
 from trading.backtesting.trade_models import TradeType
 from trading.models.base_model import BaseModel
-from trading.report.unified_trade_reporter import (
-    UnifiedTradeReporter,
-)
+from trading.report.unified_trade_reporter import UnifiedTradeReporter
 from trading.strategies.registry import BaseStrategy
 
 logger = logging.getLogger(__name__)
@@ -76,7 +74,9 @@ class EnhancedBacktester:
         # Initialize components
         self.backtester = Backtester(data, initial_cash=initial_cash, **kwargs)
         self.performance_analyzer = PerformanceAnalyzer()
-        self.risk_metrics_engine = RiskMetricsEngine(risk_free_rate=risk_free_rate, period=trading_days_per_year)
+        self.risk_metrics_engine = RiskMetricsEngine(
+            risk_free_rate=risk_free_rate, period=trading_days_per_year
+        )
         self.reporter = UnifiedTradeReporter(
             output_dir=str(self.output_dir / "reports"),
             risk_free_rate=risk_free_rate,
@@ -117,19 +117,27 @@ class EnhancedBacktester:
             Comprehensive backtest results
         """
         try:
-            logger.info(f"Running forecast backtest for {symbol} with {model.__class__.__name__}")
+            logger.info(
+                f"Running forecast backtest for {symbol} with {model.__class__.__name__}"
+            )
 
             # Generate forecasts
             forecasts = self._generate_forecasts(model, forecast_period)
 
             # Generate signals from forecasts
-            signals = self._generate_signals_from_forecasts(forecasts, strategy, confidence_threshold)
+            signals = self._generate_signals_from_forecasts(
+                forecasts, strategy, confidence_threshold
+            )
 
             # Execute backtest with signals
-            results = self._execute_backtest_with_signals(signals, strategy, symbol, **kwargs)
+            results = self._execute_backtest_with_signals(
+                signals, strategy, symbol, **kwargs
+            )
 
             # Generate comprehensive report
-            report = self._generate_backtest_report(results, model, strategy, symbol, timeframe)
+            report = self._generate_backtest_report(
+                results, model, strategy, symbol, timeframe
+            )
 
             # Store results
             test_id = f"{symbol}_{model.__class__.__name__}_{strategy.__class__.__name__}_{int(time.time())}"
@@ -177,16 +185,24 @@ class EnhancedBacktester:
             Comprehensive backtest results with ensemble analysis
         """
         try:
-            logger.info(f"Running multi-model backtest for {symbol} with {len(models)} models")
+            logger.info(
+                f"Running multi-model backtest for {symbol} with {len(models)} models"
+            )
 
             # Generate ensemble forecasts
-            ensemble_forecasts = self._generate_ensemble_forecasts(models, forecast_period, ensemble_method)
+            ensemble_forecasts = self._generate_ensemble_forecasts(
+                models, forecast_period, ensemble_method
+            )
 
             # Generate signals from ensemble forecasts
-            signals = self._generate_signals_from_forecasts(ensemble_forecasts, strategy, confidence_threshold=0.5)
+            signals = self._generate_signals_from_forecasts(
+                ensemble_forecasts, strategy, confidence_threshold=0.5
+            )
 
             # Execute backtest
-            results = self._execute_backtest_with_signals(signals, strategy, symbol, **kwargs)
+            results = self._execute_backtest_with_signals(
+                signals, strategy, symbol, **kwargs
+            )
 
             # Generate comprehensive report
             report = self._generate_ensemble_backtest_report(
@@ -194,7 +210,9 @@ class EnhancedBacktester:
             )
 
             # Store results
-            test_id = f"{symbol}_ensemble_{strategy.__class__.__name__}_{int(time.time())}"
+            test_id = (
+                f"{symbol}_ensemble_{strategy.__class__.__name__}_{int(time.time())}"
+            )
             self.backtest_results[test_id] = {
                 "results": results,
                 "report": report,
@@ -245,18 +263,29 @@ class EnhancedBacktester:
                 for strategy in strategies:
                     try:
                         result = self.run_forecast_backtest(
-                            model, strategy, symbol, timeframe, forecast_period, **kwargs
+                            model,
+                            strategy,
+                            symbol,
+                            timeframe,
+                            forecast_period,
+                            **kwargs,
                         )
-                        key = f"{model.__class__.__name__}_{strategy.__class__.__name__}"
+                        key = (
+                            f"{model.__class__.__name__}_{strategy.__class__.__name__}"
+                        )
                         comparison_results[key] = result
                     except Exception as e:
-                        logger.warning(f"Failed to run {model.__class__.__name__} + {strategy.__class__.__name__}: {e}")
-                        comparison_results[f"{model.__class__.__name__}_{strategy.__class__.__name__}"] = {
-                            "error": str(e)
-                        }
+                        logger.warning(
+                            f"Failed to run {model.__class__.__name__} + {strategy.__class__.__name__}: {e}"
+                        )
+                        comparison_results[
+                            f"{model.__class__.__name__}_{strategy.__class__.__name__}"
+                        ] = {"error": str(e)}
 
             # Generate comparison report
-            comparison_report = self._generate_comparison_report(comparison_results, symbol)
+            comparison_report = self._generate_comparison_report(
+                comparison_results, symbol
+            )
 
             # Store comparison results
             test_id = f"{symbol}_comparison_{int(time.time())}"
@@ -276,7 +305,9 @@ class EnhancedBacktester:
             logger.error(f"Error in strategy comparison: {e}")
             return self._generate_error_result(str(e))
 
-    def _generate_forecasts(self, model: BaseModel, forecast_period: int) -> Dict[str, Any]:
+    def _generate_forecasts(
+        self, model: BaseModel, forecast_period: int
+    ) -> Dict[str, Any]:
         """Generate forecasts using the specified model."""
         try:
             # Prepare data for forecasting
@@ -292,7 +323,9 @@ class EnhancedBacktester:
                 # For models that use predict instead of forecast
                 forecasts = model.predict(prepared_data)
             else:
-                raise ValueError(f"Model {model.__class__.__name__} does not support forecasting")
+                raise ValueError(
+                    f"Model {model.__class__.__name__} does not support forecasting"
+                )
 
             return {
                 "forecasts": forecasts,
@@ -319,7 +352,9 @@ class EnhancedBacktester:
                     if "error" not in forecast:
                         individual_forecasts.append(forecast)
                 except Exception as e:
-                    logger.warning(f"Failed to generate forecast for {model.__class__.__name__}: {e}")
+                    logger.warning(
+                        f"Failed to generate forecast for {model.__class__.__name__}: {e}"
+                    )
 
             if not individual_forecasts:
                 raise ValueError("No valid forecasts generated from any model")
@@ -346,7 +381,9 @@ class EnhancedBacktester:
             logger.error(f"Error generating ensemble forecasts: {e}")
             return {"error": str(e)}
 
-    def _weighted_ensemble(self, individual_forecasts: List[Dict[str, Any]]) -> np.ndarray:
+    def _weighted_ensemble(
+        self, individual_forecasts: List[Dict[str, Any]]
+    ) -> np.ndarray:
         """Combine forecasts using weighted average based on model performance."""
         try:
             # Simple equal weighting for now - could be enhanced with performance-based weights
@@ -360,9 +397,15 @@ class EnhancedBacktester:
 
         except Exception as e:
             logger.error(f"Error in weighted ensemble: {e}")
-            return individual_forecasts[0]["forecasts"] if individual_forecasts else np.array([])
+            return (
+                individual_forecasts[0]["forecasts"]
+                if individual_forecasts
+                else np.array([])
+            )
 
-    def _voting_ensemble(self, individual_forecasts: List[Dict[str, Any]]) -> np.ndarray:
+    def _voting_ensemble(
+        self, individual_forecasts: List[Dict[str, Any]]
+    ) -> np.ndarray:
         """Combine forecasts using voting mechanism."""
         try:
             # Convert forecasts to binary signals (positive/negative)
@@ -379,9 +422,15 @@ class EnhancedBacktester:
 
         except Exception as e:
             logger.error(f"Error in voting ensemble: {e}")
-            return individual_forecasts[0]["forecasts"] if individual_forecasts else np.array([])
+            return (
+                individual_forecasts[0]["forecasts"]
+                if individual_forecasts
+                else np.array([])
+            )
 
-    def _average_ensemble(self, individual_forecasts: List[Dict[str, Any]]) -> np.ndarray:
+    def _average_ensemble(
+        self, individual_forecasts: List[Dict[str, Any]]
+    ) -> np.ndarray:
         """Combine forecasts using simple average."""
         try:
             combined = np.mean([f["forecasts"] for f in individual_forecasts], axis=0)
@@ -389,17 +438,26 @@ class EnhancedBacktester:
 
         except Exception as e:
             logger.error(f"Error in average ensemble: {e}")
-            return individual_forecasts[0]["forecasts"] if individual_forecasts else np.array([])
+            return (
+                individual_forecasts[0]["forecasts"]
+                if individual_forecasts
+                else np.array([])
+            )
 
     def _generate_signals_from_forecasts(
-        self, forecasts: Dict[str, Any], strategy: BaseStrategy, confidence_threshold: float
+        self,
+        forecasts: Dict[str, Any],
+        strategy: BaseStrategy,
+        confidence_threshold: float,
     ) -> List[Dict[str, Any]]:
         """Generate trading signals from forecasts using the strategy."""
         try:
             if "error" in forecasts:
                 return []
 
-            forecast_data = forecasts.get("forecasts") or forecasts.get("ensemble_forecasts")
+            forecast_data = forecasts.get("forecasts") or forecasts.get(
+                "ensemble_forecasts"
+            )
             if forecast_data is None:
                 return []
 
@@ -421,7 +479,9 @@ class EnhancedBacktester:
                         signal = strategy.generate_signal(signal_data)
                     else:
                         # Default signal generation
-                        signal = self._default_signal_generation(signal_data, confidence_threshold)
+                        signal = self._default_signal_generation(
+                            signal_data, confidence_threshold
+                        )
 
                     if signal and signal.get("confidence", 0) >= confidence_threshold:
                         signals.append(signal)
@@ -468,7 +528,11 @@ class EnhancedBacktester:
             return None
 
     def _execute_backtest_with_signals(
-        self, signals: List[Dict[str, Any]], strategy: BaseStrategy, symbol: str, **kwargs
+        self,
+        signals: List[Dict[str, Any]],
+        strategy: BaseStrategy,
+        symbol: str,
+        **kwargs,
     ) -> Dict[str, Any]:
         """Execute backtest using generated signals."""
         try:
@@ -534,7 +598,9 @@ class EnhancedBacktester:
             # In a real system, you would look up the actual price data
             if len(self.data) > 0:
                 # Use the last available price as approximation
-                return self.data.iloc[-1].iloc[0] if len(self.data.columns) > 0 else 100.0
+                return (
+                    self.data.iloc[-1].iloc[0] if len(self.data.columns) > 0 else 100.0
+                )
             return 100.0  # Default price
         except Exception as e:
             logger.error(f"Error getting price at timestamp: {e}")
@@ -553,7 +619,12 @@ class EnhancedBacktester:
             return 0.0
 
     def _generate_backtest_report(
-        self, results: Dict[str, Any], model: BaseModel, strategy: BaseStrategy, symbol: str, timeframe: str
+        self,
+        results: Dict[str, Any],
+        model: BaseModel,
+        strategy: BaseStrategy,
+        symbol: str,
+        timeframe: str,
     ) -> Dict[str, Any]:
         """Generate comprehensive backtest report."""
         try:
@@ -610,7 +681,9 @@ class EnhancedBacktester:
         """Generate comprehensive ensemble backtest report."""
         try:
             # Similar to regular backtest report but with ensemble information
-            report = self._generate_backtest_report(results, models[0], strategy, symbol, timeframe)
+            report = self._generate_backtest_report(
+                results, models[0], strategy, symbol, timeframe
+            )
 
             # Add ensemble-specific information
             if "error" not in report:
@@ -626,7 +699,9 @@ class EnhancedBacktester:
             logger.error(f"Error generating ensemble backtest report: {e}")
             return {"error": str(e)}
 
-    def _generate_comparison_report(self, comparison_results: Dict[str, Any], symbol: str) -> Dict[str, Any]:
+    def _generate_comparison_report(
+        self, comparison_results: Dict[str, Any], symbol: str
+    ) -> Dict[str, Any]:
         """Generate comprehensive comparison report."""
         try:
             # Extract performance metrics for comparison
@@ -645,18 +720,34 @@ class EnhancedBacktester:
 
             # Find best performing combination
             if comparison_data:
-                best_sharpe = max(comparison_data.keys(), key=lambda k: comparison_data[k].get("sharpe_ratio", 0))
-                best_return = max(comparison_data.keys(), key=lambda k: comparison_data[k].get("total_return", 0))
+                best_sharpe = max(
+                    comparison_data.keys(),
+                    key=lambda k: comparison_data[k].get("sharpe_ratio", 0),
+                )
+                best_return = max(
+                    comparison_data.keys(),
+                    key=lambda k: comparison_data[k].get("total_return", 0),
+                )
 
                 comparison_summary = {
-                    "best_sharpe": {"combination": best_sharpe, "metrics": comparison_data[best_sharpe]},
-                    "best_return": {"combination": best_return, "metrics": comparison_data[best_return]},
+                    "best_sharpe": {
+                        "combination": best_sharpe,
+                        "metrics": comparison_data[best_sharpe],
+                    },
+                    "best_return": {
+                        "combination": best_return,
+                        "metrics": comparison_data[best_return],
+                    },
                     "all_combinations": comparison_data,
                 }
             else:
                 comparison_summary = {"error": "No valid results for comparison"}
 
-            return {"comparison_summary": comparison_summary, "symbol": symbol, "timestamp": datetime.now().isoformat()}
+            return {
+                "comparison_summary": comparison_summary,
+                "symbol": symbol,
+                "timestamp": datetime.now().isoformat(),
+            }
 
         except Exception as e:
             logger.error(f"Error generating comparison report: {e}")
@@ -678,7 +769,9 @@ class EnhancedBacktester:
     def save_results(self, filepath: Optional[str] = None) -> str:
         """Save all backtest results to file."""
         try:
-            filepath = filepath or str(self.output_dir / f"backtest_results_{int(time.time())}.json")
+            filepath = filepath or str(
+                self.output_dir / f"backtest_results_{int(time.time())}.json"
+            )
 
             # Convert results to serializable format
             serializable_results = {}
@@ -730,7 +823,11 @@ def run_forecast_backtest(
 
 
 def run_multi_model_backtest(
-    data: pd.DataFrame, models: List[BaseModel], strategy: BaseStrategy, symbol: str, **kwargs
+    data: pd.DataFrame,
+    models: List[BaseModel],
+    strategy: BaseStrategy,
+    symbol: str,
+    **kwargs,
 ) -> Dict[str, Any]:
     """Convenience function to run multi-model backtest."""
     backtester = EnhancedBacktester(data, **kwargs)
@@ -738,7 +835,11 @@ def run_multi_model_backtest(
 
 
 def run_strategy_comparison(
-    data: pd.DataFrame, models: List[BaseModel], strategies: List[BaseStrategy], symbol: str, **kwargs
+    data: pd.DataFrame,
+    models: List[BaseModel],
+    strategies: List[BaseStrategy],
+    symbol: str,
+    **kwargs,
 ) -> Dict[str, Any]:
     """Convenience function to run strategy comparison."""
     backtester = EnhancedBacktester(data, **kwargs)

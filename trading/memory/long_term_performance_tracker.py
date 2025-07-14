@@ -98,7 +98,9 @@ class LongTermPerformanceTracker:
 
         # Rolling windows for calculations
         self.rolling_window_days = 30
-        self.rolling_metrics: Dict[str, deque] = defaultdict(lambda: deque(maxlen=self.rolling_window_days))
+        self.rolling_metrics: Dict[str, deque] = defaultdict(
+            lambda: deque(maxlen=self.rolling_window_days)
+        )
 
         # Thread safety
         self._lock = threading.RLock()
@@ -161,7 +163,9 @@ class LongTermPerformanceTracker:
             if not result["success"]:
                 logger.error(f"Failed to save historical data: {result['error']}")
             else:
-                logger.debug(f"Successfully saved historical data: {result['filepath']}")
+                logger.debug(
+                    f"Successfully saved historical data: {result['filepath']}"
+                )
 
         except Exception as e:
             logger.error(f"Failed to save historical data: {e}")
@@ -238,7 +242,9 @@ class LongTermPerformanceTracker:
 
             # Calculate Sharpe ratio
             if np.std(excess_returns) > 0:
-                sharpe_ratio = np.mean(excess_returns) / np.std(excess_returns) * np.sqrt(365)
+                sharpe_ratio = (
+                    np.mean(excess_returns) / np.std(excess_returns) * np.sqrt(365)
+                )
             else:
                 sharpe_ratio = 0.0
 
@@ -250,7 +256,9 @@ class LongTermPerformanceTracker:
                 window_returns = returns[i - window_size : i]
                 window_excess = window_returns - daily_rf_rate
                 if np.std(window_excess) > 0:
-                    rolling_sharpe.append(np.mean(window_excess) / np.std(window_excess) * np.sqrt(365))
+                    rolling_sharpe.append(
+                        np.mean(window_excess) / np.std(window_excess) * np.sqrt(365)
+                    )
                 else:
                     rolling_sharpe.append(0.0)
 
@@ -284,7 +292,10 @@ class LongTermPerformanceTracker:
             # Check if we're in a new drawdown
             if current_drawdown > 0.01:  # 1% threshold
                 # Check if we need to start a new drawdown period
-                if not self.drawdowns[metric_name] or self.drawdowns[metric_name][-1].end_date is not None:
+                if (
+                    not self.drawdowns[metric_name]
+                    or self.drawdowns[metric_name][-1].end_date is not None
+                ):
                     # Start new drawdown
                     drawdown = DrawdownInfo(
                         start_date=timestamps[-1],
@@ -298,14 +309,23 @@ class LongTermPerformanceTracker:
                     current_dd = self.drawdowns[metric_name][-1]
                     if current_value < current_dd.trough_value:
                         current_dd.trough_value = current_value
-                        current_dd.drawdown_pct = (current_dd.peak_value - current_value) / current_dd.peak_value
+                        current_dd.drawdown_pct = (
+                            current_dd.peak_value - current_value
+                        ) / current_dd.peak_value
             else:
                 # Check if we've recovered from drawdown
-                if self.drawdowns[metric_name] and self.drawdowns[metric_name][-1].end_date is None:
+                if (
+                    self.drawdowns[metric_name]
+                    and self.drawdowns[metric_name][-1].end_date is None
+                ):
                     current_dd = self.drawdowns[metric_name][-1]
                     current_dd.end_date = timestamps[-1]
-                    current_dd.duration_days = (current_dd.end_date - current_dd.start_date).days
-                    current_dd.recovery_days = 0  # Will be updated when we reach new peak
+                    current_dd.duration_days = (
+                        current_dd.end_date - current_dd.start_date
+                    ).days
+                    current_dd.recovery_days = (
+                        0  # Will be updated when we reach new peak
+                    )
 
         except Exception as e:
             logger.error(f"Failed to update drawdown tracking for {metric_name}: {e}")
@@ -323,7 +343,9 @@ class LongTermPerformanceTracker:
             # Check for improvement
             improvement = (current_value - previous_value) / previous_value
 
-            if improvement > self.improvement_tracking[metric_name].get("improvement_threshold", 0.01):
+            if improvement > self.improvement_tracking[metric_name].get(
+                "improvement_threshold", 0.01
+            ):
                 # Record improvement
                 self.improvement_tracking[metric_name] = {
                     "last_improvement_date": metrics[-1].timestamp,
@@ -336,18 +358,27 @@ class LongTermPerformanceTracker:
                 # Update days since last improvement
                 if "last_improvement_date" in self.improvement_tracking[metric_name]:
                     days_since = (
-                        metrics[-1].timestamp - self.improvement_tracking[metric_name]["last_improvement_date"]
+                        metrics[-1].timestamp
+                        - self.improvement_tracking[metric_name][
+                            "last_improvement_date"
+                        ]
                     ).days
-                    self.improvement_tracking[metric_name]["days_since_improvement"] = days_since
+                    self.improvement_tracking[metric_name][
+                        "days_since_improvement"
+                    ] = days_since
 
         except Exception as e:
-            logger.error(f"Failed to update improvement tracking for {metric_name}: {e}")
+            logger.error(
+                f"Failed to update improvement tracking for {metric_name}: {e}"
+            )
 
     def _check_alerts(self, metric: PerformanceMetric) -> None:
         """Check for performance alerts with advanced criteria."""
         try:
             # Get recent metrics for this metric type
-            recent_metrics = [m for m in self.metrics[-100:] if m.metric_name == metric.metric_name]  # Last 100 metrics
+            recent_metrics = [
+                m for m in self.metrics[-100:] if m.metric_name == metric.metric_name
+            ]  # Last 100 metrics
 
             if len(recent_metrics) < 10:
                 return
@@ -364,7 +395,9 @@ class LongTermPerformanceTracker:
                     "metric_name": metric.metric_name,
                     "value": metric.value,
                     "expected_range": f"{mean_value - 2*std_value:.2f} to {mean_value + 2*std_value:.2f}",
-                    "severity": "high" if abs(metric.value - mean_value) > 3 * std_value else "medium",
+                    "severity": "high"
+                    if abs(metric.value - mean_value) > 3 * std_value
+                    else "medium",
                     "context": metric.context,
                 }
 
@@ -372,7 +405,10 @@ class LongTermPerformanceTracker:
                 logger.warning(f"Performance alert: {alert}")
 
             # Check for drawdown alerts
-            if metric.metric_name in self.drawdowns and self.drawdowns[metric.metric_name]:
+            if (
+                metric.metric_name in self.drawdowns
+                and self.drawdowns[metric.metric_name]
+            ):
                 current_dd = self.drawdowns[metric.metric_name][-1]
                 if current_dd.drawdown_pct > 0.1:  # 10% drawdown
                     alert = {
@@ -381,14 +417,18 @@ class LongTermPerformanceTracker:
                         "alert_type": "drawdown",
                         "drawdown_pct": current_dd.drawdown_pct,
                         "duration_days": current_dd.duration_days,
-                        "severity": "high" if current_dd.drawdown_pct > 0.2 else "medium",
+                        "severity": "high"
+                        if current_dd.drawdown_pct > 0.2
+                        else "medium",
                     }
                     self.alerts.append(alert)
                     logger.warning(f"Drawdown alert: {alert}")
 
             # Check for improvement stagnation
             if metric.metric_name in self.improvement_tracking:
-                days_since = self.improvement_tracking[metric.metric_name].get("days_since_improvement", 0)
+                days_since = self.improvement_tracking[metric.metric_name].get(
+                    "days_since_improvement", 0
+                )
                 if days_since > 30:  # 30 days without improvement
                     alert = {
                         "timestamp": datetime.now().isoformat(),
@@ -403,7 +443,9 @@ class LongTermPerformanceTracker:
         except Exception as e:
             logger.error(f"Failed to check alerts: {e}")
 
-    def analyze_trends(self, metric_name: Optional[str] = None, period_days: int = 30) -> Dict[str, Any]:
+    def analyze_trends(
+        self, metric_name: Optional[str] = None, period_days: int = 30
+    ) -> Dict[str, Any]:
         """
         Analyze performance trends with advanced metrics.
 
@@ -421,7 +463,8 @@ class LongTermPerformanceTracker:
             recent_metrics = [
                 m
                 for m in self.metrics
-                if m.timestamp > cutoff_date and (metric_name is None or m.metric_name == metric_name)
+                if m.timestamp > cutoff_date
+                and (metric_name is None or m.metric_name == metric_name)
             ]
 
             if not recent_metrics:
@@ -458,9 +501,13 @@ class LongTermPerformanceTracker:
                         direction = "stable"
 
                     # Get advanced metrics
-                    sharpe_ratio = self.sharpe_metrics.get(name, SharpeMetrics(0.0, [], 0.0, 0.0, [], [])).sharpe_ratio
+                    sharpe_ratio = self.sharpe_metrics.get(
+                        name, SharpeMetrics(0.0, [], 0.0, 0.0, [], [])
+                    ).sharpe_ratio
                     max_drawdown = self._get_current_drawdown(name)
-                    days_since_improvement = self.improvement_tracking.get(name, {}).get("days_since_improvement", 0)
+                    days_since_improvement = self.improvement_tracking.get(
+                        name, {}
+                    ).get("days_since_improvement", 0)
 
                     trend = PerformanceTrend(
                         metric_name=name,
@@ -494,7 +541,9 @@ class LongTermPerformanceTracker:
         else:
             return 0.0
 
-    def get_rolling_sharpe(self, metric_name: str, window_days: int = 30) -> List[float]:
+    def get_rolling_sharpe(
+        self, metric_name: str, window_days: int = 30
+    ) -> List[float]:
         """Get rolling Sharpe ratio for a metric.
 
         Args:
@@ -569,38 +618,50 @@ class LongTermPerformanceTracker:
                     "min": np.min(all_values),
                     "max": np.max(all_values),
                 },
-                "recent_vs_historical": self._compare_periods(recent_metrics, historical_metrics),
+                "recent_vs_historical": self._compare_periods(
+                    recent_metrics, historical_metrics
+                ),
                 "sharpe_metrics": {
                     name: {
                         "sharpe_ratio": metrics.sharpe_ratio,
                         "volatility": metrics.volatility,
-                        "rolling_sharpe_avg": np.mean(metrics.rolling_sharpe) if metrics.rolling_sharpe else 0.0,
+                        "rolling_sharpe_avg": np.mean(metrics.rolling_sharpe)
+                        if metrics.rolling_sharpe
+                        else 0.0,
                     }
                     for name, metrics in self.sharpe_metrics.items()
                 },
                 "drawdown_summary": {
                     name: {
                         "current_drawdown": self._get_current_drawdown(name),
-                        "max_drawdown": max([dd.drawdown_pct for dd in drawdowns]) if drawdowns else 0.0,
+                        "max_drawdown": max([dd.drawdown_pct for dd in drawdowns])
+                        if drawdowns
+                        else 0.0,
                         "total_drawdowns": len(drawdowns),
                     }
                     for name, drawdowns in self.drawdowns.items()
                 },
                 "improvement_summary": {
                     name: {
-                        "days_since_improvement": tracking.get("days_since_improvement", 0),
+                        "days_since_improvement": tracking.get(
+                            "days_since_improvement", 0
+                        ),
                         "last_improvement_pct": tracking.get("improvement_pct", 0.0),
                     }
                     for name, tracking in self.improvement_tracking.items()
                 },
-                "active_alerts": len([a for a in self.alerts if a.get("severity") == "high"]),
+                "active_alerts": len(
+                    [a for a in self.alerts if a.get("severity") == "high"]
+                ),
                 "timestamp": datetime.now().isoformat(),
             }
 
             return summary
 
     def _compare_periods(
-        self, recent_metrics: List[PerformanceMetric], historical_metrics: List[PerformanceMetric]
+        self,
+        recent_metrics: List[PerformanceMetric],
+        historical_metrics: List[PerformanceMetric],
     ) -> Dict[str, Any]:
         """Compare recent vs historical performance."""
         if not recent_metrics or not historical_metrics:
@@ -612,7 +673,11 @@ class LongTermPerformanceTracker:
         recent_mean = np.mean(recent_values)
         historical_mean = np.mean(historical_values)
 
-        change_pct = ((recent_mean - historical_mean) / historical_mean * 100) if historical_mean != 0 else 0
+        change_pct = (
+            ((recent_mean - historical_mean) / historical_mean * 100)
+            if historical_mean != 0
+            else 0
+        )
 
         return {
             "recent_mean": recent_mean,
@@ -621,7 +686,9 @@ class LongTermPerformanceTracker:
             "improvement": change_pct > 0,
         }
 
-    def get_performance_forecast(self, metric_name: str, forecast_days: int = 7) -> Dict[str, Any]:
+    def get_performance_forecast(
+        self, metric_name: str, forecast_days: int = 7
+    ) -> Dict[str, Any]:
         """
         Generate performance forecast with confidence intervals.
 
@@ -668,7 +735,9 @@ class LongTermPerformanceTracker:
                 "forecast_confidence": confidence,
                 "upper_bound": (forecast_values + confidence_interval).tolist(),
                 "lower_bound": (forecast_values - confidence_interval).tolist(),
-                "trend_direction": "increasing" if forecast_values[-1] > forecast_values[0] else "decreasing",
+                "trend_direction": "increasing"
+                if forecast_values[-1] > forecast_values[0]
+                else "decreasing",
             }
 
         except Exception as e:
@@ -685,7 +754,9 @@ class LongTermPerformanceTracker:
 
         # Calculate trend consistency
         diffs = np.diff(values)
-        trend_consistency = np.sum(np.sign(diffs[:-1]) == np.sign(diffs[1:])) / max(1, len(diffs) - 1)
+        trend_consistency = np.sum(np.sign(diffs[:-1]) == np.sign(diffs[1:])) / max(
+            1, len(diffs) - 1
+        )
 
         # Combine factors for confidence score
         confidence = (1 - cv) * 0.6 + trend_consistency * 0.4
@@ -714,7 +785,11 @@ class LongTermPerformanceTracker:
 
         except Exception as e:
             logger.error(f"Performance tracker run failed: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def apply_performance_decay(self, decay_rate: float = 0.95) -> Dict[str, Any]:
         """
@@ -773,9 +848,15 @@ class LongTermPerformanceTracker:
 
         except Exception as e:
             logger.error(f"Failed to apply performance decay: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def get_decay_adjusted_metrics(self, metric_name: str, decay_rate: float = 0.95) -> List[Dict[str, Any]]:
+    def get_decay_adjusted_metrics(
+        self, metric_name: str, decay_rate: float = 0.95
+    ) -> List[Dict[str, Any]]:
         """
         Get decay-adjusted metrics for analysis.
 
@@ -811,7 +892,9 @@ class LongTermPerformanceTracker:
             logger.error(f"Failed to get decay-adjusted metrics: {e}")
             return []
 
-    def calculate_decay_weighted_average(self, metric_name: str, decay_rate: float = 0.95) -> Dict[str, Any]:
+    def calculate_decay_weighted_average(
+        self, metric_name: str, decay_rate: float = 0.95
+    ) -> Dict[str, Any]:
         """
         Calculate decay-weighted average for a metric.
 

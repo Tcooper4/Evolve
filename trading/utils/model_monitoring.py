@@ -58,8 +58,17 @@ class ModelMonitor:
         self.config = config or {}
         self.metrics_history = {}
         self.drift_alerts = []
-        self.performance_thresholds = {"accuracy": 0.6, "sharpe_ratio": 0.5, "max_drawdown": -0.2, "win_rate": 0.45}
-        self.drift_thresholds = {"performance_degradation": 0.1, "data_drift": 0.15, "concept_drift": 0.2}
+        self.performance_thresholds = {
+            "accuracy": 0.6,
+            "sharpe_ratio": 0.5,
+            "max_drawdown": -0.2,
+            "win_rate": 0.45,
+        }
+        self.drift_thresholds = {
+            "performance_degradation": 0.1,
+            "data_drift": 0.15,
+            "concept_drift": 0.2,
+        }
 
         # Ensure metrics directory exists
         self.metrics_dir = "metrics"
@@ -117,7 +126,9 @@ class ModelMonitor:
             logger.error(f"Error recording metrics for model {model_id}: {e}")
             return False
 
-    def get_model_metrics(self, model_id: str, days_back: int = 30) -> List[ModelMetrics]:
+    def get_model_metrics(
+        self, model_id: str, days_back: int = 30
+    ) -> List[ModelMetrics]:
         """Get model metrics history.
 
         Args:
@@ -137,7 +148,9 @@ class ModelMonitor:
 
             # Filter by date
             cutoff_date = datetime.now() - timedelta(days=days_back)
-            recent_metrics = [m for m in self.metrics_history[model_id] if m.timestamp >= cutoff_date]
+            recent_metrics = [
+                m for m in self.metrics_history[model_id] if m.timestamp >= cutoff_date
+            ]
 
             return recent_metrics
 
@@ -203,7 +216,9 @@ class ModelMonitor:
                 "performance_score": 0.0,
             }
 
-    def get_drift_alerts(self, model_id: Optional[str] = None, days_back: int = 7) -> List[DriftAlert]:
+    def get_drift_alerts(
+        self, model_id: Optional[str] = None, days_back: int = 7
+    ) -> List[DriftAlert]:
         """Get drift alerts.
 
         Args:
@@ -223,7 +238,11 @@ class ModelMonitor:
                     if alert.model_id == model_id and alert.timestamp >= cutoff_date
                 ]
             else:
-                alerts = [alert for alert in self.drift_alerts if alert.timestamp >= cutoff_date]
+                alerts = [
+                    alert
+                    for alert in self.drift_alerts
+                    if alert.timestamp >= cutoff_date
+                ]
 
             return alerts
 
@@ -311,7 +330,9 @@ class ModelMonitor:
         except Exception as e:
             logger.error(f"Error loading metrics from file: {e}")
 
-    def _check_for_drift(self, model_id: str, current_metrics: ModelMetrics) -> List[DriftAlert]:
+    def _check_for_drift(
+        self, model_id: str, current_metrics: ModelMetrics
+    ) -> List[DriftAlert]:
         """Check for model drift."""
         try:
             alerts = []
@@ -371,11 +392,17 @@ class ModelMonitor:
         """Calculate overall performance score."""
         try:
             # Weighted average of key metrics
-            weights = {"accuracy": 0.3, "sharpe_ratio": 0.3, "win_rate": 0.2, "profit_factor": 0.2}
+            weights = {
+                "accuracy": 0.3,
+                "sharpe_ratio": 0.3,
+                "win_rate": 0.2,
+                "profit_factor": 0.2,
+            }
 
             score = (
                 weights["accuracy"] * min(metrics.accuracy, 1.0)
-                + weights["sharpe_ratio"] * min(max(metrics.sharpe_ratio / 2.0, 0.0), 1.0)
+                + weights["sharpe_ratio"]
+                * min(max(metrics.sharpe_ratio / 2.0, 0.0), 1.0)
                 + weights["win_rate"] * min(metrics.win_rate, 1.0)
                 + weights["profit_factor"] * min(metrics.profit_factor / 3.0, 1.0)
             )

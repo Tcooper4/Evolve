@@ -24,7 +24,13 @@ class BaseService(ABC):
     Each service runs independently and communicates via Redis channels.
     """
 
-    def __init__(self, service_name: str, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0):
+    def __init__(
+        self,
+        service_name: str,
+        redis_host: str = "localhost",
+        redis_port: int = 6379,
+        redis_db: int = 0,
+    ):
         """
         Initialize the base service.
 
@@ -38,12 +44,16 @@ class BaseService(ABC):
 
         # Initialize Redis connection with error handling
         try:
-            self.redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
+            self.redis_client = redis.Redis(
+                host=redis_host, port=redis_port, db=redis_db
+            )
             self.pubsub = self.redis_client.pubsub()
             self.redis_available = True
             logger.info(f"Redis connection established for {service_name}")
         except Exception as e:
-            logger.warning(f"Redis connection failed for {service_name}: {e}. Running in local mode.")
+            logger.warning(
+                f"Redis connection failed for {service_name}: {e}. Running in local mode."
+            )
             self.redis_client = None
             self.pubsub = None
             self.redis_available = False
@@ -115,7 +125,13 @@ class BaseService(ABC):
             self.pubsub.subscribe(self.input_channel, self.control_channel)
 
             # Publish startup message
-            self._publish_output({"type": "service_started", "service": self.service_name, "timestamp": time.time()})
+            self._publish_output(
+                {
+                    "type": "service_started",
+                    "service": self.service_name,
+                    "timestamp": time.time(),
+                }
+            )
 
             logger.info(f"{self.service_name} service started with Redis")
             return {
@@ -153,7 +169,13 @@ class BaseService(ABC):
 
         if self.redis_available:
             # Publish shutdown message
-            self._publish_output({"type": "service_stopped", "service": self.service_name, "timestamp": time.time()})
+            self._publish_output(
+                {
+                    "type": "service_stopped",
+                    "service": self.service_name,
+                    "timestamp": time.time(),
+                }
+            )
 
             # Unsubscribe and close
             self.pubsub.unsubscribe()
@@ -166,7 +188,9 @@ class BaseService(ABC):
         return {
             "success": True,
             "service": self.service_name,
-            "thread_joined": self.thread and not self.thread.is_alive() if self.thread else True,
+            "thread_joined": self.thread and not self.thread.is_alive()
+            if self.thread
+            else True,
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -176,7 +200,9 @@ class BaseService(ABC):
         Returns:
             Dictionary with loop status
         """
-        logger.info(f"{self.service_name} listening on channels: {self.input_channel}, {self.control_channel}")
+        logger.info(
+            f"{self.service_name} listening on channels: {self.input_channel}, {self.control_channel}"
+        )
 
         message_count = 0
         while self.is_running:
@@ -229,7 +255,11 @@ class BaseService(ABC):
             }
         except Exception as e:
             logger.error(f"Error processing message: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _handle_input_message(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle input messages by delegating to the abstract process_message method.
@@ -253,7 +283,11 @@ class BaseService(ABC):
             }
         except Exception as e:
             logger.error(f"Error handling input message: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     @abstractmethod
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -276,8 +310,14 @@ class BaseService(ABC):
             Dictionary with publish status
         """
         if not self.redis_available:
-            logger.warning(f"Cannot publish output: Redis not available for {self.service_name}")
-            return {"success": False, "error": "Redis not available", "timestamp": datetime.now().isoformat()}
+            logger.warning(
+                f"Cannot publish output: Redis not available for {self.service_name}"
+            )
+            return {
+                "success": False,
+                "error": "Redis not available",
+                "timestamp": datetime.now().isoformat(),
+            }
 
         try:
             # Add service info to message
@@ -294,9 +334,15 @@ class BaseService(ABC):
             }
         except Exception as e:
             logger.error(f"Error publishing output: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def send_message(self, target_service: str, message_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    def send_message(
+        self, target_service: str, message_type: str, data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Send a message to another service.
 
         Args:
@@ -308,10 +354,19 @@ class BaseService(ABC):
             Dictionary with send status
         """
         if not self.redis_available:
-            return {"success": False, "error": "Redis not available", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": "Redis not available",
+                "timestamp": datetime.now().isoformat(),
+            }
 
         try:
-            message = {"type": message_type, "data": data, "from": self.service_name, "timestamp": time.time()}
+            message = {
+                "type": message_type,
+                "data": data,
+                "from": self.service_name,
+                "timestamp": time.time(),
+            }
 
             target_channel = f"{target_service}_input"
             self.redis_client.publish(target_channel, json.dumps(message))
@@ -325,7 +380,11 @@ class BaseService(ABC):
             }
         except Exception as e:
             logger.error(f"Error sending message: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _handle_start(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle start control message.
@@ -373,10 +432,18 @@ class BaseService(ABC):
         Returns:
             Dictionary with ping response
         """
-        response = {"type": "pong", "service": self.service_name, "timestamp": time.time()}
+        response = {
+            "type": "pong",
+            "service": self.service_name,
+            "timestamp": time.time(),
+        }
         self._publish_output(response)
 
-        return {"success": True, "message": "Ping responded", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Ping responded",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def get_service_info(self) -> Dict[str, Any]:
         """Get service information."""

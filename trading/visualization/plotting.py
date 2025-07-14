@@ -22,7 +22,12 @@ logger = logging.getLogger(__name__)
 class TimeSeriesPlotter:
     """Class for plotting time series data with performance metrics."""
 
-    def __init__(self, style: str = "seaborn", backend: str = "matplotlib", figsize: tuple = (12, 6)):
+    def __init__(
+        self,
+        style: str = "seaborn",
+        backend: str = "matplotlib",
+        figsize: tuple = (12, 6),
+    ):
         """Initialize the plotter.
 
         Args:
@@ -74,11 +79,28 @@ class TimeSeriesPlotter:
 
         if self.backend == "matplotlib":
             return self._plot_time_series_matplotlib(
-                data, title, xlabel, ylabel, figsize, show, overlays, confidence_bands, show_overlays, show_confidence
+                data,
+                title,
+                xlabel,
+                ylabel,
+                figsize,
+                show,
+                overlays,
+                confidence_bands,
+                show_overlays,
+                show_confidence,
             )
         else:
             return self._plot_time_series_plotly(
-                data, title, xlabel, ylabel, show, overlays, confidence_bands, show_overlays, show_confidence
+                data,
+                title,
+                xlabel,
+                ylabel,
+                show,
+                overlays,
+                confidence_bands,
+                show_overlays,
+                show_confidence,
             )
 
     def _plot_time_series_matplotlib(
@@ -112,7 +134,14 @@ class TimeSeriesPlotter:
         if show_confidence and confidence_bands:
             lower, upper = confidence_bands
             if not lower.empty and not upper.empty:
-                ax.fill_between(data.index, lower, upper, alpha=0.3, color="gray", label="Confidence Band")
+                ax.fill_between(
+                    data.index,
+                    lower,
+                    upper,
+                    alpha=0.3,
+                    color="gray",
+                    label="Confidence Band",
+                )
             else:
                 logger.warning("Confidence bands are empty, skipping")
 
@@ -143,7 +172,13 @@ class TimeSeriesPlotter:
 
         # Plot main data
         fig.add_trace(
-            go.Scatter(x=data.index, y=data.values, mode="lines", name=data.name or "Main Series", line=dict(width=2))
+            go.Scatter(
+                x=data.index,
+                y=data.values,
+                mode="lines",
+                name=data.name or "Main Series",
+                line=dict(width=2),
+            )
         )
 
         # Plot overlays if requested
@@ -169,7 +204,12 @@ class TimeSeriesPlotter:
             if not lower.empty and not upper.empty:
                 fig.add_trace(
                     go.Scatter(
-                        x=data.index, y=upper, fill=None, mode="lines", line_color="rgba(0,0,0,0)", name="Upper Bound"
+                        x=data.index,
+                        y=upper,
+                        fill=None,
+                        mode="lines",
+                        line_color="rgba(0,0,0,0)",
+                        name="Upper Bound",
                     )
                 )
                 fig.add_trace(
@@ -185,13 +225,17 @@ class TimeSeriesPlotter:
             else:
                 logger.warning("Confidence bands are empty, skipping")
 
-        fig.update_layout(title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=True)
+        fig.update_layout(
+            title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=True
+        )
 
         if show:
             fig.show()
         return fig
 
-    def _create_empty_plot(self, title: str, message: str) -> Union[plt.Figure, go.Figure]:
+    def _create_empty_plot(
+        self, title: str, message: str
+    ) -> Union[plt.Figure, go.Figure]:
         """Create an empty plot with a message."""
         if self.backend == "matplotlib":
             fig, ax = plt.subplots(figsize=self.figsize)
@@ -204,7 +248,13 @@ class TimeSeriesPlotter:
         else:
             fig = go.Figure()
             fig.add_annotation(
-                text=message, xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False, font=dict(size=16, color="red")
+                text=message,
+                xref="paper",
+                yref="paper",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
+                font=dict(size=16, color="red"),
             )
             fig.update_layout(title=title, height=400, showlegend=False)
             return fig
@@ -293,14 +343,21 @@ class TimeSeriesPlotter:
         returns.cumsum().plot(ax=axes[0], label="Strategy", linewidth=2)
 
         if show_benchmark and benchmark is not None and not benchmark.empty:
-            benchmark.cumsum().plot(ax=axes[0], label="Benchmark", linestyle="--", alpha=0.7)
+            benchmark.cumsum().plot(
+                ax=axes[0], label="Benchmark", linestyle="--", alpha=0.7
+            )
 
         # Add confidence bands if requested
         if show_confidence and confidence_bands:
             lower, upper = confidence_bands
             if not lower.empty and not upper.empty:
                 axes[0].fill_between(
-                    returns.index, lower.cumsum(), upper.cumsum(), alpha=0.3, color="gray", label="Confidence Band"
+                    returns.index,
+                    lower.cumsum(),
+                    upper.cumsum(),
+                    alpha=0.3,
+                    color="gray",
+                    label="Confidence Band",
                 )
 
         axes[0].set_title("Cumulative Returns")
@@ -340,7 +397,12 @@ class TimeSeriesPlotter:
 
         # Plot returns
         fig.add_trace(
-            go.Scatter(x=returns.index, y=returns.cumsum(), name="Strategy", line=dict(color="blue", width=2)),
+            go.Scatter(
+                x=returns.index,
+                y=returns.cumsum(),
+                name="Strategy",
+                line=dict(color="blue", width=2),
+            ),
             row=1,
             col=1,
         )
@@ -390,7 +452,14 @@ class TimeSeriesPlotter:
         # Plot drawdown
         if show_drawdown and drawdown is not None and not drawdown.empty:
             fig.add_trace(
-                go.Scatter(x=drawdown.index, y=drawdown, name="Drawdown", line=dict(color="red", width=2)), row=2, col=1
+                go.Scatter(
+                    x=drawdown.index,
+                    y=drawdown,
+                    name="Drawdown",
+                    line=dict(color="red", width=2),
+                ),
+                row=2,
+                col=1,
             )
 
         fig.update_layout(title=title, height=400 * num_subplots, showlegend=True)
@@ -438,11 +507,26 @@ class TimeSeriesPlotter:
 
         if self.backend == "matplotlib":
             return self._plot_multiple_series_matplotlib(
-                series_list, labels, title, xlabel, ylabel, figsize, show, overlays, show_overlays
+                series_list,
+                labels,
+                title,
+                xlabel,
+                ylabel,
+                figsize,
+                show,
+                overlays,
+                show_overlays,
             )
         else:
             return self._plot_multiple_series_plotly(
-                series_list, labels, title, xlabel, ylabel, show, overlays, show_overlays
+                series_list,
+                labels,
+                title,
+                xlabel,
+                ylabel,
+                show,
+                overlays,
+                show_overlays,
             )
 
     def _plot_multiple_series_matplotlib(
@@ -469,7 +553,9 @@ class TimeSeriesPlotter:
         if show_overlays and overlays:
             for name, overlay_data in overlays.items():
                 if not overlay_data.empty:
-                    overlay_data.plot(ax=ax, label=f"{name} (Overlay)", alpha=0.7, linestyle="--")
+                    overlay_data.plot(
+                        ax=ax, label=f"{name} (Overlay)", alpha=0.7, linestyle="--"
+                    )
                 else:
                     logger.warning(f"Overlay '{name}' is empty, skipping")
 
@@ -500,7 +586,11 @@ class TimeSeriesPlotter:
         for i, series in enumerate(series_list):
             if not series.empty:
                 label = labels[i] if labels and i < len(labels) else f"Series {i+1}"
-                fig.add_trace(go.Scatter(x=series.index, y=series.values, mode="lines", name=label))
+                fig.add_trace(
+                    go.Scatter(
+                        x=series.index, y=series.values, mode="lines", name=label
+                    )
+                )
 
         # Plot overlays if requested
         if show_overlays and overlays:
@@ -519,7 +609,9 @@ class TimeSeriesPlotter:
                 else:
                     logger.warning(f"Overlay '{name}' is empty, skipping")
 
-        fig.update_layout(title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=True)
+        fig.update_layout(
+            title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=True
+        )
 
         if show:
             fig.show()
@@ -572,7 +664,15 @@ class TimeSeriesPlotter:
             fig = go.Figure()
 
             # Add actual values
-            fig.add_trace(go.Scatter(x=data.index, y=data.values, mode="lines", name="Actual", line=dict(color="blue")))
+            fig.add_trace(
+                go.Scatter(
+                    x=data.index,
+                    y=data.values,
+                    mode="lines",
+                    name="Actual",
+                    line=dict(color="blue"),
+                )
+            )
 
             # Add confidence intervals
             fig.add_trace(
@@ -596,7 +696,9 @@ class TimeSeriesPlotter:
                 )
             )
 
-            fig.update_layout(title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=True)
+            fig.update_layout(
+                title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=True
+            )
 
             if show:
                 fig.show()
@@ -625,7 +727,9 @@ class TimeSeriesPlotter:
         decomposition = seasonal_decompose(data, period=period)
 
         if self.backend == "matplotlib":
-            fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=figsize or self.figsize)
+            fig, (ax1, ax2, ax3, ax4) = plt.subplots(
+                4, 1, figsize=figsize or self.figsize
+            )
 
             decomposition.observed.plot(ax=ax1)
             ax1.set_title("Observed")
@@ -641,23 +745,53 @@ class TimeSeriesPlotter:
                 plt.show()
             return fig
         else:
-            fig = make_subplots(rows=4, cols=1, subplot_titles=("Observed", "Trend", "Seasonal", "Residual"))
+            fig = make_subplots(
+                rows=4,
+                cols=1,
+                subplot_titles=("Observed", "Trend", "Seasonal", "Residual"),
+            )
 
             # Add observed
             fig.add_trace(
-                go.Scatter(x=data.index, y=decomposition.observed, mode="lines", name="Observed"), row=1, col=1
+                go.Scatter(
+                    x=data.index,
+                    y=decomposition.observed,
+                    mode="lines",
+                    name="Observed",
+                ),
+                row=1,
+                col=1,
             )
 
             # Add trend
-            fig.add_trace(go.Scatter(x=data.index, y=decomposition.trend, mode="lines", name="Trend"), row=2, col=1)
+            fig.add_trace(
+                go.Scatter(
+                    x=data.index, y=decomposition.trend, mode="lines", name="Trend"
+                ),
+                row=2,
+                col=1,
+            )
 
             # Add seasonal
             fig.add_trace(
-                go.Scatter(x=data.index, y=decomposition.seasonal, mode="lines", name="Seasonal"), row=3, col=1
+                go.Scatter(
+                    x=data.index,
+                    y=decomposition.seasonal,
+                    mode="lines",
+                    name="Seasonal",
+                ),
+                row=3,
+                col=1,
             )
 
             # Add residual
-            fig.add_trace(go.Scatter(x=data.index, y=decomposition.resid, mode="lines", name="Residual"), row=4, col=1)
+            fig.add_trace(
+                go.Scatter(
+                    x=data.index, y=decomposition.resid, mode="lines", name="Residual"
+                ),
+                row=4,
+                col=1,
+            )
 
             fig.update_layout(title=title, height=1000, showlegend=False)
 
@@ -698,7 +832,10 @@ class PerformancePlotter:
         self.figsize = figsize
 
     def plot_performance_metrics(
-        self, metrics: Dict[str, float], title: str = "Performance Metrics", show: bool = True
+        self,
+        metrics: Dict[str, float],
+        title: str = "Performance Metrics",
+        show: bool = True,
     ) -> Union[plt.Figure, go.Figure]:
         """Plot performance metrics as a bar chart.
 
@@ -724,7 +861,13 @@ class PerformancePlotter:
             # Add value labels on bars
             for bar, value in zip(bars, metrics_values):
                 height = bar.get_height()
-                ax.text(bar.get_x() + bar.get_width() / 2.0, height, f"{value:.3f}", ha="center", va="bottom")
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2.0,
+                    height,
+                    f"{value:.3f}",
+                    ha="center",
+                    va="bottom",
+                )
 
             plt.xticks(rotation=45)
             plt.tight_layout()
@@ -744,14 +887,23 @@ class PerformancePlotter:
                 )
             )
 
-            fig.update_layout(title=title, xaxis_title="Metrics", yaxis_title="Value", showlegend=False)
+            fig.update_layout(
+                title=title,
+                xaxis_title="Metrics",
+                yaxis_title="Value",
+                showlegend=False,
+            )
 
             if show:
                 fig.show()
             return fig
 
     def plot_rolling_performance(
-        self, returns: pd.Series, window: int = 30, title: str = "Rolling Performance", show: bool = True
+        self,
+        returns: pd.Series,
+        window: int = 30,
+        title: str = "Rolling Performance",
+        show: bool = True,
     ) -> Union[plt.Figure, go.Figure]:
         """Plot rolling performance metrics.
 
@@ -765,7 +917,11 @@ class PerformancePlotter:
             Matplotlib or Plotly figure
         """
         # Calculate rolling metrics
-        rolling_sharpe = returns.rolling(window).mean() / returns.rolling(window).std() * np.sqrt(252)
+        rolling_sharpe = (
+            returns.rolling(window).mean()
+            / returns.rolling(window).std()
+            * np.sqrt(252)
+        )
         rolling_vol = returns.rolling(window).std() * np.sqrt(252)
         rolling_return = returns.rolling(window).mean() * 252
 
@@ -796,19 +952,41 @@ class PerformancePlotter:
             return fig
         else:
             fig = make_subplots(
-                rows=3, cols=1, subplot_titles=("Rolling Sharpe Ratio", "Rolling Volatility", "Rolling Return")
+                rows=3,
+                cols=1,
+                subplot_titles=(
+                    "Rolling Sharpe Ratio",
+                    "Rolling Volatility",
+                    "Rolling Return",
+                ),
             )
 
             # Rolling Sharpe Ratio
             fig.add_trace(
-                go.Scatter(x=rolling_sharpe.index, y=rolling_sharpe.values, name="Sharpe Ratio"), row=1, col=1
+                go.Scatter(
+                    x=rolling_sharpe.index, y=rolling_sharpe.values, name="Sharpe Ratio"
+                ),
+                row=1,
+                col=1,
             )
 
             # Rolling Volatility
-            fig.add_trace(go.Scatter(x=rolling_vol.index, y=rolling_vol.values, name="Volatility"), row=2, col=1)
+            fig.add_trace(
+                go.Scatter(
+                    x=rolling_vol.index, y=rolling_vol.values, name="Volatility"
+                ),
+                row=2,
+                col=1,
+            )
 
             # Rolling Return
-            fig.add_trace(go.Scatter(x=rolling_return.index, y=rolling_return.values, name="Return"), row=3, col=1)
+            fig.add_trace(
+                go.Scatter(
+                    x=rolling_return.index, y=rolling_return.values, name="Return"
+                ),
+                row=3,
+                col=1,
+            )
 
             fig.update_layout(title=title, height=800, showlegend=False)
 
@@ -831,7 +1009,10 @@ class FeatureImportancePlotter:
         self.figsize = figsize
 
     def plot_feature_importance(
-        self, importance_scores: Dict[str, float], title: str = "Feature Importance", show: bool = True
+        self,
+        importance_scores: Dict[str, float],
+        title: str = "Feature Importance",
+        show: bool = True,
     ) -> Union[plt.Figure, go.Figure]:
         """Plot feature importance scores.
 
@@ -866,7 +1047,12 @@ class FeatureImportancePlotter:
         else:
             fig = go.Figure()
             fig.add_trace(go.Bar(y=features, x=scores, orientation="h"))
-            fig.update_layout(title=title, xaxis_title="Importance Score", yaxis_title="Features", showlegend=False)
+            fig.update_layout(
+                title=title,
+                xaxis_title="Importance Score",
+                yaxis_title="Features",
+                showlegend=False,
+            )
 
             if show:
                 fig.show()
@@ -908,7 +1094,12 @@ class FeatureImportancePlotter:
             width = 0.8 / len(model_names)
 
             for i, model_name in enumerate(model_names):
-                ax.bar(x + i * width - 0.4 + width / 2, comparison_matrix[:, i], width, label=model_name)
+                ax.bar(
+                    x + i * width - 0.4 + width / 2,
+                    comparison_matrix[:, i],
+                    width,
+                    label=model_name,
+                )
 
             ax.set_xlabel("Features")
             ax.set_ylabel("Importance Score")
@@ -925,10 +1116,16 @@ class FeatureImportancePlotter:
             fig = go.Figure()
 
             for i, model_name in enumerate(model_names):
-                fig.add_trace(go.Bar(x=all_features, y=comparison_matrix[:, i], name=model_name))
+                fig.add_trace(
+                    go.Bar(x=all_features, y=comparison_matrix[:, i], name=model_name)
+                )
 
             fig.update_layout(
-                title=title, xaxis_title="Features", yaxis_title="Importance Score", barmode="group", showlegend=True
+                title=title,
+                xaxis_title="Features",
+                yaxis_title="Importance Score",
+                barmode="group",
+                showlegend=True,
             )
 
             if show:
@@ -992,13 +1189,29 @@ class PredictionPlotter:
         else:
             fig = go.Figure()
 
-            fig.add_trace(go.Scatter(x=dates, y=y_true, mode="lines", name="Actual", line=dict(color="blue")))
-
             fig.add_trace(
-                go.Scatter(x=dates, y=y_pred, mode="lines", name="Predicted", line=dict(color="red", dash="dash"))
+                go.Scatter(
+                    x=dates,
+                    y=y_true,
+                    mode="lines",
+                    name="Actual",
+                    line=dict(color="blue"),
+                )
             )
 
-            fig.update_layout(title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=True)
+            fig.add_trace(
+                go.Scatter(
+                    x=dates,
+                    y=y_pred,
+                    mode="lines",
+                    name="Predicted",
+                    line=dict(color="red", dash="dash"),
+                )
+            )
+
+            fig.update_layout(
+                title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=True
+            )
 
             if show:
                 fig.show()
@@ -1039,7 +1252,9 @@ class PredictionPlotter:
             fig, ax = plt.subplots(figsize=self.figsize)
             ax.plot(dates, y_true, label="Actual")
             ax.plot(dates, y_pred, label="Predicted", linestyle="--")
-            ax.fill_between(dates, lower_bound, upper_bound, alpha=0.3, label="Confidence Interval")
+            ax.fill_between(
+                dates, lower_bound, upper_bound, alpha=0.3, label="Confidence Interval"
+            )
             ax.set_title(title)
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
@@ -1053,17 +1268,36 @@ class PredictionPlotter:
             fig = go.Figure()
 
             # Add actual values
-            fig.add_trace(go.Scatter(x=dates, y=y_true, mode="lines", name="Actual", line=dict(color="blue")))
+            fig.add_trace(
+                go.Scatter(
+                    x=dates,
+                    y=y_true,
+                    mode="lines",
+                    name="Actual",
+                    line=dict(color="blue"),
+                )
+            )
 
             # Add predictions
             fig.add_trace(
-                go.Scatter(x=dates, y=y_pred, mode="lines", name="Predicted", line=dict(color="red", dash="dash"))
+                go.Scatter(
+                    x=dates,
+                    y=y_pred,
+                    mode="lines",
+                    name="Predicted",
+                    line=dict(color="red", dash="dash"),
+                )
             )
 
             # Add confidence intervals
             fig.add_trace(
                 go.Scatter(
-                    x=dates, y=upper_bound, fill=None, mode="lines", line_color="rgba(0,100,80,0.2)", name="Upper Bound"
+                    x=dates,
+                    y=upper_bound,
+                    fill=None,
+                    mode="lines",
+                    line_color="rgba(0,100,80,0.2)",
+                    name="Upper Bound",
                 )
             )
             fig.add_trace(
@@ -1077,7 +1311,9 @@ class PredictionPlotter:
                 )
             )
 
-            fig.update_layout(title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=True)
+            fig.update_layout(
+                title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=True
+            )
 
             if show:
                 fig.show()

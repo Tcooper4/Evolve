@@ -37,7 +37,11 @@ def test_task_creation_performance(task_memory):
             task_id=str(uuid.uuid4()),
             type="model_training",
             status=TaskStatus.PENDING,
-            metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat(), "model_type": "lstm"},
+            metadata={
+                "agent": "model_builder",
+                "creation_time": datetime.now().isoformat(),
+                "model_type": "lstm",
+            },
             notes=f"Performance test task {i}",
         )
         task_memory.add_task(task)
@@ -58,7 +62,10 @@ def test_concurrent_task_processing(task_memory):
             task_id=task_id,
             type="model_training",
             status=TaskStatus.PENDING,
-            metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat()},
+            metadata={
+                "agent": "model_builder",
+                "creation_time": datetime.now().isoformat(),
+            },
         )
         task_memory.add_task(task)
         time.sleep(0.1)
@@ -67,7 +74,9 @@ def test_concurrent_task_processing(task_memory):
         task_memory.update_task(task)
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = [executor.submit(process_task, str(uuid.uuid4())) for _ in range(num_tasks)]
+        futures = [
+            executor.submit(process_task, str(uuid.uuid4())) for _ in range(num_tasks)
+        ]
         for future in as_completed(futures):
             future.result()
     completed_tasks = task_memory.get_tasks_by_status(TaskStatus.COMPLETED)
@@ -81,7 +90,11 @@ def test_memory_usage_under_load(task_memory):
             task_id=str(uuid.uuid4()),
             type="model_training",
             status=TaskStatus.PENDING,
-            metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat(), "large_data": "x" * 10000},
+            metadata={
+                "agent": "model_builder",
+                "creation_time": datetime.now().isoformat(),
+                "large_data": "x" * 10000,
+            },
         )
         task_memory.add_task(task)
     final_memory = psutil.Process().memory_info().rss
@@ -95,7 +108,11 @@ def test_query_performance(task_memory):
             task_id=str(uuid.uuid4()),
             type=f"task_type_{i % 5}",
             status=TaskStatus.PENDING,
-            metadata={"agent": f"agent_{i % 3}", "creation_time": datetime.now().isoformat(), "priority": i % 10},
+            metadata={
+                "agent": f"agent_{i % 3}",
+                "creation_time": datetime.now().isoformat(),
+                "priority": i % 10,
+            },
         )
         task_memory.add_task(task)
     query_times = []
@@ -119,7 +136,11 @@ def test_dashboard_rendering_performance(dashboard, task_memory):
             task_id=str(uuid.uuid4()),
             type="model_training",
             status=TaskStatus.PENDING,
-            metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat(), "large_data": "x" * 10000},
+            metadata={
+                "agent": "model_builder",
+                "creation_time": datetime.now().isoformat(),
+                "large_data": "x" * 10000,
+            },
         )
         task_memory.add_task(task)
     # Simulate dashboard rendering (replace with actual render call if available)

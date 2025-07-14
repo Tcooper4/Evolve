@@ -58,7 +58,10 @@ class TestAgentRegistry:
     def sample_config(self):
         """Create sample agent configuration."""
         return AgentConfig(
-            name="test_agent", enabled=True, priority=1, custom_config={"test_param": "test_value", "timeout": 30}
+            name="test_agent",
+            enabled=True,
+            priority=1,
+            custom_config={"test_param": "test_value", "timeout": 30},
         )
 
     def test_agent_registration(self, registry, sample_config):
@@ -125,7 +128,9 @@ class TestAgentRegistry:
         # Test priority-based selection
         selected_agent = registry.get_best_agent_for_task("test_task")
         assert selected_agent is not None
-        assert selected_agent.config.priority <= 5  # Should select high or medium priority
+        assert (
+            selected_agent.config.priority <= 5
+        )  # Should select high or medium priority
 
         logger.info("Agent priority ordering test passed")
 
@@ -145,7 +150,9 @@ class TestAgentRegistry:
         registry.register_agent("fallback", fallback_agent)
 
         # Test fallback when primary fails
-        with patch.object(primary_agent, "execute", side_effect=Exception("Primary failed")):
+        with patch.object(
+            primary_agent, "execute", side_effect=Exception("Primary failed")
+        ):
             with patch.object(
                 fallback_agent,
                 "execute",
@@ -200,7 +207,9 @@ class TestAgentRegistry:
         logger.info("Testing agent configuration validation")
 
         # Test valid configuration
-        valid_config = AgentConfig(name="valid_agent", enabled=True, priority=1, custom_config={"timeout": 30})
+        valid_config = AgentConfig(
+            name="valid_agent", enabled=True, priority=1, custom_config={"timeout": 30}
+        )
 
         agent = MockAgent(valid_config)
         registry.register_agent("valid", agent)
@@ -247,10 +256,15 @@ class TestAgentRegistry:
 
         # Create agents with dependencies
         dependency_config = AgentConfig(
-            name="dependency", enabled=True, priority=1, dependencies=["data_provider", "model_registry"]
+            name="dependency",
+            enabled=True,
+            priority=1,
+            dependencies=["data_provider", "model_registry"],
         )
 
-        main_config = AgentConfig(name="main", enabled=True, priority=2, dependencies=["dependency"])
+        main_config = AgentConfig(
+            name="main", enabled=True, priority=2, dependencies=["dependency"]
+        )
 
         # Create mock dependencies
         dependency_agent = MockAgent(dependency_config)
@@ -258,8 +272,14 @@ class TestAgentRegistry:
 
         # Register dependencies first
         registry.register_agent("dependency", dependency_agent)
-        registry.register_agent("data_provider", MockAgent(AgentConfig(name="data", enabled=True, priority=1)))
-        registry.register_agent("model_registry", MockAgent(AgentConfig(name="model", enabled=True, priority=1)))
+        registry.register_agent(
+            "data_provider",
+            MockAgent(AgentConfig(name="data", enabled=True, priority=1)),
+        )
+        registry.register_agent(
+            "model_registry",
+            MockAgent(AgentConfig(name="model", enabled=True, priority=1)),
+        )
 
         # Register main agent
         registry.register_agent("main", main_agent)
@@ -269,7 +289,9 @@ class TestAgentRegistry:
         assert registry.validate_dependencies("dependency") is True
 
         # Test missing dependency
-        missing_dep_config = AgentConfig(name="missing_dep", enabled=True, priority=1, dependencies=["non_existent"])
+        missing_dep_config = AgentConfig(
+            name="missing_dep", enabled=True, priority=1, dependencies=["non_existent"]
+        )
         missing_dep_agent = MockAgent(missing_dep_config)
         registry.register_agent("missing_dep", missing_dep_agent)
 
@@ -319,7 +341,12 @@ class TestAgentRegistry:
         registry.register_agent("monitored", agent)
 
         # Simulate performance monitoring
-        performance_data = {"execution_time": 0.5, "memory_usage": 100, "success_rate": 0.95, "error_count": 2}
+        performance_data = {
+            "execution_time": 0.5,
+            "memory_usage": 100,
+            "success_rate": 0.95,
+            "error_count": 2,
+        }
 
         # Mock performance tracking
         with patch.object(registry, "track_performance", return_value=performance_data):

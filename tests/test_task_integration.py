@@ -55,7 +55,11 @@ def test_model_training_task_flow(task_memory, model_builder, sample_data):
         task_id=task_id,
         type="model_training",
         status=TaskStatus.PENDING,
-        metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat(), "model_type": "lstm"},
+        metadata={
+            "agent": "model_builder",
+            "creation_time": datetime.now().isoformat(),
+            "model_type": "lstm",
+        },
         notes="Starting LSTM model training",
     )
     task_memory.add_task(task)
@@ -93,7 +97,9 @@ def test_model_training_task_flow(task_memory, model_builder, sample_data):
     except Exception as e:
         # Update task status on failure
         task.status = TaskStatus.FAILED
-        task.metadata.update({"error": str(e), "completion_time": datetime.now().isoformat()})
+        task.metadata.update(
+            {"error": str(e), "completion_time": datetime.now().isoformat()}
+        )
         task_memory.update_task(task)
 
         # Verify task failure
@@ -114,7 +120,11 @@ def test_multiple_model_training_tasks(task_memory, model_builder, sample_data):
             task_id=task_id,
             type="model_training",
             status=TaskStatus.PENDING,
-            metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat(), "model_type": model_type},
+            metadata={
+                "agent": "model_builder",
+                "creation_time": datetime.now().isoformat(),
+                "model_type": model_type,
+            },
             notes=f"Starting {model_type} model training",
         )
         task_memory.add_task(task)
@@ -160,7 +170,9 @@ def test_multiple_model_training_tasks(task_memory, model_builder, sample_data):
             # Update task status on failure
             task = task_memory.get_task(task_id)
             task.status = TaskStatus.FAILED
-            task.metadata.update({"error": str(e), "completion_time": datetime.now().isoformat()})
+            task.metadata.update(
+                {"error": str(e), "completion_time": datetime.now().isoformat()}
+            )
             task_memory.update_task(task)
 
     # Verify task status distribution
@@ -184,7 +196,9 @@ def test_dashboard_task_display(task_memory, model_builder, sample_data):
     assert completed_tasks + failed_tasks == total_tasks
 
     # Test task filtering
-    model_tasks = [t for t in task_memory.tasks if t.metadata.get("model_type") == "lstm"]
+    model_tasks = [
+        t for t in task_memory.tasks if t.metadata.get("model_type") == "lstm"
+    ]
     assert len(model_tasks) == 1
 
 
@@ -196,7 +210,11 @@ def test_error_handling_and_recovery(task_memory):
         task_id=task_id,
         type="model_training",
         status=TaskStatus.PENDING,
-        metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat(), "model_type": "lstm"},
+        metadata={
+            "agent": "model_builder",
+            "creation_time": datetime.now().isoformat(),
+            "model_type": "lstm",
+        },
         notes="Starting LSTM model training",
     )
     task_memory.add_task(task)
@@ -208,7 +226,9 @@ def test_error_handling_and_recovery(task_memory):
     except Exception as e:
         # Update task status on failure
         task.status = TaskStatus.FAILED
-        task.metadata.update({"error": str(e), "completion_time": datetime.now().isoformat()})
+        task.metadata.update(
+            {"error": str(e), "completion_time": datetime.now().isoformat()}
+        )
         task_memory.update_task(task)
 
         # Verify task failure

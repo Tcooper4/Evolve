@@ -51,7 +51,11 @@ class PluginManager:
         try:
             # Look for plugins in the dashboards directory
             dashboards_dir = Path(__file__).parent
-            plugin_dirs = [dashboards_dir / "plugins", dashboards_dir / "layouts", dashboards_dir / "components"]
+            plugin_dirs = [
+                dashboards_dir / "plugins",
+                dashboards_dir / "layouts",
+                dashboards_dir / "components",
+            ]
 
             for plugin_dir in plugin_dirs:
                 if plugin_dir.exists():
@@ -76,13 +80,19 @@ class PluginManager:
                     # Import the module
                     module_name = f"trading.dashboards.{file_path.stem}"
                     if directory.name in ["plugins", "layouts", "components"]:
-                        module_name = f"trading.dashboards.{directory.name}.{file_path.stem}"
+                        module_name = (
+                            f"trading.dashboards.{directory.name}.{file_path.stem}"
+                        )
 
                     module = importlib.import_module(module_name)
 
                     # Look for classes that inherit from DashboardPlugin
                     for name, obj in inspect.getmembers(module):
-                        if inspect.isclass(obj) and issubclass(obj, DashboardPlugin) and obj != DashboardPlugin:
+                        if (
+                            inspect.isclass(obj)
+                            and issubclass(obj, DashboardPlugin)
+                            and obj != DashboardPlugin
+                        ):
                             try:
                                 plugin_instance = obj()
                                 plugin_name = plugin_instance.get_name()
@@ -99,7 +109,9 @@ class PluginManager:
                                 logger.info(f"Loaded plugin: {plugin_name}")
 
                             except Exception as e:
-                                logger.warning(f"Error instantiating plugin {name}: {e}")
+                                logger.warning(
+                                    f"Error instantiating plugin {name}: {e}"
+                                )
                                 continue
 
                 except Exception as e:
@@ -141,7 +153,9 @@ class PluginManager:
             required_keys = plugin.get_required_data_keys()
             missing_keys = [key for key in required_keys if key not in data]
             if missing_keys:
-                logger.warning(f"Missing required data keys for plugin '{plugin_name}': {missing_keys}")
+                logger.warning(
+                    f"Missing required data keys for plugin '{plugin_name}': {missing_keys}"
+                )
                 st.warning(f"Missing required data: {', '.join(missing_keys)}")
                 return False
 
@@ -197,7 +211,11 @@ class StreamlitLayoutManager:
 
                         # Look for functions that might be layouts
                         for name, obj in inspect.getmembers(module):
-                            if inspect.isfunction(obj) and not name.startswith("_") and "render" in name.lower():
+                            if (
+                                inspect.isfunction(obj)
+                                and not name.startswith("_")
+                                and "render" in name.lower()
+                            ):
                                 self.layouts[name] = obj
                                 logger.info(f"Discovered layout: {name}")
 
@@ -289,7 +307,12 @@ class TradingDashboard:
                 )
             )
 
-            fig.update_layout(title="Portfolio Performance", xaxis_title="Date", yaxis_title="Value ($)", height=400)
+            fig.update_layout(
+                title="Portfolio Performance",
+                xaxis_title="Date",
+                yaxis_title="Value ($)",
+                height=400,
+            )
 
             st.plotly_chart(fig, use_container_width=True)
 
@@ -303,7 +326,12 @@ class TradingDashboard:
             if returns.empty:
                 st.warning("No returns data available")
 
-            fig = px.histogram(returns, title="Returns Distribution", nbins=50, color_discrete_sequence=["blue"])
+            fig = px.histogram(
+                returns,
+                title="Returns Distribution",
+                nbins=50,
+                color_discrete_sequence=["blue"],
+            )
 
             fig.update_layout(height=400)
             st.plotly_chart(fig, use_container_width=True)
@@ -334,7 +362,12 @@ class TradingDashboard:
                 )
             )
 
-            fig.update_layout(title="Portfolio Drawdown", xaxis_title="Date", yaxis_title="Drawdown (%)", height=400)
+            fig.update_layout(
+                title="Portfolio Drawdown",
+                xaxis_title="Date",
+                yaxis_title="Drawdown (%)",
+                height=400,
+            )
 
             st.plotly_chart(fig, use_container_width=True)
 
@@ -349,7 +382,13 @@ class TradingDashboard:
                 st.warning("No allocation data available")
 
             fig = go.Figure(
-                data=[go.Pie(labels=list(allocation_data.keys()), values=list(allocation_data.values()), hole=0.3)]
+                data=[
+                    go.Pie(
+                        labels=list(allocation_data.keys()),
+                        values=list(allocation_data.values()),
+                        hole=0.3,
+                    )
+                ]
             )
 
             fig.update_layout(title="Asset Allocation", height=400)
@@ -368,7 +407,13 @@ class TradingDashboard:
 
             # Create metrics dataframe
             metrics_df = pd.DataFrame(
-                [{"Metric": k, "Value": f"{v:.4f}" if isinstance(v, float) else str(v)} for k, v in metrics.items()]
+                [
+                    {
+                        "Metric": k,
+                        "Value": f"{v:.4f}" if isinstance(v, float) else str(v),
+                    }
+                    for k, v in metrics.items()
+                ]
             )
 
             st.subheader("Performance Metrics")
@@ -378,7 +423,9 @@ class TradingDashboard:
             logger.error(f"Error rendering performance metrics: {e}")
             st.error("Error rendering metrics table")
 
-    def render_with_plugins(self, data: Dict[str, Any], plugin_names: Optional[List[str]] = None):
+    def render_with_plugins(
+        self, data: Dict[str, Any], plugin_names: Optional[List[str]] = None
+    ):
         """Render dashboard with plugins.
 
         Args:
@@ -451,7 +498,10 @@ class StrategyDashboard:
                 )
 
             fig.update_layout(
-                title="Strategy Performance", xaxis_title="Date", yaxis_title="Cumulative Returns", height=400
+                title="Strategy Performance",
+                xaxis_title="Date",
+                yaxis_title="Cumulative Returns",
+                height=400,
             )
 
             st.plotly_chart(fig, use_container_width=True)
@@ -468,7 +518,11 @@ class StrategyDashboard:
 
             # Trade P&L distribution
             fig = px.histogram(
-                trades_data, x="pnl", title="Trade P&L Distribution", nbins=30, color_discrete_sequence=["green"]
+                trades_data,
+                x="pnl",
+                title="Trade P&L Distribution",
+                nbins=30,
+                color_discrete_sequence=["green"],
             )
 
             fig.update_layout(height=400)

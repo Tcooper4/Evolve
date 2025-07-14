@@ -27,7 +27,9 @@ logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore")
 
 # Suppress Streamlit warnings when importing
-logging.getLogger("streamlit.runtime.scriptrunner_utils.script_run_context").setLevel(logging.ERROR)
+logging.getLogger("streamlit.runtime.scriptrunner_utils.script_run_context").setLevel(
+    logging.ERROR
+)
 logging.getLogger("streamlit.runtime.state.session_state_proxy").setLevel(logging.ERROR)
 
 # Load environment variables from .env file
@@ -62,7 +64,11 @@ else:
     logger.warning("❌ POLYGON_API_KEY not found")
 
 # Configure page
-st.set_page_config(page_title="Evolve AI Trading Dashboard", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(
+    page_title="Evolve AI Trading Dashboard",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
 # Import core components with error handling
 try:
@@ -340,12 +346,24 @@ with st.sidebar:
     st.markdown("### 📊 Navigation")
 
     primary_nav = st.radio(
-        "", ["🏠 Home & Chat", "📈 Forecasting", "⚡ Strategy Lab", "🧠 Model Lab", "📋 Reports"], key=os.getenv("KEY", "")
+        "",
+        [
+            "🏠 Home & Chat",
+            "📈 Forecasting",
+            "⚡ Strategy Lab",
+            "🧠 Model Lab",
+            "📋 Reports",
+        ],
+        key=os.getenv("KEY", ""),
     )
 
     # Advanced Tools (Collapsible)
     with st.expander("🔧 Advanced", expanded=False):
-        advanced_nav = st.radio("", ["⚙️ Settings", "📊 Monitor", "📈 Analytics", "🛡️ Risk"], key=os.getenv("KEY", ""))
+        advanced_nav = st.radio(
+            "",
+            ["⚙️ Settings", "📊 Monitor", "📈 Analytics", "🛡️ Risk"],
+            key=os.getenv("KEY", ""),
+        )
 
     # Developer Tools (Hidden by default)
     if os.environ.get("EVOLVE_DEV_MODE", "0") == "1":
@@ -361,7 +379,12 @@ with st.sidebar:
     st.markdown("### 🟢 Status")
 
     # Status indicators - compact
-    status_items = [("Core Systems", "🟢"), ("Data Feed", "🟢"), ("AI Models", "🟢"), ("Agents", "🟢")]
+    status_items = [
+        ("Core Systems", "🟢"),
+        ("Data Feed", "🟢"),
+        ("AI Models", "🟢"),
+        ("Agents", "🟢"),
+    ]
 
     for name, status in status_items:
         st.markdown(f"{status} {name}")
@@ -414,7 +437,9 @@ def initialize_session_state():
     # Prompt agent initialization
     if "prompt_agent" not in st.session_state:
         try:
-            st.session_state.prompt_agent = PromptAgent() if CORE_COMPONENTS_AVAILABLE else None
+            st.session_state.prompt_agent = (
+                PromptAgent() if CORE_COMPONENTS_AVAILABLE else None
+            )
             logger.info("✅ Prompt agent initialized successfully")
         except Exception as e:
             logger.error(f"❌ Failed to initialize prompt agent: {e}")
@@ -470,13 +495,17 @@ initialize_session_state()
 if "voice_agent" not in st.session_state and VOICE_AGENT_AVAILABLE:
     st.session_state.voice_agent = VoicePromptAgent()
 
-voice_mode = st.toggle("🎤 Voice Input", value=False, help="Enable voice prompt (Whisper or Google Speech)")
+voice_mode = st.toggle(
+    "🎤 Voice Input", value=False, help="Enable voice prompt (Whisper or Google Speech)"
+)
 
 if voice_mode and VOICE_AGENT_AVAILABLE:
     st.markdown("**Click below and speak your trading command:**")
     if st.button("🎙️ Record Voice Command"):
         with st.spinner("Listening for command..."):
-            text = st.session_state.voice_agent.listen_for_command(timeout=5, phrase_time_limit=10)
+            text = st.session_state.voice_agent.listen_for_command(
+                timeout=5, phrase_time_limit=10
+            )
             if text:
                 st.session_state["voice_prompt_text"] = text
                 st.success(f'Voice recognized: "{text}"')
@@ -531,7 +560,11 @@ prompt = st.text_input(
 
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    submit = st.button("🚀 Submit Query", use_container_width=True, help="Send your prompt to Evolve AI for processing")
+    submit = st.button(
+        "🚀 Submit Query",
+        use_container_width=True,
+        help="Send your prompt to Evolve AI for processing",
+    )
 
 # Process prompt
 if submit and prompt:
@@ -543,7 +576,9 @@ if submit and prompt:
             # Get prompt router agent with error handling
             router_agent = get_prompt_router_agent()
             if router_agent is None:
-                st.error("❌ Prompt router agent not available. Please check system configuration.")
+                st.error(
+                    "❌ Prompt router agent not available. Please check system configuration."
+                )
                 st.stop()
 
             # Handle prompt with comprehensive routing
@@ -600,14 +635,24 @@ if submit and prompt:
                     st.session_state.main_nav = "Forecasting"
                 elif "strategy" in message_lower or "signal" in message_lower:
                     st.session_state.main_nav = "Strategy Lab"
-                elif "report" in message_lower or "export" in message_lower or "analysis" in message_lower:
+                elif (
+                    "report" in message_lower
+                    or "export" in message_lower
+                    or "analysis" in message_lower
+                ):
                     st.session_state.main_nav = "Reports"
-                elif "tune" in message_lower or "optimize" in message_lower or "model" in message_lower:
+                elif (
+                    "tune" in message_lower
+                    or "optimize" in message_lower
+                    or "model" in message_lower
+                ):
                     st.session_state.main_nav = "Model Lab"
                 elif "setting" in message_lower or "config" in message_lower:
                     st.session_state.main_nav = "Settings"
 
-            st.success("✅ Request processed successfully! Evolve AI has analyzed your query.")
+            st.success(
+                "✅ Request processed successfully! Evolve AI has analyzed your query."
+            )
 
         except ImportError as e:
             st.error(f"❌ System configuration error: {str(e)}")
@@ -666,19 +711,39 @@ if st.session_state.agent_logger:
                 # Filter options
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    show_level = st.selectbox("Log Level", ["All", "Info", "Warning", "Error"])
+                    show_level = st.selectbox(
+                        "Log Level", ["All", "Info", "Warning", "Error"]
+                    )
                 with col2:
                     show_action = st.selectbox(
-                        "Action Type", ["All", "Model Synthesis", "Strategy Switch", "Forecast", "Trade"]
+                        "Action Type",
+                        [
+                            "All",
+                            "Model Synthesis",
+                            "Strategy Switch",
+                            "Forecast",
+                            "Trade",
+                        ],
                     )
                 with col3:
-                    show_agent = st.selectbox("Agent", ["All"] + list(set(log.agent_name for log in recent_logs)))
+                    show_agent = st.selectbox(
+                        "Agent",
+                        ["All"] + list(set(log.agent_name for log in recent_logs)),
+                    )
 
                 # Filter logs
                 filtered_logs = recent_logs
                 if show_level != "All":
-                    level_map = {"Info": LogLevel.INFO, "Warning": LogLevel.WARNING, "Error": LogLevel.ERROR}
-                    filtered_logs = [log for log in filtered_logs if log.level == level_map[show_level]]
+                    level_map = {
+                        "Info": LogLevel.INFO,
+                        "Warning": LogLevel.WARNING,
+                        "Error": LogLevel.ERROR,
+                    }
+                    filtered_logs = [
+                        log
+                        for log in filtered_logs
+                        if log.level == level_map[show_level]
+                    ]
 
                 if show_action != "All":
                     action_map = {
@@ -687,10 +752,16 @@ if st.session_state.agent_logger:
                         "Forecast": AgentAction.FORECAST_GENERATION,
                         "Trade": AgentAction.TRADE_EXECUTION,
                     }
-                    filtered_logs = [log for log in filtered_logs if log.action == action_map[show_action]]
+                    filtered_logs = [
+                        log
+                        for log in filtered_logs
+                        if log.action == action_map[show_action]
+                    ]
 
                 if show_agent != "All":
-                    filtered_logs = [log for log in filtered_logs if log.agent_name == show_agent]
+                    filtered_logs = [
+                        log for log in filtered_logs if log.agent_name == show_agent
+                    ]
 
                 # Display logs
                 for log in filtered_logs[-10:]:  # Show last 10 filtered logs
@@ -841,13 +912,19 @@ if "advanced_nav" in locals():
 
             # Advanced settings
             st.subheader("Risk Management")
-            risk_level = st.selectbox("Risk Level", ["Conservative", "Moderate", "Aggressive"])
+            risk_level = st.selectbox(
+                "Risk Level", ["Conservative", "Moderate", "Aggressive"]
+            )
             max_position_size = st.slider("Max Position Size (%)", 1, 50, 10)
             stop_loss = st.slider("Stop Loss (%)", 1, 20, 5)
 
             st.subheader("Data Sources")
-            data_source = st.selectbox("Primary Data Source", ["YFinance", "Alpha Vantage", "Polygon"])
-            update_frequency = st.selectbox("Update Frequency", ["Real-time", "1 minute", "5 minutes", "15 minutes"])
+            data_source = st.selectbox(
+                "Primary Data Source", ["YFinance", "Alpha Vantage", "Polygon"]
+            )
+            update_frequency = st.selectbox(
+                "Update Frequency", ["Real-time", "1 minute", "5 minutes", "15 minutes"]
+            )
 
         with col2:
             st.markdown(
@@ -940,7 +1017,10 @@ if "advanced_nav" in locals():
             st.subheader("Portfolio Performance")
             st.line_chart(
                 pd.DataFrame(
-                    {"Portfolio": np.random.randn(100).cumsum(), "Benchmark": np.random.randn(100).cumsum() * 0.8}
+                    {
+                        "Portfolio": np.random.randn(100).cumsum(),
+                        "Benchmark": np.random.randn(100).cumsum() * 0.8,
+                    }
                 )
             )
 
@@ -976,9 +1056,21 @@ if "advanced_nav" in locals():
 
             # Mock risk alerts
             alerts = [
-                {"level": "Low", "message": "Portfolio concentration in tech sector", "time": "2 hours ago"},
-                {"level": "Medium", "message": "High volatility detected in crypto positions", "time": "1 hour ago"},
-                {"level": "High", "message": "Stop loss triggered for TSLA position", "time": "30 min ago"},
+                {
+                    "level": "Low",
+                    "message": "Portfolio concentration in tech sector",
+                    "time": "2 hours ago",
+                },
+                {
+                    "level": "Medium",
+                    "message": "High volatility detected in crypto positions",
+                    "time": "1 hour ago",
+                },
+                {
+                    "level": "High",
+                    "message": "Stop loss triggered for TSLA position",
+                    "time": "30 min ago",
+                },
             ]
 
             for alert in alerts:

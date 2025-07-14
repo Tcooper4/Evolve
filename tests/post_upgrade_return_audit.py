@@ -23,7 +23,15 @@ class ReturnStatementAuditor:
     def __init__(self, root_dir: str = "."):
         self.root_dir = Path(root_dir)
         self.violations = []
-        self.excluded_dirs = {"archive", "legacy", "test_coverage", "__pycache__", ".git", ".venv", "htmlcov"}
+        self.excluded_dirs = {
+            "archive",
+            "legacy",
+            "test_coverage",
+            "__pycache__",
+            ".git",
+            ".venv",
+            "htmlcov",
+        }
         self.critical_methods = {
             "run",
             "execute",
@@ -100,7 +108,9 @@ class ReturnStatementAuditor:
 
         return violations
 
-    def check_function_compliance(self, func_node: ast.FunctionDef, filepath: Path, content: str) -> Optional[Dict]:
+    def check_function_compliance(
+        self, func_node: ast.FunctionDef, filepath: Path, content: str
+    ) -> Optional[Dict]:
         """Check if a function complies with return statement requirements."""
         # Skip __init__ methods unless they have side effects
         if func_node.name == "__init__":
@@ -158,7 +168,9 @@ class ReturnStatementAuditor:
 
         return violation
 
-    def check_init_method(self, func_node: ast.FunctionDef, filepath: Path, content: str) -> Optional[Dict]:
+    def check_init_method(
+        self, func_node: ast.FunctionDef, filepath: Path, content: str
+    ) -> Optional[Dict]:
         """Check __init__ method compliance."""
         # Check if __init__ has side effects beyond simple assignments
         has_side_effects = self.has_side_effects(func_node)
@@ -190,7 +202,10 @@ class ReturnStatementAuditor:
                     if node.func.id in ["print", "logger"]:
                         return True
                 elif isinstance(node.func, ast.Attribute):
-                    if isinstance(node.func.value, ast.Name) and node.func.value.id == "logger":
+                    if (
+                        isinstance(node.func.value, ast.Name)
+                        and node.func.value.id == "logger"
+                    ):
                         return True
         return False
 
@@ -225,7 +240,10 @@ class ReturnStatementAuditor:
                     # Check if returning a function call that might return structured output
                     if isinstance(node.value.func, ast.Name):
                         func_name = node.value.func.id
-                        if any(keyword in func_name.lower() for keyword in ["status", "result", "response"]):
+                        if any(
+                            keyword in func_name.lower()
+                            for keyword in ["status", "result", "response"]
+                        ):
                             return True
         return False
 
@@ -258,21 +276,39 @@ class ReturnStatementAuditor:
                 "high_severity": len(high_severity),
                 "medium_severity": len(medium_severity),
                 "low_severity": len(low_severity),
-                "compliance_status": "compliant" if total_violations == 0 else "non_compliant",
+                "compliance_status": "compliant"
+                if total_violations == 0
+                else "non_compliant",
             },
             "violations": self.violations,
             "violations_by_type": {
                 "missing_return_with_side_effects": len(
-                    [v for v in self.violations if v["issue"] == "missing_return_with_side_effects"]
+                    [
+                        v
+                        for v in self.violations
+                        if v["issue"] == "missing_return_with_side_effects"
+                    ]
                 ),
                 "missing_return_with_logic": len(
-                    [v for v in self.violations if v["issue"] == "missing_return_with_logic"]
+                    [
+                        v
+                        for v in self.violations
+                        if v["issue"] == "missing_return_with_logic"
+                    ]
                 ),
                 "critical_method_non_structured_return": len(
-                    [v for v in self.violations if v["issue"] == "critical_method_non_structured_return"]
+                    [
+                        v
+                        for v in self.violations
+                        if v["issue"] == "critical_method_non_structured_return"
+                    ]
                 ),
                 "init_with_side_effects_no_return": len(
-                    [v for v in self.violations if v["issue"] == "init_with_side_effects_no_return"]
+                    [
+                        v
+                        for v in self.violations
+                        if v["issue"] == "init_with_side_effects_no_return"
+                    ]
                 ),
             },
         }
@@ -306,11 +342,15 @@ class ReturnStatementAuditor:
 
             # Group by severity
             for severity in ["high", "medium", "low"]:
-                severity_violations = [v for v in violations if v["severity"] == severity]
+                severity_violations = [
+                    v for v in violations if v["severity"] == severity
+                ]
                 if severity_violations:
                     report.append(f"\n{severity.upper()} SEVERITY VIOLATIONS:")
                     for violation in severity_violations:
-                        report.append(f"  {violation['file']}:{violation['line']} - {violation['function']}")
+                        report.append(
+                            f"  {violation['file']}:{violation['line']} - {violation['function']}"
+                        )
                         report.append(f"    Issue: {violation['issue']}")
                         report.append(f"    Details: {violation['details']}")
                         report.append("")
@@ -340,7 +380,9 @@ def main():
         print("\n✅ AUDIT PASSED: All return statements are compliant")
         return 0
     else:
-        print(f"\n❌ AUDIT FAILED: {audit_result['summary']['total_violations']} violations found")
+        print(
+            f"\n❌ AUDIT FAILED: {audit_result['summary']['total_violations']} violations found"
+        )
         return 1
 
 

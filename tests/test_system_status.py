@@ -7,7 +7,6 @@ import os
 import sys
 from typing import Any, Dict
 
-
 # Add project root to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -20,7 +19,13 @@ class SystemStatusTester:
     """Comprehensive system status tester."""
 
     def __init__(self):
-        self.results = {"success": 0, "failure": 0, "warning": 0, "total": 0, "details": []}
+        self.results = {
+            "success": 0,
+            "failure": 0,
+            "warning": 0,
+            "total": 0,
+            "details": [],
+        }
 
     def test_core_modules(self):
         """Test core trading modules."""
@@ -165,7 +170,16 @@ class SystemStatusTester:
             else:
                 self._record_warning(f"File: {file_path} - Missing")
 
-        critical_dirs = ["trading", "pages", "config", "data", "models", "strategies", "utils", "scripts"]
+        critical_dirs = [
+            "trading",
+            "pages",
+            "config",
+            "data",
+            "models",
+            "strategies",
+            "utils",
+            "scripts",
+        ]
 
         for dir_name in critical_dirs:
             if os.path.exists(dir_name):

@@ -165,7 +165,9 @@ class MLManager:
 
         logging.config.dictConfig(log_config)
 
-    async def train_model(self, model_type: str, data_path: str, params: Optional[Dict[str, Any]] = None):
+    async def train_model(
+        self, model_type: str, data_path: str, params: Optional[Dict[str, Any]] = None
+    ):
         """Train a machine learning model.
 
         Args:
@@ -198,7 +200,9 @@ class MLManager:
 
                 # Train model
                 if model_type in ["pytorch"]:
-                    model = await self._train_deep_learning_model(model, X_train, y_train)
+                    model = await self._train_deep_learning_model(
+                        model, X_train, y_train
+                    )
                 else:
                     model = await self._train_traditional_model(model, X_train, y_train)
 
@@ -220,7 +224,9 @@ class MLManager:
             self.logger.error(f"Failed to train model: {e}")
             raise
 
-    async def optimize_model(self, model_type: str, data_path: str, param_grid: Dict[str, List[Any]]):
+    async def optimize_model(
+        self, model_type: str, data_path: str, param_grid: Dict[str, List[Any]]
+    ):
         """Optimize model hyperparameters.
 
         Args:
@@ -253,9 +259,13 @@ class MLManager:
 
                 # Optimize model
                 if model_type in ["pytorch"]:
-                    model = await self._optimize_deep_learning_model(model, X_train, y_train, param_grid)
+                    model = await self._optimize_deep_learning_model(
+                        model, X_train, y_train, param_grid
+                    )
                 else:
-                    model = await self._optimize_traditional_model(model, X_train, y_train, param_grid)
+                    model = await self._optimize_traditional_model(
+                        model, X_train, y_train, param_grid
+                    )
 
                 # Evaluate model
                 metrics = await self._evaluate_model(model, X_test, y_test)
@@ -277,7 +287,9 @@ class MLManager:
 
     async def evaluate_model(self, model_path: str, data_path: str):
         """Evaluate a trained model."""
-        self.logger.info(f"Evaluating model from {model_path} with data from {data_path}")
+        self.logger.info(
+            f"Evaluating model from {model_path} with data from {data_path}"
+        )
 
         try:
             # Load model
@@ -336,7 +348,9 @@ class MLManager:
 
     async def monitor_model(self, model_path: str, data_path: str, duration: int = 300):
         """Monitor model performance."""
-        self.logger.info(f"Monitoring model from {model_path} with data from {data_path}")
+        self.logger.info(
+            f"Monitoring model from {model_path} with data from {data_path}"
+        )
 
         try:
             # Load model
@@ -388,7 +402,9 @@ class MLManager:
             self.logger.error(f"Failed to load data: {e}")
             raise
 
-    def _prepare_data(self, data: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _prepare_data(
+        self, data: pd.DataFrame
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Prepare data for training."""
         try:
             # Split features and target
@@ -396,14 +412,18 @@ class MLManager:
             y = data["target"]
 
             # Split data
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42
+            )
 
             return X_train, X_test, y_train, y_test
         except Exception as e:
             self.logger.error(f"Failed to prepare data: {e}")
             raise
 
-    def _prepare_evaluation_data(self, data: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    def _prepare_evaluation_data(
+        self, data: pd.DataFrame
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Prepare data for evaluation."""
         try:
             # Split features and target
@@ -415,7 +435,9 @@ class MLManager:
             self.logger.error(f"Failed to prepare evaluation data: {e}")
             raise
 
-    def _initialize_model(self, model_type: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    def _initialize_model(
+        self, model_type: str, params: Optional[Dict[str, Any]] = None
+    ) -> Any:
         """Initialize a model."""
         try:
             if model_type == "pytorch":
@@ -434,7 +456,9 @@ class MLManager:
             self.logger.error(f"Failed to initialize model: {e}")
             raise
 
-    def _initialize_pytorch_model(self, params: Optional[Dict[str, Any]] = None) -> nn.Module:
+    def _initialize_pytorch_model(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> nn.Module:
         """Initialize a PyTorch model."""
         try:
             model = nn.Sequential(
@@ -455,7 +479,9 @@ class MLManager:
             from sklearn.ensemble import RandomForestClassifier
 
             model = RandomForestClassifier(
-                n_estimators=params.get("n_estimators", 100), max_depth=params.get("max_depth", None), random_state=42
+                n_estimators=params.get("n_estimators", 100),
+                max_depth=params.get("max_depth", None),
+                random_state=42,
             )
             return model
         except Exception as e:
@@ -478,7 +504,9 @@ class MLManager:
             self.logger.error(f"Failed to initialize XGBoost model: {e}")
             raise
 
-    def _initialize_lightgbm_model(self, params: Optional[Dict[str, Any]] = None) -> Any:
+    def _initialize_lightgbm_model(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Any:
         """Initialize a LightGBM model."""
         try:
             import lightgbm as lgb
@@ -494,7 +522,9 @@ class MLManager:
             self.logger.error(f"Failed to initialize LightGBM model: {e}")
             raise
 
-    def _initialize_catboost_model(self, params: Optional[Dict[str, Any]] = None) -> Any:
+    def _initialize_catboost_model(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Any:
         """Initialize a CatBoost model."""
         try:
             from catboost import CatBoostClassifier
@@ -510,7 +540,9 @@ class MLManager:
             self.logger.error(f"Failed to initialize CatBoost model: {e}")
             raise
 
-    async def _train_deep_learning_model(self, model: Any, X_train: np.ndarray, y_train: np.ndarray) -> Any:
+    async def _train_deep_learning_model(
+        self, model: Any, X_train: np.ndarray, y_train: np.ndarray
+    ) -> Any:
         """Train a deep learning model."""
         try:
             if isinstance(model, nn.Module):
@@ -530,7 +562,9 @@ class MLManager:
             self.logger.error(f"Failed to train deep learning model: {e}")
             raise
 
-    async def _train_traditional_model(self, model: Any, X_train: np.ndarray, y_train: np.ndarray) -> Any:
+    async def _train_traditional_model(
+        self, model: Any, X_train: np.ndarray, y_train: np.ndarray
+    ) -> Any:
         """Train a traditional model."""
         try:
             model.fit(X_train, y_train)
@@ -540,7 +574,11 @@ class MLManager:
             raise
 
     async def _optimize_deep_learning_model(
-        self, model: Any, X_train: np.ndarray, y_train: np.ndarray, param_grid: Dict[str, List[Any]]
+        self,
+        model: Any,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        param_grid: Dict[str, List[Any]],
     ) -> Any:
         """Optimize a deep learning model."""
         try:
@@ -576,11 +614,17 @@ class MLManager:
             raise
 
     async def _optimize_traditional_model(
-        self, model: Any, X_train: np.ndarray, y_train: np.ndarray, param_grid: Dict[str, List[Any]]
+        self,
+        model: Any,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        param_grid: Dict[str, List[Any]],
     ) -> Any:
         """Optimize a traditional model."""
         try:
-            grid_search = GridSearchCV(model, param_grid, cv=5, scoring="accuracy", n_jobs=-1)
+            grid_search = GridSearchCV(
+                model, param_grid, cv=5, scoring="accuracy", n_jobs=-1
+            )
             grid_search.fit(X_train, y_train)
 
             return grid_search.best_estimator_
@@ -588,7 +632,9 @@ class MLManager:
             self.logger.error(f"Failed to optimize traditional model: {e}")
             raise
 
-    async def _evaluate_model(self, model: Any, X_test: np.ndarray, y_test: np.ndarray) -> Dict[str, float]:
+    async def _evaluate_model(
+        self, model: Any, X_test: np.ndarray, y_test: np.ndarray
+    ) -> Dict[str, float]:
         """Evaluate a model."""
         try:
             if isinstance(model, nn.Module):
@@ -687,7 +733,9 @@ class MLManager:
     async def _deploy_bentoml(self, model: Any) -> Any:
         """Deploy model using BentoML."""
         try:
-            bento_model = bentoml.pytorch.save_model("model", model, signatures={"predict": {"batchable": True}})
+            bento_model = bentoml.pytorch.save_model(
+                "model", model, signatures={"predict": {"batchable": True}}
+            )
             return bento_model
         except Exception as e:
             self.logger.error(f"Failed to deploy model using BentoML: {e}")
@@ -734,20 +782,43 @@ def main():
     """Main entry point for the ML management script."""
     parser = argparse.ArgumentParser(description="ML Pipeline Manager")
     parser.add_argument(
-        "command", choices=["train", "optimize", "evaluate", "deploy", "monitor", "version"], help="Command to run"
+        "command",
+        choices=["train", "optimize", "evaluate", "deploy", "monitor", "version"],
+        help="Command to run",
     )
-    parser.add_argument("--model-type", choices=["pytorch", "xgboost", "lightgbm", "catboost"], help="Type of model")
+    parser.add_argument(
+        "--model-type",
+        choices=["pytorch", "xgboost", "lightgbm", "catboost"],
+        help="Type of model",
+    )
     parser.add_argument("--data-path", help="Path to data file")
     parser.add_argument("--model-path", help="Path to model file")
-    parser.add_argument("--params", type=json.loads, help="Model parameters as JSON string")
-    parser.add_argument("--param-grid", type=json.loads, help="Parameter grid for optimization as JSON string")
+    parser.add_argument(
+        "--params", type=json.loads, help="Model parameters as JSON string"
+    )
+    parser.add_argument(
+        "--param-grid",
+        type=json.loads,
+        help="Parameter grid for optimization as JSON string",
+    )
     parser.add_argument(
         "--deployment-type",
-        choices=["local", "mlflow", "ray", "bentoml", "seldon", "kserve", "triton", "torchserve"],
+        choices=[
+            "local",
+            "mlflow",
+            "ray",
+            "bentoml",
+            "seldon",
+            "kserve",
+            "triton",
+            "torchserve",
+        ],
         default="local",
         help="Type of deployment",
     )
-    parser.add_argument("--duration", type=int, default=300, help="Monitoring duration in seconds")
+    parser.add_argument(
+        "--duration", type=int, default=300, help="Monitoring duration in seconds"
+    )
     parser.add_argument("--help", action="store_true", help="Show usage examples")
     args = parser.parse_args()
 
@@ -759,13 +830,17 @@ def main():
     if args.command == "train":
         asyncio.run(manager.train_model(args.model_type, args.data_path, args.params))
     elif args.command == "optimize":
-        asyncio.run(manager.optimize_model(args.model_type, args.data_path, args.param_grid))
+        asyncio.run(
+            manager.optimize_model(args.model_type, args.data_path, args.param_grid)
+        )
     elif args.command == "evaluate":
         asyncio.run(manager.evaluate_model(args.model_path, args.data_path))
     elif args.command == "deploy":
         asyncio.run(manager.deploy_model(args.model_path, args.deployment_type))
     elif args.command == "monitor":
-        asyncio.run(manager.monitor_model(args.model_path, args.data_path, args.duration))
+        asyncio.run(
+            manager.monitor_model(args.model_path, args.data_path, args.duration)
+        )
     elif args.command == "version":
         # Implement version management
         pass

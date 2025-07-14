@@ -54,7 +54,9 @@ class TestLSTMForecaster:
         high = close + np.random.uniform(0, 5, 100)
         low = close - np.random.uniform(0, 5, 100)
 
-        df = pd.DataFrame({"Close": close, "Volume": volume, "High": high, "Low": low}, index=dates)
+        df = pd.DataFrame(
+            {"Close": close, "Volume": volume, "High": high, "Low": low}, index=dates
+        )
 
         return df
 
@@ -149,7 +151,8 @@ class TestLSTMForecaster:
         assert result["success"] is False
         assert "error" in result
         assert any(
-            keyword in result["error"].lower() for keyword in ["insufficient", "at least", "minimum", "sequence"]
+            keyword in result["error"].lower()
+            for keyword in ["insufficient", "at least", "minimum", "sequence"]
         )
 
     def test_constant_series_handling(self, lstm_model, constant_time_series):
@@ -164,7 +167,10 @@ class TestLSTMForecaster:
             assert len(forecast_result["predictions"]) == 5
         else:
             # If it fails, should be due to constant series
-            assert any(keyword in result.get("error", "").lower() for keyword in ["constant", "variance", "unique"])
+            assert any(
+                keyword in result.get("error", "").lower()
+                for keyword in ["constant", "variance", "unique"]
+            )
 
     def test_nan_series_handling(self, lstm_model, nan_time_series):
         """Test handling of time series with NaN values."""
@@ -173,7 +179,10 @@ class TestLSTMForecaster:
         # Should fail gracefully with clear error message
         assert result["success"] is False
         assert "error" in result
-        assert any(keyword in result["error"].lower() for keyword in ["nan", "missing", "invalid"])
+        assert any(
+            keyword in result["error"].lower()
+            for keyword in ["nan", "missing", "invalid"]
+        )
 
     def test_model_summary(self, lstm_model, synthetic_time_series):
         """Test that model summary is generated correctly."""
@@ -259,7 +268,9 @@ class TestLSTMForecaster:
 
         assert forecast1["success"] is True
         assert forecast2["success"] is True
-        np.testing.assert_array_almost_equal(forecast1["predictions"], forecast2["predictions"], decimal=10)
+        np.testing.assert_array_almost_equal(
+            forecast1["predictions"], forecast2["predictions"], decimal=10
+        )
 
     def test_trend_detection(self, lstm_model):
         """Test that model correctly identifies trends."""
@@ -290,7 +301,9 @@ class TestLSTMForecaster:
             assert not np.isnan(forecast["predictions"]).any()
 
     @pytest.mark.parametrize("horizon", [1, 5, 10, 30])
-    def test_different_forecast_horizons(self, lstm_model, synthetic_time_series, horizon):
+    def test_different_forecast_horizons(
+        self, lstm_model, synthetic_time_series, horizon
+    ):
         """Test forecasting with different horizons."""
         lstm_model.fit(synthetic_time_series)
 
@@ -354,7 +367,9 @@ class TestLSTMForecaster:
     def test_sequence_preprocessing(self, lstm_model, synthetic_time_series):
         """Test sequence preprocessing functionality."""
         if hasattr(lstm_model, "preprocess_sequences"):
-            sequences = lstm_model.preprocess_sequences(synthetic_time_series, sequence_length=10)
+            sequences = lstm_model.preprocess_sequences(
+                synthetic_time_series, sequence_length=10
+            )
             assert isinstance(sequences, np.ndarray)
             assert len(sequences.shape) == 2  # (samples, features)
 
@@ -388,7 +403,9 @@ class TestLSTMForecaster:
     def test_early_stopping(self, lstm_model, synthetic_time_series):
         """Test early stopping functionality."""
         if hasattr(lstm_model, "train_with_early_stopping"):
-            result = lstm_model.train_with_early_stopping(synthetic_time_series, patience=5, min_delta=0.001)
+            result = lstm_model.train_with_early_stopping(
+                synthetic_time_series, patience=5, min_delta=0.001
+            )
             assert result["success"] is True
 
     def test_model_performance_tracking(self, lstm_model, synthetic_time_series):

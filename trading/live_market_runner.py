@@ -114,13 +114,21 @@ class LiveMarketRunner:
         self.market_data = MarketData(self.config.get("market_data_config", {}))
         self.agent_manager = get_agent_manager()
         self.memory = AgentMemory()
-        self.portfolio_manager = PortfolioManager(self.config.get("portfolio_config", {}))
+        self.portfolio_manager = PortfolioManager(
+            self.config.get("portfolio_config", {})
+        )
 
         # Live data management
-        self.symbols = self.config.get("symbols", ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL"])
+        self.symbols = self.config.get(
+            "symbols", ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL"]
+        )
         self.live_data = {}
-        self.price_history = defaultdict(lambda: deque(maxlen=1000))  # Last 1000 prices per symbol
-        self.volume_history = defaultdict(lambda: deque(maxlen=1000))  # Last 1000 volumes per symbol
+        self.price_history = defaultdict(
+            lambda: deque(maxlen=1000)
+        )  # Last 1000 prices per symbol
+        self.volume_history = defaultdict(
+            lambda: deque(maxlen=1000)
+        )  # Last 1000 volumes per symbol
 
         # Trigger management
         self.trigger_configs = self._load_trigger_configs()
@@ -156,7 +164,9 @@ class LiveMarketRunner:
         # Load existing forecasts
         self._load_forecast_results()
 
-        self.logger.info(f"LiveMarketRunner initialized with {len(self.symbols)} symbols")
+        self.logger.info(
+            f"LiveMarketRunner initialized with {len(self.symbols)} symbols"
+        )
 
     def _setup_logging(self) -> None:
         """Setup logging configuration."""
@@ -172,7 +182,9 @@ class LiveMarketRunner:
         console_handler.setLevel(logging.INFO)
 
         # Formatter
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         file_handler.setFormatter(formatter)
         console_handler.setFormatter(formatter)
 
@@ -185,16 +197,24 @@ class LiveMarketRunner:
         """Load trigger configurations."""
         default_configs = {
             "model_builder": TriggerConfig(
-                trigger_type=TriggerType.TIME_BASED, interval_seconds=3600, enabled=True  # Every hour
+                trigger_type=TriggerType.TIME_BASED,
+                interval_seconds=3600,
+                enabled=True,  # Every hour
             ),
             "performance_critic": TriggerConfig(
-                trigger_type=TriggerType.TIME_BASED, interval_seconds=1800, enabled=True  # Every 30 minutes
+                trigger_type=TriggerType.TIME_BASED,
+                interval_seconds=1800,
+                enabled=True,  # Every 30 minutes
             ),
             "updater": TriggerConfig(
-                trigger_type=TriggerType.TIME_BASED, interval_seconds=7200, enabled=True  # Every 2 hours
+                trigger_type=TriggerType.TIME_BASED,
+                interval_seconds=7200,
+                enabled=True,  # Every 2 hours
             ),
             "execution_agent": TriggerConfig(
-                trigger_type=TriggerType.PRICE_MOVE, price_move_threshold=0.005, enabled=True  # 0.5% price move
+                trigger_type=TriggerType.PRICE_MOVE,
+                price_move_threshold=0.005,
+                enabled=True,  # 0.5% price move
             ),
         }
 
@@ -213,9 +233,12 @@ class LiveMarketRunner:
                 with open(self.forecast_file, "r") as f:
                     data = json.load(f)
                     self.forecast_results = [
-                        ForecastResult.from_dict(forecast) for forecast in data.get("forecasts", [])
+                        ForecastResult.from_dict(forecast)
+                        for forecast in data.get("forecasts", [])
                     ]
-                self.logger.info(f"Loaded {len(self.forecast_results)} existing forecasts")
+                self.logger.info(
+                    f"Loaded {len(self.forecast_results)} existing forecasts"
+                )
             except Exception as e:
                 self.logger.error(f"Error loading forecast results: {e}")
 
@@ -312,7 +335,9 @@ class LiveMarketRunner:
                 self.price_history[symbol].extend(data["Close"].tail(100).values)
                 self.volume_history[symbol].extend(data["Volume"].tail(100).values)
 
-                self.logger.info(f"Initialized data for {symbol}: ${self.live_data[symbol]['price']:.2f}")
+                self.logger.info(
+                    f"Initialized data for {symbol}: ${self.live_data[symbol]['price']:.2f}"
+                )
 
             except Exception as e:
                 self.logger.error(f"Error initializing data for {symbol}: {e}")
@@ -372,7 +397,9 @@ class LiveMarketRunner:
                     "timestamp": datetime.utcnow(),
                     "volatility": self._calculate_volatility(data["Close"]),
                     "price_change": (latest["Close"] - previous_price) / previous_price,
-                    "volume_change": self._calculate_volume_change(symbol, latest["Volume"]),
+                    "volume_change": self._calculate_volume_change(
+                        symbol, latest["Volume"]
+                    ),
                 }
             )
 
@@ -433,7 +460,9 @@ class LiveMarketRunner:
                     if not trigger_config.enabled:
                         continue
 
-                    if await self._should_trigger_agent(agent_name, trigger_config, current_time):
+                    if await self._should_trigger_agent(
+                        agent_name, trigger_config, current_time
+                    ):
                         await self._execute_agent(agent_name)
                         self.last_triggers[agent_name] = current_time
                         self.trigger_counters[agent_name] += 1
@@ -501,7 +530,9 @@ class LiveMarketRunner:
             }
 
             # Execute agent
-            result = await self.agent_manager.execute_agent(agent_name, market_data=market_data, live_mode=True)
+            result = await self.agent_manager.execute_agent(
+                agent_name, market_data=market_data, live_mode=True
+            )
 
             # Record execution time
             execution_time = time.time() - start_time
@@ -509,7 +540,9 @@ class LiveMarketRunner:
 
             # Log result
             if result.success:
-                self.logger.info(f"Agent {agent_name} executed successfully in {execution_time:.2f}s")
+                self.logger.info(
+                    f"Agent {agent_name} executed successfully in {execution_time:.2f}s"
+                )
 
                 # Store forecast if this is a forecasting agent
                 if "forecast" in result.data:
@@ -525,7 +558,9 @@ class LiveMarketRunner:
             self.logger.error(f"Error executing agent {agent_name}: {e}")
             self.error_counts[agent_name] += 1
 
-    async def _store_forecast(self, agent_name: str, forecast_data: Dict[str, Any]) -> None:
+    async def _store_forecast(
+        self, agent_name: str, forecast_data: Dict[str, Any]
+    ) -> None:
         """Store a forecast result."""
         try:
             forecast = ForecastResult(
@@ -566,7 +601,8 @@ class LiveMarketRunner:
                 for forecast in self.forecast_results:
                     if (
                         forecast.actual_price is None
-                        and (current_time - forecast.timestamp).total_seconds() >= forecast.horizon_hours * 3600
+                        and (current_time - forecast.timestamp).total_seconds()
+                        >= forecast.horizon_hours * 3600
                     ):
                         # Get actual price
                         symbol = forecast.symbol
@@ -574,20 +610,39 @@ class LiveMarketRunner:
                             actual_price = self.live_data[symbol]["price"]
 
                             # Calculate accuracy
-                            price_error = abs(actual_price - forecast.forecast_price) / forecast.forecast_price
-                            accuracy = 1.0 - min(price_error, 1.0)  # Cap at 100% accuracy
+                            price_error = (
+                                abs(actual_price - forecast.forecast_price)
+                                / forecast.forecast_price
+                            )
+                            accuracy = 1.0 - min(
+                                price_error, 1.0
+                            )  # Cap at 100% accuracy
 
                             # Determine actual direction
                             if price_error < 0.01:  # Within 1%
                                 actual_direction = forecast.forecast_direction
                             else:
-                                actual_direction = "up" if actual_price > forecast.forecast_price else "down"
+                                actual_direction = (
+                                    "up"
+                                    if actual_price > forecast.forecast_price
+                                    else "down"
+                                )
 
                             # Calculate PnL (simplified)
-                            if forecast.forecast_direction == "up" and actual_direction == "up":
-                                pnl = (actual_price - forecast.forecast_price) / forecast.forecast_price
-                            elif forecast.forecast_direction == "down" and actual_direction == "down":
-                                pnl = (forecast.forecast_price - actual_price) / forecast.forecast_price
+                            if (
+                                forecast.forecast_direction == "up"
+                                and actual_direction == "up"
+                            ):
+                                pnl = (
+                                    actual_price - forecast.forecast_price
+                                ) / forecast.forecast_price
+                            elif (
+                                forecast.forecast_direction == "down"
+                                and actual_direction == "down"
+                            ):
+                                pnl = (
+                                    forecast.forecast_price - actual_price
+                                ) / forecast.forecast_price
                             else:
                                 pnl = -0.01  # Small loss for wrong direction
 
@@ -597,14 +652,18 @@ class LiveMarketRunner:
                             forecast.accuracy = accuracy
                             forecast.pnl = pnl
 
-                            self.logger.info(f"Forecast accuracy for {symbol}: {accuracy:.2%}")
+                            self.logger.info(
+                                f"Forecast accuracy for {symbol}: {accuracy:.2%}"
+                            )
 
                 # Save forecast results periodically
                 if len(self.forecast_results) % 10 == 0:  # Every 10 forecasts
                     self._save_forecast_results()
 
                 # Sleep for tracking interval
-                tracking_interval = self.config.get("tracking_interval", 300)  # 5 minutes
+                tracking_interval = self.config.get(
+                    "tracking_interval", 300
+                )  # 5 minutes
                 await asyncio.sleep(tracking_interval)
 
             except Exception as e:
@@ -647,7 +706,9 @@ class LiveMarketRunner:
                 await self._save_performance_metrics(performance_metrics)
 
                 # Sleep for monitoring interval
-                monitoring_interval = self.config.get("monitoring_interval", 600)  # 10 minutes
+                monitoring_interval = self.config.get(
+                    "monitoring_interval", 600
+                )  # 10 minutes
                 await asyncio.sleep(monitoring_interval)
 
             except Exception as e:
@@ -706,7 +767,9 @@ class LiveMarketRunner:
             },
         )
 
-    def get_forecast_accuracy(self, symbol: Optional[str] = None, model: Optional[str] = None) -> Dict[str, Any]:
+    def get_forecast_accuracy(
+        self, symbol: Optional[str] = None, model: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Get forecast accuracy statistics."""
         try:
             # Filter forecasts
@@ -739,8 +802,12 @@ class LiveMarketRunner:
                 "avg_accuracy": np.mean(accuracies),
                 "avg_pnl": np.mean(pnls),
                 "success_rate": success_count / len(completed_forecasts),
-                "best_forecast": max(completed_forecasts, key=lambda f: f.accuracy).to_dict(),
-                "worst_forecast": min(completed_forecasts, key=lambda f: f.accuracy).to_dict(),
+                "best_forecast": max(
+                    completed_forecasts, key=lambda f: f.accuracy
+                ).to_dict(),
+                "worst_forecast": min(
+                    completed_forecasts, key=lambda f: f.accuracy
+                ).to_dict(),
             }
 
         except Exception as e:
@@ -794,7 +861,9 @@ class LiveMarketRunner:
                     min_len = min(len(price_data[sym1]), len(price_data[sym2]))
 
                     if min_len > 10:  # Need at least 10 data points
-                        corr = np.corrcoef(price_data[sym1][-min_len:], price_data[sym2][-min_len:])[0, 1]
+                        corr = np.corrcoef(
+                            price_data[sym1][-min_len:], price_data[sym2][-min_len:]
+                        )[0, 1]
 
                         if not np.isnan(corr):
                             correlations.append(corr)
@@ -815,16 +884,22 @@ class LiveMarketRunner:
                     continue
 
                 current_time = datetime.utcnow()
-                time_since_update = (current_time - self.last_data_update).total_seconds()
+                time_since_update = (
+                    current_time - self.last_data_update
+                ).total_seconds()
 
                 # Check if data feed has stalled
                 if time_since_update > self.watchdog_timeout:
-                    self.logger.warning(f"⚠️ Data feed stalled for {time_since_update:.1f} seconds")
+                    self.logger.warning(
+                        f"⚠️ Data feed stalled for {time_since_update:.1f} seconds"
+                    )
                     await self._handle_data_feed_stall()
 
                 # Check for excessive errors
                 if self.data_feed_errors >= self.max_data_feed_errors:
-                    self.logger.error(f"❌ Too many data feed errors ({self.data_feed_errors})")
+                    self.logger.error(
+                        f"❌ Too many data feed errors ({self.data_feed_errors})"
+                    )
                     await self._handle_data_feed_errors()
 
                 # Check if any symbols have stale data
@@ -833,12 +908,16 @@ class LiveMarketRunner:
                     if symbol in self.live_data:
                         symbol_data = self.live_data[symbol]
                         if "timestamp" in symbol_data:
-                            symbol_age = (current_time - symbol_data["timestamp"]).total_seconds()
+                            symbol_age = (
+                                current_time - symbol_data["timestamp"]
+                            ).total_seconds()
                             if symbol_age > self.watchdog_timeout:
                                 stale_symbols.append(symbol)
 
                 if stale_symbols:
-                    self.logger.warning(f"⚠️ Stale data detected for symbols: {stale_symbols}")
+                    self.logger.warning(
+                        f"⚠️ Stale data detected for symbols: {stale_symbols}"
+                    )
                     await self._handle_stale_symbol_data(stale_symbols)
 
             except Exception as e:
@@ -911,11 +990,15 @@ class LiveMarketRunner:
         self.restart_count += 1
 
         if self.restart_count >= self.max_restarts:
-            self.logger.critical("🚨 Maximum restart attempts reached. Stopping LiveMarketRunner.")
+            self.logger.critical(
+                "🚨 Maximum restart attempts reached. Stopping LiveMarketRunner."
+            )
             await self.stop()
             return
 
-        self.logger.warning(f"🔄 Attempting restart #{self.restart_count}/{self.max_restarts}")
+        self.logger.warning(
+            f"🔄 Attempting restart #{self.restart_count}/{self.max_restarts}"
+        )
 
         try:
             # Full restart of the pipeline
@@ -981,7 +1064,9 @@ class LiveMarketRunner:
 # Factory function
 
 
-def create_live_market_runner(config: Optional[Dict[str, Any]] = None) -> LiveMarketRunner:
+def create_live_market_runner(
+    config: Optional[Dict[str, Any]] = None
+) -> LiveMarketRunner:
     """Create a LiveMarketRunner with default configuration.
 
     Args:
@@ -996,11 +1081,27 @@ def create_live_market_runner(config: Optional[Dict[str, Any]] = None) -> LiveMa
         "trigger_interval": 10,  # 10 seconds
         "tracking_interval": 300,  # 5 minutes
         "monitoring_interval": 600,  # 10 minutes
-        "market_data_config": {"cache_size": 1000, "update_threshold": 5, "max_retries": 3},
+        "market_data_config": {
+            "cache_size": 1000,
+            "update_threshold": 5,
+            "max_retries": 3,
+        },
         "triggers": {
-            "model_builder": {"trigger_type": "time_based", "interval_seconds": 3600, "enabled": True},
-            "performance_critic": {"trigger_type": "time_based", "interval_seconds": 1800, "enabled": True},
-            "execution_agent": {"trigger_type": "price_move", "price_move_threshold": 0.005, "enabled": True},
+            "model_builder": {
+                "trigger_type": "time_based",
+                "interval_seconds": 3600,
+                "enabled": True,
+            },
+            "performance_critic": {
+                "trigger_type": "time_based",
+                "interval_seconds": 1800,
+                "enabled": True,
+            },
+            "execution_agent": {
+                "trigger_type": "price_move",
+                "price_move_threshold": 0.005,
+                "enabled": True,
+            },
         },
     }
 

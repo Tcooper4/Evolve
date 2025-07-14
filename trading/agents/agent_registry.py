@@ -16,7 +16,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
-
 from trading.agents.base_agent_interface import BaseAgent
 
 logger = logging.getLogger(__name__)
@@ -138,7 +137,9 @@ class AgentInfo:
 
         # Convert capabilities
         if "capabilities" in data and isinstance(data["capabilities"], list):
-            data["capabilities"] = [AgentCapability.from_dict(cap) for cap in data["capabilities"]]
+            data["capabilities"] = [
+                AgentCapability.from_dict(cap) for cap in data["capabilities"]
+            ]
 
         return cls(**data)
 
@@ -146,7 +147,11 @@ class AgentInfo:
 class AgentRegistry:
     """Registry for managing available agent types."""
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None, registry_file: Optional[str] = None):
+    def __init__(
+        self,
+        config: Optional[Dict[str, Any]] = None,
+        registry_file: Optional[str] = None,
+    ):
         """
         Initialize the agent registry.
 
@@ -155,7 +160,9 @@ class AgentRegistry:
             registry_file: Path to registry file for persistence
         """
         self.config = config or {}
-        self.registry_file = Path(registry_file) if registry_file else Path("data/agent_registry.json")
+        self.registry_file = (
+            Path(registry_file) if registry_file else Path("data/agent_registry.json")
+        )
         self.registry_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Registry storage
@@ -164,7 +171,12 @@ class AgentRegistry:
         self.categories: Dict[AgentCategory, Set[str]] = {}  # category -> agent names
 
         # Performance tracking
-        self.stats = {"total_agents": 0, "active_agents": 0, "total_capabilities": 0, "last_discovery": None}
+        self.stats = {
+            "total_agents": 0,
+            "active_agents": 0,
+            "total_capabilities": 0,
+            "last_discovery": None,
+        }
 
         # Load existing registry
         self._load_registry()
@@ -188,11 +200,16 @@ class AgentRegistry:
 
                 # Load capabilities index
                 if "capabilities" in data:
-                    self.capabilities = {cap: set(agents) for cap, agents in data["capabilities"].items()}
+                    self.capabilities = {
+                        cap: set(agents) for cap, agents in data["capabilities"].items()
+                    }
 
                 # Load categories index
                 if "categories" in data:
-                    self.categories = {AgentCategory(cat): set(agents) for cat, agents in data["categories"].items()}
+                    self.categories = {
+                        AgentCategory(cat): set(agents)
+                        for cat, agents in data["categories"].items()
+                    }
 
                 logger.info(f"Loaded registry from {self.registry_file}")
 
@@ -203,9 +220,15 @@ class AgentRegistry:
         """Save registry to file."""
         try:
             data = {
-                "agents": {name: agent.to_dict() for name, agent in self.agents.items()},
-                "capabilities": {cap: list(agents) for cap, agents in self.capabilities.items()},
-                "categories": {cat.value: list(agents) for cat, agents in self.categories.items()},
+                "agents": {
+                    name: agent.to_dict() for name, agent in self.agents.items()
+                },
+                "capabilities": {
+                    cap: list(agents) for cap, agents in self.capabilities.items()
+                },
+                "categories": {
+                    cat.value: list(agents) for cat, agents in self.categories.items()
+                },
                 "stats": self.stats,
                 "last_updated": datetime.now().isoformat(),
             }
@@ -231,7 +254,11 @@ class AgentRegistry:
 
                     # Find all agent classes
                     for name, obj in inspect.getmembers(module):
-                        if inspect.isclass(obj) and issubclass(obj, BaseAgent) and obj != BaseAgent:
+                        if (
+                            inspect.isclass(obj)
+                            and issubclass(obj, BaseAgent)
+                            and obj != BaseAgent
+                        ):
                             # Get agent info
                             agent_info = self._get_agent_info(obj)
                             if agent_info:
@@ -282,7 +309,8 @@ class AgentRegistry:
                 capabilities.append(
                     AgentCapability(
                         name="execute",
-                        description=inspect.getdoc(execute_method) or "Execute the agent",
+                        description=inspect.getdoc(execute_method)
+                        or "Execute the agent",
                         required_params=required_params,
                         optional_params=optional_params,
                         return_type=str(sig.return_annotation),
@@ -405,14 +433,18 @@ class AgentRegistry:
             if agent_class:
                 class_validation = self._validate_agent_class(agent_class)
                 if not class_validation["valid"]:
-                    logger.error(f"Agent class validation failed: {class_validation['errors']}")
+                    logger.error(
+                        f"Agent class validation failed: {class_validation['errors']}"
+                    )
                     return False
 
             # Check for conflicts
             if agent_info.name in self.agents:
                 existing_agent = self.agents[agent_info.name]
                 if existing_agent.version == agent_info.version:
-                    logger.warning(f"Agent {agent_info.name} version {agent_info.version} already registered")
+                    logger.warning(
+                        f"Agent {agent_info.name} version {agent_info.version} already registered"
+                    )
                     return False
 
             # Register the agent
@@ -428,7 +460,9 @@ class AgentRegistry:
             # Save registry
             self._save_registry()
 
-            logger.info(f"Registered agent: {agent_info.name} (version {agent_info.version})")
+            logger.info(
+                f"Registered agent: {agent_info.name} (version {agent_info.version})"
+            )
             return True
 
         except Exception as e:
@@ -518,7 +552,10 @@ class AgentRegistry:
                     errors.append("'run' method must be callable")
                 else:
                     # Check if it's an abstract method
-                    if hasattr(run_method, "__isabstractmethod__") and run_method.__isabstractmethod__:
+                    if (
+                        hasattr(run_method, "__isabstractmethod__")
+                        and run_method.__isabstractmethod__
+                    ):
                         errors.append("'run' method must be implemented (not abstract)")
 
             # Check for proper constructor
@@ -528,8 +565,12 @@ class AgentRegistry:
                     errors.append("Constructor must be callable")
 
             # Check for proper string representation
-            if not hasattr(agent_class, "__str__") and not hasattr(agent_class, "__repr__"):
-                errors.append("Agent class should have __str__ or __repr__ method for debugging")
+            if not hasattr(agent_class, "__str__") and not hasattr(
+                agent_class, "__repr__"
+            ):
+                errors.append(
+                    "Agent class should have __str__ or __repr__ method for debugging"
+                )
 
         except Exception as e:
             errors.append(f"Error validating agent class: {str(e)}")
@@ -589,7 +630,13 @@ class AgentRegistry:
                 errors.append(f"Config schema missing required field: {field}")
 
         # Validate schema type
-        if "type" in schema and schema["type"] not in ["object", "array", "string", "number", "boolean"]:
+        if "type" in schema and schema["type"] not in [
+            "object",
+            "array",
+            "string",
+            "number",
+            "boolean",
+        ]:
             errors.append("Invalid schema type")
 
         # Validate properties if present
@@ -646,7 +693,9 @@ class AgentRegistry:
         pattern = r"^[a-zA-Z][a-zA-Z0-9_-]*(\s*[<>=!]+\s*\d+\.\d+\.\d+)?$"
         return bool(re.match(pattern, dependency))
 
-    def _get_agent_class_from_info(self, agent_info: AgentInfo) -> Optional[Type[BaseAgent]]:
+    def _get_agent_class_from_info(
+        self, agent_info: AgentInfo
+    ) -> Optional[Type[BaseAgent]]:
         """Get agent class from agent info.
 
         Args:
@@ -660,7 +709,9 @@ class AgentRegistry:
             agent_class = getattr(module, agent_info.class_name, None)
             return agent_class if agent_class else None
         except Exception as e:
-            logger.debug(f"Could not load agent class {agent_info.class_name} from {agent_info.module_path}: {e}")
+            logger.debug(
+                f"Could not load agent class {agent_info.class_name} from {agent_info.module_path}: {e}"
+            )
             return None
 
     def unregister_agent(self, name: str) -> bool:
@@ -728,7 +779,9 @@ class AgentRegistry:
         agent_names = self.capabilities.get(capability, set())
         return [self.agents[name] for name in agent_names if name in self.agents]
 
-    def get_agents_by_category(self, category: Union[str, AgentCategory]) -> List[AgentInfo]:
+    def get_agents_by_category(
+        self, category: Union[str, AgentCategory]
+    ) -> List[AgentInfo]:
         """
         Get agents in a specific category.
 
@@ -768,7 +821,9 @@ class AgentRegistry:
         return [agent for agent in self.agents.values() if agent.status == status]
 
     def list_agents(
-        self, category: Optional[Union[str, AgentCategory]] = None, status: Optional[Union[str, AgentStatus]] = None
+        self,
+        category: Optional[Union[str, AgentCategory]] = None,
+        status: Optional[Union[str, AgentStatus]] = None,
     ) -> List[str]:
         """
         Get list of registered agent names with optional filtering.
@@ -936,9 +991,15 @@ class AgentRegistry:
         """
         try:
             data = {
-                "agents": {name: agent.to_dict() for name, agent in self.agents.items()},
-                "capabilities": {cap: list(agents) for cap, agents in self.capabilities.items()},
-                "categories": {cat.value: list(agents) for cat, agents in self.categories.items()},
+                "agents": {
+                    name: agent.to_dict() for name, agent in self.agents.items()
+                },
+                "capabilities": {
+                    cap: list(agents) for cap, agents in self.capabilities.items()
+                },
+                "categories": {
+                    cat.value: list(agents) for cat, agents in self.categories.items()
+                },
                 "stats": self.get_stats(),
                 "export_timestamp": datetime.now().isoformat(),
             }

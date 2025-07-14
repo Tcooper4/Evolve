@@ -37,7 +37,7 @@ class TestModelBuildRequest:
             hyperparameters={"epochs": 100, "batch_size": 32},
             validation_split=0.2,
             random_state=42,
-            request_id="test_123"
+            request_id="test_123",
         )
 
         assert request.model_type == "lstm"
@@ -52,9 +52,7 @@ class TestModelBuildRequest:
     def test_model_build_request_defaults(self):
         """Test ModelBuildRequest with default values."""
         request = ModelBuildRequest(
-            model_type="xgboost",
-            data_path="data/sample.csv",
-            target_column="close"
+            model_type="xgboost", data_path="data/sample.csv", target_column="close"
         )
 
         assert request.model_type == "xgboost"
@@ -82,7 +80,7 @@ class TestModelBuildResult:
             model_config={"epochs": 100, "batch_size": 32},
             feature_importance={"feature1": 0.8, "feature2": 0.2},
             build_status="success",
-            error_message=None
+            error_message=None,
         )
 
         assert result.request_id == "test_123"
@@ -105,7 +103,7 @@ class TestModelBuildResult:
             model_id="model_456",
             build_timestamp="2024-01-01T12:00:00",
             training_metrics={"mse": 0.01},
-            model_config={"epochs": 100}
+            model_config={"epochs": 100},
         )
 
         assert result.request_id == "test_123"
@@ -133,14 +131,16 @@ class TestModelBuilderAgent:
     @pytest.fixture
     def sample_data(self, temp_data_dir):
         """Create sample data for testing."""
-        data = pd.DataFrame({
-            'date': pd.date_range('2024-01-01', periods=100, freq='D'),
-            'open': np.random.randn(100).cumsum() + 100,
-            'high': np.random.randn(100).cumsum() + 105,
-            'low': np.random.randn(100).cumsum() + 95,
-            'close': np.random.randn(100).cumsum() + 100,
-            'volume': np.random.randint(1000, 10000, 100)
-        })
+        data = pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=100, freq="D"),
+                "open": np.random.randn(100).cumsum() + 100,
+                "high": np.random.randn(100).cumsum() + 105,
+                "low": np.random.randn(100).cumsum() + 95,
+                "close": np.random.randn(100).cumsum() + 100,
+                "volume": np.random.randint(1000, 10000, 100),
+            }
+        )
 
         data_path = Path(temp_data_dir) / "sample_data.csv"
         data.to_csv(data_path, index=False)
@@ -158,8 +158,8 @@ class TestModelBuilderAgent:
             retry_attempts=3,
             custom_config={
                 "max_models": 5,
-                "model_types": ["lstm", "xgboost", "ensemble"]
-            }
+                "model_types": ["lstm", "xgboost", "ensemble"],
+            },
         )
 
     @pytest.fixture
@@ -183,22 +183,22 @@ class TestModelBuilderAgent:
         assert "model-building" in metadata["tags"]
         assert "lstm_building" in metadata["capabilities"]
 
-    def test_model_builder_agent_validate_input_valid(self, model_builder_agent, sample_data):
+    def test_model_builder_agent_validate_input_valid(
+        self, model_builder_agent, sample_data
+    ):
         """Test input validation with valid data."""
         request = ModelBuildRequest(
-            model_type="lstm",
-            data_path=sample_data,
-            target_column="close"
+            model_type="lstm", data_path=sample_data, target_column="close"
         )
 
         assert model_builder_agent.validate_input(request=request) is True
 
-    def test_model_builder_agent_validate_input_invalid_type(self, model_builder_agent, sample_data):
+    def test_model_builder_agent_validate_input_invalid_type(
+        self, model_builder_agent, sample_data
+    ):
         """Test input validation with invalid model type."""
         request = ModelBuildRequest(
-            model_type="invalid_type",
-            data_path=sample_data,
-            target_column="close"
+            model_type="invalid_type", data_path=sample_data, target_column="close"
         )
 
         assert model_builder_agent.validate_input(request=request) is False
@@ -206,14 +206,14 @@ class TestModelBuilderAgent:
     def test_model_builder_agent_validate_input_missing_data(self, model_builder_agent):
         """Test input validation with missing data path."""
         request = ModelBuildRequest(
-            model_type="lstm",
-            data_path="nonexistent_file.csv",
-            target_column="close"
+            model_type="lstm", data_path="nonexistent_file.csv", target_column="close"
         )
 
         assert model_builder_agent.validate_input(request=request) is False
 
-    def test_model_builder_agent_validate_input_missing_request(self, model_builder_agent):
+    def test_model_builder_agent_validate_input_missing_request(
+        self, model_builder_agent
+    ):
         """Test input validation with missing request."""
         assert model_builder_agent.validate_input() is False
 
@@ -222,13 +222,15 @@ class TestModelBuilderAgent:
         assert model_builder_agent.validate_input(request="not_a_request") is False
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_execute_success(self, model_builder_agent, sample_data):
+    async def test_model_builder_agent_execute_success(
+        self, model_builder_agent, sample_data
+    ):
         """Test successful model building execution."""
         request = ModelBuildRequest(
             model_type="lstm",
             data_path=sample_data,
             target_column="close",
-            hyperparameters={"epochs": 5, "batch_size": 16}  # Small for testing
+            hyperparameters={"epochs": 5, "batch_size": 16},  # Small for testing
         )
 
         result = await model_builder_agent.execute(request=request)
@@ -240,7 +242,9 @@ class TestModelBuilderAgent:
         assert "training_metrics" in result.data
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_execute_invalid_request(self, model_builder_agent):
+    async def test_model_builder_agent_execute_invalid_request(
+        self, model_builder_agent
+    ):
         """Test execution with invalid request."""
         result = await model_builder_agent.execute()
 
@@ -248,7 +252,9 @@ class TestModelBuilderAgent:
         assert "required" in result.error_message.lower()
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_execute_wrong_request_type(self, model_builder_agent):
+    async def test_model_builder_agent_execute_wrong_request_type(
+        self, model_builder_agent
+    ):
         """Test execution with wrong request type."""
         result = await model_builder_agent.execute(request="not_a_request")
 
@@ -256,13 +262,15 @@ class TestModelBuilderAgent:
         assert "instance" in result.error_message.lower()
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_build_lstm_model(self, model_builder_agent, sample_data):
+    async def test_model_builder_agent_build_lstm_model(
+        self, model_builder_agent, sample_data
+    ):
         """Test LSTM model building."""
         request = ModelBuildRequest(
             model_type="lstm",
             data_path=sample_data,
             target_column="close",
-            hyperparameters={"epochs": 5, "batch_size": 16}
+            hyperparameters={"epochs": 5, "batch_size": 16},
         )
 
         result = model_builder_agent.build_model(request)
@@ -275,13 +283,15 @@ class TestModelBuilderAgent:
         assert "training_metrics" in result.training_metrics
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_build_xgboost_model(self, model_builder_agent, sample_data):
+    async def test_model_builder_agent_build_xgboost_model(
+        self, model_builder_agent, sample_data
+    ):
         """Test XGBoost model building."""
         request = ModelBuildRequest(
             model_type="xgboost",
             data_path=sample_data,
             target_column="close",
-            hyperparameters={"n_estimators": 10, "max_depth": 3}
+            hyperparameters={"n_estimators": 10, "max_depth": 3},
         )
 
         result = model_builder_agent.build_model(request)
@@ -294,13 +304,15 @@ class TestModelBuilderAgent:
         assert "training_metrics" in result.training_metrics
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_build_ensemble_model(self, model_builder_agent, sample_data):
+    async def test_model_builder_agent_build_ensemble_model(
+        self, model_builder_agent, sample_data
+    ):
         """Test ensemble model building."""
         request = ModelBuildRequest(
             model_type="ensemble",
             data_path=sample_data,
             target_column="close",
-            hyperparameters={"n_estimators": 5}
+            hyperparameters={"n_estimators": 5},
         )
 
         result = model_builder_agent.build_model(request)
@@ -313,12 +325,12 @@ class TestModelBuilderAgent:
         assert "training_metrics" in result.training_metrics
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_build_invalid_model_type(self, model_builder_agent, sample_data):
+    async def test_model_builder_agent_build_invalid_model_type(
+        self, model_builder_agent, sample_data
+    ):
         """Test building with invalid model type."""
         request = ModelBuildRequest(
-            model_type="invalid_type",
-            data_path=sample_data,
-            target_column="close"
+            model_type="invalid_type", data_path=sample_data, target_column="close"
         )
 
         result = model_builder_agent.build_model(request)
@@ -327,14 +339,16 @@ class TestModelBuilderAgent:
         assert "unsupported" in result.error_message.lower()
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_build_with_features(self, model_builder_agent, sample_data):
+    async def test_model_builder_agent_build_with_features(
+        self, model_builder_agent, sample_data
+    ):
         """Test model building with specific features."""
         request = ModelBuildRequest(
             model_type="lstm",
             data_path=sample_data,
             target_column="close",
             features=["open", "high", "low", "volume"],
-            hyperparameters={"epochs": 5, "batch_size": 16}
+            hyperparameters={"epochs": 5, "batch_size": 16},
         )
 
         result = model_builder_agent.build_model(request)
@@ -344,7 +358,9 @@ class TestModelBuilderAgent:
         assert result.model_id is not None
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_build_with_custom_hyperparameters(self, model_builder_agent, sample_data):
+    async def test_model_builder_agent_build_with_custom_hyperparameters(
+        self, model_builder_agent, sample_data
+    ):
         """Test model building with custom hyperparameters."""
         request = ModelBuildRequest(
             model_type="lstm",
@@ -354,8 +370,8 @@ class TestModelBuilderAgent:
                 "epochs": 10,
                 "batch_size": 8,
                 "learning_rate": 0.001,
-                "hidden_size": 64
-            }
+                "hidden_size": 64,
+            },
         )
 
         result = model_builder_agent.build_model(request)
@@ -365,14 +381,16 @@ class TestModelBuilderAgent:
         assert result.model_config["epochs"] == 10
         assert result.model_config["batch_size"] == 8
 
-    def test_model_builder_agent_get_model_status(self, model_builder_agent, sample_data):
+    def test_model_builder_agent_get_model_status(
+        self, model_builder_agent, sample_data
+    ):
         """Test getting model status."""
         # Build a model first
         request = ModelBuildRequest(
             model_type="lstm",
             data_path=sample_data,
             target_column="close",
-            hyperparameters={"epochs": 5, "batch_size": 16}
+            hyperparameters={"epochs": 5, "batch_size": 16},
         )
 
         build_result = model_builder_agent.build_model(request)
@@ -384,7 +402,9 @@ class TestModelBuilderAgent:
         assert status.model_id == build_result.model_id
         assert status.model_type == "lstm"
 
-    def test_model_builder_agent_get_model_status_nonexistent(self, model_builder_agent):
+    def test_model_builder_agent_get_model_status_nonexistent(
+        self, model_builder_agent
+    ):
         """Test getting status for nonexistent model."""
         status = model_builder_agent.get_model_status("nonexistent_id")
         assert status is None
@@ -396,7 +416,7 @@ class TestModelBuilderAgent:
             model_type="lstm",
             data_path=sample_data,
             target_column="close",
-            hyperparameters={"epochs": 5, "batch_size": 16}
+            hyperparameters={"epochs": 5, "batch_size": 16},
         )
 
         model_builder_agent.build_model(request)
@@ -408,14 +428,16 @@ class TestModelBuilderAgent:
         assert len(models) > 0
         assert all(isinstance(model, dict) for model in models)
 
-    def test_model_builder_agent_cleanup_old_models(self, model_builder_agent, sample_data):
+    def test_model_builder_agent_cleanup_old_models(
+        self, model_builder_agent, sample_data
+    ):
         """Test cleaning up old models."""
         # Build a model first
         request = ModelBuildRequest(
             model_type="lstm",
             data_path=sample_data,
             target_column="close",
-            hyperparameters={"epochs": 5, "batch_size": 16}
+            hyperparameters={"epochs": 5, "batch_size": 16},
         )
 
         model_builder_agent.build_model(request)
@@ -441,12 +463,12 @@ class TestModelBuilderAgentErrorHandling:
         return ModelBuilderAgent(agent_config)
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_build_with_missing_data(self, model_builder_agent):
+    async def test_model_builder_agent_build_with_missing_data(
+        self, model_builder_agent
+    ):
         """Test building model with missing data file."""
         request = ModelBuildRequest(
-            model_type="lstm",
-            data_path="nonexistent_file.csv",
-            target_column="close"
+            model_type="lstm", data_path="nonexistent_file.csv", target_column="close"
         )
 
         result = model_builder_agent.build_model(request)
@@ -455,17 +477,17 @@ class TestModelBuilderAgentErrorHandling:
         assert "error" in result.error_message.lower()
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_build_with_invalid_data(self, model_builder_agent, temp_data_dir):
+    async def test_model_builder_agent_build_with_invalid_data(
+        self, model_builder_agent, temp_data_dir
+    ):
         """Test building model with invalid data."""
         # Create invalid data file
         invalid_data_path = Path(temp_data_dir) / "invalid_data.csv"
-        with open(invalid_data_path, 'w') as f:
+        with open(invalid_data_path, "w") as f:
             f.write("invalid,csv,data\n")
 
         request = ModelBuildRequest(
-            model_type="lstm",
-            data_path=str(invalid_data_path),
-            target_column="close"
+            model_type="lstm", data_path=str(invalid_data_path), target_column="close"
         )
 
         result = model_builder_agent.build_model(request)
@@ -473,12 +495,12 @@ class TestModelBuilderAgentErrorHandling:
         assert result.build_status == "failed"
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_build_with_missing_target(self, model_builder_agent, sample_data):
+    async def test_model_builder_agent_build_with_missing_target(
+        self, model_builder_agent, sample_data
+    ):
         """Test building model with missing target column."""
         request = ModelBuildRequest(
-            model_type="lstm",
-            data_path=sample_data,
-            target_column="nonexistent_column"
+            model_type="lstm", data_path=sample_data, target_column="nonexistent_column"
         )
 
         result = model_builder_agent.build_model(request)
@@ -501,7 +523,9 @@ class TestModelBuilderAgentIntegration:
         return ModelBuilderAgent(agent_config)
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_multiple_models(self, model_builder_agent, sample_data):
+    async def test_model_builder_agent_multiple_models(
+        self, model_builder_agent, sample_data
+    ):
         """Test building multiple models of different types."""
         model_types = ["lstm", "xgboost", "ensemble"]
         results = []
@@ -511,7 +535,9 @@ class TestModelBuilderAgentIntegration:
                 model_type=model_type,
                 data_path=sample_data,
                 target_column="close",
-                hyperparameters={"epochs": 5, "batch_size": 16} if model_type == "lstm" else {"n_estimators": 10}
+                hyperparameters={"epochs": 5, "batch_size": 16}
+                if model_type == "lstm"
+                else {"n_estimators": 10},
             )
 
             result = model_builder_agent.build_model(request)
@@ -530,13 +556,15 @@ class TestModelBuilderAgentIntegration:
         assert len(set(model_paths)) == len(model_paths)
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_registry_consistency(self, model_builder_agent, sample_data):
+    async def test_model_builder_agent_registry_consistency(
+        self, model_builder_agent, sample_data
+    ):
         """Test that model registry is consistent."""
         request = ModelBuildRequest(
             model_type="lstm",
             data_path=sample_data,
             target_column="close",
-            hyperparameters={"epochs": 5, "batch_size": 16}
+            hyperparameters={"epochs": 5, "batch_size": 16},
         )
 
         result = model_builder_agent.build_model(request)
@@ -548,13 +576,15 @@ class TestModelBuilderAgentIntegration:
         assert registry_entry.model_type == result.model_type
 
     @pytest.mark.asyncio
-    async def test_model_builder_agent_memory_integration(self, model_builder_agent, sample_data):
+    async def test_model_builder_agent_memory_integration(
+        self, model_builder_agent, sample_data
+    ):
         """Test that agent memory is properly updated."""
         request = ModelBuildRequest(
             model_type="lstm",
             data_path=sample_data,
             target_column="close",
-            hyperparameters={"epochs": 5, "batch_size": 16}
+            hyperparameters={"epochs": 5, "batch_size": 16},
         )
 
         result = model_builder_agent.build_model(request)
@@ -566,7 +596,9 @@ class TestModelBuilderAgentIntegration:
         assert result.training_metrics is not None
 
     @pytest.mark.asyncio
-    async def test_dynamic_model_generation_from_text_prompt(self, model_builder_agent, sample_data):
+    async def test_dynamic_model_generation_from_text_prompt(
+        self, model_builder_agent, sample_data
+    ):
         """Test dynamic model generation from text prompt (e.g., 'build an XGBoost forecaster')."""
         print("\n🤖 Testing Dynamic Model Generation from Text Prompt")
 
@@ -576,7 +608,7 @@ class TestModelBuilderAgentIntegration:
             "create a LSTM neural network for time series forecasting",
             "generate an ensemble model combining multiple algorithms",
             "build a random forest model for price prediction",
-            "create a deep learning model with attention mechanism"
+            "create a deep learning model with attention mechanism",
         ]
 
         for prompt in text_prompts:
@@ -586,23 +618,27 @@ class TestModelBuilderAgentIntegration:
             model_config = model_builder_agent.parse_text_prompt(prompt)
 
             # Verify model configuration extraction
-            assert model_config is not None, f"Should extract config from prompt: {prompt}"
-            assert 'model_type' in model_config, "Config should contain model_type"
-            assert 'hyperparameters' in model_config, "Config should contain hyperparameters"
+            assert (
+                model_config is not None
+            ), f"Should extract config from prompt: {prompt}"
+            assert "model_type" in model_config, "Config should contain model_type"
+            assert (
+                "hyperparameters" in model_config
+            ), "Config should contain hyperparameters"
 
             print(f"    Extracted model type: {model_config['model_type']}")
             print(f"    Extracted hyperparameters: {model_config['hyperparameters']}")
 
             # Create model build request from extracted config
             request = ModelBuildRequest(
-                model_type=model_config['model_type'],
+                model_type=model_config["model_type"],
                 data_path=sample_data,
                 target_column="close",
                 features=["open", "high", "low", "volume"],
-                hyperparameters=model_config['hyperparameters'],
+                hyperparameters=model_config["hyperparameters"],
                 validation_split=0.2,
                 random_state=42,
-                request_id=f"prompt_{hash(prompt) % 10000}"
+                request_id=f"prompt_{hash(prompt) % 10000}",
             )
 
             # Validate the generated request
@@ -613,37 +649,47 @@ class TestModelBuilderAgentIntegration:
             result = await model_builder_agent.execute(request=request)
 
             # Verify successful model generation
-            assert result.success, f"Model generation should succeed for prompt: {prompt}"
+            assert (
+                result.success
+            ), f"Model generation should succeed for prompt: {prompt}"
             assert result.data is not None, "Result should contain model data"
-            assert 'model_id' in result.data, "Result should contain model_id"
-            assert 'model_path' in result.data, "Result should contain model_path"
+            assert "model_id" in result.data, "Result should contain model_id"
+            assert "model_path" in result.data, "Result should contain model_path"
 
             print(f"    ✅ Model generated successfully: {result.data['model_id']}")
 
             # Test model-specific validations
-            if 'xgboost' in prompt.lower():
-                assert model_config['model_type'] == 'xgboost',
-                               "Should extract XGBoost for XGBoost prompt"
-                assert 'n_estimators' in model_config['hyperparameters'],
-                             "XGBoost should have n_estimators parameter"
+            if "xgboost" in prompt.lower():
+                assert (
+                    model_config["model_type"] == "xgboost"
+                ), "Should extract XGBoost for XGBoost prompt"
+                assert (
+                    "n_estimators" in model_config["hyperparameters"]
+                ), "XGBoost should have n_estimators parameter"
 
-            elif 'lstm' in prompt.lower():
-                assert model_config['model_type'] == 'lstm',
-                               "Should extract LSTM for LSTM prompt"
-                assert 'epochs' in model_config['hyperparameters'],
-                             "LSTM should have epochs parameter"
+            elif "lstm" in prompt.lower():
+                assert (
+                    model_config["model_type"] == "lstm"
+                ), "Should extract LSTM for LSTM prompt"
+                assert (
+                    "epochs" in model_config["hyperparameters"]
+                ), "LSTM should have epochs parameter"
 
-            elif 'ensemble' in prompt.lower():
-                assert model_config['model_type'] == 'ensemble',
-                               "Should extract ensemble for ensemble prompt"
-                assert 'models' in model_config['hyperparameters'],
-                             "Ensemble should have models parameter"
+            elif "ensemble" in prompt.lower():
+                assert (
+                    model_config["model_type"] == "ensemble"
+                ), "Should extract ensemble for ensemble prompt"
+                assert (
+                    "models" in model_config["hyperparameters"]
+                ), "Ensemble should have models parameter"
 
-            elif 'random' in prompt.lower() and 'forest' in prompt.lower():
-                assert model_config['model_type'] == 'random_forest',
-                               "Should extract random_forest for random forest prompt"
-                assert 'n_estimators' in model_config['hyperparameters'],
-                             "Random forest should have n_estimators parameter"
+            elif "random" in prompt.lower() and "forest" in prompt.lower():
+                assert (
+                    model_config["model_type"] == "random_forest"
+                ), "Should extract random_forest for random forest prompt"
+                assert (
+                    "n_estimators" in model_config["hyperparameters"]
+                ), "Random forest should have n_estimators parameter"
 
         # Test complex prompt with multiple requirements
         print(f"\n  🔧 Testing complex prompt...")
@@ -652,12 +698,22 @@ class TestModelBuilderAgentIntegration:
         complex_config = model_builder_agent.parse_text_prompt(complex_prompt)
 
         # Verify complex configuration extraction
-        assert complex_config['model_type'] == 'lstm', "Should extract LSTM for deep learning prompt"
-        assert 'dropout' in complex_config['hyperparameters'], "Should include dropout for regularization"
-        assert 'early_stopping' in complex_config['hyperparameters'], "Should include early stopping"
-        assert 'epochs' in complex_config['hyperparameters'], "Should include epochs parameter"
+        assert (
+            complex_config["model_type"] == "lstm"
+        ), "Should extract LSTM for deep learning prompt"
+        assert (
+            "dropout" in complex_config["hyperparameters"]
+        ), "Should include dropout for regularization"
+        assert (
+            "early_stopping" in complex_config["hyperparameters"]
+        ), "Should include early stopping"
+        assert (
+            "epochs" in complex_config["hyperparameters"]
+        ), "Should include epochs parameter"
 
-        print(f"    Complex config extracted: {complex_config['model_type']} with {len(complex_config['hyperparameters'])} parameters")
+        print(
+            f"    Complex config extracted: {complex_config['model_type']} with {len(complex_config['hyperparameters'])} parameters"
+        )
 
         # Test prompt with invalid model type
         print(f"\n  ⚠️ Testing invalid model prompt...")
@@ -675,23 +731,37 @@ class TestModelBuilderAgentIntegration:
         incomplete_config = model_builder_agent.parse_text_prompt(incomplete_prompt)
 
         # Should use default configuration
-        assert incomplete_config is not None, "Should provide default config for incomplete prompt"
-        assert 'model_type' in incomplete_config, "Should have default model type"
-        assert 'hyperparameters' in incomplete_config, "Should have default hyperparameters"
+        assert (
+            incomplete_config is not None
+        ), "Should provide default config for incomplete prompt"
+        assert "model_type" in incomplete_config, "Should have default model type"
+        assert (
+            "hyperparameters" in incomplete_config
+        ), "Should have default hyperparameters"
 
-        print(f"    ✅ Default config provided for incomplete prompt: {incomplete_config['model_type']}")
+        print(
+            f"    ✅ Default config provided for incomplete prompt: {incomplete_config['model_type']}"
+        )
 
         # Test prompt with custom parameters
         print(f"\n  ⚙️ Testing prompt with custom parameters...")
-        custom_prompt = "build an XGBoost model with 500 trees, max_depth 6, and learning_rate 0.1"
+        custom_prompt = (
+            "build an XGBoost model with 500 trees, max_depth 6, and learning_rate 0.1"
+        )
 
         custom_config = model_builder_agent.parse_text_prompt(custom_prompt)
 
         # Verify custom parameters are extracted
-        assert custom_config['model_type'] == 'xgboost', "Should extract XGBoost"
-        assert custom_config['hyperparameters']['n_estimators'] == 500, "Should extract n_estimators"
-        assert custom_config['hyperparameters']['max_depth'] == 6, "Should extract max_depth"
-        assert custom_config['hyperparameters']['learning_rate'] == 0.1, "Should extract learning_rate"
+        assert custom_config["model_type"] == "xgboost", "Should extract XGBoost"
+        assert (
+            custom_config["hyperparameters"]["n_estimators"] == 500
+        ), "Should extract n_estimators"
+        assert (
+            custom_config["hyperparameters"]["max_depth"] == 6
+        ), "Should extract max_depth"
+        assert (
+            custom_config["hyperparameters"]["learning_rate"] == 0.1
+        ), "Should extract learning_rate"
 
         print(f"    ✅ Custom parameters extracted: {custom_config['hyperparameters']}")
 
@@ -702,23 +772,25 @@ class TestModelBuilderAgentIntegration:
         final_config = model_builder_agent.parse_text_prompt(final_prompt)
 
         final_request = ModelBuildRequest(
-            model_type=final_config['model_type'],
+            model_type=final_config["model_type"],
             data_path=sample_data,
             target_column="close",
             features=["open", "high", "low", "volume"],
-            hyperparameters=final_config['hyperparameters'],
+            hyperparameters=final_config["hyperparameters"],
             validation_split=0.2,
             random_state=42,
-            request_id="final_prompt_test"
+            request_id="final_prompt_test",
         )
 
         final_result = await model_builder_agent.execute(request=final_request)
 
         # Verify successful end-to-end generation
         assert final_result.success, "End-to-end model generation should succeed"
-        assert 'model_id' in final_result.data, "Should have model_id in result"
-        assert 'training_metrics' in final_result.data, "Should have training metrics"
+        assert "model_id" in final_result.data, "Should have model_id in result"
+        assert "training_metrics" in final_result.data, "Should have training metrics"
 
-        print(f"    ✅ End-to-end model generation successful: {final_result.data['model_id']}")
+        print(
+            f"    ✅ End-to-end model generation successful: {final_result.data['model_id']}"
+        )
 
         print("✅ Dynamic model generation from text prompt test completed")

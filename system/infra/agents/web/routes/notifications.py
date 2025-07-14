@@ -20,16 +20,24 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 websocket_handler = None
 
 
-def init_routes(notification_manager: NotificationManager, ws_handler: WebSocketHandler):
+def init_routes(
+    notification_manager: NotificationManager, ws_handler: WebSocketHandler
+):
     global websocket_handler
     websocket_handler = ws_handler
 
-    return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+    return {
+        "success": True,
+        "message": "Initialization completed",
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    user_id = request.state.user.get("username") if hasattr(request.state, "user") else None
+    user_id = (
+        request.state.user.get("username") if hasattr(request.state, "user") else None
+    )
     if not user_id:
         await websocket.close(code=4001)
         return
@@ -53,12 +61,17 @@ async def get_notifications(
 
         # Get all notifications first
         notifications = await notification_manager.get_user_notifications(
-            user_id=user_id, limit=1000, offset=0, unread_only=unread_only  # Get all to filter
+            user_id=user_id,
+            limit=1000,
+            offset=0,
+            unread_only=unread_only,  # Get all to filter
         )
 
         # Filter by priority if specified
         if priority:
-            notifications = [n for n in notifications if n.get("priority") == priority.value]
+            notifications = [
+                n for n in notifications if n.get("priority") == priority.value
+            ]
 
         # Sort notifications
         reverse = sort_order.lower() == "desc"
@@ -66,9 +79,16 @@ async def get_notifications(
             notifications.sort(key=lambda x: x.get("created_at", ""), reverse=reverse)
         elif sort_by == "priority":
             # Sort by priority (HIGH > MEDIUM > LOW)
-            priority_order = {NotificationPriority.HIGH: 3, NotificationPriority.MEDIUM: 2, NotificationPriority.LOW: 1}
+            priority_order = {
+                NotificationPriority.HIGH: 3,
+                NotificationPriority.MEDIUM: 2,
+                NotificationPriority.LOW: 1,
+            }
             notifications.sort(
-                key=lambda x: priority_order.get(NotificationPriority(x.get("priority", "LOW")), 0), reverse=reverse
+                key=lambda x: priority_order.get(
+                    NotificationPriority(x.get("priority", "LOW")), 0
+                ),
+                reverse=reverse,
             )
         elif sort_by == "read":
             notifications.sort(key=lambda x: x.get("read", False), reverse=reverse)
@@ -106,18 +126,27 @@ async def get_notifications_by_priority(
 
         # Get notifications by priority
         notifications = await notification_manager.get_user_notifications(
-            user_id=user_id, limit=1000, offset=0, unread_only=unread_only  # Get all to filter
+            user_id=user_id,
+            limit=1000,
+            offset=0,
+            unread_only=unread_only,  # Get all to filter
         )
 
         # Filter by priority
-        priority_notifications = [n for n in notifications if n.get("priority") == priority.value]
+        priority_notifications = [
+            n for n in notifications if n.get("priority") == priority.value
+        ]
 
         # Sort notifications
         reverse = sort_order.lower() == "desc"
         if sort_by == "created_at":
-            priority_notifications.sort(key=lambda x: x.get("created_at", ""), reverse=reverse)
+            priority_notifications.sort(
+                key=lambda x: x.get("created_at", ""), reverse=reverse
+            )
         elif sort_by == "read":
-            priority_notifications.sort(key=lambda x: x.get("read", False), reverse=reverse)
+            priority_notifications.sort(
+                key=lambda x: x.get("read", False), reverse=reverse
+            )
 
         # Apply pagination
         total_count = len(priority_notifications)
@@ -133,7 +162,9 @@ async def get_notifications_by_priority(
         }
     except Exception as e:
         logger.error(f"Error getting notifications by priority: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to get notifications by priority")
+        raise HTTPException(
+            status_code=500, detail="Failed to get notifications by priority"
+        )
 
 
 @router.get("/priority/{priority}/count")
@@ -147,16 +178,27 @@ async def get_notification_count_by_priority(
 
         # Get notifications by priority
         notifications = await notification_manager.get_user_notifications(
-            user_id=user_id, limit=1000, offset=0, unread_only=unread_only  # Get all to filter
+            user_id=user_id,
+            limit=1000,
+            offset=0,
+            unread_only=unread_only,  # Get all to filter
         )
 
         # Filter by priority
-        priority_notifications = [n for n in notifications if n.get("priority") == priority.value]
+        priority_notifications = [
+            n for n in notifications if n.get("priority") == priority.value
+        ]
 
-        return {"priority": priority.value, "count": len(priority_notifications), "unread_only": unread_only}
+        return {
+            "priority": priority.value,
+            "count": len(priority_notifications),
+            "unread_only": unread_only,
+        }
     except Exception as e:
         logger.error(f"Error getting notification count by priority: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to get notification count by priority")
+        raise HTTPException(
+            status_code=500, detail="Failed to get notification count by priority"
+        )
 
 
 @router.get("/priorities/summary")
@@ -176,10 +218,14 @@ async def get_notification_priorities_summary(request: Request):
         unread_counts = {}
 
         for priority in NotificationPriority:
-            priority_notifications = [n for n in notifications if n.get("priority") == priority.value]
+            priority_notifications = [
+                n for n in notifications if n.get("priority") == priority.value
+            ]
             priority_counts[priority.value] = len(priority_notifications)
 
-            unread_notifications = [n for n in priority_notifications if not n.get("read", False)]
+            unread_notifications = [
+                n for n in priority_notifications if not n.get("read", False)
+            ]
             unread_counts[priority.value] = len(unread_notifications)
 
         return {
@@ -190,12 +236,16 @@ async def get_notification_priorities_summary(request: Request):
         }
     except Exception as e:
         logger.error(f"Error getting notification priorities summary: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to get notification priorities summary")
+        raise HTTPException(
+            status_code=500, detail="Failed to get notification priorities summary"
+        )
 
 
 @router.post("/priority/{priority}/read-all")
 @login_required
-async def mark_all_notifications_by_priority_as_read(request: Request, priority: NotificationPriority):
+async def mark_all_notifications_by_priority_as_read(
+    request: Request, priority: NotificationPriority
+):
     """Mark all notifications of a specific priority as read."""
     try:
         user_id = request.state.user["username"]
@@ -206,23 +256,35 @@ async def mark_all_notifications_by_priority_as_read(request: Request, priority:
         )
 
         # Filter by priority and mark as read
-        priority_notifications = [n for n in notifications if n.get("priority") == priority.value]
+        priority_notifications = [
+            n for n in notifications if n.get("priority") == priority.value
+        ]
 
         marked_count = 0
         for notification in priority_notifications:
-            success = await notification_manager.mark_as_read(notification["id"], user_id)
+            success = await notification_manager.mark_as_read(
+                notification["id"], user_id
+            )
             if success:
                 marked_count += 1
 
-        return {"priority": priority.value, "marked_count": marked_count, "total_count": len(priority_notifications)}
+        return {
+            "priority": priority.value,
+            "marked_count": marked_count,
+            "total_count": len(priority_notifications),
+        }
     except Exception as e:
         logger.error(f"Error marking notifications by priority as read: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to mark notifications by priority as read")
+        raise HTTPException(
+            status_code=500, detail="Failed to mark notifications by priority as read"
+        )
 
 
 @router.delete("/priority/{priority}")
 @login_required
-async def delete_all_notifications_by_priority(request: Request, priority: NotificationPriority):
+async def delete_all_notifications_by_priority(
+    request: Request, priority: NotificationPriority
+):
     """Delete all notifications of a specific priority."""
     try:
         user_id = request.state.user["username"]
@@ -233,18 +295,28 @@ async def delete_all_notifications_by_priority(request: Request, priority: Notif
         )
 
         # Filter by priority and delete
-        priority_notifications = [n for n in notifications if n.get("priority") == priority.value]
+        priority_notifications = [
+            n for n in notifications if n.get("priority") == priority.value
+        ]
 
         deleted_count = 0
         for notification in priority_notifications:
-            success = await notification_manager.delete_notification(notification["id"], user_id)
+            success = await notification_manager.delete_notification(
+                notification["id"], user_id
+            )
             if success:
                 deleted_count += 1
 
-        return {"priority": priority.value, "deleted_count": deleted_count, "total_count": len(priority_notifications)}
+        return {
+            "priority": priority.value,
+            "deleted_count": deleted_count,
+            "total_count": len(priority_notifications),
+        }
     except Exception as e:
         logger.error(f"Error deleting notifications by priority: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to delete notifications by priority")
+        raise HTTPException(
+            status_code=500, detail="Failed to delete notifications by priority"
+        )
 
 
 @router.post("/{notification_id}/read")
@@ -260,7 +332,9 @@ async def mark_notification_as_read(request: Request, notification_id: str):
         return None
     except Exception as e:
         logger.error(f"Error marking notification as read: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to mark notification as read")
+        raise HTTPException(
+            status_code=500, detail="Failed to mark notification as read"
+        )
 
 
 @router.post("/read-all")
@@ -268,7 +342,9 @@ async def mark_notification_as_read(request: Request, notification_id: str):
 async def mark_all_notifications_as_read(request: Request):
     try:
         user_id = request.state.user["username"]
-        notifications = await notification_manager.get_user_notifications(user_id=user_id, unread_only=True)
+        notifications = await notification_manager.get_user_notifications(
+            user_id=user_id, unread_only=True
+        )
 
         for notification in notifications:
             await notification_manager.mark_as_read(notification["id"], user_id)
@@ -276,7 +352,9 @@ async def mark_all_notifications_as_read(request: Request):
         return None
     except Exception as e:
         logger.error(f"Error marking all notifications as read: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to mark all notifications as read")
+        raise HTTPException(
+            status_code=500, detail="Failed to mark all notifications as read"
+        )
 
 
 @router.delete("/{notification_id}")
@@ -284,7 +362,9 @@ async def mark_all_notifications_as_read(request: Request):
 async def delete_notification(request: Request, notification_id: str):
     try:
         user_id = request.state.user["username"]
-        success = await notification_manager.delete_notification(notification_id, user_id)
+        success = await notification_manager.delete_notification(
+            notification_id, user_id
+        )
 
         if not success:
             raise HTTPException(status_code=404, detail="Notification not found")
@@ -300,7 +380,9 @@ async def delete_notification(request: Request, notification_id: str):
 async def clear_all_notifications(request: Request):
     try:
         user_id = request.state.user["username"]
-        notifications = await notification_manager.get_user_notifications(user_id=user_id)
+        notifications = await notification_manager.get_user_notifications(
+            user_id=user_id
+        )
 
         for notification in notifications:
             await notification_manager.delete_notification(notification["id"], user_id)

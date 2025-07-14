@@ -48,7 +48,10 @@ class TestRSISignals:
         low = close_prices - np.random.uniform(0, 3, 100)
         volume = np.random.uniform(1000000, 5000000, 100)
 
-        df = pd.DataFrame({"Close": close_prices, "High": high, "Low": low, "Volume": volume}, index=dates)
+        df = pd.DataFrame(
+            {"Close": close_prices, "High": high, "Low": low, "Volume": volume},
+            index=dates,
+        )
 
         return df
 
@@ -213,7 +216,10 @@ class TestRSISignals:
             assert "rsi" in result_df.columns
         except Exception as e:
             # If it fails, should be due to insufficient data
-            assert any(keyword in str(e).lower() for keyword in ["insufficient", "at least", "minimum", "period"])
+            assert any(
+                keyword in str(e).lower()
+                for keyword in ["insufficient", "at least", "minimum", "period"]
+            )
 
     def test_constant_data_handling(self, constant_price_data):
         """Test handling of constant price data."""
@@ -244,7 +250,9 @@ class TestRSISignals:
             assert "rsi" in result_df.columns
         except Exception as e:
             # If it fails, should be due to NaN values
-            assert any(keyword in str(e).lower() for keyword in ["nan", "missing", "invalid"])
+            assert any(
+                keyword in str(e).lower() for keyword in ["nan", "missing", "invalid"]
+            )
 
     def test_different_periods(self, synthetic_price_data):
         """Test RSI calculation with different periods."""
@@ -278,7 +286,10 @@ class TestRSISignals:
 
         for buy_threshold, sell_threshold in thresholds:
             result_df = generate_rsi_signals(
-                synthetic_price_data, period=14, buy_threshold=buy_threshold, sell_threshold=sell_threshold
+                synthetic_price_data,
+                period=14,
+                buy_threshold=buy_threshold,
+                sell_threshold=sell_threshold,
             )
 
             assert "signal" in result_df.columns
@@ -336,11 +347,13 @@ class TestRSISignals:
 
         # Cumulative returns should be monotonically increasing or decreasing
         cum_returns = result_df["cumulative_returns"].dropna()
-        strategy_cum_returns = result_df["strategy_cumulative_returns"].dropna()
+        result_df["strategy_cumulative_returns"].dropna()
 
         if len(cum_returns) > 1:
             # Should be monotonically increasing (for positive returns)
-            assert (cum_returns.diff().dropna() >= 0).all() or (cum_returns.diff().dropna() <= 0).all()
+            assert (cum_returns.diff().dropna() >= 0).all() or (
+                cum_returns.diff().dropna() <= 0
+            ).all()
 
     def test_strategy_parameters(self, rsi_strategy):
         """Test RSI strategy parameters."""
@@ -387,7 +400,10 @@ class TestRSISignals:
             assert len(result_df) == 0
         except Exception as e:
             # If it fails, should be due to empty data
-            assert any(keyword in str(e).lower() for keyword in ["empty", "no data", "insufficient"])
+            assert any(
+                keyword in str(e).lower()
+                for keyword in ["empty", "no data", "insufficient"]
+            )
 
     def test_edge_case_missing_columns(self):
         """Test handling of data with missing columns."""
@@ -448,7 +464,9 @@ class TestRSISignals:
                 buy_rsi = rsi_values[buy_signals].dropna()
                 if len(buy_rsi) > 0:
                     # Buy signals should generally occur at lower RSI values
-                    assert buy_rsi.mean() < 50  # Average RSI for buy signals should be below 50
+                    assert (
+                        buy_rsi.mean() < 50
+                    )  # Average RSI for buy signals should be below 50
 
             # Check that sell signals occur at high RSI
             sell_signals = signals == -1
@@ -456,7 +474,9 @@ class TestRSISignals:
                 sell_rsi = rsi_values[sell_signals].dropna()
                 if len(sell_rsi) > 0:
                     # Sell signals should generally occur at higher RSI values
-                    assert sell_rsi.mean() > 50  # Average RSI for sell signals should be above 50
+                    assert (
+                        sell_rsi.mean() > 50
+                    )  # Average RSI for sell signals should be above 50
 
 
 if __name__ == "__main__":

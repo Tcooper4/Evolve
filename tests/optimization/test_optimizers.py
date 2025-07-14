@@ -27,7 +27,9 @@ logger.setLevel(logging.DEBUG)
 # Add file handler for debug logs
 debug_handler = logging.FileHandler("trading/optimization/logs/optimization_debug.log")
 debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+debug_formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 debug_handler.setFormatter(debug_formatter)
 logger.addHandler(debug_handler)
 
@@ -194,7 +196,9 @@ def test_agent_strategy_selection(test_agent, test_data):
     strategies = ["TestStrategy", "RSIStrategy", "MACDStrategy"]
 
     # Select strategy
-    strategy, confidence, explanation = test_agent.select_strategy(test_data, strategies)
+    strategy, confidence, explanation = test_agent.select_strategy(
+        test_data, strategies
+    )
 
     # Check selection
     assert strategy in strategies
@@ -241,7 +245,9 @@ def test_optimizer_visualization(test_optimizer, test_strategy, test_data):
     metrics = test_optimizer.evaluate_strategy(test_strategy, params, test_data)
 
     # Log results
-    test_optimizer.log_results(test_strategy.name, params, metrics, "Test visualization")
+    test_optimizer.log_results(
+        test_strategy.name, params, metrics, "Test visualization"
+    )
 
     # Visualize results
     test_optimizer.visualize_results("test_results")
@@ -261,7 +267,9 @@ def test_multi_objective_optimization(test_optimizer, test_strategy, test_data):
     assert "long_window" in optimized_params
 
     # Evaluate optimized strategy
-    metrics = test_optimizer.evaluate_strategy(test_strategy, optimized_params, test_data)
+    metrics = test_optimizer.evaluate_strategy(
+        test_strategy, optimized_params, test_data
+    )
 
     # Check metrics
     assert "sharpe_ratio" in metrics
@@ -276,11 +284,14 @@ def test_early_stopping(test_optimizer, test_strategy, test_data):
     test_optimizer.config.early_stopping_patience = 2
 
     # Run optimization
-    optimized_params = test_optimizer.optimize(test_strategy, test_data)
+    test_optimizer.optimize(test_strategy, test_data)
 
     # Check if optimization stopped early
     assert test_optimizer.current_iteration <= test_optimizer.config.max_iterations
-    assert test_optimizer.early_stopping_counter <= test_optimizer.config.early_stopping_patience
+    assert (
+        test_optimizer.early_stopping_counter
+        <= test_optimizer.config.early_stopping_patience
+    )
 
 
 def test_checkpointing(test_optimizer, test_strategy, test_data):
@@ -290,7 +301,7 @@ def test_checkpointing(test_optimizer, test_strategy, test_data):
     test_optimizer.config.checkpoint_dir = "test_checkpoints"
 
     # Run optimization
-    optimized_params = test_optimizer.optimize(test_strategy, test_data)
+    test_optimizer.optimize(test_strategy, test_data)
 
     # Check if checkpoints were created
     assert os.path.exists(test_optimizer.config.checkpoint_dir)
@@ -304,10 +315,13 @@ def test_cross_validation(test_optimizer, test_strategy, test_data):
     test_optimizer.config.cross_validation_folds = 3
 
     # Run optimization
-    optimized_params = test_optimizer.optimize(test_strategy, test_data)
+    test_optimizer.optimize(test_strategy, test_data)
 
     # Check if cross-validation was performed
-    assert len(test_optimizer.metrics_history) >= test_optimizer.config.cross_validation_folds
+    assert (
+        len(test_optimizer.metrics_history)
+        >= test_optimizer.config.cross_validation_folds
+    )
 
 
 def test_strategy_combination(test_optimizer, test_strategy, test_data):
@@ -319,11 +333,15 @@ def test_strategy_combination(test_optimizer, test_strategy, test_data):
             self.name = "CombinedStrategy"
             self.strategies = [TestStrategy(), TestStrategy()]
 
-        def generate_signals(self, data: pd.DataFrame, params: Dict[str, Any]) -> pd.Series:
+        def generate_signals(
+            self, data: pd.DataFrame, params: Dict[str, Any]
+        ) -> pd.Series:
             # Generate signals from each strategy
             signals = []
             for i, strategy in enumerate(self.strategies):
-                strategy_params = {k: v for k, v in params.items() if k.startswith(f"strategy_{i}_")}
+                strategy_params = {
+                    k: v for k, v in params.items() if k.startswith(f"strategy_{i}_")
+                }
                 strategy_signals = strategy.generate_signals(data, strategy_params)
                 signals.append(strategy_signals)
 
@@ -347,7 +365,9 @@ def test_overfitting_detection(test_optimizer, test_strategy, test_data):
     optimized_params = test_optimizer.optimize(test_strategy, test_data)
 
     # Evaluate strategy
-    metrics = test_optimizer.evaluate_strategy(test_strategy, optimized_params, test_data)
+    metrics = test_optimizer.evaluate_strategy(
+        test_strategy, optimized_params, test_data
+    )
 
     # Check for overfitting
     assert metrics["sharpe_ratio"] < 5  # Unrealistic Sharpe ratio
@@ -355,7 +375,9 @@ def test_overfitting_detection(test_optimizer, test_strategy, test_data):
     assert metrics["max_drawdown"] > 0.1  # Reasonable drawdown
 
 
-def test_dynamic_strategy_crossover_grid_search(test_optimizer, test_strategy, test_data):
+def test_dynamic_strategy_crossover_grid_search(
+    test_optimizer, test_strategy, test_data
+):
     """Test dynamic strategy crossover tuning using grid search."""
     print("\n🎯 Testing Dynamic Strategy Crossover Grid Search")
 
@@ -393,7 +415,9 @@ def test_dynamic_strategy_crossover_grid_search(test_optimizer, test_strategy, t
                     }
 
                     # Evaluate strategy with current parameters
-                    metrics = test_optimizer.evaluate_strategy(test_strategy, params, test_data)
+                    metrics = test_optimizer.evaluate_strategy(
+                        test_strategy, params, test_data
+                    )
 
                     # Calculate composite score
                     sharpe = metrics.get("sharpe_ratio", 0)
@@ -427,13 +451,20 @@ def test_dynamic_strategy_crossover_grid_search(test_optimizer, test_strategy, t
     print(f"\n  📊 Testing parameter sensitivity...")
 
     sensitivity_analysis = {}
-    for param_name in ["short_window", "long_window", "crossover_threshold", "signal_strength"]:
+    for param_name in [
+        "short_window",
+        "long_window",
+        "crossover_threshold",
+        "signal_strength",
+    ]:
         param_values = param_grid[param_name]
         param_scores = []
 
         for value in param_values:
             # Find results with this parameter value
-            relevant_results = [r for r in all_results if r["params"][param_name] == value]
+            relevant_results = [
+                r for r in all_results if r["params"][param_name] == value
+            ]
             if relevant_results:
                 avg_score = np.mean([r["score"] for r in relevant_results])
                 param_scores.append((value, avg_score))
@@ -478,7 +509,8 @@ def test_dynamic_strategy_crossover_grid_search(test_optimizer, test_strategy, t
                 relevant_results = [
                     r
                     for r in all_results
-                    if r["params"]["short_window"] == short and r["params"]["long_window"] == long
+                    if r["params"]["short_window"] == short
+                    and r["params"]["long_window"] == long
                 ]
                 if relevant_results:
                     avg_score = np.mean([r["score"] for r in relevant_results])
@@ -506,8 +538,12 @@ def test_dynamic_strategy_crossover_grid_search(test_optimizer, test_strategy, t
     print(f"\n  ✅ Testing parameter validation...")
 
     # Verify best parameters are valid
-    assert best_params["short_window"] < best_params["long_window"], "Short window should be less than long window"
-    assert 0 <= best_params["crossover_threshold"] <= 1, "Crossover threshold should be between 0 and 1"
+    assert (
+        best_params["short_window"] < best_params["long_window"]
+    ), "Short window should be less than long window"
+    assert (
+        0 <= best_params["crossover_threshold"] <= 1
+    ), "Crossover threshold should be between 0 and 1"
     assert best_params["signal_strength"] > 0, "Signal strength should be positive"
 
     # Test performance consistency
@@ -516,7 +552,9 @@ def test_dynamic_strategy_crossover_grid_search(test_optimizer, test_strategy, t
     # Re-evaluate best parameters multiple times
     consistency_scores = []
     for _ in range(3):
-        metrics = test_optimizer.evaluate_strategy(test_strategy, best_params, test_data)
+        metrics = test_optimizer.evaluate_strategy(
+            test_strategy, best_params, test_data
+        )
         sharpe = metrics.get("sharpe_ratio", 0)
         win_rate = metrics.get("win_rate", 0)
         max_dd = abs(metrics.get("max_drawdown", 0))

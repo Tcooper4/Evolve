@@ -113,11 +113,19 @@ class TestStrategy:
         # Calculate metrics
         sharpe = np.sqrt(252) * strategy_returns.mean() / strategy_returns.std()
         win_rate = (strategy_returns > 0).mean()
-        max_drawdown = (strategy_returns.cumsum() - strategy_returns.cumsum().cummax()).min()
+        max_drawdown = (
+            strategy_returns.cumsum() - strategy_returns.cumsum().cummax()
+        ).min()
         mse = ((data["close"] - data["close"].shift(1)) ** 2).mean()
         alpha = strategy_returns.mean() - returns.mean()
 
-        return {"sharpe_ratio": sharpe, "win_rate": win_rate, "max_drawdown": max_drawdown, "mse": mse, "alpha": alpha}
+        return {
+            "sharpe_ratio": sharpe,
+            "win_rate": win_rate,
+            "max_drawdown": max_drawdown,
+            "mse": mse,
+            "alpha": alpha,
+        }
 
 
 # Test configuration
@@ -169,7 +177,9 @@ def test_strategy_optimizer_initialization(optimizer_config: Dict[str, Any]):
     assert optimizer.config.n_iterations == 10
 
 
-def test_strategy_optimizer_bayesian_optimization(optimizer_config: Dict[str, Any], test_data: pd.DataFrame):
+def test_strategy_optimizer_bayesian_optimization(
+    optimizer_config: Dict[str, Any], test_data: pd.DataFrame
+):
     """Test Bayesian optimization."""
     optimizer = StrategyOptimizer(optimizer_config)
     strategy = TestStrategy()
@@ -188,7 +198,9 @@ def test_strategy_optimizer_bayesian_optimization(optimizer_config: Dict[str, An
     assert optimized_params["threshold"] in param_space["threshold"]
 
 
-def test_strategy_optimizer_grid_search(optimizer_config: Dict[str, Any], test_data: pd.DataFrame):
+def test_strategy_optimizer_grid_search(
+    optimizer_config: Dict[str, Any], test_data: pd.DataFrame
+):
     """Test grid search optimization."""
     optimizer_config["optimizer_type"] = "grid"
     optimizer = StrategyOptimizer(optimizer_config)
@@ -208,7 +220,9 @@ def test_strategy_optimizer_grid_search(optimizer_config: Dict[str, Any], test_d
     assert optimized_params["threshold"] in param_space["threshold"]
 
 
-def test_strategy_optimizer_random_search(optimizer_config: Dict[str, Any], test_data: pd.DataFrame):
+def test_strategy_optimizer_random_search(
+    optimizer_config: Dict[str, Any], test_data: pd.DataFrame
+):
     """Test random search optimization."""
     optimizer_config["optimizer_type"] = "random"
     optimizer = StrategyOptimizer(optimizer_config)
@@ -228,7 +242,9 @@ def test_strategy_optimizer_random_search(optimizer_config: Dict[str, Any], test
     assert optimized_params["threshold"] in param_space["threshold"]
 
 
-def test_strategy_optimizer_early_stopping(optimizer_config: Dict[str, Any], test_data: pd.DataFrame):
+def test_strategy_optimizer_early_stopping(
+    optimizer_config: Dict[str, Any], test_data: pd.DataFrame
+):
     """Test early stopping."""
     optimizer_config["early_stopping_patience"] = 2
     optimizer = StrategyOptimizer(optimizer_config)
@@ -245,7 +261,9 @@ def test_strategy_optimizer_early_stopping(optimizer_config: Dict[str, Any], tes
     assert len(optimizer.history) <= optimizer_config["n_iterations"]
 
 
-def test_strategy_optimizer_logging(optimizer_config: Dict[str, Any], test_data: pd.DataFrame):
+def test_strategy_optimizer_logging(
+    optimizer_config: Dict[str, Any], test_data: pd.DataFrame
+):
     """Test optimization logging."""
     optimizer = StrategyOptimizer(optimizer_config)
     strategy = TestStrategy()
@@ -254,7 +272,7 @@ def test_strategy_optimizer_logging(optimizer_config: Dict[str, Any], test_data:
     param_space = {"window": [10, 20, 30], "threshold": [0.1, 0.5, 0.9]}
 
     # Run optimization
-    optimized_params = optimizer.optimize(strategy, test_data, param_space)
+    optimizer.optimize(strategy, test_data, param_space)
 
     # Check log file
     log_path = "trading/optimization/logs/optimization_log.json"
@@ -263,11 +281,15 @@ def test_strategy_optimizer_logging(optimizer_config: Dict[str, Any], test_data:
     # Check results file
     results_dir = "trading/optimization/results"
     assert os.path.exists(results_dir)
-    results_files = [f for f in os.listdir(results_dir) if f.startswith("optimization_results_")]
+    results_files = [
+        f for f in os.listdir(results_dir) if f.startswith("optimization_results_")
+    ]
     assert len(results_files) > 0
 
 
-def test_strategy_selection_agent(optimizer_config: Dict[str, Any], test_data: pd.DataFrame):
+def test_strategy_selection_agent(
+    optimizer_config: Dict[str, Any], test_data: pd.DataFrame
+):
     """Test strategy selection agent."""
     # Create agent
     agent = StrategySelectionAgent()
@@ -332,7 +354,9 @@ def test_performance_logger(optimizer_config: Dict[str, Any], test_data: pd.Data
     assert not performance.empty
 
 
-def test_sandbox_optimization(optimizer_config: Dict[str, Any], test_data: pd.DataFrame):
+def test_sandbox_optimization(
+    optimizer_config: Dict[str, Any], test_data: pd.DataFrame
+):
     """Test sandbox optimization."""
     # Create optimizer
     optimizer = StrategyOptimizer(optimizer_config)
@@ -356,7 +380,9 @@ def test_sandbox_optimization(optimizer_config: Dict[str, Any], test_data: pd.Da
     assert len(plot_files) > 0
 
 
-def test_optimized_params_strictly_better_than_defaults(optimizer_config: Dict[str, Any], test_data: pd.DataFrame):
+def test_optimized_params_strictly_better_than_defaults(
+    optimizer_config: Dict[str, Any], test_data: pd.DataFrame
+):
     """Assert that optimized strategy parameters yield strictly better performance than defaults."""
     print("\n🏆 Testing Optimized Parameters vs Defaults")
 
@@ -441,7 +467,11 @@ def test_optimized_params_strictly_better_than_defaults(optimizer_config: Dict[s
         )
 
         win_rate_improvement = (
-            ((optimized_metrics["win_rate"] - default_metrics["win_rate"]) / default_metrics["win_rate"]) * 100
+            (
+                (optimized_metrics["win_rate"] - default_metrics["win_rate"])
+                / default_metrics["win_rate"]
+            )
+            * 100
             if default_metrics["win_rate"] != 0
             else 0
         )
@@ -450,7 +480,9 @@ def test_optimized_params_strictly_better_than_defaults(optimizer_config: Dict[s
         print(f"    Win rate improvement: {win_rate_improvement:.1f}%")
 
         # Verify meaningful improvement
-        assert sharpe_improvement > 5.0, f"Insufficient Sharpe improvement: {sharpe_improvement:.1f}%"
+        assert (
+            sharpe_improvement > 5.0
+        ), f"Insufficient Sharpe improvement: {sharpe_improvement:.1f}%"
 
     # Test optimization consistency across multiple runs
     print(f"\n  🔄 Testing optimization consistency...")
@@ -473,7 +505,9 @@ def test_optimized_params_strictly_better_than_defaults(optimizer_config: Dict[s
         strategy.fit(test_data)
         optimized_metrics = strategy.evaluate(test_data)
 
-        improvement = optimized_metrics["sharpe_ratio"] - default_metrics["sharpe_ratio"]
+        improvement = (
+            optimized_metrics["sharpe_ratio"] - default_metrics["sharpe_ratio"]
+        )
         consistency_results.append(improvement)
 
         print(f"    Run {run+1}: Improvement = {improvement:.3f}")
@@ -482,7 +516,9 @@ def test_optimized_params_strictly_better_than_defaults(optimizer_config: Dict[s
     improvement_variance = np.var(consistency_results)
     print(f"    Improvement variance: {improvement_variance:.6f}")
 
-    assert improvement_variance < 0.1, f"Optimization results too inconsistent: variance = {improvement_variance:.6f}"
+    assert (
+        improvement_variance < 0.1
+    ), f"Optimization results too inconsistent: variance = {improvement_variance:.6f}"
 
     # Test parameter space coverage
     print(f"\n  🎯 Testing parameter space coverage...")
@@ -501,10 +537,14 @@ def test_optimized_params_strictly_better_than_defaults(optimizer_config: Dict[s
     threshold_diversity = len(set(threshold_values))
 
     print(f"    Window diversity: {window_diversity}/{len(param_space['window'])}")
-    print(f"    Threshold diversity: {threshold_diversity}/{len(param_space['threshold'])}")
+    print(
+        f"    Threshold diversity: {threshold_diversity}/{len(param_space['threshold'])}"
+    )
 
     # Verify exploration of parameter space
-    assert window_diversity >= 3, f"Insufficient window parameter exploration: {window_diversity} unique values"
+    assert (
+        window_diversity >= 3
+    ), f"Insufficient window parameter exploration: {window_diversity} unique values"
     assert (
         threshold_diversity >= 3
     ), f"Insufficient threshold parameter exploration: {threshold_diversity} unique values"
@@ -536,7 +576,9 @@ def test_optimized_params_strictly_better_than_defaults(optimizer_config: Dict[s
     optimized_val_metrics = strategy.evaluate(val_data)
 
     print(f"    Default validation Sharpe: {default_val_metrics['sharpe_ratio']:.3f}")
-    print(f"    Optimized validation Sharpe: {optimized_val_metrics['sharpe_ratio']:.3f}")
+    print(
+        f"    Optimized validation Sharpe: {optimized_val_metrics['sharpe_ratio']:.3f}"
+    )
 
     # Verify generalization
     assert (

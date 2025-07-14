@@ -74,7 +74,9 @@ def _check_required_columns(df: pd.DataFrame, required: List[str]) -> None:
 
 
 @register_indicator()
-def rolling_zscore(series: pd.Series, window: int = 20, fillna: bool = True) -> pd.Series:
+def rolling_zscore(
+    series: pd.Series, window: int = 20, fillna: bool = True
+) -> pd.Series:
     """Calculate a rolling z-score for a series.
 
     Args:
@@ -131,7 +133,13 @@ def rsi(df: pd.DataFrame, window: int = 14, fillna: bool = True) -> pd.Series:
 
 
 @register_indicator()
-def macd(df: pd.DataFrame, fast: int = 12, slow: int = 26, signal: int = 9, fillna: bool = True) -> pd.DataFrame:
+def macd(
+    df: pd.DataFrame,
+    fast: int = 12,
+    slow: int = 26,
+    signal: int = 9,
+    fillna: bool = True,
+) -> pd.DataFrame:
     """Calculate MACD (Moving Average Convergence Divergence).
 
     Args:
@@ -182,7 +190,9 @@ def atr(df: pd.DataFrame, window: int = 14, fillna: bool = True) -> pd.Series:
 
 
 @register_indicator()
-def bollinger_bands(df: pd.DataFrame, window: int = 20, num_std: float = 2.0, fillna: bool = True) -> pd.DataFrame:
+def bollinger_bands(
+    df: pd.DataFrame, window: int = 20, num_std: float = 2.0, fillna: bool = True
+) -> pd.DataFrame:
     """Calculate Bollinger Bands.
 
     Args:

@@ -23,13 +23,22 @@ def setup_logging() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.FileHandler("trading/agents/logs/execution_agent.log"), logging.StreamHandler(sys.stdout)],
+        handlers=[
+            logging.FileHandler("trading/agents/logs/execution_agent.log"),
+            logging.StreamHandler(sys.stdout),
+        ],
     )
 
-    return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+    return {
+        "success": True,
+        "message": "Initialization completed",
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
-def load_config(config_path: str = "trading/agents/execution_config.json") -> Dict[str, Any]:
+def load_config(
+    config_path: str = "trading/agents/execution_config.json",
+) -> Dict[str, Any]:
     """Load configuration from file."""
     config_file = Path(config_path)
     if config_file.exists():
@@ -57,7 +66,12 @@ def load_config(config_path: str = "trading/agents/execution_config.json") -> Di
                     "min_fee": 1.0,
                 },
             },
-            "service": {"port": 8080, "host": "localhost", "debug": False, "auto_start": True},
+            "service": {
+                "port": 8080,
+                "host": "localhost",
+                "debug": False,
+                "auto_start": True,
+            },
         }
 
         # Save default config
@@ -103,7 +117,9 @@ async def main():
         logger.info(f"\n💰 Initial Portfolio Status:")
         logger.info(f"  Cash: ${portfolio_status['cash']:.2f}")
         logger.info(f"  Equity: ${portfolio_status['equity']:.2f}")
-        logger.info(f"  Available Capital: ${portfolio_status['available_capital']:.2f}")
+        logger.info(
+            f"  Available Capital: ${portfolio_status['available_capital']:.2f}"
+        )
         logger.info(f"  Open Positions: {len(portfolio_status['open_positions'])}")
 
         # Setup signal handlers

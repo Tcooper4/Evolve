@@ -6,7 +6,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-
 from trading.llm.agent import AgentConfig, LLMAgent
 from trading.llm.model_loader import ModelLoader
 from trading.llm.tools import ToolRegistry
@@ -71,7 +70,10 @@ class LLMInterface:
         logger.info("LLM interface initialized successfully")
 
     async def process_prompt(
-        self, prompt: str, context: Optional[Dict[str, Any]] = None, tools: Optional[List[str]] = None
+        self,
+        prompt: str,
+        context: Optional[Dict[str, Any]] = None,
+        tools: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Process a prompt with the agent.
 
@@ -96,8 +98,12 @@ class LLMInterface:
             self.metrics["successful_requests"] += 1
             self.metrics["total_time"] += (datetime.now() - start_time).total_seconds()
             self.metrics["total_tokens"] += result.get("metadata", {}).get("tokens", 0)
-            self.metrics["tool_calls"] += result.get("metadata", {}).get("tool_calls", 0)
-            self.metrics["memory_hits"] += result.get("metadata", {}).get("memory_hits", 0)
+            self.metrics["tool_calls"] += result.get("metadata", {}).get(
+                "tool_calls", 0
+            )
+            self.metrics["memory_hits"] += result.get("metadata", {}).get(
+                "memory_hits", 0
+            )
 
             # Log to audit trail
             audit_logger.log_prompt(
@@ -121,7 +127,13 @@ class LLMInterface:
 
         except Exception as e:
             self.metrics["failed_requests"] += 1
-            self.metrics["errors"].append({"timestamp": datetime.now().isoformat(), "error": str(e), "prompt": prompt})
+            self.metrics["errors"].append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "error": str(e),
+                    "prompt": prompt,
+                }
+            )
 
             # Log error to audit trail
             audit_logger.log_error(
@@ -134,7 +146,9 @@ class LLMInterface:
             logger.error(f"Error processing prompt: {str(e)}")
             raise
 
-    def create_agent(self, name: str, role: str, model_name: Optional[str] = None, **kwargs) -> LLMAgent:
+    def create_agent(
+        self, name: str, role: str, model_name: Optional[str] = None, **kwargs
+    ) -> LLMAgent:
         """Create a new agent with specific configuration.
 
         Args:
@@ -148,7 +162,12 @@ class LLMInterface:
         """
         logger.info(f"Creating new agent: {name} with role: {role}")
 
-        config = AgentConfig(name=name, role=role, model_name=model_name or self.agent.config.model_name, **kwargs)
+        config = AgentConfig(
+            name=name,
+            role=role,
+            model_name=model_name or self.agent.config.model_name,
+            **kwargs,
+        )
 
         agent = LLMAgent(
             config=config,
@@ -173,7 +192,9 @@ class LLMInterface:
         return {
             **self.metrics,
             "agent_metrics": self.agent.get_metrics(),
-            "memory_stats": self.memory_manager.get_memory_stats() if self.memory_manager else None,
+            "memory_stats": self.memory_manager.get_memory_stats()
+            if self.memory_manager
+            else None,
             "tools": self.tool_registry.list_tools(),
         }
 

@@ -155,7 +155,11 @@ class TimeSeriesDataset(Dataset):
             raise ValidationError("Data contains infinite values")
 
         # Check for required columns
-        missing_cols = [col for col in self.feature_cols + [self.target_col] if col not in data.columns]
+        missing_cols = [
+            col
+            for col in self.feature_cols + [self.target_col]
+            if col not in data.columns
+        ]
         if missing_cols:
             raise ValidationError(f"Missing required columns: {missing_cols}")
 
@@ -163,7 +167,10 @@ class TimeSeriesDataset(Dataset):
         return len(self.sequences)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        return (torch.FloatTensor(self.sequences[idx]), torch.FloatTensor([self.sequence_targets[idx]]))
+        return (
+            torch.FloatTensor(self.sequences[idx]),
+            torch.FloatTensor([self.sequence_targets[idx]]),
+        )
 
 
 class BaseModel(ABC):
@@ -180,7 +187,9 @@ class BaseModel(ABC):
         self.logger.setLevel(logging.INFO)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 
@@ -233,11 +242,15 @@ class BaseModel(ABC):
 
             # Create file handler
             log_file = log_dir / f"{self.__class__.__name__}.log"
-            file_handler = RotatingFileHandler(log_file, maxBytes=10 * 1024 * 1024, backupCount=5)
+            file_handler = RotatingFileHandler(
+                log_file, maxBytes=10 * 1024 * 1024, backupCount=5
+            )
             file_handler.setLevel(logging.INFO)
 
             # Create formatter
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             file_handler.setFormatter(formatter)
 
             # Add handler to logger
@@ -307,20 +320,34 @@ class BaseModel(ABC):
             # Split data
             train_size = 1 - test_size - val_size
             train_data = data.iloc[: int(len(data) * train_size)]
-            val_data = data.iloc[int(len(data) * train_size) : int(len(data) * (train_size + val_size))]
+            val_data = data.iloc[
+                int(len(data) * train_size) : int(len(data) * (train_size + val_size))
+            ]
             test_data = data.iloc[int(len(data) * (train_size + val_size)) :]
 
             # Create datasets
-            train_dataset = TimeSeriesDataset(train_data, sequence_length, target_col, feature_cols, self.scaler)
+            train_dataset = TimeSeriesDataset(
+                train_data, sequence_length, target_col, feature_cols, self.scaler
+            )
             val_dataset = TimeSeriesDataset(
-                val_data, sequence_length, target_col, feature_cols, train_dataset.get_scaler()
+                val_data,
+                sequence_length,
+                target_col,
+                feature_cols,
+                train_dataset.get_scaler(),
             )
             test_dataset = TimeSeriesDataset(
-                test_data, sequence_length, target_col, feature_cols, train_dataset.get_scaler()
+                test_data,
+                sequence_length,
+                target_col,
+                feature_cols,
+                train_dataset.get_scaler(),
             )
 
             # Create data loaders
-            train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+            train_loader = DataLoader(
+                train_dataset, batch_size=batch_size, shuffle=True
+            )
             val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
             test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
@@ -357,7 +384,11 @@ class BaseModel(ABC):
             factor = self.config.get("scheduler_factor", 0.5)
 
             self.scheduler = ReduceLROnPlateau(
-                self.optimizer, mode="min", patience=patience, factor=factor, verbose=True
+                self.optimizer,
+                mode="min",
+                patience=patience,
+                factor=factor,
+                verbose=True,
             )
 
         except Exception as e:
@@ -365,7 +396,11 @@ class BaseModel(ABC):
             raise ModelError(f"Scheduler setup failed: {e}")
 
     def train(
-        self, train_loader: DataLoader, val_loader: DataLoader, epochs: int = 100, patience: int = 10
+        self,
+        train_loader: DataLoader,
+        val_loader: DataLoader,
+        epochs: int = 100,
+        patience: int = 10,
     ) -> Dict[str, List[float]]:
         """Train the model.
 
@@ -396,7 +431,9 @@ class BaseModel(ABC):
                 train_loss = 0.0
 
                 for batch_idx, (data, target) in enumerate(train_loader):
-                    data, target = to_device(data, self.device), to_device(target, self.device)
+                    data, target = to_device(data, self.device), to_device(
+                        target, self.device
+                    )
 
                     self.optimizer.zero_grad()
                     output = safe_forward(self.model, data)
@@ -412,7 +449,9 @@ class BaseModel(ABC):
 
                 with torch.no_grad():
                     for data, target in val_loader:
-                        data, target = to_device(data, self.device), to_device(target, self.device)
+                        data, target = to_device(data, self.device), to_device(
+                            target, self.device
+                        )
                         output = safe_forward(self.model, data)
                         loss = compute_loss(self.criterion, output, target)
                         val_loss += loss.item()
@@ -439,7 +478,9 @@ class BaseModel(ABC):
 
                 # Log progress
                 if epoch % 10 == 0:
-                    self.logger.info(f"Epoch {epoch}: Train Loss: {avg_train_loss:.6f}, Val Loss: {avg_val_loss:.6f}")
+                    self.logger.info(
+                        f"Epoch {epoch}: Train Loss: {avg_train_loss:.6f}, Val Loss: {avg_val_loss:.6f}"
+                    )
 
                 # Early stopping check
                 if self.early_stopping_counter >= patience:
@@ -478,7 +519,9 @@ class BaseModel(ABC):
 
             with torch.no_grad():
                 for data, target in test_loader:
-                    data, target = to_device(data, self.device), to_device(target, self.device)
+                    data, target = to_device(data, self.device), to_device(
+                        target, self.device
+                    )
                     output = safe_forward(self.model, data)
                     loss = compute_loss(self.criterion, output, target)
                     test_loss += loss.item()
@@ -493,7 +536,12 @@ class BaseModel(ABC):
 
             metrics = compute_metrics(torch.tensor(predictions), torch.tensor(targets))
 
-            results = {"test_loss": avg_test_loss, "mse": metrics[0], "mae": metrics[1], "rmse": metrics[2]}
+            results = {
+                "test_loss": avg_test_loss,
+                "mse": metrics[0],
+                "mae": metrics[1],
+                "rmse": metrics[2],
+            }
 
             self.logger.info(f"Evaluation completed: {results}")
 
@@ -550,9 +598,13 @@ class BaseModel(ABC):
 
             # Create forecast DataFrame
             last_date = data.index[-1]
-            forecast_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=horizon, freq="D")
+            forecast_dates = pd.date_range(
+                start=last_date + pd.Timedelta(days=1), periods=horizon, freq="D"
+            )
 
-            forecast_df = pd.DataFrame({"date": forecast_dates, "predicted_value": predictions.flatten()})
+            forecast_df = pd.DataFrame(
+                {"date": forecast_dates, "predicted_value": predictions.flatten()}
+            )
 
             # Calculate confidence intervals (simple approach)
             confidence = get_model_confidence(self.val_losses)
@@ -617,7 +669,9 @@ class BaseModel(ABC):
 
             checkpoint = {
                 "model_state_dict": self.model.state_dict() if self.model else None,
-                "optimizer_state_dict": self.optimizer.state_dict() if self.optimizer else None,
+                "optimizer_state_dict": self.optimizer.state_dict()
+                if self.optimizer
+                else None,
                 "config": self.config,
                 "scaler": self.scaler,
                 "train_losses": self.train_losses,
@@ -630,10 +684,18 @@ class BaseModel(ABC):
 
             self.logger.info(f"Model saved to {save_path}")
 
-            return {"success": True, "message": f"Model saved to {save_path}", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": f"Model saved to {save_path}",
+                "timestamp": datetime.now().isoformat(),
+            }
 
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _load_model(self, filename: str) -> Dict[str, Any]:
         """Load model from file.
@@ -676,7 +738,11 @@ class BaseModel(ABC):
             }
 
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _save_training_history(self) -> Dict[str, Any]:
         """Save training history to file.
@@ -707,7 +773,11 @@ class BaseModel(ABC):
             }
 
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def plot_training_history(self) -> None:
         """Plot training history."""
@@ -730,7 +800,9 @@ class BaseModel(ABC):
             plt.grid(True)
 
             # Save plot
-            plot_file = self.results_dir / f"{self.__class__.__name__}_training_history.png"
+            plot_file = (
+                self.results_dir / f"{self.__class__.__name__}_training_history.png"
+            )
             plt.savefig(plot_file)
             plt.close()
 
@@ -743,7 +815,11 @@ class BaseModel(ABC):
             }
 
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def infer(self) -> None:
         """Run inference mode."""
@@ -751,13 +827,23 @@ class BaseModel(ABC):
             if self.model is not None:
                 self.model.eval()
 
-            return {"success": True, "message": "Model set to inference mode", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "Model set to inference mode",
+                "timestamp": datetime.now().isoformat(),
+            }
 
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     @abstractmethod
-    def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _prepare_data(
+        self, data: pd.DataFrame, is_training: bool
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepare data for model input.
 
         Args:
@@ -779,5 +865,9 @@ class BaseModel(ABC):
     def get_metadata(self) -> Dict[str, Any]:
         """Get model metadata."""
         return get_model_metadata(
-            self.__class__.__name__, self.config, self.device, self.best_val_loss, self.train_losses
+            self.__class__.__name__,
+            self.config,
+            self.device,
+            self.best_val_loss,
+            self.train_losses,
         )

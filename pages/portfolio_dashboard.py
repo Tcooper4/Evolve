@@ -17,10 +17,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from trading.portfolio.portfolio_manager import (
-    PortfolioManager,
-    Position,
-)
+from trading.portfolio.portfolio_manager import PortfolioManager, Position
 
 # Page config
 st.set_page_config(page_title="Portfolio Dashboard", page_icon="📈", layout="wide")
@@ -124,7 +121,11 @@ def plot_equity_curve(positions: List[Position]) -> go.Figure:
     fig = go.Figure()
 
     # Add equity curve
-    fig.add_trace(go.Scatter(x=df["timestamp"], y=df["cumulative_pnl"], mode="lines", name="Equity Curve"))
+    fig.add_trace(
+        go.Scatter(
+            x=df["timestamp"], y=df["cumulative_pnl"], mode="lines", name="Equity Curve"
+        )
+    )
 
     # Add entry markers (only if not fallback)
     if "entry" in df["type"].values:
@@ -153,7 +154,12 @@ def plot_equity_curve(positions: List[Position]) -> go.Figure:
         )
 
     # Update layout
-    fig.update_layout(title="Equity Curve", xaxis_title="Time", yaxis_title="Cumulative PnL", showlegend=True)
+    fig.update_layout(
+        title="Equity Curve",
+        xaxis_title="Time",
+        yaxis_title="Cumulative PnL",
+        showlegend=True,
+    )
 
     return fig
 
@@ -173,7 +179,9 @@ def plot_rolling_metrics(positions: List[Position], window: int = 20) -> go.Figu
         logger.warning("No positions provided, creating fallback rolling metrics")
         # Create fallback DataFrame
         dates = pd.date_range(start="2024-01-01", end="2024-12-31", freq="D")
-        df = pd.DataFrame({"date": dates, "return": np.random.normal(0, 0.02, len(dates))})
+        df = pd.DataFrame(
+            {"date": dates, "return": np.random.normal(0, 0.02, len(dates))}
+        )
     else:
         # Create DataFrame with daily returns
         df = pd.DataFrame(
@@ -188,12 +196,20 @@ def plot_rolling_metrics(positions: List[Position], window: int = 20) -> go.Figu
         logger.warning("Empty DataFrame, creating fallback rolling metrics")
         # Create fallback DataFrame
         dates = pd.date_range(start="2024-01-01", end="2024-12-31", freq="D")
-        df = pd.DataFrame({"date": dates, "return": np.random.normal(0, 0.02, len(dates))})
+        df = pd.DataFrame(
+            {"date": dates, "return": np.random.normal(0, 0.02, len(dates))}
+        )
 
     # Calculate rolling metrics with defensive checks
     try:
-        df["rolling_sharpe"] = df["return"].rolling(window).mean() / df["return"].rolling(window).std() * np.sqrt(252)
-        df["rolling_win_rate"] = df["return"].rolling(window).apply(lambda x: (x > 0).mean())
+        df["rolling_sharpe"] = (
+            df["return"].rolling(window).mean()
+            / df["return"].rolling(window).std()
+            * np.sqrt(252)
+        )
+        df["rolling_win_rate"] = (
+            df["return"].rolling(window).apply(lambda x: (x > 0).mean())
+        )
     except Exception as e:
         logger.warning(f"Error calculating rolling metrics: {e}, using fallback values")
         df["rolling_sharpe"] = np.random.normal(1.0, 0.3, len(df))
@@ -203,13 +219,26 @@ def plot_rolling_metrics(positions: List[Position], window: int = 20) -> go.Figu
     fig = go.Figure()
 
     # Add rolling Sharpe
-    fig.add_trace(go.Scatter(x=df.index, y=df["rolling_sharpe"], mode="lines", name="Rolling Sharpe"))
+    fig.add_trace(
+        go.Scatter(
+            x=df.index, y=df["rolling_sharpe"], mode="lines", name="Rolling Sharpe"
+        )
+    )
 
     # Add rolling win rate
-    fig.add_trace(go.Scatter(x=df.index, y=df["rolling_win_rate"], mode="lines", name="Rolling Win Rate"))
+    fig.add_trace(
+        go.Scatter(
+            x=df.index, y=df["rolling_win_rate"], mode="lines", name="Rolling Win Rate"
+        )
+    )
 
     # Update layout
-    fig.update_layout(title="Rolling Performance Metrics", xaxis_title="Time", yaxis_title="Value", showlegend=True)
+    fig.update_layout(
+        title="Rolling Performance Metrics",
+        xaxis_title="Time",
+        yaxis_title="Value",
+        showlegend=True,
+    )
 
     return fig
 
@@ -227,7 +256,11 @@ def plot_strategy_performance(positions: List[Position]) -> go.Figure:
     if not positions:
         logger.warning("No positions provided, creating fallback strategy performance")
         # Create fallback DataFrame
-        strategies = ["RSI Mean Reversion", "Bollinger Bands", "Moving Average Crossover"]
+        strategies = [
+            "RSI Mean Reversion",
+            "Bollinger Bands",
+            "Moving Average Crossover",
+        ]
         df = pd.DataFrame(
             {
                 "strategy": strategies,
@@ -242,7 +275,9 @@ def plot_strategy_performance(positions: List[Position]) -> go.Figure:
                 {
                     "strategy": p.strategy,
                     "pnl": p.pnl,
-                    "return": p.pnl / (p.entry_price * p.size) if p.pnl is not None else 0,
+                    "return": p.pnl / (p.entry_price * p.size)
+                    if p.pnl is not None
+                    else 0,
                 }
                 for p in positions
                 if p.exit_time is not None
@@ -252,7 +287,11 @@ def plot_strategy_performance(positions: List[Position]) -> go.Figure:
     if df.empty:
         logger.warning("Empty DataFrame, creating fallback strategy performance")
         # Create fallback DataFrame
-        strategies = ["RSI Mean Reversion", "Bollinger Bands", "Moving Average Crossover"]
+        strategies = [
+            "RSI Mean Reversion",
+            "Bollinger Bands",
+            "Moving Average Crossover",
+        ]
         df = pd.DataFrame(
             {
                 "strategy": strategies,
@@ -264,21 +303,42 @@ def plot_strategy_performance(positions: List[Position]) -> go.Figure:
     # Calculate strategy metrics with defensive checks
     try:
         strategy_metrics = (
-            df.groupby("strategy").agg({"pnl": ["sum", "mean", "std"], "return": ["mean", "std"]}).reset_index()
+            df.groupby("strategy")
+            .agg({"pnl": ["sum", "mean", "std"], "return": ["mean", "std"]})
+            .reset_index()
         )
 
-        strategy_metrics.columns = ["strategy", "total_pnl", "mean_pnl", "std_pnl", "mean_return", "std_return"]
-        strategy_metrics["sharpe"] = strategy_metrics["mean_return"] / strategy_metrics["std_return"] * np.sqrt(252)
+        strategy_metrics.columns = [
+            "strategy",
+            "total_pnl",
+            "mean_pnl",
+            "std_pnl",
+            "mean_return",
+            "std_return",
+        ]
+        strategy_metrics["sharpe"] = (
+            strategy_metrics["mean_return"]
+            / strategy_metrics["std_return"]
+            * np.sqrt(252)
+        )
 
         # Handle division by zero
         strategy_metrics["sharpe"] = strategy_metrics["sharpe"].fillna(0)
-        strategy_metrics["sharpe"] = strategy_metrics["sharpe"].replace([np.inf, -np.inf], 0)
+        strategy_metrics["sharpe"] = strategy_metrics["sharpe"].replace(
+            [np.inf, -np.inf], 0
+        )
 
     except Exception as e:
-        logger.warning(f"Error calculating strategy metrics: {e}, using fallback values")
+        logger.warning(
+            f"Error calculating strategy metrics: {e}, using fallback values"
+        )
         strategy_metrics = pd.DataFrame(
             {
-                "strategy": ["RSI Mean Reversion", "Bollinger Bands", "Moving Average Crossover"],
+                "strategy": [
+                    "RSI Mean Reversion",
+                    "Bollinger Bands",
+                    "Moving Average Crossover",
+                ],
                 "total_pnl": np.random.normal(1000, 500, 3),
                 "sharpe": np.random.normal(1.0, 0.3, 3),
             }
@@ -288,10 +348,22 @@ def plot_strategy_performance(positions: List[Position]) -> go.Figure:
     fig = go.Figure()
 
     # Add Sharpe ratio bars
-    fig.add_trace(go.Bar(x=strategy_metrics["strategy"], y=strategy_metrics["sharpe"], name="Sharpe Ratio"))
+    fig.add_trace(
+        go.Bar(
+            x=strategy_metrics["strategy"],
+            y=strategy_metrics["sharpe"],
+            name="Sharpe Ratio",
+        )
+    )
 
     # Add total PnL bars
-    fig.add_trace(go.Bar(x=strategy_metrics["strategy"], y=strategy_metrics["total_pnl"], name="Total PnL"))
+    fig.add_trace(
+        go.Bar(
+            x=strategy_metrics["strategy"],
+            y=strategy_metrics["total_pnl"],
+            name="Total PnL",
+        )
+    )
 
     # Update layout
     fig.update_layout(
@@ -315,7 +387,10 @@ st.sidebar.title("Controls")
 st.sidebar.subheader("Portfolio State")
 
 # Initialize portfolio manager if not already done
-if "portfolio_manager" not in st.session_state or st.session_state.portfolio_manager is None:
+if (
+    "portfolio_manager" not in st.session_state
+    or st.session_state.portfolio_manager is None
+):
     st.session_state.portfolio_manager = PortfolioManager()
 
 # Load portfolio from file
@@ -334,18 +409,31 @@ portfolio = st.session_state.portfolio_manager
 
 # Check if portfolio is properly initialized
 if portfolio is None or not hasattr(portfolio, "state") or portfolio.state is None:
-    st.error("Portfolio manager not properly initialized. Please try refreshing the page.")
+    st.error(
+        "Portfolio manager not properly initialized. Please try refreshing the page."
+    )
     st.stop()
 
 # Filters
 st.sidebar.subheader("Filters")
 selected_strategy = st.sidebar.multiselect(
     "Strategy",
-    options=sorted(set(p.strategy for p in portfolio.state.open_positions + portfolio.state.closed_positions)),
+    options=sorted(
+        set(
+            p.strategy
+            for p in portfolio.state.open_positions + portfolio.state.closed_positions
+        )
+    ),
 )
 
 selected_symbol = st.sidebar.multiselect(
-    "Symbol", options=sorted(set(p.symbol for p in portfolio.state.open_positions + portfolio.state.closed_positions))
+    "Symbol",
+    options=sorted(
+        set(
+            p.symbol
+            for p in portfolio.state.open_positions + portfolio.state.closed_positions
+        )
+    ),
 )
 
 # Main content
@@ -384,14 +472,22 @@ st.header("Performance Visualization")
 tab1, tab2, tab3 = st.tabs(["Equity Curve", "Rolling Metrics", "Strategy Performance"])
 
 with tab1:
-    st.plotly_chart(plot_equity_curve(portfolio.state.closed_positions), key=os.getenv("KEY", ""))
+    st.plotly_chart(
+        plot_equity_curve(portfolio.state.closed_positions), key=os.getenv("KEY", "")
+    )
 
 with tab2:
     window = st.slider("Rolling Window", 5, 100, 20)
-    st.plotly_chart(plot_rolling_metrics(portfolio.state.closed_positions, window=window), key=os.getenv("KEY", ""))
+    st.plotly_chart(
+        plot_rolling_metrics(portfolio.state.closed_positions, window=window),
+        key=os.getenv("KEY", ""),
+    )
 
 with tab3:
-    st.plotly_chart(plot_strategy_performance(portfolio.state.closed_positions), key=os.getenv("KEY", ""))
+    st.plotly_chart(
+        plot_strategy_performance(portfolio.state.closed_positions),
+        key=os.getenv("KEY", ""),
+    )
 
 # Export Options
 st.sidebar.subheader("Export Options")
@@ -409,7 +505,9 @@ if st.sidebar.button("Export Trade Report"):
                 "Exit Time": p.exit_time,
                 "Exit Price": p.exit_price,
                 "PnL": p.pnl,
-                "Return": p.pnl / (p.entry_price * p.size) if p.pnl is not None else None,
+                "Return": p.pnl / (p.entry_price * p.size)
+                if p.pnl is not None
+                else None,
             }
             for p in portfolio.state.closed_positions
         ]

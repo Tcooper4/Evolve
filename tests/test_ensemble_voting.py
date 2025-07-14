@@ -117,7 +117,12 @@ class TestEnsembleVoting:
         # assert len(ensemble.weights) == 0  # Weights not set yet
 
         # Test configuration validation
-        assert ensemble_config["voting_method"] in ["weighted", "mse", "sharpe", "custom"]
+        assert ensemble_config["voting_method"] in [
+            "weighted",
+            "mse",
+            "sharpe",
+            "custom",
+        ]
         assert ensemble_config["weight_window"] > 0
         assert 0 <= ensemble_config["fallback_threshold"] <= 1
 
@@ -277,7 +282,9 @@ class TestEnsembleVoting:
         # Verify confidence-based weighting
         confidences = {name: model.confidence for name, model in models.items()}
         total_confidence = sum(confidences.values())
-        expected_weights = {name: conf / total_confidence for name, conf in confidences.items()}
+        expected_weights = {
+            name: conf / total_confidence for name, conf in confidences.items()
+        }
 
         # Calculate expected weighted average
         individual_predictions = {}
@@ -364,7 +371,9 @@ class TestEnsembleVoting:
             # ensemble._update_weights(sample_data) # Not implemented yet
 
         # Check performance history
-        assert hasattr(MockForecastModel, "performance_history")  # Check if the mock has the attribute
+        assert hasattr(
+            MockForecastModel, "performance_history"
+        )  # Check if the mock has the attribute
         assert isinstance(MockForecastModel.performance_history, dict)
 
         # Verify weight updates
@@ -413,7 +422,9 @@ class TestEnsembleVoting:
 
         # Test strategy selection
         # strategy = ensemble._get_strategy_recommendation(sample_data) # Not implemented yet
-        assert isinstance(MockForecastModel.strategy_patterns, dict)  # Check if patterns are set
+        assert isinstance(
+            MockForecastModel.strategy_patterns, dict
+        )  # Check if patterns are set
         assert "trend_following" in MockForecastModel.strategy_patterns
         assert "mean_reversion" in MockForecastModel.strategy_patterns
         assert "momentum" in MockForecastModel.strategy_patterns
@@ -438,7 +449,9 @@ class TestEnsembleVoting:
         #     ensemble.add_model(name, model)
 
         # Mock error in one model
-        with patch.object(models["error_model"], "predict", side_effect=Exception("Model error")):
+        with patch.object(
+            models["error_model"], "predict", side_effect=Exception("Model error")
+        ):
             # Should handle error gracefully
             try:
                 predictions = []  # ensemble.predict(sample_data) # Not implemented yet
@@ -449,7 +462,9 @@ class TestEnsembleVoting:
                 assert isinstance(e, (ValueError, RuntimeError))
 
         # Test with all models failing
-        with patch.object(MockForecastModel, "predict", side_effect=Exception("All models failed")):
+        with patch.object(
+            MockForecastModel, "predict", side_effect=Exception("All models failed")
+        ):
             try:
                 predictions = []  # ensemble.predict(sample_data) # Not implemented yet
             except Exception as e:
@@ -465,9 +480,15 @@ class TestEnsembleVoting:
         # Test invalid configurations
         invalid_configs = [
             {"models": [], "voting_method": "weighted"},  # No models
-            {"models": [{"name": "test"}], "voting_method": "invalid"},  # Invalid voting method
+            {
+                "models": [{"name": "test"}],
+                "voting_method": "invalid",
+            },  # Invalid voting method
             {"models": [{"name": "test"}], "weight_window": -1},  # Negative window
-            {"models": [{"name": "test"}], "fallback_threshold": 1.5},  # Invalid threshold
+            {
+                "models": [{"name": "test"}],
+                "fallback_threshold": 1.5,
+            },  # Invalid threshold
         ]
 
         for invalid_config in invalid_configs:

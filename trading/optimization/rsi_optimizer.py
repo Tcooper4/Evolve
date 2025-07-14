@@ -83,7 +83,10 @@ class RSIOptimizer(BaseOptimizer):
                         if "Close" not in df.columns and "close" in df.columns:
                             df["Close"] = df["close"]
                         signals = generate_rsi_signals(
-                            df, period=period, buy_threshold=oversold, sell_threshold=overbought
+                            df,
+                            period=period,
+                            buy_threshold=oversold,
+                            sell_threshold=overbought,
                         )
                         metrics = self.calculate_metrics(
                             signals["strategy_returns"].dropna(),
@@ -108,13 +111,17 @@ class RSIOptimizer(BaseOptimizer):
                             f"Tested period={period}, overbought={overbought}, oversold={oversold}, Sharpe={sharpe:.3f}, WinRate={win_rate:.3f}"
                         )
                     except Exception as e:
-                        logger.warning(f"Failed for period={period}, overbought={overbought}, oversold={oversold}: {e}")
+                        logger.warning(
+                            f"Failed for period={period}, overbought={overbought}, oversold={oversold}: {e}"
+                        )
         logger.info(
             f"Best Sharpe: {best_result.sharpe_ratio:.3f} (period={best_result.period}, overbought={best_result.overbought}, oversold={best_result.oversold})"
         )
         return best_result
 
-    def optimize_rsi_parameters(self, objective: str = "sharpe", n_top: int = 3, **kwargs) -> List[OptimizationResult]:
+    def optimize_rsi_parameters(
+        self, objective: str = "sharpe", n_top: int = 3, **kwargs
+    ) -> List[OptimizationResult]:
         """Optimize RSI parameters.
 
         Args:
@@ -147,7 +154,10 @@ class RSIOptimizer(BaseOptimizer):
             # Convert results to our format
             results = []
             for i, (params, score) in enumerate(
-                zip(optimization_result.get("all_params", []), optimization_result.get("all_scores", []))
+                zip(
+                    optimization_result.get("all_params", []),
+                    optimization_result.get("all_scores", []),
+                )
             ):
                 if i >= n_top:
                     break
@@ -177,7 +187,9 @@ class RSIOptimizer(BaseOptimizer):
                     metrics=metrics,
                     signals=signals_df["signal"],
                     equity_curve=signals_df["strategy_cumulative_returns"],
-                    drawdown=self._calculate_drawdown(signals_df["strategy_cumulative_returns"]),
+                    drawdown=self._calculate_drawdown(
+                        signals_df["strategy_cumulative_returns"]
+                    ),
                 )
 
                 results.append(result)
@@ -240,14 +252,20 @@ class RSIOptimizer(BaseOptimizer):
 
             # Basic metrics
             total_return = equity_curve.iloc[-1] - 1 if len(equity_curve) > 0 else 0
-            annual_return = (1 + total_return) ** (252 / len(returns)) - 1 if len(returns) > 0 else 0
+            annual_return = (
+                (1 + total_return) ** (252 / len(returns)) - 1
+                if len(returns) > 0
+                else 0
+            )
             volatility = returns.std() * np.sqrt(252) if len(returns) > 0 else 0
             sharpe_ratio = annual_return / volatility if volatility != 0 else 0
 
             # Win rate
             winning_trades = returns[returns > 0]
             total_trades = returns[returns != 0]
-            win_rate = len(winning_trades) / len(total_trades) if len(total_trades) > 0 else 0
+            win_rate = (
+                len(winning_trades) / len(total_trades) if len(total_trades) > 0 else 0
+            )
 
             # Drawdown
             max_drawdown = self._calculate_drawdown(equity_curve).min()
@@ -285,7 +303,9 @@ class RSIOptimizer(BaseOptimizer):
         drawdown = (equity_curve - rolling_max) / rolling_max
         return drawdown
 
-    def plot_equity_curve(self, result: OptimizationResult, title: str = "Equity Curve") -> go.Figure:
+    def plot_equity_curve(
+        self, result: OptimizationResult, title: str = "Equity Curve"
+    ) -> go.Figure:
         """Plot equity curve.
 
         Args:
@@ -307,11 +327,15 @@ class RSIOptimizer(BaseOptimizer):
             )
         )
 
-        fig.update_layout(title=title, xaxis_title="Date", yaxis_title="Equity", showlegend=True)
+        fig.update_layout(
+            title=title, xaxis_title="Date", yaxis_title="Equity", showlegend=True
+        )
 
         return fig
 
-    def plot_drawdown(self, result: OptimizationResult, title: str = "Drawdown") -> go.Figure:
+    def plot_drawdown(
+        self, result: OptimizationResult, title: str = "Drawdown"
+    ) -> go.Figure:
         """Plot drawdown.
 
         Args:
@@ -334,11 +358,15 @@ class RSIOptimizer(BaseOptimizer):
             )
         )
 
-        fig.update_layout(title=title, xaxis_title="Date", yaxis_title="Drawdown (%)", showlegend=True)
+        fig.update_layout(
+            title=title, xaxis_title="Date", yaxis_title="Drawdown (%)", showlegend=True
+        )
 
         return fig
 
-    def plot_signals(self, result: OptimizationResult, title: str = "RSI Signals") -> go.Figure:
+    def plot_signals(
+        self, result: OptimizationResult, title: str = "RSI Signals"
+    ) -> go.Figure:
         """Plot RSI signals.
 
         Args:
@@ -348,11 +376,22 @@ class RSIOptimizer(BaseOptimizer):
         Returns:
             Plotly figure
         """
-        fig = make_subplots(rows=2, cols=1, subplot_titles=("Price", "RSI Signals"), vertical_spacing=0.1)
+        fig = make_subplots(
+            rows=2,
+            cols=1,
+            subplot_titles=("Price", "RSI Signals"),
+            vertical_spacing=0.1,
+        )
 
         # Price plot
         fig.add_trace(
-            go.Scatter(x=self.data.index, y=self.data["close"], mode="lines", name="Price", line=dict(color="black")),
+            go.Scatter(
+                x=self.data.index,
+                y=self.data["close"],
+                mode="lines",
+                name="Price",
+                line=dict(color="black"),
+            ),
             row=1,
             col=1,
         )
@@ -365,7 +404,11 @@ class RSIOptimizer(BaseOptimizer):
                 mode="markers",
                 name="Signals",
                 marker=dict(
-                    color=["red" if s == -1 else "green" if s == 1 else "gray" for s in result.signals.values], size=8
+                    color=[
+                        "red" if s == -1 else "green" if s == 1 else "gray"
+                        for s in result.signals.values
+                    ],
+                    size=8,
                 ),
             ),
             row=2,

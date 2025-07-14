@@ -56,17 +56,26 @@ class ReasoningService:
         self.service_name = service_name
 
         # Initialize Redis connection
-        self.redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)
+        self.redis_client = redis.Redis(
+            host=redis_host, port=redis_port, db=redis_db, decode_responses=True
+        )
 
         # Initialize reasoning logger
-        self.reasoning_logger = ReasoningLogger(redis_host=redis_host, redis_port=redis_port, redis_db=redis_db)
+        self.reasoning_logger = ReasoningLogger(
+            redis_host=redis_host, redis_port=redis_port, redis_db=redis_db
+        )
 
         # Service status
         self.running = False
         self.last_heartbeat = time.time()
 
         # Channels to listen to
-        self.channels = ["agent_decisions", "forecast_completed", "strategy_completed", "model_evaluation_completed"]
+        self.channels = [
+            "agent_decisions",
+            "forecast_completed",
+            "strategy_completed",
+            "model_evaluation_completed",
+        ]
 
         # Decision cache for real-time updates
         self.recent_decisions = []
@@ -103,7 +112,11 @@ class ReasoningService:
             while self.running:
                 try:
                     self.last_heartbeat = time.time()
-                    self.redis_client.set(f"service:{self.service_name}:heartbeat", self.last_heartbeat, ex=60)
+                    self.redis_client.set(
+                        f"service:{self.service_name}:heartbeat",
+                        self.last_heartbeat,
+                        ex=60,
+                    )
                     time.sleep(30)
                 except Exception as e:
                     logger.error(f"Heartbeat error: {e}")
@@ -142,7 +155,9 @@ class ReasoningService:
         """Handle incoming events."""
         try:
             event_data = json.loads(data)
-            logger.info(f"Received event on {channel}: {event_data.get('event_id', 'unknown')}")
+            logger.info(
+                f"Received event on {channel}: {event_data.get('event_id', 'unknown')}"
+            )
 
             if channel == "agent_decisions":
                 self._handle_agent_decision(event_data)
@@ -199,7 +214,11 @@ class ReasoningService:
                     "Alternative timeframes",
                     "Various feature combinations",
                 ],
-                "risks_assessed": ["Market volatility", "Model uncertainty", "Data quality issues"],
+                "risks_assessed": [
+                    "Market volatility",
+                    "Model uncertainty",
+                    "Data quality issues",
+                ],
                 "confidence_explanation": f"Confidence based on model performance and market conditions",
                 "expected_outcome": f"Forecast indicates {forecast_data.get('trend', 'neutral')} movement for {symbol}",
             }
@@ -252,7 +271,11 @@ class ReasoningService:
                     "Alternative position sizes",
                     "Various stop-loss levels",
                 ],
-                "risks_assessed": ["Market volatility risk", "Execution slippage", "Position sizing risk"],
+                "risks_assessed": [
+                    "Market volatility risk",
+                    "Execution slippage",
+                    "Position sizing risk",
+                ],
                 "confidence_explanation": f"Confidence based on strategy backtest performance and current market conditions",
                 "expected_outcome": f"Expected {strategy_data.get('performance', {}).get('expected_return', 'positive')} return",
             }
@@ -304,7 +327,11 @@ class ReasoningService:
                     "Alternative time periods",
                     "Various model configurations",
                 ],
-                "risks_assessed": ["Overfitting risk", "Data leakage risk", "Market regime changes"],
+                "risks_assessed": [
+                    "Overfitting risk",
+                    "Data leakage risk",
+                    "Market regime changes",
+                ],
                 "confidence_explanation": f"Confidence based on comprehensive evaluation metrics",
                 "expected_outcome": f"Model expected to perform {evaluation_data.get('performance', 'adequately')}",
             }
@@ -355,7 +382,9 @@ class ReasoningService:
                 "confidence_level": decision.confidence_level.value,
                 "timestamp": decision.timestamp,
                 "summary": self.reasoning_logger.get_summary(decision.decision_id),
-                "explanation": self.reasoning_logger.get_explanation(decision.decision_id),
+                "explanation": self.reasoning_logger.get_explanation(
+                    decision.decision_id
+                ),
             }
 
             self.redis_client.publish("reasoning_updates", json.dumps(update_data))
@@ -391,16 +420,24 @@ def main():
     parser.add_argument("--redis-host", default="localhost", help="Redis host")
     parser.add_argument("--redis-port", type=int, default=6379, help="Redis port")
     parser.add_argument("--redis-db", type=int, default=0, help="Redis database")
-    parser.add_argument("--service-name", default="reasoning_service", help="Service name")
+    parser.add_argument(
+        "--service-name", default="reasoning_service", help="Service name"
+    )
 
     args = parser.parse_args()
 
     # Configure logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
 
     # Initialize and start service
     service = ReasoningService(
-        redis_host=args.redis_host, redis_port=args.redis_port, redis_db=args.redis_db, service_name=args.service_name
+        redis_host=args.redis_host,
+        redis_port=args.redis_port,
+        redis_db=args.redis_db,
+        service_name=args.service_name,
     )
 
     try:

@@ -14,7 +14,9 @@ logger.setLevel(logging.DEBUG)
 # Add file handler for debug logs
 debug_handler = logging.FileHandler("trading/nlp/logs/nlp_debug.log")
 debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+debug_formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 debug_handler.setFormatter(debug_formatter)
 logger.addHandler(debug_handler)
 
@@ -48,7 +50,11 @@ class LLMProcessor:
 
         logger.info("LLMProcessor initialized with moderation categories")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def process(self, prompt: str) -> str:
         """Process a prompt and get response.
@@ -179,7 +185,10 @@ class LLMProcessor:
                 raise ValueError(f"Missing required fields: {missing_fields}")
 
             # Validate confidence
-            if not isinstance(data["confidence"], (int, float)) or not 0 <= data["confidence"] <= 1:
+            if (
+                not isinstance(data["confidence"], (int, float))
+                or not 0 <= data["confidence"] <= 1
+            ):
                 raise ValueError("Confidence must be a float between 0 and 1")
 
             return data

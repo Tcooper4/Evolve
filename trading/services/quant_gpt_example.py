@@ -29,7 +29,11 @@ def example_queries():
 
     # Initialize QuantGPT (direct usage)
     logger.info("Initializing QuantGPT...")
-    quant_gpt = QuantGPT(openai_api_key=os.getenv("OPENAI_API_KEY"), redis_host="localhost", redis_port=6379)
+    quant_gpt = QuantGPT(
+        openai_api_key=os.getenv("OPENAI_API_KEY"),
+        redis_host="localhost",
+        redis_port=6379,
+    )
 
     # Example queries
     queries = [
@@ -73,7 +77,9 @@ def example_queries():
                     best_model = results.get("best_model")
                     if best_model:
                         logger.info(f"Best Model: {best_model['model_type'].upper()}")
-                        logger.info(f"Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}")
+                        logger.info(
+                            f"Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}"
+                        )
 
                 elif action == "trading_signal":
                     signal = results.get("signal", {})
@@ -112,7 +118,11 @@ def example_service_client():
     client = ServiceClient(redis_host="localhost", redis_port=6379)
 
     # Example queries for service client
-    service_queries = ["What's the best model for MSFT?", "Should I buy AMZN now?", "Analyze ETHUSDT market"]
+    service_queries = [
+        "What's the best model for MSFT?",
+        "Should I buy AMZN now?",
+        "Analyze ETHUSDT market",
+    ]
 
     logger.info(f"\nRunning {len(service_queries)} queries via ServiceClient...")
     logger.info("-" * 60)
@@ -142,11 +152,19 @@ def example_service_client():
                         if commentary:
                             logger.info(f"\n🤖 GPT Commentary:")
                             logger.info("-" * 30)
-                            logger.info(commentary[:200] + "..." if len(commentary) > 200 else commentary)
+                            logger.info(
+                                commentary[:200] + "..."
+                                if len(commentary) > 200
+                                else commentary
+                            )
                     else:
-                        logger.error(f"❌ Query Error: {query_result.get('error', 'Unknown error')}")
+                        logger.error(
+                            f"❌ Query Error: {query_result.get('error', 'Unknown error')}"
+                        )
                 else:
-                    logger.error(f"❌ Service Error: {result.get('error', 'Unknown error')}")
+                    logger.error(
+                        f"❌ Service Error: {result.get('error', 'Unknown error')}"
+                    )
             else:
                 logger.error("❌ No response from service")
 

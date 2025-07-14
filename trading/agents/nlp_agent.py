@@ -13,7 +13,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-
 # Import NLP libraries with fallback handling
 try:
     import spacy
@@ -23,22 +22,23 @@ try:
     try:
         nlp = spacy.load("en_core_web_sm")
     except OSError:
-        logging.warning("spaCy English model not found. Install with: python -m spacy download en_core_web_sm")
+        logging.warning(
+            "spaCy English model not found. Install with: python -m spacy download en_core_web_sm"
+        )
         SPACY_AVAILABLE = False
 except ImportError:
     SPACY_AVAILABLE = False
     logging.warning("spaCy not available. Install with: pip install spacy")
 
 try:
-    from transformers import (
-        AutoTokenizer,
-        pipeline,
-    )
+    from transformers import AutoTokenizer, pipeline
 
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
-    logging.warning("Transformers not available. Install with: pip install transformers")
+    logging.warning(
+        "Transformers not available. Install with: pip install transformers"
+    )
 
 try:
     from textblob import TextBlob
@@ -145,7 +145,15 @@ class NLPAgent:
                 r"safe",
                 r"conservative",
             ],
-            "portfolio": [r"portfolio", r"allocation", r"weight", r"diversify", r"balance", r"rebalance", r"optimize"],
+            "portfolio": [
+                r"portfolio",
+                r"allocation",
+                r"weight",
+                r"diversify",
+                r"balance",
+                r"rebalance",
+                r"optimize",
+            ],
         }
 
         # Define strategy keywords
@@ -185,18 +193,24 @@ class NLPAgent:
                     )
                     logger.info("Transformers sentiment analyzer loaded")
                 except Exception as e:
-                    logger.warning(f"Failed to load transformers sentiment analyzer: {e}")
+                    logger.warning(
+                        f"Failed to load transformers sentiment analyzer: {e}"
+                    )
                     self.sentiment_analyzer = None
 
             # Initialize intent classifier
             if TRANSFORMERS_AVAILABLE:
                 try:
                     self.intent_classifier = pipeline(
-                        "text-classification", model="facebook/bart-large-mnli", return_all_scores=True
+                        "text-classification",
+                        model="facebook/bart-large-mnli",
+                        return_all_scores=True,
                     )
                     logger.info("Transformers intent classifier loaded")
                 except Exception as e:
-                    logger.warning(f"Failed to load transformers intent classifier: {e}")
+                    logger.warning(
+                        f"Failed to load transformers intent classifier: {e}"
+                    )
                     self.intent_classifier = None
 
         except Exception as e:
@@ -278,18 +292,32 @@ class NLPAgent:
                         label = result["label"].lower()
                         score = result["score"]
                         if "forecast" in label or "predict" in label:
-                            intent_scores["forecast"] = max(intent_scores.get("forecast", 0), score)
+                            intent_scores["forecast"] = max(
+                                intent_scores.get("forecast", 0), score
+                            )
                         elif "analyze" in label or "study" in label:
-                            intent_scores["analyze"] = max(intent_scores.get("analyze", 0), score)
+                            intent_scores["analyze"] = max(
+                                intent_scores.get("analyze", 0), score
+                            )
                         elif "trade" in label or "buy" in label or "sell" in label:
-                            intent_scores["trade"] = max(intent_scores.get("trade", 0), score)
+                            intent_scores["trade"] = max(
+                                intent_scores.get("trade", 0), score
+                            )
                 except (ValueError, TypeError, AttributeError) as e:
                     logger.warning(f"Transformers intent classification failed: {e}")
 
             # Get primary intent
-            primary_intent = max(intent_scores.items(), key=lambda x: x[1]) if intent_scores else ("unknown", 0)
+            primary_intent = (
+                max(intent_scores.items(), key=lambda x: x[1])
+                if intent_scores
+                else ("unknown", 0)
+            )
 
-            return {"primary": primary_intent[0], "confidence": primary_intent[1], "all_scores": intent_scores}
+            return {
+                "primary": primary_intent[0],
+                "confidence": primary_intent[1],
+                "all_scores": intent_scores,
+            }
 
         except Exception as e:
             logger.error(f"Error classifying intent: {e}")
@@ -298,7 +326,12 @@ class NLPAgent:
     def _analyze_sentiment(self, prompt: str) -> Dict[str, Any]:
         """Analyze sentiment of the prompt."""
         try:
-            sentiment_result = {"polarity": 0.0, "subjectivity": 0.0, "label": "neutral", "confidence": 0.0}
+            sentiment_result = {
+                "polarity": 0.0,
+                "subjectivity": 0.0,
+                "label": "neutral",
+                "confidence": 0.0,
+            }
 
             # TextBlob sentiment analysis
             if TEXTBLOB_AVAILABLE:
@@ -324,7 +357,9 @@ class NLPAgent:
                 try:
                     transformer_result = self.sentiment_analyzer(prompt)
                     # Get the highest scoring sentiment
-                    best_sentiment = max(transformer_result[0], key=lambda x: x["score"])
+                    best_sentiment = max(
+                        transformer_result[0], key=lambda x: x["score"]
+                    )
                     sentiment_result["transformer_label"] = best_sentiment["label"]
                     sentiment_result["transformer_confidence"] = best_sentiment["score"]
                 except Exception as e:
@@ -334,12 +369,23 @@ class NLPAgent:
 
         except Exception as e:
             logger.error(f"Error analyzing sentiment: {e}")
-            return {"polarity": 0.0, "subjectivity": 0.0, "label": "neutral", "confidence": 0.0}
+            return {
+                "polarity": 0.0,
+                "subjectivity": 0.0,
+                "label": "neutral",
+                "confidence": 0.0,
+            }
 
     def _extract_entities(self, prompt: str) -> Dict[str, List[str]]:
         """Extract named entities from the prompt."""
         try:
-            entities = {"tickers": [], "companies": [], "dates": [], "numbers": [], "currencies": []}
+            entities = {
+                "tickers": [],
+                "companies": [],
+                "dates": [],
+                "numbers": [],
+                "currencies": [],
+            }
 
             # spaCy entity extraction
             if self.nlp:
@@ -360,13 +406,21 @@ class NLPAgent:
             # Regex-based ticker extraction
             ticker_pattern = r"\b[A-Z]{1,5}\b"
             potential_tickers = re.findall(ticker_pattern, prompt.upper())
-            entities["tickers"] = [ticker for ticker in potential_tickers if len(ticker) >= 2]
+            entities["tickers"] = [
+                ticker for ticker in potential_tickers if len(ticker) >= 2
+            ]
 
             return entities
 
         except Exception as e:
             logger.error(f"Error extracting entities: {e}")
-            return {"tickers": [], "companies": [], "dates": [], "numbers": [], "currencies": []}
+            return {
+                "tickers": [],
+                "companies": [],
+                "dates": [],
+                "numbers": [],
+                "currencies": [],
+            }
 
     def _suggest_strategies(self, prompt: str) -> List[Dict[str, Any]]:
         """Suggest trading strategies based on prompt content."""
@@ -413,9 +467,17 @@ class NLPAgent:
                         score += 1
                 regime_scores[regime] = score / len(keywords)
 
-            primary_regime = max(regime_scores.items(), key=lambda x: x[1]) if regime_scores else ("unknown", 0)
+            primary_regime = (
+                max(regime_scores.items(), key=lambda x: x[1])
+                if regime_scores
+                else ("unknown", 0)
+            )
 
-            return {"primary": primary_regime[0], "confidence": primary_regime[1], "all_scores": regime_scores}
+            return {
+                "primary": primary_regime[0],
+                "confidence": primary_regime[1],
+                "all_scores": regime_scores,
+            }
 
         except Exception as e:
             logger.error(f"Error classifying market regime: {e}")
@@ -425,9 +487,18 @@ class NLPAgent:
         """Extract timeframe information from the prompt."""
         try:
             timeframe_patterns = {
-                "short_term": [r"\b(day|daily|intraday|hour|minute)\b", r"\b(1d|1h|1m|5m|15m)\b"],
-                "medium_term": [r"\b(week|weekly|month|monthly)\b", r"\b(1w|1mo|3mo)\b"],
-                "long_term": [r"\b(year|yearly|annual|long term)\b", r"\b(1y|5y|10y)\b"],
+                "short_term": [
+                    r"\b(day|daily|intraday|hour|minute)\b",
+                    r"\b(1d|1h|1m|5m|15m)\b",
+                ],
+                "medium_term": [
+                    r"\b(week|weekly|month|monthly)\b",
+                    r"\b(1w|1mo|3mo)\b",
+                ],
+                "long_term": [
+                    r"\b(year|yearly|annual|long term)\b",
+                    r"\b(1y|5y|10y)\b",
+                ],
             }
 
             timeframe_scores = {}
@@ -439,10 +510,16 @@ class NLPAgent:
                 timeframe_scores[timeframe] = score / len(patterns)
 
             primary_timeframe = (
-                max(timeframe_scores.items(), key=lambda x: x[1]) if timeframe_scores else ("unknown", 0)
+                max(timeframe_scores.items(), key=lambda x: x[1])
+                if timeframe_scores
+                else ("unknown", 0)
             )
 
-            return {"primary": primary_timeframe[0], "confidence": primary_timeframe[1], "all_scores": timeframe_scores}
+            return {
+                "primary": primary_timeframe[0],
+                "confidence": primary_timeframe[1],
+                "all_scores": timeframe_scores,
+            }
 
         except Exception as e:
             logger.error(f"Error extracting timeframe: {e}")
@@ -503,7 +580,11 @@ class NLPAgent:
                 "TOO",
                 "USE",
             }
-            tickers = [ticker for ticker in tickers if ticker not in common_words and len(ticker) >= 2]
+            tickers = [
+                ticker
+                for ticker in tickers
+                if ticker not in common_words and len(ticker) >= 2
+            ]
 
             return list(tickers)
 
@@ -522,22 +603,32 @@ class NLPAgent:
 
             # Entity extraction confidence
             entities = self._extract_entities(prompt)
-            entity_confidence = min(1.0, len(entities["tickers"]) * 0.2 + len(entities["companies"]) * 0.1)
+            entity_confidence = min(
+                1.0, len(entities["tickers"]) * 0.2 + len(entities["companies"]) * 0.1
+            )
             confidence_factors.append(entity_confidence)
 
             # Strategy suggestion confidence
             strategies = self._suggest_strategies(prompt)
-            strategy_confidence = max([s["relevance_score"] for s in strategies]) if strategies else 0
+            strategy_confidence = (
+                max([s["relevance_score"] for s in strategies]) if strategies else 0
+            )
             confidence_factors.append(strategy_confidence)
 
             # Average confidence
-            return sum(confidence_factors) / len(confidence_factors) if confidence_factors else 0
+            return (
+                sum(confidence_factors) / len(confidence_factors)
+                if confidence_factors
+                else 0
+            )
 
         except Exception as e:
             logger.error(f"Error calculating confidence: {e}")
             return 0.0
 
-    def _generate_routing_recommendations(self, parsed_result: Dict[str, Any]) -> Dict[str, Any]:
+    def _generate_routing_recommendations(
+        self, parsed_result: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Generate routing recommendations based on parsed information."""
         try:
             routing = {
@@ -558,7 +649,10 @@ class NLPAgent:
                 routing["secondary_models"] = ["prophet_model", "xgboost_model"]
             elif intent == "analyze":
                 routing["primary_model"] = "market_analyzer"
-                routing["secondary_models"] = ["technical_indicators", "fundamental_analyzer"]
+                routing["secondary_models"] = [
+                    "technical_indicators",
+                    "fundamental_analyzer",
+                ]
             elif intent == "trade":
                 routing["primary_model"] = "strategy_engine"
                 routing["strategy_engine"] = "enhanced_strategy_engine"
@@ -726,16 +820,25 @@ class NLPAgent:
             # Determine primary classification
             if total_jargon_score > total_general_score:
                 primary_classification = "financial"
-                confidence = min(total_jargon_score / (total_jargon_score + total_general_score + 1), 1.0)
+                confidence = min(
+                    total_jargon_score / (total_jargon_score + total_general_score + 1),
+                    1.0,
+                )
             elif total_general_score > total_jargon_score:
                 primary_classification = "general"
-                confidence = min(total_general_score / (total_jargon_score + total_general_score + 1), 1.0)
+                confidence = min(
+                    total_general_score
+                    / (total_jargon_score + total_general_score + 1),
+                    1.0,
+                )
             else:
                 primary_classification = "mixed"
                 confidence = 0.5
 
             # Identify specific jargon categories
-            dominant_jargon_categories = [category for category, score in jargon_scores.items() if score > 0]
+            dominant_jargon_categories = [
+                category for category, score in jargon_scores.items() if score > 0
+            ]
 
             # Determine routing recommendation
             routing_recommendation = self._get_routing_recommendation(
@@ -756,7 +859,11 @@ class NLPAgent:
 
         except Exception as e:
             logger.error(f"Error detecting financial jargon: {e}")
-            return {"primary_classification": "unknown", "confidence": 0.0, "error": str(e)}
+            return {
+                "primary_classification": "unknown",
+                "confidence": 0.0,
+                "error": str(e),
+            }
 
     def _get_routing_recommendation(
         self, classification: str, jargon_categories: List[str], jargon_score: int
@@ -872,21 +979,33 @@ class NLPAgent:
             parsed_result = self.parse_prompt(prompt)
 
             if "error" in parsed_result:
-                return {"success": False, "error": parsed_result["error"], "fallback_agent": "error_handler_agent"}
+                return {
+                    "success": False,
+                    "error": parsed_result["error"],
+                    "fallback_agent": "error_handler_agent",
+                }
 
             jargon_detection = parsed_result.get("jargon_detection", {})
             routing_recommendation = jargon_detection.get("routing_recommendation", {})
 
             # Determine final routing decision
             confidence = jargon_detection.get("confidence", 0.0)
-            confidence_threshold = routing_recommendation.get("confidence_threshold", 0.7)
+            confidence_threshold = routing_recommendation.get(
+                "confidence_threshold", 0.7
+            )
 
             if confidence >= confidence_threshold:
-                primary_agent = routing_recommendation.get("primary_agent", "general_nlp_agent")
-                fallback_agent = routing_recommendation.get("fallback_agent", "error_handler_agent")
+                primary_agent = routing_recommendation.get(
+                    "primary_agent", "general_nlp_agent"
+                )
+                fallback_agent = routing_recommendation.get(
+                    "fallback_agent", "error_handler_agent"
+                )
             else:
                 # Low confidence - use fallback
-                primary_agent = routing_recommendation.get("fallback_agent", "general_nlp_agent")
+                primary_agent = routing_recommendation.get(
+                    "fallback_agent", "general_nlp_agent"
+                )
                 fallback_agent = "error_handler_agent"
 
             return {
@@ -894,16 +1013,28 @@ class NLPAgent:
                 "primary_agent": primary_agent,
                 "fallback_agent": fallback_agent,
                 "confidence": confidence,
-                "classification": jargon_detection.get("primary_classification", "unknown"),
-                "jargon_categories": jargon_detection.get("dominant_jargon_categories", []),
-                "processing_pipeline": routing_recommendation.get("processing_pipeline", []),
-                "requires_validation": routing_recommendation.get("requires_validation", False),
+                "classification": jargon_detection.get(
+                    "primary_classification", "unknown"
+                ),
+                "jargon_categories": jargon_detection.get(
+                    "dominant_jargon_categories", []
+                ),
+                "processing_pipeline": routing_recommendation.get(
+                    "processing_pipeline", []
+                ),
+                "requires_validation": routing_recommendation.get(
+                    "requires_validation", False
+                ),
                 "parsed_result": parsed_result,
             }
 
         except Exception as e:
             logger.error(f"Error routing to appropriate agent: {e}")
-            return {"success": False, "error": str(e), "fallback_agent": "error_handler_agent"}
+            return {
+                "success": False,
+                "error": str(e),
+                "fallback_agent": "error_handler_agent",
+            }
 
     def validate_financial_entities(self, entities: List[str]) -> Dict[str, Any]:
         """
@@ -995,7 +1126,9 @@ class NLPAgent:
             # Calculate confidence based on validation results
             total_entities = len(entities)
             if total_entities > 0:
-                validation_results["confidence"] = len(validation_results["valid_entities"]) / total_entities
+                validation_results["confidence"] = (
+                    len(validation_results["valid_entities"]) / total_entities
+                )
 
             return validation_results
 

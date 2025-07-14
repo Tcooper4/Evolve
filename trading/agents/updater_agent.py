@@ -12,13 +12,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-
 # Local imports
 from trading.agents.base_agent_interface import AgentResult, BaseAgent
 from trading.agents.model_builder_agent import ModelBuilderAgent, ModelBuildRequest
-from trading.agents.performance_critic_agent import (
-    ModelEvaluationResult,
-)
+from trading.agents.performance_critic_agent import ModelEvaluationResult
 from trading.memory.agent_memory import AgentMemory
 from trading.memory.performance_memory import PerformanceMemory
 from trading.optimization.strategy_optimizer import StrategyOptimizer
@@ -69,7 +66,12 @@ class UpdaterAgent(BaseAgent):
     description = "Tunes model weights, retrains, or replaces bad models based on performance critic results"
     author = "Evolve Trading System"
     tags = ["model-updating", "optimization", "retraining", "tuning"]
-    capabilities = ["model_retraining", "hyperparameter_tuning", "model_replacement", "ensemble_adjustment"]
+    capabilities = [
+        "model_retraining",
+        "hyperparameter_tuning",
+        "model_replacement",
+        "ensemble_adjustment",
+    ]
     dependencies = ["trading.agents.model_builder_agent", "trading.optimization"]
 
     def _setup(self) -> None:
@@ -101,7 +103,11 @@ class UpdaterAgent(BaseAgent):
 
         self.logger.info("UpdaterAgent initialized")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the model updating logic.
@@ -116,17 +122,26 @@ class UpdaterAgent(BaseAgent):
         request = kwargs.get("request")
 
         if not evaluation_result and not request:
-            return AgentResult(success=False, error_message="Either evaluation_result or request is required")
+            return AgentResult(
+                success=False,
+                error_message="Either evaluation_result or request is required",
+            )
 
         try:
             if evaluation_result and not request:
                 # Process evaluation and determine if update is needed
                 request = self.process_evaluation(evaluation_result)
                 if not request:
-                    return AgentResult(success=True, data={"message": "No update needed for this model"})
+                    return AgentResult(
+                        success=True,
+                        data={"message": "No update needed for this model"},
+                    )
 
             if not isinstance(request, UpdateRequest):
-                return AgentResult(success=False, error_message="Request must be an UpdateRequest instance")
+                return AgentResult(
+                    success=False,
+                    error_message="Request must be an UpdateRequest instance",
+                )
 
             result = self.execute_update(request)
 
@@ -144,12 +159,16 @@ class UpdaterAgent(BaseAgent):
             else:
                 # Log and notify about failure
                 error_msg = result.error_message or "Model update failed"
-                self.logger.error(f"Model update failed for {request.model_id}: {error_msg}")
+                self.logger.error(
+                    f"Model update failed for {request.model_id}: {error_msg}"
+                )
 
                 # Show Streamlit notification if available
                 if STREAMLIT_AVAILABLE:
                     try:
-                        st.error(f"❌ Model update failed for {request.model_id}: {error_msg}")
+                        st.error(
+                            f"❌ Model update failed for {request.model_id}: {error_msg}"
+                        )
                     except Exception:
                         pass  # Streamlit context not available
 
@@ -184,7 +203,9 @@ class UpdaterAgent(BaseAgent):
         if not evaluation_result and not request:
             return False
 
-        if evaluation_result and not isinstance(evaluation_result, ModelEvaluationResult):
+        if evaluation_result and not isinstance(
+            evaluation_result, ModelEvaluationResult
+        ):
             return False
 
         if request and not isinstance(request, UpdateRequest):
@@ -193,7 +214,9 @@ class UpdaterAgent(BaseAgent):
         return True
 
     @handle_exceptions
-    def process_evaluation(self, evaluation_result: ModelEvaluationResult) -> Optional[UpdateRequest]:
+    def process_evaluation(
+        self, evaluation_result: ModelEvaluationResult
+    ) -> Optional[UpdateRequest]:
         """Process evaluation result and determine if update is needed.
 
         Args:
@@ -202,7 +225,9 @@ class UpdaterAgent(BaseAgent):
         Returns:
             Update request if needed, None otherwise
         """
-        self.logger.info(f"Processing evaluation for model {evaluation_result.model_id}")
+        self.logger.info(
+            f"Processing evaluation for model {evaluation_result.model_id}"
+        )
 
         # Analyze performance
         performance_score = self._calculate_performance_score(evaluation_result)
@@ -210,7 +235,9 @@ class UpdaterAgent(BaseAgent):
         overall_score = (performance_score + risk_score) / 2
 
         # Determine update type and priority
-        update_type, priority = self._determine_update_action(evaluation_result, overall_score)
+        update_type, priority = self._determine_update_action(
+            evaluation_result, overall_score
+        )
 
         if update_type:
             request = UpdateRequest(
@@ -221,7 +248,9 @@ class UpdaterAgent(BaseAgent):
                 request_id=str(uuid.uuid4()),
             )
 
-            self.logger.info(f"Update needed for model {evaluation_result.model_id}: {update_type} ({priority})")
+            self.logger.info(
+                f"Update needed for model {evaluation_result.model_id}: {update_type} ({priority})"
+            )
             return request
         else:
             self.logger.info(f"No update needed for model {evaluation_result.model_id}")
@@ -236,7 +265,9 @@ class UpdaterAgent(BaseAgent):
         Returns:
             Update result
         """
-        self.logger.info(f"Executing {request.update_type} update for model {request.model_id}")
+        self.logger.info(
+            f"Executing {request.update_type} update for model {request.model_id}"
+        )
 
         try:
             if request.update_type == "retrain":
@@ -271,15 +302,21 @@ class UpdaterAgent(BaseAgent):
                     "status": result.update_status,
                     "improvement_metrics": getattr(result, "improvement_metrics", {}),
                     "reward": reward,
-                    "timestamp": getattr(result, "update_timestamp", datetime.now().isoformat()),
+                    "timestamp": getattr(
+                        result, "update_timestamp", datetime.now().isoformat()
+                    ),
                 },
             )
 
-            self.logger.info(f"Successfully completed {request.update_type} update for model {request.model_id}")
+            self.logger.info(
+                f"Successfully completed {request.update_type} update for model {request.model_id}"
+            )
             return result
 
         except Exception as e:
-            self.logger.error(f"Failed to execute update for model {request.model_id}: {str(e)}")
+            self.logger.error(
+                f"Failed to execute update for model {request.model_id}: {str(e)}"
+            )
             self.agent_memory.log_outcome(
                 agent="UpdaterAgent",
                 run_type=request.update_type,
@@ -366,23 +403,30 @@ class UpdaterAgent(BaseAgent):
 
         # Check for critical issues
         if (
-            performance_metrics.get("sharpe_ratio", 0) <= self.update_thresholds["critical_sharpe"]
-            or risk_metrics.get("max_drawdown", 0) <= self.update_thresholds["critical_drawdown"]
-            or trading_metrics.get("win_rate", 0) <= self.update_thresholds["critical_win_rate"]
+            performance_metrics.get("sharpe_ratio", 0)
+            <= self.update_thresholds["critical_sharpe"]
+            or risk_metrics.get("max_drawdown", 0)
+            <= self.update_thresholds["critical_drawdown"]
+            or trading_metrics.get("win_rate", 0)
+            <= self.update_thresholds["critical_win_rate"]
         ):
             return "replace", "critical"
 
         # Check for retraining needed
         if (
-            performance_metrics.get("sharpe_ratio", 0) <= self.update_thresholds["retrain_sharpe"]
-            or risk_metrics.get("max_drawdown", 0) <= self.update_thresholds["retrain_drawdown"]
+            performance_metrics.get("sharpe_ratio", 0)
+            <= self.update_thresholds["retrain_sharpe"]
+            or risk_metrics.get("max_drawdown", 0)
+            <= self.update_thresholds["retrain_drawdown"]
         ):
             return "retrain", "high"
 
         # Check for tuning needed
         if (
-            performance_metrics.get("sharpe_ratio", 0) <= self.update_thresholds["tune_sharpe"]
-            or risk_metrics.get("max_drawdown", 0) <= self.update_thresholds["tune_drawdown"]
+            performance_metrics.get("sharpe_ratio", 0)
+            <= self.update_thresholds["tune_sharpe"]
+            or risk_metrics.get("max_drawdown", 0)
+            <= self.update_thresholds["tune_drawdown"]
         ):
             return "tune", "normal"
 
@@ -422,7 +466,9 @@ class UpdaterAgent(BaseAgent):
         build_result = self.model_builder.build_model(build_request)
 
         # Calculate improvement
-        improvement_metrics = self._calculate_improvement(request.evaluation_result, build_result)
+        improvement_metrics = self._calculate_improvement(
+            request.evaluation_result, build_result
+        )
 
         return UpdateResult(
             request_id=request.request_id,
@@ -451,10 +497,14 @@ class UpdaterAgent(BaseAgent):
             raise ValueError(f"No metadata found for model {request.model_id}")
 
         # Initialize optimizer
-        optimizer = StrategyOptimizer({"optimizer_type": "bayesian", "n_trials": 50, "timeout": 3600})
+        optimizer = StrategyOptimizer(
+            {"optimizer_type": "bayesian", "n_trials": 50, "timeout": 3600}
+        )
 
         # Define optimization space
-        optimization_space = self._define_optimization_space(model_metadata["model_type"])
+        optimization_space = self._define_optimization_space(
+            model_metadata["model_type"]
+        )
 
         # Run optimization
         best_params = optimizer.optimize(
@@ -475,7 +525,9 @@ class UpdaterAgent(BaseAgent):
         build_result = self.model_builder.build_model(build_request)
 
         # Calculate improvement
-        improvement_metrics = self._calculate_improvement(request.evaluation_result, build_result)
+        improvement_metrics = self._calculate_improvement(
+            request.evaluation_result, build_result
+        )
 
         return UpdateResult(
             request_id=request.request_id,
@@ -504,7 +556,9 @@ class UpdaterAgent(BaseAgent):
             raise ValueError(f"No metadata found for model {request.model_id}")
 
         # Try different model type if current one is failing
-        new_model_type = self._select_alternative_model_type(model_metadata["model_type"])
+        new_model_type = self._select_alternative_model_type(
+            model_metadata["model_type"]
+        )
 
         # Build new model
         build_request = ModelBuildRequest(
@@ -517,7 +571,9 @@ class UpdaterAgent(BaseAgent):
         build_result = self.model_builder.build_model(build_request)
 
         # Calculate improvement
-        improvement_metrics = self._calculate_improvement(request.evaluation_result, build_result)
+        improvement_metrics = self._calculate_improvement(
+            request.evaluation_result, build_result
+        )
 
         return UpdateResult(
             request_id=request.request_id,
@@ -553,14 +609,19 @@ class UpdaterAgent(BaseAgent):
         optimized_weights = self._optimize_ensemble_weights(ensemble_config)
 
         # Create new ensemble configuration
-        new_config = {"models": ensemble_config["models"], "voting_method": ensemble_config["voting_method"]}
+        new_config = {
+            "models": ensemble_config["models"],
+            "voting_method": ensemble_config["voting_method"],
+        }
 
         # Update weights
         for i, model_info in enumerate(new_config["models"]):
             model_info["weight"] = optimized_weights[i]
 
         # Save new configuration
-        new_model_id = f"ensemble_{request.model_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        new_model_id = (
+            f"ensemble_{request.model_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
         new_model_path = Path("trading/models/built") / f"{new_model_id}.json"
 
         with open(new_model_path, "w") as f:
@@ -577,7 +638,9 @@ class UpdaterAgent(BaseAgent):
             improvement_metrics={"weight_optimization": 1.0},
         )
 
-    def _generate_improved_config(self, original_config: Dict[str, Any]) -> Dict[str, Any]:
+    def _generate_improved_config(
+        self, original_config: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Generate improved configuration based on original.
 
         Args:
@@ -591,13 +654,17 @@ class UpdaterAgent(BaseAgent):
         # Apply improvements based on model type
         if "hidden_dim" in improved_config:
             # LSTM improvements
-            improved_config["hidden_dim"] = min(improved_config["hidden_dim"] * 1.2, 128)
+            improved_config["hidden_dim"] = min(
+                improved_config["hidden_dim"] * 1.2, 128
+            )
             improved_config["dropout"] = max(improved_config["dropout"] * 0.9, 0.1)
             improved_config["learning_rate"] = improved_config["learning_rate"] * 0.8
 
         elif "n_estimators" in improved_config:
             # XGBoost improvements
-            improved_config["n_estimators"] = min(improved_config["n_estimators"] * 1.5, 200)
+            improved_config["n_estimators"] = min(
+                improved_config["n_estimators"] * 1.5, 200
+            )
             improved_config["max_depth"] = min(improved_config["max_depth"] + 1, 8)
             improved_config["learning_rate"] = improved_config["learning_rate"] * 0.9
 
@@ -677,7 +744,9 @@ class UpdaterAgent(BaseAgent):
             "timestamp": datetime.now().isoformat(),
         }
 
-    def _optimize_ensemble_weights(self, ensemble_config: Dict[str, Any]) -> List[float]:
+    def _optimize_ensemble_weights(
+        self, ensemble_config: Dict[str, Any]
+    ) -> List[float]:
         """Optimize ensemble weights based on recent performance.
 
         Args:
@@ -691,7 +760,9 @@ class UpdaterAgent(BaseAgent):
         num_models = len(ensemble_config["models"])
         return [1.0 / num_models] * num_models
 
-    def _calculate_improvement(self, old_evaluation: ModelEvaluationResult, new_build_result: Any) -> Dict[str, float]:
+    def _calculate_improvement(
+        self, old_evaluation: ModelEvaluationResult, new_build_result: Any
+    ) -> Dict[str, float]:
         """Calculate improvement metrics.
 
         Args:
@@ -705,7 +776,11 @@ class UpdaterAgent(BaseAgent):
         # In practice, you'd compare actual performance metrics
         return {
             "success": True,
-            "result": {"sharpe_improvement": 0.1, "return_improvement": 0.05, "drawdown_improvement": 0.02},
+            "result": {
+                "sharpe_improvement": 0.1,
+                "return_improvement": 0.05,
+                "drawdown_improvement": 0.02,
+            },
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }

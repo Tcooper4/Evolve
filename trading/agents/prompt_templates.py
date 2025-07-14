@@ -699,8 +699,17 @@ TEMPLATE_CATEGORIES = {
     ],
     "response_generation": ["response_generation"],
     "backtesting": ["backtest_request", "backtest_results"],
-    "optimization": ["optimization_request", "optimization_results", "optimization_summary"],
-    "research": ["research_request", "research_summary", "research_summarize", "research_code_suggestion"],
+    "optimization": [
+        "optimization_request",
+        "optimization_results",
+        "optimization_summary",
+    ],
+    "research": [
+        "research_request",
+        "research_summary",
+        "research_summarize",
+        "research_code_suggestion",
+    ],
     "portfolio": ["portfolio_analysis", "portfolio_recommendations"],
     "risk": ["risk_analysis", "risk_report"],
     "sentiment": ["sentiment_analysis", "sentiment_report"],
@@ -714,7 +723,11 @@ TEMPLATE_CATEGORIES = {
         "vision_performance_analysis",
     ],
     "strategy": ["strategy_selection_reasoning"],
-    "performance": ["performance_evaluation", "trading_signal_generation", "performance_recommendations"],
+    "performance": [
+        "performance_evaluation",
+        "trading_signal_generation",
+        "performance_recommendations",
+    ],
     "model_development": [
         "model_implementation_code",
         "transformer_model_code",
@@ -740,7 +753,9 @@ def get_template(name: str) -> str:
         KeyError: If template not found
     """
     if name not in PROMPT_TEMPLATES:
-        raise KeyError(f"Template '{name}' not found. Available templates: {list(PROMPT_TEMPLATES.keys())}")
+        raise KeyError(
+            f"Template '{name}' not found. Available templates: {list(PROMPT_TEMPLATES.keys())}"
+        )
 
     return PROMPT_TEMPLATES[name]
 
@@ -756,7 +771,9 @@ def get_templates_by_category(category: str) -> Dict[str, str]:
         Dictionary of template names to template strings
     """
     if category not in TEMPLATE_CATEGORIES:
-        raise KeyError(f"Category '{category}' not found. Available categories: {list(TEMPLATE_CATEGORIES.keys())}")
+        raise KeyError(
+            f"Category '{category}' not found. Available categories: {list(TEMPLATE_CATEGORIES.keys())}"
+        )
 
     template_names = TEMPLATE_CATEGORIES[category]
     return {name: PROMPT_TEMPLATES[name] for name in template_names}

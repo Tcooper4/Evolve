@@ -51,9 +51,18 @@ class TestRouter:
     def test_agent_routing(self, router):
         """Test that the router correctly routes to appropriate agents."""
         test_cases = [
-            {"intent": {"type": "forecast", "entity": "AAPL"}, "expected_agent": "forecast_agent"},
-            {"intent": {"type": "trade", "entity": "MSFT"}, "expected_agent": "trading_agent"},
-            {"intent": {"type": "analysis", "entity": "GOOGL"}, "expected_agent": "analysis_agent"},
+            {
+                "intent": {"type": "forecast", "entity": "AAPL"},
+                "expected_agent": "forecast_agent",
+            },
+            {
+                "intent": {"type": "trade", "entity": "MSFT"},
+                "expected_agent": "trading_agent",
+            },
+            {
+                "intent": {"type": "analysis", "entity": "GOOGL"},
+                "expected_agent": "analysis_agent",
+            },
         ]
 
         for case in test_cases:
@@ -73,7 +82,12 @@ class TestRouter:
 
     def test_agent_registry(self, router):
         """Test that the agent registry contains all required agents."""
-        required_agents = ["forecast_agent", "trading_agent", "analysis_agent", "self_improving_agent"]
+        required_agents = [
+            "forecast_agent",
+            "trading_agent",
+            "analysis_agent",
+            "self_improving_agent",
+        ]
 
         for agent_name in required_agents:
             assert agent_name in router.agent_registry
@@ -85,7 +99,11 @@ class TestRouter:
     def test_end_to_end_routing(self, mock_detect_intent, router):
         """Test end-to-end routing process."""
         # Mock intent detection
-        mock_detect_intent.return_value = {"type": "forecast", "entity": "AAPL", "confidence": 0.9}
+        mock_detect_intent.return_value = {
+            "type": "forecast",
+            "entity": "AAPL",
+            "confidence": 0.9,
+        }
 
         # Test routing
         result = router.process_request("What's the forecast for AAPL?")

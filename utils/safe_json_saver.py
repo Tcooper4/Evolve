@@ -40,7 +40,9 @@ def safe_json_save(
 
         # Check if data is effectively empty
         if not data:
-            logger.warning(f"Skipped saving empty data to prevent wiping valid history: {filepath}")
+            logger.warning(
+                f"Skipped saving empty data to prevent wiping valid history: {filepath}"
+            )
             return {
                 "success": False,
                 "error": "Empty data detected - skipping save to prevent data loss",
@@ -49,7 +51,9 @@ def safe_json_save(
 
         # Additional check for empty dictionaries/lists
         if isinstance(data, (dict, list)) and len(data) < min_data_size:
-            logger.warning(f"Data too small ({len(data)} items) - skipping save to prevent data loss: {filepath}")
+            logger.warning(
+                f"Data too small ({len(data)} items) - skipping save to prevent data loss: {filepath}"
+            )
             return {
                 "success": False,
                 "error": f"Data too small ({len(data)} items) - skipping save to prevent data loss",
@@ -87,7 +91,10 @@ def safe_json_save(
 
 
 def safe_json_save_with_validation(
-    data: Any, filepath: Union[str, Path], validation_func: Optional[callable] = None, **kwargs
+    data: Any,
+    filepath: Union[str, Path],
+    validation_func: Optional[callable] = None,
+    **kwargs,
 ) -> Dict[str, Any]:
     """
     Save JSON data with additional validation.
@@ -106,7 +113,9 @@ def safe_json_save_with_validation(
         if validation_func:
             validation_result = validation_func(data)
             if not validation_result.get("valid", True):
-                logger.warning(f"Data validation failed: {validation_result.get('error', 'Unknown error')}")
+                logger.warning(
+                    f"Data validation failed: {validation_result.get('error', 'Unknown error')}"
+                )
                 return {
                     "success": False,
                     "error": f'Validation failed: {validation_result.get("error", "Unknown error")}',
@@ -160,7 +169,9 @@ def validate_historical_data(data: Any) -> Dict[str, Any]:
 
 
 # Convenience function for historical data
-def safe_save_historical_data(data: Any, filepath: Union[str, Path], **kwargs) -> Dict[str, Any]:
+def safe_save_historical_data(
+    data: Any, filepath: Union[str, Path], **kwargs
+) -> Dict[str, Any]:
     """
     Safely save historical data with validation.
 
@@ -172,4 +183,6 @@ def safe_save_historical_data(data: Any, filepath: Union[str, Path], **kwargs) -
     Returns:
         Dictionary with operation result
     """
-    return safe_json_save_with_validation(data, filepath, validation_func=validate_historical_data, **kwargs)
+    return safe_json_save_with_validation(
+        data, filepath, validation_func=validate_historical_data, **kwargs
+    )

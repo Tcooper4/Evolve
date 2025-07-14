@@ -53,7 +53,9 @@ class TestXGBoostForecaster:
         high = close + np.random.uniform(0, 5, 100)
         low = close - np.random.uniform(0, 5, 100)
 
-        df = pd.DataFrame({"Close": close, "Volume": volume, "High": high, "Low": low}, index=dates)
+        df = pd.DataFrame(
+            {"Close": close, "Volume": volume, "High": high, "Low": low}, index=dates
+        )
 
         return df
 
@@ -142,7 +144,10 @@ class TestXGBoostForecaster:
         # Should fail gracefully with clear error message
         assert result["success"] is False
         assert "error" in result
-        assert any(keyword in result["error"].lower() for keyword in ["insufficient", "at least", "minimum", "data"])
+        assert any(
+            keyword in result["error"].lower()
+            for keyword in ["insufficient", "at least", "minimum", "data"]
+        )
 
     def test_constant_series_handling(self, xgboost_model, constant_time_series):
         """Test handling of constant time series."""
@@ -158,7 +163,10 @@ class TestXGBoostForecaster:
             assert len(forecast_result["predictions"]) == 5
         else:
             # If it fails, should be due to constant series
-            assert any(keyword in result.get("error", "").lower() for keyword in ["constant", "variance", "unique"])
+            assert any(
+                keyword in result.get("error", "").lower()
+                for keyword in ["constant", "variance", "unique"]
+            )
 
     def test_nan_series_handling(self, xgboost_model, nan_time_series):
         """Test handling of time series with NaN values."""
@@ -169,7 +177,10 @@ class TestXGBoostForecaster:
         # Should fail gracefully with clear error message
         assert result["success"] is False
         assert "error" in result
-        assert any(keyword in result["error"].lower() for keyword in ["nan", "missing", "invalid"])
+        assert any(
+            keyword in result["error"].lower()
+            for keyword in ["nan", "missing", "invalid"]
+        )
 
     def test_model_summary(self, xgboost_model, synthetic_dataframe):
         """Test that model summary is generated correctly."""
@@ -254,14 +265,20 @@ class TestXGBoostForecaster:
 
         assert forecast1["success"] is True
         assert forecast2["success"] is True
-        np.testing.assert_array_almost_equal(forecast1["predictions"], forecast2["predictions"], decimal=10)
+        np.testing.assert_array_almost_equal(
+            forecast1["predictions"], forecast2["predictions"], decimal=10
+        )
 
     def test_trend_detection(self, xgboost_model):
         """Test that model correctly identifies trends."""
         # Create data with clear trend
         dates = pd.date_range(start="2023-01-01", periods=50, freq="D")
         trend_data = pd.DataFrame(
-            {"Close": np.linspace(100, 200, 50), "Volume": np.random.uniform(1000000, 5000000, 50)}, index=dates
+            {
+                "Close": np.linspace(100, 200, 50),
+                "Volume": np.random.uniform(1000000, 5000000, 50),
+            },
+            index=dates,
         )
 
         xgboost_model.fit(trend_data)
@@ -278,7 +295,11 @@ class TestXGBoostForecaster:
         dates = pd.date_range(start="2023-01-01", periods=100, freq="D")
         t = np.linspace(0, 4 * np.pi, 100)
         seasonal_data = pd.DataFrame(
-            {"Close": 100 + 10 * np.sin(t), "Volume": np.random.uniform(1000000, 5000000, 100)}, index=dates
+            {
+                "Close": 100 + 10 * np.sin(t),
+                "Volume": np.random.uniform(1000000, 5000000, 100),
+            },
+            index=dates,
         )
 
         xgboost_model.fit(seasonal_data)
@@ -289,7 +310,9 @@ class TestXGBoostForecaster:
             assert not np.isnan(forecast["predictions"]).any()
 
     @pytest.mark.parametrize("horizon", [1, 5, 10, 30])
-    def test_different_forecast_horizons(self, xgboost_model, synthetic_dataframe, horizon):
+    def test_different_forecast_horizons(
+        self, xgboost_model, synthetic_dataframe, horizon
+    ):
         """Test forecasting with different horizons."""
         xgboost_model.fit(synthetic_dataframe)
 
@@ -363,7 +386,9 @@ class TestXGBoostForecaster:
 
         # Test confidence intervals if supported
         if hasattr(xgboost_model, "predict_with_confidence"):
-            result = xgboost_model.predict_with_confidence(synthetic_dataframe, horizon=5)
+            result = xgboost_model.predict_with_confidence(
+                synthetic_dataframe, horizon=5
+            )
             assert result["success"] is True
             assert "predictions" in result
             assert "confidence_intervals" in result or "lower" in result

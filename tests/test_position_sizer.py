@@ -80,20 +80,30 @@ class TestPositionSizer:
         assert position_sizer is not None
         assert hasattr(position_sizer, "config")
         assert hasattr(position_sizer, "sizing_history")
-        assert position_sizer.config["default_strategy"] == SizingStrategy.FIXED_PERCENTAGE
+        assert (
+            position_sizer.config["default_strategy"] == SizingStrategy.FIXED_PERCENTAGE
+        )
 
     def test_initialization_with_config(self):
         """Test PositionSizer initialization with custom config."""
-        config = {"default_strategy": SizingStrategy.KELLY_CRITERION, "risk_per_trade": 0.03, "max_position_size": 0.25}
+        config = {
+            "default_strategy": SizingStrategy.KELLY_CRITERION,
+            "risk_per_trade": 0.03,
+            "max_position_size": 0.25,
+        }
         position_sizer = PositionSizer(config)
 
-        assert position_sizer.config["default_strategy"] == SizingStrategy.KELLY_CRITERION
+        assert (
+            position_sizer.config["default_strategy"] == SizingStrategy.KELLY_CRITERION
+        )
         assert position_sizer.config["risk_per_trade"] == 0.03
         assert position_sizer.config["max_position_size"] == 0.25
 
     def test_fixed_percentage_sizing(self, position_sizer, portfolio_context):
         """Test fixed percentage sizing strategy."""
-        params = SizingParameters(strategy=SizingStrategy.FIXED_PERCENTAGE, risk_per_trade=0.02)
+        params = SizingParameters(
+            strategy=SizingStrategy.FIXED_PERCENTAGE, risk_per_trade=0.02
+        )
 
         position_size, details = position_sizer.calculate_position_size(
             entry_price=150.0,
@@ -108,9 +118,13 @@ class TestPositionSizer:
         assert details["strategy"] == "fixed_percentage"
         assert details["risk_percentage"] > 0
 
-    def test_kelly_criterion_sizing(self, position_sizer, signal_context, portfolio_context):
+    def test_kelly_criterion_sizing(
+        self, position_sizer, signal_context, portfolio_context
+    ):
         """Test Kelly Criterion sizing strategy."""
-        params = SizingParameters(strategy=SizingStrategy.KELLY_CRITERION, kelly_fraction=0.25)
+        params = SizingParameters(
+            strategy=SizingStrategy.KELLY_CRITERION, kelly_fraction=0.25
+        )
 
         position_size, details = position_sizer.calculate_position_size(
             entry_price=150.0,
@@ -125,9 +139,13 @@ class TestPositionSizer:
         assert details["strategy"] == "kelly_criterion"
         assert details["risk_percentage"] > 0
 
-    def test_volatility_based_sizing(self, position_sizer, market_context, portfolio_context):
+    def test_volatility_based_sizing(
+        self, position_sizer, market_context, portfolio_context
+    ):
         """Test volatility-based sizing strategy."""
-        params = SizingParameters(strategy=SizingStrategy.VOLATILITY_BASED, volatility_multiplier=1.0)
+        params = SizingParameters(
+            strategy=SizingStrategy.VOLATILITY_BASED, volatility_multiplier=1.0
+        )
 
         position_size, details = position_sizer.calculate_position_size(
             entry_price=150.0,
@@ -142,9 +160,13 @@ class TestPositionSizer:
         assert details["strategy"] == "volatility_based"
         assert details["risk_percentage"] > 0
 
-    def test_confidence_based_sizing(self, position_sizer, signal_context, portfolio_context):
+    def test_confidence_based_sizing(
+        self, position_sizer, signal_context, portfolio_context
+    ):
         """Test confidence-based sizing strategy."""
-        params = SizingParameters(strategy=SizingStrategy.CONFIDENCE_BASED, confidence_multiplier=1.0)
+        params = SizingParameters(
+            strategy=SizingStrategy.CONFIDENCE_BASED, confidence_multiplier=1.0
+        )
 
         position_size, details = position_sizer.calculate_position_size(
             entry_price=150.0,
@@ -159,9 +181,13 @@ class TestPositionSizer:
         assert details["strategy"] == "confidence_based"
         assert details["risk_percentage"] > 0
 
-    def test_forecast_certainty_sizing(self, position_sizer, signal_context, portfolio_context):
+    def test_forecast_certainty_sizing(
+        self, position_sizer, signal_context, portfolio_context
+    ):
         """Test forecast certainty sizing strategy."""
-        params = SizingParameters(strategy=SizingStrategy.FORECAST_CERTAINTY, confidence_multiplier=1.0)
+        params = SizingParameters(
+            strategy=SizingStrategy.FORECAST_CERTAINTY, confidence_multiplier=1.0
+        )
 
         position_size, details = position_sizer.calculate_position_size(
             entry_price=150.0,
@@ -178,7 +204,9 @@ class TestPositionSizer:
 
     def test_optimal_f_sizing(self, position_sizer, signal_context, portfolio_context):
         """Test Optimal F sizing strategy."""
-        params = SizingParameters(strategy=SizingStrategy.OPTIMAL_F, optimal_f_risk=0.02)
+        params = SizingParameters(
+            strategy=SizingStrategy.OPTIMAL_F, optimal_f_risk=0.02
+        )
 
         position_size, details = position_sizer.calculate_position_size(
             entry_price=150.0,
@@ -193,9 +221,13 @@ class TestPositionSizer:
         assert details["strategy"] == "optimal_f"
         assert details["risk_percentage"] > 0
 
-    def test_risk_parity_sizing(self, position_sizer, market_context, portfolio_context):
+    def test_risk_parity_sizing(
+        self, position_sizer, market_context, portfolio_context
+    ):
         """Test risk parity sizing strategy."""
-        params = SizingParameters(strategy=SizingStrategy.RISK_PARITY, risk_per_trade=0.02)
+        params = SizingParameters(
+            strategy=SizingStrategy.RISK_PARITY, risk_per_trade=0.02
+        )
 
         position_size, details = position_sizer.calculate_position_size(
             entry_price=150.0,
@@ -212,7 +244,9 @@ class TestPositionSizer:
 
     def test_martingale_sizing(self, position_sizer, portfolio_context):
         """Test Martingale sizing strategy."""
-        params = SizingParameters(strategy=SizingStrategy.MARTINGALE, base_position_size=0.1)
+        params = SizingParameters(
+            strategy=SizingStrategy.MARTINGALE, base_position_size=0.1
+        )
 
         position_size, details = position_sizer.calculate_position_size(
             entry_price=150.0,
@@ -228,7 +262,9 @@ class TestPositionSizer:
 
     def test_anti_martingale_sizing(self, position_sizer, portfolio_context):
         """Test Anti-Martingale sizing strategy."""
-        params = SizingParameters(strategy=SizingStrategy.ANTI_MARTINGALE, base_position_size=0.1)
+        params = SizingParameters(
+            strategy=SizingStrategy.ANTI_MARTINGALE, base_position_size=0.1
+        )
 
         position_size, details = position_sizer.calculate_position_size(
             entry_price=150.0,
@@ -258,7 +294,9 @@ class TestPositionSizer:
         assert position_size > 0
         assert details["risk_percentage"] > 0
 
-    def test_correlation_adjustment(self, position_sizer, signal_context, portfolio_context):
+    def test_correlation_adjustment(
+        self, position_sizer, signal_context, portfolio_context
+    ):
         """Test correlation adjustment functionality."""
         market_context = MarketContext(
             symbol="AAPL",
@@ -281,7 +319,9 @@ class TestPositionSizer:
         assert position_size > 0
         assert details["risk_percentage"] > 0
 
-    def test_volatility_adjustment(self, position_sizer, signal_context, portfolio_context):
+    def test_volatility_adjustment(
+        self, position_sizer, signal_context, portfolio_context
+    ):
         """Test volatility adjustment functionality."""
         market_context = MarketContext(
             symbol="AAPL",
@@ -304,7 +344,9 @@ class TestPositionSizer:
         assert position_size > 0
         assert details["risk_percentage"] > 0
 
-    def test_liquidity_adjustment(self, position_sizer, signal_context, portfolio_context):
+    def test_liquidity_adjustment(
+        self, position_sizer, signal_context, portfolio_context
+    ):
         """Test liquidity adjustment functionality."""
         market_context = MarketContext(
             symbol="AAPL",
@@ -327,7 +369,9 @@ class TestPositionSizer:
         assert position_size > 0
         assert details["risk_percentage"] > 0
 
-    def test_position_size_constraints(self, position_sizer, signal_context, portfolio_context):
+    def test_position_size_constraints(
+        self, position_sizer, signal_context, portfolio_context
+    ):
         """Test position size constraints."""
         # Test with very small available capital
         portfolio_context.available_capital = 1000.0
@@ -359,7 +403,9 @@ class TestPositionSizer:
     def test_conservative_fallback(self, position_sizer):
         """Test conservative fallback when errors occur."""
         # Mock an error scenario
-        with patch.object(position_sizer, "_calculate_base_size", side_effect=Exception("Test error")):
+        with patch.object(
+            position_sizer, "_calculate_base_size", side_effect=Exception("Test error")
+        ):
             position_size, details = position_sizer.calculate_position_size(
                 entry_price=150.0,
                 stop_loss_price=147.0,
@@ -398,7 +444,9 @@ class TestPositionSizer:
 
         assert len(position_sizer.sizing_history) <= 1000
 
-    def test_get_sizing_history(self, position_sizer, signal_context, portfolio_context):
+    def test_get_sizing_history(
+        self, position_sizer, signal_context, portfolio_context
+    ):
         """Test getting sizing history."""
         # Add some sizing decisions
         for _ in range(5):
@@ -416,7 +464,9 @@ class TestPositionSizer:
         history = position_sizer.get_sizing_history(limit=10)
         assert len(history) == 5
 
-    def test_get_sizing_summary(self, position_sizer, signal_context, portfolio_context):
+    def test_get_sizing_summary(
+        self, position_sizer, signal_context, portfolio_context
+    ):
         """Test getting sizing summary."""
         # Add some sizing decisions
         for _ in range(5):
@@ -461,7 +511,9 @@ class TestPositionSizer:
         assert restored_params.risk_per_trade == 0.02
         assert restored_params.max_position_size == 0.2
 
-    def test_context_serialization(self, market_context, signal_context, portfolio_context):
+    def test_context_serialization(
+        self, market_context, signal_context, portfolio_context
+    ):
         """Test context serialization."""
         # Test MarketContext
         market_dict = market_context.to_dict()
@@ -509,7 +561,11 @@ class TestPositionSizerIntegration:
             strategy="test_strategy",
             confidence=0.75,
             entry_price=150.0,
-            market_data={"forecast_certainty": 0.7, "signal_strength": 0.8, "sizing_strategy": "confidence_based"},
+            market_data={
+                "forecast_certainty": 0.7,
+                "signal_strength": 0.8,
+                "sizing_strategy": "confidence_based",
+            },
         )
 
     @pytest.fixture
@@ -525,7 +581,9 @@ class TestPositionSizerIntegration:
             }
         }
 
-    def test_position_sizer_integration(self, execution_agent, trade_signal, market_data):
+    def test_position_sizer_integration(
+        self, execution_agent, trade_signal, market_data
+    ):
         """Test PositionSizer integration with ExecutionAgent."""
         # Test position size calculation
         position_size, sizing_details = execution_agent._calculate_position_size(
@@ -537,9 +595,16 @@ class TestPositionSizerIntegration:
         assert "risk_percentage" in sizing_details
         assert "position_value" in sizing_details
 
-    def test_different_sizing_strategies_integration(self, execution_agent, market_data):
+    def test_different_sizing_strategies_integration(
+        self, execution_agent, market_data
+    ):
         """Test different sizing strategies in ExecutionAgent."""
-        strategies = ["fixed_percentage", "kelly_criterion", "volatility_based", "confidence_based"]
+        strategies = [
+            "fixed_percentage",
+            "kelly_criterion",
+            "volatility_based",
+            "confidence_based",
+        ]
 
         for strategy in strategies:
             signal = TradeSignal(
@@ -576,7 +641,9 @@ class TestPositionSizerIntegration:
         assert position_size == 100.0
         assert sizing_details["strategy"] == "manual_size"
 
-    def test_error_handling_integration(self, execution_agent, trade_signal, market_data):
+    def test_error_handling_integration(
+        self, execution_agent, trade_signal, market_data
+    ):
         """Test error handling in ExecutionAgent integration."""
         # Test with invalid market data
         invalid_market_data = {}
@@ -586,7 +653,10 @@ class TestPositionSizerIntegration:
         )
 
         assert position_size > 0
-        assert "error" in sizing_details or sizing_details["strategy"] == "conservative_fallback"
+        assert (
+            "error" in sizing_details
+            or sizing_details["strategy"] == "conservative_fallback"
+        )
 
 
 if __name__ == "__main__":

@@ -40,7 +40,9 @@ def normalize_features(
         return data
 
 
-def create_lag_features(data: pd.DataFrame, columns: List[str], lags: List[int]) -> pd.DataFrame:
+def create_lag_features(
+    data: pd.DataFrame, columns: List[str], lags: List[int]
+) -> pd.DataFrame:
     """
     Create lag features for specified columns.
 
@@ -57,7 +59,9 @@ def create_lag_features(data: pd.DataFrame, columns: List[str], lags: List[int])
         for col in columns:
             for lag in lags:
                 result[f"{col}_lag_{lag}"] = data[col].shift(lag)
-        logger.debug(f"Created lag features for {len(columns)} columns with {len(lags)} lags")
+        logger.debug(
+            f"Created lag features for {len(columns)} columns with {len(lags)} lags"
+        )
         return result
     except Exception as e:
         logger.error(f"Error creating lag features: {e}")
@@ -126,13 +130,21 @@ def calculate_rolling_features(
             for window in windows:
                 for func in functions:
                     if func == "mean":
-                        result[f"{col}_rolling_mean_{window}"] = data[col].rolling(window).mean()
+                        result[f"{col}_rolling_mean_{window}"] = (
+                            data[col].rolling(window).mean()
+                        )
                     elif func == "std":
-                        result[f"{col}_rolling_std_{window}"] = data[col].rolling(window).std()
+                        result[f"{col}_rolling_std_{window}"] = (
+                            data[col].rolling(window).std()
+                        )
                     elif func == "min":
-                        result[f"{col}_rolling_min_{window}"] = data[col].rolling(window).min()
+                        result[f"{col}_rolling_min_{window}"] = (
+                            data[col].rolling(window).min()
+                        )
                     elif func == "max":
-                        result[f"{col}_rolling_max_{window}"] = data[col].rolling(window).max()
+                        result[f"{col}_rolling_max_{window}"] = (
+                            data[col].rolling(window).max()
+                        )
 
         logger.debug(f"Created rolling features for {len(columns)} columns")
         return result

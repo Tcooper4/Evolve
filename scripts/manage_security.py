@@ -162,7 +162,11 @@ class SecurityManager:
                 issues.append(f"Insecure permissions on {key_file.name}")
                 recommendations.append(f"Fix permissions: chmod 600 {key_file}")
 
-        return {"status": not issues, "issues": issues, "recommendations": recommendations}
+        return {
+            "status": not issues,
+            "issues": issues,
+            "recommendations": recommendations,
+        }
 
     def _check_permissions(self) -> Dict[str, Any]:
         """Check file permissions."""
@@ -178,7 +182,11 @@ class SecurityManager:
                     issues.append(f"Insecure permissions on {dir_name} directory")
                     recommendations.append(f"Fix permissions: chmod 700 {dir_name}")
 
-        return {"status": not issues, "issues": issues, "recommendations": recommendations}
+        return {
+            "status": not issues,
+            "issues": issues,
+            "recommendations": recommendations,
+        }
 
     def _check_config(self) -> Dict[str, Any]:
         """Check security configuration."""
@@ -191,11 +199,19 @@ class SecurityManager:
             recommendations.append("Enable SSL in app_config.yaml")
 
         # Check password policy
-        if not self.config.get("security", {}).get("password_policy", {}).get("enabled", False):
+        if (
+            not self.config.get("security", {})
+            .get("password_policy", {})
+            .get("enabled", False)
+        ):
             issues.append("Password policy not enabled")
             recommendations.append("Enable password policy in app_config.yaml")
 
-        return {"status": not issues, "issues": issues, "recommendations": recommendations}
+        return {
+            "status": not issues,
+            "issues": issues,
+            "recommendations": recommendations,
+        }
 
     def _check_dependencies(self) -> Dict[str, Any]:
         """Check security dependencies."""
@@ -209,12 +225,16 @@ class SecurityManager:
             for dist in distributions():
                 package_name = dist.metadata["Name"]
                 if package_name in ["cryptography", "pyjwt"]:
-                    current_version = version(package_name)
+                    version(package_name)
                     # Add version checking logic here if needed
         except Exception as e:
             self.logger.warning(f"Could not check dependencies: {e}")
 
-        return {"status": not issues, "issues": issues, "recommendations": recommendations}
+        return {
+            "status": not issues,
+            "issues": issues,
+            "recommendations": recommendations,
+        }
 
     def encrypt_file(self, file_path: str, output_path: Optional[str] = None):
         """Encrypt a file."""
@@ -296,8 +316,14 @@ class SecurityManager:
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Security Manager")
-    parser.add_argument("command", choices=["rotate", "check", "encrypt", "decrypt"], help="Command to execute")
-    parser.add_argument("--key-type", choices=["api", "jwt", "encryption"], help="Type of key to rotate")
+    parser.add_argument(
+        "command",
+        choices=["rotate", "check", "encrypt", "decrypt"],
+        help="Command to execute",
+    )
+    parser.add_argument(
+        "--key-type", choices=["api", "jwt", "encryption"], help="Type of key to rotate"
+    )
     parser.add_argument("--file", help="File to encrypt/decrypt")
     parser.add_argument("--output", help="Output file path for encryption/decryption")
 
@@ -307,8 +333,12 @@ def main():
     commands = {
         "rotate": lambda: manager.rotate_keys(args.key_type),
         "check": lambda: manager.check_security(),
-        "encrypt": lambda: manager.encrypt_file(args.file, args.output) if args.file else False,
-        "decrypt": lambda: manager.decrypt_file(args.file, args.output) if args.file else False,
+        "encrypt": lambda: manager.encrypt_file(args.file, args.output)
+        if args.file
+        else False,
+        "decrypt": lambda: manager.decrypt_file(args.file, args.output)
+        if args.file
+        else False,
     }
 
     if args.command in commands:

@@ -83,7 +83,9 @@ class FallbackQuantGPT:
             commentary_type = self._determine_commentary_type(data)
 
             # Get appropriate templates
-            templates = self._commentary_templates.get(commentary_type, self._commentary_templates["general"])
+            templates = self._commentary_templates.get(
+                commentary_type, self._commentary_templates["general"]
+            )
 
             # Select random template
             template = random.choice(templates)
@@ -173,7 +175,9 @@ class FallbackQuantGPT:
                 return "forecast"
             elif any(word in data_str for word in ["strategy", "signal", "trade"]):
                 return "strategy"
-            elif any(word in data_str for word in ["portfolio", "position", "allocation"]):
+            elif any(
+                word in data_str for word in ["portfolio", "position", "allocation"]
+            ):
                 return "portfolio"
             else:
                 return "general"
@@ -274,7 +278,12 @@ class FallbackQuantGPT:
 
         except Exception as e:
             logger.error(f"Error analyzing market sentiment: {e}")
-            return {"sentiment": "unknown", "confidence": 0.0, "error": str(e), "fallback_mode": True}
+            return {
+                "sentiment": "unknown",
+                "confidence": 0.0,
+                "error": str(e),
+                "fallback_mode": True,
+            }
 
     def get_system_health(self) -> Dict[str, Any]:
         """
@@ -293,4 +302,9 @@ class FallbackQuantGPT:
             }
         except Exception as e:
             logger.error(f"Error getting fallback QuantGPT health: {e}")
-            return {"status": "error", "available_templates": 0, "fallback_mode": True, "error": str(e)}
+            return {
+                "status": "error",
+                "available_templates": 0,
+                "fallback_mode": True,
+                "error": str(e),
+            }

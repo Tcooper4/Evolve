@@ -67,12 +67,17 @@ class PerformanceWeightsManager:
 
                 # Keep only recent history
                 if len(self.performance_history[ticker][model]) > window_size * 2:
-                    self.performance_history[ticker][model] = self.performance_history[ticker][model][-window_size:]
+                    self.performance_history[ticker][model] = self.performance_history[
+                        ticker
+                    ][model][-window_size:]
 
                 # Calculate rolling Sharpe ratio
                 if len(self.performance_history[ticker][model]) >= window_size:
                     recent_performance = [
-                        record["performance"] for record in self.performance_history[ticker][model][-window_size:]
+                        record["performance"]
+                        for record in self.performance_history[ticker][model][
+                            -window_size:
+                        ]
                     ]
                     sharpe_ratio = self._calculate_sharpe_ratio(recent_performance)
                     sharpe_ratios[model] = sharpe_ratio
@@ -133,9 +138,15 @@ class PerformanceWeightsManager:
 
         except Exception as e:
             logger.error(f"Error updating weights with Sharpe ratio: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def _calculate_sharpe_ratio(self, returns: List[float], risk_free_rate: float = 0.02) -> float:
+    def _calculate_sharpe_ratio(
+        self, returns: List[float], risk_free_rate: float = 0.02
+    ) -> float:
         """Calculate Sharpe ratio from a list of returns.
 
         Args:
@@ -223,7 +234,13 @@ class PerformanceWeightsManager:
         Returns:
             Dictionary of default weights
         """
-        return {"lstm": 0.3, "xgboost": 0.25, "prophet": 0.2, "ensemble": 0.15, "tcn": 0.1}
+        return {
+            "lstm": 0.3,
+            "xgboost": 0.25,
+            "prophet": 0.2,
+            "ensemble": 0.15,
+            "tcn": 0.1,
+        }
 
     def _save_weights(self, ticker: str, weights: Dict[str, float]) -> bool:
         """Save weights to file.
@@ -302,7 +319,11 @@ class PerformanceWeightsManager:
 
         except Exception as e:
             logger.error(f"Error resetting weights: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
 
 # Global instance
@@ -322,7 +343,13 @@ def export_weights_to_file(ticker: str, strategy: str = "balanced") -> Dict[str,
     """
     try:
         # Default weights for demonstration
-        default_weights = {"lstm": 0.3, "xgboost": 0.25, "prophet": 0.2, "ensemble": 0.15, "tcn": 0.1}
+        default_weights = {
+            "lstm": 0.3,
+            "xgboost": 0.25,
+            "prophet": 0.2,
+            "ensemble": 0.15,
+            "tcn": 0.1,
+        }
 
         try:
             os.makedirs("memory", exist_ok=True)
@@ -371,7 +398,13 @@ def get_latest_weights(ticker: str = "AAPL") -> Dict[str, float]:
                 }
         else:
             # Return default weights if file doesn't exist
-            return {"lstm": 0.3, "xgboost": 0.25, "prophet": 0.2, "ensemble": 0.15, "tcn": 0.1}
+            return {
+                "lstm": 0.3,
+                "xgboost": 0.25,
+                "prophet": 0.2,
+                "ensemble": 0.15,
+                "tcn": 0.1,
+            }
     except Exception as e:
         logger.error(f"Error loading weights: {e}")
         return {"lstm": 1.0}  # Fallback to single model

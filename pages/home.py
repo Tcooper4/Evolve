@@ -35,7 +35,9 @@ def render_home_page(module_status: Dict[str, Any], agent_hub_available: bool = 
     with col1:
         st.metric(
             label="System Status",
-            value="🟢 Operational" if all(status == "SUCCESS" for status in module_status.values()) else "🟡 Degraded",
+            value="🟢 Operational"
+            if all(status == "SUCCESS" for status in module_status.values())
+            else "🟡 Degraded",
             delta="All systems online"
             if all(status == "SUCCESS" for status in module_status.values())
             else "Some issues detected",
@@ -46,11 +48,15 @@ def render_home_page(module_status: Dict[str, Any], agent_hub_available: bool = 
         try:
             model_monitor = ModelMonitor()
             trust_levels = model_monitor.get_model_trust_levels()
-            avg_trust = sum(trust_levels.values()) / len(trust_levels) if trust_levels else 0
+            avg_trust = (
+                sum(trust_levels.values()) / len(trust_levels) if trust_levels else 0
+            )
             st.metric(
                 label="Avg Model Trust",
                 value=f"{avg_trust:.1%}",
-                delta=f"{len(trust_levels)} models active" if trust_levels else "No models",
+                delta=f"{len(trust_levels)} models active"
+                if trust_levels
+                else "No models",
             )
         except Exception as e:
             logger.warning(f"Could not get model trust levels: {e}")
@@ -69,7 +75,11 @@ def render_home_page(module_status: Dict[str, Any], agent_hub_available: bool = 
                     delta="Portfolio active" if total_positions > 0 else "No positions",
                 )
             else:
-                st.metric(label="Active Positions", value="0", delta="Portfolio not initialized")
+                st.metric(
+                    label="Active Positions",
+                    value="0",
+                    delta="Portfolio not initialized",
+                )
         except Exception as e:
             logger.warning(f"Could not get portfolio status: {e}")
             st.metric(label="Active Positions", value="N/A", delta="Error")
@@ -83,7 +93,9 @@ def render_home_page(module_status: Dict[str, Any], agent_hub_available: bool = 
             st.metric(
                 label="Recent Decisions",
                 value=decision_count,
-                delta="Strategy active" if decision_count > 0 else "No recent decisions",
+                delta="Strategy active"
+                if decision_count > 0
+                else "No recent decisions",
             )
         except Exception as e:
             logger.warning(f"Could not get strategy decisions: {e}")
@@ -152,7 +164,9 @@ def render_home_page(module_status: Dict[str, Any], agent_hub_available: bool = 
         )
 
     # Quick prompt suggestions
-    st.caption("💡 Quick suggestions: 'Forecast AAPL', 'RSI strategy', 'Market analysis', 'Portfolio optimization'")
+    st.caption(
+        "💡 Quick suggestions: 'Forecast AAPL', 'RSI strategy', 'Market analysis', 'Portfolio optimization'"
+    )
 
     # Recent Activity
     st.subheader("📋 Recent Activity")
@@ -165,10 +179,14 @@ def render_home_page(module_status: Dict[str, Any], agent_hub_available: bool = 
 
             if recent_interactions:
                 for interaction in recent_interactions:
-                    with st.expander(f"{interaction['timestamp']} - {interaction['agent_type']}"):
+                    with st.expander(
+                        f"{interaction['timestamp']} - {interaction['agent_type']}"
+                    ):
                         st.write(f"**Prompt:** {interaction['prompt']}")
                         st.write(f"**Response:** {interaction['response'][:200]}...")
-                        st.write(f"**Confidence:** {interaction.get('confidence', 'N/A')}")
+                        st.write(
+                            f"**Confidence:** {interaction.get('confidence', 'N/A')}"
+                        )
             else:
                 st.info("No recent agent interactions")
         else:
@@ -210,7 +228,9 @@ def get_comprehensive_system_health() -> Dict[str, Any]:
             data_feed = get_data_feed()
             feed_health = data_feed.get_system_health()
             health_data["data_feed_status"] = feed_health.get("status", "Unknown")
-            health_data["data_feed_providers"] = feed_health.get("available_providers", 0)
+            health_data["data_feed_providers"] = feed_health.get(
+                "available_providers", 0
+            )
         except ImportError:
             health_data["data_feed_status"] = "Not Available"
         except Exception as e:
@@ -222,7 +242,9 @@ def get_comprehensive_system_health() -> Dict[str, Any]:
             model_monitor = ModelMonitor()
             trust_levels = model_monitor.get_model_trust_levels()
             health_data["active_models"] = len(trust_levels) if trust_levels else 0
-            health_data["model_engine_status"] = "Healthy" if health_data["active_models"] > 0 else "Degraded"
+            health_data["model_engine_status"] = (
+                "Healthy" if health_data["active_models"] > 0 else "Degraded"
+            )
         except Exception as e:
             logger.warning(f"Model engine health check failed: {e}")
             health_data["model_engine_status"] = "Error"
@@ -231,8 +253,12 @@ def get_comprehensive_system_health() -> Dict[str, Any]:
         try:
             strategy_logger = StrategyLogger()
             recent_strategies = strategy_logger.get_recent_decisions(limit=10)
-            health_data["active_strategies"] = len(recent_strategies) if recent_strategies else 0
-            health_data["strategy_engine_status"] = "Healthy" if health_data["active_strategies"] > 0 else "Degraded"
+            health_data["active_strategies"] = (
+                len(recent_strategies) if recent_strategies else 0
+            )
+            health_data["strategy_engine_status"] = (
+                "Healthy" if health_data["active_strategies"] > 0 else "Degraded"
+            )
         except Exception as e:
             logger.warning(f"Strategy engine health check failed: {e}")
             health_data["strategy_engine_status"] = "Error"

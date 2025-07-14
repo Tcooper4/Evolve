@@ -160,7 +160,9 @@ class PipelineManager:
             self.logger.error(f"Failed to run pipeline: {e}")
             return False
 
-    async def _initialize_pipeline(self, pipeline_type: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _initialize_pipeline(
+        self, pipeline_type: str, config: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Initialize pipeline components."""
         pipeline = {
             "type": pipeline_type,
@@ -255,47 +257,91 @@ class PipelineManager:
 
     def _init_market_data_fetcher(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize market data fetcher."""
-        return {"type": "fetcher", "config": config.get("fetcher", {}), "status": "initialized"}
+        return {
+            "type": "fetcher",
+            "config": config.get("fetcher", {}),
+            "status": "initialized",
+        }
 
     def _init_market_data_processor(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize market data processor."""
-        return {"type": "processor", "config": config.get("processor", {}), "status": "initialized"}
+        return {
+            "type": "processor",
+            "config": config.get("processor", {}),
+            "status": "initialized",
+        }
 
     def _init_market_data_storage(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize market data storage."""
-        return {"type": "storage", "config": config.get("storage", {}), "status": "initialized"}
+        return {
+            "type": "storage",
+            "config": config.get("storage", {}),
+            "status": "initialized",
+        }
 
     def _init_model_data_loader(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize model data loader."""
-        return {"type": "data_loader", "config": config.get("data_loader", {}), "status": "initialized"}
+        return {
+            "type": "data_loader",
+            "config": config.get("data_loader", {}),
+            "status": "initialized",
+        }
 
     def _init_model_preprocessor(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize model preprocessor."""
-        return {"type": "preprocessor", "config": config.get("preprocessor", {}), "status": "initialized"}
+        return {
+            "type": "preprocessor",
+            "config": config.get("preprocessor", {}),
+            "status": "initialized",
+        }
 
     def _init_model_trainer(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize model trainer."""
-        return {"type": "trainer", "config": config.get("trainer", {}), "status": "initialized"}
+        return {
+            "type": "trainer",
+            "config": config.get("trainer", {}),
+            "status": "initialized",
+        }
 
     def _init_model_evaluator(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize model evaluator."""
-        return {"type": "evaluator", "config": config.get("evaluator", {}), "status": "initialized"}
+        return {
+            "type": "evaluator",
+            "config": config.get("evaluator", {}),
+            "status": "initialized",
+        }
 
     def _init_prediction_data_loader(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize prediction data loader."""
-        return {"type": "data_loader", "config": config.get("data_loader", {}), "status": "initialized"}
+        return {
+            "type": "data_loader",
+            "config": config.get("data_loader", {}),
+            "status": "initialized",
+        }
 
     def _init_prediction_preprocessor(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize prediction preprocessor."""
-        return {"type": "preprocessor", "config": config.get("preprocessor", {}), "status": "initialized"}
+        return {
+            "type": "preprocessor",
+            "config": config.get("preprocessor", {}),
+            "status": "initialized",
+        }
 
     def _init_predictor(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize predictor."""
-        return {"type": "predictor", "config": config.get("predictor", {}), "status": "initialized"}
+        return {
+            "type": "predictor",
+            "config": config.get("predictor", {}),
+            "status": "initialized",
+        }
 
     def _init_prediction_postprocessor(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize prediction postprocessor."""
-        return {"type": "postprocessor", "config": config.get("postprocessor", {}), "status": "initialized"}
+        return {
+            "type": "postprocessor",
+            "config": config.get("postprocessor", {}),
+            "status": "initialized",
+        }
 
     def _load_data(self, data_path: str) -> pd.DataFrame:
         """Load data from file."""
@@ -310,7 +356,9 @@ class PipelineManager:
             self.logger.error(f"Failed to load data: {e}")
             raise
 
-    async def _get_stream_data(self, pipeline: Dict[str, Any]) -> Optional[pd.DataFrame]:
+    async def _get_stream_data(
+        self, pipeline: Dict[str, Any]
+    ) -> Optional[pd.DataFrame]:
         """Get data from stream."""
         try:
             # Implement stream data retrieval based on pipeline type
@@ -325,7 +373,9 @@ class PipelineManager:
             self.logger.error(f"Failed to get stream data: {e}")
             return None
 
-    async def _run_component(self, component: Dict[str, Any], data: pd.DataFrame) -> pd.DataFrame:
+    async def _run_component(
+        self, component: Dict[str, Any], data: pd.DataFrame
+    ) -> pd.DataFrame:
         """Run pipeline component."""
         try:
             # Update component status
@@ -360,47 +410,65 @@ class PipelineManager:
             component["status"] = "failed"
             raise
 
-    async def _run_fetcher(self, component: Dict[str, Any], data: pd.DataFrame) -> pd.DataFrame:
+    async def _run_fetcher(
+        self, component: Dict[str, Any], data: pd.DataFrame
+    ) -> pd.DataFrame:
         """Run data fetcher."""
         # Implement data fetching logic
         return data
 
-    async def _run_processor(self, component: Dict[str, Any], data: pd.DataFrame) -> pd.DataFrame:
+    async def _run_processor(
+        self, component: Dict[str, Any], data: pd.DataFrame
+    ) -> pd.DataFrame:
         """Run data processor."""
         # Implement data processing logic
         return data
 
-    async def _run_storage(self, component: Dict[str, Any], data: pd.DataFrame) -> pd.DataFrame:
+    async def _run_storage(
+        self, component: Dict[str, Any], data: pd.DataFrame
+    ) -> pd.DataFrame:
         """Run data storage."""
         # Implement data storage logic
         return data
 
-    async def _run_data_loader(self, component: Dict[str, Any], data: pd.DataFrame) -> pd.DataFrame:
+    async def _run_data_loader(
+        self, component: Dict[str, Any], data: pd.DataFrame
+    ) -> pd.DataFrame:
         """Run data loader."""
         # Implement data loading logic
         return data
 
-    async def _run_preprocessor(self, component: Dict[str, Any], data: pd.DataFrame) -> pd.DataFrame:
+    async def _run_preprocessor(
+        self, component: Dict[str, Any], data: pd.DataFrame
+    ) -> pd.DataFrame:
         """Run data preprocessor."""
         # Implement data preprocessing logic
         return data
 
-    async def _run_trainer(self, component: Dict[str, Any], data: pd.DataFrame) -> pd.DataFrame:
+    async def _run_trainer(
+        self, component: Dict[str, Any], data: pd.DataFrame
+    ) -> pd.DataFrame:
         """Run model trainer."""
         # Implement model training logic
         return data
 
-    async def _run_evaluator(self, component: Dict[str, Any], data: pd.DataFrame) -> pd.DataFrame:
+    async def _run_evaluator(
+        self, component: Dict[str, Any], data: pd.DataFrame
+    ) -> pd.DataFrame:
         """Run model evaluator."""
         # Implement model evaluation logic
         return data
 
-    async def _run_predictor(self, component: Dict[str, Any], data: pd.DataFrame) -> pd.DataFrame:
+    async def _run_predictor(
+        self, component: Dict[str, Any], data: pd.DataFrame
+    ) -> pd.DataFrame:
         """Run predictor."""
         # Implement prediction logic
         return data
 
-    async def _run_postprocessor(self, component: Dict[str, Any], data: pd.DataFrame) -> pd.DataFrame:
+    async def _run_postprocessor(
+        self, component: Dict[str, Any], data: pd.DataFrame
+    ) -> pd.DataFrame:
         """Run prediction postprocessor."""
         # Implement prediction postprocessing logic
         return data
@@ -430,7 +498,9 @@ class PipelineManager:
 def main():
     """Main entry point for the pipeline management script."""
     parser = argparse.ArgumentParser(description="Pipeline Manager")
-    parser.add_argument("command", choices=["run", "status", "report"], help="Command to run")
+    parser.add_argument(
+        "command", choices=["run", "status", "report"], help="Command to run"
+    )
     parser.add_argument(
         "--pipeline-type",
         choices=["market_data", "model_training", "prediction"],

@@ -44,19 +44,42 @@ Examples:
     )
 
     # Interface options
-    parser.add_argument("--streamlit", action="store_true", help="Launch Streamlit web interface")
-    parser.add_argument("--terminal", action="store_true", help="Launch terminal interface")
+    parser.add_argument(
+        "--streamlit", action="store_true", help="Launch Streamlit web interface"
+    )
+    parser.add_argument(
+        "--terminal", action="store_true", help="Launch terminal interface"
+    )
     parser.add_argument("--api", action="store_true", help="Launch REST API server")
-    parser.add_argument("--unified", action="store_true", help="Launch unified interface with multiple access methods")
+    parser.add_argument(
+        "--unified",
+        action="store_true",
+        help="Launch unified interface with multiple access methods",
+    )
 
     # Command execution
-    parser.add_argument("--command", type=str, help='Execute a specific command (e.g., "forecast AAPL 7d")')
+    parser.add_argument(
+        "--command",
+        type=str,
+        help='Execute a specific command (e.g., "forecast AAPL 7d")',
+    )
 
     # System options
-    parser.add_argument("--health", action="store_true", help="Check system health and component status")
-    parser.add_argument("--config", type=str, default="config/system_config.yaml", help="Path to configuration file")
     parser.add_argument(
-        "--log-level", type=str, choices=["DEBUG", "INFO", "WARNING", "ERROR"], default="INFO", help="Logging level"
+        "--health", action="store_true", help="Check system health and component status"
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config/system_config.yaml",
+        help="Path to configuration file",
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Logging level",
     )
 
     args = parser.parse_args()
@@ -95,7 +118,11 @@ Examples:
         return {"status": "interrupted", "timestamp": datetime.now().isoformat()}
     except Exception as e:
         logger.error(f"Fatal error in main: {e}")
-        return {"status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def check_system_health() -> Dict[str, Any]:
@@ -119,14 +146,21 @@ def check_system_health() -> Dict[str, Any]:
         print("=" * 60)
 
         print(f"Overall Status: {health['overall_status'].upper()}")
-        print(f"Healthy Components: {health['healthy_components']}/{health['total_components']}")
+        print(
+            f"Healthy Components: {health['healthy_components']}/{health['total_components']}"
+        )
         print(f"Timestamp: {health['timestamp']}")
 
         print("\nComponent Status:")
         print("-" * 40)
         for name, component_health in health["components"].items():
             status = component_health.get("status", "unknown")
-            status_icon = {"healthy": "✅", "fallback": "⚠️", "error": "❌", "unknown": "❓"}.get(status, "❓")
+            status_icon = {
+                "healthy": "✅",
+                "fallback": "⚠️",
+                "error": "❌",
+                "unknown": "❓",
+            }.get(status, "❓")
 
             print(f"{status_icon} {name}: {status}")
 
@@ -135,11 +169,19 @@ def check_system_health() -> Dict[str, Any]:
 
         print("\n" + "=" * 60)
 
-        return {"status": "success", "health": health, "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "success",
+            "health": health,
+            "timestamp": datetime.now().isoformat(),
+        }
 
     except Exception as e:
         logger.error(f"Error checking system health: {e}")
-        return {"status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def execute_command(command: str) -> Dict[str, Any]:
@@ -186,17 +228,30 @@ def execute_command(command: str) -> Dict[str, Any]:
             if "forecast_values" in result:
                 print(f"Forecast values: {result['forecast_values'][:5]}...")
 
-            return {"status": "success", "command": command, "result": result, "timestamp": datetime.now().isoformat()}
+            return {
+                "status": "success",
+                "command": command,
+                "result": result,
+                "timestamp": datetime.now().isoformat(),
+            }
 
         elif action == "health":
             return check_system_health()
 
         else:
-            return {"status": "error", "error": f"Unknown command: {action}", "timestamp": datetime.now().isoformat()}
+            return {
+                "status": "error",
+                "error": f"Unknown command: {action}",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     except Exception as e:
         logger.error(f"Error executing command: {e}")
-        return {"status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def launch_streamlit_interface() -> Dict[str, Any]:
@@ -213,7 +268,13 @@ def launch_streamlit_interface() -> Dict[str, Any]:
         import sys
 
         # Launch Streamlit
-        cmd = [sys.executable, "-m", "streamlit", "run", "interface/unified_interface.py"]
+        cmd = [
+            sys.executable,
+            "-m",
+            "streamlit",
+            "run",
+            "interface/unified_interface.py",
+        ]
 
         print("🚀 Launching Evolve Trading Platform...")
         print("📊 Streamlit interface will open in your browser")
@@ -222,11 +283,19 @@ def launch_streamlit_interface() -> Dict[str, Any]:
 
         subprocess.run(cmd)
 
-        return {"status": "success", "interface": "streamlit", "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "success",
+            "interface": "streamlit",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     except Exception as e:
         logger.error(f"Error launching Streamlit interface: {e}")
-        return {"status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def launch_terminal_interface() -> Dict[str, Any]:
@@ -266,11 +335,19 @@ def launch_terminal_interface() -> Dict[str, Any]:
             except Exception as e:
                 print(f"Error: {e}")
 
-        return {"status": "success", "interface": "terminal", "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "success",
+            "interface": "terminal",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     except Exception as e:
         logger.error(f"Error launching terminal interface: {e}")
-        return {"status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def launch_api_interface() -> Dict[str, Any]:
@@ -322,11 +399,19 @@ def launch_api_interface() -> Dict[str, Any]:
         except Exception as e:
             logger.error(f"Failed to start API server: {e}")
 
-        return {"status": "not_implemented", "interface": "api", "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "not_implemented",
+            "interface": "api",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     except Exception as e:
         logger.error(f"Error launching API interface: {e}")
-        return {"status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def launch_unified_interface() -> Dict[str, Any]:
@@ -344,11 +429,20 @@ def launch_unified_interface() -> Dict[str, Any]:
         interface = UnifiedInterface()
         result = interface.run()
 
-        return {"status": "success", "interface": "unified", "result": result, "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "success",
+            "interface": "unified",
+            "result": result,
+            "timestamp": datetime.now().isoformat(),
+        }
 
     except Exception as e:
         logger.error(f"Error launching unified interface: {e}")
-        return {"status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 if __name__ == "__main__":
