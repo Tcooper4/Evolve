@@ -10,10 +10,12 @@ import json
 import logging
 import os
 import re
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from collections import deque
 
 import numpy as np
 import pandas as pd
@@ -25,6 +27,14 @@ try:
 except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
     logger.warning("SentenceTransformers not available. Prompt examples will be disabled.")
+
+# Import tiktoken for token counting
+try:
+    import tiktoken
+    TIKTOKEN_AVAILABLE = True
+except ImportError:
+    TIKTOKEN_AVAILABLE = False
+    logger.warning("tiktoken not available. Token counting will be disabled.")
 
 from trading.agents.forecast_router import ForecastRouter
 from trading.agents.strategy_gatekeeper import StrategyGatekeeper
@@ -140,6 +150,35 @@ class PromptAgent:
                 logger.warning(f"Could not initialize sentence transformer: {e}")
         else:
             logger.info("Prompt examples system disabled (SentenceTransformers not available)")
+
+        # Initialize token usage tracking
+        self.token_usage = {
+            "total_tokens": 0,
+            "total_cost": 0.0,
+            "requests_count": 0,
+            "model_costs": {
+                "gpt-4": 0.03,  # per 1K tokens
+                "gpt-3.5-turbo": 0.002,
+                "claude-3": 0.015,
+                "default": 0.01
+            }
+        }
+
+        # Initialize log batching
+        self.log_buffer = deque(maxlen=100)
+        self.last_log_flush = time.time()
+        self.log_flush_interval = 60  # seconds
+
+        # Initialize tiktoken for token counting
+        self.tokenizer = None
+        if TIKTOKEN_AVAILABLE:
+            try:
+                self.tokenizer = tiktoken.get_encoding("cl100k_base")  # GPT-4 encoding
+                logger.info("Token counting initialized successfully")
+            except Exception as e:
+                logger.warning(f"Could not initialize tokenizer: {e}")
+        else:
+            logger.info("Token counting disabled (tiktoken not available)")
 
         # Initialize components
         self.forecast_router = ForecastRouter()
@@ -265,6 +304,174 @@ class PromptAgent:
         except Exception as e:
             logger.error(f"Error computing example embeddings: {e}")
             return None
+
+    def estimate_token_usage(self, prompt: str, model: str = "gpt-4") -> Dict[str, Any]:
+        """Estimate token usage and cost for a prompt.
+        
+        Args:
+            prompt: Input prompt
+            model: Model name for cost calculation
+            
+        Returns:
+            Dictionary with token count and estimated cost
+        """
+        try:
+            if not self.tokenizer:
+                # Fallback estimation: ~4 characters per token
+                token_count = len(prompt) // 4
+            else:
+                token_count = len(self.tokenizer.encode(prompt))
+            
+            # Get cost per 1K tokens
+            cost_per_1k = self.token_usage["model_costs"].get(model, self.token_usage["model_costs"]["default"])
+            estimated_cost = (token_count / 1000) * cost_per_1k
+            
+            return {
+                "token_count": token_count,
+                "estimated_cost": estimated_cost,
+                "model": model,
+                "cost_per_1k": cost_per_1k
+            }
+            
+        except Exception as e:
+            logger.warning(f"Error estimating token usage: {e}")
+            return {
+                "token_count": 0,
+                "estimated_cost": 0.0,
+                "model": model,
+                "cost_per_1k": 0.0
+            }
+
+    def sanitize_prompt(self, prompt: str, max_length: int = 4000) -> str:
+        """Sanitize and trim overly long prompts to prevent injection attacks.
+        
+        Args:
+            prompt: Input prompt
+            max_length: Maximum allowed length
+            
+        Returns:
+            Sanitized prompt
+        """
+        try:
+            # Remove potential injection patterns
+            injection_patterns = [
+                r'<script.*?</script>',
+                r'javascript:',
+                r'data:text/html',
+                r'vbscript:',
+                r'on\w+\s*=',
+                r'<iframe',
+                r'<object',
+                r'<embed',
+            ]
+            
+            sanitized = prompt
+            for pattern in injection_patterns:
+                sanitized = re.sub(pattern, '', sanitized, flags=re.IGNORECASE)
+            
+            # Remove excessive whitespace
+            sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+            
+            # Truncate if too long
+            if len(sanitized) > max_length:
+                sanitized = sanitized[:max_length] + "..."
+                logger.warning(f"Prompt truncated from {len(prompt)} to {len(sanitized)} characters")
+            
+            # Log if significant changes were made
+            if len(sanitized) != len(prompt):
+                logger.info(f"Prompt sanitized: {len(prompt)} -> {len(sanitized)} characters")
+            
+            return sanitized
+            
+        except Exception as e:
+            logger.error(f"Error sanitizing prompt: {e}")
+            return prompt[:max_length] if len(prompt) > max_length else prompt
+
+    def batch_log(self, message: str, level: str = "info"):
+        """Add log message to buffer for batch processing."""
+        try:
+            timestamp = datetime.now().isoformat()
+            log_entry = {
+                "timestamp": timestamp,
+                "level": level,
+                "message": message
+            }
+            
+            self.log_buffer.append(log_entry)
+            
+            # Flush buffer if it's full or enough time has passed
+            current_time = time.time()
+            if (len(self.log_buffer) >= 100 or 
+                current_time - self.last_log_flush >= self.log_flush_interval):
+                self._flush_log_buffer()
+                
+        except Exception as e:
+            # Fallback to direct logging
+            logger.error(f"Error in batch logging: {e}")
+            logger.info(message)
+
+    def _flush_log_buffer(self):
+        """Flush the log buffer to actual logging."""
+        try:
+            if not self.log_buffer:
+                return
+            
+            # Group logs by level
+            logs_by_level = {}
+            for entry in self.log_buffer:
+                level = entry["level"]
+                if level not in logs_by_level:
+                    logs_by_level[level] = []
+                logs_by_level[level].append(entry["message"])
+            
+            # Log grouped messages
+            for level, messages in logs_by_level.items():
+                if len(messages) == 1:
+                    # Single message, log directly
+                    getattr(logger, level)(messages[0])
+                else:
+                    # Multiple messages, log as batch
+                    batch_message = f"Batch of {len(messages)} {level} messages: " + "; ".join(messages[:5])
+                    if len(messages) > 5:
+                        batch_message += f" ... and {len(messages) - 5} more"
+                    getattr(logger, level)(batch_message)
+            
+            # Clear buffer
+            self.log_buffer.clear()
+            self.last_log_flush = time.time()
+            
+        except Exception as e:
+            logger.error(f"Error flushing log buffer: {e}")
+
+    def update_token_usage(self, tokens_used: int, model: str = "gpt-4"):
+        """Update token usage tracking.
+        
+        Args:
+            tokens_used: Number of tokens used
+            model: Model name for cost calculation
+        """
+        try:
+            self.token_usage["total_tokens"] += tokens_used
+            self.token_usage["requests_count"] += 1
+            
+            # Calculate cost
+            cost_per_1k = self.token_usage["model_costs"].get(model, self.token_usage["model_costs"]["default"])
+            cost = (tokens_used / 1000) * cost_per_1k
+            self.token_usage["total_cost"] += cost
+            
+            # Log usage periodically
+            if self.token_usage["requests_count"] % 10 == 0:
+                self.batch_log(
+                    f"Token usage update: {tokens_used} tokens, ${cost:.4f} cost, "
+                    f"Total: {self.token_usage['total_tokens']} tokens, ${self.token_usage['total_cost']:.4f}"
+                )
+                
+        except Exception as e:
+            logger.error(f"Error updating token usage: {e}")
+
+    def get_token_usage_stats(self) -> Dict[str, Any]:
+        """Get current token usage statistics."""
+        return self.token_usage.copy()
 
     def _find_similar_examples(self, prompt: str, top_k: int = 3) -> List[Dict[str, Any]]:
         """Find similar examples using cosine similarity.
@@ -519,7 +726,13 @@ class PromptAgent:
             Agent response with results and recommendations
         """
         try:
-            logger.info(f"Processing prompt: {prompt}")
+            # Sanitize and validate prompt
+            original_prompt = prompt
+            prompt = self.sanitize_prompt(prompt)
+            
+            # Estimate token usage and cost
+            token_estimate = self.estimate_token_usage(prompt, model="gpt-4")
+            self.batch_log(f"Processing prompt: {len(prompt)} chars, estimated {token_estimate['token_count']} tokens, ${token_estimate['estimated_cost']:.4f}")
 
             # Find similar examples for few-shot learning
             similar_examples = self._find_similar_examples(prompt, top_k=3)
@@ -528,7 +741,7 @@ class PromptAgent:
             enhanced_prompt = self._create_few_shot_prompt(prompt, similar_examples)
             
             if similar_examples:
-                logger.info(f"Found {len(similar_examples)} similar examples with scores: "
+                self.batch_log(f"Found {len(similar_examples)} similar examples with scores: "
                           f"{[f'{ex['similarity_score']:.3f}' for ex in similar_examples]}")
 
             # Parse prompt to extract intent and parameters

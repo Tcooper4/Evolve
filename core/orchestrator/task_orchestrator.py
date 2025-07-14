@@ -220,9 +220,12 @@ class TaskOrchestrator:
             self.logger.error(f"Failed to initialize task providers: {e}")
     
     def _load_tasks(self):
-        """Load task configurations"""
+        """Load task configurations and build dynamic DAG"""
         try:
             tasks_config = self.config.get('tasks', {})
+            
+            # Build task dependency graph
+            task_graph = {}
             
             for task_name, task_data in tasks_config.items():
                 task_config = TaskConfig(
@@ -233,14 +236,81 @@ class TaskOrchestrator:
                     priority=task_data.get('priority', 'medium'),
                     dependencies=task_data.get('dependencies', []),
                     conditions=task_data.get('conditions', {}),
-                    parameters=task_data.get('parameters', {})
+                    parameters=task_data.get('parameters', {}),
+                    retry_attempts=task_data.get('retry_attempts', 3),
+                    retry_delay=task_data.get('retry_delay', 60),
+                    skip_on_failure=task_data.get('skip_on_failure', False)
                 )
                 
+                task_graph[task_name] = task_config
                 self.scheduler.add_task(task_config)
             
-            self.logger.info(f"Loaded {len(tasks_config)} task configurations")
+            # Validate DAG and detect cycles
+            self._validate_task_dependencies(task_graph)
+            
+            # Build execution order
+            self.execution_order = self._build_execution_order(task_graph)
+            
+            self.logger.info(f"Loaded {len(tasks_config)} task configurations with dynamic DAG")
         except Exception as e:
             self.logger.error(f"Failed to load tasks: {e}")
+    
+    def _validate_task_dependencies(self, task_graph: Dict[str, TaskConfig]) -> None:
+        """Validate task dependencies and detect cycles."""
+        visited = set()
+        rec_stack = set()
+        
+        def has_cycle(node: str) -> bool:
+            if node in rec_stack:
+                return True
+            if node in visited:
+                return False
+                
+            visited.add(node)
+            rec_stack.add(node)
+            
+            for dep in task_graph[node].dependencies:
+                if dep in task_graph and has_cycle(dep):
+                    return True
+                    
+            rec_stack.remove(node)
+            return False
+        
+        for task_name in task_graph:
+            if has_cycle(task_name):
+                raise ValueError(f"Circular dependency detected involving task: {task_name}")
+    
+    def _build_execution_order(self, task_graph: Dict[str, TaskConfig]) -> List[List[str]]:
+        """Build execution order using topological sort."""
+        # Calculate in-degrees
+        in_degree = {task: 0 for task in task_graph}
+        for task_name, task_config in task_graph.items():
+            for dep in task_config.dependencies:
+                if dep in task_graph:
+                    in_degree[task_name] += 1
+        
+        # Topological sort
+        execution_levels = []
+        queue = [task for task, degree in in_degree.items() if degree == 0]
+        
+        while queue:
+            level = []
+            next_queue = []
+            
+            for task in queue:
+                level.append(task)
+                
+                # Reduce in-degree for dependent tasks
+                for task_name, task_config in task_graph.items():
+                    if task in task_config.dependencies:
+                        in_degree[task_name] -= 1
+                        if in_degree[task_name] == 0:
+                            next_queue.append(task_name)
+            
+            execution_levels.append(level)
+            queue = next_queue
+        
+        return execution_levels
     
     def _initialize_scheduling(self):
         """Initialize task scheduling"""

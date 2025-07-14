@@ -5,9 +5,13 @@ from datetime import datetime
 from typing import Dict, Optional, Tuple
 
 import pandas as pd
+import logging
 
 # Import centralized technical indicators
 from utils.technical_indicators import calculate_bollinger_bands
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -60,9 +64,11 @@ class BollingerStrategy:
         """
         # Validate input
         if not isinstance(df, pd.DataFrame):
+            logger.error("Input must be a pandas DataFrame")
             raise ValueError("Input must be a pandas DataFrame")
         
         if df.empty:
+            logger.warning("DataFrame is empty; skipping signal generation.")
             raise ValueError("DataFrame is empty")
         
         # Check for required columns (case-insensitive)
@@ -72,7 +78,28 @@ class BollingerStrategy:
         required_columns = ["close", "volume"]
         missing_columns = [col for col in required_columns if col not in df_lower.columns]
         if missing_columns:
+            logger.error(f"Data must contain columns: {missing_columns}")
             raise ValueError(f"Data must contain columns: {missing_columns}")
+        
+        # Clean NaNs
+        df_lower = df_lower.drop_duplicates(subset=df_lower.index)
+        df_lower = df_lower.dropna()
+        if len(df_lower) < 2:
+            logger.warning("Not enough data after NaN cleaning; skipping signal generation.")
+            raise ValueError("Not enough data after NaN cleaning")
+        
+        # Fallback for constant price series
+        if df_lower["close"].std() == 0:
+            logger.warning("Constant price series detected (stddev=0); skipping signal generation.")
+            signals = pd.DataFrame(index=df_lower.index)
+            signals["signal"] = 0
+            signals["upper_band"] = df_lower["close"]
+            signals["middle_band"] = df_lower["close"]
+            signals["lower_band"] = df_lower["close"]
+            signals["bandwidth"] = 0
+            signals["squeeze"] = False
+            self.signals = signals
+            return signals
         
         # Handle NaN values
         if df_lower["close"].isna().any():

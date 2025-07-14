@@ -61,6 +61,9 @@ class TaskConfig:
     concurrent_execution: bool = False
     error_threshold: int = 5
     performance_threshold: float = 0.8
+    retry_attempts: int = 3
+    retry_delay: int = 60
+    skip_on_failure: bool = False
 
 
 @dataclass

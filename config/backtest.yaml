@@ -1,0 +1,106 @@
+# Backtesting Configuration
+# This file contains all backtesting-related configuration settings
+
+backtesting:
+  # General backtesting settings
+  enabled: true
+  default_initial_capital: 100000
+  default_commission_rate: 0.001
+  default_slippage: 0.0005
+  default_leverage: 1.0
+  
+  # Data settings
+  data:
+    start_date: "2020-01-01"
+    end_date: "2024-01-01"
+    frequency: "1d"
+    symbols: ["AAPL", "GOOGL", "MSFT", "TSLA", "AMZN"]
+    data_source: "yfinance"
+    
+  # Strategy settings
+  strategies:
+    bollinger_bands:
+      enabled: true
+      lookback_period: 20
+      std_dev: 2.0
+      position_size: 0.1
+      
+    macd:
+      enabled: true
+      fast_period: 12
+      slow_period: 26
+      signal_period: 9
+      position_size: 0.1
+      
+    rsi:
+      enabled: true
+      period: 14
+      oversold_threshold: 30
+      overbought_threshold: 70
+      position_size: 0.1
+      
+    ensemble:
+      enabled: true
+      strategies: ["bollinger_bands", "macd", "rsi"]
+      weights: [0.4, 0.3, 0.3]
+      voting_method: "majority"
+      
+  # Risk management
+  risk_management:
+    enabled: true
+    max_position_size: 0.2
+    max_portfolio_risk: 0.02
+    stop_loss: 0.05
+    take_profit: 0.1
+    trailing_stop: true
+    trailing_stop_distance: 0.02
+    
+  # Execution settings
+  execution:
+    order_type: "market"
+    fill_strategy: "next_bar"
+    partial_fills: true
+    min_trade_size: 100
+    max_trade_size: 10000
+    
+  # Performance metrics
+  metrics:
+    calculate_sharpe: true
+    calculate_sortino: true
+    calculate_calmar: true
+    calculate_max_drawdown: true
+    calculate_win_rate: true
+    calculate_profit_factor: true
+    
+  # Reporting
+  reporting:
+    generate_reports: true
+    report_formats: ["html", "pdf", "json"]
+    include_charts: true
+    include_trades: true
+    include_metrics: true
+    
+  # Optimization
+  optimization:
+    enabled: true
+    method: "grid_search"
+    parameters:
+      bollinger_bands:
+        lookback_period: [10, 20, 30]
+        std_dev: [1.5, 2.0, 2.5]
+      macd:
+        fast_period: [8, 12, 16]
+        slow_period: [20, 26, 32]
+      rsi:
+        period: [10, 14, 20]
+        oversold_threshold: [20, 30, 40]
+        overbought_threshold: [60, 70, 80]
+        
+  # Validation
+  validation:
+    walk_forward: true
+    walk_forward_periods: 12
+    walk_forward_length: 252
+    out_of_sample_testing: true
+    monte_carlo_simulation: true
+    monte_carlo_runs: 1000 
