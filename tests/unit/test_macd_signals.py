@@ -138,6 +138,32 @@ class TestMACDSignals:
             pytest.skip("MACD strategy not available")
         return MACDStrategy()
 
+    @pytest.fixture
+    def all_null_price_data(self):
+        """Create all-null price data."""
+        dates = pd.date_range(start="2023-01-01", periods=20, freq="D")
+        close_prices = [np.nan] * 20
+        df = pd.DataFrame({
+            "Close": close_prices,
+            "High": [np.nan] * 20,
+            "Low": [np.nan] * 20,
+            "Volume": [np.nan] * 20,
+        }, index=dates)
+        return df
+
+    @pytest.fixture
+    def tz_aware_price_data(self):
+        """Create timezone-aware price data."""
+        dates = pd.date_range(start="2023-01-01", periods=30, freq="D", tz="UTC")
+        close_prices = np.linspace(100, 110, 30)
+        df = pd.DataFrame({
+            "Close": close_prices,
+            "High": close_prices + 1,
+            "Low": close_prices - 1,
+            "Volume": [1000000] * 30,
+        }, index=dates)
+        return df
+
     def test_macd_signal_generation(self, macd_strategy, synthetic_price_data):
         """Test that MACD signals are generated correctly."""
         signals = macd_strategy.generate_signals(synthetic_price_data)
@@ -270,6 +296,17 @@ class TestMACDSignals:
             assert any(
                 keyword in str(e).lower() for keyword in ["nan", "missing", "invalid"]
             )
+
+    def test_all_null_data_handling(self, macd_strategy, all_null_price_data):
+        """Test handling of all-null price data."""
+        with pytest.raises(Exception):
+            macd_strategy.generate_signals(all_null_price_data)
+
+    def test_timezone_aware_data(self, macd_strategy, tz_aware_price_data):
+        """Test handling of timezone-aware price data."""
+        result = macd_strategy.generate_signals(tz_aware_price_data)
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 30
 
     def test_different_periods(self, synthetic_price_data):
         """Test MACD calculation with different periods."""

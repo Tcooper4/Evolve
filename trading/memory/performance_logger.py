@@ -1,7 +1,8 @@
-"""Performance logging utilities."""
+"""Performance logging utilities with persistent score tracking."""
 
 import json
 import logging
+import pickle
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -31,6 +32,287 @@ logger = logging.getLogger(__name__)
 performance_data = []
 
 
+class ModelScoreTracker:
+    """Model score tracker with persistent storage."""
+    
+    def __init__(self, storage_path: str = "data/model_scores"):
+        """Initialize the model score tracker.
+        
+        Args:
+            storage_path: Path to store score data
+        """
+        self.storage_path = Path(storage_path)
+        self.storage_path.mkdir(parents=True, exist_ok=True)
+        self.scores_file = self.storage_path / "model_scores.json"
+        self.history_file = self.storage_path / "score_history.pkl"
+        self.model_scores: Dict[str, Dict[str, Any]] = {}
+        self.score_history: List[Dict[str, Any]] = []
+        
+        # Load existing data
+        self.load()
+        
+    def update_score(
+        self, 
+        model_name: str, 
+        metric_name: str, 
+        score: float, 
+        timestamp: Optional[datetime] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ):
+        """Update a model's score for a specific metric.
+        
+        Args:
+            model_name: Name of the model
+            metric_name: Name of the metric
+            score: Score value
+            timestamp: Timestamp for the score
+            metadata: Additional metadata
+        """
+        if timestamp is None:
+            timestamp = datetime.now()
+            
+        # Initialize model if not exists
+        if model_name not in self.model_scores:
+            self.model_scores[model_name] = {
+                "metrics": {},
+                "last_updated": timestamp.isoformat(),
+                "total_updates": 0
+            }
+            
+        # Update score
+        if metric_name not in self.model_scores[model_name]["metrics"]:
+            self.model_scores[model_name]["metrics"][metric_name] = {
+                "current_score": score,
+                "best_score": score,
+                "worst_score": score,
+                "avg_score": score,
+                "score_history": [],
+                "last_updated": timestamp.isoformat()
+            }
+        else:
+            metric_data = self.model_scores[model_name]["metrics"][metric_name]
+            metric_data["current_score"] = score
+            metric_data["best_score"] = max(metric_data["best_score"], score)
+            metric_data["worst_score"] = min(metric_data["worst_score"], score)
+            metric_data["score_history"].append({
+                "score": score,
+                "timestamp": timestamp.isoformat(),
+                "metadata": metadata or {}
+            })
+            
+            # Calculate running average
+            scores = [h["score"] for h in metric_data["score_history"]]
+            metric_data["avg_score"] = np.mean(scores)
+            metric_data["last_updated"] = timestamp.isoformat()
+            
+        # Update model metadata
+        self.model_scores[model_name]["last_updated"] = timestamp.isoformat()
+        self.model_scores[model_name]["total_updates"] += 1
+        
+        # Record in history
+        history_entry = {
+            "timestamp": timestamp.isoformat(),
+            "model_name": model_name,
+            "metric_name": metric_name,
+            "score": score,
+            "metadata": metadata or {}
+        }
+        self.score_history.append(history_entry)
+        
+        # Keep only recent history (last 1000 entries)
+        if len(self.score_history) > 1000:
+            self.score_history = self.score_history[-1000:]
+            
+        logger.debug(f"Updated score for {model_name}.{metric_name}: {score}")
+        
+    def get_score(self, model_name: str, metric_name: str) -> Optional[float]:
+        """Get current score for a model and metric.
+        
+        Args:
+            model_name: Name of the model
+            metric_name: Name of the metric
+            
+        Returns:
+            Current score or None if not found
+        """
+        if (model_name in self.model_scores and 
+            metric_name in self.model_scores[model_name]["metrics"]):
+            return self.model_scores[model_name]["metrics"][metric_name]["current_score"]
+        return None
+        
+    def get_model_scores(self, model_name: str) -> Dict[str, Any]:
+        """Get all scores for a model.
+        
+        Args:
+            model_name: Name of the model
+            
+        Returns:
+            Dictionary with all metric scores
+        """
+        return self.model_scores.get(model_name, {})
+        
+    def get_best_model(self, metric_name: str) -> Optional[str]:
+        """Get the best performing model for a metric.
+        
+        Args:
+            metric_name: Name of the metric
+            
+        Returns:
+            Name of the best model or None
+        """
+        best_model = None
+        best_score = float('-inf')
+        
+        for model_name, model_data in self.model_scores.items():
+            if metric_name in model_data["metrics"]:
+                score = model_data["metrics"][metric_name]["current_score"]
+                if score > best_score:
+                    best_score = score
+                    best_model = model_name
+                    
+        return best_model
+        
+    def get_score_summary(self) -> Dict[str, Any]:
+        """Get summary of all model scores.
+        
+        Returns:
+            Dictionary with score summary
+        """
+        summary = {
+            "total_models": len(self.model_scores),
+            "total_history_entries": len(self.score_history),
+            "models": {}
+        }
+        
+        for model_name, model_data in self.model_scores.items():
+            summary["models"][model_name] = {
+                "metrics_count": len(model_data["metrics"]),
+                "total_updates": model_data["total_updates"],
+                "last_updated": model_data["last_updated"],
+                "metrics": {}
+            }
+            
+            for metric_name, metric_data in model_data["metrics"].items():
+                summary["models"][model_name]["metrics"][metric_name] = {
+                    "current_score": metric_data["current_score"],
+                    "best_score": metric_data["best_score"],
+                    "worst_score": metric_data["worst_score"],
+                    "avg_score": metric_data["avg_score"],
+                    "history_count": len(metric_data["score_history"])
+                }
+                
+        return summary
+        
+    def save(self, filepath: Optional[str] = None):
+        """Save model scores to file.
+        
+        Args:
+            filepath: Optional custom filepath
+        """
+        try:
+            if filepath is None:
+                filepath = self.scores_file
+                
+            # Save current scores
+            with open(filepath, 'w') as f:
+                json.dump(self.model_scores, f, indent=2)
+                
+            # Save history
+            with open(self.history_file, 'wb') as f:
+                pickle.dump(self.score_history, f)
+                
+            logger.info(f"Saved model scores to {filepath}")
+            logger.info(f"Saved score history to {self.history_file}")
+            
+        except Exception as e:
+            logger.error(f"Could not save model scores: {e}")
+            
+    def load(self, filepath: Optional[str] = None):
+        """Load model scores from file.
+        
+        Args:
+            filepath: Optional custom filepath
+        """
+        try:
+            if filepath is None:
+                filepath = self.scores_file
+                
+            # Load current scores
+            if Path(filepath).exists():
+                with open(filepath, 'r') as f:
+                    self.model_scores = json.load(f)
+                    
+            # Load history
+            if self.history_file.exists():
+                with open(self.history_file, 'rb') as f:
+                    self.score_history = pickle.load(f)
+                    
+            logger.info(f"Loaded model scores from {filepath}")
+            logger.info(f"Loaded {len(self.score_history)} history entries")
+            
+        except Exception as e:
+            logger.warning(f"Could not load model scores: {e}")
+            self.model_scores = {}
+            self.score_history = []
+            
+    def export_scores(self, filepath: str, format: str = "csv"):
+        """Export scores to file.
+        
+        Args:
+            filepath: Output filepath
+            format: Export format ('csv', 'json', 'excel')
+        """
+        try:
+            if format == "csv":
+                # Create DataFrame for export
+                export_data = []
+                for model_name, model_data in self.model_scores.items():
+                    for metric_name, metric_data in model_data["metrics"].items():
+                        export_data.append({
+                            "model_name": model_name,
+                            "metric_name": metric_name,
+                            "current_score": metric_data["current_score"],
+                            "best_score": metric_data["best_score"],
+                            "worst_score": metric_data["worst_score"],
+                            "avg_score": metric_data["avg_score"],
+                            "last_updated": metric_data["last_updated"]
+                        })
+                        
+                df = pd.DataFrame(export_data)
+                df.to_csv(filepath, index=False)
+                
+            elif format == "json":
+                with open(filepath, 'w') as f:
+                    json.dump(self.model_scores, f, indent=2)
+                    
+            elif format == "excel":
+                # Create DataFrame for export
+                export_data = []
+                for model_name, model_data in self.model_scores.items():
+                    for metric_name, metric_data in model_data["metrics"].items():
+                        export_data.append({
+                            "model_name": model_name,
+                            "metric_name": metric_name,
+                            "current_score": metric_data["current_score"],
+                            "best_score": metric_data["best_score"],
+                            "worst_score": metric_data["worst_score"],
+                            "avg_score": metric_data["avg_score"],
+                            "last_updated": metric_data["last_updated"]
+                        })
+                        
+                df = pd.DataFrame(export_data)
+                df.to_excel(filepath, index=False)
+                
+            logger.info(f"Exported scores to {filepath}")
+            
+        except Exception as e:
+            logger.error(f"Could not export scores: {e}")
+
+
+# Global instance
+_score_tracker = ModelScoreTracker()
+
+
 def log_strategy_performance(
     strategy_name: str,
     performance_metrics: Dict[str, float],
@@ -52,6 +334,10 @@ def log_strategy_performance(
 
     # Store in memory for trending
     performance_data.append(log_data)
+    
+    # Update score tracker
+    for metric_name, score in performance_metrics.items():
+        _score_tracker.update_score(strategy_name, metric_name, score, metadata=metadata)
 
     logger.info(f"Strategy Performance: {json.dumps(log_data)}")
 
@@ -83,6 +369,10 @@ def log_performance(
 
     # Store in memory for trending
     performance_data.append(log_data)
+    
+    # Update score tracker
+    for metric_name, score in metrics.items():
+        _score_tracker.update_score(model, metric_name, score, metadata=metadata)
 
     logger.info(f"Performance Log: {json.dumps(log_data)}")
 
@@ -201,199 +491,87 @@ def create_performance_trend_chart(
         )
         plt.xticks(rotation=45)
 
-        # Add trend line
-        if len(values) > 1:
-            z = np.polyfit(range(len(values)), values, 1)
-            p = np.poly1d(z)
-            plt.plot(timestamps, p(range(len(values))), "r--", alpha=0.8, label="Trend")
-            plt.legend()
-
-        plt.tight_layout()
-
         # Save chart
-        charts_dir = Path("charts")
-        charts_dir.mkdir(exist_ok=True)
-
-        filename = f"performance_trend_{metric_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        filepath = charts_dir / filename
-
-        plt.savefig(filepath, dpi=300, bbox_inches="tight")
+        chart_path = f"charts/performance_{metric_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        Path(chart_path).parent.mkdir(parents=True, exist_ok=True)
+        plt.tight_layout()
+        plt.savefig(chart_path, dpi=300, bbox_inches="tight")
         plt.close()
 
-        logger.info(f"Performance trend chart saved: {filepath}")
-        return str(filepath)
+        logger.info(f"Performance chart saved to {chart_path}")
+        return chart_path
 
     except Exception as e:
-        logger.error(f"Error creating performance trend chart: {e}")
+        logger.error(f"Error creating performance chart: {e}")
         return None
 
 
 def create_streamlit_performance_dashboard():
-    """Create a Streamlit dashboard for performance visualization."""
+    """Create a Streamlit performance dashboard."""
     if not STREAMLIT_AVAILABLE:
         logger.warning("Streamlit not available for dashboard creation")
         return
 
     try:
-        st.title("Performance Trending Dashboard")
+        st.title("Performance Dashboard")
 
         # Sidebar filters
         st.sidebar.header("Filters")
-
-        # Get unique values for filters
-        strategies = list(
-            set(
-                record.get("strategy")
-                for record in performance_data
-                if record.get("strategy")
-            )
-        )
-        tickers = list(
-            set(
-                record.get("ticker")
-                for record in performance_data
-                if record.get("ticker")
-            )
-        )
-        models = list(
-            set(
-                record.get("model")
-                for record in performance_data
-                if record.get("model")
-            )
+        days_back = st.sidebar.slider("Days Back", 1, 365, 30)
+        metric_filter = st.sidebar.selectbox(
+            "Metric",
+            ["sharpe_ratio", "total_return", "max_drawdown", "win_rate"]
         )
 
-        selected_strategy = st.sidebar.selectbox("Strategy", ["All"] + strategies)
-        selected_ticker = st.sidebar.selectbox("Ticker", ["All"] + tickers)
-        selected_model = st.sidebar.selectbox("Model", ["All"] + models)
-        days_back = st.sidebar.slider("Days Back", 7, 90, 30)
-
-        # Get filtered data
-        strategy_filter = selected_strategy if selected_strategy != "All" else None
-        ticker_filter = selected_ticker if selected_ticker != "All" else None
-        model_filter = selected_model if selected_model != "All" else None
-
-        data = get_performance_data(
-            strategy_filter, ticker_filter, model_filter, days_back
-        )
+        # Get performance data
+        data = get_performance_data(days_back=days_back)
 
         if not data:
-            st.warning("No performance data available for selected filters")
+            st.warning("No performance data available")
             return
 
-        # Convert to DataFrame for easier manipulation
+        # Create DataFrame
         df_data = []
         for record in data:
-            for metric_name, value in record["metrics"].items():
-                df_data.append(
-                    {
-                        "timestamp": datetime.fromisoformat(record["timestamp"]),
-                        "metric": metric_name,
-                        "value": float(value),
-                        "strategy": record.get("strategy", ""),
-                        "ticker": record.get("ticker", ""),
-                        "model": record.get("model", ""),
-                    }
-                )
+            if metric_filter in record["metrics"]:
+                df_data.append({
+                    "Timestamp": datetime.fromisoformat(record["timestamp"]),
+                    "Strategy": record.get("strategy", "Unknown"),
+                    "Ticker": record.get("ticker", "Unknown"),
+                    "Model": record.get("model", "Unknown"),
+                    "Metric": record["metrics"][metric_filter]
+                })
+
+        if not df_data:
+            st.warning(f"No data for metric: {metric_filter}")
+            return
 
         df = pd.DataFrame(df_data)
 
-        # Performance overview
-        st.header("Performance Overview")
-
+        # Display metrics
         col1, col2, col3 = st.columns(3)
-
         with col1:
-            if not df.empty:
-                avg_value = df["value"].mean()
-                st.metric("Average Performance", f"{avg_value:.4f}")
-
+            st.metric("Average", f"{df['Metric'].mean():.4f}")
         with col2:
-            if not df.empty:
-                latest_value = df.groupby("metric")["value"].last().mean()
-                st.metric("Latest Performance", f"{latest_value:.4f}")
-
+            st.metric("Best", f"{df['Metric'].max():.4f}")
         with col3:
-            if not df.empty:
-                trend = (
-                    df.groupby("metric")["value"]
-                    .apply(lambda x: x.iloc[-1] - x.iloc[0])
-                    .mean()
-                )
-                st.metric("Trend", f"{trend:+.4f}")
+            st.metric("Worst", f"{df['Metric'].min():.4f}")
 
-        # Performance trends by metric
-        st.header("Performance Trends by Metric")
+        # Performance chart
+        st.subheader(f"{metric_filter.replace('_', ' ').title()} Over Time")
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(df["Timestamp"], df["Metric"], marker="o", alpha=0.7)
+        ax.set_xlabel("Time")
+        ax.set_ylabel(metric_filter.replace("_", " ").title())
+        ax.grid(True, alpha=0.3)
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
 
-        metrics = df["metric"].unique()
-        selected_metric = st.selectbox("Select Metric", metrics)
-
-        metric_data = df[df["metric"] == selected_metric]
-
-        if not metric_data.empty:
-            # Create trend chart
-            fig, ax = plt.subplots(figsize=(10, 6))
-
-            for strategy in metric_data["strategy"].unique():
-                if strategy:
-                    strategy_data = metric_data[metric_data["strategy"] == strategy]
-                    ax.plot(
-                        strategy_data["timestamp"],
-                        strategy_data["value"],
-                        marker="o",
-                        label=strategy,
-                        alpha=0.7,
-                    )
-
-            ax.set_title(f"{selected_metric} Performance Trend")
-            ax.set_xlabel("Time")
-            ax.set_ylabel(selected_metric)
-            ax.legend()
-            ax.grid(True, alpha=0.3)
-
-            st.pyplot(fig)
-
-            # Performance statistics
-            st.subheader("Performance Statistics")
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.write("**Summary Statistics**")
-                stats = metric_data["value"].describe()
-                st.write(stats)
-
-            with col2:
-                st.write("**Recent Performance**")
-                recent_data = metric_data.tail(10)
-                st.dataframe(
-                    recent_data[["timestamp", "value", "strategy"]].set_index(
-                        "timestamp"
-                    )
-                )
-
-        # Performance comparison
-        st.header("Performance Comparison")
-
-        if len(metrics) > 1:
-            comparison_metric = st.selectbox(
-                "Select Metric for Comparison", metrics, key="comparison"
-            )
-
-            comparison_data = df[df["metric"] == comparison_metric]
-
-            if not comparison_data.empty:
-                # Box plot
-                fig, ax = plt.subplots(figsize=(10, 6))
-                comparison_data.boxplot(column="value", by="strategy", ax=ax)
-                ax.set_title(f"{comparison_metric} Distribution by Strategy")
-                ax.set_xlabel("Strategy")
-                ax.set_ylabel(comparison_metric)
-                plt.xticks(rotation=45)
-                st.pyplot(fig)
+        # Data table
+        st.subheader("Performance Data")
+        st.dataframe(df)
 
     except Exception as e:
-        logger.error(f"Error creating Streamlit dashboard: {e}")
         st.error(f"Error creating dashboard: {e}")
 
 
@@ -408,7 +586,7 @@ def export_performance_data(
     """Export performance data to file.
 
     Args:
-        filename: Output filename (auto-generated if None)
+        filename: Output filename
         format: Export format ('csv', 'json', 'excel')
         strategy_name: Filter by strategy name
         ticker: Filter by ticker
@@ -419,6 +597,7 @@ def export_performance_data(
         Path to exported file or None if failed
     """
     try:
+        # Get filtered data
         data = get_performance_data(strategy_name, ticker, model, days_back)
 
         if not data:
@@ -426,34 +605,35 @@ def export_performance_data(
             return None
 
         # Generate filename if not provided
-        if not filename:
+        if filename is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"performance_export_{timestamp}.{format}"
 
         # Create export directory
         export_dir = Path("exports")
         export_dir.mkdir(exist_ok=True)
-
         filepath = export_dir / filename
 
+        # Export based on format
         if format == "csv":
-            # Convert to DataFrame and export
-            df_data = []
+            # Flatten data for CSV export
+            flat_data = []
             for record in data:
-                for metric_name, value in record["metrics"].items():
-                    df_data.append(
-                        {
-                            "timestamp": record["timestamp"],
-                            "metric": metric_name,
-                            "value": float(value),
-                            "strategy": record.get("strategy", ""),
-                            "ticker": record.get("ticker", ""),
-                            "model": record.get("model", ""),
-                            "metadata": json.dumps(record.get("metadata", {})),
-                        }
-                    )
+                base_record = {
+                    "timestamp": record["timestamp"],
+                    "strategy": record.get("strategy", ""),
+                    "ticker": record.get("ticker", ""),
+                    "model": record.get("model", ""),
+                    "agentic": record.get("agentic", False),
+                }
 
-            df = pd.DataFrame(df_data)
+                # Add metrics
+                for metric_name, metric_value in record["metrics"].items():
+                    base_record[f"metric_{metric_name}"] = metric_value
+
+                flat_data.append(base_record)
+
+            df = pd.DataFrame(flat_data)
             df.to_csv(filepath, index=False)
 
         elif format == "json":
@@ -461,28 +641,50 @@ def export_performance_data(
                 json.dump(data, f, indent=2)
 
         elif format == "excel":
-            # Convert to DataFrame and export
-            df_data = []
+            # Flatten data for Excel export
+            flat_data = []
             for record in data:
-                for metric_name, value in record["metrics"].items():
-                    df_data.append(
-                        {
-                            "timestamp": record["timestamp"],
-                            "metric": metric_name,
-                            "value": float(value),
-                            "strategy": record.get("strategy", ""),
-                            "ticker": record.get("ticker", ""),
-                            "model": record.get("model", ""),
-                            "metadata": json.dumps(record.get("metadata", {})),
-                        }
-                    )
+                base_record = {
+                    "timestamp": record["timestamp"],
+                    "strategy": record.get("strategy", ""),
+                    "ticker": record.get("ticker", ""),
+                    "model": record.get("model", ""),
+                    "agentic": record.get("agentic", False),
+                }
 
-            df = pd.DataFrame(df_data)
+                # Add metrics
+                for metric_name, metric_value in record["metrics"].items():
+                    base_record[f"metric_{metric_name}"] = metric_value
+
+                flat_data.append(base_record)
+
+            df = pd.DataFrame(flat_data)
             df.to_excel(filepath, index=False)
 
-        logger.info(f"Performance data exported to: {filepath}")
+        logger.info(f"Performance data exported to {filepath}")
         return str(filepath)
 
     except Exception as e:
         logger.error(f"Error exporting performance data: {e}")
         return None
+
+
+# Convenience functions for score tracker
+def save_model_scores(filepath: Optional[str] = None):
+    """Save model scores (convenience function)."""
+    _score_tracker.save(filepath)
+
+
+def load_model_scores(filepath: Optional[str] = None):
+    """Load model scores (convenience function)."""
+    _score_tracker.load(filepath)
+
+
+def get_model_score(model_name: str, metric_name: str) -> Optional[float]:
+    """Get model score (convenience function)."""
+    return _score_tracker.get_score(model_name, metric_name)
+
+
+def get_score_summary() -> Dict[str, Any]:
+    """Get score summary (convenience function)."""
+    return _score_tracker.get_score_summary()

@@ -2,8 +2,10 @@
 LLM module for trading system.
 """
 
-# Import from the correct location
-from agents.llm.llm_interface import LLMInterface
+# Do not import LLMInterface at the top level to avoid circular import
 
-# Create aliases for backward compatibility
-__all__ = ["LLMInterface"] 
+def get_llm_interface():
+    from agents.llm.llm_interface import LLMInterface
+    return LLMInterface
+
+__all__ = ["get_llm_interface"] 

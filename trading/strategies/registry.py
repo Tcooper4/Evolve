@@ -33,35 +33,7 @@ class StrategyResult:
     strategy_name: str
 
 
-class BaseStrategy(ABC):
-    """Base class for all trading strategies."""
-
-    def __init__(self, name: str, description: str = ""):
-        """Initialize strategy."""
-        self.name = name
-        self.description = description
-        self.parameters: Dict[str, Any] = {}
-
-    @abstractmethod
-    def generate_signals(self, data: pd.DataFrame, **kwargs) -> pd.DataFrame:
-        """Generate trading signals from market data."""
-
-    @abstractmethod
-    def get_parameter_space(self) -> Dict[str, Any]:
-        """Get the parameter space for optimization."""
-
-    def set_parameters(self, parameters: Dict[str, Any]):
-        """Set strategy parameters."""
-        self.parameters.update(parameters)
-
-    def get_parameters(self) -> Dict[str, Any]:
-        """Get current parameters."""
-        return self.parameters.copy()
-
-    def validate_data(self, data: pd.DataFrame) -> bool:
-        """Validate input data."""
-        required_columns = ["Open", "High", "Low", "Close", "Volume"]
-        return all(col in data.columns for col in required_columns)
+from .base_strategy import BaseStrategy
 
 
 class StrategyDiscovery:

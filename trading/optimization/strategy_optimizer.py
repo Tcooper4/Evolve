@@ -5,6 +5,7 @@ It has been refactored to use modular optimization components.
 """
 
 import logging
+import time
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Union
 
@@ -39,6 +40,15 @@ class StrategyOptimizer(BaseOptimizer):
             "ray_tune": RayTuneOptimization(),
         }
         self.logger = logging.getLogger(self.__class__.__name__)
+        
+        # Early stopping configuration
+        self.early_stopping_config = {
+            "enabled": self.config.get("early_stopping_enabled", True),
+            "patience": self.config.get("early_stopping_patience", 10),
+            "min_delta": self.config.get("early_stopping_min_delta", 0.001),
+            "max_evaluations": self.config.get("max_evaluations", 1000),
+            "timeout_seconds": self.config.get("timeout_seconds", 3600),  # 1 hour
+        }
 
     def optimize(
         self,
@@ -46,6 +56,8 @@ class StrategyOptimizer(BaseOptimizer):
         param_space: Dict[str, Any],
         data: pd.DataFrame,
         method: str = "grid_search",
+        early_stopping: Optional[Dict[str, Any]] = None,
+        max_evaluations: Optional[int] = None,
         **kwargs,
     ) -> OptimizationResult:
         """Run strategy optimization using the specified method.
@@ -55,6 +67,8 @@ class StrategyOptimizer(BaseOptimizer):
             param_space: Parameter space to search
             data: Market data
             method: Optimization method to use
+            early_stopping: Early stopping configuration
+            max_evaluations: Maximum number of evaluations
             **kwargs: Additional optimization parameters
 
         Returns:
@@ -65,8 +79,129 @@ class StrategyOptimizer(BaseOptimizer):
 
         self.logger.info(f"Starting {method} optimization")
         
+        # Apply early stopping configuration
+        if early_stopping is None:
+            early_stopping = self.early_stopping_config.copy()
+        else:
+            # Merge with default config
+            early_stopping = {**self.early_stopping_config, **early_stopping}
+            
+        # Apply max evaluations limit
+        if max_evaluations is None:
+            max_evaluations = early_stopping["max_evaluations"]
+            
+        # Create wrapped objective with early stopping
+        wrapped_objective = self._create_early_stopping_objective(
+            objective, early_stopping, max_evaluations
+        )
+        
         optimizer = self.optimization_methods[method]
-        return optimizer.optimize(objective, param_space, data, **kwargs)
+        
+        # Add early stopping parameters to kwargs
+        kwargs.update({
+            "early_stopping": early_stopping,
+            "max_evaluations": max_evaluations,
+            "timeout_seconds": early_stopping["timeout_seconds"]
+        })
+        
+        return optimizer.optimize(wrapped_objective, param_space, data, **kwargs)
+
+    def _create_early_stopping_objective(
+        self, 
+        objective: Callable, 
+        early_stopping: Dict[str, Any],
+        max_evaluations: int
+    ) -> Callable:
+        """Create an objective function with early stopping capabilities."""
+        
+        class EarlyStoppingObjective:
+            def __init__(self, original_objective, config, max_evals):
+                self.original_objective = original_objective
+                self.config = config
+                self.max_evaluations = max_evals
+                self.evaluation_count = 0
+                self.best_score = float('inf')
+                self.patience_counter = 0
+                self.start_time = time.time()
+                self.scores_history = []
+                
+            def __call__(self, *args, **kwargs):
+                # Check evaluation limit
+                if self.evaluation_count >= self.max_evaluations:
+                    self.logger.info(f"Reached maximum evaluations: {self.max_evaluations}")
+                    return float('inf')
+                    
+                # Check timeout
+                elapsed_time = time.time() - self.start_time
+                if elapsed_time > self.config["timeout_seconds"]:
+                    self.logger.info(f"Optimization timeout after {elapsed_time:.1f} seconds")
+                    return float('inf')
+                    
+                # Evaluate objective
+                score = self.original_objective(*args, **kwargs)
+                self.evaluation_count += 1
+                self.scores_history.append(score)
+                
+                # Check for improvement
+                if score < self.best_score - self.config["min_delta"]:
+                    self.best_score = score
+                    self.patience_counter = 0
+                else:
+                    self.patience_counter += 1
+                    
+                # Check early stopping
+                if (self.config["enabled"] and 
+                    self.patience_counter >= self.config["patience"] and
+                    self.evaluation_count >= self.config["patience"]):
+                    self.logger.info(f"Early stopping triggered after {self.evaluation_count} evaluations")
+                    return float('inf')
+                    
+                return score
+                
+        return EarlyStoppingObjective(objective, early_stopping, max_evaluations)
+
+    def optimize_with_early_stopping(
+        self,
+        objective: Callable,
+        param_space: Dict[str, Any],
+        data: pd.DataFrame,
+        method: str = "bayesian",
+        patience: int = 10,
+        min_delta: float = 0.001,
+        max_evaluations: int = 500,
+        timeout_seconds: int = 1800,
+        **kwargs,
+    ) -> OptimizationResult:
+        """Run optimization with early stopping configuration.
+
+        Args:
+            objective: Objective function to minimize
+            param_space: Parameter space to search
+            data: Market data
+            method: Optimization method to use
+            patience: Number of evaluations without improvement before stopping
+            min_delta: Minimum improvement required to reset patience
+            max_evaluations: Maximum number of evaluations
+            timeout_seconds: Maximum time in seconds
+            **kwargs: Additional optimization parameters
+
+        Returns:
+            OptimizationResult object
+        """
+        early_stopping_config = {
+            "enabled": True,
+            "patience": patience,
+            "min_delta": min_delta,
+            "max_evaluations": max_evaluations,
+            "timeout_seconds": timeout_seconds,
+        }
+        
+        return self.optimize(
+            objective, param_space, data, method, 
+            early_stopping=early_stopping_config,
+            max_evaluations=max_evaluations,
+            **kwargs
+        )
 
     def optimize_multiple_methods(
         self,
@@ -74,6 +209,8 @@ class StrategyOptimizer(BaseOptimizer):
         param_space: Dict[str, Any],
         data: pd.DataFrame,
         methods: List[str] = None,
+        early_stopping: Optional[Dict[str, Any]] = None,
+        max_evaluations: Optional[int] = None,
         **kwargs,
     ) -> Dict[str, OptimizationResult]:
         """Run optimization using multiple methods and compare results.
@@ -83,6 +220,8 @@ class StrategyOptimizer(BaseOptimizer):
             param_space: Parameter space to search
             data: Market data
             methods: List of optimization methods to use
+            early_stopping: Early stopping configuration
+            max_evaluations: Maximum number of evaluations
             **kwargs: Additional optimization parameters
 
         Returns:
@@ -97,7 +236,12 @@ class StrategyOptimizer(BaseOptimizer):
             if method in self.optimization_methods:
                 try:
                     self.logger.info(f"Running {method} optimization")
-                    result = self.optimize(objective, param_space, data, method, **kwargs)
+                    result = self.optimize(
+                        objective, param_space, data, method,
+                        early_stopping=early_stopping,
+                        max_evaluations=max_evaluations,
+                        **kwargs
+                    )
                     results[method] = result
                 except Exception as e:
                     self.logger.error(f"Error in {method} optimization: {str(e)}")
@@ -140,6 +284,7 @@ class StrategyOptimizer(BaseOptimizer):
                 "optimization_time": result.optimization_time,
                 "n_iterations": result.n_iterations,
                 "convergence_rate": self._calculate_convergence_rate(result),
+                "early_stopping_triggered": self._check_early_stopping(result),
             })
 
         return pd.DataFrame(comparison_data)
@@ -170,6 +315,21 @@ class StrategyOptimizer(BaseOptimizer):
 
         return improvement / total_possible_improvement
 
+    def _check_early_stopping(self, result: OptimizationResult) -> bool:
+        """Check if early stopping was triggered for a result.
+
+        Args:
+            result: Optimization result
+
+        Returns:
+            True if early stopping was triggered
+        """
+        # This would need to be implemented based on the specific optimizer
+        # For now, we'll check if the result has early stopping metadata
+        if hasattr(result, 'metadata') and result.metadata:
+            return result.metadata.get('early_stopping_triggered', False)
+        return False
+
     def get_available_methods(self) -> List[str]:
         """Get list of available optimization methods.
 
@@ -197,4 +357,26 @@ class StrategyOptimizer(BaseOptimizer):
             "class": optimizer.__class__.__name__,
             "description": optimizer.__doc__ or "",
             "config": optimizer.config,
+            "supports_early_stopping": hasattr(optimizer, 'supports_early_stopping'),
+        }
+
+    def set_early_stopping_config(self, config: Dict[str, Any]):
+        """Update early stopping configuration.
+
+        Args:
+            config: New early stopping configuration
+        """
+        self.early_stopping_config.update(config)
+        self.logger.info(f"Updated early stopping config: {config}")
+
+    def get_optimization_stats(self) -> Dict[str, Any]:
+        """Get optimization statistics.
+
+        Returns:
+            Dictionary with optimization statistics
+        """
+        return {
+            "available_methods": self.get_available_methods(),
+            "early_stopping_config": self.early_stopping_config,
+            "total_optimizations": getattr(self, 'total_optimizations', 0),
         }

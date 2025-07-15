@@ -354,8 +354,9 @@ with st.sidebar:
     # Main Navigation - Simplified
     st.markdown("### 📊 Navigation")
 
+    # Primary Navigation
     primary_nav = st.radio(
-        "",
+        "Main Navigation",
         [
             "🏠 Home & Chat",
             "📈 Forecasting",
@@ -363,15 +364,17 @@ with st.sidebar:
             "🧠 Model Lab",
             "📋 Reports",
         ],
-        key=os.getenv("KEY", ""),
+        key="primary_nav",
+        label_visibility="collapsed",
     )
 
     # Advanced Tools (Collapsible)
     with st.expander("🔧 Advanced", expanded=False):
         advanced_nav = st.radio(
-            "",
+            "Advanced Tools",
             ["⚙️ Settings", "📊 Monitor", "📈 Analytics", "🛡️ Risk", "🤖 Orchestrator"],
-            key=os.getenv("KEY", ""),
+            key="advanced_nav",
+            label_visibility="collapsed",
         )
 
     # Developer Tools (Hidden by default)

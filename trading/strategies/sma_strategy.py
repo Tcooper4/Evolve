@@ -228,6 +228,16 @@ class SMAStrategy:
         if df.empty:
             raise ValueError("DataFrame is empty")
         
+        # Additional validation for 'Close' column presence and all-NaN
+        if 'Close' not in df.columns or df['Close'].isna().all():
+            # Return empty signals DataFrame with correct index and columns
+            signals = pd.DataFrame(index=df.index)
+            signals['signal'] = 0
+            signals['short_sma'] = np.nan
+            signals['long_sma'] = np.nan
+            signals['crossover_strength'] = np.nan
+            return signals
+        
         # Check for required columns (case-insensitive)
         df_lower = df.copy()
         df_lower.columns = df_lower.columns.str.lower()

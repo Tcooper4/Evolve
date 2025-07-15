@@ -3,6 +3,8 @@
 # Standard library imports
 import logging
 import os
+import hashlib
+import pickle
 from typing import Any, Dict, List, Optional, Tuple
 
 # Third-party imports
@@ -14,6 +16,7 @@ from sklearn.preprocessing import StandardScaler
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
+import joblib
 
 # Local imports
 from .base_model import BaseModel
@@ -368,6 +371,12 @@ class LSTMForecaster(BaseModel):
 
         # Initialize logger
         self.logger = logging.getLogger(__name__)
+        
+        # Cache management
+        self.cache_dir = "cache/lstm_models"
+        os.makedirs(self.cache_dir, exist_ok=True)
+        self.last_input_hash = None
+        self.compiled_model = None
 
     def build_model(self) -> nn.Module:
         """Build and return the LSTM model using PyTorch."""
@@ -581,6 +590,60 @@ class LSTMForecaster(BaseModel):
             sequences.append(data[i : i + self.config["sequence_length"]])
         return torch.stack(sequences)
 
+    def _get_input_hash(self, data: pd.DataFrame) -> str:
+        """Generate hash for input data to determine if retraining is needed.
+        
+        Args:
+            data (pd.DataFrame): Input data
+            
+        Returns:
+            str: Hash of input data
+        """
+        # Create a hash of the data shape, column names, and first/last few values
+        data_info = {
+            'shape': data.shape,
+            'columns': list(data.columns),
+            'dtypes': str(data.dtypes.to_dict()),
+            'first_values': data.head(3).to_dict(),
+            'last_values': data.tail(3).to_dict(),
+            'config_hash': str(sorted(self.config.items()))
+        }
+        
+        data_str = str(data_info)
+        return hashlib.md5(data_str.encode()).hexdigest()
+
+    def _load_cached_model(self, cache_key: str) -> bool:
+        """Load cached compiled model if available.
+        
+        Args:
+            cache_key (str): Cache key for the model
+            
+        Returns:
+            bool: True if model was loaded successfully
+        """
+        try:
+            cache_path = os.path.join(self.cache_dir, f"{cache_key}.joblib")
+            if os.path.exists(cache_path):
+                self.compiled_model = joblib.load(cache_path)
+                self.logger.info(f"Loaded cached model from {cache_path}")
+                return True
+        except Exception as e:
+            self.logger.warning(f"Failed to load cached model: {e}")
+        return False
+
+    def _save_cached_model(self, cache_key: str) -> None:
+        """Save compiled model to cache.
+        
+        Args:
+            cache_key (str): Cache key for the model
+        """
+        try:
+            cache_path = os.path.join(self.cache_dir, f"{cache_key}.joblib")
+            joblib.dump(self.compiled_model, cache_path)
+            self.logger.info(f"Saved model to cache: {cache_path}")
+        except Exception as e:
+            self.logger.warning(f"Failed to save model to cache: {e}")
+
     def fit(
         self,
         X: pd.DataFrame,
@@ -591,6 +654,19 @@ class LSTMForecaster(BaseModel):
         validation_split: float = 0.2,
     ) -> Dict[str, List[float]]:
         """Train the model with robust error handling and input validation."""
+        # Generate input hash to check if retraining is needed
+        input_hash = self._get_input_hash(X)
+        
+        # Check if we have a cached model for this input
+        if input_hash == self.last_input_hash and self.compiled_model is not None:
+            self.logger.info("Input data unchanged, using cached model")
+            return {"train_loss": [0.0], "val_loss": [0.0], "cached": True}
+        
+        # Check if we can load from cache
+        if self._load_cached_model(input_hash):
+            self.last_input_hash = input_hash
+            return {"train_loss": [0.0], "val_loss": [0.0], "cached": True}
+        
         # Input validation: Drop NaNs
         X = X.copy()
         y = y.copy()
@@ -687,6 +763,11 @@ class LSTMForecaster(BaseModel):
             # Log progress
             if (epoch + 1) % 10 == 0:
                 self.logger.info(f"Epoch [{epoch+1}/{epochs}], Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
+        
+        # Cache the compiled model
+        self.compiled_model = self.model
+        self.last_input_hash = input_hash
+        self._save_cached_model(input_hash)
         
         return history
 

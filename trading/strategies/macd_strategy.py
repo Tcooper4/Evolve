@@ -8,6 +8,7 @@ import pandas as pd
 
 # Import centralized technical indicators
 from utils.technical_indicators import calculate_macd
+from utils.strategy_utils import macd_crossover_signals
 
 
 @dataclass
@@ -111,15 +112,7 @@ class MACDStrategy:
             signals["signal"] = 0
 
             # Generate signals based on MACD line crossing signal line with tolerance buffer
-            # Calculate the difference between MACD and signal line
-            macd_diff = macd_line - signal_line
-
-            # Apply tolerance buffer to avoid repeated triggers on equality
-            buy_condition = macd_diff > config.tolerance
-            sell_condition = macd_diff < -config.tolerance
-
-            signals.loc[buy_condition, "signal"] = 1  # Buy signal
-            signals.loc[sell_condition, "signal"] = -1  # Sell signal
+            signals["signal"] = macd_crossover_signals(macd_line, signal_line, config.tolerance)
 
             # Apply smoothing using short EMA window to reduce noise
             smoothing_window = kwargs.get('smoothing_window', 3)

@@ -135,6 +135,7 @@ class ForecastRouter:
             "arima": ARIMAModel,
             "lstm": LSTMModel,
             "xgboost": XGBoostModel,
+            "xgb": XGBoostModel,  # Alias
             "autoformer": AutoformerModel,
         }
 
@@ -280,8 +281,14 @@ class ForecastRouter:
         Returns:
             Selected model type
         """
-        if model_type and model_type in self.model_registry:
-            return model_type
+        # Alias matching for xgboost/xgb
+        if model_type:
+            if model_type in self.model_registry:
+                return model_type
+            if model_type.lower() in ["xgboost", "xgb"]:
+                return "xgboost"
+            else:
+                raise ValueError(f"Unknown model: {model_type}. Available models: {list(self.model_registry.keys())}")
 
         # Analyze data characteristics
         characteristics = self._analyze_data(data)
