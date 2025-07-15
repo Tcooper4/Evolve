@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 import numpy as np
 import pandas as pd
@@ -64,19 +64,81 @@ class HybridModel:
         self.save_state()
 
     def predict(self, data: pd.DataFrame) -> np.ndarray:
-        """Weighted ensemble prediction."""
-        preds = []
+        """Weighted ensemble prediction with fallback for None/mismatched forecasts."""
+        valid_preds = []
+        
         for name, model in self.models.items():
             try:
                 pred = model.predict(data)
-                preds.append((name, pred))
+                
+                # Validate prediction
+                if pred is None:
+                    logger.warning(f"Model {name} returned None prediction, skipping")
+                    continue
+                    
+                # Convert to numpy array if needed
+                if not isinstance(pred, np.ndarray):
+                    pred = np.array(pred)
+                
+                # Check for valid values
+                if np.any(np.isnan(pred)) or np.any(np.isinf(pred)):
+                    logger.warning(f"Model {name} returned invalid values (NaN/Inf), skipping")
+                    continue
+                
+                # Check for reasonable prediction range
+                if np.any(pred < -1e6) or np.any(pred > 1e6):
+                    logger.warning(f"Model {name} returned extreme values, skipping")
+                    continue
+                
+                valid_preds.append((name, pred))
+                
             except Exception as e:
                 logger.warning(f"Model {name} failed to predict: {e}")
-        # Align predictions
-        min_len = min(len(p) for _, p in preds)
+                continue
+        
+        # Handle case where no valid predictions
+        if not valid_preds:
+            logger.error("No valid predictions from any model, returning fallback")
+            # Return simple moving average as fallback
+            if len(data) > 0 and "close" in data.columns:
+                fallback_pred = np.full(len(data), data["close"].mean())
+                return fallback_pred
+            else:
+                return np.array([])
+        
+        # Align predictions to same length
+        min_len = min(len(p) for _, p in valid_preds)
+        if min_len == 0:
+            logger.error("All predictions have zero length")
+            return np.array([])
+        
+        # Truncate all predictions to minimum length
+        aligned_preds = []
+        for name, pred in valid_preds:
+            if len(pred) > min_len:
+                # Take the last min_len values
+                aligned_pred = pred[-min_len:]
+            else:
+                aligned_pred = pred
+            aligned_preds.append((name, aligned_pred))
+        
+        # Calculate weighted ensemble
         weighted = np.zeros(min_len)
-        for name, p in preds:
-            weighted += self.weights.get(name, 0) * np.array(p[-min_len:])
+        total_weight = 0.0
+        
+        for name, pred in aligned_preds:
+            weight = self.weights.get(name, 0.0)
+            if weight > 0:
+                weighted += weight * pred
+                total_weight += weight
+        
+        # Normalize by total weight
+        if total_weight > 0:
+            weighted = weighted / total_weight
+        else:
+            # Equal weighting if no valid weights
+            weighted = np.mean([pred for _, pred in aligned_preds], axis=0)
+        
         return weighted
 
     def save_state(self):

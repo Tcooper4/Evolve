@@ -1,13 +1,13 @@
 """
-Consolidated Prompt Agent
+Enhanced Prompt Agent with Batch 12 Features
 
 This module consolidates all prompt routing functionality into a single, comprehensive agent:
-- Regex-based intent detection
-- Local LLM processing (HuggingFace)
-- OpenAI fallback with intelligent routing
-- Seamless fallback chain: Regex → Local LLM → OpenAI
+- Enhanced Hugging Face classification for intent detection
+- GPT-4 structured parser with JSON schema validation
+- Intelligent fallback chain with confidence scoring
 - Comprehensive logging and routing logic
 - LLM selection flags and performance tracking
+- Memory module integration for persistent learning
 """
 
 import json
@@ -15,11 +15,13 @@ import logging
 import os
 import pickle
 import re
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
+import asyncio
 
 import numpy as np
 
@@ -31,13 +33,26 @@ except ImportError:
     openai = None
     OPENAI_AVAILABLE = False
 
-# Try to import HuggingFace
+# Try to import HuggingFace with enhanced classification
 try:
     import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+    from transformers import (
+        AutoModelForSequenceClassification, 
+        AutoTokenizer, 
+        pipeline,
+        AutoModelForCausalLM
+    )
+    from sentence_transformers import SentenceTransformer
     HUGGINGFACE_AVAILABLE = True
 except ImportError:
     HUGGINGFACE_AVAILABLE = False
+
+# Try to import Redis for memory
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
 
 from trading.memory.agent_memory import AgentMemory
 from trading.utils.reasoning_logger import (
@@ -45,8 +60,42 @@ from trading.utils.reasoning_logger import (
     DecisionType,
     ReasoningLogger,
 )
-from logs.prompt_trace_logger import PromptTraceLogger, ActionStatus
-from trading.llm.parser_engine import ParserEngine, ParsedIntent
+
+# Optional import for prompt trace logging
+try:
+    from logs.prompt_trace_logger import PromptTraceLogger, ActionStatus
+except ImportError:
+    # Fallback implementation if module is not available
+    from enum import Enum
+    from datetime import datetime
+    from typing import Dict, Any, Optional
+    
+    class ActionStatus(Enum):
+        """Status of prompt actions."""
+        PENDING = "pending"
+        RUNNING = "running"
+        COMPLETED = "completed"
+        FAILED = "failed"
+        CANCELLED = "cancelled"
+        TIMEOUT = "timeout"
+    
+    class PromptTraceLogger:
+        """Fallback prompt trace logger."""
+        def __init__(self, log_file: Optional[str] = None):
+            self.log_file = log_file
+            self.traces: Dict[str, Any] = {}
+        
+        def start_trace(self, prompt: str, user_id: Optional[str] = None, session_id: Optional[str] = None) -> str:
+            return f"trace_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+        
+        def add_action(self, trace_id: str, action_type: str, metadata: Optional[Dict[str, Any]] = None) -> str:
+            return f"action_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+        
+        def update_action_status(self, trace_id: str, action_id: str, status: ActionStatus, result: Optional[Dict[str, Any]] = None, error: Optional[str] = None):
+            pass
+        
+        def complete_trace(self, trace_id: str, metadata: Optional[Dict[str, Any]] = None):
+            pass
 
 logger = logging.getLogger(__name__)
 
@@ -104,10 +153,11 @@ class ParsedIntent:
     intent: str
     confidence: float
     args: Dict[str, Any]
-    provider: str  # 'regex', 'huggingface', 'openai'
+    provider: str  # 'huggingface', 'openai', 'fallback'
     raw_response: str
     error: Optional[str] = None
     json_spec: Optional[Dict[str, Any]] = None
+    structured_data: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -140,265 +190,411 @@ class RoutingDecision:
     metadata: Optional[Dict[str, Any]] = None
 
 
+class EnhancedPromptMemory:
+    """Enhanced memory module for persistent prompt → action → outcome learning."""
+    
+    def __init__(self, redis_url: Optional[str] = None):
+        """Initialize enhanced prompt memory.
+        
+        Args:
+            redis_url: Redis connection URL
+        """
+        self.redis_client = None
+        self.memory_file = "data/prompt_memory.jsonl"
+        
+        # Initialize Redis if available
+        if REDIS_AVAILABLE and redis_url:
+            try:
+                self.redis_client = redis.from_url(redis_url)
+                self.redis_client.ping()
+                logger.info("Connected to Redis for prompt memory")
+            except Exception as e:
+                logger.warning(f"Redis connection failed: {e}")
+                self.redis_client = None
+        
+        # Ensure memory file directory exists
+        os.makedirs(os.path.dirname(self.memory_file), exist_ok=True)
+        
+        # Initialize sentence transformer for similarity
+        self.sentence_transformer = None
+        if HUGGINGFACE_AVAILABLE:
+            try:
+                self.sentence_transformer = SentenceTransformer('all-MiniLM-L6-v2')
+                logger.info("Sentence transformer initialized for memory similarity")
+            except Exception as e:
+                logger.warning(f"Could not initialize sentence transformer: {e}")
+    
+    def store_interaction(
+        self, 
+        prompt: str, 
+        intent: str, 
+        action: str, 
+        outcome: Dict[str, Any],
+        user_id: Optional[str] = None
+    ):
+        """Store a prompt → action → outcome interaction.
+        
+        Args:
+            prompt: User prompt
+            intent: Detected intent
+            action: Action taken
+            outcome: Outcome of the action
+            user_id: Optional user ID
+        """
+        interaction = {
+            "timestamp": datetime.now().isoformat(),
+            "prompt": prompt,
+            "intent": intent,
+            "action": action,
+            "outcome": outcome,
+            "user_id": user_id,
+            "success": outcome.get("success", False)
+        }
+        
+        # Store in Redis if available
+        if self.redis_client:
+            try:
+                key = f"prompt_memory:{datetime.now().strftime('%Y%m%d')}"
+                self.redis_client.lpush(key, json.dumps(interaction))
+                self.redis_client.expire(key, 86400 * 30)  # 30 days
+            except Exception as e:
+                logger.error(f"Failed to store in Redis: {e}")
+        
+        # Store in file
+        try:
+            with open(self.memory_file, "a") as f:
+                f.write(json.dumps(interaction) + "\n")
+        except Exception as e:
+            logger.error(f"Failed to store in file: {e}")
+    
+    def find_similar_prompts(
+        self, 
+        prompt: str, 
+        limit: int = 5,
+        threshold: float = 0.7
+    ) -> List[Dict[str, Any]]:
+        """Find similar past prompts.
+        
+        Args:
+            prompt: Current prompt
+            limit: Maximum number of similar prompts to return
+            threshold: Similarity threshold
+            
+        Returns:
+            List of similar interactions
+        """
+        if not self.sentence_transformer:
+            return []
+        
+        try:
+            # Get recent interactions
+            interactions = self._load_recent_interactions(1000)
+            
+            if not interactions:
+                return []
+            
+            # Compute embeddings
+            prompt_embedding = self.sentence_transformer.encode([prompt])[0]
+            past_prompts = [i["prompt"] for i in interactions]
+            past_embeddings = self.sentence_transformer.encode(past_prompts)
+            
+            # Calculate similarities
+            similarities = []
+            for i, past_embedding in enumerate(past_embeddings):
+                similarity = np.dot(prompt_embedding, past_embedding) / (
+                    np.linalg.norm(prompt_embedding) * np.linalg.norm(past_embedding)
+                )
+                if similarity >= threshold:
+                    similarities.append((similarity, interactions[i]))
+            
+            # Sort by similarity and return top results
+            similarities.sort(key=lambda x: x[0], reverse=True)
+            return [interaction for _, interaction in similarities[:limit]]
+            
+        except Exception as e:
+            logger.error(f"Error finding similar prompts: {e}")
+            return []
+    
+    def get_learning_insights(self) -> Dict[str, Any]:
+        """Get insights from past interactions for learning.
+        
+        Returns:
+            Dictionary with learning insights
+        """
+        try:
+            interactions = self._load_recent_interactions(10000)
+            
+            if not interactions:
+                return {}
+            
+            # Analyze success rates by intent
+            intent_success = {}
+            action_success = {}
+            
+            for interaction in interactions:
+                intent = interaction.get("intent", "unknown")
+                action = interaction.get("action", "unknown")
+                success = interaction.get("success", False)
+                
+                if intent not in intent_success:
+                    intent_success[intent] = {"total": 0, "successful": 0}
+                if action not in action_success:
+                    action_success[action] = {"total": 0, "successful": 0}
+                
+                intent_success[intent]["total"] += 1
+                action_success[action]["total"] += 1
+                
+                if success:
+                    intent_success[intent]["successful"] += 1
+                    action_success[action]["successful"] += 1
+            
+            # Calculate success rates
+            insights = {
+                "intent_success_rates": {},
+                "action_success_rates": {},
+                "total_interactions": len(interactions),
+                "recent_failures": []
+            }
+            
+            for intent, stats in intent_success.items():
+                insights["intent_success_rates"][intent] = stats["successful"] / stats["total"]
+            
+            for action, stats in action_success.items():
+                insights["action_success_rates"][action] = stats["successful"] / stats["total"]
+            
+            # Get recent failures
+            recent_failures = [
+                i for i in interactions[-100:] 
+                if not i.get("success", True)
+            ]
+            insights["recent_failures"] = recent_failures[:10]
+            
+            return insights
+            
+        except Exception as e:
+            logger.error(f"Error getting learning insights: {e}")
+            return {}
+    
+    def _load_recent_interactions(self, limit: int) -> List[Dict[str, Any]]:
+        """Load recent interactions from storage.
+        
+        Args:
+            limit: Maximum number of interactions to load
+            
+        Returns:
+            List of recent interactions
+        """
+        interactions = []
+        
+        # Try Redis first
+        if self.redis_client:
+            try:
+                keys = self.redis_client.keys("prompt_memory:*")
+                for key in keys[-7:]:  # Last 7 days
+                    items = self.redis_client.lrange(key, 0, -1)
+                    for item in items:
+                        interactions.append(json.loads(item))
+            except Exception as e:
+                logger.error(f"Failed to load from Redis: {e}")
+        
+        # Load from file
+        try:
+            if os.path.exists(self.memory_file):
+                with open(self.memory_file, "r") as f:
+                    for line in f:
+                        if line.strip():
+                            interactions.append(json.loads(line))
+        except Exception as e:
+            logger.error(f"Failed to load from file: {e}")
+        
+        # Sort by timestamp and return recent ones
+        interactions.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        return interactions[:limit]
+
+
 class PromptAgent:
     """
-    Consolidated prompt agent with comprehensive routing and fallback capabilities.
-    
-    Features:
-    - Regex-based intent detection (fastest)
-    - Local LLM processing (HuggingFace)
-    - OpenAI fallback (most accurate)
-    - Seamless fallback chain
-    - Comprehensive logging and performance tracking
-    - Agent capability matching and load balancing
+    Enhanced prompt agent with Batch 12 features:
+    - Hugging Face classification for intent detection
+    - GPT-4 structured parser with JSON schema validation
+    - Enhanced memory module for persistent learning
+    - Intelligent fallback chain with confidence scoring
     """
 
     def __init__(
         self,
         openai_api_key: Optional[str] = None,
-        huggingface_model: str = "gpt2",
+        huggingface_model: str = "microsoft/DialoGPT-medium",
+        classification_model: str = "facebook/bart-large-mnli",
         huggingface_api_key: Optional[str] = None,
         enable_debug_mode: bool = False,
-        use_regex_first: bool = True,
-        use_local_llm: bool = True,
+        use_huggingface_first: bool = True,
         use_openai_fallback: bool = True,
+        max_retries: int = 3,
+        retry_backoff_factor: float = 2.0,
+        retry_delay_seconds: float = 1.0,
+        redis_url: Optional[str] = None,
     ):
         """
-        Initialize the consolidated prompt agent.
+        Initialize the enhanced prompt agent.
 
         Args:
             openai_api_key: OpenAI API key
-            huggingface_model: HuggingFace model name
+            huggingface_model: HuggingFace model for text generation
+            classification_model: HuggingFace model for intent classification
             huggingface_api_key: HuggingFace API key
             enable_debug_mode: Enable JSON spec return for debugging
-            use_regex_first: Use regex parsing first (fastest)
-            use_local_llm: Use local LLM as fallback
-            use_openai_fallback: Use OpenAI as final fallback
+            use_huggingface_first: Use HuggingFace classification first
+            use_openai_fallback: Use OpenAI as fallback
+            max_retries: Maximum number of retry attempts
+            retry_backoff_factor: Exponential backoff multiplier
+            retry_delay_seconds: Initial delay between retries
+            redis_url: Redis URL for memory storage
         """
         self.openai_api_key = openai_api_key
         self.huggingface_model = huggingface_model
+        self.classification_model = classification_model
         self.huggingface_api_key = huggingface_api_key
-        self.hf_pipeline = None
         self.enable_debug_mode = enable_debug_mode
         
         # LLM selection flags
-        self.use_regex_first = use_regex_first
-        self.use_local_llm = use_local_llm and HUGGINGFACE_AVAILABLE
+        self.use_huggingface_first = use_huggingface_first and HUGGINGFACE_AVAILABLE
         self.use_openai_fallback = use_openai_fallback and OPENAI_AVAILABLE
         
-        # Initialize components
-        self.memory = AgentMemory()
-        self.reasoning_logger = ReasoningLogger()
-        self.prompt_trace_logger = PromptTraceLogger()
+        # Retry configuration
+        self.max_retries = max_retries
+        self.retry_backoff_factor = retry_backoff_factor
+        self.retry_delay_seconds = retry_delay_seconds
         
-        # Initialize parser engine
-        self.parser_engine = ParserEngine(
-            openai_api_key=openai_api_key,
-            huggingface_model=huggingface_model,
-            enable_debug_mode=enable_debug_mode,
-            use_regex_first=use_regex_first,
-            use_local_llm=use_local_llm,
-            use_openai_fallback=use_openai_fallback,
-        )
+        # Initialize memory module
+        self.memory = EnhancedPromptMemory(redis_url)
+        
+        # Initialize components
+        self._initialize_providers()
+        self._initialize_classification_labels()
+        self._initialize_agent_registry()
         
         # Performance tracking
         self.performance_metrics = {
             "total_requests": 0,
-            "successful_routes": 0,
-            "avg_response_time": 0.0,
-            "provider_usage": {"regex": 0, "huggingface": 0, "openai": 0},
-            "agent_usage": {},
+            "successful_parses": 0,
+            "huggingface_parses": 0,
+            "openai_parses": 0,
+            "fallback_parses": 0,
+            "avg_parse_time": 0.0,
+            "errors": []
         }
         
-        # Routing history
-        self.routing_history: List[RoutingDecision] = []
+        # Initialize prompt trace logger
+        self.trace_logger = PromptTraceLogger()
         
-        # Available agents
-        self.available_agents: Dict[str, AgentInfo] = {}
-        
-        # Initialize agent registry
-        self._initialize_agent_registry()
-        
-        logger.info(f"PromptAgent initialized with parser engine integration")
+        logger.info("Enhanced PromptAgent initialized successfully")
 
     def _initialize_providers(self):
         """Initialize LLM providers."""
-        # Initialize OpenAI if available
+        # Initialize HuggingFace
+        if self.use_huggingface_first:
+            self._init_huggingface()
+        
+        # Initialize OpenAI
         if self.use_openai_fallback and self.openai_api_key:
             openai.api_key = self.openai_api_key
-            logger.info("✅ OpenAI initialized for prompt routing")
-
-        # Initialize HuggingFace if available
-        if self.use_local_llm:
-            try:
-                self._init_huggingface()
-                logger.info("✅ HuggingFace initialized for prompt routing")
-            except Exception as e:
-                logger.warning(f"⚠️ HuggingFace initialization failed: {e}")
-                self.use_local_llm = False
-
+            logger.info("OpenAI API configured")
+    
     def _init_huggingface(self):
-        """Initialize HuggingFace pipeline."""
-        if not HUGGINGFACE_AVAILABLE:
-            return
-            
+        """Initialize HuggingFace models."""
         try:
-            # Use a smaller model for faster inference
-            model_name = "distilgpt2" if self.huggingface_model == "gpt2" else self.huggingface_model
-            
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
-            model = AutoModelForCausalLM.from_pretrained(model_name)
-            
-            # Add padding token if not present
-            if tokenizer.pad_token is None:
-                tokenizer.pad_token = tokenizer.eos_token
-                
-            self.hf_pipeline = pipeline(
-                "text-generation",
-                model=model,
-                tokenizer=tokenizer,
-                device="cpu",  # Use CPU for compatibility
-                max_length=100,
-                do_sample=True,
-                temperature=0.7,
-                pad_token_id=tokenizer.eos_token_id,
+            # Initialize classification pipeline
+            self.classifier = pipeline(
+                "zero-shot-classification",
+                model=self.classification_model,
+                device=0 if torch.cuda.is_available() else -1
             )
+            
+            # Initialize text generation pipeline
+            self.generator = pipeline(
+                "text-generation",
+                model=self.huggingface_model,
+                device=0 if torch.cuda.is_available() else -1
+            )
+            
+            logger.info(f"HuggingFace models initialized: {self.classification_model}, {self.huggingface_model}")
+            
         except Exception as e:
-            logger.error(f"Failed to initialize HuggingFace: {e}")
-            self.use_local_llm = False
-
-    def _initialize_patterns(self):
-        """Initialize classification and parameter extraction patterns."""
-        # Classification patterns
-        self.classification_patterns = {
-            RequestType.FORECAST: [
-                r"\b(forecast|predict|future|next|upcoming|tomorrow|next week|next month)\b",
-                r"\b(price|stock|market|trend|movement|direction)\b",
-                r"\b(how much|what will|when will|where will)\b",
-            ],
-            RequestType.STRATEGY: [
-                r"\b(strategy|trading|signal|entry|exit|position)\b",
-                r"\b(buy|sell|hold|long|short|trade)\b",
-                r"\b(rsi|macd|bollinger|moving average|indicator)\b",
-            ],
-            RequestType.ANALYSIS: [
-                r"\b(analyze|analysis|examine|study|review|assess|evaluate)\b",
-                r"\b(performance|metrics|statistics|data|chart|graph)\b",
-                r"\b(why|what caused|what happened|explain)\b",
-            ],
-            RequestType.OPTIMIZATION: [
-                r"\b(optimize|tune|improve|enhance|better|best|optimal)\b",
-                r"\b(parameters|settings|configuration|hyperparameters)\b",
-                r"\b(performance|efficiency|accuracy|speed)\b",
-            ],
-            RequestType.PORTFOLIO: [
-                r"\b(portfolio|allocation|diversification|risk|balance)\b",
-                r"\b(asset|investment|holdings|positions|weights)\b",
-                r"\b(rebalance|adjust|change|modify)\b",
-            ],
-            RequestType.SYSTEM: [
-                r"\b(system|status|health|monitor|check|diagnose)\b",
-                r"\b(error|problem|issue|bug|fix|repair)\b",
-                r"\b(restart|stop|start|configure|setup)\b",
-            ],
-            RequestType.INVESTMENT: [
-                r"\b(invest|investment|buy|purchase|acquire)\b",
-                r"\b(top stocks|best stocks|recommended|suggest)\b",
-                r"\b(what should|which stocks|what to buy|where to invest)\b",
-                r"\b(opportunity|potential|growth|returns)\b",
-                r"\b(today|now|current|market)\b",
-            ],
+            logger.error(f"Failed to initialize HuggingFace models: {e}")
+            self.use_huggingface_first = False
+    
+    def _initialize_classification_labels(self):
+        """Initialize classification labels for intent detection."""
+        self.intent_labels = [
+            "forecast stock price",
+            "generate trading strategy", 
+            "analyze market",
+            "optimize portfolio",
+            "manage positions",
+            "system status",
+            "general question",
+            "investment advice"
+        ]
+        
+        # Map labels to request types
+        self.label_to_request_type = {
+            "forecast stock price": RequestType.FORECAST,
+            "generate trading strategy": RequestType.STRATEGY,
+            "analyze market": RequestType.ANALYSIS,
+            "optimize portfolio": RequestType.OPTIMIZATION,
+            "manage positions": RequestType.PORTFOLIO,
+            "system status": RequestType.SYSTEM,
+            "general question": RequestType.GENERAL,
+            "investment advice": RequestType.INVESTMENT
         }
-
-        # Parameter extraction patterns
-        self.parameter_patterns = {
-            "symbol": r"\b([A-Z]{1,5})\b",
-            "timeframe": r"\b(1m|5m|15m|30m|1h|4h|1d|1w|1M)\b",
-            "days": r"\b(\d+)\s*(days?|d)\b",
-            "model": r"\b(lstm|arima|xgboost|prophet|ensemble|transformer)\b",
-            "strategy": r"\b(rsi|macd|bollinger|sma|ema|custom)\b",
-            "risk_level": r"\b(low|medium|high|conservative|aggressive)\b",
-        }
-
-        # Intent keywords for regex fallback
-        self.intent_keywords = {
-            "forecasting": [
-                "forecast", "predict", "projection", "future", "price", "trend", "outlook"
-            ],
-            "backtesting": [
-                "backtest", "historical", "simulate", "performance", "past", "test", "simulation"
-            ],
-            "tuning": [
-                "tune", "optimize", "hyperparameter", "search", "bayesian", "parameter", "improve"
-            ],
-            "research": [
-                "research", "find", "paper", "github", "arxiv", "summarize", "analyze", "study"
-            ],
-            "portfolio": [
-                "portfolio", "position", "holdings", "allocation", "balance", "asset"
-            ],
-            "risk": [
-                "risk", "volatility", "drawdown", "var", "sharpe", "danger", "exposure"
-            ],
-            "sentiment": [
-                "sentiment", "news", "social", "twitter", "reddit", "emotion", "mood"
-            ],
-            "compare_strategies": [
-                "compare", "comparison", "versus", "vs", "against", "different", "strategy"
-            ],
-            "optimize_model": [
-                "optimize", "improve", "enhance", "tune", "model", "performance"
-            ],
-            "debug_forecast": [
-                "debug", "fix", "error", "issue", "problem", "forecast", "prediction"
-            ],
-        }
-
+    
     def _initialize_agent_registry(self):
-        """Initialize the agent registry with available agents."""
-        # Define available agents and their capabilities
+        """Initialize the registry of available agents."""
+        self.available_agents = {}
+        
         agent_definitions = {
-            "ForecastAgent": {
+            "ModelSelectorAgent": {
                 "capabilities": [AgentCapability.FORECASTING],
                 "priority": 1,
-                "max_concurrent": 5,
+                "max_concurrent": 3,
                 "success_rate": 0.85,
                 "avg_response_time": 2.5,
             },
-            "StrategyAgent": {
+            "StrategySelectorAgent": {
                 "capabilities": [AgentCapability.STRATEGY_GENERATION],
-                "priority": 2,
+                "priority": 1,
                 "max_concurrent": 3,
                 "success_rate": 0.80,
-                "avg_response_time": 1.8,
+                "avg_response_time": 3.0,
             },
-            "AnalysisAgent": {
+            "MarketAnalyzerAgent": {
                 "capabilities": [AgentCapability.MARKET_ANALYSIS],
-                "priority": 3,
-                "max_concurrent": 4,
-                "success_rate": 0.90,
-                "avg_response_time": 1.2,
-            },
-            "OptimizationAgent": {
-                "capabilities": [AgentCapability.OPTIMIZATION],
                 "priority": 2,
                 "max_concurrent": 2,
-                "success_rate": 0.75,
-                "avg_response_time": 5.0,
+                "success_rate": 0.90,
+                "avg_response_time": 4.0,
             },
-            "PortfolioAgent": {
+            "MetaTunerAgent": {
+                "capabilities": [AgentCapability.OPTIMIZATION],
+                "priority": 2,
+                "max_concurrent": 1,
+                "success_rate": 0.75,
+                "avg_response_time": 15.0,
+            },
+            "PortfolioManagerAgent": {
                 "capabilities": [AgentCapability.PORTFOLIO_MANAGEMENT],
                 "priority": 1,
-                "max_concurrent": 3,
-                "success_rate": 0.88,
-                "avg_response_time": 2.0,
-            },
-            "SystemAgent": {
-                "capabilities": [AgentCapability.SYSTEM_MONITORING],
-                "priority": 1,
                 "max_concurrent": 2,
+                "success_rate": 0.88,
+                "avg_response_time": 5.0,
+            },
+            "SystemMonitorAgent": {
+                "capabilities": [AgentCapability.SYSTEM_MONITORING],
+                "priority": 3,
+                "max_concurrent": 5,
                 "success_rate": 0.95,
-                "avg_response_time": 0.5,
+                "avg_response_time": 1.0,
             },
         }
 
@@ -415,11 +611,11 @@ class PromptAgent:
                 is_available=True,
             )
 
-    def process_prompt(
+    async def process_prompt(
         self, prompt: str, context: Optional[PromptContext] = None
     ) -> ProcessedPrompt:
         """
-        Process a user prompt and extract information using the fallback chain.
+        Process a user prompt and extract information using enhanced classification.
 
         Args:
             prompt: User's input prompt
@@ -429,6 +625,7 @@ class PromptAgent:
             ProcessedPrompt: Processed prompt information
         """
         start_time = datetime.now()
+        trace_id = self.trace_logger.start_trace(prompt)
 
         if context is None:
             context = PromptContext()
@@ -436,471 +633,447 @@ class PromptAgent:
         # Normalize prompt
         normalized_prompt = self._normalize_prompt(prompt)
 
-        # Use the fallback chain to parse intent
-        parsed_intent = self.parse_intent(prompt)
+        # Check memory for similar prompts
+        similar_prompts = self.memory.find_similar_prompts(normalized_prompt)
+        if similar_prompts:
+            logger.info(f"Found {len(similar_prompts)} similar prompts in memory")
+
+        # Parse intent using enhanced methods
+        parsed_intent = await self.parse_intent_enhanced(prompt)
         
         # Map intent to request type
         request_type = self._map_intent_to_request_type(parsed_intent.intent)
         
         # Extract parameters
-        extracted_parameters = self._extract_parameters(normalized_prompt)
-        extracted_parameters.update(parsed_intent.args)
-
+        extracted_parameters = self._extract_parameters_enhanced(normalized_prompt, parsed_intent)
+        
         # Generate routing suggestions
         routing_suggestions = self._generate_routing_suggestions(
             request_type, extracted_parameters
         )
-        
-        # Get strategy route from parser engine
-        strategy_route = self.parser_engine.route_strategy(
-            parsed_intent.intent, extracted_parameters
-        )
 
         processing_time = (datetime.now() - start_time).total_seconds()
+        
+        # Store interaction in memory
+        self.memory.store_interaction(
+            prompt=prompt,
+            intent=parsed_intent.intent,
+            action="parse_intent",
+            outcome={
+                "success": parsed_intent.error is None,
+                "confidence": parsed_intent.confidence,
+                "request_type": request_type.value,
+                "processing_time": processing_time
+            },
+            user_id=context.user_id
+        )
 
-        processed_prompt = ProcessedPrompt(
+        # Complete trace
+        self.trace_logger.complete_trace(trace_id, {
+            "processing_time": processing_time,
+            "confidence": parsed_intent.confidence,
+            "provider": parsed_intent.provider
+        })
+
+        return ProcessedPrompt(
             original_prompt=prompt,
             request_type=request_type,
             confidence=parsed_intent.confidence,
             extracted_parameters=extracted_parameters,
             context=context,
             routing_suggestions=routing_suggestions,
-            processing_time=processing_time,
+            processing_time=processing_time
         )
 
-        logger.info(
-            f"Processed prompt: {request_type.value} (confidence: {parsed_intent.confidence:.2f}, "
-            f"provider: {parsed_intent.provider})"
-        )
-        return processed_prompt
-
-    def parse_intent(self, prompt: str) -> ParsedIntent:
+    async def parse_intent_enhanced(self, prompt: str) -> ParsedIntent:
         """
-        Parse intent using the parser engine with fallback chain.
-
+        Enhanced intent parsing with HuggingFace classification and GPT-4 structured parser.
+        
         Args:
             prompt: User prompt
-
+            
         Returns:
-            ParsedIntent: Parsed intent with provider information
+            ParsedIntent: Structured parsed intent
         """
-        try:
-            # Use parser engine for intent parsing
-            result = self.parser_engine.parse_intent(prompt)
-            
-            # Update performance metrics
-            self.performance_metrics["provider_usage"][result.provider] += 1
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Parser engine failed: {e}")
-            
-            # Fallback to basic regex parsing
-            logger.warning("Using basic regex fallback")
-            result = self._basic_regex_fallback(prompt)
-            self.performance_metrics["provider_usage"]["fallback"] += 1
-            return result
+        start_time = datetime.now()
+        
+        # Try HuggingFace classification first
+        if self.use_huggingface_first:
+            try:
+                result = await self._parse_intent_huggingface(prompt)
+                if result and result.confidence > 0.7:
+                    self.performance_metrics["huggingface_parses"] += 1
+                    return result
+            except Exception as e:
+                logger.warning(f"HuggingFace parsing failed: {e}")
+        
+        # Try OpenAI structured parser
+        if self.use_openai_fallback:
+            try:
+                result = await self._parse_intent_openai_structured(prompt)
+                if result and result.confidence > 0.6:
+                    self.performance_metrics["openai_parses"] += 1
+                    return result
+            except Exception as e:
+                logger.warning(f"OpenAI structured parsing failed: {e}")
+        
+        # Fallback to basic parsing
+        result = self._parse_intent_fallback(prompt)
+        self.performance_metrics["fallback_parses"] += 1
+        
+        # Update performance metrics
+        parse_time = (datetime.now() - start_time).total_seconds()
+        self.performance_metrics["total_requests"] += 1
+        self.performance_metrics["successful_parses"] += 1
+        self.performance_metrics["avg_parse_time"] = (
+            (self.performance_metrics["avg_parse_time"] * (self.performance_metrics["total_requests"] - 1) + parse_time) 
+            / self.performance_metrics["total_requests"]
+        )
+        
+        return result
 
-    def _basic_regex_fallback(self, prompt: str) -> ParsedIntent:
-        """Basic regex fallback when parser engine fails."""
-        try:
-            # Simple keyword matching
-            prompt_lower = prompt.lower()
-            
-            if any(word in prompt_lower for word in ['forecast', 'predict', 'future']):
-                intent = 'forecasting'
-                confidence = 0.6
-            elif any(word in prompt_lower for word in ['strategy', 'trade', 'buy', 'sell']):
-                intent = 'strategy'
-                confidence = 0.6
-            elif any(word in prompt_lower for word in ['analyze', 'analysis', 'study']):
-                intent = 'analysis'
-                confidence = 0.6
-            elif any(word in prompt_lower for word in ['optimize', 'tune', 'improve']):
-                intent = 'optimization'
-                confidence = 0.6
-            elif any(word in prompt_lower for word in ['portfolio', 'allocation']):
-                intent = 'portfolio'
-                confidence = 0.6
-            else:
-                intent = 'general'
-                confidence = 0.5
-            
-            return ParsedIntent(
-                intent=intent,
-                confidence=confidence,
-                args={},
-                provider='basic_regex_fallback',
-                raw_response=prompt,
-                error=None
-            )
-            
-        except Exception as e:
-            logger.error(f"Basic regex fallback failed: {e}")
-            return ParsedIntent(
-                intent='general',
-                confidence=0.0,
-                args={},
-                provider='basic_regex_fallback',
-                raw_response=prompt,
-                error=str(e)
-            )
-
-    def _fallback_regex_router(self, prompt: str) -> ParsedIntent:
-        """Enhanced fallback regex router with comprehensive pattern matching.
+    async def _parse_intent_huggingface(self, prompt: str) -> Optional[ParsedIntent]:
+        """Parse intent using HuggingFace classification.
         
         Args:
-            prompt: User prompt text
+            prompt: User prompt
             
         Returns:
-            ParsedIntent with fallback routing
+            ParsedIntent or None if parsing fails
         """
         try:
-            # Enhanced regex patterns for fallback routing
-            fallback_patterns = {
-                # Forecasting patterns
-                r'\b(forecast|predict|future|trend|outlook)\b.*\b(price|stock|market|value)\b': {
-                    'intent': 'forecasting',
-                    'confidence': 0.8,
-                    'args': {'type': 'price_forecast'}
-                },
-                r'\b(forecast|predict)\b.*\b(\d+)\s*(days?|weeks?|months?)\b': {
-                    'intent': 'forecasting',
-                    'confidence': 0.85,
-                    'args': {'horizon': 'extracted'}
-                },
-                
-                # Strategy patterns
-                r'\b(strategy|strategy|approach|method)\b.*\b(trading|investment|portfolio)\b': {
-                    'intent': 'strategy',
-                    'confidence': 0.8,
-                    'args': {'type': 'trading_strategy'}
-                },
-                r'\b(buy|sell|hold|position)\b.*\b(signal|recommendation|advice)\b': {
-                    'intent': 'strategy',
-                    'confidence': 0.9,
-                    'args': {'action': 'signal'}
-                },
-                
-                # Analysis patterns
-                r'\b(analyze|analysis|examine|study)\b.*\b(market|stock|performance|data)\b': {
-                    'intent': 'research',
-                    'confidence': 0.8,
-                    'args': {'type': 'market_analysis'}
-                },
-                r'\b(technical|fundamental|sentiment)\b.*\b(analysis|indicator|metric)\b': {
-                    'intent': 'research',
-                    'confidence': 0.85,
-                    'args': {'analysis_type': 'extracted'}
-                },
-                
-                # Optimization patterns
-                r'\b(optimize|optimization|improve|enhance)\b.*\b(strategy|portfolio|performance)\b': {
-                    'intent': 'tuning',
-                    'confidence': 0.8,
-                    'args': {'type': 'performance_optimization'}
-                },
-                r'\b(parameter|hyperparameter|tune|adjust)\b.*\b(model|strategy|algorithm)\b': {
-                    'intent': 'tuning',
-                    'confidence': 0.85,
-                    'args': {'type': 'parameter_tuning'}
-                },
-                
-                # Portfolio patterns
-                r'\b(portfolio|allocation|diversification|rebalance)\b': {
-                    'intent': 'portfolio',
-                    'confidence': 0.8,
-                    'args': {'type': 'portfolio_management'}
-                },
-                r'\b(risk|volatility|sharpe|return)\b.*\b(portfolio|allocation)\b': {
-                    'intent': 'risk',
-                    'confidence': 0.85,
-                    'args': {'type': 'risk_analysis'}
-                },
-                
-                # System patterns
-                r'\b(system|status|health|monitor|check)\b': {
-                    'intent': 'general',
-                    'confidence': 0.8,
-                    'args': {'type': 'system_status'}
-                },
-                r'\b(error|issue|problem|fix|debug)\b': {
-                    'intent': 'general',
-                    'confidence': 0.9,
-                    'args': {'type': 'troubleshooting'}
-                },
-                
-                # General patterns
-                r'\b(help|assist|support|guide)\b': {
-                    'intent': 'general',
-                    'confidence': 0.7,
-                    'args': {'type': 'help_request'}
-                },
-                r'\b(what|how|why|when|where)\b': {
-                    'intent': 'general',
-                    'confidence': 0.6,
-                    'args': {'type': 'question'}
-                }
-            }
-            
-            # Test patterns against prompt
-            best_match = None
-            best_confidence = 0.0
-            
-            for pattern, config in fallback_patterns.items():
-                if re.search(pattern, prompt, re.IGNORECASE):
-                    confidence = config['confidence']
-                    if confidence > best_confidence:
-                        best_confidence = confidence
-                        best_match = config
-            
-            if best_match:
-                # Extract additional parameters
-                args = best_match['args'].copy()
-                
-                # Extract time horizons
-                time_match = re.search(r'(\d+)\s*(days?|weeks?|months?)', prompt, re.IGNORECASE)
-                if time_match:
-                    args['horizon'] = int(time_match.group(1))
-                    args['horizon_unit'] = time_match.group(2)
-                
-                # Extract ticker symbols
-                ticker_match = re.search(r'\b([A-Z]{1,5})\b', prompt)
-                if ticker_match:
-                    args['ticker'] = ticker_match.group(1)
-                
-                # Extract action words
-                action_match = re.search(r'\b(buy|sell|hold|long|short)\b', prompt, re.IGNORECASE)
-                if action_match:
-                    args['action'] = action_match.group(1).lower()
-                
-                return ParsedIntent(
-                    intent=best_match['intent'],
-                    confidence=best_confidence,
-                    args=args,
-                    provider='fallback_regex',
-                    raw_response=prompt,
-                    error=None
-                )
-            
-            # Default fallback
-            return ParsedIntent(
-                intent='general',
-                confidence=0.5,
-                args={'type': 'general_query'},
-                provider='fallback_regex',
-                raw_response=prompt,
-                error=None
+            # Use zero-shot classification
+            result = self.classifier(
+                prompt,
+                candidate_labels=self.intent_labels,
+                hypothesis_template="This text is about {}."
             )
             
-        except Exception as e:
-            logger.error(f"Fallback regex router failed: {e}")
-            return ParsedIntent(
-                intent='general',
-                confidence=0.0,
-                args={},
-                provider='fallback_regex',
-                raw_response=prompt,
-                error=str(e)
-            )
-
-    def parse_intent_regex(self, prompt: str) -> ParsedIntent:
-        """Parse intent using regex patterns."""
-        normalized_prompt = prompt.lower()
-        
-        # Find the best matching intent
-        best_intent = "general"
-        best_confidence = 0.0
-        best_matches = 0
-        
-        for intent, keywords in self.intent_keywords.items():
-            matches = sum(1 for keyword in keywords if keyword in normalized_prompt)
-            if matches > best_matches:
-                best_matches = matches
-                best_intent = intent
-                best_confidence = min(0.9, matches / len(keywords) + 0.3)
-        
-        # Extract arguments using regex
-        args = self._extract_args_regex(prompt)
-        
-        return ParsedIntent(
-            intent=best_intent,
-            confidence=best_confidence,
-            args=args,
-            provider="regex",
-            raw_response=f"Intent: {best_intent}, Confidence: {best_confidence:.2f}",
-        )
-
-    def parse_intent_huggingface(self, prompt: str) -> Optional[ParsedIntent]:
-        """Parse intent using local HuggingFace model."""
-        if not self.hf_pipeline:
-            return None
+            # Get best match
+            best_label = result["labels"][0]
+            confidence = result["scores"][0]
             
-        try:
-            # Create a simple prompt for intent classification
-            classification_prompt = f"Classify intent: {prompt}\nIntent:"
-            
-            # Generate response
-            response = self.hf_pipeline(
-                classification_prompt,
-                max_length=len(classification_prompt.split()) + 10,
-                do_sample=True,
-                temperature=0.3,
-                pad_token_id=self.hf_pipeline.tokenizer.eos_token_id,
+            # Extract parameters using text generation
+            param_prompt = f"Extract parameters from: {prompt}\nParameters:"
+            param_result = self.generator(
+                param_prompt,
+                max_length=100,
+                num_return_sequences=1,
+                temperature=0.3
             )
             
-            generated_text = response[0]["generated_text"]
-            intent_part = generated_text[len(classification_prompt):].strip()
-            
-            # Extract intent from generated text
-            intent = self._extract_intent_from_text(intent_part)
-            confidence = 0.7  # Medium confidence for local LLM
-            
-            # Extract arguments
-            args = self._extract_args_regex(prompt)
+            # Parse parameters (simplified)
+            params_text = param_result[0]["generated_text"]
+            extracted_params = self._extract_params_from_text(params_text)
             
             return ParsedIntent(
-                intent=intent,
+                intent=best_label,
                 confidence=confidence,
-                args=args,
+                args=extracted_params,
                 provider="huggingface",
-                raw_response=generated_text,
+                raw_response=result,
+                structured_data={
+                    "classification_result": result,
+                    "parameter_text": params_text
+                }
             )
             
         except Exception as e:
             logger.error(f"HuggingFace parsing error: {e}")
             return None
 
-    def parse_intent_openai(self, prompt: str) -> Optional[ParsedIntent]:
-        """Parse intent using OpenAI."""
-        if not OPENAI_AVAILABLE or not self.openai_api_key:
-            return None
+    async def _parse_intent_openai_structured(self, prompt: str) -> Optional[ParsedIntent]:
+        """Parse intent using OpenAI with structured JSON output.
+        
+        Args:
+            prompt: User prompt
             
+        Returns:
+            ParsedIntent or None if parsing fails
+        """
         try:
-            # Create structured prompt for OpenAI
-            system_prompt = """
-            You are an intent classification system. Analyze the user's request and return a JSON response with:
-            - intent: The primary intent (forecasting, backtesting, tuning, research, portfolio, risk, sentiment, compare_strategies, optimize_model, debug_forecast, general)
-            - confidence: Confidence score (0.0 to 1.0)
-            - args: Extracted arguments as key-value pairs
+            # Define JSON schema for structured output
+            schema = {
+                "type": "object",
+                "properties": {
+                    "intent": {
+                        "type": "string",
+                        "enum": [label.replace(" ", "_") for label in self.intent_labels]
+                    },
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "symbol": {"type": "string"},
+                            "timeframe": {"type": "string"},
+                            "strategy_type": {"type": "string"},
+                            "risk_level": {"type": "string"},
+                            "amount": {"type": "number"}
+                        }
+                    },
+                    "entities": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    }
+                },
+                "required": ["intent", "confidence"]
+            }
+            
+            # Create structured prompt
+            structured_prompt = f"""
+            Parse the following user request and return a JSON object with the specified schema:
+            
+            User request: {prompt}
+            
+            JSON schema: {json.dumps(schema, indent=2)}
+            
+            Return only the JSON object, no additional text.
             """
             
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+            # Call OpenAI with structured output
+            response = await openai.ChatCompletion.acreate(
+                model="gpt-4",
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": "You are a precise intent parser. Return only valid JSON."},
+                    {"role": "user", "content": structured_prompt}
                 ],
                 temperature=0.1,
-                max_tokens=200,
+                max_tokens=500
             )
             
+            # Parse response
             response_text = response.choices[0].message.content.strip()
             
-            # Parse JSON response
-            try:
-                parsed = json.loads(response_text)
-                intent = parsed.get("intent", "general")
-                confidence = float(parsed.get("confidence", 0.8))
-                args = parsed.get("args", {})
-                
-                return ParsedIntent(
-                    intent=intent,
-                    confidence=confidence,
-                    args=args,
-                    provider="openai",
-                    raw_response=response_text,
-                    json_spec=parsed if self.enable_debug_mode else None,
-                )
-            except json.JSONDecodeError:
-                # Fallback: extract intent from text
-                intent = self._extract_intent_from_text(response_text)
-                return ParsedIntent(
-                    intent=intent,
-                    confidence=0.8,
-                    args={},
-                    provider="openai",
-                    raw_response=response_text,
-                )
-                
+            # Extract JSON from response
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            if not json_match:
+                raise ValueError("No JSON found in response")
+            
+            parsed_data = json.loads(json_match.group())
+            
+            # Convert intent back to readable format
+            intent = parsed_data["intent"].replace("_", " ")
+            
+            return ParsedIntent(
+                intent=intent,
+                confidence=parsed_data.get("confidence", 0.8),
+                args=parsed_data.get("parameters", {}),
+                provider="openai",
+                raw_response=response_text,
+                json_spec=parsed_data,
+                structured_data=parsed_data
+            )
+            
         except Exception as e:
-            logger.error(f"OpenAI parsing error: {e}")
+            logger.error(f"OpenAI structured parsing error: {e}")
             return None
 
-    def _extract_intent_from_text(self, text: str) -> str:
-        """Extract intent from generated text."""
-        text_lower = text.lower()
+    def _parse_intent_fallback(self, prompt: str) -> ParsedIntent:
+        """Fallback intent parsing using basic pattern matching.
         
-        for intent in self.intent_keywords.keys():
-            if intent in text_lower:
-                return intent
-                
-        return "general"
+        Args:
+            prompt: User prompt
+            
+        Returns:
+            ParsedIntent: Basic parsed intent
+        """
+        prompt_lower = prompt.lower()
+        
+        # Basic pattern matching
+        if any(word in prompt_lower for word in ["forecast", "predict", "price", "stock"]):
+            intent = "forecast stock price"
+        elif any(word in prompt_lower for word in ["strategy", "trade", "signal"]):
+            intent = "generate trading strategy"
+        elif any(word in prompt_lower for word in ["analyze", "market", "trend"]):
+            intent = "analyze market"
+        elif any(word in prompt_lower for word in ["optimize", "portfolio", "allocation"]):
+            intent = "optimize portfolio"
+        elif any(word in prompt_lower for word in ["position", "manage", "risk"]):
+            intent = "manage positions"
+        elif any(word in prompt_lower for word in ["system", "status", "health"]):
+            intent = "system status"
+        elif any(word in prompt_lower for word in ["invest", "buy", "sell", "advice"]):
+            intent = "investment advice"
+        else:
+            intent = "general question"
+        
+        # Extract basic parameters
+        args = self._extract_basic_parameters(prompt)
+        
+        return ParsedIntent(
+            intent=intent,
+            confidence=0.5,  # Low confidence for fallback
+            args=args,
+            provider="fallback",
+            raw_response=prompt
+        )
 
-    def _extract_args_regex(self, prompt: str) -> Dict[str, Any]:
-        """Extract arguments using regex patterns."""
-        args = {}
+    def _extract_parameters_enhanced(
+        self, 
+        prompt: str, 
+        parsed_intent: ParsedIntent
+    ) -> Dict[str, Any]:
+        """Enhanced parameter extraction.
         
-        for param_name, pattern in self.parameter_patterns.items():
-            matches = re.findall(pattern, prompt, re.IGNORECASE)
-            if matches:
-                args[param_name] = matches[0] if len(matches) == 1 else matches
+        Args:
+            prompt: User prompt
+            parsed_intent: Parsed intent result
+            
+        Returns:
+            Dictionary of extracted parameters
+        """
+        params = {}
         
-        return args
+        # Use structured data if available
+        if parsed_intent.structured_data:
+            params.update(parsed_intent.structured_data.get("parameters", {}))
+        
+        # Extract from parsed intent args
+        params.update(parsed_intent.args)
+        
+        # Extract additional parameters using regex
+        params.update(self._extract_params_regex(prompt))
+        
+        return params
+
+    def _extract_params_regex(self, prompt: str) -> Dict[str, Any]:
+        """Extract parameters using regex patterns.
+        
+        Args:
+            prompt: User prompt
+            
+        Returns:
+            Dictionary of extracted parameters
+        """
+        params = {}
+        
+        # Extract stock symbols
+        symbol_pattern = r'\b[A-Z]{1,5}\b'
+        symbols = re.findall(symbol_pattern, prompt.upper())
+        if symbols:
+            params["symbols"] = symbols
+        
+        # Extract timeframes
+        timeframe_pattern = r'\b(\d+)\s*(day|week|month|year)s?\b'
+        timeframes = re.findall(timeframe_pattern, prompt.lower())
+        if timeframes:
+            params["timeframe"] = f"{timeframes[0][0]} {timeframes[0][1]}"
+        
+        # Extract amounts
+        amount_pattern = r'\$?(\d+(?:,\d{3})*(?:\.\d{2})?)'
+        amounts = re.findall(amount_pattern, prompt)
+        if amounts:
+            params["amount"] = float(amounts[0].replace(",", ""))
+        
+        return params
+
+    def _extract_basic_parameters(self, prompt: str) -> Dict[str, Any]:
+        """Extract basic parameters from prompt.
+        
+        Args:
+            prompt: User prompt
+            
+        Returns:
+            Dictionary of basic parameters
+        """
+        return self._extract_params_regex(prompt)
+
+    def _extract_params_from_text(self, text: str) -> Dict[str, Any]:
+        """Extract parameters from generated text.
+        
+        Args:
+            text: Generated parameter text
+            
+        Returns:
+            Dictionary of parameters
+        """
+        params = {}
+        
+        # Simple extraction from generated text
+        lines = text.split('\n')
+        for line in lines:
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip().lower().replace(' ', '_')
+                value = value.strip()
+                if value:
+                    params[key] = value
+        
+        return params
 
     def _map_intent_to_request_type(self, intent: str) -> RequestType:
-        """Map parsed intent to request type."""
-        intent_mapping = {
-            "forecasting": RequestType.FORECAST,
-            "backtesting": RequestType.ANALYSIS,
-            "tuning": RequestType.OPTIMIZATION,
-            "research": RequestType.ANALYSIS,
-            "portfolio": RequestType.PORTFOLIO,
-            "risk": RequestType.ANALYSIS,
-            "sentiment": RequestType.ANALYSIS,
-            "compare_strategies": RequestType.STRATEGY,
-            "optimize_model": RequestType.OPTIMIZATION,
-            "debug_forecast": RequestType.SYSTEM,
-        }
+        """Map intent to request type.
         
-        return intent_mapping.get(intent, RequestType.GENERAL)
+        Args:
+            intent: Detected intent
+            
+        Returns:
+            RequestType: Mapped request type
+        """
+        return self.label_to_request_type.get(intent, RequestType.UNKNOWN)
 
     def _normalize_prompt(self, prompt: str) -> str:
-        """Normalize prompt for processing."""
-        return prompt.lower().strip()
-
-    def _extract_parameters(self, prompt: str) -> Dict[str, Any]:
-        """Extract parameters from prompt."""
-        return self._extract_args_regex(prompt)
+        """Normalize prompt text.
+        
+        Args:
+            prompt: Raw prompt
+            
+        Returns:
+            Normalized prompt
+        """
+        return prompt.strip().lower()
 
     def _generate_routing_suggestions(
         self, request_type: RequestType, parameters: Dict[str, Any]
     ) -> List[str]:
-        """Generate routing suggestions based on request type and parameters."""
+        """Generate routing suggestions based on request type and parameters.
+        
+        Args:
+            request_type: Type of request
+            parameters: Extracted parameters
+            
+        Returns:
+            List of suggested agents
+        """
         suggestions = []
         
-        # Map request types to suggested agents
-        agent_suggestions = {
-            RequestType.FORECAST: ["ForecastAgent"],
-            RequestType.STRATEGY: ["StrategyAgent"],
-            RequestType.ANALYSIS: ["AnalysisAgent"],
-            RequestType.OPTIMIZATION: ["OptimizationAgent"],
-            RequestType.PORTFOLIO: ["PortfolioAgent"],
-            RequestType.SYSTEM: ["SystemAgent"],
-            RequestType.INVESTMENT: ["AnalysisAgent", "PortfolioAgent"],
-            RequestType.GENERAL: ["AnalysisAgent"],
-        }
+        if request_type == RequestType.FORECAST:
+            suggestions.extend(["ModelSelectorAgent", "MarketAnalyzerAgent"])
+        elif request_type == RequestType.STRATEGY:
+            suggestions.extend(["StrategySelectorAgent", "MetaTunerAgent"])
+        elif request_type == RequestType.ANALYSIS:
+            suggestions.extend(["MarketAnalyzerAgent", "ModelSelectorAgent"])
+        elif request_type == RequestType.OPTIMIZATION:
+            suggestions.extend(["MetaTunerAgent", "PortfolioManagerAgent"])
+        elif request_type == RequestType.PORTFOLIO:
+            suggestions.extend(["PortfolioManagerAgent", "MetaTunerAgent"])
+        elif request_type == RequestType.SYSTEM:
+            suggestions.extend(["SystemMonitorAgent"])
+        else:
+            suggestions.extend(["ModelSelectorAgent", "StrategySelectorAgent"])
         
-        suggestions.extend(agent_suggestions.get(request_type, ["AnalysisAgent"]))
+        return suggestions
+
+    def get_learning_insights(self) -> Dict[str, Any]:
+        """Get learning insights from memory.
         
-        # Add specific suggestions based on parameters
-        if "model" in parameters:
-            suggestions.append("OptimizationAgent")
-        if "strategy" in parameters:
-            suggestions.append("StrategyAgent")
-            
-        return list(set(suggestions))  # Remove duplicates
+        Returns:
+            Dictionary with learning insights
+        """
+        return self.memory.get_learning_insights()
+
+    def get_performance_statistics(self) -> Dict[str, Any]:
+        """Get performance statistics.
+        
+        Returns:
+            Dictionary with performance statistics
+        """
+        stats = self.performance_metrics.copy()
+        stats["success_rate"] = (
+            stats["successful_parses"] / stats["total_requests"] 
+            if stats["total_requests"] > 0 else 0
+        )
+        return stats
 
     def route_request(
         self, user_request: str, context: Optional[Dict[str, Any]] = None
@@ -917,6 +1090,27 @@ class PromptAgent:
         """
         # Process the prompt
         processed = self.process_prompt(user_request)
+        
+        # Check if strategy was detected
+        if not processed.request_type or processed.request_type == RequestType.UNKNOWN:
+            # Return fallback for no strategy detected
+            return RoutingDecision(
+                request_id=f"req_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
+                request_type=RequestType.GENERAL,
+                primary_agent="GeneralAgent",
+                fallback_agents=[],
+                confidence=0.1,
+                reasoning="No strategy detected, using general fallback",
+                expected_response_time=1.0,
+                priority=7,
+                timestamp=datetime.now(),
+                metadata={
+                    "action": "help",
+                    "message": "No strategy detected",
+                    "processed_prompt": processed,
+                    "provider_used": "consolidated",
+                },
+            )
         
         # Find suitable agents
         suitable_agents = self._find_suitable_agents(processed.request_type, user_request)
@@ -997,7 +1191,7 @@ class PromptAgent:
         """Select primary and fallback agents."""
         if not suitable_agents:
             # Fallback to general agent
-            return "AnalysisAgent", []
+            return "GeneralAgent", []
         
         # Sort by score (priority, success rate, load)
         scored_agents = []
@@ -1146,28 +1340,6 @@ class PromptAgent:
             self.performance_metrics["agent_usage"][agent_name] = 0
         self.performance_metrics["agent_usage"][agent_name] += 1
 
-    def get_performance_statistics(self) -> Dict[str, Any]:
-        """Get performance statistics."""
-        total_requests = self.performance_metrics["total_requests"]
-        
-        if total_requests == 0:
-            return {
-                "total_requests": 0,
-                "success_rate": 0.0,
-                "avg_response_time": 0.0,
-                "provider_usage": {},
-                "agent_usage": {},
-            }
-        
-        return {
-            "total_requests": total_requests,
-            "success_rate": self.performance_metrics["successful_routes"] / total_requests,
-            "avg_response_time": self.performance_metrics["avg_response_time"],
-            "provider_usage": self.performance_metrics["provider_usage"],
-            "agent_usage": self.performance_metrics["agent_usage"],
-            "recent_decisions": len(self.routing_history),
-        }
-
     def update_agent_status(
         self, agent_name: str, is_available: bool, current_load: int = 0
     ):
@@ -1213,7 +1385,7 @@ class PromptAgent:
         session_id = context.get('session_id') if context else None
         user_id = context.get('user_id') if context else None
         
-        trace = self.prompt_trace_logger.start_trace(
+        trace = self.trace_logger.start_trace(
             trace_id=trace_id,
             session_id=session_id,
             user_id=user_id,
@@ -1226,8 +1398,8 @@ class PromptAgent:
             processed = self.process_prompt(prompt)
             
             # Parse intent and update trace
-            parsed_intent = self.parse_intent(prompt)
-            self.prompt_trace_logger.update_intent(
+            parsed_intent = self.parse_intent_enhanced(prompt)
+            self.trace_logger.update_intent(
                 trace=trace,
                 detection_method=parsed_intent.provider,
                 intent=parsed_intent.intent,
@@ -1241,7 +1413,7 @@ class PromptAgent:
             
             # Update trace with action execution
             action_duration = (datetime.now() - start_time).total_seconds()
-            self.prompt_trace_logger.update_action(
+            self.trace_logger.update_action(
                 trace=trace,
                 action=f"route_to_{routing_decision.primary_agent}",
                 status=ActionStatus.SUCCESS if routing_decision.confidence > 0.5 else ActionStatus.PARTIAL,
@@ -1255,7 +1427,7 @@ class PromptAgent:
             )
             
             # Update provider usage in trace
-            self.prompt_trace_logger.update_provider_usage(
+            self.trace_logger.update_provider_usage(
                 trace=trace,
                 provider=parsed_intent.provider,
                 count=1
@@ -1263,7 +1435,7 @@ class PromptAgent:
             
             # Complete trace logging
             processing_time = (datetime.now() - start_time).total_seconds()
-            self.prompt_trace_logger.complete_trace(trace, processing_time)
+            self.trace_logger.complete_trace(trace, processing_time)
             
             return {
                 "success": True,
@@ -1290,8 +1462,8 @@ class PromptAgent:
             logger.error(f"Error handling prompt: {e}")
             
             # Update trace with error
-            self.prompt_trace_logger.add_error(trace, str(e))
-            self.prompt_trace_logger.update_action(
+            self.trace_logger.add_error(trace, str(e))
+            self.trace_logger.update_action(
                 trace=trace,
                 action="error_handling",
                 status=ActionStatus.FAILED,
@@ -1301,7 +1473,7 @@ class PromptAgent:
             
             # Complete trace logging
             processing_time = (datetime.now() - start_time).total_seconds()
-            self.prompt_trace_logger.complete_trace(trace, processing_time)
+            self.trace_logger.complete_trace(trace, processing_time)
             
             return {
                 "success": False,
@@ -1319,24 +1491,26 @@ class PromptAgent:
 # Convenience function to create a prompt agent
 def create_prompt_agent(
     openai_api_key: Optional[str] = None,
-    huggingface_model: str = "gpt2",
+    huggingface_model: str = "microsoft/DialoGPT-medium",
+    classification_model: str = "facebook/bart-large-mnli",
     huggingface_api_key: Optional[str] = None,
     enable_debug_mode: bool = False,
-    use_regex_first: bool = True,
-    use_local_llm: bool = True,
+    use_huggingface_first: bool = True,
     use_openai_fallback: bool = True,
+    redis_url: Optional[str] = None,
 ) -> PromptAgent:
     """
     Create a configured prompt agent.
 
     Args:
         openai_api_key: OpenAI API key
-        huggingface_model: HuggingFace model name
+        huggingface_model: HuggingFace model for text generation
+        classification_model: HuggingFace model for intent classification
         huggingface_api_key: HuggingFace API key
         enable_debug_mode: Enable debug mode
-        use_regex_first: Use regex parsing first
-        use_local_llm: Use local LLM
+        use_huggingface_first: Use HuggingFace classification first
         use_openai_fallback: Use OpenAI fallback
+        redis_url: Redis URL for memory storage
 
     Returns:
         Configured PromptAgent instance
@@ -1344,9 +1518,10 @@ def create_prompt_agent(
     return PromptAgent(
         openai_api_key=openai_api_key,
         huggingface_model=huggingface_model,
+        classification_model=classification_model,
         huggingface_api_key=huggingface_api_key,
         enable_debug_mode=enable_debug_mode,
-        use_regex_first=use_regex_first,
-        use_local_llm=use_local_llm,
+        use_huggingface_first=use_huggingface_first,
         use_openai_fallback=use_openai_fallback,
+        redis_url=redis_url,
     ) 

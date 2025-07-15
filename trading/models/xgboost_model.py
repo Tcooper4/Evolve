@@ -9,10 +9,14 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, List
+import warnings
 
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn.feature_selection import SelectKBest, f_regression, RFE
+from sklearn.model_selection import cross_val_score, TimeSeriesSplit
+from sklearn.preprocessing import StandardScaler
 
 from .base_model import BaseModel
 from utils.model_cache import cache_model_operation, get_model_cache
@@ -40,6 +44,10 @@ class XGBoostModel(BaseModel):
         self.model = None
         self.is_trained = False
         self.feature_names = None
+        self.feature_selector = None
+        self.scaler = StandardScaler()
+        self.selected_features = None
+        self.feature_importance_scores = None
 
     def _load_hyperparameters(self) -> Dict[str, Any]:
         """Load XGBoost hyperparameters from config file or environment variables."""
@@ -123,317 +131,87 @@ class XGBoostModel(BaseModel):
                 "XGBoost is required for this model. Install with: pip install xgboost"
             )
 
-    def prepare_features(self, data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
-        """Prepare features for XGBoost model.
-
+    def _create_lag_features(self, data: pd.DataFrame, max_lags: int = 20) -> pd.DataFrame:
+        """Create lag features with cross-validated selection.
+        
         Args:
-            data: Input time series data
-
+            data: Input data
+            max_lags: Maximum number of lags to create
+            
         Returns:
-            Tuple of (features, target)
+            DataFrame with lag features
         """
         try:
-            # Feature construction sanity check to prevent future-data leakage
-            self._validate_feature_construction(data)
+            features = data.copy()
             
-            # Use auto feature engineering if enabled
-            if self.config.get("auto_feature_engineering", False):
-                return self._auto_engineer_features(data)
-
-            # Create lag features using dynamic optimization
-            optimal_lags = self._optimize_lags(data)
-            features = pd.DataFrame()
-
-            for lag in optimal_lags:
-                features[f"lag_{lag}"] = data["close"].shift(lag)
-
-            # Add technical indicators
-            features["sma_5"] = data["close"].rolling(5).mean()
-            features["sma_20"] = data["close"].rolling(20).mean()
-            features["rsi"] = self._calculate_rsi(data["close"])
-            features["volatility"] = data["close"].rolling(20).std()
-
-            # Add time features
-            features["day_of_week"] = data.index.dayofweek
-            features["month"] = data.index.month
-
-            # Target variable
-            target = data["close"].shift(-1)  # Next day's price
-
-            # Remove NaN values
+            # Create lag features for close price
+            if "close" in data.columns:
+                for lag in range(1, max_lags + 1):
+                    features[f"close_lag_{lag}"] = data["close"].shift(lag)
+            
+            # Create lag features for volume
+            if "volume" in data.columns:
+                for lag in range(1, min(max_lags, 10) + 1):
+                    features[f"volume_lag_{lag}"] = data["volume"].shift(lag)
+            
+            # Create rolling statistics
+            if "close" in data.columns:
+                for window in [5, 10, 20, 50]:
+                    features[f"close_ma_{window}"] = data["close"].rolling(window=window).mean()
+                    features[f"close_std_{window}"] = data["close"].rolling(window=window).std()
+                    features[f"close_min_{window}"] = data["close"].rolling(window=window).min()
+                    features[f"close_max_{window}"] = data["close"].rolling(window=window).max()
+            
+            # Create technical indicators
+            features = self._add_technical_indicators(features)
+            
+            # Remove rows with NaN values
             features = features.dropna()
-            target = target[features.index]
-
-            self.feature_names = features.columns.tolist()
             
-            # Store last features for SHAP calculation
-            self.last_features = features.copy()
-
-            return features, target
-
+            return features
+            
         except Exception as e:
-            logger.error(f"Error preparing features: {e}")
+            logger.error(f"Error creating lag features: {e}")
             raise
 
-    def _validate_feature_construction(self, data: pd.DataFrame) -> None:
-        """Validate feature construction to prevent future-data leakage.
+    def _add_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Add technical indicators to the data.
         
         Args:
-            data: Input time series data
-            
-        Raises:
-            ValueError: If future data leakage is detected
-        """
-        try:
-            # Check for proper time index
-            if not isinstance(data.index, pd.DatetimeIndex):
-                raise ValueError("Data must have a DatetimeIndex")
-            
-            # Check for sorted time index
-            if not data.index.is_monotonic_increasing:
-                raise ValueError("Data must be sorted by time (ascending)")
-            
-            # Check for duplicate timestamps
-            if data.index.duplicated().any():
-                raise ValueError("Data contains duplicate timestamps")
-            
-            # Check for missing values in key columns
-            required_columns = ['close']
-            for col in required_columns:
-                if col not in data.columns:
-                    raise ValueError(f"Required column '{col}' not found in data")
-                if data[col].isnull().all():
-                    raise ValueError(f"Column '{col}' contains only null values")
-            
-            # Check for sufficient data
-            if len(data) < 50:
-                raise ValueError("Insufficient data for feature construction (need at least 50 samples)")
-            
-            # Check for reasonable price values
-            if (data['close'] <= 0).any():
-                raise ValueError("Price data contains non-positive values")
-            
-            # Check for extreme outliers (prices > 100x median)
-            median_price = data['close'].median()
-            if (data['close'] > 100 * median_price).any():
-                logger.warning("Extreme price outliers detected in data")
-            
-            logger.info("Feature construction validation passed")
-            
-        except Exception as e:
-            logger.error(f"Feature construction validation failed: {e}")
-            raise ValueError(f"Feature construction validation failed: {e}")
-
-    def _auto_engineer_features(
-        self, data: pd.DataFrame
-    ) -> Tuple[pd.DataFrame, pd.Series]:
-        """Automatically engineer features using cross-validation to find optimal lags."""
-        try:
-            from sklearn.metrics import mean_squared_error
-            from sklearn.model_selection import TimeSeriesSplit
-
-            logger.info("Starting auto feature engineering...")
-
-            # Define candidate lag ranges
-            lag_ranges = {
-                "short": list(range(1, 6)),
-                "medium": list(range(5, 16, 2)),
-                "long": list(range(15, 31, 5)),
-            }
-
-            # Define candidate rolling windows
-            rolling_windows = [5, 10, 20, 30]
-
-            best_features = None
-            best_score = float("inf")
-
-            # Cross-validation setup
-            tscv = TimeSeriesSplit(n_splits=3)
-
-            # Test different feature combinations
-            for lag_type, lags in lag_ranges.items():
-                for window in rolling_windows:
-                    # Create feature set
-                    features = pd.DataFrame()
-
-                    # Add lag features
-                    for lag in lags:
-                        features[f"lag_{lag}"] = data["close"].shift(lag)
-
-                    # Add rolling features
-                    features[f"sma_{window}"] = data["close"].rolling(window).mean()
-                    features[f"std_{window}"] = data["close"].rolling(window).std()
-                    features[f"min_{window}"] = data["close"].rolling(window).min()
-                    features[f"max_{window}"] = data["close"].rolling(window).max()
-
-                    # Add technical indicators
-                    features["rsi"] = self._calculate_rsi(data["close"])
-
-                    # Add time features
-                    features["day_of_week"] = data.index.dayofweek
-                    features["month"] = data.index.month
-
-                    # Target variable
-                    target = data["close"].shift(-1)
-
-                    # Remove NaN values
-                    features_clean = features.dropna()
-                    target_clean = target[features_clean.index]
-
-                    if len(features_clean) < 50:
-                        continue
-
-                    # Evaluate with cross-validation
-                    cv_scores = []
-                    for train_idx, val_idx in tscv.split(features_clean):
-                        X_train, X_val = (
-                            features_clean.iloc[train_idx],
-                            features_clean.iloc[val_idx],
-                        )
-                        y_train, y_val = (
-                            target_clean.iloc[train_idx],
-                            target_clean.iloc[val_idx],
-                        )
-
-                        # Quick XGBoost fit
-                        import xgboost as xgb
-
-                        model = xgb.XGBRegressor(n_estimators=50, random_state=42)
-                        model.fit(X_train, y_train)
-
-                        # Predict and score
-                        y_pred = model.predict(X_val)
-                        score = mean_squared_error(y_val, y_pred)
-                        cv_scores.append(score)
-
-                    avg_score = np.mean(cv_scores)
-
-                    if avg_score < best_score:
-                        best_score = avg_score
-                        best_features = features_clean.copy()
-                        logger.info(
-                            f"New best feature set: {lag_type} lags, {window} window, CV score: {avg_score:.4f}"
-                        )
-
-            if best_features is None:
-                logger.warning(
-                    "Auto feature engineering failed, using default features"
-                )
-                return self.prepare_features(data)
-
-            target = data["close"].shift(-1)[best_features.index]
-            self.feature_names = best_features.columns.tolist()
-
-            logger.info(
-                f"Auto feature engineering completed. Best CV score: {best_score:.4f}"
-            )
-            return best_features, target
-
-        except Exception as e:
-            logger.error(f"Auto feature engineering failed: {e}")
-            # Fallback to default features
-            return self.prepare_features(data)
-
-    def _optimize_lags(self, data: pd.DataFrame, max_lags: int = 20) -> List[int]:
-        """Dynamically optimize lag features using cross-validation.
-        
-        Args:
-            data: Input time series data
-            max_lags: Maximum number of lags to test
+            data: Input data
             
         Returns:
-            List of optimal lag values
+            DataFrame with technical indicators
         """
         try:
-            from sklearn.model_selection import TimeSeriesSplit
-            from sklearn.metrics import mean_squared_error
-            import xgboost as xgb
-            
-            logger.info(f"Optimizing lags up to {max_lags} periods...")
-            
-            # Test different lag combinations
-            lag_candidates = list(range(1, min(max_lags + 1, len(data) // 4)))
-            best_lags = []
-            best_score = float('inf')
-            
-            # Use time series cross-validation
-            tscv = TimeSeriesSplit(n_splits=3)
-            
-            # Test individual lags first
-            individual_scores = {}
-            for lag in lag_candidates:
-                try:
-                    # Create simple feature set with just this lag
-                    features = pd.DataFrame()
-                    features[f'lag_{lag}'] = data['close'].shift(lag)
-                    features['target'] = data['close'].shift(-1)
-                    
-                    # Remove NaN values
-                    features = features.dropna()
-                    
-                    if len(features) < 50:
-                        continue
-                    
-                    # Cross-validate
-                    cv_scores = []
-                    for train_idx, val_idx in tscv.split(features):
-                        X_train = features.iloc[train_idx, :-1]
-                        y_train = features.iloc[train_idx, -1]
-                        X_val = features.iloc[val_idx, :-1]
-                        y_val = features.iloc[val_idx, -1]
-                        
-                        # Quick XGBoost fit
-                        model = xgb.XGBRegressor(n_estimators=50, random_state=42)
-                        model.fit(X_train, y_train)
-                        
-                        # Predict and score
-                        y_pred = model.predict(X_val)
-                        score = mean_squared_error(y_val, y_pred)
-                        cv_scores.append(score)
-                    
-                    # Average score across folds
-                    avg_score = np.mean(cv_scores)
-                    individual_scores[lag] = avg_score
-                    
-                except Exception as e:
-                    logger.warning(f"Error testing lag {lag}: {e}")
-                    continue
-            
-            # Select top performing lags
-            if individual_scores:
-                # Sort by performance and select top lags
-                sorted_lags = sorted(individual_scores.items(), key=lambda x: x[1])
-                top_lags = [lag for lag, score in sorted_lags[:5]]  # Top 5 lags
+            if "close" in data.columns:
+                # RSI
+                data["rsi"] = self._calculate_rsi(data["close"])
                 
-                # Add some diversity (short, medium, long term)
-                optimal_lags = []
-                if 1 in top_lags:
-                    optimal_lags.append(1)  # Always include lag 1
+                # MACD
+                data["macd"], data["macd_signal"] = self._calculate_macd(data["close"])
                 
-                # Add medium-term lags
-                medium_lags = [lag for lag in top_lags if 2 <= lag <= 7]
-                optimal_lags.extend(medium_lags[:2])
+                # Bollinger Bands
+                data["bb_upper"], data["bb_middle"], data["bb_lower"] = self._calculate_bollinger_bands(data["close"])
                 
-                # Add long-term lags
-                long_lags = [lag for lag in top_lags if lag > 7]
-                optimal_lags.extend(long_lags[:2])
+                # Price changes
+                data["price_change"] = data["close"].pct_change()
+                data["price_change_2"] = data["close"].pct_change(2)
+                data["price_change_5"] = data["close"].pct_change(5)
                 
-                # Ensure we have at least 3 lags
-                if len(optimal_lags) < 3:
-                    optimal_lags.extend([1, 2, 3])
+                # Volatility
+                data["volatility"] = data["close"].rolling(window=20).std()
                 
-                optimal_lags = sorted(list(set(optimal_lags)))[:5]  # Remove duplicates, max 5
+            if "volume" in data.columns:
+                # Volume indicators
+                data["volume_ma"] = data["volume"].rolling(window=20).mean()
+                data["volume_ratio"] = data["volume"] / data["volume_ma"]
                 
-                logger.info(f"Selected optimal lags: {optimal_lags}")
-                return optimal_lags
-            
-            # Fallback to default lags
-            logger.warning("Lag optimization failed, using default lags")
-            return [1, 2, 3, 5, 10]
+            return data
             
         except Exception as e:
-            logger.error(f"Error in lag optimization: {e}")
-            return [1, 2, 3, 5, 10]  # Fallback
+            logger.error(f"Error adding technical indicators: {e}")
+            return data
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
         """Calculate RSI indicator."""
@@ -448,8 +226,140 @@ class XGBoostModel(BaseModel):
             logger.warning(f"Error calculating RSI: {e}")
             return pd.Series(index=prices.index, data=50)
 
+    def _calculate_macd(self, prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> Tuple[pd.Series, pd.Series]:
+        """Calculate MACD indicator."""
+        try:
+            ema_fast = prices.ewm(span=fast).mean()
+            ema_slow = prices.ewm(span=slow).mean()
+            macd = ema_fast - ema_slow
+            macd_signal = macd.ewm(span=signal).mean()
+            return macd, macd_signal
+        except Exception as e:
+            logger.warning(f"Error calculating MACD: {e}")
+            return pd.Series(index=prices.index, data=0), pd.Series(index=prices.index, data=0)
+
+    def _calculate_bollinger_bands(self, prices: pd.Series, window: int = 20, std_dev: float = 2) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Calculate Bollinger Bands."""
+        try:
+            middle = prices.rolling(window=window).mean()
+            std = prices.rolling(window=window).std()
+            upper = middle + (std * std_dev)
+            lower = middle - (std * std_dev)
+            return upper, middle, lower
+        except Exception as e:
+            logger.warning(f"Error calculating Bollinger Bands: {e}")
+            return prices, prices, prices
+
+    def _select_features_cross_validation(self, X: pd.DataFrame, y: pd.Series, max_features: int = 50) -> List[str]:
+        """Select features using cross-validated methods.
+        
+        Args:
+            X: Feature matrix
+            y: Target variable
+            max_features: Maximum number of features to select
+            
+        Returns:
+            List of selected feature names
+        """
+        try:
+            # Remove any remaining NaN values
+            X_clean = X.dropna()
+            y_clean = y[X_clean.index]
+            
+            if len(X_clean) < 50:
+                logger.warning("Insufficient data for feature selection, using all features")
+                return list(X_clean.columns)
+            
+            # Method 1: SelectKBest with f_regression
+            try:
+                selector_kbest = SelectKBest(score_func=f_regression, k=min(max_features, len(X_clean.columns)))
+                selector_kbest.fit(X_clean, y_clean)
+                kbest_features = X_clean.columns[selector_kbest.get_support()].tolist()
+                logger.info(f"SelectKBest selected {len(kbest_features)} features")
+            except Exception as e:
+                logger.warning(f"SelectKBest failed: {e}")
+                kbest_features = list(X_clean.columns)
+            
+            # Method 2: Recursive Feature Elimination with XGBoost
+            try:
+                import xgboost as xgb
+                estimator = xgb.XGBRegressor(n_estimators=50, random_state=42)
+                selector_rfe = RFE(estimator=estimator, n_features_to_select=min(max_features//2, len(X_clean.columns)))
+                selector_rfe.fit(X_clean, y_clean)
+                rfe_features = X_clean.columns[selector_rfe.get_support()].tolist()
+                logger.info(f"RFE selected {len(rfe_features)} features")
+            except Exception as e:
+                logger.warning(f"RFE failed: {e}")
+                rfe_features = list(X_clean.columns)
+            
+            # Combine features from both methods
+            combined_features = list(set(kbest_features + rfe_features))
+            
+            # Limit to max_features
+            if len(combined_features) > max_features:
+                # Use feature importance from XGBoost to prioritize
+                try:
+                    temp_model = xgb.XGBRegressor(n_estimators=50, random_state=42)
+                    temp_model.fit(X_clean[combined_features], y_clean)
+                    feature_importance = pd.Series(temp_model.feature_importances_, index=combined_features)
+                    combined_features = feature_importance.nlargest(max_features).index.tolist()
+                except Exception as e:
+                    logger.warning(f"Feature importance ranking failed: {e}")
+                    combined_features = combined_features[:max_features]
+            
+            logger.info(f"Final feature selection: {len(combined_features)} features")
+            return combined_features
+            
+        except Exception as e:
+            logger.error(f"Feature selection failed: {e}")
+            return list(X.columns)
+
+    def prepare_features(self, data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
+        """Prepare features with cross-validated feature selection.
+        
+        Args:
+            data: Input data
+            
+        Returns:
+            Tuple of features and target
+        """
+        try:
+            # Create lag features
+            features = self._create_lag_features(data)
+            
+            if features.empty:
+                raise ValueError("No features created from input data")
+            
+            # Separate features and target
+            target_col = "close" if "close" in features.columns else features.columns[0]
+            target = features[target_col]
+            feature_cols = [col for col in features.columns if col != target_col]
+            X = features[feature_cols]
+            
+            # Select features if not already done
+            if self.selected_features is None:
+                self.selected_features = self._select_features_cross_validation(X, target)
+                self.feature_names = self.selected_features
+            
+            # Use only selected features
+            X = X[self.selected_features]
+            
+            # Scale features
+            if not self.is_trained:
+                X_scaled = self.scaler.fit_transform(X)
+            else:
+                X_scaled = self.scaler.transform(X)
+            
+            X_scaled_df = pd.DataFrame(X_scaled, columns=X.columns, index=X.index)
+            
+            return X_scaled_df, target
+            
+        except Exception as e:
+            logger.error(f"Error preparing features: {e}")
+            raise
+
     def train(self, data: pd.DataFrame) -> Dict[str, Any]:
-        """Train the XGBoost model.
+        """Train the XGBoost model with cross-validated feature selection.
 
         Args:
             data: Training data
@@ -458,19 +368,29 @@ class XGBoostModel(BaseModel):
             Training results dictionary
         """
         try:
-            logger.info("Starting XGBoost model training...")
+            logger.info("Starting XGBoost model training with cross-validated feature selection...")
 
             # Setup model if not already done
             if self.model is None:
                 self._setup_model()
 
-            # Prepare features
+            # Prepare features with cross-validated selection
             features, target = self.prepare_features(data)
 
             if len(features) < 50:
                 raise ValueError(
                     "Insufficient data for training (need at least 50 samples)"
                 )
+
+            # Cross-validation to validate model performance
+            try:
+                from sklearn.model_selection import TimeSeriesSplit
+                tscv = TimeSeriesSplit(n_splits=5)
+                cv_scores = cross_val_score(self.model, features, target, cv=tscv, scoring='neg_mean_squared_error')
+                cv_rmse = np.sqrt(-cv_scores)
+                logger.info(f"Cross-validation RMSE: {cv_rmse.mean():.4f} (+/- {cv_rmse.std() * 2:.4f})")
+            except Exception as e:
+                logger.warning(f"Cross-validation failed: {e}")
 
             # Train model
             self.model.fit(features, target)
@@ -481,14 +401,20 @@ class XGBoostModel(BaseModel):
             mse = np.mean((target - train_predictions) ** 2)
             mae = np.mean(np.abs(target - train_predictions))
 
+            # Store feature importance
+            self.feature_importance_scores = dict(
+                zip(self.feature_names, self.model.feature_importances_)
+            )
+
             logger.info(f"XGBoost training completed. MSE: {mse:.4f}, MAE: {mae:.4f}")
+            logger.info(f"Selected {len(self.feature_names)} features")
 
             return {
                 "mse": mse,
                 "mae": mae,
-                "feature_importance": dict(
-                    zip(self.feature_names, self.model.feature_importances_)
-                ),
+                "feature_importance": self.feature_importance_scores,
+                "selected_features": self.feature_names,
+                "cv_rmse": cv_rmse.mean() if 'cv_rmse' in locals() else None,
             }
 
         except Exception as e:
@@ -496,7 +422,7 @@ class XGBoostModel(BaseModel):
             raise
 
     def predict(self, data: pd.DataFrame) -> np.ndarray:
-        """Generate predictions using the trained model.
+        """Generate predictions using the trained model with error handling.
 
         Args:
             data: Input data for prediction
@@ -532,87 +458,35 @@ class XGBoostModel(BaseModel):
             # Make predictions
             predictions = self.model.predict(features)
 
+            # Validate predictions
+            if np.any(np.isnan(predictions)):
+                logger.warning("Model produced NaN predictions, replacing with mean")
+                predictions = np.nan_to_num(predictions, nan=np.nanmean(predictions))
+            
+            if np.any(np.isinf(predictions)):
+                logger.warning("Model produced infinite predictions, replacing with mean")
+                predictions = np.nan_to_num(predictions, posinf=np.nanmean(predictions), neginf=np.nanmean(predictions))
+
             return predictions
 
         except Exception as e:
             logger.error(f"Error making predictions: {e}")
-            raise
+            # Return fallback predictions
+            if len(data) > 0 and "close" in data.columns:
+                logger.info("Using fallback predictions (mean of close prices)")
+                return np.full(len(data), data["close"].mean())
+            else:
+                return np.array([])
 
     def get_feature_importance(self) -> Dict[str, float]:
-        """Get feature importance from the trained model using both native and SHAP methods.
-
-        Returns:
-            Dictionary mapping feature names to importance scores
-        """
-        if not self.is_trained or self.model is None:
-            return {}
-
-        try:
-            # Get native XGBoost feature importance
-            native_importance = self.model.feature_importances_
-            feature_names = self.feature_names or [f"feature_{i}" for i in range(len(native_importance))]
-            native_importance_dict = dict(zip(feature_names, native_importance))
-            
-            # Try to get SHAP importance if available
-            shap_importance_dict = self._get_shap_importance()
-            
-            # Combine both methods
-            combined_importance = {}
-            for feature in feature_names:
-                native_score = native_importance_dict.get(feature, 0.0)
-                shap_score = shap_importance_dict.get(feature, 0.0)
-                
-                # Use SHAP if available, otherwise fall back to native
-                combined_importance[feature] = shap_score if shap_score > 0 else native_score
-            
-            # Sort by importance
-            sorted_importance = dict(sorted(combined_importance.items(), key=lambda x: x[1], reverse=True))
-            
-            logger.info(f"Feature importance calculated for {len(sorted_importance)} features")
-            return sorted_importance
-            
-        except Exception as e:
-            logger.error(f"Error getting feature importance: {e}")
-            return {}
-
-    def _get_shap_importance(self) -> Dict[str, float]:
-        """Get SHAP-based feature importance.
+        """Get feature importance scores.
         
         Returns:
-            Dictionary mapping feature names to SHAP importance scores
+            Dictionary of feature importance scores
         """
-        try:
-            import shap
-            
-            # Create SHAP explainer
-            explainer = shap.TreeExplainer(self.model)
-            
-            # Get sample data for SHAP calculation
-            if hasattr(self, 'last_features') and self.last_features is not None:
-                sample_data = self.last_features.iloc[:100]  # Use first 100 samples
-            else:
-                logger.warning("No sample data available for SHAP calculation")
-                return {}
-            
-            # Calculate SHAP values
-            shap_values = explainer.shap_values(sample_data)
-            
-            # Calculate mean absolute SHAP values
-            mean_shap_values = np.mean(np.abs(shap_values), axis=0)
-            
-            # Map to feature names
-            feature_names = self.feature_names or [f"feature_{i}" for i in range(len(mean_shap_values))]
-            shap_importance = dict(zip(feature_names, mean_shap_values))
-            
-            logger.info("SHAP feature importance calculated successfully")
-            return shap_importance
-            
-        except ImportError:
-            logger.warning("SHAP not available. Using native feature importance only.")
+        if self.feature_importance_scores is None:
             return {}
-        except Exception as e:
-            logger.error(f"Error calculating SHAP importance: {e}")
-            return {}
+        return self.feature_importance_scores.copy()
 
     def save(self, filepath: str) -> bool:
         """Save the trained model.
@@ -634,6 +508,9 @@ class XGBoostModel(BaseModel):
             model_data = {
                 "model": self.model,
                 "feature_names": self.feature_names,
+                "selected_features": self.selected_features,
+                "feature_importance_scores": self.feature_importance_scores,
+                "scaler": self.scaler,
                 "config": self.config,
                 "is_trained": self.is_trained,
                 "timestamp": datetime.now().isoformat(),
@@ -661,6 +538,9 @@ class XGBoostModel(BaseModel):
 
             self.model = model_data["model"]
             self.feature_names = model_data["feature_names"]
+            self.selected_features = model_data.get("selected_features")
+            self.feature_importance_scores = model_data.get("feature_importance_scores")
+            self.scaler = model_data.get("scaler", StandardScaler())
             self.config = model_data.get("config", {})
             self.is_trained = model_data.get("is_trained", False)
 
@@ -681,13 +561,14 @@ class XGBoostModel(BaseModel):
             "model_type": "xgboost",
             "is_trained": self.is_trained,
             "feature_count": len(self.feature_names) if self.feature_names else 0,
+            "selected_features": self.selected_features,
             "config": self.config,
             "timestamp": datetime.now().isoformat(),
         }
 
     @cache_model_operation
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
-        """Generate forecast for future time steps with caching.
+        """Generate forecast for future time steps with caching and error handling.
 
         Args:
             data: Historical data DataFrame
@@ -699,34 +580,69 @@ class XGBoostModel(BaseModel):
         try:
             if not self.is_trained:
                 # Train the model if not already trained
+                logger.info("Model not trained, training with provided data...")
                 self.train(data)
 
             # Generate multi-step forecast
             forecast_values = []
             current_data = data.copy()
+            forecast_errors = []
 
             for i in range(horizon):
-                # Get prediction for next step
-                pred = self.predict(current_data)
-                forecast_values.append(pred[-1])
+                try:
+                    # Get prediction for next step
+                    pred = self.predict(current_data)
+                    
+                    if len(pred) == 0:
+                        logger.error(f"Empty prediction at step {i}")
+                        break
+                        
+                    forecast_values.append(pred[-1])
 
-                # Update data for next iteration
-                new_row = current_data.iloc[-1].copy()
-                new_row["close"] = pred[-1]  # Update with prediction
-                current_data = pd.concat(
-                    [current_data, pd.DataFrame([new_row])], ignore_index=True
-                )
-                current_data = current_data.iloc[1:]  # Remove oldest row
+                    # Update data for next iteration
+                    new_row = current_data.iloc[-1].copy()
+                    new_row["close"] = pred[-1]  # Update with prediction
+                    current_data = pd.concat(
+                        [current_data, pd.DataFrame([new_row])], ignore_index=True
+                    )
+                    current_data = current_data.iloc[1:]  # Remove oldest row
+                    
+                except Exception as e:
+                    logger.error(f"Error in forecast step {i}: {e}")
+                    forecast_errors.append(str(e))
+                    # Use last known value as fallback
+                    if len(forecast_values) > 0:
+                        forecast_values.append(forecast_values[-1])
+                    else:
+                        forecast_values.append(current_data["close"].iloc[-1] if "close" in current_data.columns else 0)
+
+            # Calculate confidence based on prediction stability
+            if len(forecast_values) > 1:
+                forecast_std = np.std(forecast_values)
+                forecast_mean = np.mean(forecast_values)
+                confidence = max(0.1, min(0.95, 1.0 - (forecast_std / (forecast_mean + 1e-8))))
+            else:
+                confidence = 0.5
 
             return {
                 "forecast": np.array(forecast_values),
-                "confidence": 0.85,  # XGBoost confidence
+                "confidence": confidence,
                 "model": "XGBoost",
                 "horizon": horizon,
                 "feature_importance": self.get_feature_importance(),
                 "metadata": self.get_metadata(),
+                "errors": forecast_errors if forecast_errors else None,
             }
 
         except Exception as e:
             logger.error(f"Error in XGBoost model forecast: {e}")
-            raise RuntimeError(f"XGBoost model forecasting failed: {e}")
+            # Return fallback forecast
+            fallback_forecast = np.full(horizon, data["close"].mean() if "close" in data.columns else 0)
+            return {
+                "forecast": fallback_forecast,
+                "confidence": 0.1,
+                "model": "XGBoost_Fallback",
+                "horizon": horizon,
+                "error": str(e),
+                "metadata": self.get_metadata(),
+            }

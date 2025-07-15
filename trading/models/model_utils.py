@@ -242,3 +242,43 @@ def get_model_metadata(
             "created_at": datetime.now().isoformat(),
             "error": str(e),
         }
+
+
+def handle_nan_forecast(forecast: np.ndarray, data: pd.Series, method: str = "rolling_mean") -> np.ndarray:
+    """
+    Handle NaN values in forecast by substituting fallback predictions.
+    
+    Args:
+        forecast: Forecast array that may contain NaNs
+        data: Original time series data
+        method: Fallback method ('rolling_mean', 'static', 'last_value')
+        
+    Returns:
+        Cleaned forecast array without NaNs
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    if not np.isnan(forecast).any():
+        return forecast
+    
+    nan_count = np.isnan(forecast).sum()
+    logger.warning(f"Forecast contains {nan_count} NaN values, using {method} fallback")
+    
+    if method == "rolling_mean":
+        # Use rolling mean of recent data
+        fallback = data.rolling(window=min(20, len(data)), min_periods=1).mean().iloc[-1]
+    elif method == "static":
+        # Use mean of recent data
+        fallback = data.tail(20).mean()
+    elif method == "last_value":
+        # Use last known value
+        fallback = data.iloc[-1]
+    else:
+        fallback = data.mean()
+    
+    # Replace NaNs with fallback value
+    cleaned_forecast = forecast.copy()
+    cleaned_forecast[np.isnan(cleaned_forecast)] = fallback
+    
+    return cleaned_forecast
