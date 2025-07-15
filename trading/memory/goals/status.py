@@ -152,6 +152,30 @@ class GoalStatusTracker:
         try:
             goals_data = self.load_goals()
 
+            # Check if goals are properly initialized
+            if not goals_data or goals_data.get("status") == "No Data":
+                logger.warning("No goals data found. Initializing empty goals structure.")
+                goals_data = self._initialize_empty_goals()
+                self.save_goals(goals_data)
+
+            # Validate goals data structure
+            if not isinstance(goals_data, dict):
+                logger.error(f"Invalid goals data format: {type(goals_data)}")
+                goals_data = self._initialize_empty_goals()
+
+            # Check for required fields and provide defaults
+            if "status" not in goals_data:
+                logger.warning("Goals status missing, setting default status")
+                goals_data["status"] = "not_started"
+            
+            if "progress" not in goals_data:
+                logger.warning("Goals progress missing, setting default progress")
+                goals_data["progress"] = 0.0
+            
+            if "metrics" not in goals_data:
+                logger.warning("Goals metrics missing, initializing empty metrics")
+                goals_data["metrics"] = {}
+
             # Create summary
             summary = {
                 "current_status": goals_data.get("status", "Unknown"),
@@ -161,27 +185,63 @@ class GoalStatusTracker:
                 "metrics": goals_data.get("metrics", {}),
                 "recommendations": self._generate_recommendations(goals_data),
                 "alerts": self._check_alerts(goals_data),
+                "goal_count": self._get_goal_count(goals_data),
             }
+
+            # Log warning if no goals are defined
+            goal_count = summary["goal_count"]
+            if goal_count == 0:
+                logger.warning("No goals are currently defined. Consider setting up goals for better tracking.")
 
             # Rate limit logging to prevent spam
             if self._should_log_status(summary["current_status"]):
                 self.logger.info(
-                    f"Generated goal status summary: {summary['current_status']}"
+                    f"Generated goal status summary: {summary['current_status']} (Goals: {goal_count})"
                 )
 
             return summary
 
         except Exception as e:
-            self.logger.error(f"Error generating status summary: {str(e)}")
+            error_msg = f"Error generating status summary: {str(e)}"
+            self.logger.error(error_msg)
             return {
                 "current_status": "Error",
                 "last_updated": datetime.now().isoformat(),
-                "message": f"Error generating summary: {str(e)}",
+                "message": error_msg,
                 "progress": 0.0,
                 "metrics": {},
-                "recommendations": [],
-                "alerts": [],
+                "recommendations": ["Check goal configuration and data files"],
+                "alerts": [{"type": "error", "message": error_msg, "severity": "high"}],
+                "goal_count": 0,
             }
+
+    def _initialize_empty_goals(self) -> Dict[str, Any]:
+        """Initialize an empty goals structure with default values."""
+        return {
+            "status": "not_started",
+            "message": "No goals defined yet",
+            "timestamp": datetime.now().isoformat(),
+            "progress": 0.0,
+            "metrics": {},
+            "goals": [],
+            "target_date": None,
+            "priority": "medium"
+        }
+
+    def _get_goal_count(self, goals_data: Dict[str, Any]) -> int:
+        """Get the number of defined goals."""
+        try:
+            # Check if goals are stored as a list
+            if "goals" in goals_data and isinstance(goals_data["goals"], list):
+                return len(goals_data["goals"])
+            
+            # Check if goals are stored as individual entries
+            goal_keys = [key for key in goals_data.keys() if key.startswith("goal_")]
+            return len(goal_keys)
+            
+        except Exception as e:
+            logger.warning(f"Error counting goals: {e}")
+            return 0
 
     def generate_summary(self) -> Dict[str, Any]:
         """Generate a summary of goal status (alias for get_status_summary)."""
