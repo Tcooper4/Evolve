@@ -2,10 +2,13 @@
 Strategy utility functions for testing and analysis.
 """
 
+import logging
 from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 _signal_registry = {}
 
@@ -28,10 +31,16 @@ def calculate_returns(prices: pd.Series, method: str = "simple") -> pd.Series:
     Returns:
         Returns series
     """
-    if method == "log":
-        return np.log(prices / prices.shift(1))
-    else:
-        return (prices - prices.shift(1)) / prices.shift(1)
+    try:
+        if prices.empty or 'Close' not in prices.index:
+            raise ValueError("Input DataFrame must contain 'Close' prices and not be empty")
+        if method == "log":
+            return np.log(prices / prices.shift(1))
+        else:
+            return (prices - prices.shift(1)) / prices.shift(1)
+    except Exception as e:
+        logger.error(f"Strategy failed: {e}")
+        return pd.Series()
 
 
 def calculate_sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
@@ -44,12 +53,18 @@ def calculate_sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> f
     Returns:
         Sharpe ratio
     """
-    excess_returns = returns - risk_free_rate
-    return (
-        excess_returns.mean() / excess_returns.std()
-        if excess_returns.std() > 0
-        else 0.0
-    )
+    try:
+        if returns.empty:
+            raise ValueError("Input DataFrame must contain 'Close' prices and not be empty")
+        excess_returns = returns - risk_free_rate
+        return (
+            excess_returns.mean() / excess_returns.std()
+            if excess_returns.std() > 0
+            else 0.0
+        )
+    except Exception as e:
+        logger.error(f"Strategy failed: {e}")
+        return 0.0
 
 
 def calculate_max_drawdown(returns: pd.Series) -> float:
@@ -61,10 +76,16 @@ def calculate_max_drawdown(returns: pd.Series) -> float:
     Returns:
         Maximum drawdown
     """
-    cumulative = (1 + returns).cumprod()
-    running_max = cumulative.expanding().max()
-    drawdown = (cumulative - running_max) / running_max
-    return drawdown.min()
+    try:
+        if returns.empty:
+            raise ValueError("Input DataFrame must contain 'Close' prices and not be empty")
+        cumulative = (1 + returns).cumprod()
+        running_max = cumulative.expanding().max()
+        drawdown = (cumulative - running_max) / running_max
+        return drawdown.min()
+    except Exception as e:
+        logger.error(f"Strategy failed: {e}")
+        return 0.0
 
 
 def calculate_win_rate(returns: pd.Series) -> float:
@@ -261,12 +282,18 @@ def validate_signal_schema(df: pd.DataFrame) -> bool:
     Required: index, 'Close', 'SignalType'. Optional: 'Confidence'.
     Returns True if valid, False otherwise.
     """
-    required_cols = {"Close", "SignalType"}
-    if not required_cols.issubset(set(df.columns)):
+    try:
+        if df.empty or 'Close' not in df.columns:
+            raise ValueError("Input DataFrame must contain 'Close' prices and not be empty")
+        required_cols = {"Close", "SignalType"}
+        if not required_cols.issubset(set(df.columns)):
+            return False
+        if df.index is None or df.index.isnull().any():
+            return False
+        return True
+    except Exception as e:
+        logger.error(f"Strategy failed: {e}")
         return False
-    if df.index is None or df.index.isnull().any():
-        return False
-    return True
 
 
 def calculate_risk_metrics(
@@ -281,20 +308,23 @@ def calculate_risk_metrics(
     Returns:
         Dictionary of risk metrics
     """
-    metrics = {
-        "total_return": (1 + returns).prod() - 1,
-        "annualized_return": returns.mean() * 252,
-        "volatility": calculate_volatility(returns),
-        "sharpe_ratio": calculate_sharpe_ratio(returns),
-        "sortino_ratio": calculate_sortino_ratio(returns),
-        "max_drawdown": calculate_max_drawdown(returns),
-        "win_rate": calculate_win_rate(returns),
-        "profit_factor": calculate_profit_factor(returns),
-        "calmar_ratio": calculate_calmar_ratio(returns),
-        "ulcer_index": calculate_ulcer_index(returns),
-        "gain_to_pain_ratio": calculate_gain_to_pain_ratio(returns),
-        "recovery_factor": calculate_recovery_factor(returns),
-    }
+    try:
+        if returns.empty:
+            raise ValueError("Input DataFrame must contain 'Close' prices and not be empty")
+        metrics = {
+            "total_return": (1 + returns).prod() - 1,
+            "annualized_return": returns.mean() * 252,
+            "volatility": calculate_volatility(returns),
+            "sharpe_ratio": calculate_sharpe_ratio(returns),
+            "sortino_ratio": calculate_sortino_ratio(returns),
+            "max_drawdown": calculate_max_drawdown(returns),
+            "win_rate": calculate_win_rate(returns),
+            "profit_factor": calculate_profit_factor(returns),
+            "calmar_ratio": calculate_calmar_ratio(returns),
+            "ulcer_index": calculate_ulcer_index(returns),
+            "gain_to_pain_ratio": calculate_gain_to_pain_ratio(returns),
+            "recovery_factor": calculate_recovery_factor(returns),
+        }
 
     if market_returns is not None:
         metrics.update(
@@ -308,3 +338,6 @@ def calculate_risk_metrics(
         )
 
     return metrics
+    except Exception as e:
+        logger.error(f"Strategy failed: {e}")
+        return {}

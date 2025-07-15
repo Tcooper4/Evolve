@@ -36,6 +36,8 @@ class ForecastFormatter:
         Returns:
             DataFrame with normalized index
         """
+        if not isinstance(df, pd.DataFrame):
+            raise ValueError("Expected forecast input as a DataFrame")
         if df is None or df.empty:
             return df
             
@@ -61,6 +63,9 @@ class ForecastFormatter:
         if self.sort_index:
             df = df.sort_index()
             
+        # Clean up NaN values
+        df.dropna(how='all', inplace=True)
+            
         logger.info(f"Normalized datetime index: {df.index.dtype}")
         return df
         
@@ -77,7 +82,10 @@ class ForecastFormatter:
         Returns:
             Formatted DataFrame
         """
-        if isinstance(forecast_data, np.ndarray):
+        if isinstance(forecast_data, pd.DataFrame):
+            if not isinstance(forecast_data, pd.DataFrame):
+                raise ValueError("Expected forecast input as a DataFrame")
+        elif isinstance(forecast_data, np.ndarray):
             # Convert numpy array to DataFrame
             df = pd.DataFrame(forecast_data)
             logger.info("Converted numpy array to DataFrame")
@@ -105,6 +113,9 @@ class ForecastFormatter:
         
         # Ensure numeric data
         df = self._ensure_numeric_data(df)
+        
+        # Clean up NaN values
+        df.dropna(how='all', inplace=True)
         
         return df
         
@@ -146,6 +157,8 @@ class ForecastFormatter:
         Returns:
             DataFrame with confidence intervals
         """
+        if not isinstance(forecast, pd.DataFrame):
+            raise ValueError("Expected forecast input as a DataFrame")
         # Ensure all inputs are DataFrames
         if not isinstance(forecast, pd.DataFrame):
             forecast = pd.DataFrame(forecast)
@@ -165,6 +178,9 @@ class ForecastFormatter:
             'lower': lower,
             'upper': upper
         })
+        
+        # Clean up NaN values
+        ci_df.dropna(how='all', inplace=True)
         
         return ci_df
         
