@@ -4,11 +4,15 @@ Replacement for the removed core.session_utils module.
 """
 
 import logging
+import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 
 import pandas as pd
 import streamlit as st
+
+# Session UUID to track runs
+SESSION_ID = str(uuid.uuid4())
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +83,7 @@ def initialize_session_state() -> None:
         "last_result": None,
         "system_status": "initializing",
         "last_updated": datetime.now().isoformat(),
+        "session_id": SESSION_ID,
     }
 
     for key, default_value in defaults.items():
@@ -104,6 +109,7 @@ def get_session_summary() -> Dict[str, Any]:
             "chat_history_length": len(safe_session_get("chat_history", [])),
             "current_action": safe_session_get("current_action"),
             "system_status": safe_session_get("system_status"),
+            "session_id": SESSION_ID,
         }
     except Exception as e:
         logger.error(f"Error getting session summary: {e}")
