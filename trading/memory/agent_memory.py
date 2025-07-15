@@ -325,11 +325,49 @@ class AgentMemory:
                 return json.load(f)
 
     def _save(self, data: Dict[str, Any]) -> None:
+        """Save memory data to file with robust error handling."""
         with self.lock:
-            temp_path = self.path.with_suffix(".tmp")
-            with open(temp_path, "w") as f:
-                json.dump(data, f, indent=2)
-            temp_path.replace(self.path)
+            try:
+                # Ensure directory exists
+                self.path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # Create backup if file exists
+                if self.path.exists():
+                    backup_path = self.path.with_suffix(".backup")
+                    try:
+                        import shutil
+                        shutil.copy2(self.path, backup_path)
+                        logger.debug(f"Created backup: {backup_path}")
+                    except Exception as e:
+                        logger.warning(f"Failed to create backup: {e}")
+                
+                # Save with atomic write
+                temp_path = self.path.with_suffix(".tmp")
+                try:
+                    with open(temp_path, "w") as f:
+                        json.dump(data, f, indent=2)
+                    
+                    # Atomic move
+                    temp_path.replace(self.path)
+                    logger.debug(f"Successfully saved memory to: {self.path}")
+                    
+                except Exception as e:
+                    # Clean up temp file
+                    try:
+                        temp_path.unlink()
+                    except:
+                        pass
+                    raise e
+                    
+            except PermissionError as e:
+                logger.error(f"Permission error saving memory to {self.path}: {e}")
+                raise
+            except OSError as e:
+                logger.error(f"OS error saving memory to {self.path}: {e}")
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error saving memory to {self.path}: {e}")
+                raise
 
     def log_outcome(
         self,

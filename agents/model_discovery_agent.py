@@ -30,6 +30,31 @@ class ModelDiscoveryAgent(BaseAgent):
         self.validation_threshold = 0.6
         self.max_models_per_type = 3
         
+        # Pre-defined fallback models
+        self.predefined_models = [
+            {
+                'id': 'lstm_fallback_1',
+                'type': 'lstm',
+                'config': {'layers': [50, 25], 'dropout': 0.2, 'epochs': 100},
+                'discovery_time': datetime.now().isoformat(),
+                'status': 'predefined'
+            },
+            {
+                'id': 'xgboost_fallback_1',
+                'type': 'xgboost',
+                'config': {'n_estimators': 100, 'max_depth': 6, 'learning_rate': 0.1},
+                'discovery_time': datetime.now().isoformat(),
+                'status': 'predefined'
+            },
+            {
+                'id': 'prophet_fallback_1',
+                'type': 'prophet',
+                'config': {'changepoint_prior_scale': 0.05, 'seasonality_prior_scale': 10},
+                'discovery_time': datetime.now().isoformat(),
+                'status': 'predefined'
+            }
+        ]
+        
         # History tracking
         self.history_file = Path("logs/generation_history.json")
         self.history_file.parent.mkdir(parents=True, exist_ok=True)
@@ -77,6 +102,16 @@ class ModelDiscoveryAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Failed to save model registry: {e}")
     
+    def _get_predefined_models(self) -> List[Dict[str, Any]]:
+        """
+        Get pre-defined fallback models.
+        
+        Returns:
+            List of pre-defined model configurations
+        """
+        self.logger.info("Using pre-defined fallback models")
+        return self.predefined_models.copy()
+    
     async def execute(self, **kwargs) -> AgentResult:
         """Execute model discovery process."""
         try:
@@ -98,6 +133,11 @@ class ModelDiscoveryAgent(BaseAgent):
                 validation_data=validation_data
             )
             
+            # Add fallback to pre-defined model list if none discovered
+            if not discovered_models:
+                self.logger.warning("No models discovered, falling back to pre-defined model list")
+                discovered_models = self._get_predefined_models()
+            
             # Validate discovered models
             validated_models = await self._validate_models(
                 discovered_models, validation_data
@@ -115,7 +155,8 @@ class ModelDiscoveryAgent(BaseAgent):
                     'discovered_models': len(discovered_models),
                     'validated_models': len(validated_models),
                     'registered_models': registered_count,
-                    'model_types': [m['type'] for m in validated_models]
+                    'model_types': [m['type'] for m in validated_models],
+                    'used_fallback': len(discovered_models) > 0 and discovered_models[0].get('status') == 'predefined'
                 },
                 extra_metrics={
                     'discovery_rate': len(validated_models) / max(len(discovered_models), 1),
@@ -199,9 +240,9 @@ class ModelDiscoveryAgent(BaseAgent):
             ]
         elif model_type == 'ensemble':
             configs = [
-                {'weights': [0.4, 0.3, 0.3], 'methods': ['lstm', 'xgboost', 'prophet']},
-                {'weights': [0.5, 0.3, 0.2], 'methods': ['lstm', 'arima', 'xgboost']},
-                {'weights': [0.3, 0.4, 0.3], 'methods': ['prophet', 'lstm', 'arima']}
+                {'models': ['lstm', 'xgboost'], 'weights': [0.6, 0.4]},
+                {'models': ['prophet', 'arima'], 'weights': [0.7, 0.3]},
+                {'models': ['lstm', 'prophet', 'xgboost'], 'weights': [0.4, 0.3, 0.3]}
             ]
         
         return configs
@@ -215,82 +256,87 @@ class ModelDiscoveryAgent(BaseAgent):
         validated_models = []
         
         for model in models:
-            try:
-                # Basic validation
-                if self._validate_model_config(model):
+            if self._validate_model_config(model):
+                # Calculate validation score
+                score = self._calculate_validation_score(model)
+                model['validation_score'] = score
+                
+                if score >= self.validation_threshold:
                     model['status'] = 'validated'
-                    model['validation_score'] = self._calculate_validation_score(model)
                     validated_models.append(model)
                 else:
-                    model['status'] = 'invalid'
-                    
-            except Exception as e:
-                self.logger.warning(f"Model validation failed for {model['id']}: {e}")
-                model['status'] = 'validation_failed'
-                model['error'] = str(e)
+                    self.logger.warning(f"Model {model['id']} failed validation: score {score:.3f} < {self.validation_threshold}")
+            else:
+                self.logger.warning(f"Model {model['id']} has invalid configuration")
         
         return validated_models
     
     def _validate_model_config(self, model: Dict[str, Any]) -> bool:
         """Validate model configuration."""
-        model_type = model['type']
-        config = model['config']
-        
-        # Basic validation rules
-        if model_type == 'lstm':
-            return ('layers' in config and 
-                   isinstance(config['layers'], list) and 
-                   len(config['layers']) > 0)
-        elif model_type == 'xgboost':
-            return ('n_estimators' in config and 
-                   config['n_estimators'] > 0)
-        elif model_type == 'prophet':
-            return ('changepoint_prior_scale' in config and 
-                   config['changepoint_prior_scale'] > 0)
-        elif model_type == 'arima':
-            return ('order' in config and 
-                   isinstance(config['order'], tuple) and 
-                   len(config['order']) == 3)
-        elif model_type == 'ensemble':
-            return ('weights' in config and 
-                   'methods' in config and 
-                   len(config['weights']) == len(config['methods']))
-        
-        return False
+        try:
+            config = model.get('config', {})
+            model_type = model.get('type')
+            
+            if not model_type or model_type not in self.model_types:
+                return False
+            
+            # Type-specific validation
+            if model_type == 'lstm':
+                return 'layers' in config and 'dropout' in config
+            elif model_type == 'xgboost':
+                return 'n_estimators' in config and 'max_depth' in config
+            elif model_type == 'prophet':
+                return 'changepoint_prior_scale' in config
+            elif model_type == 'arima':
+                return 'order' in config
+            elif model_type == 'ensemble':
+                return 'models' in config and 'weights' in config
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error validating model config: {e}")
+            return False
     
     def _calculate_validation_score(self, model: Dict[str, Any]) -> float:
         """Calculate validation score for a model."""
-        # Simple scoring based on model type and config
-        base_score = 0.7
-        
-        if model['type'] == 'lstm':
-            layers = model['config']['layers']
-            base_score += min(len(layers) * 0.1, 0.2)
-        elif model['type'] == 'xgboost':
-            n_estimators = model['config']['n_estimators']
-            base_score += min(n_estimators / 1000, 0.2)
-        elif model['type'] == 'ensemble':
-            base_score += 0.1  # Ensembles get bonus
-        
-        return min(base_score, 1.0)
+        try:
+            # Simulate validation score calculation
+            # In practice, this would involve actual model training and validation
+            base_score = 0.7  # Base score for valid configurations
+            
+            # Add small random variation
+            import random
+            variation = random.uniform(-0.1, 0.1)
+            
+            return min(1.0, max(0.0, base_score + variation))
+            
+        except Exception as e:
+            self.logger.error(f"Error calculating validation score: {e}")
+            return 0.0
     
     async def _register_models(self, models: List[Dict[str, Any]]) -> int:
         """Register validated models in the registry."""
         registered_count = 0
         
         for model in models:
-            if model['status'] == 'validated':
-                self.model_registry[model['id']] = {
+            try:
+                model_id = model['id']
+                self.model_registry[model_id] = {
                     'type': model['type'],
                     'config': model['config'],
-                    'validation_score': model['validation_score'],
+                    'validation_score': model.get('validation_score', 0.0),
                     'registration_time': datetime.now().isoformat(),
-                    'status': 'active'
+                    'status': model['status']
                 }
                 registered_count += 1
+                self.logger.info(f"Registered model: {model_id}")
+                
+            except Exception as e:
+                self.logger.error(f"Failed to register model {model.get('id', 'unknown')}: {e}")
         
-        if registered_count > 0:
-            self._save_model_registry()
+        # Save registry
+        self._save_model_registry()
         
         return registered_count
     
@@ -305,12 +351,12 @@ class ModelDiscoveryAgent(BaseAgent):
             'discovered_count': len(discovered_models),
             'validated_count': len(validated_models),
             'model_types': list(set(m['type'] for m in discovered_models)),
-            'success_rate': len(validated_models) / max(len(discovered_models), 1)
+            'used_fallback': len(discovered_models) > 0 and discovered_models[0].get('status') == 'predefined'
         }
         
         self.generation_history.append(history_entry)
         
-        # Keep only last 100 entries
+        # Keep only recent history
         if len(self.generation_history) > 100:
             self.generation_history = self.generation_history[-100:]
         
@@ -318,34 +364,46 @@ class ModelDiscoveryAgent(BaseAgent):
     
     def get_model_registry(self) -> Dict[str, Any]:
         """Get current model registry."""
-        return self.model_registry
+        return self.model_registry.copy()
     
     def get_generation_history(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Get recent generation history."""
-        return self.generation_history[-limit:] if self.generation_history else []
+        return self.generation_history[-limit:]
     
     def get_model_performance_stats(self) -> Dict[str, Any]:
-        """Get performance statistics for models."""
+        """Get model performance statistics."""
         if not self.model_registry:
             return {}
         
-        type_counts = {}
-        avg_scores = {}
-        
-        for model in self.model_registry.values():
-            model_type = model['type']
-            type_counts[model_type] = type_counts.get(model_type, 0) + 1
-            
-            if model_type not in avg_scores:
-                avg_scores[model_type] = []
-            avg_scores[model_type].append(model.get('validation_score', 0))
-        
-        # Calculate averages
-        for model_type in avg_scores:
-            avg_scores[model_type] = np.mean(avg_scores[model_type])
-        
-        return {
+        stats = {
             'total_models': len(self.model_registry),
-            'type_distribution': type_counts,
-            'average_scores': avg_scores
-        } 
+            'by_type': {},
+            'avg_validation_score': 0.0,
+            'fallback_usage_count': 0
+        }
+        
+        total_score = 0.0
+        for model_id, model_data in self.model_registry.items():
+            model_type = model_data.get('type', 'unknown')
+            if model_type not in stats['by_type']:
+                stats['by_type'][model_type] = 0
+            stats['by_type'][model_type] += 1
+            
+            total_score += model_data.get('validation_score', 0.0)
+        
+        if self.model_registry:
+            stats['avg_validation_score'] = total_score / len(self.model_registry)
+        
+        # Count fallback usage from history
+        for entry in self.generation_history:
+            if entry.get('used_fallback', False):
+                stats['fallback_usage_count'] += 1
+        
+        return stats
+
+
+def get_model_discovery_agent() -> ModelDiscoveryAgent:
+    """Get singleton instance of ModelDiscoveryAgent."""
+    if not hasattr(get_model_discovery_agent, "_instance"):
+        get_model_discovery_agent._instance = ModelDiscoveryAgent()
+    return get_model_discovery_agent._instance 
