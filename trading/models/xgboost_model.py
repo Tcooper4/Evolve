@@ -20,6 +20,7 @@ from sklearn.preprocessing import StandardScaler
 
 from .base_model import BaseModel
 from utils.model_cache import cache_model_operation, get_model_cache
+from utils.forecast_helpers import safe_forecast, validate_forecast_input, log_forecast_performance
 
 logger = logging.getLogger(__name__)
 
@@ -567,6 +568,7 @@ class XGBoostModel(BaseModel):
         }
 
     @cache_model_operation
+    @safe_forecast(max_retries=2, retry_delay=0.5, log_errors=True)
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps with caching and error handling.
 
@@ -577,72 +579,62 @@ class XGBoostModel(BaseModel):
         Returns:
             Dictionary containing forecast results
         """
-        try:
-            if not self.is_trained:
-                # Train the model if not already trained
-                logger.info("Model not trained, training with provided data...")
-                self.train(data)
+        import time
+        start_time = time.time()
+        
+        # Validate input data
+        validate_forecast_input(data, min_length=20, require_numeric=True)
+        
+        if not self.is_trained:
+            # Train the model if not already trained
+            logger.info("Model not trained, training with provided data...")
+            self.train(data)
 
-            # Generate multi-step forecast
-            forecast_values = []
-            current_data = data.copy()
-            forecast_errors = []
+        # Generate multi-step forecast
+        forecast_values = []
+        current_data = data.copy()
 
-            for i in range(horizon):
-                try:
-                    # Get prediction for next step
-                    pred = self.predict(current_data)
-                    
-                    if len(pred) == 0:
-                        logger.error(f"Empty prediction at step {i}")
-                        break
-                        
-                    forecast_values.append(pred[-1])
+        for i in range(horizon):
+            # Get prediction for next step
+            pred = self.predict(current_data)
+            
+            if len(pred) == 0:
+                logger.error(f"Empty prediction at step {i}")
+                break
+                
+            forecast_values.append(pred[-1])
 
-                    # Update data for next iteration
-                    new_row = current_data.iloc[-1].copy()
-                    new_row["close"] = pred[-1]  # Update with prediction
-                    current_data = pd.concat(
-                        [current_data, pd.DataFrame([new_row])], ignore_index=True
-                    )
-                    current_data = current_data.iloc[1:]  # Remove oldest row
-                    
-                except Exception as e:
-                    logger.error(f"Error in forecast step {i}: {e}")
-                    forecast_errors.append(str(e))
-                    # Use last known value as fallback
-                    if len(forecast_values) > 0:
-                        forecast_values.append(forecast_values[-1])
-                    else:
-                        forecast_values.append(current_data["close"].iloc[-1] if "close" in current_data.columns else 0)
+            # Update data for next iteration
+            new_row = current_data.iloc[-1].copy()
+            new_row["close"] = pred[-1]  # Update with prediction
+            current_data = pd.concat(
+                [current_data, pd.DataFrame([new_row])], ignore_index=True
+            )
+            current_data = current_data.iloc[1:]  # Remove oldest row
 
-            # Calculate confidence based on prediction stability
-            if len(forecast_values) > 1:
-                forecast_std = np.std(forecast_values)
-                forecast_mean = np.mean(forecast_values)
-                confidence = max(0.1, min(0.95, 1.0 - (forecast_std / (forecast_mean + 1e-8))))
-            else:
-                confidence = 0.5
+        # Calculate confidence based on prediction stability
+        if len(forecast_values) > 1:
+            forecast_std = np.std(forecast_values)
+            forecast_mean = np.mean(forecast_values)
+            confidence = max(0.1, min(0.95, 1.0 - (forecast_std / (forecast_mean + 1e-8))))
+        else:
+            confidence = 0.5
 
-            return {
-                "forecast": np.array(forecast_values),
-                "confidence": confidence,
-                "model": "XGBoost",
-                "horizon": horizon,
-                "feature_importance": self.get_feature_importance(),
-                "metadata": self.get_metadata(),
-                "errors": forecast_errors if forecast_errors else None,
-            }
+        execution_time = time.time() - start_time
+        
+        # Log performance
+        log_forecast_performance(
+            model_name="XGBoost",
+            execution_time=execution_time,
+            data_length=len(data),
+            confidence=confidence
+        )
 
-        except Exception as e:
-            logger.error(f"Error in XGBoost model forecast: {e}")
-            # Return fallback forecast
-            fallback_forecast = np.full(horizon, data["close"].mean() if "close" in data.columns else 0)
-            return {
-                "forecast": fallback_forecast,
-                "confidence": 0.1,
-                "model": "XGBoost_Fallback",
-                "horizon": horizon,
-                "error": str(e),
-                "metadata": self.get_metadata(),
-            }
+        return {
+            "forecast": np.array(forecast_values),
+            "confidence": confidence,
+            "model": "XGBoost",
+            "horizon": horizon,
+            "feature_importance": self.get_feature_importance(),
+            "metadata": self.get_metadata(),
+        }

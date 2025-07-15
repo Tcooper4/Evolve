@@ -17,10 +17,12 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
 import joblib
+import time
 
 # Local imports
 from .base_model import BaseModel
 from utils.model_cache import cache_model_operation, get_model_cache
+from utils.forecast_helpers import safe_forecast, validate_forecast_input, log_forecast_performance
 
 
 class LSTMModel(nn.Module):
@@ -898,6 +900,7 @@ class LSTMForecaster(BaseModel):
                 raise RuntimeError(f"Failed to load model from {path}: {e2}")
 
     @cache_model_operation
+    @safe_forecast(max_retries=2, retry_delay=0.5, log_errors=True)
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.
 
@@ -908,37 +911,48 @@ class LSTMForecaster(BaseModel):
         Returns:
             Dictionary containing forecast results
         """
-        try:
-            # Make initial prediction
-            self.predict(data)
+        # Validate input data
+        validate_forecast_input(data, min_length=20, require_numeric=True)
+        
+        start_time = time.time()
+        
+        # Make initial prediction
+        self.predict(data)
 
-            # Generate multi-step forecast
-            forecast_values = []
-            current_data = data.copy()
+        # Generate multi-step forecast
+        forecast_values = []
+        current_data = data.copy()
 
-            for i in range(horizon):
-                # Get prediction for next step
-                pred = self.predict(current_data)
-                forecast_values.append(pred[-1])
+        for i in range(horizon):
+            # Get prediction for next step
+            pred = self.predict(current_data)
+            forecast_values.append(pred[-1])
 
-                # Update data for next iteration
-                new_row = current_data.iloc[-1].copy()
-                new_row[self.config["target_column"]] = pred[-1]
-                current_data = pd.concat(
-                    [current_data, pd.DataFrame([new_row])], ignore_index=True
-                )
-                current_data = current_data.iloc[1:]  # Remove oldest row
+            # Update data for next iteration
+            new_row = current_data.iloc[-1].copy()
+            new_row[self.config["target_column"]] = pred[-1]
+            current_data = pd.concat(
+                [current_data, pd.DataFrame([new_row])], ignore_index=True
+            )
+            current_data = current_data.iloc[1:]  # Remove oldest row
 
-            return {
-                "forecast": np.array(forecast_values),
-                "confidence": 0.85,  # Placeholder confidence
-                "model": "LSTM",
-                "horizon": horizon,
-            }
+        execution_time = time.time() - start_time
+        confidence = 0.85  # Placeholder confidence
+        
+        # Log performance
+        log_forecast_performance(
+            model_name="LSTM",
+            execution_time=execution_time,
+            data_length=len(data),
+            confidence=confidence
+        )
 
-        except Exception as e:
-            self.logger.error(f"Error in LSTM model forecast: {e}")
-            raise RuntimeError(f"LSTM model forecasting failed: {e}")
+        return {
+            "forecast": np.array(forecast_values),
+            "confidence": confidence,
+            "model": "LSTM",
+            "horizon": horizon,
+        }
 
     def plot_results(self, data: pd.DataFrame, predictions: np.ndarray = None) -> None:
         """Plot model results and predictions.
