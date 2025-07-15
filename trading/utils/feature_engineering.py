@@ -46,6 +46,9 @@ class FeatureEngineer:
             result["volatility_10"] = data["close"].rolling(window=10).std()
             result["volatility_20"] = data["close"].rolling(window=20).std()
 
+            # Clean up NaN values after lag/rolling operations
+            result.fillna(method="bfill", inplace=True)
+
             return result
         except Exception as e:
             logger.error(f"Error creating price features: {e}")
@@ -73,6 +76,9 @@ class FeatureEngineer:
             # Volume momentum
             result["volume_momentum_5"] = data["volume"] / data["volume"].shift(5) - 1
             result["volume_momentum_10"] = data["volume"] / data["volume"].shift(10) - 1
+
+            # Clean up NaN values after lag/rolling operations
+            result.fillna(method="bfill", inplace=True)
 
             return result
         except Exception as e:
@@ -125,6 +131,9 @@ class FeatureEngineer:
                     "sma_50"
                 ]
 
+            # Clean up NaN values after lag/rolling operations
+            result.fillna(method="bfill", inplace=True)
+
             return result
         except Exception as e:
             logger.error(f"Error creating technical features: {e}")
@@ -170,6 +179,9 @@ class FeatureEngineer:
                     for lag in lags:
                         result[f"{column}_lag_{lag}"] = data[column].shift(lag)
 
+            # Clean up NaN values after lag/rolling operations
+            result.fillna(method="bfill", inplace=True)
+
             return result
         except Exception as e:
             logger.error(f"Error creating lag features: {e}")
@@ -210,6 +222,9 @@ class FeatureEngineer:
                                 result[f"{column}_rolling_median_{window}"] = (
                                     data[column].rolling(window=window).median()
                                 )
+
+            # Clean up NaN values after lag/rolling operations
+            result.fillna(method="bfill", inplace=True)
 
             return result
         except Exception as e:

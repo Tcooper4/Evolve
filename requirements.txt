@@ -4,7 +4,6 @@ alpaca_trade_api==3.2.0
 alpha_vantage==3.0.0
 arch==7.2.0
 arxiv==2.2.0
-automation==0.6.1
 beautifulsoup4==4.13.4
 bentoml==1.4.17
 boto3==1.39.4
@@ -12,7 +11,6 @@ cachetools==5.5.2
 catboost==1.2.8
 ccxt==4.4.91
 chardet==5.2.0
-python-consul2==0.1.5
 croniter==6.0.0
 cryptography==45.0.5
 cvxpy==1.6.5
@@ -43,6 +41,7 @@ ipdb==0.13.13
 Jinja2==3.1.6
 joblib==1.4.2
 jose==1.0.0
+kserve==0.10.2
 
 librosa==0.11.0
 lightgbm==4.6.0
