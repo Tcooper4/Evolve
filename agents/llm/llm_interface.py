@@ -6,9 +6,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from trading.llm.agent import AgentConfig, LLMAgent
-from trading.llm.model_loader import ModelLoader
-from trading.llm.tools import ToolRegistry
+from agents.llm.agent import AgentConfig, LLMAgent
+from agents.llm.model_loader import ModelLoader
+from agents.llm.tools import ToolRegistry
 from trading.logs.audit_logger import audit_logger
 from trading.logs.logger import get_logger
 from trading.memory.agent_memory_manager import AgentMemoryManager as MemoryManager

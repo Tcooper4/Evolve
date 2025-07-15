@@ -47,8 +47,7 @@ class TestForecastTaskDispatcher:
             max_retries=2,
             retry_delay=0.1
         )
-        yield dispatcher
-        await dispatcher.stop()
+        return dispatcher
     
     @pytest.mark.asyncio
     async def test_dispatcher_start_stop(self, dispatcher):

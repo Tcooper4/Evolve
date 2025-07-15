@@ -31,11 +31,12 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Local imports
-from .base_agent import BaseAgent
-from trading.backtesting.backtest_engine import BacktestEngine
+from trading.agents.base_agent_interface import BaseAgent, AgentConfig, AgentPriority
+from trading.backtesting import BacktestEngine
 from trading.strategies.base_strategy import BaseStrategy
-from utils.cache_utils import cache_result
-from utils.common_helpers import safe_json_save, load_config
+from trading.utils.cache_manager import cache_result
+from trading.utils.config_utils import load_config
+from utils.safe_json_saver import safe_json_save
 
 
 @dataclass
@@ -61,7 +62,17 @@ class StrategyResearchAgent(BaseAgent):
     """
     
     def __init__(self, config_path: str = "config/app_config.yaml"):
-        super().__init__("StrategyResearchAgent")
+        # Create proper AgentConfig for BaseAgent
+        config = AgentConfig(
+            name="StrategyResearchAgent",
+            enabled=True,
+            priority=AgentPriority.NORMAL,
+            max_concurrent_runs=1,
+            timeout_seconds=300,
+            retry_attempts=3,
+            description="Agent for discovering new trading strategies from internet sources"
+        )
+        super().__init__(config)
         
         # Load configuration
         self.config = load_config(config_path)
@@ -115,7 +126,7 @@ class StrategyResearchAgent(BaseAgent):
                     except Exception as e:
                         self.logger.warning(f"Failed to load {strategy_file}: {e}")
     
-    @cache_result(ttl=3600)  # Cache for 1 hour
+    @cache_result(ttl_seconds=3600)  # Cache for 1 hour
     def search_arxiv(self, query: str = "trading strategy", max_results: int = 50) -> List[StrategyDiscovery]:
         """
         Search arXiv for trading strategy papers
@@ -177,7 +188,7 @@ class StrategyResearchAgent(BaseAgent):
         
         return discoveries
     
-    @cache_result(ttl=3600)
+    @cache_result(ttl_seconds=3600)
     def search_ssrn(self, query: str = "trading strategy", max_results: int = 30) -> List[StrategyDiscovery]:
         """
         Search SSRN for trading strategy papers
@@ -272,7 +283,7 @@ class StrategyResearchAgent(BaseAgent):
             self.logger.warning(f"Failed to get SSRN paper details: {e}")
             return None
     
-    @cache_result(ttl=3600)
+    @cache_result(ttl_seconds=3600)
     def search_github(self, query: str = "trading strategy", max_results: int = 50) -> List[StrategyDiscovery]:
         """
         Search GitHub for trading strategy repositories
@@ -453,7 +464,7 @@ class StrategyResearchAgent(BaseAgent):
         
         return requirements
     
-    @cache_result(ttl=3600)
+    @cache_result(ttl_seconds=3600)
     def search_quantconnect(self, query: str = "strategy", max_results: int = 30) -> List[StrategyDiscovery]:
         """
         Search QuantConnect forums for strategies
