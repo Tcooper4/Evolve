@@ -65,6 +65,13 @@ class ModelConfig:
     preload: bool = False  # Whether to preload on startup
     memory_limit: Optional[int] = None  # Memory limit in MB
     async_loading: bool = True  # Whether to load asynchronously
+    metadata: Optional[Dict[str, Any]] = None  # Additional configuration metadata
+    
+    def __post_init__(self):
+        if self.fallback_models is None:
+            self.fallback_models = []
+        if self.metadata is None:
+            self.metadata = {}
 
 
 @dataclass
@@ -153,55 +160,114 @@ class AsyncModelLoader:
         
         logger.info("Async model loader stopped")
 
-    def _load_config(self, config_path: Optional[str]) -> None:
-        """Load model configurations from file."""
-        if config_path and Path(config_path).exists():
-            with open(config_path, "r") as f:
-                configs = yaml.safe_load(f)
-                for name, config in configs.items():
-                    self.configs[name] = ModelConfig(name=name, **config)
-        else:
-            # Enhanced default configurations
-            self.configs = {
-                "gpt-3.5-turbo": ModelConfig(
-                    name="gpt-3.5-turbo", 
-                    provider="openai", 
-                    model_type="chat",
-                    priority=1,
-                    preload=True
-                ),
-                "gpt2": ModelConfig(
-                    name="gpt2", 
-                    provider="huggingface", 
-                    model_type="causal",
-                    priority=2,
-                    preload=True
-                ),
-                "lstm-forecast": ModelConfig(
-                    name="lstm-forecast",
-                    provider="tensorflow",
-                    model_type="lstm",
-                    priority=1,
-                    preload=True,
-                    async_loading=True
-                ),
-                "xgboost-classifier": ModelConfig(
-                    name="xgboost-classifier",
-                    provider="xgboost",
-                    model_type="xgboost",
-                    priority=2,
-                    preload=True,
-                    async_loading=True
-                ),
-                "transformer-sentiment": ModelConfig(
-                    name="transformer-sentiment",
-                    provider="huggingface",
-                    model_type="sequence",
-                    priority=2,
-                    preload=True,
-                    async_loading=True
-                )
-            }
+    def _load_config(self, config_path: Optional[str] = None) -> None:
+        """Load model configurations from file.
+        
+        Args:
+            config_path: Path to model configuration file. If None, uses default config.
+        """
+        # Try to load from provided config path or default location
+        config_locations = [
+            config_path,
+            "config/model_registry.yaml",
+            "agents/llm/model_registry.yaml",
+            "trading/config/model_registry.yaml"
+        ]
+        
+        config_loaded = False
+        for location in config_locations:
+            if location and Path(location).exists():
+                try:
+                    with open(location, "r") as f:
+                        config_data = yaml.safe_load(f)
+                        
+                    # Load global configuration
+                    global_config = config_data.get("global_config", {})
+                    self.total_memory_limit = global_config.get("total_memory_limit", 8192)
+                    self.max_workers = global_config.get("max_concurrent_models", 4)
+                    
+                    # Load model configurations
+                    models_config = config_data.get("models", {})
+                    for model_name, model_config in models_config.items():
+                        # Create ModelConfig from registry data
+                        config = ModelConfig(
+                            name=model_name,
+                            provider=model_config.get("provider", "unknown"),
+                            model_type=model_config.get("model_type", "unknown"),
+                            api_key=os.getenv(model_config.get("api_key_env", "")),
+                            max_tokens=model_config.get("max_tokens", 500),
+                            temperature=model_config.get("temperature", 0.7),
+                            top_p=model_config.get("top_p", 0.9),
+                            device=model_config.get("device", "auto"),
+                            cache_dir=model_config.get("cache_dir"),
+                            fallback_models=model_config.get("fallback_models", []),
+                            priority=model_config.get("priority", 3),
+                            preload=model_config.get("preload", False),
+                            memory_limit=model_config.get("memory_limit"),
+                            async_loading=model_config.get("async_loading", True)
+                        )
+                        
+                        # Store additional metadata
+                        config.metadata = {
+                            "class_path": model_config.get("class_path"),
+                            "model_path": model_config.get("model_path"),
+                            "tokenizer_path": model_config.get("tokenizer_path"),
+                            "provider_config": model_config
+                        }
+                        
+                        self.configs[model_name] = config
+                    
+                    logger.info(f"Loaded {len(self.configs)} models from {location}")
+                    config_loaded = True
+                    break
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to load config from {location}: {e}")
+                    continue
+        
+        # Fallback to default configurations if no config file found
+        if not config_loaded:
+            logger.warning("No config file found, using default configurations")
+            self._load_default_configs()
+    
+    def _load_default_configs(self) -> None:
+        """Load default model configurations as fallback."""
+        self.configs = {
+            "gpt-3.5-turbo": ModelConfig(
+                name="gpt-3.5-turbo", 
+                provider="openai", 
+                model_type="chat",
+                priority=1,
+                preload=True,
+                metadata={"class_path": "openai.ChatCompletion"}
+            ),
+            "gpt2": ModelConfig(
+                name="gpt2", 
+                provider="huggingface", 
+                model_type="causal",
+                priority=2,
+                preload=True,
+                metadata={"class_path": "transformers.AutoModelForCausalLM", "model_path": "gpt2"}
+            ),
+            "lstm-forecast": ModelConfig(
+                name="lstm-forecast",
+                provider="tensorflow",
+                model_type="lstm",
+                priority=1,
+                preload=True,
+                async_loading=True,
+                metadata={"class_path": "trading.models.lstm_model.LSTMForecaster"}
+            ),
+            "xgboost-classifier": ModelConfig(
+                name="xgboost-classifier",
+                provider="xgboost",
+                model_type="xgboost",
+                priority=2,
+                preload=True,
+                async_loading=True,
+                metadata={"class_path": "trading.models.xgboost_model.XGBoostModel"}
+            ),
+        }
 
     async def _preload_priority_models(self) -> None:
         """Preload high-priority models on startup."""

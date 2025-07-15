@@ -1,0 +1,181 @@
+# Model Registry Configuration
+# This file defines all available models with their paths, types, and configurations
+
+models:
+  # OpenAI Models
+  gpt-3.5-turbo:
+    provider: "openai"
+    model_type: "chat"
+    class_path: "openai.ChatCompletion"
+    api_key_env: "OPENAI_API_KEY"
+    max_tokens: 500
+    temperature: 0.7
+    top_p: 0.9
+    priority: 1
+    preload: true
+    async_loading: true
+    memory_limit: 512  # MB
+    fallback_models: ["gpt2", "claude-3-sonnet"]
+    
+  gpt-4:
+    provider: "openai"
+    model_type: "chat"
+    class_path: "openai.ChatCompletion"
+    api_key_env: "OPENAI_API_KEY"
+    max_tokens: 1000
+    temperature: 0.7
+    top_p: 0.9
+    priority: 1
+    preload: true
+    async_loading: true
+    memory_limit: 1024  # MB
+    fallback_models: ["gpt-3.5-turbo", "claude-3-sonnet"]
+
+  # HuggingFace Models
+  gpt2:
+    provider: "huggingface"
+    model_type: "causal"
+    class_path: "transformers.AutoModelForCausalLM"
+    model_path: "gpt2"
+    tokenizer_path: "gpt2"
+    device: "auto"
+    priority: 2
+    preload: true
+    async_loading: true
+    memory_limit: 2048  # MB
+    fallback_models: ["distilgpt2"]
+    
+  bert-base-uncased:
+    provider: "huggingface"
+    model_type: "sequence"
+    class_path: "transformers.AutoModelForSequenceClassification"
+    model_path: "bert-base-uncased"
+    tokenizer_path: "bert-base-uncased"
+    device: "auto"
+    priority: 2
+    preload: false
+    async_loading: true
+    memory_limit: 1024  # MB
+    
+  distilbert-base-uncased:
+    provider: "huggingface"
+    model_type: "sequence"
+    class_path: "transformers.AutoModelForSequenceClassification"
+    model_path: "distilbert-base-uncased"
+    tokenizer_path: "distilbert-base-uncased"
+    device: "auto"
+    priority: 3
+    preload: false
+    async_loading: true
+    memory_limit: 512  # MB
+
+  # Claude Models
+  claude-3-sonnet:
+    provider: "anthropic"
+    model_type: "chat"
+    class_path: "anthropic.Anthropic"
+    api_key_env: "ANTHROPIC_API_KEY"
+    max_tokens: 1000
+    temperature: 0.7
+    priority: 1
+    preload: true
+    async_loading: true
+    memory_limit: 512  # MB
+    fallback_models: ["gpt-3.5-turbo", "gpt2"]
+
+  # Mistral Models
+  mistral-7b:
+    provider: "mistral"
+    model_type: "causal"
+    class_path: "transformers.AutoModelForCausalLM"
+    model_path: "mistralai/Mistral-7B-v0.1"
+    tokenizer_path: "mistralai/Mistral-7B-v0.1"
+    device: "auto"
+    priority: 2
+    preload: false
+    async_loading: true
+    memory_limit: 8192  # MB
+    fallback_models: ["gpt2", "gpt-3.5-turbo"]
+
+  # Trading-Specific Models
+  lstm-forecast:
+    provider: "tensorflow"
+    model_type: "lstm"
+    class_path: "trading.models.lstm_model.LSTMForecaster"
+    model_path: "models/built/lstm_forecast_model.h5"
+    priority: 1
+    preload: true
+    async_loading: true
+    memory_limit: 2048  # MB
+    fallback_models: ["arima-forecast", "xgboost-forecast"]
+    
+  xgboost-classifier:
+    provider: "xgboost"
+    model_type: "xgboost"
+    class_path: "trading.models.xgboost_model.XGBoostModel"
+    model_path: "models/built/xgboost_classifier.pkl"
+    priority: 2
+    preload: true
+    async_loading: true
+    memory_limit: 1024  # MB
+    fallback_models: ["lstm-forecast"]
+    
+  arima-forecast:
+    provider: "statsmodels"
+    model_type: "arima"
+    class_path: "trading.models.arima_model.ARIMAModel"
+    model_path: "models/built/arima_forecast.pkl"
+    priority: 2
+    preload: false
+    async_loading: false
+    memory_limit: 512  # MB
+    fallback_models: ["lstm-forecast"]
+
+  # Sentiment Analysis Models
+  transformer-sentiment:
+    provider: "huggingface"
+    model_type: "sequence"
+    class_path: "transformers.AutoModelForSequenceClassification"
+    model_path: "cardiffnlp/twitter-roberta-base-sentiment-latest"
+    tokenizer_path: "cardiffnlp/twitter-roberta-base-sentiment-latest"
+    device: "auto"
+    priority: 2
+    preload: false
+    async_loading: true
+    memory_limit: 1024  # MB
+    fallback_models: ["bert-base-uncased"]
+
+# Global Configuration
+global_config:
+  default_device: "auto"  # auto, cpu, cuda, mps
+  max_concurrent_models: 4
+  total_memory_limit: 16384  # MB (16GB)
+  cache_dir: ".cache/models"
+  model_timeout: 300  # seconds
+  retry_attempts: 3
+  retry_delay: 1.0  # seconds
+  
+# Provider-specific configurations
+providers:
+  openai:
+    base_url: "https://api.openai.com/v1"
+    timeout: 60
+    max_retries: 3
+    
+  huggingface:
+    cache_dir: ".cache/huggingface"
+    local_files_only: false
+    trust_remote_code: true
+    
+  anthropic:
+    base_url: "https://api.anthropic.com"
+    timeout: 60
+    max_retries: 3
+    
+  tensorflow:
+    gpu_memory_growth: true
+    mixed_precision: true
+    
+  xgboost:
+    n_jobs: -1
+    verbosity: 0 

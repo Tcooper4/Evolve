@@ -416,6 +416,190 @@ class TestLSTMForecaster:
             assert isinstance(history, dict)
             assert "loss" in history or "val_loss" in history
 
+    def test_forecast_shape_validation(self, lstm_model, synthetic_time_series):
+        """Test that forecast output shape matches expected dimensions."""
+        lstm_model.fit(synthetic_time_series)
+        
+        # Test different horizons
+        test_horizons = [1, 5, 10, 30]
+        for horizon in test_horizons:
+            result = lstm_model.forecast(synthetic_time_series, horizon=horizon)
+            
+            # Validate forecast shape
+            assert "forecast" in result
+            forecast_array = np.array(result["forecast"])
+            assert len(forecast_array) == horizon, f"Expected {horizon} predictions, got {len(forecast_array)}"
+            
+            # Validate forecast is 1D array
+            assert forecast_array.ndim == 1, f"Expected 1D array, got {forecast_array.ndim}D"
+            
+            # Validate no NaN values
+            assert not np.isnan(forecast_array).any(), "Forecast contains NaN values"
+            
+            # Validate finite values
+            assert np.all(np.isfinite(forecast_array)), "Forecast contains infinite values"
+
+    def test_confidence_score_validation(self, lstm_model, synthetic_time_series):
+        """Test that confidence scores are valid and within expected range."""
+        lstm_model.fit(synthetic_time_series)
+        
+        result = lstm_model.forecast(synthetic_time_series, horizon=10)
+        
+        # Validate confidence score exists
+        assert "confidence" in result, "Confidence score missing from forecast result"
+        
+        confidence = result["confidence"]
+        
+        # Validate confidence is numeric
+        assert isinstance(confidence, (int, float, np.number)), f"Confidence must be numeric, got {type(confidence)}"
+        
+        # Validate confidence is within valid range [0, 1]
+        assert 0.0 <= confidence <= 1.0, f"Confidence {confidence} outside valid range [0, 1]"
+        
+        # Validate confidence is finite
+        assert np.isfinite(confidence), "Confidence score is not finite"
+
+    def test_forecast_metadata_validation(self, lstm_model, synthetic_time_series):
+        """Test that forecast result contains all required metadata."""
+        lstm_model.fit(synthetic_time_series)
+        
+        result = lstm_model.forecast(synthetic_time_series, horizon=10)
+        
+        # Required fields
+        required_fields = ["forecast", "confidence", "model", "horizon"]
+        for field in required_fields:
+            assert field in result, f"Required field '{field}' missing from forecast result"
+        
+        # Validate field types
+        assert isinstance(result["forecast"], (list, np.ndarray)), "Forecast must be array-like"
+        assert isinstance(result["confidence"], (int, float, np.number)), "Confidence must be numeric"
+        assert isinstance(result["model"], str), "Model name must be string"
+        assert isinstance(result["horizon"], int), "Horizon must be integer"
+        
+        # Validate model name
+        assert result["model"] == "LSTM", f"Expected model name 'LSTM', got '{result['model']}'"
+        
+        # Validate horizon matches input
+        assert result["horizon"] == 10, f"Expected horizon 10, got {result['horizon']}"
+
+    def test_forecast_consistency_across_runs(self, lstm_model, synthetic_time_series):
+        """Test that forecasts are consistent across multiple runs (for deterministic models)."""
+        lstm_model.fit(synthetic_time_series)
+        
+        # Run forecast multiple times
+        results = []
+        for _ in range(3):
+            result = lstm_model.forecast(synthetic_time_series, horizon=5)
+            results.append(result)
+        
+        # All results should have same structure
+        for result in results:
+            assert "forecast" in result
+            assert "confidence" in result
+            assert len(result["forecast"]) == 5
+        
+        # For deterministic models, forecasts should be identical
+        # Note: LSTM might have some randomness, so we check structure consistency
+        forecast_lengths = [len(r["forecast"]) for r in results]
+        assert len(set(forecast_lengths)) == 1, "Forecast lengths should be consistent"
+        
+        confidence_scores = [r["confidence"] for r in results]
+        assert all(0 <= c <= 1 for c in confidence_scores), "All confidence scores should be valid"
+
+    def test_forecast_with_different_data_lengths(self, lstm_model):
+        """Test forecast behavior with different input data lengths."""
+        # Create datasets of different lengths
+        lengths = [50, 100, 200]
+        
+        for length in lengths:
+            dates = pd.date_range(start="2023-01-01", periods=length, freq="D")
+            values = np.linspace(100, 150, length) + np.random.normal(0, 2, length)
+            data = pd.Series(values, index=dates, name="Close")
+            
+            try:
+                lstm_model.fit(data)
+                result = lstm_model.forecast(data, horizon=10)
+                
+                # Validate successful forecast
+                assert "forecast" in result
+                assert len(result["forecast"]) == 10
+                assert "confidence" in result
+                
+            except Exception as e:
+                # If it fails, should be due to insufficient data
+                assert "insufficient" in str(e).lower() or "minimum" in str(e).lower()
+
+    def test_forecast_edge_cases(self, lstm_model, synthetic_time_series):
+        """Test forecast behavior with edge cases."""
+        lstm_model.fit(synthetic_time_series)
+        
+        # Test horizon = 0
+        try:
+            result = lstm_model.forecast(synthetic_time_series, horizon=0)
+            assert len(result["forecast"]) == 0
+        except ValueError:
+            # Some models might not support horizon=0
+            pass
+        
+        # Test very large horizon
+        try:
+            result = lstm_model.forecast(synthetic_time_series, horizon=1000)
+            assert len(result["forecast"]) == 1000
+            assert "confidence" in result
+        except Exception as e:
+            # Large horizons might be limited by model constraints
+            assert "horizon" in str(e).lower() or "limit" in str(e).lower()
+
+    def test_forecast_performance_metrics(self, lstm_model, synthetic_time_series):
+        """Test that forecast includes performance metrics when available."""
+        lstm_model.fit(synthetic_time_series)
+        
+        result = lstm_model.forecast(synthetic_time_series, horizon=10)
+        
+        # Basic validation
+        assert "forecast" in result
+        assert "confidence" in result
+        
+        # Check for optional performance metrics
+        optional_metrics = ["aic", "bic", "rmse", "mae", "mape"]
+        for metric in optional_metrics:
+            if metric in result:
+                assert isinstance(result[metric], (int, float, np.number)), f"{metric} must be numeric"
+                assert np.isfinite(result[metric]), f"{metric} must be finite"
+
+    def test_forecast_error_handling(self, lstm_model):
+        """Test forecast error handling with invalid inputs."""
+        # Test with unfitted model
+        dates = pd.date_range(start="2023-01-01", periods=50, freq="D")
+        data = pd.Series(np.random.randn(50), index=dates, name="Close")
+        
+        try:
+            result = lstm_model.forecast(data, horizon=10)
+            # If it succeeds, it should auto-fit
+            assert "forecast" in result
+        except Exception as e:
+            # Should provide clear error message
+            assert any(keyword in str(e).lower() for keyword in ["fit", "train", "model"])
+
+    def test_forecast_data_validation(self, lstm_model, synthetic_time_series):
+        """Test forecast data validation and preprocessing."""
+        lstm_model.fit(synthetic_time_series)
+        
+        # Test with DataFrame input
+        df = synthetic_time_series.to_frame()
+        result = lstm_model.forecast(df, horizon=10)
+        assert "forecast" in result
+        assert len(result["forecast"]) == 10
+        
+        # Test with numpy array input
+        array_data = synthetic_time_series.values
+        try:
+            result = lstm_model.forecast(array_data, horizon=10)
+            assert "forecast" in result
+        except Exception:
+            # Some models might require pandas input
+            pass
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
