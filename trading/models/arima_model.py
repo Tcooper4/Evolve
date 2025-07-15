@@ -13,6 +13,7 @@ from statsmodels.tsa.stattools import adfuller
 warnings.filterwarnings("ignore")
 
 from .base_model import BaseModel
+from utils.forecast_helpers import safe_forecast, validate_forecast_input, log_forecast_performance
 
 logger = logging.getLogger(__name__)
 
@@ -436,6 +437,7 @@ class ARIMAModel(BaseModel):
                 "timestamp": pd.Timestamp.now().isoformat(),
             }
 
+    @safe_forecast(max_retries=2, retry_delay=0.5, log_errors=True)
     def forecast(self, data: pd.Series, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.
 
@@ -446,28 +448,40 @@ class ARIMAModel(BaseModel):
         Returns:
             Dictionary containing forecast results
         """
-        try:
-            if not self.is_fitted:
-                # Fit the model if not already fitted
-                self.fit(data)
+        import time
+        start_time = time.time()
+        
+        # Validate input data
+        validate_forecast_input(data, min_length=20, require_numeric=True)
+        
+        if not self.is_fitted:
+            # Fit the model if not already fitted
+            self.fit(data)
 
-            # Generate forecast
-            forecast_result = self.fitted_model.forecast(steps=horizon)
+        # Generate forecast
+        forecast_result = self.fitted_model.forecast(steps=horizon)
+        
+        execution_time = time.time() - start_time
+        confidence = 0.8  # ARIMA confidence
+        
+        # Log performance
+        log_forecast_performance(
+            model_name="ARIMA",
+            execution_time=execution_time,
+            data_length=len(data),
+            confidence=confidence
+        )
 
-            return {
-                "forecast": forecast_result.values,
-                "confidence": 0.8,  # ARIMA confidence
-                "model": "ARIMA",
-                "horizon": horizon,
-                "order": self.order,
-                "seasonal_order": self.seasonal_order,
-                "aic": self.get_aic(),
-                "bic": self.get_bic(),
-            }
-
-        except Exception as e:
-            logging.error(f"Error in ARIMA model forecast: {e}")
-            raise RuntimeError(f"ARIMA model forecasting failed: {e}")
+        return {
+            "forecast": forecast_result.values,
+            "confidence": confidence,
+            "model": "ARIMA",
+            "horizon": horizon,
+            "order": self.order,
+            "seasonal_order": self.seasonal_order,
+            "aic": self.get_aic(),
+            "bic": self.get_bic(),
+        }
 
     def plot_results(self, data: pd.Series, predictions: np.ndarray = None) -> None:
         """Plot ARIMA model results and predictions.
