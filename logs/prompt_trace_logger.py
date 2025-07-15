@@ -1,465 +1,321 @@
 """
 Prompt Trace Logger
 
-This module provides comprehensive logging of prompt processing traces including:
-- User input → interpreted intent → executed action
-- Performance metrics and timing
-- Error tracking and fallback usage
-- Session management and context tracking
+This module provides logging functionality for tracking prompt processing
+and action execution in the trading system.
 """
 
 import json
 import logging
-import os
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-from dataclasses import dataclass, asdict
 from enum import Enum
+from typing import Any, Dict, List, Optional
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-class TraceLevel(Enum):
-    """Trace logging levels."""
-    DEBUG = "debug"
-    INFO = "info"
-    WARNING = "warning"
-    ERROR = "error"
-
-
 class ActionStatus(Enum):
-    """Status of executed actions."""
-    SUCCESS = "success"
+    """Status of prompt actions."""
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
     FAILED = "failed"
-    PARTIAL = "partial"
+    CANCELLED = "cancelled"
     TIMEOUT = "timeout"
-    FALLBACK = "fallback"
 
 
 @dataclass
 class PromptTrace:
-    """Complete trace of a prompt processing session."""
+    """Trace record for prompt processing."""
     trace_id: str
-    session_id: Optional[str]
-    user_id: Optional[str]
+    prompt: str
     timestamp: datetime
-    
-    # Input
-    original_prompt: str
-    normalized_prompt: str
-    
-    # Intent processing
-    intent_detection_method: str  # 'regex', 'huggingface', 'openai', 'fallback'
-    detected_intent: str
-    intent_confidence: float
-    extracted_parameters: Dict[str, Any]
-    
-    # Action execution
-    executed_action: str
-    action_status: ActionStatus
-    action_result: Optional[Dict[str, Any]]
-    action_duration: float
-    
-    # Performance metrics
-    total_processing_time: float
-    provider_usage: Dict[str, int]
-    
-    # Error handling
-    errors: List[str]
-    fallbacks_used: List[str]
-    
-    # Context
-    context: Dict[str, Any]
-    metadata: Dict[str, Any]
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+    actions: List[Dict[str, Any]] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ActionTrace:
+    """Trace record for action execution."""
+    action_id: str
+    action_type: str
+    status: ActionStatus
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    duration: Optional[float] = None
+    result: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 class PromptTraceLogger:
-    """Comprehensive prompt trace logging system."""
+    """
+    Logger for tracking prompt processing and action execution.
+    """
     
-    def __init__(
-        self,
-        log_dir: str = "logs/prompt_traces",
-        max_traces_per_file: int = 1000,
-        enable_compression: bool = True,
-        retention_days: int = 30
-    ):
-        """Initialize the prompt trace logger.
-        
-        Args:
-            log_dir: Directory to store trace logs
-            max_traces_per_file: Maximum traces per log file
-            enable_compression: Enable log file compression
-            retention_days: Number of days to retain logs
+    def __init__(self, log_file: Optional[str] = None):
         """
-        self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        
-        self.max_traces_per_file = max_traces_per_file
-        self.enable_compression = enable_compression
-        self.retention_days = retention_days
-        
-        # Current trace file
-        self.current_file = None
-        self.traces_in_current_file = 0
-        
-        # Performance tracking
-        self.total_traces = 0
-        self.successful_traces = 0
-        self.failed_traces = 0
-        
-        # Initialize current file
-        self._initialize_current_file()
-        
-        # Cleanup old files
-        self._cleanup_old_files()
-        
-        logger.info(f"PromptTraceLogger initialized with log_dir: {self.log_dir}")
-
-    def _initialize_current_file(self):
-        """Initialize the current trace log file."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.current_file = self.log_dir / f"prompt_traces_{timestamp}.jsonl"
-        self.traces_in_current_file = 0
-        
-        # Create file with header
-        with open(self.current_file, 'w') as f:
-            f.write(f"# Prompt Trace Log - Started at {datetime.now().isoformat()}\n")
-
-    def _cleanup_old_files(self):
-        """Clean up old trace log files."""
-        try:
-            cutoff_date = datetime.now() - timedelta(days=self.retention_days)
-            
-            for log_file in self.log_dir.glob("prompt_traces_*.jsonl*"):
-                file_date_str = log_file.stem.split('_')[2:4]  # Extract date part
-                if len(file_date_str) >= 2:
-                    try:
-                        file_date = datetime.strptime(f"{file_date_str[0]}_{file_date_str[1]}", 
-                                                    "%Y%m%d_%H%M%S")
-                        if file_date < cutoff_date:
-                            log_file.unlink()
-                            logger.info(f"Deleted old trace file: {log_file}")
-                    except ValueError:
-                        continue
-                        
-        except Exception as e:
-            logger.error(f"Error cleaning up old files: {e}")
-
-    def start_trace(
-        self,
-        trace_id: str,
-        session_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-        original_prompt: str = "",
-        context: Optional[Dict[str, Any]] = None
-    ) -> PromptTrace:
-        """Start a new prompt trace.
+        Initialize prompt trace logger.
         
         Args:
-            trace_id: Unique trace identifier
-            session_id: Session identifier
+            log_file: Path to log file (optional)
+        """
+        self.log_file = log_file
+        self.traces: Dict[str, PromptTrace] = {}
+        
+        if log_file:
+            log_path = Path(log_file)
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        logger.info("PromptTraceLogger initialized")
+    
+    def start_trace(self, prompt: str, user_id: Optional[str] = None,
+                   session_id: Optional[str] = None) -> str:
+        """
+        Start a new prompt trace.
+        
+        Args:
+            prompt: User prompt
             user_id: User identifier
-            original_prompt: Original user prompt
-            context: Additional context
+            session_id: Session identifier
             
         Returns:
-            PromptTrace object
+            Trace ID
         """
+        trace_id = f"trace_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+        
         trace = PromptTrace(
             trace_id=trace_id,
-            session_id=session_id,
-            user_id=user_id,
+            prompt=prompt,
             timestamp=datetime.now(),
-            original_prompt=original_prompt,
-            normalized_prompt="",
-            intent_detection_method="",
-            detected_intent="",
-            intent_confidence=0.0,
-            extracted_parameters={},
-            executed_action="",
-            action_status=ActionStatus.FAILED,
-            action_result=None,
-            action_duration=0.0,
-            total_processing_time=0.0,
-            provider_usage={},
-            errors=[],
-            fallbacks_used=[],
-            context=context or {},
-            metadata={}
+            user_id=user_id,
+            session_id=session_id
         )
         
-        return trace
-
-    def update_intent(
-        self,
-        trace: PromptTrace,
-        detection_method: str,
-        intent: str,
-        confidence: float,
-        parameters: Dict[str, Any],
-        normalized_prompt: str = ""
-    ):
-        """Update trace with intent detection results.
+        self.traces[trace_id] = trace
+        logger.debug(f"Started prompt trace: {trace_id}")
         
-        Args:
-            trace: PromptTrace object
-            detection_method: Method used for intent detection
-            intent: Detected intent
-            confidence: Confidence score
-            parameters: Extracted parameters
-            normalized_prompt: Normalized prompt text
+        return trace_id
+    
+    def add_action(self, trace_id: str, action_type: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         """
-        trace.intent_detection_method = detection_method
-        trace.detected_intent = intent
-        trace.intent_confidence = confidence
-        trace.extracted_parameters = parameters
-        trace.normalized_prompt = normalized_prompt
-
-    def update_action(
-        self,
-        trace: PromptTrace,
-        action: str,
-        status: ActionStatus,
-        result: Optional[Dict[str, Any]] = None,
-        duration: float = 0.0
-    ):
-        """Update trace with action execution results.
+        Add an action to a trace.
         
         Args:
-            trace: PromptTrace object
-            action: Executed action
-            status: Action status
+            trace_id: Trace identifier
+            action_type: Type of action
+            metadata: Additional metadata
+            
+        Returns:
+            Action ID
+        """
+        if trace_id not in self.traces:
+            raise ValueError(f"Trace not found: {trace_id}")
+        
+        action_id = f"action_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+        
+        action_trace = ActionTrace(
+            action_id=action_id,
+            action_type=action_type,
+            status=ActionStatus.PENDING,
+            start_time=datetime.now(),
+            metadata=metadata or {}
+        )
+        
+        self.traces[trace_id].actions.append(action_trace.__dict__)
+        logger.debug(f"Added action to trace {trace_id}: {action_id}")
+        
+        return action_id
+    
+    def update_action_status(self, trace_id: str, action_id: str, status: ActionStatus,
+                           result: Optional[Dict[str, Any]] = None, error: Optional[str] = None):
+        """
+        Update action status.
+        
+        Args:
+            trace_id: Trace identifier
+            action_id: Action identifier
+            status: New status
             result: Action result
-            duration: Action duration
-        """
-        trace.executed_action = action
-        trace.action_status = status
-        trace.action_result = result
-        trace.action_duration = duration
-
-    def add_error(self, trace: PromptTrace, error: str):
-        """Add an error to the trace.
-        
-        Args:
-            trace: PromptTrace object
             error: Error message
         """
-        trace.errors.append(error)
-
-    def add_fallback(self, trace: PromptTrace, fallback_method: str):
-        """Add a fallback method to the trace.
+        if trace_id not in self.traces:
+            logger.warning(f"Trace not found: {trace_id}")
+            return
+        
+        trace = self.traces[trace_id]
+        
+        for action in trace.actions:
+            if action["action_id"] == action_id:
+                action["status"] = status.value
+                action["end_time"] = datetime.now().isoformat()
+                
+                if action["start_time"]:
+                    start_time = datetime.fromisoformat(action["start_time"])
+                    end_time = datetime.now()
+                    action["duration"] = (end_time - start_time).total_seconds()
+                
+                if result:
+                    action["result"] = result
+                
+                if error:
+                    action["error"] = error
+                
+                logger.debug(f"Updated action {action_id} status to {status.value}")
+                break
+    
+    def complete_trace(self, trace_id: str, metadata: Optional[Dict[str, Any]] = None):
+        """
+        Complete a prompt trace.
         
         Args:
-            trace: PromptTrace object
-            fallback_method: Fallback method used
+            trace_id: Trace identifier
+            metadata: Additional metadata
         """
-        trace.fallbacks_used.append(fallback_method)
-
-    def update_provider_usage(self, trace: PromptTrace, provider: str, count: int = 1):
-        """Update provider usage statistics.
+        if trace_id not in self.traces:
+            logger.warning(f"Trace not found: {trace_id}")
+            return
         
-        Args:
-            trace: PromptTrace object
-            provider: Provider name
-            count: Usage count
-        """
-        trace.provider_usage[provider] = trace.provider_usage.get(provider, 0) + count
-
-    def complete_trace(self, trace: PromptTrace, total_duration: float):
-        """Complete a trace and log it.
+        trace = self.traces[trace_id]
         
-        Args:
-            trace: PromptTrace object
-            total_duration: Total processing duration
-        """
-        trace.total_processing_time = total_duration
+        if metadata:
+            trace.metadata.update(metadata)
         
-        # Update statistics
-        self.total_traces += 1
-        if trace.action_status == ActionStatus.SUCCESS:
-            self.successful_traces += 1
-        else:
-            self.failed_traces += 1
+        # Save to file if configured
+        if self.log_file:
+            self._save_trace(trace)
         
-        # Log the trace
-        self._log_trace(trace)
-        
-        logger.debug(f"Completed trace {trace.trace_id} in {total_duration:.3f}s")
-
-    def _log_trace(self, trace: PromptTrace):
-        """Log a trace to the current file.
-        
-        Args:
-            trace: PromptTrace object to log
-        """
+        logger.info(f"Completed prompt trace: {trace_id}")
+    
+    def _save_trace(self, trace: PromptTrace):
+        """Save trace to log file."""
         try:
-            # Check if we need to rotate files
-            if self.traces_in_current_file >= self.max_traces_per_file:
-                self._rotate_file()
+            trace_data = {
+                "trace_id": trace.trace_id,
+                "prompt": trace.prompt,
+                "timestamp": trace.timestamp.isoformat(),
+                "user_id": trace.user_id,
+                "session_id": trace.session_id,
+                "actions": trace.actions,
+                "metadata": trace.metadata
+            }
             
-            # Convert trace to JSON
-            trace_dict = asdict(trace)
-            trace_dict['timestamp'] = trace.timestamp.isoformat()
-            trace_dict['action_status'] = trace.action_status.value
-            
-            # Write to file
-            with open(self.current_file, 'a') as f:
-                f.write(json.dumps(trace_dict) + '\n')
-            
-            self.traces_in_current_file += 1
-            
+            with open(self.log_file, 'a') as f:
+                f.write(json.dumps(trace_data) + '\n')
+                
         except Exception as e:
-            logger.error(f"Error logging trace: {e}")
-
-    def _rotate_file(self):
-        """Rotate to a new trace log file."""
-        try:
-            # Compress current file if enabled
-            if self.enable_compression and self.current_file.exists():
-                import gzip
-                compressed_file = self.current_file.with_suffix('.jsonl.gz')
-                with open(self.current_file, 'rb') as f_in:
-                    with gzip.open(compressed_file, 'wb') as f_out:
-                        f_out.writelines(f_in)
-                self.current_file.unlink()
-                logger.info(f"Compressed trace file: {compressed_file}")
-            
-            # Initialize new file
-            self._initialize_current_file()
-            
-        except Exception as e:
-            logger.error(f"Error rotating trace file: {e}")
-
-    def get_trace_statistics(self) -> Dict[str, Any]:
-        """Get trace logging statistics.
-        
-        Returns:
-            Dictionary with statistics
+            logger.error(f"Error saving trace: {e}")
+    
+    def get_trace(self, trace_id: str) -> Optional[PromptTrace]:
         """
-        return {
-            'total_traces': self.total_traces,
-            'successful_traces': self.successful_traces,
-            'failed_traces': self.failed_traces,
-            'success_rate': self.successful_traces / max(self.total_traces, 1),
-            'current_file': str(self.current_file),
-            'traces_in_current_file': self.traces_in_current_file
-        }
-
-    def search_traces(
-        self,
-        session_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-        intent: Optional[str] = None,
-        status: Optional[ActionStatus] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        limit: int = 100
-    ) -> List[PromptTrace]:
-        """Search for traces based on criteria.
+        Get a trace by ID.
         
         Args:
-            session_id: Session ID filter
-            user_id: User ID filter
-            intent: Intent filter
-            status: Action status filter
-            start_date: Start date filter
-            end_date: End date filter
-            limit: Maximum number of results
+            trace_id: Trace identifier
             
         Returns:
-            List of matching traces
+            PromptTrace or None
         """
-        traces = []
+        return self.traces.get(trace_id)
+    
+    def get_traces_by_user(self, user_id: str) -> List[PromptTrace]:
+        """
+        Get all traces for a user.
         
-        try:
-            # Search through all trace files
-            for log_file in self.log_dir.glob("prompt_traces_*.jsonl*"):
-                if log_file.suffix == '.gz':
-                    import gzip
-                    with gzip.open(log_file, 'rt') as f:
-                        lines = f.readlines()
-                else:
-                    with open(log_file, 'r') as f:
-                        lines = f.readlines()
-                
-                # Skip header lines
-                lines = [line for line in lines if not line.startswith('#')]
-                
-                for line in lines:
-                    try:
-                        trace_dict = json.loads(line.strip())
-                        
-                        # Apply filters
-                        if session_id and trace_dict.get('session_id') != session_id:
-                            continue
-                        if user_id and trace_dict.get('user_id') != user_id:
-                            continue
-                        if intent and trace_dict.get('detected_intent') != intent:
-                            continue
-                        if status and trace_dict.get('action_status') != status.value:
-                            continue
-                        
-                        # Date filters
-                        trace_date = datetime.fromisoformat(trace_dict['timestamp'])
-                        if start_date and trace_date < start_date:
-                            continue
-                        if end_date and trace_date > end_date:
-                            continue
-                        
-                        # Convert back to PromptTrace
-                        trace = PromptTrace(**trace_dict)
-                        trace.timestamp = trace_date
-                        trace.action_status = ActionStatus(trace_dict['action_status'])
-                        
-                        traces.append(trace)
-                        
-                        if len(traces) >= limit:
-                            break
-                            
-                    except Exception as e:
-                        logger.warning(f"Error parsing trace line: {e}")
-                        continue
-                        
-        except Exception as e:
-            logger.error(f"Error searching traces: {e}")
-        
-        return traces[:limit]
-
-    def get_session_summary(self, session_id: str) -> Dict[str, Any]:
-        """Get summary statistics for a session.
+        Args:
+            user_id: User identifier
+            
+        Returns:
+            List of traces
+        """
+        return [trace for trace in self.traces.values() if trace.user_id == user_id]
+    
+    def get_traces_by_session(self, session_id: str) -> List[PromptTrace]:
+        """
+        Get all traces for a session.
         
         Args:
             session_id: Session identifier
             
         Returns:
-            Session summary dictionary
+            List of traces
         """
-        session_traces = self.search_traces(session_id=session_id)
+        return [trace for trace in self.traces.values() if trace.session_id == session_id]
+    
+    def get_trace_statistics(self) -> Dict[str, Any]:
+        """
+        Get statistics about traces.
         
-        if not session_traces:
+        Returns:
+            Dictionary with trace statistics
+        """
+        if not self.traces:
             return {}
         
-        # Calculate statistics
-        total_traces = len(session_traces)
-        successful_traces = sum(1 for t in session_traces if t.action_status == ActionStatus.SUCCESS)
-        avg_processing_time = sum(t.total_processing_time for t in session_traces) / total_traces
+        total_traces = len(self.traces)
+        total_actions = sum(len(trace.actions) for trace in self.traces.values())
         
-        # Most common intents
-        intent_counts = {}
-        for trace in session_traces:
-            intent = trace.detected_intent
-            intent_counts[intent] = intent_counts.get(intent, 0) + 1
+        # Count actions by status
+        status_counts = {}
+        for trace in self.traces.values():
+            for action in trace.actions:
+                status = action.get("status", "unknown")
+                status_counts[status] = status_counts.get(status, 0) + 1
         
-        most_common_intent = max(intent_counts.items(), key=lambda x: x[1]) if intent_counts else None
+        # Calculate average duration
+        durations = []
+        for trace in self.traces.values():
+            for action in trace.actions:
+                if "duration" in action:
+                    durations.append(action["duration"])
+        
+        avg_duration = sum(durations) / len(durations) if durations else 0
         
         return {
-            'session_id': session_id,
-            'total_traces': total_traces,
-            'successful_traces': successful_traces,
-            'success_rate': successful_traces / total_traces,
-            'avg_processing_time': avg_processing_time,
-            'most_common_intent': most_common_intent,
-            'first_trace': min(t.timestamp for t in session_traces),
-            'last_trace': max(t.timestamp for t in session_traces)
-        } 
+            "total_traces": total_traces,
+            "total_actions": total_actions,
+            "avg_actions_per_trace": total_actions / total_traces if total_traces > 0 else 0,
+            "action_status_distribution": status_counts,
+            "avg_action_duration": avg_duration
+        }
+    
+    def clear_traces(self, older_than_days: Optional[int] = None):
+        """
+        Clear old traces.
+        
+        Args:
+            older_than_days: Clear traces older than this many days
+        """
+        if older_than_days is None:
+            self.traces.clear()
+            logger.info("Cleared all traces")
+            return
+        
+        cutoff_time = datetime.now() - timedelta(days=older_than_days)
+        to_remove = []
+        
+        for trace_id, trace in self.traces.items():
+            if trace.timestamp < cutoff_time:
+                to_remove.append(trace_id)
+        
+        for trace_id in to_remove:
+            del self.traces[trace_id]
+        
+        logger.info(f"Cleared {len(to_remove)} old traces")
+
+
+def create_prompt_trace_logger(log_file: Optional[str] = None) -> PromptTraceLogger:
+    """
+    Create a prompt trace logger instance.
+    
+    Args:
+        log_file: Path to log file
+        
+    Returns:
+        PromptTraceLogger instance
+    """
+    return PromptTraceLogger(log_file) 

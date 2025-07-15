@@ -1,17 +1,64 @@
-"""Enhanced risk management module with comprehensive metrics and safeguards."""
+"""Enhanced risk management module with comprehensive metrics and safeguards.
+Enhanced with Batch 11 features: dynamic volatility model integration (rolling std and GARCH)
+to adjust position size.
+"""
 
 import json
 import logging
 import os
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from enum import Enum
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.optimize import minimize
+
+# Try to import GARCH models
+try:
+    from arch import arch_model
+    GARCH_AVAILABLE = True
+except ImportError:
+    GARCH_AVAILABLE = False
+
+
+class VolatilityModel(Enum):
+    """Volatility model types."""
+    ROLLING_STD = "rolling_std"
+    EWMA = "ewma"
+    GARCH = "garch"
+    HYBRID = "hybrid"
+
+
+@dataclass
+class VolatilityForecast:
+    """Volatility forecast data class."""
+    
+    timestamp: str
+    current_volatility: float
+    forecasted_volatility: float
+    confidence_interval: Tuple[float, float]
+    model_type: str
+    model_parameters: Dict[str, Any]
+    forecast_horizon: int
+
+
+@dataclass
+class PositionSizeRecommendation:
+    """Position size recommendation data class."""
+    
+    timestamp: str
+    symbol: str
+    base_position_size: float
+    volatility_adjusted_size: float
+    risk_adjusted_size: float
+    final_recommendation: float
+    volatility_model: str
+    confidence_score: float
+    risk_factors: Dict[str, float]
 
 
 @dataclass
@@ -49,6 +96,207 @@ class StressTestResult:
     timestamp: str
 
 
+class DynamicVolatilityModel:
+    """Dynamic volatility model for position sizing."""
+    
+    def __init__(
+        self, 
+        model_type: VolatilityModel = VolatilityModel.ROLLING_STD,
+        window: int = 252,
+        alpha: float = 0.94,
+        garch_order: Tuple[int, int] = (1, 1)
+    ):
+        """Initialize dynamic volatility model.
+        
+        Args:
+            model_type: Type of volatility model
+            window: Rolling window size
+            alpha: EWMA decay factor
+            garch_order: GARCH model order (p, q)
+        """
+        self.model_type = model_type
+        self.window = window
+        self.alpha = alpha
+        self.garch_order = garch_order
+        self.volatility_history = []
+        self.forecasts = []
+        
+        self.logger = logging.getLogger(__name__)
+        
+        if model_type == VolatilityModel.GARCH and not GARCH_AVAILABLE:
+            self.logger.warning("GARCH not available, falling back to rolling std")
+            self.model_type = VolatilityModel.ROLLING_STD
+    
+    def calculate_rolling_volatility(self, returns: pd.Series) -> pd.Series:
+        """Calculate rolling volatility using standard deviation.
+        
+        Args:
+            returns: Returns series
+            
+        Returns:
+            Rolling volatility series
+        """
+        return returns.rolling(window=self.window).std() * np.sqrt(252)
+    
+    def calculate_ewma_volatility(self, returns: pd.Series) -> pd.Series:
+        """Calculate exponentially weighted moving average volatility.
+        
+        Args:
+            returns: Returns series
+            
+        Returns:
+            EWMA volatility series
+        """
+        return returns.ewm(alpha=self.alpha).std() * np.sqrt(252)
+    
+    def calculate_garch_volatility(self, returns: pd.Series) -> pd.Series:
+        """Calculate GARCH volatility.
+        
+        Args:
+            returns: Returns series
+            
+        Returns:
+            GARCH volatility series
+        """
+        if not GARCH_AVAILABLE:
+            self.logger.warning("GARCH not available, using rolling std")
+            return self.calculate_rolling_volatility(returns)
+        
+        try:
+            # Fit GARCH model
+            model = arch_model(
+                returns * 100,  # Convert to percentage
+                vol='Garch', 
+                p=self.garch_order[0], 
+                q=self.garch_order[1]
+            )
+            results = model.fit(disp='off')
+            
+            # Get conditional volatility
+            conditional_vol = results.conditional_volatility / 100  # Convert back
+            return pd.Series(conditional_vol, index=returns.index) * np.sqrt(252)
+            
+        except Exception as e:
+            self.logger.error(f"GARCH model fitting failed: {e}")
+            return self.calculate_rolling_volatility(returns)
+    
+    def calculate_hybrid_volatility(self, returns: pd.Series) -> pd.Series:
+        """Calculate hybrid volatility combining multiple models.
+        
+        Args:
+            returns: Returns series
+            
+        Returns:
+            Hybrid volatility series
+        """
+        rolling_vol = self.calculate_rolling_volatility(returns)
+        ewma_vol = self.calculate_ewma_volatility(returns)
+        
+        # Combine with equal weights
+        hybrid_vol = 0.5 * rolling_vol + 0.5 * ewma_vol
+        
+        # Add GARCH if available
+        if GARCH_AVAILABLE:
+            try:
+                garch_vol = self.calculate_garch_volatility(returns)
+                # Use GARCH for recent periods, hybrid for older
+                recent_mask = returns.index >= returns.index[-min(100, len(returns))]
+                hybrid_vol[recent_mask] = 0.4 * rolling_vol[recent_mask] + 0.3 * ewma_vol[recent_mask] + 0.3 * garch_vol[recent_mask]
+            except:
+                pass
+        
+        return hybrid_vol
+    
+    def forecast_volatility(
+        self, 
+        returns: pd.Series, 
+        horizon: int = 5
+    ) -> VolatilityForecast:
+        """Forecast volatility for the next period.
+        
+        Args:
+            returns: Returns series
+            horizon: Forecast horizon in days
+            
+        Returns:
+            Volatility forecast
+        """
+        try:
+            if self.model_type == VolatilityModel.ROLLING_STD:
+                current_vol = self.calculate_rolling_volatility(returns).iloc[-1]
+                forecast_vol = current_vol  # Simple persistence
+            
+            elif self.model_type == VolatilityModel.EWMA:
+                current_vol = self.calculate_ewma_volatility(returns).iloc[-1]
+                forecast_vol = current_vol  # EWMA persistence
+            
+            elif self.model_type == VolatilityModel.GARCH:
+                if GARCH_AVAILABLE:
+                    model = arch_model(
+                        returns * 100, 
+                        vol='Garch', 
+                        p=self.garch_order[0], 
+                        q=self.garch_order[1]
+                    )
+                    results = model.fit(disp='off')
+                    forecast = results.forecast(horizon=horizon)
+                    current_vol = results.conditional_volatility.iloc[-1] / 100 * np.sqrt(252)
+                    forecast_vol = forecast.variance.iloc[-1] ** 0.5 / 100 * np.sqrt(252)
+                else:
+                    current_vol = self.calculate_rolling_volatility(returns).iloc[-1]
+                    forecast_vol = current_vol
+            
+            elif self.model_type == VolatilityModel.HYBRID:
+                current_vol = self.calculate_hybrid_volatility(returns).iloc[-1]
+                # Simple trend-based forecast
+                recent_vol = self.calculate_hybrid_volatility(returns).tail(20)
+                trend = np.polyfit(range(len(recent_vol)), recent_vol, 1)[0]
+                forecast_vol = current_vol + trend * horizon
+            
+            else:
+                current_vol = self.calculate_rolling_volatility(returns).iloc[-1]
+                forecast_vol = current_vol
+            
+            # Calculate confidence interval
+            vol_series = self.calculate_rolling_volatility(returns).dropna()
+            vol_std = vol_series.std()
+            confidence_interval = (
+                max(0, forecast_vol - 1.96 * vol_std),
+                forecast_vol + 1.96 * vol_std
+            )
+            
+            forecast = VolatilityForecast(
+                timestamp=datetime.now().isoformat(),
+                current_volatility=current_vol,
+                forecasted_volatility=forecast_vol,
+                confidence_interval=confidence_interval,
+                model_type=self.model_type.value,
+                model_parameters={
+                    "window": self.window,
+                    "alpha": self.alpha,
+                    "garch_order": self.garch_order
+                },
+                forecast_horizon=horizon
+            )
+            
+            self.forecasts.append(forecast)
+            return forecast
+            
+        except Exception as e:
+            self.logger.error(f"Volatility forecasting failed: {e}")
+            # Return simple forecast
+            current_vol = returns.std() * np.sqrt(252)
+            return VolatilityForecast(
+                timestamp=datetime.now().isoformat(),
+                current_volatility=current_vol,
+                forecasted_volatility=current_vol,
+                confidence_interval=(current_vol * 0.8, current_vol * 1.2),
+                model_type="fallback",
+                model_parameters={},
+                forecast_horizon=horizon
+            )
+
+
 class RiskManager:
     """Enhanced risk management module with comprehensive metrics and safeguards."""
 
@@ -65,6 +313,23 @@ class RiskManager:
         self.benchmark_returns = None
         self.metrics_history = []
         self.current_metrics = None
+
+        # Initialize dynamic volatility model
+        volatility_config = self.config.get("volatility_model", {})
+        self.volatility_model = DynamicVolatilityModel(
+            model_type=VolatilityModel(volatility_config.get("type", "rolling_std")),
+            window=volatility_config.get("window", 252),
+            alpha=volatility_config.get("alpha", 0.94),
+            garch_order=volatility_config.get("garch_order", (1, 1))
+        )
+        
+        # Position sizing parameters
+        self.position_config = self.config.get("position_sizing", {
+            "max_position_size": 0.1,  # 10% of portfolio
+            "volatility_scaling": True,
+            "risk_adjustment": True,
+            "confidence_threshold": 0.7
+        })
 
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -684,6 +949,150 @@ class RiskManager:
                 "filepath": filepath,
                 "timestamp": datetime.utcnow().isoformat(),
             }
+
+    def calculate_dynamic_position_size(
+        self, 
+        symbol: str,
+        base_position_size: float,
+        expected_return: float = 0.0,
+        current_volatility: Optional[float] = None,
+        confidence_score: float = 0.5
+    ) -> PositionSizeRecommendation:
+        """Calculate dynamic position size based on volatility model.
+        
+        Args:
+            symbol: Trading symbol
+            base_position_size: Base position size
+            expected_return: Expected return
+            current_volatility: Current volatility (if None, will be calculated)
+            confidence_score: Confidence score for the signal
+            
+        Returns:
+            Position size recommendation
+        """
+        try:
+            if self.returns is None or self.returns.empty:
+                self.logger.warning("No returns data available for position sizing")
+                return PositionSizeRecommendation(
+                    timestamp=datetime.now().isoformat(),
+                    symbol=symbol,
+                    base_position_size=base_position_size,
+                    volatility_adjusted_size=base_position_size,
+                    risk_adjusted_size=base_position_size,
+                    final_recommendation=base_position_size,
+                    volatility_model="none",
+                    confidence_score=confidence_score,
+                    risk_factors={}
+                )
+            
+            # Get volatility forecast
+            volatility_forecast = self.volatility_model.forecast_volatility(self.returns)
+            
+            # Calculate volatility-adjusted position size
+            if self.position_config.get("volatility_scaling", True):
+                # Inverse volatility scaling
+                target_volatility = self.config.get("target_volatility", 0.15)
+                volatility_ratio = target_volatility / volatility_forecast.forecasted_volatility
+                volatility_adjusted_size = base_position_size * volatility_ratio
+            else:
+                volatility_adjusted_size = base_position_size
+            
+            # Calculate risk-adjusted position size
+            if self.position_config.get("risk_adjustment", True):
+                # Kelly criterion adjustment
+                kelly_fraction = self.current_metrics.kelly_fraction if self.current_metrics else 0.0
+                risk_adjusted_size = volatility_adjusted_size * max(0, kelly_fraction)
+                
+                # Confidence adjustment
+                confidence_threshold = self.position_config.get("confidence_threshold", 0.7)
+                if confidence_score < confidence_threshold:
+                    risk_adjusted_size *= confidence_score / confidence_threshold
+            else:
+                risk_adjusted_size = volatility_adjusted_size
+            
+            # Apply position limits
+            max_position = self.position_config.get("max_position_size", 0.1)
+            final_recommendation = min(risk_adjusted_size, max_position)
+            
+            # Calculate risk factors
+            risk_factors = {
+                "volatility_ratio": volatility_ratio if self.position_config.get("volatility_scaling", True) else 1.0,
+                "kelly_fraction": self.current_metrics.kelly_fraction if self.current_metrics else 0.0,
+                "confidence_adjustment": confidence_score / confidence_threshold if confidence_score < confidence_threshold else 1.0,
+                "current_volatility": volatility_forecast.current_volatility,
+                "forecasted_volatility": volatility_forecast.forecasted_volatility
+            }
+            
+            recommendation = PositionSizeRecommendation(
+                timestamp=datetime.now().isoformat(),
+                symbol=symbol,
+                base_position_size=base_position_size,
+                volatility_adjusted_size=volatility_adjusted_size,
+                risk_adjusted_size=risk_adjusted_size,
+                final_recommendation=final_recommendation,
+                volatility_model=volatility_forecast.model_type,
+                confidence_score=confidence_score,
+                risk_factors=risk_factors
+            )
+            
+            self.logger.info(f"Position size calculated for {symbol}: {final_recommendation:.4f}")
+            return recommendation
+            
+        except Exception as e:
+            self.logger.error(f"Error calculating position size for {symbol}: {e}")
+            return PositionSizeRecommendation(
+                timestamp=datetime.now().isoformat(),
+                symbol=symbol,
+                base_position_size=base_position_size,
+                volatility_adjusted_size=base_position_size,
+                risk_adjusted_size=base_position_size,
+                final_recommendation=base_position_size,
+                volatility_model="error",
+                confidence_score=confidence_score,
+                risk_factors={"error": str(e)}
+            )
+
+    def get_volatility_forecast(self) -> Optional[VolatilityForecast]:
+        """Get the latest volatility forecast.
+        
+        Returns:
+            Latest volatility forecast or None
+        """
+        if self.returns is None or self.returns.empty:
+            return None
+        
+        return self.volatility_model.forecast_volatility(self.returns)
+
+    def update_volatility_model(
+        self, 
+        model_type: VolatilityModel,
+        **kwargs
+    ) -> bool:
+        """Update volatility model configuration.
+        
+        Args:
+            model_type: New volatility model type
+            **kwargs: Additional model parameters
+            
+        Returns:
+            True if update successful
+        """
+        try:
+            self.volatility_model.model_type = model_type
+            
+            if "window" in kwargs:
+                self.volatility_model.window = kwargs["window"]
+            if "alpha" in kwargs:
+                self.volatility_model.alpha = kwargs["alpha"]
+            if "garch_order" in kwargs:
+                self.volatility_model.garch_order = kwargs["garch_order"]
+            
+            self.logger.info(f"Updated volatility model to {model_type.value}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error updating volatility model: {e}")
+            return False
 
 
 __all__ = ["RiskManager", "RiskMetrics"]

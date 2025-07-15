@@ -1,7 +1,11 @@
-"""Execution Engine for Trade Execution."""
+"""Execution Engine for Trade Execution.
+Enhanced with Batch 10 features: detailed logging for skipped/failure cases.
+"""
 
 import logging
 import warnings
+from datetime import datetime
+from typing import Dict, List, Optional, Any
 
 warnings.filterwarnings("ignore")
 
@@ -53,7 +57,7 @@ logger = get_logger(__name__)
 
 
 class ExecutionEngine:
-    """Trade execution engine."""
+    """Trade execution engine with enhanced logging for failure cases."""
 
     def __init__(self, config: TradingConfig = None):
         """Initialize execution engine."""
@@ -61,6 +65,14 @@ class ExecutionEngine:
         self.memory = AgentMemory()
         self.execution_history = []
         self.active_orders = {}
+        self.failed_orders = []  # Track failed orders for analysis
+        self.skipped_orders = []  # Track skipped orders for analysis
+
+        # Enhanced logging configuration
+        self.log_failures = getattr(self.config, 'log_failures', True)
+        self.log_skips = getattr(self.config, 'log_skips', True)
+        self.max_slippage_threshold = getattr(self.config, 'max_slippage_threshold', 0.05)  # 5%
+        self.min_price_threshold = getattr(self.config, 'min_price_threshold', 0.01)  # $0.01
 
         # Initialize broker connections
         self._init_brokers()
@@ -80,6 +92,7 @@ class ExecutionEngine:
                 logger.info("Alpaca broker initialized")
             except Exception as e:
                 logger.error(f"Failed to initialize Alpaca: {e}")
+                self._log_failure("broker_init", "alpaca", str(e))
 
         # CCXT (for crypto)
         if CCXT_AVAILABLE:
@@ -94,14 +107,23 @@ class ExecutionEngine:
                 logger.info("Binance broker initialized")
             except Exception as e:
                 logger.error(f"Failed to initialize Binance: {e}")
+                self._log_failure("broker_init", "binance", str(e))
 
     def execute_order(self, order: dict) -> dict:
-        """Execute a trading order."""
+        """Execute a trading order with enhanced failure logging."""
         try:
             # Validate order
             validated_order = self._validate_order(order)
             if not validated_order:
-                return {"status": "error", "message": "Invalid order"}
+                failure_reason = "Invalid order parameters"
+                self._log_failure("validation", order.get("symbol", "unknown"), failure_reason)
+                return {"status": "error", "message": failure_reason}
+
+            # Check pre-execution conditions
+            skip_reason = self._check_execution_conditions(validated_order)
+            if skip_reason:
+                self._log_skip(validated_order["symbol"], skip_reason)
+                return {"status": "skipped", "message": skip_reason}
 
             # Execute based on mode
             if self.config.execution_mode == "live":
@@ -109,29 +131,163 @@ class ExecutionEngine:
             else:
                 result = self._execute_simulation_order(validated_order)
 
+            # Log execution result
+            if result.get("status") == "error":
+                self._log_failure("execution", validated_order["symbol"], result.get("message", "Unknown error"))
+            elif result.get("status") == "skipped":
+                self._log_skip(validated_order["symbol"], result.get("message", "Unknown skip reason"))
+
             # Store execution
-            self.execution_history.append(
-                {"timestamp": "now", "order": validated_order, "result": result}
-            )
+            execution_record = {
+                "timestamp": datetime.now().isoformat(),
+                "order": validated_order,
+                "result": result,
+                "failure_reason": result.get("message") if result.get("status") in ["error", "skipped"] else None
+            }
+            self.execution_history.append(execution_record)
 
             # Update memory
-            self.memory.memory.append(
-                {"timestamp": "now", "type": "order_execution", "data": result}
-            )
+            self.memory.memory.append({
+                "timestamp": datetime.now().isoformat(),
+                "type": "order_execution",
+                "data": result,
+                "failure_logged": result.get("status") in ["error", "skipped"]
+            })
 
             return result
 
         except Exception as e:
-            logger.error(f"Error executing order: {e}")
-            return {"status": "error", "message": str(e)}
+            error_msg = f"Unexpected error during execution: {str(e)}"
+            logger.error(error_msg)
+            self._log_failure("unexpected", order.get("symbol", "unknown"), error_msg)
+            return {"status": "error", "message": error_msg}
+
+    def _check_execution_conditions(self, order: dict) -> Optional[str]:
+        """Check if order should be skipped due to market conditions."""
+        try:
+            # Check price availability
+            current_price = self._get_current_price(order["symbol"])
+            if current_price is None:
+                return "Price unavailable for symbol"
+            
+            if current_price < self.min_price_threshold:
+                return f"Price too low: ${current_price:.4f} < ${self.min_price_threshold}"
+
+            # Check slippage conditions
+            if "limit_price" in order and order["limit_price"]:
+                slippage = abs(current_price - order["limit_price"]) / current_price
+                if slippage > self.max_slippage_threshold:
+                    return f"Slippage too high: {slippage:.2%} > {self.max_slippage_threshold:.2%}"
+
+            # Check market hours (for stocks)
+            if not order["symbol"].endswith("USD") and not self._is_market_open():
+                return "Market closed"
+
+            # Check liquidity (simplified)
+            if order["quantity"] > self._get_available_liquidity(order["symbol"]):
+                return "Insufficient liquidity"
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error checking execution conditions: {e}")
+            return f"Error checking conditions: {str(e)}"
+
+    def _get_current_price(self, symbol: str) -> Optional[float]:
+        """Get current price for symbol."""
+        try:
+            if symbol.endswith("USD"):  # Crypto
+                if "binance" in self.brokers:
+                    ticker = self.brokers["binance"].fetch_ticker(symbol)
+                    return ticker.get("last")
+            else:  # Stock
+                if "alpaca" in self.brokers:
+                    bar = self.brokers["alpaca"].get_latest_bar(symbol)
+                    return bar.c if bar else None
+            
+            # Fallback to simulated price
+            return self._get_simulated_price(symbol)
+
+        except Exception as e:
+            logger.error(f"Error getting current price for {symbol}: {e}")
+            return None
+
+    def _is_market_open(self) -> bool:
+        """Check if market is open."""
+        try:
+            if "alpaca" in self.brokers:
+                clock = self.brokers["alpaca"].get_clock()
+                return clock.is_open
+            return True  # Assume open for simulation
+        except Exception as e:
+            logger.error(f"Error checking market status: {e}")
+            return True
+
+    def _get_available_liquidity(self, symbol: str) -> float:
+        """Get available liquidity for symbol (simplified)."""
+        # Simplified liquidity check - in real implementation, this would check order book
+        return 1000000.0  # Assume $1M liquidity
+
+    def _log_failure(self, failure_type: str, symbol: str, reason: str):
+        """Log execution failure with detailed information."""
+        if not self.log_failures:
+            return
+
+        failure_record = {
+            "timestamp": datetime.now().isoformat(),
+            "failure_type": failure_type,
+            "symbol": symbol,
+            "reason": reason,
+            "execution_mode": self.config.execution_mode,
+            "brokers_available": list(self.brokers.keys())
+        }
+
+        self.failed_orders.append(failure_record)
+        
+        logger.error(f"EXECUTION FAILURE - Type: {failure_type}, Symbol: {symbol}, Reason: {reason}")
+        
+        # Log to file for analysis
+        try:
+            import json
+            with open("logs/execution_failures.json", "a") as f:
+                f.write(json.dumps(failure_record) + "\n")
+        except Exception as e:
+            logger.error(f"Failed to log failure to file: {e}")
+
+    def _log_skip(self, symbol: str, reason: str):
+        """Log skipped order with detailed information."""
+        if not self.log_skips:
+            return
+
+        skip_record = {
+            "timestamp": datetime.now().isoformat(),
+            "symbol": symbol,
+            "reason": reason,
+            "execution_mode": self.config.execution_mode,
+            "current_price": self._get_current_price(symbol),
+            "market_open": self._is_market_open()
+        }
+
+        self.skipped_orders.append(skip_record)
+        
+        logger.warning(f"ORDER SKIPPED - Symbol: {symbol}, Reason: {reason}")
+        
+        # Log to file for analysis
+        try:
+            import json
+            with open("logs/execution_skips.json", "a") as f:
+                f.write(json.dumps(skip_record) + "\n")
+        except Exception as e:
+            logger.error(f"Failed to log skip to file: {e}")
 
     def _validate_order(self, order: dict) -> dict:
-        """Validate order parameters."""
+        """Validate order parameters with enhanced logging."""
         required_fields = ["symbol", "side", "quantity", "order_type"]
 
         for field in required_fields:
             if field not in order:
                 logger.error(f"Missing required field: {field}")
+                return None
 
         # Validate symbol
         if not isinstance(order["symbol"], str) or len(order["symbol"]) == 0:
@@ -161,7 +317,7 @@ class ExecutionEngine:
         return order
 
     def _execute_live_order(self, order: dict) -> dict:
-        """Execute order on live broker."""
+        """Execute order on live broker with enhanced error handling."""
         try:
             if order["symbol"].endswith("USD"):  # Crypto
                 return self._execute_crypto_order(order)
@@ -169,13 +325,16 @@ class ExecutionEngine:
                 return self._execute_stock_order(order)
 
         except Exception as e:
-            logger.error(f"Live execution error: {e}")
-            return {"status": "error", "message": str(e)}
+            error_msg = f"Live execution error: {str(e)}"
+            logger.error(error_msg)
+            return {"status": "error", "message": error_msg}
 
     def _execute_stock_order(self, order: dict) -> dict:
-        """Execute stock order via Alpaca."""
+        """Execute stock order via Alpaca with enhanced error handling."""
         if "alpaca" not in self.brokers:
-            return {"status": "error", "message": "Alpaca broker not available"}
+            error_msg = "Alpaca broker not available"
+            logger.error(error_msg)
+            return {"status": "error", "message": error_msg}
 
         try:
             # Prepare order parameters
@@ -199,23 +358,24 @@ class ExecutionEngine:
             return {
                 "status": "success",
                 "order_id": alpaca_order.id,
-                "symbol": order["symbol"],
-                "side": order["side"],
-                "quantity": order["quantity"],
-                "filled_quantity": alpaca_order.filled_qty,
-                "average_price": alpaca_order.filled_avg_price,
+                "symbol": alpaca_order.symbol,
+                "quantity": alpaca_order.qty,
+                "side": alpaca_order.side,
+                "type": alpaca_order.type,
                 "status": alpaca_order.status,
-                "timestamp": alpaca_order.submitted_at,
             }
 
         except Exception as e:
-            logger.error(f"Alpaca execution error: {e}")
-            return {"status": "error", "message": str(e)}
+            error_msg = f"Alpaca execution error: {str(e)}"
+            logger.error(error_msg)
+            return {"status": "error", "message": error_msg}
 
     def _execute_crypto_order(self, order: dict) -> dict:
-        """Execute crypto order via CCXT."""
+        """Execute crypto order via CCXT with enhanced error handling."""
         if "binance" not in self.brokers:
-            return {"status": "error", "message": "Binance broker not available"}
+            error_msg = "Binance broker not available"
+            logger.error(error_msg)
+            return {"status": "error", "message": error_msg}
 
         try:
             # Prepare order parameters
@@ -235,83 +395,120 @@ class ExecutionEngine:
             return {
                 "status": "success",
                 "order_id": ccxt_order["id"],
-                "symbol": order["symbol"],
-                "side": order["side"],
-                "quantity": order["quantity"],
-                "filled_quantity": ccxt_order.get("filled", 0),
-                "average_price": ccxt_order.get("average", 0),
+                "symbol": ccxt_order["symbol"],
+                "quantity": ccxt_order["amount"],
+                "side": ccxt_order["side"],
+                "type": ccxt_order["type"],
                 "status": ccxt_order["status"],
-                "timestamp": ccxt_order["timestamp"],
             }
 
         except Exception as e:
-            logger.error(f"CCXT execution error: {e}")
-            return {"status": "error", "message": str(e)}
+            error_msg = f"CCXT execution error: {str(e)}"
+            logger.error(error_msg)
+            return {"status": "error", "message": error_msg}
 
     def _execute_simulation_order(self, order: dict) -> dict:
-        """Execute order in simulation mode."""
+        """Execute order in simulation mode with enhanced logging."""
         try:
-            # Simulate market conditions
-            current_price = self._get_simulated_price(order["symbol"])
+            # Get simulated price
+            simulated_price = self._get_simulated_price(order["symbol"])
+            if simulated_price is None:
+                error_msg = "Unable to get simulated price"
+                logger.error(error_msg)
+                return {"status": "error", "message": error_msg}
 
-            # Simulate execution
-            if order["order_type"] == "market":
-                executed_price = current_price
-                filled_quantity = order["quantity"]
-            elif order["order_type"] == "limit":
-                if order["side"] == "buy" and order["limit_price"] >= current_price:
-                    executed_price = order["limit_price"]
-                    filled_quantity = order["quantity"]
-                elif order["side"] == "sell" and order["limit_price"] <= current_price:
-                    executed_price = order["limit_price"]
-                    filled_quantity = order["quantity"]
-                else:
-                    executed_price = 0
-                    filled_quantity = 0
-            else:
-                executed_price = current_price
-                filled_quantity = order["quantity"]
+            # Calculate simulated execution
+            execution_price = simulated_price
+            if order["order_type"] == "limit" and order["limit_price"]:
+                if order["side"] == "buy" and simulated_price > order["limit_price"]:
+                    return {"status": "skipped", "message": "Limit price not met"}
+                elif order["side"] == "sell" and simulated_price < order["limit_price"]:
+                    return {"status": "skipped", "message": "Limit price not met"}
+                execution_price = order["limit_price"]
 
-            # Simulate order ID
-            import uuid
+            # Simulate execution delay and slippage
+            import time
+            time.sleep(0.1)  # Simulate execution delay
 
-            order_id = str(uuid.uuid4())
+            # Calculate slippage
+            slippage = abs(execution_price - simulated_price) / simulated_price
+            if slippage > self.max_slippage_threshold:
+                skip_msg = f"Simulated slippage too high: {slippage:.2%}"
+                logger.warning(skip_msg)
+                return {"status": "skipped", "message": skip_msg}
 
             return {
                 "status": "success",
-                "order_id": order_id,
+                "order_id": f"sim_{int(time.time())}",
                 "symbol": order["symbol"],
-                "side": order["side"],
                 "quantity": order["quantity"],
-                "filled_quantity": filled_quantity,
-                "average_price": executed_price,
-                "status": "filled" if filled_quantity > 0 else "rejected",
-                "timestamp": "now",
-                "simulation": True,
+                "side": order["side"],
+                "type": order["order_type"],
+                "execution_price": execution_price,
+                "slippage": slippage,
+                "timestamp": datetime.now().isoformat(),
             }
 
         except Exception as e:
-            logger.error(f"Simulation execution error: {e}")
-            return {"status": "error", "message": str(e)}
+            error_msg = f"Simulation execution error: {str(e)}"
+            logger.error(error_msg)
+            return {"status": "error", "message": error_msg}
 
     def _get_simulated_price(self, symbol: str) -> float:
         """Get simulated price for symbol."""
-        # Simple price simulation
+        # Simple price simulation - in real implementation, this would use market data
         import random
+        base_price = 100.0
+        if symbol.endswith("USD"):
+            base_price = 50000.0  # Crypto prices
+        
+        # Add some randomness
+        variation = random.uniform(-0.02, 0.02)  # ±2% variation
+        return base_price * (1 + variation)
 
-        base_prices = {
-            "AAPL": 150.0,
-            "GOOGL": 2800.0,
-            "MSFT": 300.0,
-            "TSLA": 800.0,
-            "BTCUSD": 45000.0,
-            "ETHUSD": 3000.0,
+    def get_failure_summary(self) -> dict:
+        """Get summary of execution failures."""
+        if not self.failed_orders:
+            return {"total_failures": 0}
+
+        failure_types = {}
+        symbols_failed = {}
+        
+        for failure in self.failed_orders:
+            failure_type = failure["failure_type"]
+            symbol = failure["symbol"]
+            
+            failure_types[failure_type] = failure_types.get(failure_type, 0) + 1
+            symbols_failed[symbol] = symbols_failed.get(symbol, 0) + 1
+
+        return {
+            "total_failures": len(self.failed_orders),
+            "failure_types": failure_types,
+            "symbols_failed": symbols_failed,
+            "recent_failures": self.failed_orders[-10:] if len(self.failed_orders) > 10 else self.failed_orders
         }
 
-        base_price = base_prices.get(symbol, 100.0)
-        variation = random.uniform(-0.02, 0.02)  # ±2% variation
+    def get_skip_summary(self) -> dict:
+        """Get summary of skipped orders."""
+        if not self.skipped_orders:
+            return {"total_skips": 0}
 
-        return base_price * (1 + variation)
+        skip_reasons = {}
+        symbols_skipped = {}
+        
+        for skip in self.skipped_orders:
+            reason = skip["reason"]
+            symbol = skip["symbol"]
+            
+            skip_reasons[reason] = skip_reasons.get(reason, 0) + 1
+            symbols_skipped[symbol] = symbols_skipped.get(symbol, 0) + 1
+
+        return {
+            "total_skips": len(self.skipped_orders),
+            "skip_reasons": skip_reasons,
+            "symbols_skipped": symbols_skipped,
+            "recent_skips": self.skipped_orders[-10:] if len(self.skipped_orders) > 10 else self.skipped_orders
+        }
 
     def cancel_order(self, order_id: str) -> dict:
         """Cancel an active order."""

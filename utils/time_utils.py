@@ -307,3 +307,17 @@ def detect_seasonality(data: pd.DataFrame, date_column: str, target_column: str)
     except Exception as e:
         logger.error(f"Error detecting seasonality: {e}")
         return {} 
+
+
+def normalize_datetime_index(df: pd.DataFrame, enforce_utc: bool = False) -> pd.DataFrame:
+    """
+    Normalize DataFrame index to remove timezone info or enforce UTC.
+    If enforce_utc is True, convert to UTC. Otherwise, remove tz info.
+    """
+    idx = df.index
+    if hasattr(idx, 'tz') and idx.tz is not None:
+        if enforce_utc:
+            df.index = idx.tz_convert('UTC')
+        else:
+            df.index = idx.tz_localize(None)
+    return df 

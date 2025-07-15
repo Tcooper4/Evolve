@@ -63,6 +63,20 @@ class TestARIMAForecaster:
         return pd.Series(values, index=dates, name="Close")
 
     @pytest.fixture
+    def all_null_time_series(self):
+        """Create all-null time series."""
+        dates = pd.date_range(start="2023-01-01", periods=20, freq="D")
+        values = [np.nan] * 20
+        return pd.Series(values, index=dates, name="Close")
+
+    @pytest.fixture
+    def tz_aware_time_series(self):
+        """Create timezone-aware time series."""
+        dates = pd.date_range(start="2023-01-01", periods=30, freq="D", tz="UTC")
+        values = np.linspace(100, 110, 30)
+        return pd.Series(values, index=dates, name="Close")
+
+    @pytest.fixture
     def arima_model(self):
         """Create ARIMA model instance."""
         if not ARIMA_AVAILABLE:
@@ -157,6 +171,28 @@ class TestARIMAForecaster:
             keyword in result["error"].lower()
             for keyword in ["nan", "missing", "invalid"]
         )
+
+    def test_all_null_series_handling(self, arima_model, all_null_time_series):
+        """Test handling of all-null time series."""
+        result = arima_model.fit(all_null_time_series)
+        assert result["success"] is False
+        assert "error" in result
+        assert any(
+            keyword in result["error"].lower()
+            for keyword in ["nan", "missing", "invalid", "null"]
+        )
+
+    def test_timezone_aware_series(self, arima_model, tz_aware_time_series):
+        """Test handling of timezone-aware time series."""
+        result = arima_model.fit(tz_aware_time_series)
+        # Should fit or fail gracefully, but not crash
+        assert "success" in result
+        if result["success"]:
+            forecast_result = arima_model.predict(steps=5)
+            assert forecast_result["success"] is True
+            assert len(forecast_result["predictions"]) == 5
+        else:
+            assert "error" in result
 
     def test_model_summary(self, arima_model, synthetic_time_series):
         """Test that model summary is generated correctly."""

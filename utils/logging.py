@@ -1,64 +1,122 @@
 """
 Logging Module
 
+Enhanced with Batch 11 features: comprehensive file output + optional rotating log handler
+support via logging.handlers with additional configuration options.
+
 This module provides centralized logging configuration and utilities for the Evolve Trading Platform:
 - Logging setup and configuration
 - Log level management
 - Log file rotation and management
 - Structured logging for different components
+- Enhanced file output with multiple formats
+- Configurable rotating log handlers
 """
 
 import logging
 import logging.handlers
 import sys
+import json
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List, Union
 
 
-class LogManager:
-    """Manages logging configuration and setup."""
+class EnhancedLogManager:
+    """Enhanced log manager with comprehensive file output and rotating handlers."""
 
-    def __init__(self, log_dir: str = "logs", log_level: int = logging.INFO):
+    def __init__(
+        self, 
+        log_dir: str = "logs", 
+        log_level: int = logging.INFO,
+        enable_file_output: bool = True,
+        enable_rotating_handlers: bool = True,
+        max_file_size: int = 10 * 1024 * 1024,  # 10MB
+        backup_count: int = 5,
+        enable_json_logging: bool = False
+    ):
         """
-        Initialize the log manager.
+        Initialize the enhanced log manager.
 
         Args:
             log_dir: Directory for log files
             log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+            enable_file_output: Whether to enable file output
+            enable_rotating_handlers: Whether to use rotating file handlers
+            max_file_size: Maximum size for log files before rotation
+            backup_count: Number of backup files to keep
+            enable_json_logging: Whether to enable JSON format logging
         """
         self.log_dir = Path(log_dir)
         self.log_level = log_level
+        self.enable_file_output = enable_file_output
+        self.enable_rotating_handlers = enable_rotating_handlers
+        self.max_file_size = max_file_size
+        self.backup_count = backup_count
+        self.enable_json_logging = enable_json_logging
         self.loggers = {}
+        self.handlers = {}
 
         # Create log directory if it doesn't exist
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
         # Setup basic logging
-        self._setup_basic_logging()
+        self._setup_enhanced_logging()
 
-    def _setup_basic_logging(self):
-        """Setup basic logging configuration."""
+    def _setup_enhanced_logging(self):
+        """Setup enhanced logging configuration."""
         # Configure root logger
+        handlers = [logging.StreamHandler(sys.stdout)]
+        
+        if self.enable_file_output:
+            if self.enable_rotating_handlers:
+                file_handler = logging.handlers.RotatingFileHandler(
+                    self.log_dir / "evolve.log",
+                    maxBytes=self.max_file_size,
+                    backupCount=self.backup_count,
+                    encoding='utf-8'
+                )
+            else:
+                file_handler = logging.FileHandler(
+                    self.log_dir / "evolve.log",
+                    encoding='utf-8'
+                )
+            
+            if self.enable_json_logging:
+                file_handler.setFormatter(logging.Formatter(
+                    '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "name": "%(name)s", "message": "%(message)s"}'
+                ))
+            else:
+                file_handler.setFormatter(logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                ))
+            
+            handlers.append(file_handler)
+        
         logging.basicConfig(
             level=self.log_level,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.StreamHandler(sys.stdout),
-                logging.handlers.RotatingFileHandler(
-                    self.log_dir / "evolve.log",
-                    maxBytes=10 * 1024 * 1024,
-                    backupCount=5,  # 10MB
-                ),
-            ],
+            handlers=handlers,
+            force=True
         )
 
-    def get_logger(self, name: str) -> logging.Logger:
+    def get_enhanced_logger(
+        self, 
+        name: str,
+        log_file: Optional[str] = None,
+        enable_console: bool = True,
+        enable_file: bool = True,
+        enable_json: Optional[bool] = None
+    ) -> logging.Logger:
         """
-        Get a logger for a specific component.
+        Get an enhanced logger for a specific component.
 
         Args:
             name: Logger name (usually __name__)
+            log_file: Custom log file name
+            enable_console: Whether to enable console output
+            enable_file: Whether to enable file output
+            enable_json: Whether to use JSON format (None = use global setting)
 
         Returns:
             logging.Logger: Configured logger instance
@@ -66,63 +124,219 @@ class LogManager:
         if name not in self.loggers:
             logger = logging.getLogger(name)
             logger.setLevel(self.log_level)
-
-            # Add file handler for this component
-            component_log_file = self.log_dir / f"{name.replace('.', '_')}.log"
-            file_handler = logging.handlers.RotatingFileHandler(
-                component_log_file, maxBytes=5 * 1024 * 1024, backupCount=3  # 5MB
-            )
-            file_handler.setFormatter(
-                logging.Formatter(
+            
+            # Clear existing handlers
+            logger.handlers.clear()
+            
+            handlers = []
+            
+            # Add console handler if enabled
+            if enable_console:
+                console_handler = logging.StreamHandler(sys.stdout)
+                console_handler.setFormatter(logging.Formatter(
                     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-                )
-            )
-            logger.addHandler(file_handler)
-
+                ))
+                handlers.append(console_handler)
+            
+            # Add file handler if enabled
+            if enable_file and self.enable_file_output:
+                if log_file is None:
+                    log_file = f"{name.replace('.', '_')}.log"
+                
+                if self.enable_rotating_handlers:
+                    file_handler = logging.handlers.RotatingFileHandler(
+                        self.log_dir / log_file,
+                        maxBytes=self.max_file_size,
+                        backupCount=self.backup_count,
+                        encoding='utf-8'
+                    )
+                else:
+                    file_handler = logging.FileHandler(
+                        self.log_dir / log_file,
+                        encoding='utf-8'
+                    )
+                
+                use_json = enable_json if enable_json is not None else self.enable_json_logging
+                if use_json:
+                    file_handler.setFormatter(logging.Formatter(
+                        '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "name": "%(name)s", "message": "%(message)s"}'
+                    ))
+                else:
+                    file_handler.setFormatter(logging.Formatter(
+                        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                    ))
+                
+                handlers.append(file_handler)
+                self.handlers[name] = file_handler
+            
+            # Add all handlers to logger
+            for handler in handlers:
+                logger.addHandler(handler)
+            
             self.loggers[name] = logger
 
         return self.loggers[name]
 
-    def setup_component_logging(
-        self, component_name: str, log_file: Optional[str] = None
+    def setup_timed_rotating_handler(
+        self, 
+        name: str,
+        log_file: str,
+        when: str = 'midnight',
+        interval: int = 1,
+        backup_count: int = 30
     ) -> logging.Logger:
         """
-        Setup logging for a specific component.
+        Setup a logger with timed rotating file handler.
 
         Args:
-            component_name: Name of the component
-            log_file: Optional custom log file name
+            name: Logger name
+            log_file: Log file name
+            when: When to rotate ('S', 'M', 'H', 'D', 'W0'-'W6', 'midnight')
+            interval: Interval between rotations
+            backup_count: Number of backup files to keep
 
         Returns:
-            logging.Logger: Configured logger for the component
+            logging.Logger: Configured logger
         """
-        if log_file is None:
-            log_file = f"{component_name.lower()}.log"
-
-        logger = logging.getLogger(component_name)
+        logger = logging.getLogger(name)
         logger.setLevel(self.log_level)
-
+        
         # Clear existing handlers
         logger.handlers.clear()
-
+        
         # Add console handler
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        )
+        console_handler.setFormatter(logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        ))
         logger.addHandler(console_handler)
-
-        # Add file handler
-        file_handler = logging.handlers.RotatingFileHandler(
-            self.log_dir / log_file, maxBytes=5 * 1024 * 1024, backupCount=3  # 5MB
+        
+        # Add timed rotating file handler
+        file_handler = logging.handlers.TimedRotatingFileHandler(
+            self.log_dir / log_file,
+            when=when,
+            interval=interval,
+            backupCount=backup_count,
+            encoding='utf-8'
         )
-        file_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        )
+        file_handler.setFormatter(logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        ))
         logger.addHandler(file_handler)
-
-        self.loggers[component_name] = logger
+        
+        self.loggers[name] = logger
+        self.handlers[name] = file_handler
+        
         return logger
+
+    def setup_memory_handler(
+        self, 
+        name: str,
+        capacity: int = 1000,
+        flushLevel: int = logging.ERROR,
+        target_handler: Optional[logging.Handler] = None
+    ) -> logging.Logger:
+        """
+        Setup a logger with memory handler for buffered logging.
+
+        Args:
+            name: Logger name
+            capacity: Buffer capacity
+            flushLevel: Level at which to flush buffer
+            target_handler: Target handler for flushing
+
+        Returns:
+            logging.Logger: Configured logger
+        """
+        logger = logging.getLogger(name)
+        logger.setLevel(self.log_level)
+        
+        # Clear existing handlers
+        logger.handlers.clear()
+        
+        # Add console handler
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        ))
+        logger.addHandler(console_handler)
+        
+        # Add memory handler
+        if target_handler is None:
+            target_handler = logging.handlers.RotatingFileHandler(
+                self.log_dir / f"{name}_buffered.log",
+                maxBytes=self.max_file_size,
+                backupCount=self.backup_count,
+                encoding='utf-8'
+            )
+            target_handler.setFormatter(logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            ))
+        
+        memory_handler = logging.handlers.MemoryHandler(
+            capacity=capacity,
+            flushLevel=flushLevel,
+            target=target_handler
+        )
+        logger.addHandler(memory_handler)
+        
+        self.loggers[name] = logger
+        self.handlers[name] = memory_handler
+        
+        return logger
+
+    def setup_queue_handler(
+        self, 
+        name: str,
+        queue_size: int = 1000
+    ) -> logging.Logger:
+        """
+        Setup a logger with queue handler for async logging.
+
+        Args:
+            name: Logger name
+            queue_size: Queue size
+
+        Returns:
+            logging.Logger: Configured logger
+        """
+        try:
+            import queue
+            from logging.handlers import QueueHandler, QueueListener
+            
+            logger = logging.getLogger(name)
+            logger.setLevel(self.log_level)
+            
+            # Clear existing handlers
+            logger.handlers.clear()
+            
+            # Create queue and handler
+            log_queue = queue.Queue(maxsize=queue_size)
+            queue_handler = QueueHandler(log_queue)
+            logger.addHandler(queue_handler)
+            
+            # Create listener with file handler
+            file_handler = logging.handlers.RotatingFileHandler(
+                self.log_dir / f"{name}_async.log",
+                maxBytes=self.max_file_size,
+                backupCount=self.backup_count,
+                encoding='utf-8'
+            )
+            file_handler.setFormatter(logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            ))
+            
+            listener = QueueListener(log_queue, file_handler)
+            listener.start()
+            
+            self.loggers[name] = logger
+            self.handlers[name] = listener
+            
+            return logger
+            
+        except ImportError:
+            # Fallback to regular handler if queue not available
+            return self.get_enhanced_logger(name)
 
     def set_log_level(self, level: int):
         """
@@ -136,36 +350,110 @@ class LogManager:
             logger.setLevel(level)
         logging.getLogger().setLevel(level)
 
-    def get_log_files(self) -> Dict[str, str]:
+    def get_log_files(self) -> Dict[str, Dict[str, Any]]:
         """
-        Get list of log files and their sizes.
+        Get detailed information about log files.
 
         Returns:
-            Dict: Mapping of log file names to their sizes
+            Dict: Mapping of log file names to their details
         """
         log_files = {}
-        for log_file in self.log_dir.glob("*.log"):
-            size = log_file.stat().st_size
-            log_files[log_file.name] = f"{size / 1024:.1f} KB"
+        for log_file in self.log_dir.glob("*.log*"):
+            stat = log_file.stat()
+            log_files[log_file.name] = {
+                "size_kb": f"{stat.st_size / 1024:.1f}",
+                "size_bytes": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "created": datetime.fromtimestamp(stat.st_ctime).isoformat()
+            }
         return log_files
 
-    def cleanup_old_logs(self, days: int = 30):
+    def cleanup_old_logs(self, days: int = 30, max_size_mb: Optional[int] = None):
         """
-        Clean up log files older than specified days.
+        Clean up old log files with size limit option.
 
         Args:
             days: Number of days to keep logs
+            max_size_mb: Maximum total size in MB
         """
         cutoff_time = datetime.now().timestamp() - (days * 24 * 60 * 60)
         deleted_count = 0
+        deleted_size = 0
 
-        for log_file in self.log_dir.glob("*.log*"):
+        # Get all log files sorted by modification time
+        log_files = sorted(
+            self.log_dir.glob("*.log*"),
+            key=lambda x: x.stat().st_mtime
+        )
+
+        for log_file in log_files:
             if log_file.stat().st_mtime < cutoff_time:
+                size = log_file.stat().st_size
                 log_file.unlink()
                 deleted_count += 1
+                deleted_size += size
+
+        # Size-based cleanup
+        if max_size_mb:
+            total_size = sum(f.stat().st_size for f in self.log_dir.glob("*.log*"))
+            max_size_bytes = max_size_mb * 1024 * 1024
+            
+            if total_size > max_size_bytes:
+                for log_file in log_files:
+                    if total_size <= max_size_bytes:
+                        break
+                    size = log_file.stat().st_size
+                    log_file.unlink()
+                    deleted_count += 1
+                    deleted_size += size
+                    total_size -= size
 
         if deleted_count > 0:
-            logging.info(f"Cleaned up {deleted_count} old log files")
+            logging.info(f"Cleaned up {deleted_count} old log files ({deleted_size / 1024 / 1024:.1f} MB)")
+
+    def get_logger_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about all loggers.
+
+        Returns:
+            Dict: Logger statistics
+        """
+        stats = {
+            "total_loggers": len(self.loggers),
+            "log_files": self.get_log_files(),
+            "handlers": {}
+        }
+        
+        for name, handler in self.handlers.items():
+            handler_type = type(handler).__name__
+            stats["handlers"][name] = {
+                "type": handler_type,
+                "level": handler.level if hasattr(handler, 'level') else 'N/A'
+            }
+        
+        return stats
+
+    def flush_all_handlers(self):
+        """Flush all handlers to ensure logs are written."""
+        for handler in self.handlers.values():
+            if hasattr(handler, 'flush'):
+                handler.flush()
+            elif hasattr(handler, 'target') and hasattr(handler.target, 'flush'):
+                handler.target.flush()
+
+    def close_all_handlers(self):
+        """Close all handlers properly."""
+        for handler in self.handlers.values():
+            if hasattr(handler, 'close'):
+                handler.close()
+            elif hasattr(handler, 'target') and hasattr(handler.target, 'close'):
+                handler.target.close()
+
+
+# Legacy compatibility
+class LogManager(EnhancedLogManager):
+    """Legacy LogManager for backward compatibility."""
+    pass
 
 
 class ModelLogger:
@@ -323,7 +611,7 @@ class PerformanceLogger:
         self.logger.info(f"System health: {health_status}")
 
 
-def setup_logging(log_dir: str = "logs", log_level: int = logging.INFO) -> LogManager:
+def setup_logging(log_dir: str = "logs", log_level: int = logging.INFO) -> EnhancedLogManager:
     """
     Setup logging for the application.
 
@@ -332,19 +620,19 @@ def setup_logging(log_dir: str = "logs", log_level: int = logging.INFO) -> LogMa
         log_level: Logging level
 
     Returns:
-        LogManager: Configured log manager instance
+        EnhancedLogManager: Configured enhanced log manager instance
     """
-    return LogManager(log_dir, log_level)
+    return EnhancedLogManager(log_dir, log_level)
 
 
 def get_logger(name: str) -> logging.Logger:
     """
-    Get a logger instance.
-
+    Get a logger for a specific component using the __name__ pattern.
+    
     Args:
         name: Logger name (usually __name__)
-
+        
     Returns:
-        logging.Logger: Logger instance
+        logging.Logger: Configured logger instance
     """
     return logging.getLogger(name)

@@ -7,7 +7,7 @@ and Plotly backends.
 
 import logging
 import warnings
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -54,6 +54,10 @@ class TimeSeriesPlotter:
         confidence_bands: Optional[Tuple[pd.Series, pd.Series]] = None,
         show_overlays: bool = True,
         show_confidence: bool = True,
+        signal_col: Optional[str] = None,
+        compression: bool = False,
+        strategy_styles: Optional[Dict[str, Dict[str, Any]]] = None,
+        **kwargs,
     ) -> Union[plt.Figure, go.Figure]:
         """Plot a single time series with optional overlays and confidence bands.
 
@@ -68,18 +72,44 @@ class TimeSeriesPlotter:
             confidence_bands: Tuple of (lower, upper) confidence bands
             show_overlays: Whether to show overlays
             show_confidence: Whether to show confidence bands
+            signal_col: Optional, name of signal column to plot if data is DataFrame
+            compression: If True, compress overlapping signals
+            strategy_styles: Dict mapping strategy names to style configs (linewidth, color, alpha)
+            **kwargs: Additional plotting options
 
         Returns:
             Matplotlib or Plotly figure
         """
+        # Default strategy styles to reduce clutter
+        if strategy_styles is None:
+            strategy_styles = {
+                "rsi": {"linewidth": 1, "color": "#1f77b4", "alpha": 0.8},
+                "macd": {"linewidth": 1, "color": "#ff7f0e", "alpha": 0.8},
+                "bollinger": {"linewidth": 1, "color": "#2ca02c", "alpha": 0.8},
+                "sma": {"linewidth": 1, "color": "#d62728", "alpha": 0.8},
+                "default": {"linewidth": 2, "color": "#1f77b4", "alpha": 1.0},
+            }
+
+        # Support DataFrame input with dynamic signal column
+        if isinstance(data, pd.DataFrame) and signal_col:
+            plot_data = data[signal_col]
+        else:
+            plot_data = data
+
+        # Optionally compress overlapping signals
+        if compression:
+            plot_data = plot_data.copy()
+            if hasattr(plot_data, 'rolling'):
+                plot_data = plot_data.rolling(window=3, min_periods=1).mean()
+
         # Check for empty series
-        if data.empty:
+        if plot_data.empty:
             warnings.warn("Input data series is empty")
             return self._create_empty_plot(title, "No data available")
 
         if self.backend == "matplotlib":
             return self._plot_time_series_matplotlib(
-                data,
+                plot_data,
                 title,
                 xlabel,
                 ylabel,
@@ -89,10 +119,11 @@ class TimeSeriesPlotter:
                 confidence_bands,
                 show_overlays,
                 show_confidence,
+                strategy_styles,
             )
         else:
             return self._plot_time_series_plotly(
-                data,
+                plot_data,
                 title,
                 xlabel,
                 ylabel,
@@ -101,6 +132,7 @@ class TimeSeriesPlotter:
                 confidence_bands,
                 show_overlays,
                 show_confidence,
+                strategy_styles,
             )
 
     def _plot_time_series_matplotlib(
@@ -115,6 +147,7 @@ class TimeSeriesPlotter:
         confidence_bands: Optional[Tuple[pd.Series, pd.Series]],
         show_overlays: bool,
         show_confidence: bool,
+        strategy_styles: Dict[str, Dict[str, Any]],
     ) -> plt.Figure:
         """Plot time series using Matplotlib."""
         fig, ax = plt.subplots(figsize=figsize or self.figsize)
@@ -126,7 +159,16 @@ class TimeSeriesPlotter:
         if show_overlays and overlays:
             for name, overlay_data in overlays.items():
                 if not overlay_data.empty:
-                    overlay_data.plot(ax=ax, label=name, alpha=0.7, linestyle="--")
+                    # Get strategy-specific style or use default
+                    style = strategy_styles.get(name.lower(), strategy_styles["default"])
+                    overlay_data.plot(
+                        ax=ax, 
+                        label=name, 
+                        alpha=style["alpha"], 
+                        linestyle="--",
+                        linewidth=style["linewidth"],
+                        color=style["color"]
+                    )
                 else:
                     logger.warning(f"Overlay '{name}' is empty, skipping")
 
@@ -166,6 +208,7 @@ class TimeSeriesPlotter:
         confidence_bands: Optional[Tuple[pd.Series, pd.Series]],
         show_overlays: bool,
         show_confidence: bool,
+        strategy_styles: Dict[str, Dict[str, Any]],
     ) -> go.Figure:
         """Plot time series using Plotly."""
         fig = go.Figure()
@@ -185,14 +228,20 @@ class TimeSeriesPlotter:
         if show_overlays and overlays:
             for name, overlay_data in overlays.items():
                 if not overlay_data.empty:
+                    # Get strategy-specific style or use default
+                    style = strategy_styles.get(name.lower(), strategy_styles["default"])
                     fig.add_trace(
                         go.Scatter(
                             x=overlay_data.index,
                             y=overlay_data.values,
                             mode="lines",
                             name=name,
-                            line=dict(dash="dash", width=1),
-                            opacity=0.7,
+                            line=dict(
+                                dash="dash", 
+                                width=style["linewidth"],
+                                color=style["color"]
+                            ),
+                            opacity=style["alpha"],
                         )
                     )
                 else:

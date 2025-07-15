@@ -46,6 +46,11 @@ class BollingerStrategy:
             data["close"], self.config.window, self.config.num_std
         )
 
+        # Drop NaNs from rolling calculations to avoid front-window issues
+        upper_band = upper_band.dropna()
+        middle_band = middle_band.dropna()
+        lower_band = lower_band.dropna()
+
         return upper_band, middle_band, lower_band
 
     def generate_signals(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:

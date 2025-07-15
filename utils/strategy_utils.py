@@ -7,6 +7,16 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
+_signal_registry = {}
+
+def register_signal(name: str, cls):
+    """Register a signal generator class by name."""
+    _signal_registry[name] = cls
+
+def get_signal_class(name: str):
+    """Retrieve a registered signal generator class by name."""
+    return _signal_registry.get(name)
+
 
 def calculate_returns(prices: pd.Series, method: str = "simple") -> pd.Series:
     """Calculate returns from price series.
@@ -225,6 +235,38 @@ def calculate_recovery_factor(returns: pd.Series) -> float:
     total_return = (1 + returns).prod() - 1
     max_dd = calculate_max_drawdown(returns)
     return total_return / abs(max_dd) if max_dd < 0 else 0.0
+
+
+def macd_crossover_signals(macd_line, signal_line, tolerance=0.001):
+    """
+    Shared utility for MACD crossover buy/sell signal logic.
+    Args:
+        macd_line: pd.Series of MACD values
+        signal_line: pd.Series of MACD signal line values
+        tolerance: float, buffer to avoid repeated triggers
+    Returns:
+        pd.Series of signals: 1 (buy), -1 (sell), 0 (hold)
+    """
+    import numpy as np
+    macd_diff = macd_line - signal_line
+    signals = np.zeros_like(macd_diff, dtype=int)
+    signals[macd_diff > tolerance] = 1
+    signals[macd_diff < -tolerance] = -1
+    return pd.Series(signals, index=macd_line.index)
+
+
+def validate_signal_schema(df: pd.DataFrame) -> bool:
+    """
+    Validate that a signal DataFrame includes required columns and index.
+    Required: index, 'Close', 'SignalType'. Optional: 'Confidence'.
+    Returns True if valid, False otherwise.
+    """
+    required_cols = {"Close", "SignalType"}
+    if not required_cols.issubset(set(df.columns)):
+        return False
+    if df.index is None or df.index.isnull().any():
+        return False
+    return True
 
 
 def calculate_risk_metrics(

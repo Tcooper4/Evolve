@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from collections import deque
 
+logger = logging.getLogger(__name__)
+
 import numpy as np
 import pandas as pd
 
@@ -36,13 +38,11 @@ except ImportError:
     TIKTOKEN_AVAILABLE = False
     logger.warning("tiktoken not available. Token counting will be disabled.")
 
-from trading.agents.forecast_router import ForecastRouter
-from trading.agents.strategy_gatekeeper import StrategyGatekeeper
-from trading.agents.trade_execution import TradeExecutionSimulator
-from trading.agents.self_tuning_optimizer import SelfTuningOptimizer
-from trading.data.fallback_data_provider import FallbackDataProvider
-
-logger = logging.getLogger(__name__)
+from trading.models.forecast_router import ForecastRouter
+from trading.strategies.gatekeeper import StrategyGatekeeper
+from trading.execution.trade_execution_simulator import TradeExecutionSimulator
+from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer
+from trading.data.providers.fallback_provider import FallbackDataProvider
 
 
 @dataclass

@@ -154,6 +154,9 @@ if PROPHET_AVAILABLE:
 
                 return {"train_loss": [], "val_loss": []}
 
+            except ValueError as ve:
+                logger.error(f"ValueError fitting Prophet model: {ve}")
+                return {"success": False, "error": str(ve), "type": "ValueError", "timestamp": datetime.now().isoformat()}
             except Exception as e:
                 logger.error(f"Error fitting Prophet model: {e}")
                 raise RuntimeError(f"Prophet model fitting failed: {e}")

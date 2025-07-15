@@ -124,28 +124,29 @@ class ARIMAModel(BaseModel):
         """Fit ARIMA model with manually specified parameters."""
         try:
             logger.info(f"Fitting manual ARIMA with order: {self.order}")
-            
             # Create ARIMA model
             if self.seasonal_order:
                 from statsmodels.tsa.statespace.sarimax import SARIMAX
-
-                self.model = SARIMAX(
-                    data, order=self.order, seasonal_order=self.seasonal_order
-                )
+                try:
+                    self.model = SARIMAX(
+                        data, order=self.order, seasonal_order=self.seasonal_order
+                    )
+                    self.fitted_model = self.model.fit()
+                    self.is_fitted = True
+                except Exception as seasonal_exc:
+                    logger.warning(f"Seasonal ARIMA fitting failed: {seasonal_exc}. Falling back to non-seasonal ARIMA.")
+                    self.model = ARIMA(data, order=self.order)
+                    self.fitted_model = self.model.fit()
+                    self.is_fitted = True
             else:
                 self.model = ARIMA(data, order=self.order)
-
-            # Fit the model
-            self.fitted_model = self.model.fit()
-            self.is_fitted = True
-
+                self.fitted_model = self.model.fit()
+                self.is_fitted = True
             # Log AIC/BIC values
             aic_result = self.get_aic()
             bic_result = self.get_bic()
-            
             logger.info(f"Model AIC: {aic_result.get('aic', 'N/A')}")
             logger.info(f"Model BIC: {bic_result.get('bic', 'N/A')}")
-
             return {
                 "success": True,
                 "message": "Manual ARIMA model fitted successfully",
