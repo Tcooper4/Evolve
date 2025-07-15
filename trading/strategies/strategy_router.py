@@ -205,8 +205,24 @@ class StrategyRouter:
         matches = self.find_strategy_matches(prompt)
         
         if not matches:
-            logger.warning(f"No strategy matches found for prompt: {prompt}")
-            return None
+            logger.warning(f"No strategy matches found for prompt: {prompt}. Falling back to base strategy.")
+            # Fallback to base strategy (RSI, SMA, etc)
+            base_strategies = [s for s in self.strategies.keys() if s in ("RSI_Strategy", "Moving_Average_Crossover", "SMA_Strategy")]
+            if base_strategies:
+                base_name = base_strategies[0]
+                base_info = self.strategies[base_name]
+                logger.info(f"Fallback to base strategy: {base_name}")
+                return StrategyMatch(
+                    strategy_name=base_name,
+                    strategy_type=base_info["type"],
+                    relevance_score=1,
+                    priority=base_info["priority"],
+                    keywords_matched=[],
+                    confidence=base_info["confidence"]
+                )
+            else:
+                logger.error("No base strategies available for fallback.")
+                return None
             
         # If multiple matches, use priority rules
         if len(matches) > 1:

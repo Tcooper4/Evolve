@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 import pandas as pd
+import functools
 
 from trading.strategies.atr_strategy import ATRConfig, ATRStrategy, generate_atr_signals
 from trading.strategies.bollinger_strategy import BollingerConfig, BollingerStrategy
@@ -122,6 +123,7 @@ def get_available_strategies() -> List[str]:
     return ["rsi", "bollinger", "macd", "sma", "cci", "atr", "ensemble"]
 
 
+@functools.lru_cache(maxsize=32)
 def create_strategy(strategy_name: str, **kwargs) -> Any:
     """Create a strategy instance.
 

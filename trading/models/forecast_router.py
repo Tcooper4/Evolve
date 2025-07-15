@@ -281,14 +281,27 @@ class ForecastRouter:
         Returns:
             Selected model type
         """
-        # Alias matching for xgboost/xgb
-        if model_type:
-            if model_type in self.model_registry:
-                return model_type
-            if model_type.lower() in ["xgboost", "xgb"]:
-                return "xgboost"
+        # Handle None or invalid model_name with fallback
+        if model_type is None:
+            logger.warning("No model_name specified, defaulting to Prophet forecaster")
+            if PROPHET_AVAILABLE:
+                return "prophet"
             else:
-                raise ValueError(f"Unknown model: {model_type}. Available models: {list(self.model_registry.keys())}")
+                logger.warning("Prophet not available, falling back to ARIMA")
+                return "arima"
+        
+        # Check if model exists in registry
+        if model_type not in self.model_registry:
+            logger.warning(f"Model '{model_type}' not found in registry, defaulting to Prophet forecaster")
+            if PROPHET_AVAILABLE:
+                return "prophet"
+            else:
+                logger.warning("Prophet not available, falling back to ARIMA")
+                return "arima"
+        
+        # Alias matching for xgboost/xgb
+        if model_type.lower() in ["xgboost", "xgb"]:
+            return "xgboost"
 
         # Analyze data characteristics
         characteristics = self._analyze_data(data)

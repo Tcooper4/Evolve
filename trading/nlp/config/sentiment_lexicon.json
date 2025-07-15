@@ -1,0 +1,12 @@
+{
+  "positive_words": [
+    "bullish", "surge", "rally", "gain", "profit", "growth", "positive",
+    "strong", "beat", "exceed", "outperform", "upgrade", "buy", "hold",
+    "opportunity", "potential", "promising", "robust", "solid", "stable"
+  ],
+  "negative_words": [
+    "bearish", "plunge", "crash", "loss", "decline", "negative", "weak",
+    "miss", "underperform", "downgrade", "sell", "risk", "concern",
+    "volatile", "uncertain", "pressure", "headwind", "challenge", "worry"
+  ]
+} 

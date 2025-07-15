@@ -187,6 +187,34 @@ class TimeSeriesPlotter:
             else:
                 logger.warning("Confidence bands are empty, skipping")
 
+        # Add vertical padding to ensure overlays are not cut off
+        # Calculate the range of all plotted data (main series + overlays + confidence bands)
+        all_data = [data]
+        
+        if show_overlays and overlays:
+            for overlay_data in overlays.values():
+                if not overlay_data.empty:
+                    all_data.append(overlay_data)
+        
+        if show_confidence and confidence_bands:
+            lower, upper = confidence_bands
+            if not lower.empty and not upper.empty:
+                all_data.extend([lower, upper])
+        
+        # Calculate min and max across all data
+        if all_data:
+            all_values = pd.concat(all_data, axis=1).values.flatten()
+            all_values = all_values[~np.isnan(all_values)]  # Remove NaN values
+            
+            if len(all_values) > 0:
+                data_min = np.min(all_values)
+                data_max = np.max(all_values)
+                data_range = data_max - data_min
+                
+                # Add 5% padding on each side
+                padding = data_range * 0.05
+                ax.set_ylim(data_min - padding, data_max + padding)
+
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
@@ -675,6 +703,10 @@ class TimeSeriesPlotter:
         ylabel: str = "Value",
         figsize: Optional[tuple] = None,
         show: bool = True,
+        signal_markers: Optional[Dict[str, pd.Series]] = None,
+        confidence_offset: float = 0.02,
+        confidence_alpha: float = 0.2,
+        z_order_adjustment: bool = True,
     ) -> Union[plt.Figure, go.Figure]:
         """Plot time series with confidence intervals.
 
@@ -686,24 +718,76 @@ class TimeSeriesPlotter:
             ylabel: Y-axis label
             figsize: Figure size (matplotlib only)
             show: Whether to display the plot
+            signal_markers: Optional dict of signal markers (e.g., {'buy': buy_signals, 'sell': sell_signals})
+            confidence_offset: Offset factor for confidence interval shading to avoid overlap
+            confidence_alpha: Alpha transparency for confidence intervals
+            z_order_adjustment: Whether to adjust z-order for better visual clarity
 
         Returns:
             Matplotlib or Plotly figure
         """
         if self.backend == "matplotlib":
             fig, ax = plt.subplots(figsize=figsize or self.figsize)
-            data.plot(ax=ax, label="Actual")
+            
+            # Calculate offset for confidence intervals to avoid overlap with markers
+            data_range = data.max() - data.min()
+            offset = data_range * confidence_offset
+            
+            # Plot confidence intervals first (background layer)
             ax.fill_between(
                 confidence_intervals.index,
-                confidence_intervals["lower"],
-                confidence_intervals["upper"],
-                alpha=0.3,
+                confidence_intervals["lower"] - offset,
+                confidence_intervals["upper"] + offset,
+                alpha=confidence_alpha,
                 label="Confidence Interval",
+                color='lightblue',
+                zorder=1 if z_order_adjustment else 0,
             )
+            
+            # Plot actual data (middle layer)
+            data.plot(ax=ax, label="Actual", linewidth=2, zorder=2 if z_order_adjustment else 0)
+            
+            # Add signal markers if provided (top layer)
+            if signal_markers:
+                for signal_type, signal_data in signal_markers.items():
+                    if not signal_data.empty:
+                        if signal_type.lower() == 'buy':
+                            ax.scatter(
+                                signal_data.index,
+                                signal_data.values,
+                                color='green',
+                                marker='^',
+                                s=100,
+                                label=f'{signal_type.title()} Signals',
+                                zorder=3 if z_order_adjustment else 0,
+                                alpha=0.8
+                            )
+                        elif signal_type.lower() == 'sell':
+                            ax.scatter(
+                                signal_data.index,
+                                signal_data.values,
+                                color='red',
+                                marker='v',
+                                s=100,
+                                label=f'{signal_type.title()} Signals',
+                                zorder=3 if z_order_adjustment else 0,
+                                alpha=0.8
+                            )
+                        else:
+                            ax.scatter(
+                                signal_data.index,
+                                signal_data.values,
+                                marker='o',
+                                s=80,
+                                label=f'{signal_type.title()} Signals',
+                                zorder=3 if z_order_adjustment else 0,
+                                alpha=0.7
+                            )
+            
             ax.set_title(title)
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
-            ax.grid(True)
+            ax.grid(True, alpha=0.3, zorder=0)
             ax.legend()
 
             if show:
@@ -712,41 +796,101 @@ class TimeSeriesPlotter:
         else:
             fig = go.Figure()
 
-            # Add actual values
+            # Calculate offset for confidence intervals
+            data_range = data.max() - data.min()
+            offset = data_range * confidence_offset
+
+            # Add confidence intervals first (background)
+            fig.add_trace(
+                go.Scatter(
+                    x=confidence_intervals.index,
+                    y=confidence_intervals["upper"] + offset,
+                    fill=None,
+                    mode="lines",
+                    line_color="rgba(173, 216, 230, 0.3)",
+                    name="Upper Bound",
+                    showlegend=False,
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=confidence_intervals.index,
+                    y=confidence_intervals["lower"] - offset,
+                    fill="tonexty",
+                    mode="lines",
+                    line_color="rgba(173, 216, 230, 0.3)",
+                    name="Confidence Interval",
+                    fillcolor="rgba(173, 216, 230, 0.2)",
+                )
+            )
+
+            # Add actual values (middle layer)
             fig.add_trace(
                 go.Scatter(
                     x=data.index,
                     y=data.values,
                     mode="lines",
                     name="Actual",
-                    line=dict(color="blue"),
+                    line=dict(color="blue", width=2),
                 )
             )
 
-            # Add confidence intervals
-            fig.add_trace(
-                go.Scatter(
-                    x=confidence_intervals.index,
-                    y=confidence_intervals["upper"],
-                    fill=None,
-                    mode="lines",
-                    line_color="rgba(0,100,80,0.2)",
-                    name="Upper Bound",
-                )
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x=confidence_intervals.index,
-                    y=confidence_intervals["lower"],
-                    fill="tonexty",
-                    mode="lines",
-                    line_color="rgba(0,100,80,0.2)",
-                    name="Lower Bound",
-                )
-            )
+            # Add signal markers if provided (top layer)
+            if signal_markers:
+                for signal_type, signal_data in signal_markers.items():
+                    if not signal_data.empty:
+                        if signal_type.lower() == 'buy':
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=signal_data.index,
+                                    y=signal_data.values,
+                                    mode="markers",
+                                    name=f"{signal_type.title()} Signals",
+                                    marker=dict(
+                                        symbol="triangle-up",
+                                        size=10,
+                                        color="green",
+                                        opacity=0.8
+                                    ),
+                                )
+                            )
+                        elif signal_type.lower() == 'sell':
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=signal_data.index,
+                                    y=signal_data.values,
+                                    mode="markers",
+                                    name=f"{signal_type.title()} Signals",
+                                    marker=dict(
+                                        symbol="triangle-down",
+                                        size=10,
+                                        color="red",
+                                        opacity=0.8
+                                    ),
+                                )
+                            )
+                        else:
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=signal_data.index,
+                                    y=signal_data.values,
+                                    mode="markers",
+                                    name=f"{signal_type.title()} Signals",
+                                    marker=dict(
+                                        symbol="circle",
+                                        size=8,
+                                        opacity=0.7
+                                    ),
+                                )
+                            )
 
             fig.update_layout(
-                title=title, xaxis_title=xlabel, yaxis_title=ylabel, showlegend=True
+                title=title,
+                xaxis_title=xlabel,
+                yaxis_title=ylabel,
+                showlegend=True,
+                plot_bgcolor="white",
+                paper_bgcolor="white",
             )
 
             if show:
