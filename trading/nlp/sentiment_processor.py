@@ -3,7 +3,8 @@ Sentiment Processor with Dynamic Polarity Scaling
 
 This module provides advanced sentiment analysis with dynamic polarity scaling,
 supporting news source weighting, tweet impact scoring, and Flesch-Kincaid
-readability scoring as a quality filter.
+readability scoring as a quality filter. Now includes soft-matching capabilities
+for rare words using cosine similarity from embeddings.
 """
 
 import json
@@ -15,6 +16,14 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 from textstat import textstat
+
+# Try to import embedding libraries for soft-matching
+try:
+    from sentence_transformers import SentenceTransformer
+    from sklearn.metrics.pairwise import cosine_similarity
+    EMBEDDINGS_AVAILABLE = True
+except ImportError:
+    EMBEDDINGS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -93,19 +102,26 @@ class SentimentContext:
 
 class SentimentProcessor:
     """
-    Advanced sentiment processor with dynamic polarity scaling.
+    Advanced sentiment processor with dynamic polarity scaling and soft-matching.
     """
     
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: Optional[str] = None, enable_soft_matching: bool = True):
         """
         Initialize sentiment processor.
         
         Args:
             config_path: Path to configuration file
+            enable_soft_matching: Whether to enable soft-matching for rare words
         """
         self.news_sources: Dict[str, NewsSource] = {}
         self.sentiment_lexicons: Dict[str, Dict[str, float]] = {}
         self.emotion_lexicons: Dict[str, Dict[str, List[str]]] = {}
+        
+        # Soft-matching configuration
+        self.enable_soft_matching = enable_soft_matching and EMBEDDINGS_AVAILABLE
+        self.soft_match_threshold = 0.7  # Minimum similarity for soft-matching
+        self.embedding_model = None
+        self.lexicon_embeddings = {}
         
         # Default configuration
         self.default_source_weight = 1.0
@@ -119,7 +135,11 @@ class SentimentProcessor:
         else:
             self._load_default_config()
         
-        logger.info("SentimentProcessor initialized with dynamic polarity scaling")
+        # Initialize soft-matching if enabled
+        if self.enable_soft_matching:
+            self._initialize_soft_matching()
+        
+        logger.info("SentimentProcessor initialized with dynamic polarity scaling and soft-matching")
     
     def _load_default_config(self):
         """Load default configuration."""
@@ -174,28 +194,20 @@ class SentimentProcessor:
         self._load_basic_lexicons()
     
     def _load_basic_lexicons(self):
-        """Load basic sentiment lexicons."""
-        # Positive words
-        positive_words = [
-            "bullish", "surge", "rally", "gain", "profit", "growth", "positive",
-            "strong", "beat", "exceed", "outperform", "upgrade", "buy", "hold",
-            "opportunity", "potential", "promising", "robust", "solid", "stable"
-        ]
-        
-        # Negative words
-        negative_words = [
-            "bearish", "plunge", "crash", "loss", "decline", "negative", "weak",
-            "miss", "underperform", "downgrade", "sell", "risk", "concern",
-            "volatile", "uncertain", "pressure", "headwind", "challenge", "worry"
-        ]
-        
-        # Create sentiment lexicon
-        self.sentiment_lexicons["basic"] = {}
-        for word in positive_words:
-            self.sentiment_lexicons["basic"][word.lower()] = 1.0
-        for word in negative_words:
-            self.sentiment_lexicons["basic"][word.lower()] = -1.0
-        
+        """Load basic sentiment lexicons from JSON config."""
+        import os
+        lexicon_path = os.path.join(os.path.dirname(__file__), 'config', 'sentiment_lexicon.json')
+        try:
+            with open(lexicon_path, 'r', encoding='utf-8') as f:
+                lexicon = json.load(f)
+            self.sentiment_lexicons["basic"] = {}
+            for word in lexicon.get("positive_words", []):
+                self.sentiment_lexicons["basic"][word.lower()] = 1.0
+            for word in lexicon.get("negative_words", []):
+                self.sentiment_lexicons["basic"][word.lower()] = -1.0
+        except Exception as e:
+            logger.error(f"Failed to load sentiment lexicon from JSON: {e}")
+            self.sentiment_lexicons["basic"] = {}
         # Emotion lexicons
         self.emotion_lexicons["fear"] = [
             "panic", "fear", "worry", "concern", "anxiety", "nervous", "scared",
@@ -443,8 +455,97 @@ class SentimentProcessor:
                 metadata={"error": str(e)}
             )
     
+    def _initialize_soft_matching(self):
+        """Initialize soft-matching capabilities with embeddings."""
+        try:
+            if not EMBEDDINGS_AVAILABLE:
+                logger.warning("Embedding libraries not available, soft-matching disabled")
+                self.enable_soft_matching = False
+                return
+            
+            # Load a lightweight embedding model
+            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            
+            # Create embeddings for lexicon words
+            self._create_lexicon_embeddings()
+            
+            logger.info("Soft-matching initialized with embedding model")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize soft-matching: {e}")
+            self.enable_soft_matching = False
+    
+    def _create_lexicon_embeddings(self):
+        """Create embeddings for all lexicon words."""
+        try:
+            if not self.embedding_model:
+                return
+            
+            # Get all unique words from lexicons
+            all_words = set()
+            for lexicon in self.sentiment_lexicons.values():
+                all_words.update(lexicon.keys())
+            
+            if not all_words:
+                return
+            
+            # Create embeddings for all words
+            word_list = list(all_words)
+            embeddings = self.embedding_model.encode(word_list)
+            
+            # Store embeddings
+            for word, embedding in zip(word_list, embeddings):
+                self.lexicon_embeddings[word] = embedding
+            
+            logger.info(f"Created embeddings for {len(word_list)} lexicon words")
+            
+        except Exception as e:
+            logger.error(f"Error creating lexicon embeddings: {e}")
+    
+    def _find_soft_matches(self, word: str, max_matches: int = 3) -> List[Tuple[str, float, float]]:
+        """
+        Find soft matches for a word using cosine similarity.
+        
+        Args:
+            word: Word to find matches for
+            max_matches: Maximum number of matches to return
+            
+        Returns:
+            List of (matched_word, similarity_score, sentiment_score) tuples
+        """
+        try:
+            if not self.enable_soft_matching or not self.embedding_model:
+                return []
+            
+            # Encode the input word
+            word_embedding = self.embedding_model.encode([word])[0]
+            
+            matches = []
+            
+            # Compare with all lexicon words
+            for lexicon_name, lexicon in self.sentiment_lexicons.items():
+                for lexicon_word, sentiment_score in lexicon.items():
+                    if lexicon_word in self.lexicon_embeddings:
+                        # Calculate cosine similarity
+                        lexicon_embedding = self.lexicon_embeddings[lexicon_word]
+                        similarity = cosine_similarity(
+                            [word_embedding], [lexicon_embedding]
+                        )[0][0]
+                        
+                        # Only include matches above threshold
+                        if similarity >= self.soft_match_threshold:
+                            matches.append((lexicon_word, similarity, sentiment_score))
+            
+            # Sort by similarity and return top matches
+            matches.sort(key=lambda x: x[1], reverse=True)
+            return matches[:max_matches]
+            
+        except Exception as e:
+            logger.warning(f"Error in soft-matching for word '{word}': {e}")
+            return []
+    
     def _calculate_base_sentiment(self, text: str) -> float:
-        """Calculate base sentiment score using lexicon."""
+        """Calculate base sentiment score using lexicon with soft-matching."""
         try:
             words = re.findall(r'\b\w+\b', text.lower())
             if not words:
@@ -452,14 +553,33 @@ class SentimentProcessor:
             
             total_score = 0.0
             matched_words = 0
+            soft_matches_used = 0
             
             for word in words:
+                # Try exact match first
                 if word in self.sentiment_lexicons["basic"]:
                     total_score += self.sentiment_lexicons["basic"][word]
                     matched_words += 1
+                elif self.enable_soft_matching:
+                    # Try soft-matching for rare words
+                    soft_matches = self._find_soft_matches(word)
+                    if soft_matches:
+                        # Use the best match
+                        best_match_word, similarity, sentiment_score = soft_matches[0]
+                        # Weight the score by similarity
+                        weighted_score = sentiment_score * similarity
+                        total_score += weighted_score
+                        matched_words += 1
+                        soft_matches_used += 1
+                        
+                        logger.debug(f"Soft match: '{word}' -> '{best_match_word}' (similarity: {similarity:.3f})")
             
             if matched_words == 0:
                 return 0.0
+            
+            # Log soft-matching usage
+            if soft_matches_used > 0:
+                logger.info(f"Used {soft_matches_used} soft matches out of {matched_words} total matches")
             
             # Normalize score to [-1, 1] range
             avg_score = total_score / matched_words

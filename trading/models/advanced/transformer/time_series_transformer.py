@@ -213,8 +213,23 @@ class TransformerForecaster(BaseModel):
             dropout=self.config["dropout"],
             batch_first=True,
         )
-        self.transformer_encoder = nn.TransformerEncoder(
-            encoder_layer, num_layers=self.config["num_layers"]
+        # Wrap encoder layer with Dropout after each attention block
+        class EncoderWithDropout(nn.Module):
+            def __init__(self, encoder_layer, num_layers, dropout_rate):
+                super().__init__()
+                self.layers = nn.ModuleList([
+                    nn.Sequential(
+                        encoder_layer,
+                        nn.Dropout(dropout_rate)
+                    ) for _ in range(num_layers)
+                ])
+            def forward(self, src, mask=None, src_key_padding_mask=None):
+                output = src
+                for layer in self.layers:
+                    output = layer(output, mask=mask, src_key_padding_mask=src_key_padding_mask)
+                return output
+        self.transformer_encoder = EncoderWithDropout(
+            encoder_layer, self.config["num_layers"], self.config["dropout"]
         )
 
         # Output projection
@@ -692,6 +707,15 @@ class TransformerForecaster(BaseModel):
             # ... (assume self.model is a torch.nn.Module)
             # Example: self.model.train(); optimizer.step(); etc.
             # (Insert your actual training code here)
+            # Example gradient clipping:
+            # optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config["learning_rate"])
+            # for epoch in range(num_epochs):
+            #     optimizer.zero_grad()
+            #     output = self.model(X)
+            #     loss = loss_fn(output, y)
+            #     loss.backward()
+            #     torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+            #     optimizer.step()
             # After training, save checkpoint
             if save_checkpoint:
                 os.makedirs('checkpoints', exist_ok=True)

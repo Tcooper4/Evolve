@@ -167,16 +167,39 @@ def generate_rsi_signals(
     """Generate RSI trading signals with user-configurable thresholds.
     Enhanced with index alignment and empty slice validation.
 
+    RSI (Relative Strength Index) Strategy Logic:
+    - Buy signals are triggered when RSI falls below buy_threshold (default 30)
+      indicating oversold conditions where price may reverse upward
+    - Sell signals are triggered when RSI rises above sell_threshold (default 70)
+      indicating overbought conditions where price may reverse downward
+    - RSI is calculated using a rolling window of 'period' periods (default 14)
+      with exponential smoothing to reduce noise
+    - Edge cases are handled including:
+      * Insufficient data (less than period length)
+      * All NaN values in price data
+      * Non-monotonic or duplicate indices
+      * Constant price series (zero variance)
+
     Args:
-        df: Price data DataFrame with OHLCV columns
+        df: Price data DataFrame with OHLCV columns (must include 'Close')
         ticker: Optional ticker symbol for loading optimized settings
-        period: RSI period
-        buy_threshold: RSI level for buy signals
-        sell_threshold: RSI level for sell signals
-        user_config: Optional user configuration dict with thresholds
+        period: RSI calculation period (default 14, typical range 10-21)
+        buy_threshold: RSI level for buy signals (default 30, typical range 20-40)
+        sell_threshold: RSI level for sell signals (default 70, typical range 60-80)
+        user_config: Optional user configuration dict with custom thresholds
+        streamlit_session: Optional Streamlit session for UI integration
 
     Returns:
-        DataFrame with RSI signals and returns
+        DataFrame with RSI signals and returns including:
+        - 'RSI': Calculated RSI values
+        - 'signal': Trading signals (1=buy, -1=sell, 0=hold)
+        - 'buy_signal': Boolean buy signal flags
+        - 'sell_signal': Boolean sell signal flags
+        - 'oversold': Boolean oversold condition flags
+        - 'overbought': Boolean overbought condition flags
+
+    Raises:
+        ValueError: If DataFrame is invalid, missing required columns, or insufficient data
     """
     try:
         # Store original index for alignment

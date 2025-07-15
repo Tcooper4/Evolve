@@ -31,26 +31,23 @@ class SignalMerger:
         validate: bool = True
     ) -> pd.DataFrame:
         """
-        Merge two signal DataFrames with index validation.
-        
-        Args:
-            df1: First signal DataFrame
-            df2: Second signal DataFrame
-            validate: Whether to validate indexes
-            
-        Returns:
-            Merged DataFrame
-            
-        Raises:
-            ValueError: If indexes don't match and validation is enabled
+        Merge two signal DataFrames with index validation and UTC localization.
         """
         if df1 is None or df2 is None:
             raise ValueError("Cannot merge None DataFrames")
-            
         if df1.empty and df2.empty:
             logger.warning("Both DataFrames are empty")
             return pd.DataFrame()
-            
+        # Ensure DateTimeIndex is timezone-aware and set to UTC
+        for df in [df1, df2]:
+            if isinstance(df.index, pd.DatetimeIndex):
+                if df.index.tz is None:
+                    try:
+                        df.index = df.index.tz_localize('UTC', nonexistent='shift_forward')
+                    except Exception:
+                        df.index = df.index.tz_localize('UTC', errors='coerce')
+                else:
+                    df.index = df.index.tz_convert('UTC')
         # Validate indexes if requested
         if validate and self.validate_indexes:
             if not df1.index.equals(df2.index):
@@ -58,7 +55,6 @@ class SignalMerger:
                 logger.error(f"df1 index: {df1.index[:5]}...")
                 logger.error(f"df2 index: {df2.index[:5]}...")
                 raise ValueError("Indexes must match for signal merging")
-                
         # Perform merge
         try:
             merged_df = pd.merge(
@@ -68,10 +64,8 @@ class SignalMerger:
                 right_index=True, 
                 how=self.merge_method
             )
-            
             logger.info(f"Successfully merged signals: {df1.shape} + {df2.shape} -> {merged_df.shape}")
             return merged_df
-            
         except Exception as e:
             logger.error(f"Error merging signals: {e}")
             raise
@@ -82,22 +76,23 @@ class SignalMerger:
         validate: bool = True
     ) -> pd.DataFrame:
         """
-        Merge multiple signal DataFrames.
-        
-        Args:
-            dataframes: List of DataFrames to merge
-            validate: Whether to validate indexes
-            
-        Returns:
-            Merged DataFrame
+        Merge multiple signal DataFrames with UTC localization.
         """
         if not dataframes:
             logger.warning("No DataFrames provided for merging")
             return pd.DataFrame()
-            
         if len(dataframes) == 1:
             return dataframes[0]
-            
+        # Ensure all indexes are UTC
+        for i, df in enumerate(dataframes):
+            if isinstance(df.index, pd.DatetimeIndex):
+                if df.index.tz is None:
+                    try:
+                        df.index = df.index.tz_localize('UTC', nonexistent='shift_forward')
+                    except Exception:
+                        df.index = df.index.tz_localize('UTC', errors='coerce')
+                else:
+                    df.index = df.index.tz_convert('UTC')
         # Validate all indexes match if requested
         if validate and self.validate_indexes:
             reference_index = dataframes[0].index
@@ -105,16 +100,13 @@ class SignalMerger:
                 if not df.index.equals(reference_index):
                     logger.error(f"Index mismatch between DataFrame 0 and DataFrame {i}")
                     raise ValueError(f"All DataFrames must have matching indexes")
-                    
         # Merge all DataFrames
         try:
             merged_df = dataframes[0]
             for df in dataframes[1:]:
                 merged_df = self.merge_signals(merged_df, df, validate=False)
-                
             logger.info(f"Successfully merged {len(dataframes)} DataFrames: {merged_df.shape}")
             return merged_df
-            
         except Exception as e:
             logger.error(f"Error merging multiple signals: {e}")
             raise
