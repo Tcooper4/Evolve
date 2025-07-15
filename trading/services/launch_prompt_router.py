@@ -13,6 +13,9 @@ import signal
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import hashlib
+import traceback
+from datetime import datetime
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -33,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 class PromptValidationHandler:
-    """Handles validation and suggestions for malformed user prompts."""
+    """Handles validation and suggestions for malformed user prompts with enhanced error logging."""
 
     def __init__(self):
         self.example_prompts = {
@@ -72,53 +75,166 @@ class PromptValidationHandler:
             "risk": r"\b(risk|var|drawdown|correlation|volatility|exposure)\b",
         }
 
+    def _generate_prompt_hash(self, prompt: str) -> str:
+        """Generate a hash for the prompt content for error tracking."""
+        return hashlib.md5(prompt.encode('utf-8')).hexdigest()[:8]
+
     def validate_prompt(self, prompt: str) -> Dict[str, Any]:
-        """Validate user prompt and provide suggestions if malformed."""
-        if not prompt or not isinstance(prompt, str):
+        """Validate user prompt and provide suggestions if malformed with enhanced error logging."""
+        prompt_hash = self._generate_prompt_hash(prompt)
+        
+        try:
+            if not prompt or not isinstance(prompt, str):
+                error_msg = f"Prompt validation failed: Prompt is empty or not a string (hash: {prompt_hash})"
+                logger.error(error_msg)
+                return {
+                    "valid": False,
+                    "error": "Prompt is empty or not a string",
+                    "suggestions": self._get_general_suggestions(),
+                    "prompt_hash": prompt_hash,
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+            prompt = prompt.strip()
+            if len(prompt) < 10:
+                error_msg = f"Prompt validation failed: Prompt too short (hash: {prompt_hash}, length: {len(prompt)})"
+                logger.error(error_msg)
+                return {
+                    "valid": False,
+                    "error": "Prompt is too short (minimum 10 characters)",
+                    "suggestions": self._get_general_suggestions(),
+                    "prompt_hash": prompt_hash,
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+            if len(prompt) > 1000:
+                error_msg = f"Prompt validation failed: Prompt too long (hash: {prompt_hash}, length: {len(prompt)})"
+                logger.error(error_msg)
+                return {
+                    "valid": False,
+                    "error": "Prompt is too long (maximum 1000 characters)",
+                    "suggestions": [
+                        "Please provide a more concise prompt focusing on one specific request."
+                    ],
+                    "prompt_hash": prompt_hash,
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+            # Check for basic structure
+            if not self._has_action_words(prompt):
+                error_msg = f"Prompt validation failed: No action words detected (hash: {prompt_hash})"
+                logger.error(error_msg)
+                return {
+                    "valid": False,
+                    "error": "Prompt lacks clear action words",
+                    "suggestions": self._get_action_suggestions(),
+                    "prompt_hash": prompt_hash,
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+            # Check for specific intent
+            intent = self._detect_intent(prompt)
+            if not intent:
+                error_msg = f"Prompt validation failed: Unable to determine intent (hash: {prompt_hash})"
+                logger.error(error_msg)
+                return {
+                    "valid": False,
+                    "error": "Unable to determine prompt intent",
+                    "suggestions": self._get_general_suggestions(),
+                    "prompt_hash": prompt_hash,
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+            logger.info(f"Prompt validation successful (hash: {prompt_hash}, intent: {intent})")
+            return {
+                "valid": True,
+                "intent": intent,
+                "confidence": self._calculate_confidence(prompt, intent),
+                "prompt_hash": prompt_hash,
+                "timestamp": datetime.now().isoformat(),
+            }
+
+        except Exception as e:
+            error_msg = f"Prompt validation error: {str(e)} (hash: {prompt_hash})"
+            logger.error(error_msg, exc_info=True)
             return {
                 "valid": False,
-                "error": "Prompt is empty or not a string",
+                "error": f"Validation error: {str(e)}",
                 "suggestions": self._get_general_suggestions(),
+                "prompt_hash": prompt_hash,
+                "timestamp": datetime.now().isoformat(),
+                "traceback": traceback.format_exc(),
             }
 
-        prompt = prompt.strip()
-        if len(prompt) < 10:
-            return {
-                "valid": False,
-                "error": "Prompt is too short (minimum 10 characters)",
-                "suggestions": self._get_general_suggestions(),
-            }
-
-        if len(prompt) > 1000:
-            return {
-                "valid": False,
-                "error": "Prompt is too long (maximum 1000 characters)",
-                "suggestions": [
-                    "Please provide a more concise prompt focusing on one specific request."
-                ],
-            }
-
-        # Check for basic structure
-        if not self._has_action_words(prompt):
-            return {
-                "valid": False,
-                "error": "Prompt lacks clear action words",
-                "suggestions": self._get_action_suggestions(),
-            }
-
-        # Check for specific intent
-        intent = self._detect_intent(prompt)
-        if not intent:
-            return {
-                "valid": False,
-                "error": "Unable to determine prompt intent",
-                "suggestions": self._get_general_suggestions(),
-            }
-
+    def handle_routing_failure(self, prompt: str, error: Exception, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Handle prompt routing failures with detailed error logging.
+        
+        Args:
+            prompt: The prompt that failed routing
+            error: The error that occurred
+            context: Optional context information
+            
+        Returns:
+            Error response with detailed logging
+        """
+        prompt_hash = self._generate_prompt_hash(prompt)
+        error_type = type(error).__name__
+        
+        # Log detailed error information
+        error_msg = f"Prompt routing failed (hash: {prompt_hash}, type: {error_type}): {str(error)}"
+        logger.error(error_msg, exc_info=True)
+        
+        # Log additional context if available
+        if context:
+            logger.error(f"Routing context for hash {prompt_hash}: {context}")
+        
         return {
-            "valid": True,
-            "intent": intent,
-            "confidence": self._calculate_confidence(prompt, intent),
+            "success": False,
+            "error": f"Routing failed: {str(error)}",
+            "error_type": error_type,
+            "prompt_hash": prompt_hash,
+            "timestamp": datetime.now().isoformat(),
+            "traceback": traceback.format_exc(),
+            "suggestions": [
+                "Try rephrasing your request",
+                "Check if the requested functionality is available",
+                "Contact support if the issue persists"
+            ]
+        }
+
+    def handle_gpt_fallback_failure(self, prompt: str, error: Exception, fallback_attempts: int = 0) -> Dict[str, Any]:
+        """
+        Handle GPT fallback failures with detailed error logging.
+        
+        Args:
+            prompt: The prompt that failed GPT fallback
+            error: The error that occurred
+            fallback_attempts: Number of fallback attempts made
+            
+        Returns:
+            Error response with detailed logging
+        """
+        prompt_hash = self._generate_prompt_hash(prompt)
+        error_type = type(error).__name__
+        
+        # Log detailed error information
+        error_msg = f"GPT fallback failed (hash: {prompt_hash}, attempts: {fallback_attempts}, type: {error_type}): {str(error)}"
+        logger.error(error_msg, exc_info=True)
+        
+        return {
+            "success": False,
+            "error": f"GPT fallback failed after {fallback_attempts} attempts: {str(error)}",
+            "error_type": error_type,
+            "prompt_hash": prompt_hash,
+            "fallback_attempts": fallback_attempts,
+            "timestamp": datetime.now().isoformat(),
+            "traceback": traceback.format_exc(),
+            "suggestions": [
+                "The AI service is currently unavailable",
+                "Try again in a few minutes",
+                "Use a simpler request format"
+            ]
         }
 
     def _has_action_words(self, prompt: str) -> bool:

@@ -68,6 +68,18 @@ class ForecastPostprocessor:
         logger.info(f"Sanitization complete: {original_shape} -> {df_clean.shape}")
         return df_clean
         
+    def dynamic_ewma_smoothing(self, forecast: pd.Series) -> pd.Series:
+        """
+        Apply EWMA smoothing with dynamic alpha based on forecast volatility.
+        alpha = min(0.3, 1 - std(forecast) / max(forecast))
+        """
+        if forecast.empty or forecast.max() == 0:
+            alpha = 0.1
+        else:
+            alpha = min(0.3, 1 - forecast.std() / max(abs(forecast.max()), 1e-8))
+        logger.info(f"Dynamic EWMA smoothing with alpha={alpha:.4f}")
+        return forecast.ewm(alpha=alpha).mean()
+
     def prepare_for_plotting(self, forecast_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Prepare forecast data for plotting.
@@ -84,10 +96,16 @@ class ForecastPostprocessor:
         if "forecast" in processed_data:
             if isinstance(processed_data["forecast"], pd.DataFrame):
                 processed_data["forecast"] = self.sanitize_forecast(processed_data["forecast"])
+                # Apply dynamic EWMA smoothing to first column if present
+                col = processed_data["forecast"].columns[0]
+                processed_data["forecast"][col] = self.dynamic_ewma_smoothing(processed_data["forecast"][col])
             elif isinstance(processed_data["forecast"], np.ndarray):
                 # Convert to DataFrame for consistent handling
                 df = pd.DataFrame(processed_data["forecast"])
-                processed_data["forecast"] = self.sanitize_forecast(df)
+                df = self.sanitize_forecast(df)
+                col = df.columns[0]
+                df[col] = self.dynamic_ewma_smoothing(df[col])
+                processed_data["forecast"] = df
                 
         # Sanitize confidence intervals if present
         if "confidence_intervals" in processed_data:

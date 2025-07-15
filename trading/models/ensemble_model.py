@@ -713,8 +713,24 @@ class EnsembleModel(BaseModel):
             }
 
         except Exception as e:
-            logging.error(f"Error in ensemble model forecast: {e}")
-            raise RuntimeError(f"Ensemble model forecasting failed: {e}")
+            logging.warning(f"Error in ensemble model forecast: {e}. Returning fallback DataFrame.")
+            
+            # Return fallback DataFrame with required columns
+            fallback_df = pd.DataFrame({
+                'Forecast': [],
+                'Confidence': []
+            })
+            
+            return {
+                "forecast": np.array([]),
+                "confidence": 0.0,
+                "model": "Ensemble_Fallback",
+                "horizon": horizon,
+                "weights": {},
+                "strategy_patterns": {},
+                "fallback_dataframe": fallback_df,
+                "error": str(e)
+            }
 
     def plot_results(self, data: pd.DataFrame, predictions: np.ndarray = None) -> None:
         """Plot ensemble model results and predictions.

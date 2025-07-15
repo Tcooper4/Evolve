@@ -6,7 +6,8 @@ Handles generation of GPT-powered and fallback commentary for trading analysis r
 
 import json
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+import ast
 
 import openai
 
@@ -21,20 +22,73 @@ class CommentaryGenerator:
     when GPT is not available.
     """
 
-    def __init__(self, openai_api_key: str = None):
+    def __init__(self, openai_api_key: str = None, max_tokens: int = 8000):
         """
         Initialize the commentary generator.
 
         Args:
             openai_api_key: OpenAI API key for GPT commentary
+            max_tokens: Maximum tokens for response truncation
         """
         self.openai_api_key = openai_api_key
+        self.max_tokens = max_tokens
         if openai_api_key:
             openai.api_key = openai_api_key
         else:
             import os
 
             openai.api_key = os.getenv("OPENAI_API_KEY")
+
+    def truncate_response(self, response: str, max_tokens: Optional[int] = None) -> str:
+        """
+        Truncate response to specified token limit.
+        
+        Args:
+            response: Response text to truncate
+            max_tokens: Maximum tokens (uses instance default if None)
+            
+        Returns:
+            Truncated response
+        """
+        if max_tokens is None:
+            max_tokens = self.max_tokens
+        
+        try:
+            # Try to use tokenizer if available
+            import tiktoken
+            tokenizer = tiktoken.get_encoding("cl100k_base")  # GPT-3.5/4 tokenizer
+            tokens = tokenizer.encode(response)
+            
+            if len(tokens) <= max_tokens:
+                return response
+            
+            # Truncate to max_tokens
+            truncated_tokens = tokens[:max_tokens]
+            truncated_response = tokenizer.decode(truncated_tokens)
+            
+            logger.info(f"Response truncated from {len(tokens)} to {len(truncated_tokens)} tokens")
+            return truncated_response
+            
+        except ImportError:
+            # Fallback to character-based estimation (rough approximation)
+            # Assume ~4 characters per token on average
+            estimated_tokens = len(response) // 4
+            
+            if estimated_tokens <= max_tokens:
+                return response
+            
+            # Truncate to estimated token limit
+            max_chars = max_tokens * 4
+            truncated_response = response[:max_chars]
+            
+            logger.info(f"Response truncated from ~{estimated_tokens} to ~{max_tokens} tokens (estimated)")
+            return truncated_response
+        
+        except Exception as e:
+            logger.warning(f"Error in token counting, using character-based truncation: {e}")
+            # Fallback to simple character truncation
+            max_chars = max_tokens * 4
+            return response[:max_chars]
 
     def generate_commentary(
         self, query: str, parsed: Dict[str, Any], result: Dict[str, Any]
@@ -54,7 +108,9 @@ class CommentaryGenerator:
             return self._generate_fallback_commentary(query, parsed, result)
 
         try:
-            return self._generate_gpt_commentary(query, parsed, result)
+            commentary = self._generate_gpt_commentary(query, parsed, result)
+            # Apply token truncation
+            return self.truncate_response(commentary)
         except Exception as e:
             logger.error(f"Error generating GPT commentary: {e}")
             return self._generate_fallback_commentary(query, parsed, result)
