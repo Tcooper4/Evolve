@@ -197,7 +197,7 @@ def main():
         ("stable_baselines3", "Stable Baselines3 RL"),
         ("gymnasium", "Gymnasium RL environment"),
         ("ccxt", "CCXT crypto trading"),
-        ("alpaca_trade_api", "Alpaca trading API"),
+        ("alpaca", "Alpaca trading API"),
         ("speech_recognition", "Speech recognition"),
         ("utils.performance_metrics", "Custom performance metrics"),
         ("scipy", "SciPy scientific computing"),

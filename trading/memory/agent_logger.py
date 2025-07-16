@@ -151,7 +151,12 @@ class AgentLogger:
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
         # Log level configuration
-        self.min_log_level = LogLevel(self.config.get("min_log_level", "INFO"))
+        min_level_str = self.config.get("min_log_level", "INFO").lower()
+        try:
+            self.min_log_level = LogLevel(min_level_str)
+        except ValueError:
+            logger.warning(f"Invalid log level '{min_level_str}', defaulting to INFO")
+            self.min_log_level = LogLevel.INFO
         self.enable_debug_logs = self.config.get("enable_debug_logs", False)
         self.enable_performance_logs = self.config.get("enable_performance_logs", True)
 
@@ -176,28 +181,60 @@ class AgentLogger:
         """Initialize SQLite database for log storage."""
         try:
             with sqlite3.connect(self.db_path) as conn:
-                conn.execute(
+                # Check if table exists and has the correct schema
+                cursor = conn.execute("PRAGMA table_info(agent_logs)")
+                columns = [row[1] for row in cursor.fetchall()]
+                
+                if not columns:
+                    # Table doesn't exist, create it
+                    conn.execute(
+                        """
+                        CREATE TABLE agent_logs (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            timestamp TEXT NOT NULL,
+                            agent_name TEXT NOT NULL,
+                            agent_type TEXT NOT NULL,
+                            action TEXT NOT NULL,
+                            level TEXT NOT NULL,
+                            message TEXT NOT NULL,
+                            data TEXT,
+                            context TEXT,
+                            session_id TEXT NOT NULL,
+                            user_id TEXT,
+                            performance_metrics TEXT,
+                            error_details TEXT,
+                            task_id TEXT,
+                            correlation_id TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
                     """
-                    CREATE TABLE IF NOT EXISTS agent_logs (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        timestamp TEXT NOT NULL,
-                        agent_name TEXT NOT NULL,
-                        agent_type TEXT NOT NULL,
-                        action TEXT NOT NULL,
-                        level TEXT NOT NULL,
-                        message TEXT NOT NULL,
-                        data TEXT,
-                        context TEXT,
-                        session_id TEXT NOT NULL,
-                        user_id TEXT,
-                        performance_metrics TEXT,
-                        error_details TEXT,
-                        task_id TEXT,
-                        correlation_id TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
-                """
-                )
+                elif 'agent_type' not in columns:
+                    # Table exists but missing agent_type column, recreate it
+                    logger.info("Database schema outdated, recreating table...")
+                    conn.execute("DROP TABLE IF EXISTS agent_logs")
+                    conn.execute(
+                        """
+                        CREATE TABLE agent_logs (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            timestamp TEXT NOT NULL,
+                            agent_name TEXT NOT NULL,
+                            agent_type TEXT NOT NULL,
+                            action TEXT NOT NULL,
+                            level TEXT NOT NULL,
+                            message TEXT NOT NULL,
+                            data TEXT,
+                            context TEXT,
+                            session_id TEXT NOT NULL,
+                            user_id TEXT,
+                            performance_metrics TEXT,
+                            error_details TEXT,
+                            task_id TEXT,
+                            correlation_id TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """
+                    )
 
                 # Create indexes for better performance
                 conn.execute(

@@ -72,7 +72,7 @@ st.set_page_config(
 
 # Import core components with error handling
 try:
-    from trading.llm.agent import PromptAgent
+    from agents.llm.agent import PromptAgent
 
     CORE_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -81,7 +81,7 @@ except ImportError as e:
 
 # Add Task Orchestrator integration after the existing imports
 try:
-    from core.task_orchestrator import TaskOrchestrator
+    from core.orchestrator.task_orchestrator import TaskOrchestrator
     from system.orchestrator_integration import get_system_integration_status
     ORCHESTRATOR_AVAILABLE = True
 except ImportError as e:
@@ -501,8 +501,10 @@ except ImportError:
     VOICE_AGENT_AVAILABLE = False
     VoicePromptAgent = None
 
-# Initialize session state
-initialize_session_state()
+# Initialize session state (only once)
+if "initialized" not in st.session_state:
+    initialize_session_state()
+    st.session_state.initialized = True
 
 if "voice_agent" not in st.session_state and VOICE_AGENT_AVAILABLE:
     st.session_state.voice_agent = VoicePromptAgent()

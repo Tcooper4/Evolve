@@ -70,7 +70,7 @@
 ## 📦 Section 5: DEPENDENCY PATCHES (COMPLETED)
 
 ### File: `requirements.txt`
-- ✅ Set compatible version for great_expectations==0.16.16
+- ✅ Migrated from great_expectations to pandera for data validation
 - ✅ Added kserve==0.10.2
 - ✅ Removed broken packages: automation==0.6.1, python-consul2==0.1.5
 

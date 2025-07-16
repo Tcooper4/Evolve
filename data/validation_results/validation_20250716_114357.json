@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-07-16T11:43:57.886193",
+  "data_path": "C:\\Users\\Thomas\\AppData\\Local\\Temp\\tmpfm7k53aa.csv",
+  "schema_validation": {
+    "success": true,
+    "results": [
+      {
+        "type": "success",
+        "message": "Schema validation passed"
+      }
+    ]
+  },
+  "quality_validation": {
+    "success": true,
+    "results": [
+      {
+        "type": "success",
+        "message": "Quality validation passed"
+      },
+      {
+        "type": "warning",
+        "message": "Column name has high cardinality (100.00% unique values)"
+      },
+      {
+        "type": "warning",
+        "message": "Column email has high cardinality (100.00% unique values)"
+      }
+    ]
+  }
+}
