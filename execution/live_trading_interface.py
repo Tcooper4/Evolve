@@ -15,7 +15,10 @@ import numpy as np
 
 # Alpaca imports
 try:
-    import alpaca_trade_api as tradeapi
+    from alpaca.trading.client import TradingClient
+    from alpaca.data.historical import StockHistoricalDataClient
+    from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest, StopOrderRequest, StopLimitOrderRequest
+    from alpaca.trading.enums import OrderSide, OrderType, TimeInForce
 
     ALPACA_AVAILABLE = True
 except ImportError as e:
@@ -518,13 +521,14 @@ class AlpacaTradingInterface:
             raise ValueError("Alpaca API credentials not provided")
 
         # Initialize API
-        self.api = tradeapi.REST(
-            self.api_key,
-            self.secret_key,
-            "https://paper-api.alpaca.markets"
-            if paper_trading
-            else "https://api.alpaca.markets",
-            api_version="v2",
+        self.trading_client = TradingClient(
+            api_key=self.api_key,
+            secret_key=self.secret_key,
+            paper=paper_trading
+        )
+        self.data_client = StockHistoricalDataClient(
+            api_key=self.api_key,
+            secret_key=self.secret_key
         )
 
         logger.info(
@@ -534,36 +538,67 @@ class AlpacaTradingInterface:
     def place_order(self, order_request: OrderRequest) -> OrderStatus:
         """Place order through Alpaca."""
         try:
-            # Convert to Alpaca order format
-            alpaca_order = self.api.submit_order(
-                symbol=order_request.symbol,
-                qty=order_request.quantity,
-                side=order_request.side,
-                type=order_request.order_type,
-                time_in_force=order_request.time_in_force,
-                limit_price=order_request.limit_price,
-                stop_price=order_request.stop_price,
-                client_order_id=order_request.client_order_id,
-            )
+            # Convert order side
+            side = OrderSide.BUY if order_request.side == "buy" else OrderSide.SELL
+            
+            # Convert time in force
+            time_in_force = TimeInForce.DAY if order_request.time_in_force == "day" else TimeInForce.GTC
+            
+            # Create appropriate order request based on order type
+            if order_request.order_type == "market":
+                alpaca_order_request = MarketOrderRequest(
+                    symbol=order_request.symbol,
+                    qty=order_request.quantity,
+                    side=side,
+                    time_in_force=time_in_force,
+                    client_order_id=order_request.client_order_id
+                )
+            elif order_request.order_type == "limit":
+                alpaca_order_request = LimitOrderRequest(
+                    symbol=order_request.symbol,
+                    qty=order_request.quantity,
+                    side=side,
+                    time_in_force=time_in_force,
+                    limit_price=order_request.limit_price,
+                    client_order_id=order_request.client_order_id
+                )
+            elif order_request.order_type == "stop":
+                alpaca_order_request = StopOrderRequest(
+                    symbol=order_request.symbol,
+                    qty=order_request.quantity,
+                    side=side,
+                    time_in_force=time_in_force,
+                    stop_price=order_request.stop_price,
+                    client_order_id=order_request.client_order_id
+                )
+            elif order_request.order_type == "stop_limit":
+                alpaca_order_request = StopLimitOrderRequest(
+                    symbol=order_request.symbol,
+                    qty=order_request.quantity,
+                    side=side,
+                    time_in_force=time_in_force,
+                    limit_price=order_request.limit_price,
+                    stop_price=order_request.stop_price,
+                    client_order_id=order_request.client_order_id
+                )
+            else:
+                raise ValueError(f"Unsupported order type: {order_request.order_type}")
+
+            # Submit order
+            alpaca_order = self.trading_client.submit_order(alpaca_order_request)
 
             # Convert to OrderStatus
             order_status = OrderStatus(
                 order_id=alpaca_order.id,
                 symbol=alpaca_order.symbol,
-                side=alpaca_order.side,
+                side=alpaca_order.side.value,
                 quantity=float(alpaca_order.qty),
                 filled_quantity=float(alpaca_order.filled_qty),
-                order_type=alpaca_order.type,
-                status=alpaca_order.status,
-                limit_price=float(alpaca_order.limit_price)
-                if alpaca_order.limit_price
-                else None,
-                stop_price=float(alpaca_order.stop_price)
-                if alpaca_order.stop_price
-                else None,
-                filled_price=float(alpaca_order.filled_avg_price)
-                if alpaca_order.filled_avg_price
-                else None,
+                order_type=alpaca_order.order_type.value,
+                status=alpaca_order.status.value,
+                limit_price=float(alpaca_order.limit_price) if alpaca_order.limit_price else None,
+                stop_price=float(alpaca_order.stop_price) if alpaca_order.stop_price else None,
+                filled_price=float(alpaca_order.filled_avg_price) if alpaca_order.filled_avg_price else None,
                 created_at=alpaca_order.created_at,
                 filled_at=alpaca_order.filled_at,
                 client_order_id=alpaca_order.client_order_id,
@@ -579,7 +614,7 @@ class AlpacaTradingInterface:
     def cancel_order(self, order_id: str) -> bool:
         """Cancel order through Alpaca."""
         try:
-            self.api.cancel_order(order_id)
+            self.trading_client.cancel_order_by_id(order_id)
             return True
         except Exception as e:
             logger.error(f"Error cancelling Alpaca order: {e}")
@@ -588,25 +623,19 @@ class AlpacaTradingInterface:
     def get_order_status(self, order_id: str) -> Optional[OrderStatus]:
         """Get order status from Alpaca."""
         try:
-            alpaca_order = self.api.get_order(order_id)
+            alpaca_order = self.trading_client.get_order_by_id(order_id)
 
             order_status = OrderStatus(
                 order_id=alpaca_order.id,
                 symbol=alpaca_order.symbol,
-                side=alpaca_order.side,
+                side=alpaca_order.side.value,
                 quantity=float(alpaca_order.qty),
                 filled_quantity=float(alpaca_order.filled_qty),
-                order_type=alpaca_order.type,
-                status=alpaca_order.status,
-                limit_price=float(alpaca_order.limit_price)
-                if alpaca_order.limit_price
-                else None,
-                stop_price=float(alpaca_order.stop_price)
-                if alpaca_order.stop_price
-                else None,
-                filled_price=float(alpaca_order.filled_avg_price)
-                if alpaca_order.filled_avg_price
-                else None,
+                order_type=alpaca_order.order_type.value,
+                status=alpaca_order.status.value,
+                limit_price=float(alpaca_order.limit_price) if alpaca_order.limit_price else None,
+                stop_price=float(alpaca_order.stop_price) if alpaca_order.stop_price else None,
+                filled_price=float(alpaca_order.filled_avg_price) if alpaca_order.filled_avg_price else None,
                 created_at=alpaca_order.created_at,
                 filled_at=alpaca_order.filled_at,
                 client_order_id=alpaca_order.client_order_id,
@@ -621,7 +650,7 @@ class AlpacaTradingInterface:
     def get_positions(self) -> Dict[str, Position]:
         """Get positions from Alpaca."""
         try:
-            alpaca_positions = self.api.list_positions()
+            alpaca_positions = self.trading_client.get_all_positions()
             positions = {}
 
             for pos in alpaca_positions:
@@ -646,7 +675,7 @@ class AlpacaTradingInterface:
     def get_account_info(self) -> AccountInfo:
         """Get account information from Alpaca."""
         try:
-            account = self.api.get_account()
+            account = self.trading_client.get_account()
 
             return AccountInfo(
                 account_id=account.id,

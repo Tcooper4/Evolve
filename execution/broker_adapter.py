@@ -30,8 +30,6 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 # Local imports
-from utils.cache_utils import cache_result
-from utils.common_helpers import safe_json_save, load_config
 
 
 class BrokerType(Enum):
@@ -378,15 +376,15 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
             execution = OrderExecution(
                 order_id=order_id,
                 ticker=order_details.symbol,
-                side=OrderSide.BUY if order_details.side == 'buy' else OrderSide.SELL,
-                order_type=OrderType(order_details.type),
+                side=OrderSide.BUY if order_details.side.value == 'buy' else OrderSide.SELL,
+                order_type=OrderType(order_details.order_type.value),
                 quantity=float(order_details.qty),
                 price=float(order_details.limit_price) if order_details.limit_price else 0.0,
                 executed_quantity=float(order_details.filled_qty),
                 average_price=float(order_details.filled_avg_price) if order_details.filled_avg_price else 0.0,
                 commission=0.0,
                 timestamp=order_details.submitted_at.isoformat(),
-                status=OrderStatus(order_details.status),
+                status=OrderStatus(order_details.status.value),
                 fills=[],
                 metadata={}
             )

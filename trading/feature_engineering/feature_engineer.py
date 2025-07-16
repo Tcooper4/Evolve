@@ -1,3 +1,4 @@
+import logging
 from typing import Callable, Dict, Optional, Union
 
 import numpy as np
@@ -26,8 +27,6 @@ except ImportError as e:
 except Exception as e:
     PANDAS_TA_AVAILABLE = False
     logging.warning(f"pandas_ta import error: {e}")
-
-import logging
 
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor
