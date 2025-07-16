@@ -326,18 +326,18 @@ def calculate_risk_metrics(
             "recovery_factor": calculate_recovery_factor(returns),
         }
 
-    if market_returns is not None:
-        metrics.update(
-            {
-                "beta": calculate_beta(returns, market_returns),
-                "alpha": calculate_alpha(returns, market_returns),
-                "information_ratio": calculate_information_ratio(
-                    returns, market_returns
-                ),
-            }
-        )
+        if market_returns is not None:
+            metrics.update(
+                {
+                    "beta": calculate_beta(returns, market_returns),
+                    "alpha": calculate_alpha(returns, market_returns),
+                    "information_ratio": calculate_information_ratio(
+                        returns, market_returns
+                    ),
+                }
+            )
 
-    return metrics
+        return metrics
     except Exception as e:
         logger.error(f"Strategy failed: {e}")
         return {}
