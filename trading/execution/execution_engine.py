@@ -11,14 +11,6 @@ warnings.filterwarnings("ignore")
 
 # Try to import execution libraries with fallbacks
 try:
-    import alpaca_trade_api as tradeapi
-
-    ALPACA_AVAILABLE = True
-except ImportError:
-    ALPACA_AVAILABLE = False
-    tradeapi = None
-
-try:
     import ccxt
 
     CCXT_AVAILABLE = True
@@ -81,15 +73,15 @@ class ExecutionEngine:
         """Initialize broker connections."""
         self.brokers = {}
 
-        # Alpaca
-        if ALPACA_AVAILABLE and self.config.broker_api_key:
+        # Alpaca (alpaca-py)
+        if self.config.broker_api_key:
             try:
-                self.brokers["alpaca"] = tradeapi.REST(
-                    self.config.broker_api_key,
-                    self.config.broker_secret_key,
-                    "https://paper-api.alpaca.markets",  # Use paper trading
+                self.brokers["alpaca"] = TradingClient(
+                    api_key=self.config.broker_api_key,
+                    secret_key=self.config.broker_secret_key,
+                    paper=True
                 )
-                logger.info("Alpaca broker initialized")
+                logger.info("Alpaca broker initialized (alpaca-py)")
             except Exception as e:
                 logger.error(f"Failed to initialize Alpaca: {e}")
                 self._log_failure("broker_init", "alpaca", str(e))
@@ -330,30 +322,44 @@ class ExecutionEngine:
             return {"status": "error", "message": error_msg}
 
     def _execute_stock_order(self, order: dict) -> dict:
-        """Execute stock order via Alpaca with enhanced error handling."""
+        """Execute stock order via Alpaca (alpaca-py) with enhanced error handling."""
         if "alpaca" not in self.brokers:
             error_msg = "Alpaca broker not available"
             logger.error(error_msg)
             return {"status": "error", "message": error_msg}
 
         try:
-            # Prepare order parameters
-            order_params = {
-                "symbol": order["symbol"],
-                "qty": order["quantity"],
-                "side": order["side"],
-                "type": order["order_type"],
-                "time_in_force": order["time_in_force"],
-            }
+            # Prepare order request
+            side = AlpacaOrderSide.BUY if order["side"].lower() == "buy" else AlpacaOrderSide.SELL
+            tif = TimeInForce[order["time_in_force"].upper()]
+            order_type = order["order_type"].lower()
+            if order_type == "market":
+                order_request = MarketOrderRequest(
+                    symbol=order["symbol"],
+                    qty=order["quantity"],
+                    side=side,
+                    time_in_force=tif
+                )
+            elif order_type == "limit":
+                order_request = LimitOrderRequest(
+                    symbol=order["symbol"],
+                    qty=order["quantity"],
+                    side=side,
+                    time_in_force=tif,
+                    limit_price=order["limit_price"]
+                )
+            elif order_type == "stop":
+                order_request = StopOrderRequest(
+                    symbol=order["symbol"],
+                    qty=order["quantity"],
+                    side=side,
+                    time_in_force=tif,
+                    stop_price=order["stop_price"]
+                )
+            else:
+                return {"status": "error", "message": f"Unsupported order type: {order_type}"}
 
-            if order["limit_price"]:
-                order_params["limit_price"] = order["limit_price"]
-
-            if order["stop_price"]:
-                order_params["stop_price"] = order["stop_price"]
-
-            # Submit order
-            alpaca_order = self.brokers["alpaca"].submit_order(**order_params)
+            alpaca_order = self.brokers["alpaca"].submit_order(order_request)
 
             return {
                 "status": "success",

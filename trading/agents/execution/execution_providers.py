@@ -120,13 +120,18 @@ class AlpacaProvider(ExecutionProvider):
     async def connect(self) -> bool:
         """Connect to Alpaca API."""
         try:
-            # Import alpaca-trade-api here to avoid dependency issues
-            import alpaca_trade_api as tradeapi
-            self.api = tradeapi.REST(
-                self.api_key,
-                self.secret_key,
-                self.base_url,
-                api_version='v2'
+            # Import alpaca-py here to avoid dependency issues
+            from alpaca.trading.client import TradingClient
+            from alpaca.data.historical import StockHistoricalDataClient
+            
+            self.trading_client = TradingClient(
+                api_key=self.api_key,
+                secret_key=self.secret_key,
+                paper=True if "paper" in self.base_url else False
+            )
+            self.data_client = StockHistoricalDataClient(
+                api_key=self.api_key,
+                secret_key=self.secret_key
             )
             self.is_connected = True
             return True
@@ -144,14 +149,20 @@ class AlpacaProvider(ExecutionProvider):
             raise RuntimeError("Alpaca provider not connected")
 
         try:
-            # Place order via Alpaca API
-            order = self.api.submit_order(
+            # Import alpaca-py components
+            from alpaca.trading.requests import MarketOrderRequest
+            from alpaca.trading.enums import OrderSide, TimeInForce
+            
+            # Create market order request
+            order_data = MarketOrderRequest(
                 symbol=signal.symbol,
                 qty=signal.size,
-                side='buy' if signal.direction.value == 'long' else 'sell',
-                type='market',
-                time_in_force='day'
+                side=OrderSide.BUY if signal.direction.value == 'long' else OrderSide.SELL,
+                time_in_force=TimeInForce.DAY
             )
+            
+            # Submit order
+            order = self.trading_client.submit_order(order_data)
             
             return {
                 "success": True,
@@ -174,7 +185,7 @@ class AlpacaProvider(ExecutionProvider):
             return {}
         
         try:
-            account = self.api.get_account()
+            account = self.trading_client.get_account()
             return {
                 "balance": float(account.cash),
                 "buying_power": float(account.buying_power),
@@ -190,7 +201,7 @@ class AlpacaProvider(ExecutionProvider):
             return {}
         
         try:
-            positions = self.api.list_positions()
+            positions = self.trading_client.get_all_positions()
             return {pos.symbol: {
                 "quantity": float(pos.qty),
                 "avg_entry_price": float(pos.avg_entry_price),

@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-07-16T11:39:06.531405",
+  "data_path": "C:\\Users\\Thomas\\AppData\\Local\\Temp\\tmp0x14lgwa.csv",
+  "schema_validation": {
+    "success": false,
+    "results": [
+      {
+        "type": "error",
+        "message": "Schema validation failed: expected series 'id' to have type float64, got int64"
+      }
+    ]
+  },
+  "quality_validation": {
+    "success": false,
+    "results": [
+      {
+        "type": "error",
+        "message": "Quality validation failed: expected series 'id' to have type float64, got int64"
+      },
+      {
+        "type": "warning",
+        "message": "Column name has high cardinality (100.00% unique values)"
+      },
+      {
+        "type": "warning",
+        "message": "Column email has high cardinality (100.00% unique values)"
+      }
+    ]
+  }
+}

@@ -42,6 +42,10 @@ class PerformanceAnalyzer:
                     if metrics["volatility"] > 0
                     else np.nan
                 )
+                
+                # Warn users when Sharpe ratio is low
+                if metrics["sharpe_ratio"] < 1:
+                    logger.warning("⚠️ Warning: Strategy Sharpe ratio below 1.0")
             else:
                 metrics["annualized_return"] = np.nan
                 metrics["volatility"] = np.nan
@@ -56,6 +60,10 @@ class PerformanceAnalyzer:
             metrics["win_rate"] = (
                 (trade_log["pnl"] > 0).mean() if "pnl" in trade_log else np.nan
             )
+            
+            # Warn users when win rate is low
+            if metrics["win_rate"] < 0.5:
+                logger.warning("⚠️ Warning: Strategy win rate below 50%")
             metrics["avg_win"] = (
                 trade_log[trade_log["pnl"] > 0]["pnl"].mean()
                 if "pnl" in trade_log

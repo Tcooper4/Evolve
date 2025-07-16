@@ -38,8 +38,9 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
+import pandera as pa
+from pandera import Column, DataFrameSchema, Check
 import yaml
-from great_expectations.dataset import PandasDataset
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
@@ -65,14 +66,15 @@ class DataQualityManager:
     def setup_logging(self):
         """Initialize logging configuration."""
         log_config_path = Path("config/logging_config.yaml")
-        if not log_config_path.exists():
-            print("Error: logging_config.yaml not found")
-            sys.exit(1)
-
-        with open(log_config_path) as f:
-            log_config = yaml.safe_load(f)
-
-        logging.config.dictConfig(log_config)
+        try:
+            if not log_config_path.exists():
+                raise FileNotFoundError("logging_config.yaml not found")
+            with open(log_config_path) as f:
+                log_config = yaml.safe_load(f)
+            logging.config.dictConfig(log_config)
+        except Exception as e:
+            print(f"[DataQualityManager] Warning: Failed to load advanced logging config: {e}. Using basic logging.")
+            logging.basicConfig(level=logging.INFO)
 
     def validate_data(self, data_path: str, schema_path: Optional[str] = None):
         """Validate data against schema and quality rules."""
@@ -82,18 +84,15 @@ class DataQualityManager:
             # Load data
             data = self._load_data(data_path)
 
-            # Create Great Expectations dataset
-            ge_data = PandasDataset(data)
-
             # Validate schema if provided
             if schema_path:
                 schema = self._load_schema(schema_path)
-                schema_validation = self._validate_schema(ge_data, schema)
+                schema_validation = self._validate_schema(data, schema)
             else:
                 schema_validation = {"success": True, "results": []}
 
             # Validate data quality
-            quality_validation = self._validate_quality(ge_data)
+            quality_validation = self._validate_quality(data)
 
             # Combine results
             validation_results = {
@@ -192,92 +191,113 @@ class DataQualityManager:
             raise
 
     def _validate_schema(
-        self, data: PandasDataset, schema: Dict[str, Any]
+        self, data: pd.DataFrame, schema: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Validate data against schema."""
+        """Validate data against schema using pandera."""
         results = []
         success = True
 
         try:
-            # Validate column types
-            for column, type_info in schema["columns"].items():
-                if column not in data.columns:
-                    results.append(
-                        {
-                            "type": "error",
-                            "message": f"Column {column} not found in data",
-                        }
-                    )
-                    success = False
-                    continue
-
-                if type_info["type"] == "numeric":
-                    if not data[column].dtype in ["int64", "float64"]:
-                        results.append(
-                            {
-                                "type": "error",
-                                "message": f"Column {column} is not numeric",
-                            }
-                        )
-                        success = False
-                elif type_info["type"] == "categorical":
-                    if not data[column].dtype == "object":
-                        results.append(
-                            {
-                                "type": "error",
-                                "message": f"Column {column} is not categorical",
-                            }
-                        )
-                        success = False
-
-            # Validate constraints
-            for constraint in schema.get("constraints", []):
-                if constraint["type"] == "unique":
-                    if not data.expect_column_values_to_be_unique(
-                        constraint["column"]
-                    ).success:
-                        results.append(
-                            {
-                                "type": "error",
-                                "message": f"Column {constraint['column']} contains duplicate values",
-                            }
-                        )
-                        success = False
-                elif constraint["type"] == "not_null":
-                    if not data.expect_column_values_to_not_be_null(
-                        constraint["column"]
-                    ).success:
-                        results.append(
-                            {
-                                "type": "error",
-                                "message": f"Column {constraint['column']} contains null values",
-                            }
-                        )
-                        success = False
-                elif constraint["type"] == "range":
-                    if not data.expect_column_values_to_be_between(
-                        constraint["column"], constraint["min"], constraint["max"]
-                    ).success:
-                        results.append(
-                            {
-                                "type": "error",
-                                "message": f"Column {constraint['column']} contains values outside range",
-                            }
-                        )
-                        success = False
+            # Build pandera schema from configuration
+            pandera_schema = self._build_pandera_schema(schema)
+            
+            # Validate data
+            try:
+                validated_data = pandera_schema.validate(data)
+                results.append({
+                    "type": "success",
+                    "message": "Schema validation passed"
+                })
+            except pa.errors.SchemaError as e:
+                success = False
+                results.append({
+                    "type": "error",
+                    "message": f"Schema validation failed: {str(e)}"
+                })
 
             return {"success": success, "results": results}
         except Exception as e:
             self.logger.error(f"Failed to validate schema: {e}")
             raise
 
-    def _validate_quality(self, data: PandasDataset) -> Dict[str, Any]:
-        """Validate data quality."""
+    def _build_pandera_schema(self, schema: Dict[str, Any]) -> DataFrameSchema:
+        """Build pandera DataFrameSchema from configuration."""
+        columns = {}
+        
+        # Process column definitions
+        for column, type_info in schema["columns"].items():
+            if type_info["type"] == "numeric":
+                # Use Float with coerce=True for both int and float
+                column_schema = Column(pa.Float, nullable=True, coerce=True)
+            elif type_info["type"] == "categorical":
+                column_schema = Column(pa.String, nullable=True)
+            else:
+                column_schema = Column(pa.String, nullable=True)
+            columns[column] = column_schema
+        
+        # Add constraints as checks
+        for constraint in schema.get("constraints", []):
+            column = constraint["column"]
+            if column in columns:
+                if constraint["type"] == "unique":
+                    # Set unique=True in the Column
+                    current_col = columns[column]
+                    columns[column] = Column(
+                        current_col.dtype,
+                        nullable=current_col.nullable,
+                        unique=True
+                    )
+                elif constraint["type"] == "not_null":
+                    # Make column non-nullable
+                    current_col = columns[column]
+                    columns[column] = Column(
+                        current_col.dtype, 
+                        nullable=False
+                    )
+                elif constraint["type"] == "range":
+                    # Add range checks
+                    min_val = constraint.get("min")
+                    max_val = constraint.get("max")
+                    current_col = columns[column]
+                    checks = []
+                    if min_val is not None:
+                        checks.append(Check.greater_than_or_equal_to(min_val))
+                    if max_val is not None:
+                        checks.append(Check.less_than_or_equal_to(max_val))
+                    
+                    if checks:
+                        columns[column] = Column(
+                            current_col.dtype,
+                            nullable=current_col.nullable,
+                            checks=checks
+                        )
+        
+        return DataFrameSchema(columns)
+
+    def _validate_quality(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Validate data quality using pandera."""
         results = []
         success = True
 
         try:
-            # Check for missing values
+            # Create quality validation schema
+            quality_schema = self._build_quality_schema(data)
+            
+            # Validate data quality
+            try:
+                validated_data = quality_schema.validate(data)
+                results.append({
+                    "type": "success",
+                    "message": "Quality validation passed"
+                })
+            except pa.errors.SchemaError as e:
+                success = False
+                results.append({
+                    "type": "error",
+                    "message": f"Quality validation failed: {str(e)}"
+                })
+
+            # Additional quality checks
             for column in data.columns:
                 missing_ratio = data[column].isnull().mean()
                 if missing_ratio > 0.1:  # More than 10% missing
@@ -288,7 +308,7 @@ class DataQualityManager:
                         }
                     )
 
-            # Check for outliers
+            # Check for outliers in numeric columns
             numeric_columns = data.select_dtypes(include=["int64", "float64"]).columns
             for column in numeric_columns:
                 z_scores = np.abs(
@@ -319,6 +339,17 @@ class DataQualityManager:
         except Exception as e:
             self.logger.error(f"Failed to validate quality: {e}")
             raise
+
+    def _build_quality_schema(self, data: pd.DataFrame) -> DataFrameSchema:
+        """Build pandera schema for quality validation."""
+        columns = {}
+        for column in data.columns:
+            if data[column].dtype in ["int64", "float64"]:
+                column_schema = Column(pa.Float, nullable=True, coerce=True)
+            else:
+                column_schema = Column(pa.String, nullable=True)
+            columns[column] = column_schema
+        return DataFrameSchema(columns)
 
     def _clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """Clean and preprocess data."""
@@ -469,17 +500,17 @@ class DataQualityManager:
 
         print("\nSchema Validation:")
         if results["schema_validation"]["success"]:
-            print("  ��� Schema validation passed")
+            print("  ✅ Schema validation passed")
         else:
-            print("  ��� Schema validation failed")
+            print("  ❌ Schema validation failed")
             for result in results["schema_validation"]["results"]:
                 print(f"    - {result['message']}")
 
         print("\nQuality Validation:")
         if results["quality_validation"]["success"]:
-            print("  ��� Quality validation passed")
+            print("  ✅ Quality validation passed")
         else:
-            print("  ��� Quality validation failed")
+            print("  ❌ Quality validation failed")
             for result in results["quality_validation"]["results"]:
                 print(f"    - {result['message']}")
 

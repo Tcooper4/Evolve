@@ -81,6 +81,11 @@ class EnvironmentManager:
 
             # Validate and load settings
             self.settings = EnvironmentSettings()
+            
+            # Ensure that key environment variables are present
+            if not self.settings.OPENAI_API_KEY:
+                raise EnvironmentError("OPENAI_API_KEY is not set in the environment")
+            
             self.logger.info("Environment loaded successfully")
 
         except Exception as e:
