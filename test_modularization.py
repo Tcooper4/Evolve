@@ -6,10 +6,12 @@ Test script to verify modularization work without importing problematic packages
 import os
 import sys
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 
 def test_file_structure():
     """Test that all modularized files exist."""
-    print("🔍 Testing modularized file structure...")
+    logger.info("🔍 Testing modularized file structure...")
     
     optimization_files = [
         "trading/optimization/grid_search_optimizer.py",
@@ -26,33 +28,33 @@ def test_file_structure():
         if not Path(file_path).exists():
             missing_files.append(file_path)
         else:
-            print(f"✅ {file_path}")
+            logger.info(f"✅ {file_path}")
     
     if missing_files:
-        print(f"❌ Missing files: {missing_files}")
+        logger.error(f"❌ Missing files: {missing_files}")
         return False
     else:
-        print("✅ All modularized files exist!")
+        logger.info("✅ All modularized files exist!")
         return True
 
 def test_file_sizes():
     """Test that files are reasonably sized after modularization."""
-    print("\n📏 Testing file sizes...")
+    logger.info("\n📏 Testing file sizes...")
     
     # Check that strategy_optimizer.py is now much smaller
     strategy_optimizer_size = Path("trading/optimization/strategy_optimizer.py").stat().st_size
-    print(f"Strategy optimizer size: {strategy_optimizer_size:,} bytes")
+    logger.info(f"Strategy optimizer size: {strategy_optimizer_size:,} bytes")
     
     if strategy_optimizer_size < 10000:  # Should be much smaller now
-        print("✅ Strategy optimizer successfully modularized!")
+        logger.info("✅ Strategy optimizer successfully modularized!")
         return True
     else:
-        print("❌ Strategy optimizer still too large")
+        logger.error("❌ Strategy optimizer still too large")
         return False
 
 def test_import_structure():
     """Test the import structure without actually importing."""
-    print("\n📦 Testing import structure...")
+    logger.info("\n📦 Testing import structure...")
     
     # Check __init__.py exports
     init_content = Path("trading/optimization/__init__.py").read_text()
@@ -75,18 +77,18 @@ def test_import_structure():
         if export not in init_content:
             missing_exports.append(export)
         else:
-            print(f"✅ {export} exported")
+            logger.info(f"✅ {export} exported")
     
     if missing_exports:
-        print(f"❌ Missing exports: {missing_exports}")
+        logger.error(f"❌ Missing exports: {missing_exports}")
         return False
     else:
-        print("✅ All expected exports present!")
+        logger.info("✅ All expected exports present!")
         return True
 
 def test_code_quality():
     """Test basic code quality metrics."""
-    print("\n🔧 Testing code quality...")
+    logger.info("\n🔧 Testing code quality...")
     
     # Check for proper docstrings
     files_to_check = [
@@ -111,17 +113,17 @@ def test_code_quality():
             issues.append(f"{file_path}: No classes found")
     
     if issues:
-        print("❌ Code quality issues:")
+        logger.error("❌ Code quality issues:")
         for issue in issues:
-            print(f"  - {issue}")
+            logger.error(f"  - {issue}")
         return False
     else:
-        print("✅ Code quality looks good!")
+        logger.info("✅ Code quality looks good!")
         return True
 
 def main():
     """Run all tests."""
-    print("🚀 Testing Modularization Work\n")
+    logger.info("🚀 Testing Modularization Work\n")
     
     tests = [
         test_file_structure,
@@ -138,15 +140,15 @@ def main():
             if test():
                 passed += 1
         except Exception as e:
-            print(f"❌ Test failed with error: {e}")
+            logger.error(f"❌ Test failed with error: {e}")
     
-    print(f"\n📊 Results: {passed}/{total} tests passed")
+    logger.info(f"\n📊 Results: {passed}/{total} tests passed")
     
     if passed == total:
-        print("🎉 All tests passed! Modularization successful!")
+        logger.info("🎉 All tests passed! Modularization successful!")
         return True
     else:
-        print("⚠️ Some tests failed. Check the issues above.")
+        logger.warning("⚠️ Some tests failed. Check the issues above.")
         return False
 
 if __name__ == "__main__":

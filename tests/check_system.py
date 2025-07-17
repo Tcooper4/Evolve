@@ -335,87 +335,87 @@ def check_file_permissions() -> Dict[str, bool]:
 
 def main():
     """Run system check."""
-    print("🔍 EVOLVE TRADING PLATFORM - SYSTEM CHECK")
-    print("=" * 60)
+    logger.info("🔍 EVOLVE TRADING PLATFORM - SYSTEM CHECK")
+    logger.info("=" * 60)
 
     # Check imports
-    print("\n📦 CRITICAL IMPORTS:")
+    logger.info("\n📦 CRITICAL IMPORTS:")
     import_results = check_imports()
     import_success = sum(import_results.values())
     import_total = len(import_results)
 
     for module, success in import_results.items():
         status = "✅" if success else "❌"
-        print(f"  {status} {module}")
+        logger.info(f"  {status} {module}")
 
     # Check core modules
-    print("\n🏗️ CORE MODULES:")
+    logger.info("\n🏗️ CORE MODULES:")
     core_results = check_core_modules()
     core_success = sum(core_results.values())
     core_total = len(core_results)
 
     for module, success in core_results.items():
         status = "✅" if success else "❌"
-        print(f"  {status} {module}")
+        logger.info(f"  {status} {module}")
 
     # Check advanced modules
-    print("\n🚀 ADVANCED MODULES:")
+    logger.info("\n🚀 ADVANCED MODULES:")
     advanced_results = check_advanced_modules()
     advanced_success = sum(advanced_results.values())
     advanced_total = len(advanced_results)
 
     for module, success in advanced_results.items():
         status = "✅" if success else "⚠️"
-        print(f"  {status} {module}")
+        logger.info(f"  {status} {module}")
 
     # Check UI modules
-    print("\n🖥️ UI MODULES:")
+    logger.info("\n🖥️ UI MODULES:")
     ui_results = check_ui_modules()
     ui_success = sum(ui_results.values())
     ui_total = len(ui_results)
 
     for module, success in ui_results.items():
         status = "✅" if success else "❌"
-        print(f"  {status} {module}")
+        logger.info(f"  {status} {module}")
 
     # Check configuration loading
-    print("\n⚙️ CONFIGURATION:")
+    logger.info("\n⚙️ CONFIGURATION:")
     config_results = check_config_loading()
 
     # Environment variables
-    print("  Environment Variables:")
+    logger.info("  Environment Variables:")
     for var, success in config_results["required_vars"].items():
         status = "✅" if success else "❌"
-        print(f"    {status} {var}")
+        logger.info(f"    {status} {var}")
 
     for var, success in config_results["optional_vars"].items():
         status = "✅" if success else "⚠️"
-        print(f"    {status} {var}")
+        logger.info(f"    {status} {var}")
 
     # Config files
-    print("  Configuration Files:")
+    logger.info("  Configuration Files:")
     if config_results["env_loading"]:
-        print("    ✅ .env file found")
+        logger.info("    ✅ .env file found")
     else:
-        print("    ❌ .env file not found")
+        logger.error("    ❌ .env file not found")
 
     if config_results["json_fallback"]:
-        print("    ✅ JSON config files found")
+        logger.info("    ✅ JSON config files found")
     else:
-        print("    ❌ No JSON config files found")
+        logger.error("    ❌ No JSON config files found")
 
     if config_results["config_validation"]:
-        print("    ✅ Config validation passed")
+        logger.info("    ✅ Config validation passed")
     else:
-        print("    ❌ Config validation failed")
+        logger.error("    ❌ Config validation failed")
 
     # Check file permissions
-    print("\n📁 FILE PERMISSIONS:")
+    logger.info("\n📁 FILE PERMISSIONS:")
     permission_results = check_file_permissions()
 
     for permission, success in permission_results.items():
         status = "✅" if success else "❌"
-        print(f"  {status} {permission}")
+        logger.info(f"  {status} {permission}")
 
     # Calculate overall success rate
     total_success = import_success + core_success + advanced_success + ui_success
@@ -439,18 +439,18 @@ def main():
 
     success_rate = (total_success / total_checks) * 100 if total_checks > 0 else 0
 
-    print("\n" + "=" * 60)
-    print(f"📊 OVERALL SUCCESS RATE: {success_rate:.1f}%")
-    print(f"✅ Success: {total_success}/{total_checks}")
-    print(f"❌ Failures: {total_checks - total_success}")
+    logger.info("\n" + "=" * 60)
+    logger.info(f"📊 OVERALL SUCCESS RATE: {success_rate:.1f}%")
+    logger.info(f"✅ Success: {total_success}/{total_checks}")
+    logger.info(f"❌ Failures: {total_checks - total_success}")
 
     # Show configuration errors if any
     if config_results["errors"]:
-        print(f"\n⚠️ CONFIGURATION ERRORS:")
+        logger.warning(f"\n⚠️ CONFIGURATION ERRORS:")
         for error in config_results["errors"]:
-            print(f"  - {error}")
+            logger.error(f"  - {error}")
 
-    print("=" * 60)
+    logger.info("=" * 60)
 
     return {
         "success_rate": success_rate,

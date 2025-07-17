@@ -8,6 +8,8 @@ without importing the full trading package that has dependency issues.
 import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime
+import logging
+logger = logging.getLogger(__name__)
 
 def test_alpaca_imports():
     """Test that alpaca-py can be imported successfully"""
@@ -16,7 +18,7 @@ def test_alpaca_imports():
         from alpaca.data.historical import StockHistoricalDataClient
         from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest
         from alpaca.trading.enums import OrderSide, OrderType, TimeInForce
-        print("✓ All alpaca-py imports successful")
+        logger.info("✓ All alpaca-py imports successful")
         assert True
     except ImportError as e:
         pytest.fail(f"Failed to import alpaca-py: {e}")
@@ -31,7 +33,7 @@ def test_alpaca_enum_values():
     assert OrderType.LIMIT.value == "limit"
     assert TimeInForce.DAY.value == "day"
     assert TimeInForce.GTC.value == "gtc"
-    print("✓ All alpaca-py enum values correct")
+    logger.info("✓ All alpaca-py enum values correct")
 
 def test_alpaca_client_creation():
     """Test that TradingClient can be created"""
@@ -40,7 +42,7 @@ def test_alpaca_client_creation():
     # This should not raise an exception
     client = TradingClient(api_key="test", secret_key="test", paper=True)
     assert client is not None
-    print("✓ TradingClient creation successful")
+    logger.info("✓ TradingClient creation successful")
 
 def test_alpaca_order_request():
     """Test that order requests can be created"""
@@ -58,7 +60,7 @@ def test_alpaca_order_request():
     assert order_request.qty == 10
     assert order_request.side == OrderSide.BUY
     assert order_request.time_in_force == TimeInForce.DAY
-    print("✓ MarketOrderRequest creation successful")
+    logger.info("✓ MarketOrderRequest creation successful")
 
 def test_old_api_not_available():
     """Test that the old alpaca-trade-api is not available"""
@@ -66,14 +68,14 @@ def test_old_api_not_available():
         import alpaca_trade_api
         pytest.fail("Old alpaca-trade-api should not be available")
     except ImportError:
-        print("✓ Old alpaca-trade-api correctly not available")
+        logger.info("✓ Old alpaca-trade-api correctly not available")
         assert True
 
 if __name__ == "__main__":
-    print("Running Alpaca Migration Tests...")
+    logger.info("Running Alpaca Migration Tests...")
     test_alpaca_imports()
     test_alpaca_enum_values()
     test_alpaca_client_creation()
     test_alpaca_order_request()
     test_old_api_not_available()
-    print("All Alpaca migration tests passed!") 
+    logger.info("All Alpaca migration tests passed!") 

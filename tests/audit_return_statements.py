@@ -602,38 +602,33 @@ def main():
     """Main function to run the audit."""
     auditor = ReturnStatementAuditor()
     report = auditor.audit_codebase()
-
-    print("=== Return Statement Audit Report ===")
-    print(f"Timestamp: {report['timestamp']}")
-    print(f"Total functions audited: {report['summary']['total_functions_audited']}")
-    print(f"Passing functions: {report['summary']['passing_functions']}")
-    print(f"Functions with issues: {report['summary']['functions_with_issues']}")
-    print(f"Pipeline functions: {report['summary']['pipeline_functions']}")
-    print(f"Unused return values: {report['summary']['unused_return_values']}")
-    print(f"Coverage: {report['summary']['coverage_percentage']:.1f}%")
+    logger.info("=== Return Statement Audit Report ===")
+    logger.info(f"Timestamp: {report['timestamp']}")
+    logger.info(f"Total functions audited: {report['summary']['total_functions_audited']}")
+    logger.info(f"Passing functions: {report['summary']['passing_functions']}")
+    logger.info(f"Functions with issues: {report['summary']['functions_with_issues']}")
+    logger.info(f"Pipeline functions: {report['summary']['pipeline_functions']}")
+    logger.info(f"Unused return values: {report['summary']['unused_return_values']}")
+    logger.info(f"Coverage: {report['summary']['coverage_percentage']:.1f}%")
 
     if report["issues"]:
-        print("\n=== Issues Found ===")
+        logger.info("\n=== Issues Found ===")
         for issue in report["issues"]:
-            print(
-                f"- {issue['file']}:{issue['line']} - {issue['function']} - {issue['type']}"
-            )
+            logger.info(f"- {issue['file']}:{issue['line']} - {issue['function']} - {issue['type']}")
 
     if report["unused_returns"]:
-        print("\n=== Unused Return Values ===")
+        logger.info("\n=== Unused Return Values ===")
         for unused in report["unused_returns"]:
-            print(
-                f"- {unused['file']}:{unused['line']} - {unused['function_call']} (from {unused['tracked_function']})"
-            )
+            logger.info(f"- {unused['file']}:{unused['line']} - {unused['function_call']} (from {unused['tracked_function']})")
 
     if report["pipeline_analysis"]["recommendations"]:
-        print("\n=== Pipeline Recommendations ===")
+        logger.info("\n=== Pipeline Recommendations ===")
         for rec in report["pipeline_analysis"]["recommendations"]:
-            print(f"- {rec}")
+            logger.info(f"- {rec}")
 
-    print("\n=== General Recommendations ===")
+    logger.info("\n=== General Recommendations ===")
     for rec in report["recommendations"]:
-        print(f"- {rec}")
+        logger.info(f"- {rec}")
 
     return report
 

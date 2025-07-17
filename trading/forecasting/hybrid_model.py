@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class HybridModel:
     """
     Hybrid ensemble model that tracks model performance, auto-updates weights, and persists state.
-    Uses comprehensive scoring based on Sharpe ratio, drawdown, and win rate instead of MSE.
+    Uses risk-aware weighting based on Sharpe ratio, drawdown, or MSE with user-selectable metrics.
     """
     def __init__(self, model_dict: Dict[str, Any], weight_file: str = "hybrid_weights.json", perf_file: str = "hybrid_performance.json"):
         """
@@ -27,16 +27,21 @@ class HybridModel:
         self.weights = {name: 1.0 / len(model_dict) for name in model_dict}
         self.performance = {name: [] for name in model_dict}  # List of recent performance metrics
         self.scoring_config = {
-            "method": "weighted_average",  # "weighted_average", "ahp", "composite"
+            "method": "risk_aware",  # "risk_aware", "weighted_average", "ahp", "composite"
+            "weighting_metric": "sharpe",  # "sharpe", "drawdown", "mse"
             "metrics": {
                 "sharpe_ratio": {"weight": 0.4, "direction": "maximize"},
                 "win_rate": {"weight": 0.3, "direction": "maximize"},
                 "max_drawdown": {"weight": 0.2, "direction": "minimize"},
                 "mse": {"weight": 0.1, "direction": "minimize"},
-                "total_return": {"weight": 0.0, "direction": "maximize"} # Added total_return
+                "total_return": {"weight": 0.0, "direction": "maximize"}
             },
             "min_performance_threshold": 0.1,  # Minimum performance to avoid zero weights
-            "recency_weight": 0.7 # Weight for recent vs historical performance
+            "recency_weight": 0.7,  # Weight for recent vs historical performance
+            "risk_free_rate": 0.02,  # Risk-free rate for Sharpe calculations
+            "sharpe_floor": 0.0,  # Minimum Sharpe ratio to avoid negative weights
+            "drawdown_ceiling": -0.5,  # Maximum drawdown threshold
+            "mse_ceiling": 1000.0  # Maximum MSE threshold
         }
         self.load_state()
 
@@ -211,17 +216,19 @@ class HybridModel:
             return -1.0
 
     def update_weights(self):
-        """Auto-update ensemble weights based on comprehensive performance metrics."""
+        """Auto-update ensemble weights based on risk-aware performance metrics."""
         try:
-            if self.scoring_config["method"] == "weighted_average":
+            if self.scoring_config["method"] == "risk_aware":
+                self.weights = self._calculate_risk_aware_weights()
+            elif self.scoring_config["method"] == "weighted_average":
                 self.weights = self._calculate_weighted_average_weights()
             elif self.scoring_config["method"] == "ahp":
                 self.weights = self._calculate_ahp_weights()
             elif self.scoring_config["method"] == "composite":
                 self.weights = self._calculate_composite_weights()
             else:
-                logger.warning(f"Unknown scoring method: {self.scoring_config['method']}, using weighted average")
-                self.weights = self._calculate_weighted_average_weights()
+                logger.warning(f"Unknown scoring method: {self.scoring_config['method']}, using risk-aware")
+                self.weights = self._calculate_risk_aware_weights()
             
             self.save_state()
             
@@ -229,6 +236,81 @@ class HybridModel:
             logger.error(f"Error updating weights: {e}")
             # Fallback to equal weights
             self.weights = {name: 1.0 / len(self.models) for name in self.models}
+
+    def _calculate_risk_aware_weights(self) -> Dict[str, float]:
+        """
+        Calculate weights using risk-aware metrics (Sharpe, Drawdown, or MSE).
+        weight = metric_value / total_metric_value
+        """
+        model_scores = {}
+        weighting_metric = self.scoring_config["weighting_metric"]
+        
+        for name, perf_list in self.performance.items():
+            if not perf_list:
+                model_scores[name] = 0.0
+                continue
+            
+            # Calculate average metric over recent performance
+            recent_perf = perf_list[-10:]  # Last 10 performance records
+            
+            if weighting_metric == "sharpe":
+                # Use Sharpe ratio: weight = Sharpe / total_Sharpe
+                sharpe_values = [p.get("sharpe_ratio", -1.0) for p in recent_perf if p.get("sharpe_ratio") is not None]
+                if sharpe_values:
+                    avg_sharpe = np.mean(sharpe_values)
+                    # Apply floor to avoid negative weights
+                    score = max(self.scoring_config["sharpe_floor"], avg_sharpe)
+                else:
+                    score = self.scoring_config["sharpe_floor"]
+                    
+            elif weighting_metric == "drawdown":
+                # Use inverse of drawdown: weight = (1 + drawdown) / total
+                # Note: drawdown is negative, so we add 1 to make it positive
+                drawdown_values = [p.get("max_drawdown", -1.0) for p in recent_perf if p.get("max_drawdown") is not None]
+                if drawdown_values:
+                    avg_drawdown = np.mean(drawdown_values)
+                    # Apply ceiling and convert to positive score
+                    capped_drawdown = max(self.scoring_config["drawdown_ceiling"], avg_drawdown)
+                    score = 1.0 + capped_drawdown  # This makes it positive
+                else:
+                    score = 1.0 + self.scoring_config["drawdown_ceiling"]
+                    
+            elif weighting_metric == "mse":
+                # Use inverse of MSE: weight = (1/MSE) / total(1/MSE)
+                mse_values = [p.get("mse", float('inf')) for p in recent_perf if p.get("mse") is not None]
+                if mse_values:
+                    avg_mse = np.mean(mse_values)
+                    # Apply ceiling and convert to inverse
+                    capped_mse = min(self.scoring_config["mse_ceiling"], avg_mse)
+                    score = 1.0 / (1.0 + capped_mse)  # Add 1 to avoid division by zero
+                else:
+                    score = 1.0 / (1.0 + self.scoring_config["mse_ceiling"])
+                    
+            else:
+                logger.warning(f"Unknown weighting metric: {weighting_metric}, using Sharpe")
+                # Fallback to Sharpe ratio
+                sharpe_values = [p.get("sharpe_ratio", -1.0) for p in recent_perf if p.get("sharpe_ratio") is not None]
+                if sharpe_values:
+                    avg_sharpe = np.mean(sharpe_values)
+                    score = max(self.scoring_config["sharpe_floor"], avg_sharpe)
+                else:
+                    score = self.scoring_config["sharpe_floor"]
+            
+            # Apply minimum performance threshold
+            if score < self.scoring_config["min_performance_threshold"]:
+                score = self.scoring_config["min_performance_threshold"]
+            
+            model_scores[name] = score
+        
+        # Normalize weights
+        total_score = sum(model_scores.values())
+        if total_score > 0:
+            weights = {name: score / total_score for name, score in model_scores.items()}
+        else:
+            # Equal weights if no positive scores
+            weights = {name: 1.0 / len(self.models) for name in self.models}
+        
+        return weights
 
     def _calculate_weighted_average_weights(self) -> Dict[str, float]:
         """Calculate weights using weighted average of performance metrics."""
@@ -383,6 +465,55 @@ class HybridModel:
         """Update the scoring configuration."""
         self.scoring_config.update(config)
         logger.info(f"Updated scoring config: {self.scoring_config}")
+
+    def set_weighting_metric(self, metric: str):
+        """
+        Set the primary weighting metric for risk-aware weighting.
+        
+        Args:
+            metric: One of "sharpe", "drawdown", or "mse"
+        """
+        valid_metrics = ["sharpe", "drawdown", "mse"]
+        if metric not in valid_metrics:
+            logger.warning(f"Invalid weighting metric: {metric}. Must be one of {valid_metrics}")
+            return
+        
+        self.scoring_config["weighting_metric"] = metric
+        self.scoring_config["method"] = "risk_aware"
+        logger.info(f"Set weighting metric to: {metric}")
+        
+        # Update weights immediately
+        self.update_weights()
+
+    def get_weighting_metric_info(self) -> Dict[str, Any]:
+        """Get information about the current weighting metric and available options."""
+        return {
+            "current_metric": self.scoring_config["weighting_metric"],
+            "current_method": self.scoring_config["method"],
+            "available_metrics": {
+                "sharpe": {
+                    "description": "Sharpe ratio weighting (weight = Sharpe / total_Sharpe)",
+                    "direction": "maximize",
+                    "floor": self.scoring_config["sharpe_floor"]
+                },
+                "drawdown": {
+                    "description": "Inverse drawdown weighting (weight = (1 + drawdown) / total)",
+                    "direction": "minimize",
+                    "ceiling": self.scoring_config["drawdown_ceiling"]
+                },
+                "mse": {
+                    "description": "Inverse MSE weighting (weight = (1/MSE) / total(1/MSE))",
+                    "direction": "minimize",
+                    "ceiling": self.scoring_config["mse_ceiling"]
+                }
+            },
+            "available_methods": {
+                "risk_aware": "Risk-aware weighting using single metric",
+                "weighted_average": "Weighted average of multiple metrics",
+                "ahp": "Analytic Hierarchy Process",
+                "composite": "Composite scoring with trend adjustment"
+            }
+        }
 
     def get_model_performance_summary(self) -> Dict[str, Any]:
         """Provide a summary of model performance for analysis."""
