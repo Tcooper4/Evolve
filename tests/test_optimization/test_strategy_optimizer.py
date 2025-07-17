@@ -16,8 +16,8 @@ from trading.optimization.strategy_optimizer import (
     OptimizationResult,
     ParticleSwarmOptimization,
     StrategyOptimizer,
-    StrategyOptimizerConfig,
 )
+from trading.optimization.base_optimizer import OptimizerConfig
 
 
 class TestGeneticAlgorithm:
@@ -356,7 +356,7 @@ class TestStrategyOptimizer:
 
     def test_optimizer_initialization(self):
         """Test optimizer initialization."""
-        config = StrategyOptimizerConfig(optimizer_type="genetic")
+        config = OptimizerConfig(optimizer_type="genetic")
         optimizer = StrategyOptimizer(config)
 
         assert optimizer.config.optimizer_type == "genetic"
@@ -364,7 +364,7 @@ class TestStrategyOptimizer:
 
     def test_create_optimizer_genetic(self):
         """Test creating genetic algorithm optimizer."""
-        config = StrategyOptimizerConfig(optimizer_type="genetic")
+        config = OptimizerConfig(optimizer_type="genetic")
         optimizer = StrategyOptimizer(config)
 
         opt_method = optimizer._create_optimizer()
@@ -372,7 +372,7 @@ class TestStrategyOptimizer:
 
     def test_create_optimizer_pso(self):
         """Test creating PSO optimizer."""
-        config = StrategyOptimizerConfig(optimizer_type="pso")
+        config = OptimizerConfig(optimizer_type="pso")
         optimizer = StrategyOptimizer(config)
 
         opt_method = optimizer._create_optimizer()
@@ -380,7 +380,7 @@ class TestStrategyOptimizer:
 
     def test_create_optimizer_invalid_type(self):
         """Test creating optimizer with invalid type."""
-        config = StrategyOptimizerConfig(optimizer_type="invalid")
+        config = OptimizerConfig(optimizer_type="invalid")
         optimizer = StrategyOptimizer(config)
 
         with pytest.raises(ValueError, match="Unsupported optimizer type"):
@@ -388,7 +388,7 @@ class TestStrategyOptimizer:
 
     def test_objective_wrapper(self, sample_data, mock_strategy):
         """Test objective function wrapper."""
-        config = StrategyOptimizerConfig()
+        config = OptimizerConfig()
         optimizer = StrategyOptimizer(config)
 
         objective = optimizer._objective_wrapper(mock_strategy, sample_data)
@@ -400,7 +400,7 @@ class TestStrategyOptimizer:
 
     def test_get_default_params(self, mock_strategy):
         """Test getting default parameters."""
-        config = StrategyOptimizerConfig()
+        config = OptimizerConfig()
         optimizer = StrategyOptimizer(config)
 
         params = optimizer._get_default_params(mock_strategy)
@@ -408,7 +408,7 @@ class TestStrategyOptimizer:
 
     def test_create_parameter_grid(self):
         """Test parameter grid creation."""
-        config = StrategyOptimizerConfig()
+        config = OptimizerConfig()
         optimizer = StrategyOptimizer(config)
 
         params = {"window": 20, "threshold": 0.05, "method": ["sma", "ema"]}
@@ -422,7 +422,7 @@ class TestStrategyOptimizer:
 
     def test_optimize_with_genetic(self, sample_data, mock_strategy):
         """Test optimization with genetic algorithm."""
-        config = StrategyOptimizerConfig(optimizer_type="genetic", n_iterations=5)
+        config = OptimizerConfig(optimizer_type="genetic", n_iterations=5)
         optimizer = StrategyOptimizer(config)
 
         # Mock the optimization method
@@ -444,7 +444,7 @@ class TestStrategyOptimizer:
 
     def test_optimize_with_pso(self, sample_data, mock_strategy):
         """Test optimization with PSO."""
-        config = StrategyOptimizerConfig(optimizer_type="pso", n_iterations=5)
+        config = OptimizerConfig(optimizer_type="pso", n_iterations=5)
         optimizer = StrategyOptimizer(config)
 
         # Mock the optimization method
@@ -469,12 +469,12 @@ class TestStrategyOptimizer:
         # Test valid optimizer types
         valid_types = ["grid", "bayesian", "genetic", "pso", "optuna", "pytorch", "ray"]
         for opt_type in valid_types:
-            config = StrategyOptimizerConfig(optimizer_type=opt_type)
+            config = OptimizerConfig(optimizer_type=opt_type)
             assert config.optimizer_type == opt_type
 
         # Test invalid optimizer type
         with pytest.raises(ValueError, match="optimizer_type must be one of"):
-            StrategyOptimizerConfig(optimizer_type="invalid")
+            OptimizerConfig(optimizer_type="invalid")
 
     def test_optimizer_comparison(self, sample_data, mock_strategy):
         """Test comparing different optimizers."""
@@ -482,7 +482,7 @@ class TestStrategyOptimizer:
         results = {}
 
         for opt_type in optimizers:
-            config = StrategyOptimizerConfig(optimizer_type=opt_type, n_iterations=3)
+            config = OptimizerConfig(optimizer_type=opt_type, n_iterations=3)
             optimizer = StrategyOptimizer(config)
 
             # Mock the optimization method
@@ -506,7 +506,7 @@ class TestStrategyOptimizer:
 
     def test_optimization_error_handling(self, sample_data, mock_strategy):
         """Test optimization error handling."""
-        config = StrategyOptimizerConfig(optimizer_type="genetic")
+        config = OptimizerConfig(optimizer_type="genetic")
         optimizer = StrategyOptimizer(config)
 
         # Mock objective function to raise error
@@ -521,7 +521,7 @@ class TestStrategyOptimizer:
 
     def test_optimization_with_custom_parameters(self, sample_data, mock_strategy):
         """Test optimization with custom parameters."""
-        config = StrategyOptimizerConfig(optimizer_type="genetic", n_iterations=5)
+        config = OptimizerConfig(optimizer_type="genetic", n_iterations=5)
         optimizer = StrategyOptimizer(config)
 
         initial_params = {"window": 15, "threshold": 0.03, "method": "rsi"}
@@ -545,7 +545,7 @@ class TestStrategyOptimizer:
 
     def test_optimization_metrics_tracking(self, sample_data, mock_strategy):
         """Test optimization metrics tracking."""
-        config = StrategyOptimizerConfig(optimizer_type="genetic", n_iterations=3)
+        config = OptimizerConfig(optimizer_type="genetic", n_iterations=3)
         optimizer = StrategyOptimizer(config)
 
         # Mock the optimization method
@@ -568,7 +568,7 @@ class TestStrategyOptimizer:
 
     def test_optimization_convergence_analysis(self, sample_data, mock_strategy):
         """Test optimization convergence analysis."""
-        config = StrategyOptimizerConfig(optimizer_type="genetic", n_iterations=10)
+        config = OptimizerConfig(optimizer_type="genetic", n_iterations=10)
         optimizer = StrategyOptimizer(config)
 
         # Mock the optimization method with convergence data

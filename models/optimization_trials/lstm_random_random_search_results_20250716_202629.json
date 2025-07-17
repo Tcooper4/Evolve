@@ -1,0 +1,43 @@
+{
+  "model_type": "lstm_random",
+  "results": [
+    {
+      "params": {
+        "lstm_units": 128,
+        "dropout_rate": 0.2,
+        "learning_rate": 0.001,
+        "batch_size": 32,
+        "epochs": 20,
+        "sequence_length": 30
+      },
+      "score": 0.7,
+      "trial": 0
+    },
+    {
+      "params": {
+        "lstm_units": 128,
+        "dropout_rate": 0.2,
+        "learning_rate": 0.001,
+        "batch_size": 32,
+        "epochs": 20,
+        "sequence_length": 30
+      },
+      "score": 0.7,
+      "trial": 1
+    },
+    {
+      "params": {
+        "lstm_units": 128,
+        "dropout_rate": 0.2,
+        "learning_rate": 0.001,
+        "batch_size": 32,
+        "epochs": 20,
+        "sequence_length": 30
+      },
+      "score": 0.7,
+      "trial": 2
+    }
+  ],
+  "timestamp": "2025-07-16T20:26:29.891720",
+  "backend": "random"
+}

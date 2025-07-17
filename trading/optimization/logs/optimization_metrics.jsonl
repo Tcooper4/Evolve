@@ -6,3 +6,4 @@
 {"timestamp": "2025-07-09T23:55:09.362029", "strategy": "TestStrategy", "config": {"param1": 1, "param2": 2}, "sharpe_ratio": 1.5, "win_rate": 0.6, "max_drawdown": 0.2, "mse": 0.01, "alpha": 0.1, "regime": "test", "reason": "Test run"}
 {"timestamp": "2025-07-10T00:14:12.658779", "strategy": "TestStrategy", "config": {"param1": 1, "param2": 2}, "sharpe_ratio": 1.5, "win_rate": 0.6, "max_drawdown": 0.2, "mse": 0.01, "alpha": 0.1, "regime": "test", "reason": "Test run"}
 {"timestamp": "2025-07-10T00:23:57.967905", "strategy": "TestStrategy", "config": {"param1": 1, "param2": 2}, "sharpe_ratio": 1.5, "win_rate": 0.6, "max_drawdown": 0.2, "mse": 0.01, "alpha": 0.1, "regime": "test", "reason": "Test run"}
+{"timestamp": "2025-07-17T00:26:08.761088", "strategy": "TestStrategy", "config": {"param1": 1, "param2": 2}, "sharpe_ratio": 1.5, "win_rate": 0.6, "max_drawdown": 0.2, "mse": 0.01, "alpha": 0.1, "regime": "test", "reason": "Test run"}

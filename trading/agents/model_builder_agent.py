@@ -194,6 +194,25 @@ class ModelBuilderAgent(BaseAgent):
 
         return True
 
+    def validate_config(self) -> bool:
+        """Validate the agent's configuration."""
+        # For now, always return True (can be expanded later)
+        return True
+
+    def handle_error(self, error: Exception) -> AgentResult:
+        """Handle errors during agent execution."""
+        self.logger.error(f"Error handled in ModelBuilderAgent: {error}")
+        return AgentResult(success=False, error_message=str(error))
+
+    def get_capabilities(self) -> list:
+        """Return a list of agent capabilities."""
+        return self.capabilities if hasattr(self, "capabilities") else []
+
+    def get_requirements(self) -> dict:
+        """Return a dictionary of agent requirements."""
+        # This could be expanded to return required packages, resources, etc.
+        return {"dependencies": self.dependencies if hasattr(self, "dependencies") else []}
+
     @handle_exceptions
     def build_model(self, request: ModelBuildRequest) -> ModelBuildResult:
         """Build a model based on the request.

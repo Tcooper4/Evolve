@@ -1,0 +1,11 @@
+{"timestamp": "2025-07-16T16:40:47.809014", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-07-16T16:43:53.947736", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-07-16T17:03:55.577789", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-07-16T17:06:37.413985", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-07-16T17:09:48.376865", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-07-16T22:18:48.893138", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-07-16T22:20:32.171028", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-07-16T22:21:49.362877", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-07-16T22:23:38.820062", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-07-16T22:28:27.402177", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-07-16T22:55:50.448153", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}

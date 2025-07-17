@@ -1,0 +1,8 @@
+,Return,Volatility,Sharpe,CVaR
+Equal Weight,0.0023,0.0124,-1.4243,
+Mean-Variance,0.0018,0.0114,-1.5961,
+Risk Parity,0.0036,0.017,-0.9621,
+Min-CVaR,0.0013,0.0112,-1.67,0.0203
+Black-Litterman,0.001,0.02,0.5,
+Enhanced BL (Relative),0.0018,0.0114,-1.5961,
+Risk Parity (CVaR),0.0036,0.017,-0.9621,

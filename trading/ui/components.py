@@ -929,3 +929,353 @@ def create_system_metrics_panel(metrics: Dict[str, float]) -> Dict[str, Any]:
             "total_pnl": metrics.get("total_pnl", 0.0),
         },
     }
+
+
+def create_strategy_pipeline_selector(
+    key: str = "strategy_pipeline_selector",
+    allow_combos: bool = True,
+) -> Dict[str, Any]:
+    """Create a strategy pipeline selector with combo functionality.
+
+    Args:
+        key: Unique key for the Streamlit component
+        allow_combos: Whether to allow strategy combinations
+
+    Returns:
+        Dictionary containing selected strategies and combo settings
+    """
+    try:
+        from strategies.strategy_pipeline import get_strategy_names, get_combine_modes
+        
+        # Get available strategies from pipeline
+        strategy_names = get_strategy_names()
+        combine_modes = get_combine_modes()
+        
+        if not strategy_names:
+            st.warning("No strategies available in pipeline")
+            return {}
+        
+        # Strategy selection
+        if allow_combos:
+            st.subheader("🎯 Strategy Selection")
+            selected_strategies = st.multiselect(
+                "Select Strategies",           options=strategy_names,
+                default=[strategy_names[0]] if strategy_names else [],
+                help="Select one or more strategies to combine"
+            )
+            
+            if not selected_strategies:
+                st.warning("Please select at least one strategy")
+                return {}
+            
+            # Show selected strategies
+            if len(selected_strategies) > 1:
+                st.info(f"Selected strategies: {', '.join(selected_strategies)}")
+                
+                # Combination mode selection
+                st.subheader("🔗 Combination Mode")
+                combine_mode = st.selectbox(
+                 "How to combine signals",
+                    options=combine_modes,
+                    index=1,  # Default to intersection
+                    help="union: signal if any strategy signals, intersection: signal only if all strategies agree, weighted: weighted sum of signals"
+                )
+                
+                # Weights for weighted mode
+                weights = None
+                if combine_mode == 'weighted':
+                    st.subheader("⚖️ Strategy Weights")
+                    weights = []
+                    for i, strategy in enumerate(selected_strategies):
+                        weight = st.slider(
+                            f"Weight for {strategy}",
+                            min_value=0.0,
+                            max_value=2.0,
+                            value=1.0,
+                            step=0.1,
+                            key=f"{key}_weight_{i}"
+                        )
+                        weights.append(weight)
+                    
+                    # Normalize weights
+                    if weights:
+                        total_weight = sum(weights)
+                        if total_weight > 0:
+                            weights = [w / total_weight for w in weights]
+                        st.info(f"Normalized weights: {[f'{w:.2f}' for w in weights]}")
+                
+                # Strategy parameters
+                st.subheader("⚙️ Strategy Parameters")
+                strategy_params = {}
+                
+                for strategy in selected_strategies:
+                    with st.expander(f"Parameters for {strategy}"):
+                        if strategy == "RSI":
+                            strategy_params[strategy] = {
+                             'window': st.slider(f"{strategy} Window", 5, 14, key=f"{key}_rsi_window"),
+                                'overbought': st.slider(f"{strategy} Overbought", 60, 90, key=f"{key}_rsi_overbought"),
+                               'oversold': st.slider(f"{strategy} Oversold", 10, 40, key=f"{key}_rsi_oversold")
+                            }
+                        elif strategy == "MACD":
+                            strategy_params[strategy] = {
+                               'fast': st.slider(f"{strategy} Fast Period", 8, 20, key=f"{key}_macd_fast"),
+                               'slow': st.slider(f"{strategy} Slow Period", 20, 40, key=f"{key}_macd_slow"),
+                             'signal': st.slider(f"{strategy} Signal Period", 5, 15, key=f"{key}_macd_signal")
+                            }
+                        elif strategy == "Bollinger":
+                            strategy_params[strategy] = {
+                             'window': st.slider(f"{strategy} Window", 10, 20, key=f"{key}_bollinger_window"),
+                              'num_std': st.slider(f"{strategy} Standard Deviations", 1.0, 3.0, step=0.1, key=f"{key}_bollinger_std")
+                            }
+                        elif strategy == "SMA":
+                            strategy_params[strategy] = {
+                             'window': st.slider(f"{strategy} Window", 5, 20, key=f"{key}_sma_window")
+                            }
+                
+                result = {
+               'strategies': selected_strategies,
+                 'combine_mode': combine_mode,
+                    'weights': weights,
+               'parameters': strategy_params,
+                  'is_combo': len(selected_strategies) > 1
+                }
+                
+            else:
+                # Single strategy selected
+                strategy = selected_strategies[0]
+                st.info(f"Single strategy selected: {strategy}")
+                
+                # Strategy parameters for single strategy
+                st.subheader("⚙️ Strategy Parameters")
+                strategy_params = {}
+                
+                with st.expander(f"Parameters for {strategy}"):
+                    if strategy == "RSI":
+                        strategy_params[strategy] = {
+                         'window': st.slider(f"{strategy} Window", 5, 14, key=f"{key}_rsi_window"),
+                            'overbought': st.slider(f"{strategy} Overbought", 60, 90, key=f"{key}_rsi_overbought"),
+                           'oversold': st.slider(f"{strategy} Oversold", 10, 40, key=f"{key}_rsi_oversold")
+                        }
+                    elif strategy == "MACD":
+                        strategy_params[strategy] = {
+                           'fast': st.slider(f"{strategy} Fast Period", 8, 20, key=f"{key}_macd_fast"),
+                           'slow': st.slider(f"{strategy} Slow Period", 20, 40, key=f"{key}_macd_slow"),
+                         'signal': st.slider(f"{strategy} Signal Period", 5, 15, key=f"{key}_macd_signal")
+                        }
+                    elif strategy == "Bollinger":
+                        strategy_params[strategy] = {
+                         'window': st.slider(f"{strategy} Window", 10, 20, key=f"{key}_bollinger_window"),
+                          'num_std': st.slider(f"{strategy} Standard Deviations", 1.0, 3.0, step=0.1, key=f"{key}_bollinger_std")
+                        }
+                    elif strategy == "SMA":
+                        strategy_params[strategy] = {
+                         'window': st.slider(f"{strategy} Window", 5, 20, key=f"{key}_sma_window")
+                        }
+                
+                result = {
+               'strategies': selected_strategies,
+                 'combine_mode': None,
+                   'weights': [],
+                'parameters': strategy_params,
+                    'is_combo': False
+                }
+        else:
+            # Single strategy selection only
+            selected_strategy = st.selectbox(
+              "Select Strategy",           options=strategy_names,
+                key=key
+            )
+            
+            result = {
+                'strategies': [selected_strategy] if selected_strategy else [],
+                'combine_mode': None,
+                'weights': [],
+                'parameters': {},
+                'is_combo': False
+            }
+        
+        # Log selection for agentic monitoring
+        logger.info(f"Strategy pipeline selection: {result}")
+        
+        return result
+        
+    except ImportError:
+        st.error("Strategy pipeline module not available")
+        return {}
+    except Exception as e:
+        logger.error(f"Error in strategy pipeline selector: {e}")
+        st.error(f"Error creating strategy selector: {str(e)}")
+        return {}
+
+
+def execute_strategy_pipeline(
+    strategy_config: Dict[str, Any],
+    market_data: pd.DataFrame,
+    key: str = "strategy_execution"
+) -> Dict[str, Any]:
+    """Execute a strategy pipeline with given configuration and market data.
+
+    Args:
+        strategy_config: Configuration from create_strategy_pipeline_selector
+        market_data: Market data DataFrame with OHLCV columns
+        key: Unique key for the Streamlit component
+
+    Returns:
+        Dictionary containing signals, performance metrics, and execution info
+    """
+    try:
+        from strategies.strategy_pipeline import (
+            rsi_strategy, macd_strategy, bollinger_strategy, sma_strategy,
+            combine_signals
+        )
+        
+        if not strategy_config or not strategy_config.get('strategies'):
+            st.error("No strategies selected")
+            return {}
+        
+        strategies = strategy_config['strategies']
+        parameters = strategy_config.get('parameters', {})
+        combine_mode = strategy_config.get('combine_mode')
+        weights = strategy_config.get('weights')
+        
+        # Generate individual strategy signals
+        signals_list = []
+        strategy_names = []
+        
+        for strategy in strategies:
+            strategy_params = parameters.get(strategy, {})
+            if strategy == "RSI":
+                signal = rsi_strategy(
+                    market_data,
+                    window=strategy_params.get('window', 14),
+                    overbought=strategy_params.get('overbought', 70),
+                    oversold=strategy_params.get('oversold', 30)
+                )
+            elif strategy == "MACD":
+                signal = macd_strategy(
+                    market_data,
+                    fast=strategy_params.get('fast', 12),
+                    slow=strategy_params.get('slow', 26),
+                    signal=strategy_params.get('signal', 9)
+                )
+            elif strategy == "Bollinger":
+                signal = bollinger_strategy(
+                    market_data,
+                    window=strategy_params.get('window', 20),
+                    num_std=strategy_params.get('num_std', 2.0)
+                )
+            elif strategy == "SMA":
+                signal = sma_strategy(
+                    market_data,
+                    window=strategy_params.get('window', 20)
+                )
+            else:
+                st.warning(f"Unknown strategy: {strategy}")
+                continue
+            
+            signals_list.append(signal)
+            strategy_names.append(strategy)
+        
+        if not signals_list:
+            st.error("No valid signals generated")
+            return {}
+        
+        # Combine signals if multiple strategies
+        if len(signals_list) > 1 and combine_mode:
+            combined_signal = combine_signals(
+                signals_list,
+                mode=combine_mode,
+                weights=weights
+            )
+            final_signal = combined_signal
+            signal_type = f"Combined ({combine_mode})"
+        else:
+            final_signal = signals_list[0]
+            signal_type = "Single"
+        # Calculate basic performance metrics
+        performance_metrics = calculate_signal_performance(
+            market_data, final_signal, strategy_names
+        )
+        
+        # Create result dictionary
+        result = {
+           'signal': final_signal,
+          'individual_signals': dict(zip(strategy_names, signals_list)),
+        'signal_type': signal_type,
+            'strategies_used': strategies,
+         'combine_mode': combine_mode,
+            'weights': weights,
+        'performance': performance_metrics,
+           'execution_time':datetime.now().isoformat()
+        }
+        
+        # Log execution for agentic monitoring
+        logger.info(f"Strategy pipeline executed: {len(strategies)} strategies, mode: {combine_mode}")
+        
+        return result
+        
+    except ImportError as e:
+        st.error(f"Strategy pipeline module not available: {e}")
+        return {}
+    except Exception as e:
+        logger.error(f"Error executing strategy pipeline: {e}")
+        st.error(f"Error executing strategy pipeline: {str(e)}")
+        return {}
+
+
+def calculate_signal_performance(
+    market_data: pd.DataFrame,
+    signals: pd.Series,
+    strategy_names: List[str]
+) -> Dict[str, Any]:
+    """Calculate basic performance metrics for strategy signals.
+
+    Args:
+        market_data: Market data DataFrame
+        signals: Signal series (1y,-1l, 0=hold)
+        strategy_names: List of strategy names used
+
+    Returns:
+        Dictionary of performance metrics
+    """
+    try:
+        # Calculate returns
+        price_returns = market_data['close'].pct_change()
+        
+        # Calculate strategy returns (assuming 100% position size)
+        strategy_returns = price_returns * signals.shift(1)
+        
+        # Basic metrics
+        total_return = strategy_returns.sum()
+        sharpe_ratio = strategy_returns.mean() / (strategy_returns.std() + 1e-9) * np.sqrt(252)
+        max_drawdown = (strategy_returns.cumsum() - strategy_returns.cumsum().expanding().max()).min()
+        
+        # Signal statistics
+        buy_signals = (signals == 1).sum()
+        sell_signals = (signals == -1).sum()
+        hold_signals = (signals == 0).sum()
+        total_signals = len(signals)
+        
+        # Win rate (simplified)
+        positive_returns = (strategy_returns > 0).sum()
+        total_trades = (strategy_returns != 0).sum()
+        win_rate = positive_returns / (total_trades + 1e-9)
+        
+        return {
+         'total_return': total_return,
+         'sharpe_ratio': sharpe_ratio,
+         'max_drawdown': max_drawdown,
+            'buy_signals': buy_signals,
+         'sell_signals': sell_signals,
+         'hold_signals': hold_signals,
+          'total_signals': total_signals,
+         'win_rate': win_rate,
+           'strategy_names': strategy_names
+        }
+        
+    except Exception as e:
+        logger.error(f"Error calculating performance metrics: {e}")
+        return {
+           'error': str(e),
+           'strategy_names': strategy_names
+        }

@@ -248,7 +248,7 @@ class BacktestEngine:
             }
 
         except Exception as e:
-            logger.error(f"Backtest error: {e}")
+            self.logger.error(f"Backtest error: {e}")
             return {}
 
 
@@ -306,7 +306,7 @@ class ModelEvaluator:
             }
 
         except Exception as e:
-            logger.error(f"Error calculating metrics: {e}")
+            self.logger.error(f"Error calculating metrics: {e}")
             return {}
 
     @staticmethod
@@ -375,7 +375,7 @@ class ModelEvaluator:
             return grade, overall_score
 
         except Exception as e:
-            logger.error(f"Error grading performance: {e}")
+            self.logger.error(f"Error grading performance: {e}")
             return "F", 0.0
 
 
@@ -441,9 +441,9 @@ class ModelLeaderboard:
                 with open(self.leaderboard_file, "r") as f:
                     data = json.load(f)
                     self.entries = [ModelLeaderboardEntry(**entry) for entry in data]
-                logger.info(f"Loaded {len(self.entries)} leaderboard entries")
+                self.logger.info(f"Loaded {len(self.entries)} leaderboard entries")
         except Exception as e:
-            logger.warning(f"Could not load leaderboard: {e}")
+            self.logger.warning(f"Could not load leaderboard: {e}")
 
     def save_leaderboard(self):
         """Save leaderboard to file."""
@@ -454,7 +454,7 @@ class ModelLeaderboard:
                     [asdict(entry) for entry in self.entries], f, indent=2, default=str
                 )
         except Exception as e:
-            logger.error(f"Could not save leaderboard: {e}")
+            self.logger.error(f"Could not save leaderboard: {e}")
 
 
 class EnhancedModelCreatorAgent:
@@ -480,7 +480,7 @@ class EnhancedModelCreatorAgent:
         # Load existing models
         self._load_existing_models()
 
-        logger.info("Enhanced Model Creator Agent initialized")
+        self.logger.info("Enhanced Model Creator Agent initialized")
 
     def _initialize_framework_registry(self) -> Dict[str, Dict[str, Any]]:
         """Initialize available ML frameworks."""
@@ -535,9 +535,9 @@ class EnhancedModelCreatorAgent:
             if model_file.exists():
                 with open(model_file, "r") as f:
                     self.model_registry = json.load(f)
-                logger.info(f"Loaded {len(self.model_registry)} existing models")
+                self.logger.info(f"Loaded {len(self.model_registry)} existing models")
         except Exception as e:
-            logger.warning(f"Could not load existing models: {e}")
+            self.logger.warning(f"Could not load existing models: {e}")
 
     def _save_model_registry(self):
         """Save model registry to storage."""
@@ -547,7 +547,7 @@ class EnhancedModelCreatorAgent:
             with open(model_file, "w") as f:
                 json.dump(self.model_registry, f, indent=2, default=str)
         except Exception as e:
-            logger.error(f"Could not save model registry: {e}")
+            self.logger.error(f"Could not save model registry: {e}")
 
     def parse_requirements(self, requirements: str) -> Dict[str, Any]:
         """Parse natural language requirements into structured format."""
@@ -624,7 +624,7 @@ class EnhancedModelCreatorAgent:
             if self.framework_registry[framework_pref]["available"]:
                 return framework_pref
             else:
-                logger.warning(f"Preferred framework {framework_pref} not available")
+                self.logger.warning(f"Preferred framework {framework_pref} not available")
 
         # Auto-select based on requirements
         if model_type == "forecasting" and PYTORCH_AVAILABLE:
@@ -715,12 +715,12 @@ class EnhancedModelCreatorAgent:
                 self.model_registry[model_name] = asdict(spec)
                 self.creation_history.append(asdict(spec))
                 self._save_model_registry()
-                logger.info(f"Successfully created and validated model: {model_name}")
+                self.logger.info(f"Successfully created and validated model: {model_name}")
 
             return spec, spec.validation_status == "passed", validation_errors
 
         except Exception as e:
-            logger.error(f"Error creating model: {e}")
+            self.logger.error(f"Error creating model: {e}")
             raise
 
     def _create_architecture_blueprint(
@@ -831,13 +831,13 @@ class EnhancedModelCreatorAgent:
             )
             self.leaderboard.add_entry(leaderboard_entry)
 
-            logger.info(
+            self.logger.info(
                 f"Successfully evaluated model: {model_name} (Grade: {grade}, Score: {overall_score:.3f})"
             )
             return evaluation
 
         except Exception as e:
-            logger.error(f"Error evaluating model {model_name}: {e}")
+            self.logger.error(f"Error evaluating model {model_name}: {e}")
             raise
 
     def _generate_recommendations(
@@ -943,11 +943,11 @@ class EnhancedModelCreatorAgent:
             with open(filepath, "w") as f:
                 json.dump(blueprint, f, indent=2, default=str)
 
-            logger.info(f"Saved model blueprint to {filepath}")
+            self.logger.info(f"Saved model blueprint to {filepath}")
             return True
 
         except Exception as e:
-            logger.error(f"Error saving model blueprint: {e}")
+            self.logger.error(f"Error saving model blueprint: {e}")
             return False
 
     def load_model_blueprint(self, filepath: str) -> Optional[ModelSpecification]:
@@ -959,11 +959,11 @@ class EnhancedModelCreatorAgent:
             spec_data = blueprint["specification"]
             spec = ModelSpecification(**spec_data)
 
-            logger.info(f"Loaded model blueprint from {filepath}")
+            self.logger.info(f"Loaded model blueprint from {filepath}")
             return spec
 
         except Exception as e:
-            logger.error(f"Error loading model blueprint: {e}")
+            self.logger.error(f"Error loading model blueprint: {e}")
             return None
 
     # Existing helper methods (updated for enhanced functionality)
@@ -1162,11 +1162,11 @@ class EnhancedModelCreatorAgent:
             if model_name in self.model_registry:
                 del self.model_registry[model_name]
                 self._save_model_registry()
-                logger.info(f"Deleted model: {model_name}")
+                self.logger.info(f"Deleted model: {model_name}")
                 return True
             return False
         except Exception as e:
-            logger.error(f"Error deleting model {model_name}: {e}")
+            self.logger.error(f"Error deleting model {model_name}: {e}")
             return False
 
 

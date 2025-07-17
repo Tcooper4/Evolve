@@ -18,7 +18,7 @@ from trading.agents.base_agent_interface import BaseAgent, AgentResult, AgentCon
 from trading.models.lstm_model import LSTMForecaster
 from trading.models.xgboost_model import XGBoostForecaster
 from trading.models.prophet_model import ProphetForecaster
-from trading.models.arima_model import ARIMAForecaster
+from trading.models.arima_model import ARIMAModel
 from trading.models.ensemble_model import EnsembleForecaster
 
 
@@ -56,7 +56,7 @@ class ForecastDispatcher(BaseAgent):
             'lstm': LSTMForecaster(),
             'xgboost': XGBoostForecaster(),
             'prophet': ProphetForecaster(),
-            'arima': ARIMAForecaster(),
+            'arima': ARIMAModel(),
             'ensemble': EnsembleForecaster()
         }
         

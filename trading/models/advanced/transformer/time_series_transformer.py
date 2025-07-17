@@ -117,8 +117,8 @@ class TransformerForecaster(BaseModel):
     def _setup_fallback_model(self) -> None:
         """Setup ARIMA fallback model."""
         try:
-            from trading.models.arima_model import ARIMAForecaster
-            self.fallback_model = ARIMAForecaster({
+            from trading.models.arima_model import ARIMAModel
+            self.fallback_model = ARIMAModel({
                 "order": (1, 1, 1),
                 "seasonal_order": (1, 1, 1, 12),
                 "target_column": self.config["target_column"]
