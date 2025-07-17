@@ -22,6 +22,9 @@ from memory.prompt_log import get_prompt_memory, log_prompt
 
 class TaskType(Enum):
     """Types of tasks that can be executed."""
+    FORECAST = "forecast"
+    STRATEGY = "strategy"
+    BACKTEST = "backtest"
     MODEL_BUILD = "model_build"
     MODEL_EVALUATE = "model_evaluate"
     MODEL_UPDATE = "model_update"
@@ -35,6 +38,9 @@ class TaskType(Enum):
 
 class ActionType(Enum):
     """Types of actions that can be taken."""
+    BUILDER = "builder"
+    EVALUATOR = "evaluator"
+    UPDATER = "updater"
     RUN_MODEL = "run_model"
     SCORE_PERFORMANCE = "score_performance"
     UPDATE_PARAMETERS = "update_parameters"
@@ -83,6 +89,236 @@ class ActionStrategy(ABC):
     def get_name(self) -> str:
         """Get the name of this action strategy."""
         pass
+
+
+class BuilderStrategy(ActionStrategy):
+    """Strategy for building models using ModelBuilderAgent."""
+    
+    def get_name(self) -> str:
+        return "builder"
+    
+    async def execute(self, context: TaskContext, **kwargs) -> TaskResult:
+        """Execute model building logic."""
+        try:
+            # Import the ModelBuilderAgent
+            from trading.agents.model_builder_agent import ModelBuilderAgent, ModelBuildRequest
+            
+            # Create build request
+            build_request = ModelBuildRequest(
+                model_type=context.parameters.get("model_type", "lstm"),
+                data_path=context.parameters.get("data_path", "data/sample_data.csv"),
+                target_column=context.parameters.get("target_column", "close"),
+                hyperparameters=context.parameters.get("hyperparameters", {}),
+                request_id=context.task_id
+            )
+            
+            # Execute build
+            builder = ModelBuilderAgent()
+            build_result = await builder.execute(request=build_request)
+            
+            if build_result.success:
+                return TaskResult(
+                    success=True,
+                    performance_score=0.8,  # Good build success
+                    data={
+                        "model_id": build_result.data.get("model_id"),
+                        "model_path": build_result.data.get("model_path"),
+                        "model_type": build_request.model_type,
+                        "build_metrics": build_result.data.get("metrics", {})
+                    },
+                    message=f"Model built successfully: {build_request.model_type}",
+                    next_action=ActionType.EVALUATOR,
+                    should_continue=True
+                )
+            else:
+                return TaskResult(
+                    success=False,
+                    performance_score=0.0,
+                    error_details=build_result.error_message,
+                    message="Model build failed",
+                    next_action=ActionType.RETRY_WITH_DIFFERENT_APPROACH,
+                    should_continue=True
+                )
+        except Exception as e:
+            return TaskResult(
+                success=False,
+                performance_score=0.0,
+                error_details=str(e),
+                message="Model build failed",
+                next_action=ActionType.RETRY_WITH_DIFFERENT_APPROACH,
+                should_continue=True
+            )
+
+
+class EvaluatorStrategy(ActionStrategy):
+    """Strategy for evaluating models using PerformanceCriticAgent."""
+    
+    def get_name(self) -> str:
+        return "evaluator"
+    
+    async def execute(self, context: TaskContext, **kwargs) -> TaskResult:
+        """Execute model evaluation logic."""
+        try:
+            # Import the PerformanceCriticAgent
+            from trading.agents.performance_critic_agent import PerformanceCriticAgent, ModelEvaluationRequest
+            
+            # Get model info from previous step
+            model_id = context.parameters.get("model_id")
+            model_path = context.parameters.get("model_path")
+            model_type = context.parameters.get("model_type", "lstm")
+            
+            if not model_id or not model_path:
+                return TaskResult(
+                    success=False,
+                    performance_score=0.0,
+                    error_details="Missing model_id or model_path from previous step",
+                    message="Cannot evaluate without model information",
+                    next_action=ActionType.BUILDER,
+                    should_continue=True
+                )
+            
+            # Create evaluation request
+            eval_request = ModelEvaluationRequest(
+                model_id=model_id,
+                model_path=model_path,
+                model_type=model_type,
+                test_data_path=context.parameters.get("test_data_path", "data/test_data.csv"),
+                request_id=f"eval_{context.task_id}"
+            )
+            
+            # Execute evaluation
+            evaluator = PerformanceCriticAgent()
+            eval_result = await evaluator.execute(request=eval_request)
+            
+            if eval_result.success:
+                # Extract performance metrics
+                metrics = eval_result.data.get("metrics", {})
+                sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
+                total_return = metrics.get("total_return", 0.0)
+                max_drawdown = metrics.get("max_drawdown", 0.0)
+                
+                # Calculate overall performance score
+                performance_score = min(1.0, max(0.0, (sharpe_ratio + 1) / 2))  # Normalize to 0-1
+                
+                return TaskResult(
+                    success=True,
+                    performance_score=performance_score,
+                    data={
+                        "evaluation_result": eval_result.data,
+                        "sharpe_ratio": sharpe_ratio,
+                        "total_return": total_return,
+                        "max_drawdown": max_drawdown,
+                        "model_id": model_id
+                    },
+                    message=f"Model evaluated - Sharpe: {sharpe_ratio:.3f}, Return: {total_return:.3f}",
+                    next_action=ActionType.UPDATER if performance_score < context.performance_threshold else ActionType.STOP_AND_REPORT,
+                    should_continue=performance_score < context.performance_threshold
+                )
+            else:
+                return TaskResult(
+                    success=False,
+                    performance_score=0.0,
+                    error_details=eval_result.error_message,
+                    message="Model evaluation failed",
+                    next_action=ActionType.RETRY_WITH_DIFFERENT_APPROACH,
+                    should_continue=True
+                )
+        except Exception as e:
+            return TaskResult(
+                success=False,
+                performance_score=0.0,
+                error_details=str(e),
+                message="Model evaluation failed",
+                next_action=ActionType.RETRY_WITH_DIFFERENT_APPROACH,
+                should_continue=True
+            )
+
+
+class UpdaterStrategy(ActionStrategy):
+    """Strategy for updating models using UpdaterAgent."""
+    
+    def get_name(self) -> str:
+        return "updater"
+    
+    async def execute(self, context: TaskContext, **kwargs) -> TaskResult:
+        """Execute model update logic."""
+        try:
+            # Import the UpdaterAgent
+            from trading.agents.updater_agent import UpdaterAgent, UpdateRequest
+            from trading.agents.performance_critic_agent import ModelEvaluationResult
+            
+            # Get evaluation result from previous step
+            evaluation_data = context.parameters.get("evaluation_result", {})
+            model_id = context.parameters.get("model_id")
+            
+            if not evaluation_data or not model_id:
+                return TaskResult(
+                    success=False,
+                    performance_score=0.0,
+                    error_details="Missing evaluation result or model_id from previous step",
+                    message="Cannot update without evaluation information",
+                    next_action=ActionType.EVALUATOR,
+                    should_continue=True
+                )
+            
+            # Create evaluation result object
+            eval_result = ModelEvaluationResult(
+                model_id=model_id,
+                metrics=evaluation_data.get("metrics", {}),
+                evaluation_date=datetime.now().isoformat(),
+                model_path=context.parameters.get("model_path", ""),
+                model_type=context.parameters.get("model_type", "lstm")
+            )
+            
+            # Process evaluation and determine if update is needed
+            updater = UpdaterAgent()
+            update_request = updater.process_evaluation(eval_result)
+            
+            if update_request:
+                # Execute update
+                update_result = await updater.execute(request=update_request)
+                
+                if update_result.success:
+                    return TaskResult(
+                        success=True,
+                        performance_score=0.7,  # Good update success
+                        data={
+                            "update_result": update_result.data,
+                            "new_model_id": update_result.data.get("new_model_id"),
+                            "improvement_metrics": update_result.data.get("improvement_metrics", {})
+                        },
+                        message=f"Model updated successfully: {update_request.update_type}",
+                        next_action=ActionType.EVALUATOR,  # Re-evaluate the updated model
+                        should_continue=True
+                    )
+                else:
+                    return TaskResult(
+                        success=False,
+                        performance_score=0.0,
+                        error_details=update_result.error_message,
+                        message="Model update failed",
+                        next_action=ActionType.RETRY_WITH_DIFFERENT_APPROACH,
+                        should_continue=True
+                    )
+            else:
+                # No update needed
+                return TaskResult(
+                    success=True,
+                    performance_score=0.6,  # Acceptable performance
+                    data={"update_status": "no_update_needed"},
+                    message="No model update needed",
+                    next_action=ActionType.STOP_AND_REPORT,
+                    should_continue=False
+                )
+        except Exception as e:
+            return TaskResult(
+                success=False,
+                performance_score=0.0,
+                error_details=str(e),
+                message="Model update failed",
+                next_action=ActionType.RETRY_WITH_DIFFERENT_APPROACH,
+                should_continue=True
+            )
 
 
 class RunModelStrategy(ActionStrategy):
@@ -343,6 +579,9 @@ class TaskAgent:
         
         # Initialize action strategies
         self.action_strategies: Dict[ActionType, ActionStrategy] = {
+            ActionType.BUILDER: BuilderStrategy(),
+            ActionType.EVALUATOR: EvaluatorStrategy(),
+            ActionType.UPDATER: UpdaterStrategy(),
             ActionType.RUN_MODEL: RunModelStrategy(),
             ActionType.SCORE_PERFORMANCE: ScorePerformanceStrategy(),
             ActionType.UPDATE_PARAMETERS: UpdateParametersStrategy(),
@@ -370,10 +609,10 @@ class TaskAgent:
         
         Args:
             prompt: The task prompt
-            task_type: Type of task to execute
+            task_type: Type of task to execute (forecast, strategy, backtest, etc.)
             parameters: Task parameters
             max_depth: Maximum recursion depth
-            performance_threshold: Performance threshold for success
+            performance_threshold: Performance threshold for success (e.g., Sharpe < 1)
             parent_task_id: ID of parent task (for nested tasks)
             
         Returns:
@@ -381,13 +620,15 @@ class TaskAgent:
         """
         start_time = datetime.now()
         
-        # Create task context
+        # Create task context with task-specific parameter mapping
         task_id = str(uuid.uuid4())
+        mapped_parameters = self._map_task_parameters(task_type, parameters or {})
+        
         context = TaskContext(
             task_id=task_id,
             task_type=task_type,
             prompt=prompt,
-            parameters=parameters or {},
+            parameters=mapped_parameters,
             max_depth=max_depth,
             performance_threshold=performance_threshold,
             parent_task_id=parent_task_id
@@ -506,8 +747,13 @@ class TaskAgent:
         
         # Determine initial action
         if context.depth == 0:
-            # First iteration - start with running the model
-            action_type = ActionType.RUN_MODEL
+            # First iteration - determine action based on task type
+            if context.task_type in [TaskType.FORECAST, TaskType.STRATEGY, TaskType.BACKTEST]:
+                # For forecast, strategy, backtest tasks, start with builder
+                action_type = ActionType.BUILDER
+            else:
+                # For other tasks, start with running the model
+                action_type = ActionType.RUN_MODEL
         else:
             # Use the next action from previous result
             action_type = context.action_history[-1].get("next_action", ActionType.STOP_AND_REPORT)
@@ -682,6 +928,57 @@ class TaskAgent:
         """Get all task histories."""
         return [self.get_task_history(task_id) for task_id in self.task_registry.keys()]
     
+    def _map_task_parameters(self, task_type: TaskType, parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Map task-specific parameters to the appropriate format for the builder/evaluator/updater chain.
+        
+        Args:
+            task_type: Type of task
+            parameters: Original parameters
+            
+        Returns:
+            Mapped parameters
+        """
+        mapped_params = parameters.copy()
+        
+        if task_type == TaskType.FORECAST:
+            # Map forecast parameters
+            mapped_params.setdefault("model_type", "lstm")
+            mapped_params.setdefault("data_path", "data/forecast_data.csv")
+            mapped_params.setdefault("target_column", "close")
+            mapped_params.setdefault("hyperparameters", {
+                "epochs": 100,
+                "batch_size": 32,
+                "lookback_window": 60
+            })
+            mapped_params.setdefault("test_data_path", "data/forecast_test.csv")
+            
+        elif task_type == TaskType.STRATEGY:
+            # Map strategy parameters
+            mapped_params.setdefault("model_type", "ensemble")
+            mapped_params.setdefault("data_path", "data/strategy_data.csv")
+            mapped_params.setdefault("target_column", "returns")
+            mapped_params.setdefault("hyperparameters", {
+                "n_estimators": 100,
+                "max_depth": 10,
+                "learning_rate": 0.1
+            })
+            mapped_params.setdefault("test_data_path", "data/strategy_test.csv")
+            
+        elif task_type == TaskType.BACKTEST:
+            # Map backtest parameters
+            mapped_params.setdefault("model_type", "xgboost")
+            mapped_params.setdefault("data_path", "data/backtest_data.csv")
+            mapped_params.setdefault("target_column", "signal")
+            mapped_params.setdefault("hyperparameters", {
+                "n_estimators": 200,
+                "max_depth": 8,
+                "subsample": 0.8
+            })
+            mapped_params.setdefault("test_data_path", "data/backtest_test.csv")
+            
+        return mapped_params
+    
     def clear_task_history(self):
         """Clear all task history."""
         self.task_registry.clear()
@@ -707,4 +1004,31 @@ async def execute_task(
 ) -> TaskResult:
     """Convenience function to execute a task."""
     agent = get_task_agent()
-    return await agent.execute_task(prompt, task_type, parameters, **kwargs) 
+    return await agent.execute_task(prompt, task_type, parameters, **kwargs)
+
+
+async def execute_forecast_task(
+    prompt: str,
+    parameters: Optional[Dict[str, Any]] = None,
+    **kwargs
+) -> TaskResult:
+    """Convenience function to execute a forecast task."""
+    return await execute_task(prompt, TaskType.FORECAST, parameters, **kwargs)
+
+
+async def execute_strategy_task(
+    prompt: str,
+    parameters: Optional[Dict[str, Any]] = None,
+    **kwargs
+) -> TaskResult:
+    """Convenience function to execute a strategy task."""
+    return await execute_task(prompt, TaskType.STRATEGY, parameters, **kwargs)
+
+
+async def execute_backtest_task(
+    prompt: str,
+    parameters: Optional[Dict[str, Any]] = None,
+    **kwargs
+) -> TaskResult:
+    """Convenience function to execute a backtest task."""
+    return await execute_task(prompt, TaskType.BACKTEST, parameters, **kwargs) 
