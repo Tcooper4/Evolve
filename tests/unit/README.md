@@ -51,10 +51,10 @@ pytest tests/unit/ --cov=trading --cov=utils --cov-report=html
 pytest tests/unit/test_arima_forecaster.py -v
 
 # Run specific test class
-pytest tests/unit/test_arima_forecaster.py::TestARIMAForecaster -v
+pytest tests/unit/test_arima_forecaster.py::TestARIMAModel -v
 
 # Run specific test method
-pytest tests/unit/test_arima_forecaster.py::TestARIMAForecaster::test_model_instantiation -v
+pytest tests/unit/test_arima_forecaster.py::TestARIMAModel::test_model_instantiation -v
 ```
 
 #### Option 3: Run individual test suites

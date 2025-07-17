@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
-from .rsi_signals import RSISignals
+from .rsi_signals import generate_rsi_signals
 from .macd_strategy import MACDStrategy
 from .bollinger_strategy import BollingerStrategy
 

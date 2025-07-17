@@ -13,7 +13,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:25.481909",
+    "last_updated": "2025-07-17T00:26:40.287784",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -32,7 +32,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:25.558099",
+    "last_updated": "2025-07-17T00:26:40.359213",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -51,32 +51,28 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:25.615226",
+    "last_updated": "2025-07-17T00:26:40.435105",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
   },
   "test_agent": {
     "agent_name": "test_agent",
-    "sharpe_ratio": 1.5,
-    "max_drawdown": 0.15,
-    "win_rate": 0.65,
-    "total_return": 0.25,
-    "calmar_ratio": 1.6666666666666667,
-    "sortino_ratio": 1.25,
-    "profit_factor": 1.8,
-    "volatility": 0.2,
+    "sharpe_ratio": 2.0,
+    "max_drawdown": 0.1,
+    "win_rate": 0.7,
+    "total_return": 0.3,
+    "calmar_ratio": 2.9999999999999996,
+    "sortino_ratio": 0.0,
+    "profit_factor": 0.0,
+    "volatility": 0.0,
     "beta": 0.0,
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:36.043303",
-    "status": "active",
-    "extra_metrics": {
-      "volatility": 0.2,
-      "calmar_ratio": 2.0,
-      "profit_factor": 1.8
-    },
+    "last_updated": "2025-07-17T00:26:43.765918",
+    "status": "deprecated",
+    "extra_metrics": {},
     "metadata": {}
   },
   "agent1": {
@@ -93,7 +89,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:42.896585",
+    "last_updated": "2025-07-17T00:26:46.412346",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -112,7 +108,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:24.506851",
+    "last_updated": "2025-07-17T00:26:43.406005",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -131,7 +127,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:35.763345",
+    "last_updated": "2025-07-17T00:26:42.666790",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -150,7 +146,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:42.280321",
+    "last_updated": "2025-07-17T00:26:45.882098",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -169,7 +165,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:42.244506",
+    "last_updated": "2025-07-17T00:26:45.844815",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -188,7 +184,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:42.290306",
+    "last_updated": "2025-07-17T00:26:46.176950",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -207,7 +203,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:42.354393",
+    "last_updated": "2025-07-17T00:26:46.181340",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -226,7 +222,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:42.360216",
+    "last_updated": "2025-07-17T00:26:46.179211",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -245,7 +241,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:27.142273",
+    "last_updated": "2025-07-17T00:26:33.581514",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -264,7 +260,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:27.228783",
+    "last_updated": "2025-07-17T00:26:33.630205",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -283,7 +279,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:27.304026",
+    "last_updated": "2025-07-17T00:26:33.676188",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -302,7 +298,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:27.381182",
+    "last_updated": "2025-07-17T00:26:33.727290",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -321,7 +317,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:27.481962",
+    "last_updated": "2025-07-17T00:26:33.771913",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -340,7 +336,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:27.567379",
+    "last_updated": "2025-07-17T00:26:33.818471",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -359,7 +355,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:27.647038",
+    "last_updated": "2025-07-17T00:26:33.868015",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -378,7 +374,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:27.716348",
+    "last_updated": "2025-07-17T00:26:33.916373",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -397,7 +393,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:27.777835",
+    "last_updated": "2025-07-17T00:26:33.964586",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -416,7 +412,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:27.863801",
+    "last_updated": "2025-07-17T00:26:34.009689",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -435,7 +431,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:27.942858",
+    "last_updated": "2025-07-17T00:26:34.055610",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -454,7 +450,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.000580",
+    "last_updated": "2025-07-17T00:26:34.101544",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -473,7 +469,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.084135",
+    "last_updated": "2025-07-17T00:26:34.145412",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -492,7 +488,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.159926",
+    "last_updated": "2025-07-17T00:26:34.193175",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -511,7 +507,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.240166",
+    "last_updated": "2025-07-17T00:26:34.244123",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -530,7 +526,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.326127",
+    "last_updated": "2025-07-17T00:26:34.289759",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -549,7 +545,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.397442",
+    "last_updated": "2025-07-17T00:26:34.343506",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -568,7 +564,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.489197",
+    "last_updated": "2025-07-17T00:26:34.405130",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -587,7 +583,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.564512",
+    "last_updated": "2025-07-17T00:26:34.456070",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -606,7 +602,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.661849",
+    "last_updated": "2025-07-17T00:26:34.517784",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -625,7 +621,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.774492",
+    "last_updated": "2025-07-17T00:26:34.575184",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -644,7 +640,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.840078",
+    "last_updated": "2025-07-17T00:26:34.633999",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -663,7 +659,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:28.917357",
+    "last_updated": "2025-07-17T00:26:34.680539",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -682,7 +678,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:29.032900",
+    "last_updated": "2025-07-17T00:26:34.725542",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -701,7 +697,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:29.114458",
+    "last_updated": "2025-07-17T00:26:34.774944",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -720,7 +716,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:29.197591",
+    "last_updated": "2025-07-17T00:26:34.819984",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -739,7 +735,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:29.275153",
+    "last_updated": "2025-07-17T00:26:34.864101",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -758,7 +754,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:29.367799",
+    "last_updated": "2025-07-17T00:26:34.907368",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -777,7 +773,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:29.502268",
+    "last_updated": "2025-07-17T00:26:34.952963",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -796,7 +792,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:29.631142",
+    "last_updated": "2025-07-17T00:26:34.998830",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -815,7 +811,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:29.729522",
+    "last_updated": "2025-07-17T00:26:35.044576",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -834,7 +830,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:29.802319",
+    "last_updated": "2025-07-17T00:26:35.097250",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -853,7 +849,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:29.878248",
+    "last_updated": "2025-07-17T00:26:35.143478",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -872,7 +868,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:29.960360",
+    "last_updated": "2025-07-17T00:26:35.190039",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -891,7 +887,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:30.037719",
+    "last_updated": "2025-07-17T00:26:35.243745",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -910,7 +906,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:30.117637",
+    "last_updated": "2025-07-17T00:26:35.289781",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -929,7 +925,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:30.186738",
+    "last_updated": "2025-07-17T00:26:35.333670",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -948,7 +944,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:30.254161",
+    "last_updated": "2025-07-17T00:26:35.377797",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -967,7 +963,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:30.332943",
+    "last_updated": "2025-07-17T00:26:35.421723",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -986,7 +982,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:30.410406",
+    "last_updated": "2025-07-17T00:26:35.465291",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1005,7 +1001,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:30.495034",
+    "last_updated": "2025-07-17T00:26:35.510371",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1024,7 +1020,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:30.566176",
+    "last_updated": "2025-07-17T00:26:35.553919",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1043,7 +1039,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:31.102678",
+    "last_updated": "2025-07-17T00:26:35.598375",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1062,7 +1058,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:31.272099",
+    "last_updated": "2025-07-17T00:26:35.644464",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1081,7 +1077,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:31.377208",
+    "last_updated": "2025-07-17T00:26:35.700313",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1100,7 +1096,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:31.489013",
+    "last_updated": "2025-07-17T00:26:35.744188",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1119,7 +1115,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:31.587169",
+    "last_updated": "2025-07-17T00:26:35.790291",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1138,7 +1134,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:31.658733",
+    "last_updated": "2025-07-17T00:26:35.837013",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1157,7 +1153,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:31.751452",
+    "last_updated": "2025-07-17T00:26:35.879964",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1176,7 +1172,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:31.846539",
+    "last_updated": "2025-07-17T00:26:35.924966",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1195,7 +1191,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:31.933573",
+    "last_updated": "2025-07-17T00:26:35.970818",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1214,7 +1210,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.017660",
+    "last_updated": "2025-07-17T00:26:36.017945",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1233,7 +1229,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.105153",
+    "last_updated": "2025-07-17T00:26:36.064130",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1252,7 +1248,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.189265",
+    "last_updated": "2025-07-17T00:26:36.109944",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1271,7 +1267,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.282298",
+    "last_updated": "2025-07-17T00:26:36.155875",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1290,7 +1286,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.374383",
+    "last_updated": "2025-07-17T00:26:36.203692",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1309,7 +1305,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.457360",
+    "last_updated": "2025-07-17T00:26:36.249624",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1328,7 +1324,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.533420",
+    "last_updated": "2025-07-17T00:26:36.294823",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1347,7 +1343,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.606883",
+    "last_updated": "2025-07-17T00:26:36.343540",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1366,7 +1362,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.682184",
+    "last_updated": "2025-07-17T00:26:36.392762",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1385,7 +1381,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.756344",
+    "last_updated": "2025-07-17T00:26:36.437106",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1404,7 +1400,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.832681",
+    "last_updated": "2025-07-17T00:26:36.482008",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1423,7 +1419,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.916323",
+    "last_updated": "2025-07-17T00:26:36.526952",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1442,7 +1438,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:32.992629",
+    "last_updated": "2025-07-17T00:26:36.569717",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1461,7 +1457,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:33.063864",
+    "last_updated": "2025-07-17T00:26:36.613481",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1480,7 +1476,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:33.139687",
+    "last_updated": "2025-07-17T00:26:36.669774",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1499,7 +1495,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:33.223899",
+    "last_updated": "2025-07-17T00:26:36.737776",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1518,7 +1514,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:33.294520",
+    "last_updated": "2025-07-17T00:26:36.781725",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1537,7 +1533,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:33.364260",
+    "last_updated": "2025-07-17T00:26:36.826344",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1556,7 +1552,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:33.429374",
+    "last_updated": "2025-07-17T00:26:36.874685",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1575,7 +1571,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:33.506877",
+    "last_updated": "2025-07-17T00:26:36.919650",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1594,7 +1590,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:33.594020",
+    "last_updated": "2025-07-17T00:26:36.964389",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1613,7 +1609,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:33.694476",
+    "last_updated": "2025-07-17T00:26:37.020591",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1632,7 +1628,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:33.829388",
+    "last_updated": "2025-07-17T00:26:37.078786",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1651,7 +1647,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:33.910608",
+    "last_updated": "2025-07-17T00:26:37.129972",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1670,7 +1666,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.001335",
+    "last_updated": "2025-07-17T00:26:37.185586",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1689,7 +1685,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.087229",
+    "last_updated": "2025-07-17T00:26:37.250031",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1708,7 +1704,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.185759",
+    "last_updated": "2025-07-17T00:26:37.299602",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1727,7 +1723,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.272724",
+    "last_updated": "2025-07-17T00:26:37.349088",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1746,7 +1742,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.348526",
+    "last_updated": "2025-07-17T00:26:37.399567",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1765,7 +1761,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.424177",
+    "last_updated": "2025-07-17T00:26:37.444688",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1784,7 +1780,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.497745",
+    "last_updated": "2025-07-17T00:26:37.488921",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1803,7 +1799,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.573429",
+    "last_updated": "2025-07-17T00:26:37.535827",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1822,7 +1818,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.644041",
+    "last_updated": "2025-07-17T00:26:37.583194",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1841,7 +1837,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.707579",
+    "last_updated": "2025-07-17T00:26:37.630724",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1860,7 +1856,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.793982",
+    "last_updated": "2025-07-17T00:26:37.691590",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1879,7 +1875,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.864231",
+    "last_updated": "2025-07-17T00:26:37.762144",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1898,7 +1894,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:34.944686",
+    "last_updated": "2025-07-17T00:26:37.820257",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1917,7 +1913,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:35.026017",
+    "last_updated": "2025-07-17T00:26:37.893229",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1936,7 +1932,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:35.106472",
+    "last_updated": "2025-07-17T00:26:37.968788",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1955,7 +1951,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:35.189264",
+    "last_updated": "2025-07-17T00:26:38.056066",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1974,7 +1970,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:35.264954",
+    "last_updated": "2025-07-17T00:26:38.166744",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -1993,7 +1989,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:35.337044",
+    "last_updated": "2025-07-17T00:26:38.280365",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2012,7 +2008,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:35.424148",
+    "last_updated": "2025-07-17T00:26:38.359759",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2031,7 +2027,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:35.497495",
+    "last_updated": "2025-07-17T00:26:38.532341",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2050,18 +2046,18 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:43.001655",
+    "last_updated": "2025-07-17T00:26:46.465039",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
   },
   "agent3": {
     "agent_name": "agent3",
-    "sharpe_ratio": 1.3,
-    "max_drawdown": 0.15,
-    "win_rate": 0.65,
-    "total_return": 0.25,
-    "calmar_ratio": 1.6666666666666667,
+    "sharpe_ratio": 1.0,
+    "max_drawdown": 0.2,
+    "win_rate": 0.6,
+    "total_return": 0.2,
+    "calmar_ratio": 1.0,
     "sortino_ratio": 0.0,
     "profit_factor": 0.0,
     "volatility": 0.0,
@@ -2069,7 +2065,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:36.858956",
+    "last_updated": "2025-07-17T00:26:42.094733",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2088,7 +2084,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:36.205993",
+    "last_updated": "2025-07-17T00:26:39.793064",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2107,7 +2103,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:24.009471",
+    "last_updated": "2025-07-17T00:26:42.325513",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2126,7 +2122,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:36.342457",
+    "last_updated": "2025-07-17T00:26:40.559590",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2145,7 +2141,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:36.421500",
+    "last_updated": "2025-07-17T00:26:40.616722",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2164,7 +2160,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:36.494677",
+    "last_updated": "2025-07-17T00:26:40.671902",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2183,7 +2179,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:36.936047",
+    "last_updated": "2025-07-17T00:26:41.610531",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2202,7 +2198,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:24.131629",
+    "last_updated": "2025-07-17T00:26:43.240407",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2221,7 +2217,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:36.619833",
+    "last_updated": "2025-07-17T00:26:41.396558",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2240,7 +2236,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:37.010789",
+    "last_updated": "2025-07-17T00:26:41.659596",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2259,7 +2255,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:37.091859",
+    "last_updated": "2025-07-17T00:26:41.708795",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2278,7 +2274,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:37.173402",
+    "last_updated": "2025-07-17T00:26:41.760747",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2297,7 +2293,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:37.270022",
+    "last_updated": "2025-07-17T00:26:41.812124",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2316,7 +2312,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:37.354182",
+    "last_updated": "2025-07-17T00:26:41.862165",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2335,7 +2331,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:23.545641",
+    "last_updated": "2025-07-17T00:26:39.530802",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2354,7 +2350,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:35.900122",
+    "last_updated": "2025-07-17T00:26:33.205001",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2373,7 +2369,26 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-10T00:22:23.400265",
+    "last_updated": "2025-07-17T00:26:43.556393",
+    "status": "deprecated",
+    "extra_metrics": {},
+    "metadata": {}
+  },
+  "agent_a": {
+    "agent_name": "agent_a",
+    "sharpe_ratio": 1.0,
+    "max_drawdown": 0.15,
+    "win_rate": 0.6,
+    "total_return": 0.2,
+    "calmar_ratio": 1.3333333333333335,
+    "sortino_ratio": 0.0,
+    "profit_factor": 0.0,
+    "volatility": 0.0,
+    "beta": 0.0,
+    "alpha": 0.0,
+    "information_ratio": 0.0,
+    "treynor_ratio": 0.0,
+    "last_updated": "2025-07-17T00:26:43.882513",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}

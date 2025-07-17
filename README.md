@@ -1,67 +1,210 @@
-# Evolve AI Trading Platform
+# 🚀 Evolve AI Trading Platform
 
 A production-ready, quant-grade trading intelligence platform powered by advanced AI and machine learning. Evolve provides a clean, ChatGPT-like interface for natural language trading operations with comprehensive forecasting, strategy optimization, and risk management capabilities.
 
-## 🚀 Features
+## 🎯 What This Tool Does
 
-### Core Capabilities
-- **Natural Language Interface**: ChatGPT-like prompt system for trading operations
+Evolve is an **autonomous AI trading system** that transforms natural language requests into sophisticated trading operations. Think of it as a "ChatGPT for trading" that can:
+
+- **Generate forecasts** using multiple AI models based on simple prompts
+- **Create and optimize trading strategies** through natural language descriptions
+- **Execute backtests** with comprehensive performance analysis
+- **Manage portfolios** with institutional-grade risk management
+- **Adapt to market regimes** automatically switching strategies
+- **Provide real-time insights** with explainable AI and confidence scoring
+
+### Key Capabilities
+- **Natural Language Interface**: Ask questions like Forecast AAPL for the next 30days" or Create a momentum strategy for crypto"
 - **Dynamic Model Creation**: AI-powered model synthesis with multiple frameworks
 - **Strategy Auto-Tuning**: Automated strategy optimization and parameter tuning
 - **Comprehensive Analytics**: RMSE, MAE, MAPE, Sharpe, Win Rate, Drawdown metrics
 - **Real-time Monitoring**: Live system health and performance tracking
 - **Multi-format Export**: PDF, Excel, HTML, JSON report generation
 
-### Advanced AI Features
-- **Model Synthesis**: Create custom models using natural language descriptions
-- **Strategy Optimization**: Bayesian optimization, genetic algorithms, grid search
-- **Risk Management**: VaR, CVaR, stress testing, portfolio optimization
-- **Market Regime Detection**: Adaptive strategy switching based on market conditions
-- **Ensemble Methods**: Multi-model combination for improved accuracy
+## 🧠 Forecasting Models Used
 
-### Supported Models
-- **Traditional ML**: Ridge, Lasso, ElasticNet, Random Forest, XGBoost, LightGBM
-- **Deep Learning**: LSTM, Transformer, Autoformer, Informer, MLP
-- **Time Series**: ARIMA, Prophet, GARCH, Kalman Filter
-- **Ensemble**: Weighted combinations, voting methods, stacking
+### Traditional Machine Learning
+- **Ridge/Lasso/ElasticNet**: Linear models with regularization
+- **Random Forest**: Ensemble method for robust predictions
+- **XGBoost**: Gradient boosting for high accuracy
+- **LightGBM**: Fast gradient boosting framework
+- **CatBoost**: Categorical feature handling
 
-### Trading Strategies
-- **Mean Reversion**: RSI, Bollinger Bands, Stochastic Oscillator
-- **Trend Following**: MACD, Moving Average Crossover, EMA
-- **Breakout**: Donchian Channels, ATR Breakout, Volatility Breakout
-- **Advanced**: Multi-timeframe, regime-aware, adaptive strategies
+### Deep Learning Models
+- **LSTM**: Long Short-Term Memory for sequence modeling
+- **Transformer**: Attention-based architecture for complex patterns
+- **Autoformer**: Auto-correlation mechanism for time series
+- **Informer**: Efficient transformer variant
+- **MLP**: Multi-layer perceptron for feature learning
 
-## 🏗️ Architecture
+### Time Series Specialists
+- **ARIMA**: Auto-regressive integrated moving average
+- **Prophet**: Facebook's forecasting tool with seasonality
+- **GARCH**: Generalized autoregressive conditional heteroskedasticity
+- **Kalman Filter**: State-space modeling for noisy data
+
+### Ensemble Methods
+- **Weighted Combinations**: Optimal model weighting
+- **Voting Methods**: Majority-based predictions
+- **Stacking**: Meta-learning for model combination
+
+## 📈 Trading Strategies & Customization
+
+### Built-in Strategies
+
+#### Mean Reversion Strategies
+- **RSI Strategy**: Relative Strength Index with overbought/oversold signals
+- **Bollinger Bands**: Price channel breakout detection
+- **Stochastic Oscillator**: Momentum-based reversal signals
+- **Williams %R**: Overbought/oversold momentum indicator
+
+#### Trend Following Strategies
+- **MACD**: Moving Average Convergence Divergence
+- **Moving Average Crossover**: Short/long-term MA signals
+- **EMA Strategy**: Exponential Moving Average trends
+- **ADX**: Average Directional Index for trend strength
+
+#### Breakout Strategies
+- **Donchian Channels**: Price channel breakouts
+- **ATR Breakout**: Average True Range volatility breakouts
+- **Volatility Breakout**: Standard deviation-based signals
+
+#### Advanced Strategies
+- **Multi-timeframe**: Combining signals across timeframes
+- **Regime-aware**: Adaptive strategy switching
+- **Ensemble Strategy**: Combining multiple strategies
+
+### Strategy Customization
+
+#### Parameter Tuning
+```python
+# Example strategy configuration
+strategy_config = {
+    name': 'Custom_RSI_Strategy,
+  parameters': [object Object]       rsi_period': 14
+  oversold_threshold': 30   overbought_threshold': 70,
+        position_size': 0.1       stop_loss: 00.05
+       take_profit:0.10
+    },
+    risk_management': {
+        max_position_size':00.2        max_daily_loss: 00.02,
+        cooling_period':300
+    }
+}
+```
+
+#### Custom Strategy Creation
+```python
+# Natural language strategy creation
+Create a momentum strategy that:
+- Uses20 and 50-day moving averages
+- Buys when price crosses above both MAs
+- Sells when price crosses below 20-day MA
+- Includes 2% stop loss and 6% take profit
+- Only trades during market hours"
+```
+
+#### Strategy Optimization
+- **Grid Search**: Systematic parameter exploration
+- **Bayesian Optimization**: Efficient hyperparameter tuning
+- **Genetic Algorithm**: Evolutionary strategy optimization
+- **Walk-Forward Validation**: Robust out-of-sample testing
+
+## 🔄 How Prompt Routing Works
+
+The Evolve platform uses an intelligent **multi-layer routing system** that processes natural language requests and routes them to the most appropriate components:
+
+### Routing Flow Architecture
 
 ```
-Evolve AI Trading Platform
-├── app.py                          # Main Streamlit application
-├── pages/                          # Modular page components
-│   ├── Forecasting.py             # Forecasting dashboard
-│   ├── Strategy_Lab.py            # Strategy development & testing
-│   ├── Model_Lab.py               # Model creation & management
-│   └── Reports.py                 # Performance & risk reports
-├── trading/                        # Core trading engine
-│   ├── agents/                     # AI agents and automation
-│   ├── strategies/                 # Trading strategy implementations
-│   ├── models/                     # ML model implementations
-│   ├── data/                       # Data providers and feeds
-│   ├── execution/                  # Trade execution engine
-│   ├── risk/                       # Risk management system
-│   └── optimization/               # Strategy optimization
-├── models/                         # Model registry and routing
-├── utils/                          # Utility functions
-└── config/                         # Configuration management
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   User Prompt   │───▶│   LLM Parser    │───▶│  Intent Router  │
+│                 │    │                 │    │                 │
+│Forecast AAPL  │    │ • OpenAI GPT-4  │    │ • Request Type  │
+│  using LSTM"    │    │ • Local Models  │    │ • Confidence    │
+│                 │    │ • Regex Fallback│    │ • Priority      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                       │
+                                                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Model Router  │◀───│  Strategy Router│◀───│  Agent Router   │
+│                 │    │                 │    │                 │
+│ • LSTM Model    │    │ • RSI Strategy  │    │ • Forecast Agent│
+│ • Prophet Model │    │ • MACD Strategy │    │ • Strategy Agent│
+│ • XGBoost Model │    │ • Custom Logic  │    │ • Analysis Agent│
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Backtest      │    │   Optimization  │    │   Risk Engine   │
+│   Engine        │    │   Engine        │    │                 │
+│                 │    │                 │    │                 │
+│ • Performance   │    │ • Hyperparameter│    │ • VaR/CVaR      │
+│ • Metrics       │    │ • Walk-Forward  │    │ • Position Size │
+│ • Visualization │    │ • Regime Detect │    │ • Stop Loss     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 ▼
+                        ┌─────────────────┐
+                        │   UI Dashboard  │
+                        │                 │
+                        │ • Results       │
+                        │ • Charts        │
+                        │ • Reports       │
+                        │ • Controls      │
+                        └─────────────────┘
 ```
 
-## 🚀 Quick Start
+### Routing Components
+
+####1 **LLM Parser** (`agents/llm/agent.py`)
+- **OpenAI GPT-4**: Primary parser for complex requests
+- **Local Models**: HuggingFace models for privacy
+- **Regex Fallback**: Fast pattern matching for simple requests
+
+#### 2 **Intent Router** (`routing/prompt_router.py`)
+- **Request Classification**: Forecast, Strategy, Analysis, Optimization
+- **Confidence Scoring**: Determines routing reliability
+- **Priority Assignment**: Handles urgent vs. background tasks
+
+#### 3. **Strategy Router** (`trading/strategies/strategy_router.py`)
+- **Keyword Matching**: Identifies strategy preferences
+- **Relevance Scoring**: Calculates strategy fit
+- **Fallback Logic**: Ensures always has a strategy
+
+####4. **Model Router** (`trading/models/forecast_router.py`)
+- **Data Analysis**: Analyzes time series characteristics
+- **Model Selection**: Chooses best model for data
+- **Performance History**: Uses past performance for selection
+
+####5. **Agent Router** (`trading/agents/prompt_router_agent.py`)
+- **Agent Registry**: Maps intents to available agents
+- **Load Balancing**: Distributes requests across agents
+- **Health Monitoring**: Routes away from failed agents
+
+### Example Routing Flow
+
+```
+User: Create a momentum strategy for TSLA with5 stop loss"
+
+1M Parser: Extracts intent=strategy", symbol="TSLA", type="momentum, stop_loss=0.052tent Router: Classifies as STRATEGY request, confidence=0.95
+3. Strategy Router: Matches momentum → MACD_Strategy, relevance=0.88del Router: Selects LSTM for TSLA (good for tech stocks)
+5. Agent Router: Routes to StrategyAgent with StrategyOptimizationAgent as backup
+6. Backtest Engine: Runs strategy with historical data
+7. Risk Engine: Applies 5% stop loss and position sizing
+8. UI Dashboard: Displays results with charts and metrics
+```
+
+## 🚀 Deployment Instructions
 
 ### Prerequisites
-- Python 3.9+
-- 8GB+ RAM (16GB+ recommended)
-- GPU support (optional, for deep learning models)
+- **Python 3.9+** (3.10 recommended)
+- **8GB+ RAM** (16GB+ for large datasets)
+- **GPU support** (optional, for deep learning models)
+- **Redis** (optional, for caching and coordination)
 
-### Installation
+### Quick Start
 
 1. **Clone the repository**
    ```bash
@@ -71,8 +214,8 @@ Evolve AI Trading Platform
 
 2. **Create virtual environment**
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
 3. **Install dependencies**
@@ -82,7 +225,7 @@ Evolve AI Trading Platform
 
 4. **Set up environment variables**
    ```bash
-   cp env.example .env
+   cp .env.example .env
    # Edit .env with your API keys
    ```
 
@@ -92,7 +235,9 @@ Evolve AI Trading Platform
    ```
 
 ### Environment Variables
+
 Create a `.env` file with the following variables:
+
 ```env
 # Data Provider API Keys
 ALPHA_VANTAGE_API_KEY=your_key_here
@@ -105,300 +250,169 @@ OPENAI_API_KEY=your_key_here
 # System Configuration
 EVOLVE_DEV_MODE=0
 LOG_LEVEL=INFO
-```
-
-## 📖 Usage Guide
-
-### Natural Language Interface
-
-The platform features a ChatGPT-like interface where you can ask questions in natural language:
-
-**Forecasting Examples:**
-- "Show me the best forecast for AAPL"
-- "Create a neural network for cryptocurrency prediction"
-- "Generate a 30-day forecast using ensemble methods"
-
-**Strategy Examples:**
-- "Switch to RSI strategy and optimize it"
-- "Test Bollinger Bands strategy on TSLA"
-- "Create a custom strategy for high volatility markets"
-
-**Analysis Examples:**
-- "Generate a performance report for my portfolio"
-- "Analyze risk metrics for the last 6 months"
-- "Compare strategy performance across different market regimes"
-
-### Dashboard Navigation
-
-1. **Home & Chat**: Main interface for natural language interactions
-2. **Forecasting**: Generate price forecasts with multiple models
-3. **Strategy Lab**: Develop, test, and optimize trading strategies
-4. **Model Lab**: Create and manage AI models
-5. **Reports**: Generate comprehensive performance and risk reports
-
-### Advanced Features
-
-#### Dynamic Model Creation
-```python
-# Natural language model creation
-"Create a deep learning model for cryptocurrency price prediction 
-that can handle high volatility and multiple timeframes"
-```
-
-#### Strategy Optimization
-- **Grid Search**: Systematic parameter exploration
-- **Bayesian Optimization**: Efficient hyperparameter tuning
-- **Genetic Algorithm**: Evolutionary strategy optimization
-- **Random Search**: Stochastic parameter sampling
-
-#### Risk Management
-- **Portfolio Optimization**: Modern portfolio theory implementation
-- **Risk Metrics**: VaR, CVaR, Sharpe ratio, maximum drawdown
-- **Stress Testing**: Scenario analysis and stress testing
-- **Position Sizing**: Kelly criterion and risk-based sizing
-
-## 🔧 Configuration
-
-### Model Configuration
-Models can be configured through the Model Lab interface or programmatically:
-
-```python
-# Example model configuration
-model_config = {
-    'name': 'Custom_LSTM',
-    'type': 'LSTM',
-    'parameters': {
-        'layers': 3,
-        'units': 128,
-        'dropout': 0.2,
-        'learning_rate': 0.001
-    },
-    'training': {
-        'epochs': 100,
-        'batch_size': 32,
-        'validation_split': 0.2
-    }
-}
-```
-
-### Strategy Configuration
-Strategies can be customized with various parameters:
-
-```python
-# Example strategy configuration
-strategy_config = {
-    'name': 'RSI_Mean_Reversion',
-    'parameters': {
-        'rsi_period': 14,
-        'oversold_threshold': 30,
-        'overbought_threshold': 70,
-        'position_size': 0.1
-    },
-    'risk_management': {
-        'stop_loss': 0.05,
-        'take_profit': 0.10,
-        'max_position_size': 0.2
-    }
-}
-```
-
-## 📊 Performance Metrics
-
-The platform provides comprehensive performance metrics:
-
-### Forecasting Metrics
-- **RMSE**: Root Mean Square Error
-- **MAE**: Mean Absolute Error
-- **MAPE**: Mean Absolute Percentage Error
-- **Directional Accuracy**: Correct direction prediction rate
-
-### Trading Metrics
-- **Sharpe Ratio**: Risk-adjusted returns
-- **Sortino Ratio**: Downside risk-adjusted returns
-- **Calmar Ratio**: Return vs maximum drawdown
-- **Win Rate**: Percentage of profitable trades
-- **Profit Factor**: Gross profit / gross loss
-- **Maximum Drawdown**: Largest peak-to-trough decline
-
-### Risk Metrics
-- **VaR (95%)**: Value at Risk at 95% confidence
-- **CVaR (95%)**: Conditional Value at Risk
-- **Beta**: Market correlation measure
-- **Alpha**: Excess return vs benchmark
-- **Information Ratio**: Active return efficiency
-
-## 🚀 Deployment
-
-### Local Development
-```bash
-# Development mode with hot reload
-streamlit run app.py --server.port 8501 --server.address localhost
+REDIS_URL=redis://localhost:6379
 ```
 
 ### Production Deployment
 
 #### Docker Deployment
 ```bash
-# Build Docker image
+# Build the image
 docker build -t evolve-trading .
 
-# Run container
-docker run -p 8501:8501 -e ALPHA_VANTAGE_API_KEY=your_key evolve-trading
+# Run with environment variables
+docker run -p 851:8501 \
+  -e ALPHA_VANTAGE_API_KEY=your_key \
+  -e OPENAI_API_KEY=your_key \
+  evolve-trading
+```
+
+#### Kubernetes Deployment
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evolve-trading
+spec:
+  replicas:3elector:
+    matchLabels:
+      app: evolve-trading
+  template:
+    metadata:
+      labels:
+        app: evolve-trading
+    spec:
+      containers:
+      - name: evolve-trading
+        image: evolve-trading:latest
+        ports:
+        - containerPort: 8501      env:
+        - name: ALPHA_VANTAGE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-keys
+              key: alpha-vantage
 ```
 
 #### Cloud Deployment
-The platform can be deployed on various cloud platforms:
 
-- **Heroku**: Use the provided Procfile
-- **AWS**: Deploy using AWS ECS or EC2
-- **Google Cloud**: Use Cloud Run or Compute Engine
-- **Azure**: Deploy using Azure Container Instances
-
-### Scaling Considerations
-- **Horizontal Scaling**: Multiple instances behind load balancer
-- **Database**: Use PostgreSQL or MongoDB for production
-- **Caching**: Redis for session and model caching
-- **Monitoring**: Prometheus and Grafana for metrics
-
-## 🔒 Security
-
-### API Security
-- API key management and rotation
-- Rate limiting and request throttling
-- Input validation and sanitization
-- HTTPS enforcement
-
-### Data Security
-- Encrypted data storage
-- Secure API communication
-- User authentication and authorization
-- Audit logging
-
-## 🧪 Testing
-
-### Running Tests
+**AWS (ECS/Fargate)**
 ```bash
-# Run all tests
-pytest
-
-# Run specific test categories
-pytest tests/unit/
-pytest tests/integration/
-pytest tests/performance/
-
-# Generate coverage report
-pytest --cov=evolve --cov-report=html
+# Deploy to ECS
+aws ecs create-service \
+  --cluster evolve-cluster \
+  --service-name evolve-trading \
+  --task-definition evolve-trading:1 \
+  --desired-count 2
 ```
 
-### Test Categories
-- **Unit Tests**: Individual component testing
-- **Integration Tests**: End-to-end workflow testing
-- **Performance Tests**: Load and stress testing
-- **Security Tests**: Vulnerability and penetration testing
-
-## 📈 Performance Benchmarks
-
-### Model Performance
-| Model | Accuracy | RMSE | Training Time |
-|-------|----------|------|---------------|
-| LSTM | 87.2% | 0.023 | 15 min |
-| Transformer | 89.1% | 0.021 | 25 min |
-| XGBoost | 85.3% | 0.025 | 5 min |
-| Ensemble | 92.4% | 0.019 | 45 min |
-
-### Strategy Performance
-| Strategy | Sharpe Ratio | Win Rate | Max Drawdown |
-|----------|--------------|----------|--------------|
-| RSI Mean Reversion | 1.2 | 65% | 8% |
-| MACD Crossover | 1.1 | 58% | 12% |
-| Bollinger Bands | 1.1 | 62% | 10% |
-| Ensemble Strategy | 1.4 | 70% | 8% |
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-1. **Import Errors**
-   ```bash
-   # Ensure all dependencies are installed
-   pip install -r requirements.txt
-   ```
-
-2. **API Key Issues**
-   ```bash
-   # Check environment variables
-   echo $ALPHA_VANTAGE_API_KEY
-   ```
-
-3. **Memory Issues**
-   ```bash
-   # Increase memory limit for Streamlit
-   streamlit run app.py --server.maxUploadSize 200
-   ```
-
-4. **Model Training Issues**
-   - Check GPU availability
-   - Reduce batch size
-   - Use smaller model architectures
-
-### Debug Mode
-Enable debug mode for detailed logging:
+**Google Cloud (GKE)**
 ```bash
-export EVOLVE_DEV_MODE=1
-streamlit run app.py
+# Deploy to GKE
+gcloud container clusters create evolve-cluster \
+  --num-nodes=3 \
+  --machine-type=e2-standard-4
+
+kubectl apply -f k8s/deployment.yaml
+```
+
+### Monitoring & Logging
+
+#### Health Checks
+```bash
+# Check system health
+curl http://localhost:851lth
+
+# Check agent status
+curl http://localhost:8501/api/agents/status
+```
+
+#### Logging Configuration
+```python
+# Configure logging
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s,handlers=[
+        logging.FileHandler('logs/evolve.log'),
+        logging.StreamHandler()
+    ]
+)
+```
+
+## 📊 Usage Examples
+
+### Forecasting
+```python
+# Natural language forecasting
+Forecast AAPL for the next 30 days using LSTM
+e a neural network for cryptocurrency prediction"
+Generate a 30-day forecast using ensemble methods"
+```
+
+### Strategy Development
+```python
+# Strategy creation and optimization
+"Switch to RSI strategy and optimize it"Test Bollinger Bands strategy on TSLA
+ a custom strategy for high volatility markets"
+```
+
+### Analysis & Reporting
+```python
+# Performance analysis
+"Generate a performance report for my portfolio"
+"Analyze risk metrics for the last 6Compare strategy performance across different market regimes"
+```
+
+## 🔧 Configuration
+
+### Model Configuration
+```python
+model_config = {
+   name:Custom_LSTM',
+  type': 'LSTM,
+  parameters':[object Object]
+   layers':3,
+    units': 128,
+      dropout': 0.2,
+        learning_rate': 0.001  },
+training':[object Object]
+     epochs': 10       batch_size': 32,
+       validation_split':02
+```
+
+### Strategy Configuration
+```python
+strategy_config = [object Object]
+    name': 'RSI_Mean_Reversion,
+  parameters': [object Object]       rsi_period': 14
+  oversold_threshold': 30   overbought_threshold': 70,
+        position_size': 0.1
+    },
+    risk_management: {       stop_loss: 00.05
+       take_profit:0.1     max_position_size':00.2    }
+}
 ```
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### Development Setup
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-### Code Style
-- Follow PEP 8 guidelines
-- Use type hints
-- Add docstrings
-- Write unit tests
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature`)
+4.Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🆘 Support
 
-- Streamlit for the web framework
-- Plotly for interactive visualizations
-- Scikit-learn for machine learning tools
-- PyTorch for deep learning
-- The open-source community for various libraries
-
-## 📞 Support
-
-- **Documentation**: [docs.evolve-trading.com](https://docs.evolve-trading.com)
+- **Documentation**: [docs/](docs/)
 - **Issues**: [GitHub Issues](https://github.com/your-org/evolve-trading/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/your-org/evolve-trading/discussions)
 - **Email**: support@evolve-trading.com
 
-## 🔄 Changelog
-
-### Version 1.0.0 (2024-01-01)
-- Initial release
-- Natural language interface
-- Dynamic model creation
-- Strategy optimization
-- Comprehensive reporting
-
-### Version 1.1.0 (2024-02-01)
-- Enhanced model synthesis
-- Advanced risk management
-- Performance improvements
-- Bug fixes and stability
-
 ---
 
-**Evolve AI Trading Platform** - Professional Trading Intelligence powered by AI 
+**Evolve AI Trading Platform** - Transforming natural language into sophisticated trading intelligence. 🚀 

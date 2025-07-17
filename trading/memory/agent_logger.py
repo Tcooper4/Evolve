@@ -449,7 +449,7 @@ class AgentLogger:
                         log_entry.level.value,
                         log_entry.message,
                         json.dumps(log_entry.data),
-                        json.dumps(log_entry.context.to_dict()),
+                        json.dumps(enum_to_value(log_entry.context)),
                         log_entry.session_id,
                         log_entry.user_id,
                         json.dumps(log_entry.performance_metrics)
@@ -834,6 +834,22 @@ class AgentLogger:
                 else None,
                 "dependencies": context.dependencies,
             }
+
+
+def enum_to_value(obj):
+    """Recursively convert enums in a dict (or dataclass) to their .value for JSON serialization."""
+    if isinstance(obj, dict):
+        return {k: enum_to_value(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [enum_to_value(i) for i in obj]
+    elif isinstance(obj, tuple):
+        return tuple(enum_to_value(i) for i in obj)
+    elif hasattr(obj, "__dataclass_fields__"):
+        return enum_to_value(asdict(obj))
+    elif isinstance(obj, Enum):
+        return obj.value
+    else:
+        return obj
 
 
 # --- Global Agent Logger Instance ---

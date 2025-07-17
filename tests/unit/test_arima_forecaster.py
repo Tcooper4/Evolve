@@ -25,7 +25,7 @@ except ImportError:
     ARIMAModel = Mock()
 
 
-class TestARIMAForecaster:
+class TestARIMAModel:
     """Test suite for ARIMA forecaster model."""
 
     @pytest.fixture

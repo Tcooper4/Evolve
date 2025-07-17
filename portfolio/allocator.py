@@ -22,7 +22,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Local imports
-from utils.cache_utils import cache_result
+from utils.cache_utils import cache_model_operation
 from utils.common_helpers import safe_json_save, load_config
 
 

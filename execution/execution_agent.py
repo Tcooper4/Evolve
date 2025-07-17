@@ -26,7 +26,7 @@ import uuid
 from decimal import Decimal, ROUND_HALF_UP
 
 # Local imports
-from utils.cache_utils import cache_result
+from utils.cache_utils import cache_model_operation
 from utils.common_helpers import safe_json_save, load_config
 from .broker_adapter import BrokerAdapter, OrderType, OrderSide, OrderStatus
 

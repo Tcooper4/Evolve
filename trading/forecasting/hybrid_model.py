@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 class HybridModel:
     """
     Hybrid ensemble model that tracks model performance, auto-updates weights, and persists state.
+    Uses comprehensive scoring based on Sharpe ratio, drawdown, and win rate instead of MSE.
     """
     def __init__(self, model_dict: Dict[str, Any], weight_file: str = "hybrid_weights.json", perf_file: str = "hybrid_performance.json"):
         """
@@ -24,7 +25,19 @@ class HybridModel:
         self.weight_file = weight_file
         self.perf_file = perf_file
         self.weights = {name: 1.0 / len(model_dict) for name in model_dict}
-        self.performance = {name: [] for name in model_dict}  # List of recent MSEs
+        self.performance = {name: [] for name in model_dict}  # List of recent performance metrics
+        self.scoring_config = {
+            "method": "weighted_average",  # "weighted_average", "ahp", "composite"
+            "metrics": {
+                "sharpe_ratio": {"weight": 0.4, "direction": "maximize"},
+                "win_rate": {"weight": 0.3, "direction": "maximize"},
+                "max_drawdown": {"weight": 0.2, "direction": "minimize"},
+                "mse": {"weight": 0.1, "direction": "minimize"},
+                "total_return": {"weight": 0.0, "direction": "maximize"} # Added total_return
+            },
+            "min_performance_threshold": 0.1,  # Minimum performance to avoid zero weights
+            "recency_weight": 0.7 # Weight for recent vs historical performance
+        }
         self.load_state()
 
     def fit(self, data: pd.DataFrame, window: int = 50):
@@ -34,10 +47,13 @@ class HybridModel:
                 model.fit(data)
                 preds = model.predict(data)
                 actual = data["close"].values[-len(preds):]
-                mse = float(np.mean((actual - preds) ** 2))
+                
+                # Calculate comprehensive performance metrics
+                performance_metrics = self._calculate_performance_metrics(actual, preds, data)
+                
                 self.performance[name].append({
                     "timestamp": datetime.now().isoformat(),
-                    "mse": mse
+                    **performance_metrics
                 })
                 # Keep only trailing window
                 self.performance[name] = self.performance[name][-window:]
@@ -45,23 +61,356 @@ class HybridModel:
                 logger.warning(f"Model {name} failed to fit or predict: {e}")
                 self.performance[name].append({
                     "timestamp": datetime.now().isoformat(),
-                    "mse": float('inf')
+                    "sharpe_ratio": -1.0,
+                    "win_rate": 0.0,
+                    "max_drawdown": -1.0,
+                    "mse": float('inf'),
+                    "total_return": -10
                 })
         self.save_state()
         self.update_weights()
 
+    def _calculate_performance_metrics(self, actual: np.ndarray, preds: np.ndarray, data: pd.DataFrame) -> Dict[str, float]:
+        """Calculate comprehensive performance metrics for model evaluation."""
+        try:
+            # Ensure arrays are the same length
+            min_len = min(len(actual), len(preds))
+            actual = actual[-min_len:]
+            preds = preds[-min_len:]
+            
+            # Calculate returns
+            actual_returns = np.diff(actual) / actual[:-1]
+            pred_returns = np.diff(preds) / preds[:-1]
+            
+            # Sharpe Ratio
+            sharpe_ratio = self._calculate_sharpe_ratio(actual_returns, pred_returns)
+            
+            # Win Rate
+            win_rate = self._calculate_win_rate(actual_returns, pred_returns)
+            
+            # Maximum Drawdown
+            max_drawdown = self._calculate_max_drawdown(actual_returns, pred_returns)
+            
+            # MSE (keeping for backward compatibility)
+            mse = float(np.mean((actual - preds) **2))
+            # Total Return
+            total_return = self._calculate_total_return(actual_returns, pred_returns)
+            
+            return {
+                "sharpe_ratio": sharpe_ratio,
+                "win_rate": win_rate,
+                "max_drawdown": max_drawdown,
+                "mse": mse,
+                "total_return": total_return
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating performance metrics: {e}")
+            return {
+                "sharpe_ratio": -1.0,
+                "win_rate": 0.0,
+                "max_drawdown": -1.0,
+                "mse": float('inf'),
+                "total_return": -10
+            }
+
+    def _calculate_sharpe_ratio(self, actual_returns: np.ndarray, pred_returns: np.ndarray) -> float:
+        """Calculate Sharpe ratio based on prediction accuracy."""
+        try:
+            # Calculate strategy returns (assuming we follow predictions)
+            strategy_returns = actual_returns * np.sign(pred_returns)
+            
+            # Remove NaN values
+            strategy_returns = strategy_returns[~np.isnan(strategy_returns)]
+            
+            if len(strategy_returns) == 0:
+                return -1.0
+            # Calculate Sharpe ratio (annualized)
+            mean_return = np.mean(strategy_returns)
+            std_return = np.std(strategy_returns)
+            
+            if std_return == 0:
+                return 0.0
+            # Annualize (assuming daily data)
+            sharpe_ratio = (mean_return / std_return) * np.sqrt(252)
+            return float(sharpe_ratio)
+            
+        except Exception as e:
+            logger.error(f"Error calculating Sharpe ratio: {e}")
+            return -1.0
+
+    def _calculate_win_rate(self, actual_returns: np.ndarray, pred_returns: np.ndarray) -> float:
+        """Calculate win rate based on prediction accuracy."""
+        try:
+            # Calculate strategy returns
+            strategy_returns = actual_returns * np.sign(pred_returns)
+            
+            # Remove NaN values
+            strategy_returns = strategy_returns[~np.isnan(strategy_returns)]
+            
+            if len(strategy_returns) == 0:
+                return 0.0
+            # Count positive returns (wins)
+            wins = np.sum(strategy_returns > 0)
+            total_trades = len(strategy_returns)
+            
+            win_rate = wins / total_trades if total_trades > 0 else 0.0
+            return float(win_rate)
+            
+        except Exception as e:
+            logger.error(f"Error calculating win rate: {e}")
+            return 0.0
+
+    def _calculate_max_drawdown(self, actual_returns: np.ndarray, pred_returns: np.ndarray) -> float:
+        """Calculate maximum drawdown based on prediction accuracy."""
+        try:
+            # Calculate strategy returns
+            strategy_returns = actual_returns * np.sign(pred_returns)
+            
+            # Remove NaN values
+            strategy_returns = strategy_returns[~np.isnan(strategy_returns)]
+            
+            if len(strategy_returns) == 0:
+                return -1.0
+            # Calculate cumulative returns
+            cumulative_returns = np.cumprod(1 + strategy_returns)
+            
+            # Calculate running maximum
+            running_max = np.maximum.accumulate(cumulative_returns)
+            
+            # Calculate drawdown
+            drawdown = (cumulative_returns - running_max) / running_max
+            
+            # Get maximum drawdown
+            max_drawdown = np.min(drawdown)
+            
+            return float(max_drawdown)
+            
+        except Exception as e:
+            logger.error(f"Error calculating max drawdown: {e}")
+            return -1.0
+
+    def _calculate_total_return(self, actual_returns: np.ndarray, pred_returns: np.ndarray) -> float:
+        """Calculate total return based on prediction accuracy."""
+        try:
+            # Calculate strategy returns
+            strategy_returns = actual_returns * np.sign(pred_returns)
+            
+            # Remove NaN values
+            strategy_returns = strategy_returns[~np.isnan(strategy_returns)]
+            
+            if len(strategy_returns) == 0:
+                return -1.0
+            # Calculate total return
+            total_return = np.prod(1 + strategy_returns) - 1
+            
+            return float(total_return)
+            
+        except Exception as e:
+            logger.error(f"Error calculating total return: {e}")
+            return -1.0
+
     def update_weights(self):
-        """Auto-update ensemble weights based on trailing MSE performance."""
-        avg_mse = {name: np.mean([entry["mse"] for entry in perf if np.isfinite(entry["mse"])])
-                   for name, perf in self.performance.items()}
-        # Inverse MSE weighting
-        inv_mse = {name: 1.0 / mse if mse > 0 else 0.0 for name, mse in avg_mse.items()}
-        total = sum(inv_mse.values())
-        if total > 0:
-            self.weights = {name: val / total for name, val in inv_mse.items()}
-        else:
+        """Auto-update ensemble weights based on comprehensive performance metrics."""
+        try:
+            if self.scoring_config["method"] == "weighted_average":
+                self.weights = self._calculate_weighted_average_weights()
+            elif self.scoring_config["method"] == "ahp":
+                self.weights = self._calculate_ahp_weights()
+            elif self.scoring_config["method"] == "composite":
+                self.weights = self._calculate_composite_weights()
+            else:
+                logger.warning(f"Unknown scoring method: {self.scoring_config['method']}, using weighted average")
+                self.weights = self._calculate_weighted_average_weights()
+            
+            self.save_state()
+            
+        except Exception as e:
+            logger.error(f"Error updating weights: {e}")
+            # Fallback to equal weights
             self.weights = {name: 1.0 / len(self.models) for name in self.models}
-        self.save_state()
+
+    def _calculate_weighted_average_weights(self) -> Dict[str, float]:
+        """Calculate weights using weighted average of performance metrics."""
+        model_scores = {}
+        
+        for name, perf_list in self.performance.items():
+            if not perf_list:
+                model_scores[name] = 0.0
+                continue
+            
+            # Calculate average metrics over recent performance
+            recent_perf = perf_list[-10:]  # Last 10 performance records
+            
+            avg_metrics = {}
+            for metric in ["sharpe_ratio", "win_rate", "max_drawdown", "mse", "total_return"]:
+                values = [p.get(metric, 0.0) for p in recent_perf if p.get(metric) is not None]
+                if values:
+                    avg_metrics[metric] = np.mean(values)
+                else:
+                    avg_metrics[metric] = 0.0
+            # Calculate composite score
+            score = 0.0
+            for metric, config in self.scoring_config["metrics"].items():
+                if metric in avg_metrics:
+                    value = avg_metrics[metric]
+                    
+                    # Normalize and apply direction
+                    if config["direction"] == "maximize":
+                        normalized_value = max(0, min(1, value))  # Clamp to [0, 1]
+                    else:  # minimize
+                        if metric == "max_drawdown":
+                            normalized_value = max(0, min(1, 1 + value))  # Drawdown is negative
+                        else:
+                            normalized_value = max(0, min(1, 1 / (1 + value)))  # Inverse for minimization
+                    
+                    score += config["weight"] * normalized_value
+            
+            # Apply minimum performance threshold
+            if score < self.scoring_config["min_performance_threshold"]:
+                score = self.scoring_config["min_performance_threshold"]
+            
+            model_scores[name] = score
+        
+        # Normalize weights
+        total_score = sum(model_scores.values())
+        if total_score > 0:
+            weights = {name: score / total_score for name, score in model_scores.items()}
+        else:
+            # Equal weights if no positive scores
+            weights = {name: 1.0 / len(self.models) for name in self.models}
+        
+        return weights
+
+    def _calculate_ahp_weights(self) -> Dict[str, float]:
+        """Calculate weights using Analytic Hierarchy Process (AHP)."""
+        # This is a simplified AHP implementation
+        # In a full implementation, you would use pairwise comparisons
+        
+        # For now, we'll use a simplified version based on performance ranking
+        model_rankings = {}
+        
+        for name, perf_list in self.performance.items():
+            if not perf_list:
+                model_rankings[name] = 0.0
+                continue
+            
+            # Calculate average Sharpe ratio as primary ranking metric
+            recent_perf = perf_list[-10:]
+            sharpe_values = [p.get("sharpe_ratio", -1.0) for p in recent_perf if p.get("sharpe_ratio") is not None]
+            
+            if sharpe_values:
+                avg_sharpe = np.mean(sharpe_values)
+                model_rankings[name] = max(0, avg_sharpe)  # Ensure non-negative
+            else:
+                model_rankings[name] = 0.0        
+        # Convert rankings to weights using exponential weighting
+        max_ranking = max(model_rankings.values()) if model_rankings else 1.0
+        if max_ranking > 0:
+            weights = {name: np.exp(ranking / max_ranking) for name, ranking in model_rankings.items()}
+        else:
+            weights = {name: 1.0 for name in model_rankings.keys()}
+        
+        # Normalize weights
+        total_weight = sum(weights.values())
+        if total_weight > 0:
+            weights = {name: weight / total_weight for name, weight in weights.items()}
+        else:
+            weights = {name: 1.0 / len(self.models) for name in self.models}
+        
+        return weights
+
+    def _calculate_composite_weights(self) -> Dict[str, float]:
+        """Calculate weights using a composite scoring system."""
+        model_scores = {}
+        
+        for name, perf_list in self.performance.items():
+            if not perf_list:
+                model_scores[name] = 0.0
+                continue
+            
+            # Get recent performance
+            recent_perf = perf_list[-5:]  # Last 5 performance records
+            
+            # Calculate trend-adjusted scores
+            sharpe_trend = self._calculate_trend([p.get("sharpe_ratio", -1.0) for p in recent_perf])
+            win_rate_trend = self._calculate_trend([p.get("win_rate", 0.0) for p in recent_perf])
+            
+            # Base score from latest performance
+            latest = recent_perf[-1]
+            base_score = (
+                0.4 * max(0, latest.get("sharpe_ratio", -1.0)) +
+                0.3 * latest.get("win_rate", 0.0) +
+                0.2 * max(0, 1 + latest.get("max_drawdown", -10)) +  # Drawdown is negative
+                0.1 * max(0, 1 / (1 + latest.get("mse", float('inf'))))
+            )
+            
+            # Trend adjustment
+            trend_adjustment = (sharpe_trend + win_rate_trend) / 2
+            
+            # Final score
+            final_score = base_score * (1.0 + 0.2 * trend_adjustment)  # 20% adjustment
+            
+            model_scores[name] = max(self.scoring_config["min_performance_threshold"], final_score)
+        
+        # Normalize weights
+        total_score = sum(model_scores.values())
+        if total_score > 0:
+            weights = {name: score / total_score for name, score in model_scores.items()}
+        else:
+            weights = {name: 1.0 / len(self.models) for name in self.models}
+        
+        return weights
+
+    def _calculate_trend(self, values: List[float]) -> float:
+        """Calculate trend of a series of values."""
+        if len(values) < 2:
+            return 0.0      
+        try:
+            # Simple linear trend calculation
+            x = np.arange(len(values))
+            slope = np.polyfit(x, values, 1)[0]
+            
+            # Normalize trend to [-1, 1] range
+            max_change = max(values) - min(values) if max(values) != min(values) else 1.0
+            normalized_trend = slope / max_change if max_change > 0 else 0.0
+            return np.clip(normalized_trend, -1.0, 1.0)
+        except Exception as e:
+            logger.error(f"Error calculating trend: {e}")
+            return 0.0
+
+    def set_scoring_config(self, config: Dict[str, Any]):
+        """Update the scoring configuration."""
+        self.scoring_config.update(config)
+        logger.info(f"Updated scoring config: {self.scoring_config}")
+
+    def get_model_performance_summary(self) -> Dict[str, Any]:
+        """Provide a summary of model performance for analysis."""
+        summary = {}
+        
+        for name, perf_list in self.performance.items():
+            if not perf_list:
+                summary[name] = {"status": "no_data"}
+                continue
+            
+            recent_perf = perf_list[-10:]  # Last 10 records
+            
+            # Calculate averages
+            avg_metrics = {}
+            for metric in ["sharpe_ratio", "win_rate", "max_drawdown", "mse", "total_return"]:
+                values = [p.get(metric, 0.0) for p in recent_perf if p.get(metric) is not None]
+                if values:
+                    avg_metrics[metric] = np.mean(values)
+                else:
+                    avg_metrics[metric] = 0.0
+            summary[name] = {
+                "status": "active",
+                "current_weight": self.weights.get(name, 0.0),
+                "avg_metrics": avg_metrics,
+                "performance_count": len(perf_list)
+            }
+        
+        return summary
 
     def predict(self, data: pd.DataFrame) -> np.ndarray:
         """Weighted ensemble prediction with fallback for None/mismatched forecasts."""
@@ -124,8 +473,7 @@ class HybridModel:
         
         # Calculate weighted ensemble
         weighted = np.zeros(min_len)
-        total_weight = 0.0
-        
+        total_weight = 0.0      
         for name, pred in aligned_preds:
             weight = self.weights.get(name, 0.0)
             if weight > 0:

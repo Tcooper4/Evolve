@@ -24,6 +24,7 @@ import pandas as pd
 from trading.backtesting.performance_analysis import PerformanceAnalyzer
 from trading.backtesting.position_sizing import PositionSizing, PositionSizingEngine
 from trading.backtesting.risk_metrics import RiskMetricsEngine
+from trading.backtesting.cost_model import CostModel, CostConfig, get_retail_cost_config
 
 # Local imports
 from trading.backtesting.trade_models import Trade, TradeType
@@ -57,6 +58,7 @@ class Backtester:
         enable_fractional_sizing: bool = True,
         slippage_model: str = "fixed",  # "fixed", "proportional", "dynamic"
         transaction_cost_model: str = "bps",  # "fixed", "bps", "tiered"
+        cost_model: Optional[CostModel] = None,  # New argument
     ):
         """Initialize backtester.
 
@@ -122,6 +124,8 @@ class Backtester:
         self.performance_analyzer = PerformanceAnalyzer()
         self.visualizer = BacktestVisualizer()
 
+        self.cost_model = cost_model if cost_model is not None else CostModel(get_retail_cost_config(), data)
+
         # Setup logging
         self._setup_logging()
 
@@ -164,57 +168,75 @@ class Backtester:
             # Round to whole shares
             return int(base_size)
     
-    def _calculate_slippage(self, price: float, quantity: float, trade_type: str) -> float:
-        """Calculate slippage based on the specified model.
-        
-        Args:
-            price: Current price
-            quantity: Trade quantity
-            trade_type: "buy" or "sell"
-            
-        Returns:
-            Slippage amount
-        """
-        if self.slippage_model == "fixed":
-            return self.slippage
-        elif self.slippage_model == "proportional":
-            # Proportional to trade size
-            return self.slippage * (quantity * price / 10000)  # Base on $10k trade
-        elif self.slippage_model == "dynamic":
-            # Dynamic based on volatility
-            volatility = self.data[asset].pct_change().rolling(20).std().iloc[-1]
-            return self.slippage * (1 + volatility * 10)
-        else:
-            return self.slippage
-    
-    def _calculate_transaction_cost(self, price: float, quantity: float) -> float:
-        """Calculate transaction costs based on the specified model.
-        
-        Args:
-            price: Trade price
-            quantity: Trade quantity
-            
-        Returns:
-            Transaction cost amount
-        """
-        trade_value = price * quantity
-        
-        if self.transaction_cost_model == "fixed":
-            return self.transaction_cost
-        elif self.transaction_cost_model == "bps":
-            # Basis points (e.g., 10 bps = 0.1%)
-            return trade_value * self.transaction_cost
-        elif self.transaction_cost_model == "tiered":
-            # Tiered structure
-            if trade_value < 10000:
-                return max(1.0, trade_value * 0.001)  # $1 minimum, 0.1%
-            elif trade_value < 100000:
-                return trade_value * 0.0005  # 0.05%
-            else:
-                return trade_value * 0.0002  # 0.02%
-        else:
-            return trade_value * self.transaction_cost
-    
+    def execute_trade(
+        self,
+        timestamp: datetime,
+        asset: str,
+        quantity: float,
+        price: float,
+        trade_type: TradeType,
+        strategy: str,
+        signal: float,
+    ) -> Trade:
+        """Execute a trade and record it with cost model adjustments."""
+        position_size = self._calculate_position_size(asset, price, strategy, signal)
+
+        # Use the robust cost model
+        cost_breakdown = self.cost_model.calculate_total_cost(
+            price=price,
+            quantity=quantity,
+            trade_type=trade_type.name.lower(),
+            asset=asset,
+            timestamp=timestamp,
+            volume=None  # Optionally pass volume if available
+        )
+        # Unpack costs
+        fees = cost_breakdown["fees"]
+        spread = cost_breakdown["spread"]
+        slippage = cost_breakdown["slippage"]
+        total_cost = cost_breakdown["total_cost"]
+        effective_price = cost_breakdown["effective_price"]
+
+        # Calculate risk metrics
+        risk_metrics = self._calculate_risk_metrics(asset, price, quantity)
+
+        # Create trade object with cost details
+        trade = Trade(
+            timestamp=timestamp,
+            asset=asset,
+            quantity=quantity,
+            price=price,
+            type=trade_type,
+            slippage=slippage,
+            transaction_cost=fees,
+            spread=spread,
+            cash_balance=self.cash_account,
+            portfolio_value=self._calculate_portfolio_value(),
+            strategy=strategy,
+            position_size=position_size,
+            risk_metrics=risk_metrics,
+            total_cost=total_cost,
+            effective_price=effective_price,
+        )
+
+        # Update positions and accounts
+        if trade_type == TradeType.BUY:
+            self.positions[asset] = self.positions.get(asset, 0) + quantity
+        elif trade_type == TradeType.SELL:
+            self.positions[asset] = self.positions.get(asset, 0) - quantity
+
+        # Update account ledger
+        self._update_account_ledger(trade)
+
+        # Add trade to history
+        self.trades.append(trade)
+        self.trade_log.append(trade.to_dict())
+
+        # Add trade to position sizing engine history
+        self.position_sizing_engine.add_trade(trade.to_dict())
+
+        return trade
+
     def _update_account_ledger(self, trade: Trade) -> None:
         """Update the simulated broker ledger with trade information.
         
@@ -287,136 +309,18 @@ class Backtester:
 
         return self.risk_metrics_engine.calculate(returns)
 
-    def execute_trade(
-        self,
-        timestamp: datetime,
-        asset: str,
-        quantity: float,
-        price: float,
-        trade_type: TradeType,
-        strategy: str,
-        signal: float,
-    ) -> Trade:
-        """Execute a trade and record it with enhanced features."""
-        # Calculate position size with leverage and fractional support
-        position_size = self._calculate_position_size(asset, price, strategy, signal)
-
-        # Calculate enhanced slippage and transaction costs
-        slippage_amount = self._calculate_slippage(price, quantity, trade_type.name.lower())
-        transaction_cost_amount = self._calculate_transaction_cost(price, quantity)
-
-        # Calculate risk metrics
-        risk_metrics = self._calculate_risk_metrics(asset, price, quantity)
-
-        # Create trade object with enhanced features
-        trade = Trade(
-            timestamp=timestamp,
-            asset=asset,
-            quantity=quantity,
-            price=price,
-            type=trade_type,
-            slippage=slippage_amount,
-            transaction_cost=transaction_cost_amount,
-            spread=self.spread,
-            cash_balance=self.cash_account,
-            portfolio_value=self._calculate_portfolio_value(),
-            strategy=strategy,
-            position_size=position_size,
-            risk_metrics=risk_metrics,
-        )
-
-        # Update positions and accounts
-        if trade_type == TradeType.BUY:
-            self.positions[asset] = self.positions.get(asset, 0) + quantity
-        elif trade_type == TradeType.SELL:
-            self.positions[asset] = self.positions.get(asset, 0) - quantity
-
-        # Update account ledger
-        self._update_account_ledger(trade)
-
-        # Add trade to history
-        self.trades.append(trade)
-        self.trade_log.append(trade.to_dict())
-
-        # Add trade to position sizing engine history
-        self.position_sizing_engine.add_trade(trade.to_dict())
-
-        return trade
-
-    def _calculate_portfolio_value(self) -> float:
-        """Calculate current portfolio value."""
-        portfolio_value = self.cash
-        for asset, quantity in self.positions.items():
-            if asset in self.data.columns and quantity != 0:
-                current_price = self.data[asset].iloc[-1]
-                portfolio_value += quantity * current_price
-        return portfolio_value
-
-    def get_performance_metrics(self) -> Dict[str, Any]:
-        """Get comprehensive performance metrics with NaN handling and error logging."""
-        if not self.trades:
-            return self.performance_analyzer.get_fallback_metrics()
-
-        try:
-            # Create equity curve
-            equity_curve = self._calculate_equity_curve()
-
-            # Create trade log DataFrame
-            trade_log_df = pd.DataFrame(self.trade_log)
-
-            # Calculate metrics
-            metrics = self.performance_analyzer.compute_metrics(equity_curve, trade_log_df)
-
-            # Add risk metrics with NaN handling
-            if "returns" in equity_curve.columns:
-                returns_series = equity_curve["returns"].dropna()
-                
-                # Check for NaN or infinite values in returns
-                if returns_series.isna().any() or np.isinf(returns_series).any():
-                    self.logger.warning("NaN or infinite values detected in returns series")
-                    returns_series = returns_series.replace([np.inf, -np.inf], np.nan).dropna()
-                
-                if len(returns_series) > 0:
-                    risk_metrics = self.risk_metrics_engine.calculate(returns_series)
-                    
-                    # Validate risk metrics for NaN/infinite values
-                    for metric_name, metric_value in risk_metrics.items():
-                        if pd.isna(metric_value) or np.isinf(metric_value):
-                            self.logger.error(f"NaN or infinite value in {metric_name}: {metric_value}")
-                            risk_metrics[metric_name] = 0.0  # Set to safe default
-                    
-                    metrics.update(risk_metrics)
-                else:
-                    self.logger.warning("No valid returns data for risk metrics calculation")
-
-            # Validate final metrics
-            for metric_name, metric_value in metrics.items():
-                if pd.isna(metric_value) or np.isinf(metric_value):
-                    self.logger.error(f"NaN or infinite value in final metric {metric_name}: {metric_value}")
-                    metrics[metric_name] = 0.0  # Set to safe default
-
-            return metrics
-            
-        except Exception as e:
-            self.logger.error(f"Error calculating performance metrics: {e}")
-            return self.performance_analyzer.get_fallback_metrics()
-
     def _calculate_equity_curve(self) -> pd.DataFrame:
-        """Calculate equity curve from trades."""
+        """Calculate equity curve from trades, using true cost of each trade."""
         if not self.trades:
             return pd.DataFrame()
 
-        # Create date range
         start_date = self.data.index[0]
         end_date = self.data.index[-1]
         date_range = pd.date_range(start=start_date, end=end_date, freq="D")
-
-        # Initialize equity curve
         equity_curve = pd.DataFrame(index=date_range)
         equity_curve["equity_curve"] = self.initial_cash
         equity_curve["returns"] = 0.0
 
-        # Calculate portfolio value over time
         current_cash = self.initial_cash
         current_positions = {}
 
@@ -428,18 +332,17 @@ class Backtester:
                 current_positions[trade.asset] = (
                     current_positions.get(trade.asset, 0) + trade.quantity
                 )
-                current_cash -= trade.calculate_total_cost()
+                current_cash -= trade.total_cost if hasattr(trade, 'total_cost') else trade.calculate_total_cost()
             elif trade.type == TradeType.SELL:
                 current_positions[trade.asset] = (
                     current_positions.get(trade.asset, 0) - trade.quantity
                 )
-                current_cash += trade.calculate_total_cost()
+                current_cash += trade.total_cost if hasattr(trade, 'total_cost') else trade.calculate_total_cost()
 
             # Calculate portfolio value
             portfolio_value = current_cash
             for asset, quantity in current_positions.items():
                 if asset in self.data.columns and quantity != 0:
-                    # Find closest price to trade date
                     asset_data = self.data[asset]
                     closest_date = asset_data.index[
                         asset_data.index.get_indexer([trade_date], method="ffill")[0]
@@ -447,13 +350,10 @@ class Backtester:
                     price = asset_data.loc[closest_date]
                     portfolio_value += quantity * price
 
-            # Update equity curve from trade date onwards
             mask = equity_curve.index >= trade_date
             equity_curve.loc[mask, "equity_curve"] = portfolio_value
 
-        # Calculate returns
         equity_curve["returns"] = equity_curve["equity_curve"].pct_change()
-
         return equity_curve
 
     def process_signals_dataframe(self, signals_df: pd.DataFrame, fill_method: str = "ffill") -> pd.DataFrame:
@@ -601,6 +501,99 @@ class Backtester:
         """Cleanup when backtester is destroyed."""
         if self.trade_log_path and self.trade_log:
             self.save_trade_log()
+
+    def run_rolling_window_validation(
+        self,
+        model,
+        strategy,
+        symbol: str,
+        window_size: int = 252,
+        step_size: int = 21,
+        test_size: int = 21,
+        interval: str = '1d',
+        metrics: Optional[List[str]] = None,
+        output_csv: Optional[str] = None,
+        output_heatmap: Optional[str] = None,
+    ) -> pd.DataFrame:
+        """
+        Run rolling-window validation:
+        - For each window, train model on window_1, test on window_2, roll forward.
+        - Average performance metrics across all windows.
+        - Output as CSV and/or heatmap.
+
+        Args:
+            model: Model instance (must support fit(X, y) and predict(X))
+            strategy: Strategy instance
+            symbol: Symbol to backtest
+            window_size: Training window size (in bars)
+            step_size: Step size to roll window (in bars)
+            test_size: Test window size (in bars)
+            interval: Data interval
+            metrics: List of metrics to collect (default: all)
+            output_csv: Path to save CSV report
+            output_heatmap: Path to save heatmap image (optional)
+        Returns:
+            DataFrame of window-by-window metrics
+        """
+        import numpy as np
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+
+        # Get full data for symbol
+        data = self.data if symbol not in self.data.columns else self.data[[symbol]]
+        if 'timestamp' in data.columns:
+            data = data.set_index('timestamp')
+        n = len(data)
+        results = []
+        window_starts = range(0, n - window_size - test_size + 1, step_size)
+        for start in window_starts:
+            train_idx = slice(start, start + window_size)
+            test_idx = slice(start + window_size, start + window_size + test_size)
+            train_data = data.iloc[train_idx]
+            test_data = data.iloc[test_idx]
+            if len(test_data) < test_size:
+                continue
+            # Fit model on train_data
+            X_train, y_train = train_data.drop('Close', axis=1, errors='ignore'), train_data['Close']
+            X_test, y_test = test_data.drop('Close', axis=1, errors='ignore'), test_data['Close']
+            try:
+                model.fit(X_train, y_train)
+                preds = model.predict(X_test)
+            except Exception as e:
+                self.logger.error(f"Model training/prediction failed: {e}")
+                continue
+            # Run backtest on test window
+            # (Assume strategy can use preds as signals)
+            # You may need to adapt this for your strategy/model interface
+            test_df = test_data.copy()
+            test_df['pred'] = preds
+            # Simulate simple returns as example
+            test_df['returns'] = test_df['Close'].pct_change().shift(-1) * np.sign(test_df['pred'].diff())
+            perf = {
+                'window_start': test_data.index[0],
+                'window_end': test_data.index[-1],
+                'mean_return': test_df['returns'].mean(),
+                'sharpe': test_df['returns'].mean() / (test_df['returns'].std() + 1e-9),
+                'drawdown': (test_df['returns'].cumsum().cummax() - test_df['returns'].cumsum()).max(),
+                'win_rate': (test_df['returns'] > 0).mean(),
+            }
+            results.append(perf)
+        results_df = pd.DataFrame(results)
+        if output_csv:
+            results_df.to_csv(output_csv, index=False)
+        if output_heatmap and not results_df.empty:
+            # Create a heatmap of mean_return by window
+            plt.figure(figsize=(12, 4))
+            data_for_heatmap = results_df[['mean_return']].T
+            sns.heatmap(data_for_heatmap, annot=True, fmt='.4f', cmap='coolwarm')
+            plt.title('Rolling Window Mean Return')
+            plt.xlabel('Window')
+            plt.ylabel('Metric')
+            plt.tight_layout()
+            plt.savefig(output_heatmap)
+            plt.close()
+        return results_df
 
 
 # Utility functions for backward compatibility

@@ -1,0 +1,616 @@
+{
+  "test_user": [
+    {
+      "prompt": "Test prompt for memory",
+      "result": {
+        "status": "success",
+        "data": "test result"
+      },
+      "timestamp": "2025-07-16T17:02:06.728689",
+      "session_id": "default",
+      "user_id": "test_user",
+      "agent_type": "TestAgent",
+      "execution_time": 1.5,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Test prompt for memory",
+      "result": {
+        "status": "success",
+        "data": "test result"
+      },
+      "timestamp": "2025-07-16T17:06:52.051800",
+      "session_id": "default",
+      "user_id": "test_user",
+      "agent_type": "TestAgent",
+      "execution_time": 1.5,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Test prompt for memory",
+      "result": {
+        "status": "success",
+        "data": "test result"
+      },
+      "timestamp": "2025-07-16T17:07:20.049809",
+      "session_id": "default",
+      "user_id": "test_user",
+      "agent_type": "TestAgent",
+      "execution_time": 1.5,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Test prompt for memory",
+      "result": {
+        "status": "success",
+        "data": "test result"
+      },
+      "timestamp": "2025-07-16T17:08:46.552452",
+      "session_id": "default",
+      "user_id": "test_user",
+      "agent_type": "TestAgent",
+      "execution_time": 1.5,
+      "success": true,
+      "metadata": {}
+    }
+  ],
+  "task_agent": [
+    {
+      "prompt": "Test task for prompt memory integration",
+      "result": {
+        "task_id": "da2b7914-1152-4362-8f8c-19f05c047e39",
+        "task_type": "model_build",
+        "status": "started",
+        "parameters": {
+          "test": true,
+          "model_type": "test"
+        },
+        "max_depth": 2,
+        "performance_threshold": 0.5
+      },
+      "timestamp": "2025-07-16T17:02:21.122781",
+      "session_id": "da2b7914-1152-4362-8f8c-19f05c047e39",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 0.0,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "parent_task_id": null,
+        "initial_depth": 0
+      }
+    },
+    {
+      "prompt": "Task: model_build - Action: run_model",
+      "result": {
+        "task_id": "da2b7914-1152-4362-8f8c-19f05c047e39",
+        "action_type": "run_model",
+        "success": true,
+        "performance_score": 0.6,
+        "message": "Model test executed for AAPL",
+        "next_action": "stop_and_report",
+        "depth": 0,
+        "parameters": {
+          "test": true,
+          "model_type": "test"
+        }
+      },
+      "timestamp": "2025-07-16T17:02:21.124145",
+      "session_id": "da2b7914-1152-4362-8f8c-19f05c047e39",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 1.8e-05,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "action_type": "run_model",
+        "depth": 0,
+        "strategy": "run_model"
+      }
+    },
+    {
+      "prompt": "Task completed: Test task for prompt memory integration",
+      "result": {
+        "task_id": "da2b7914-1152-4362-8f8c-19f05c047e39",
+        "task_type": "model_build",
+        "status": "completed",
+        "final_success": true,
+        "final_performance_score": 0.6,
+        "total_actions": 1,
+        "depth_reached": 0,
+        "total_execution_time": 0.034213,
+        "action_history": [
+          {
+            "action": "run_model",
+            "timestamp": "2025-07-16T17:02:21.150105",
+            "result": {
+              "success": true,
+              "performance_score": 0.6,
+              "message": "Model test executed for AAPL"
+            },
+            "next_action": "stop_and_report"
+          }
+        ],
+        "performance_history": [
+          {
+            "score": 0.6,
+            "timestamp": "2025-07-16T17:02:21.124127",
+            "action": "run_model"
+          }
+        ]
+      },
+      "timestamp": "2025-07-16T17:02:21.158255",
+      "session_id": "da2b7914-1152-4362-8f8c-19f05c047e39",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 0.034213,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "final_depth": 0,
+        "total_actions": 1
+      }
+    },
+    {
+      "prompt": "Test task for prompt memory integration",
+      "result": {
+        "task_id": "db5a2dc4-764f-407a-a9ef-cd49efe055a8",
+        "task_type": "model_build",
+        "status": "started",
+        "parameters": {
+          "test": true,
+          "model_type": "test"
+        },
+        "max_depth": 2,
+        "performance_threshold": 0.5
+      },
+      "timestamp": "2025-07-16T17:07:06.696054",
+      "session_id": "db5a2dc4-764f-407a-a9ef-cd49efe055a8",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 0.0,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "parent_task_id": null,
+        "initial_depth": 0
+      }
+    },
+    {
+      "prompt": "Task: model_build - Action: run_model",
+      "result": {
+        "task_id": "db5a2dc4-764f-407a-a9ef-cd49efe055a8",
+        "action_type": "run_model",
+        "success": true,
+        "performance_score": 0.6,
+        "message": "Model test executed for AAPL",
+        "next_action": "stop_and_report",
+        "depth": 0,
+        "parameters": {
+          "test": true,
+          "model_type": "test"
+        }
+      },
+      "timestamp": "2025-07-16T17:07:06.697555",
+      "session_id": "db5a2dc4-764f-407a-a9ef-cd49efe055a8",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 1.4e-05,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "action_type": "run_model",
+        "depth": 0,
+        "strategy": "run_model"
+      }
+    },
+    {
+      "prompt": "Task completed: Test task for prompt memory integration",
+      "result": {
+        "task_id": "db5a2dc4-764f-407a-a9ef-cd49efe055a8",
+        "task_type": "model_build",
+        "status": "completed",
+        "final_success": true,
+        "final_performance_score": 0.6,
+        "total_actions": 1,
+        "depth_reached": 0,
+        "total_execution_time": 0.06529,
+        "action_history": [
+          {
+            "action": "run_model",
+            "timestamp": "2025-07-16T17:07:06.734437",
+            "result": {
+              "success": true,
+              "performance_score": 0.6,
+              "message": "Model test executed for AAPL"
+            },
+            "next_action": "stop_and_report"
+          }
+        ],
+        "performance_history": [
+          {
+            "score": 0.6,
+            "timestamp": "2025-07-16T17:07:06.697541",
+            "action": "run_model"
+          }
+        ]
+      },
+      "timestamp": "2025-07-16T17:07:06.751003",
+      "session_id": "db5a2dc4-764f-407a-a9ef-cd49efe055a8",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 0.06529,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "final_depth": 0,
+        "total_actions": 1
+      }
+    },
+    {
+      "prompt": "Test task for prompt memory integration",
+      "result": {
+        "task_id": "dc6dcfca-9bc5-4e2e-912c-ac60c793ee44",
+        "task_type": "model_build",
+        "status": "started",
+        "parameters": {
+          "test": true,
+          "model_type": "test"
+        },
+        "max_depth": 2,
+        "performance_threshold": 0.5
+      },
+      "timestamp": "2025-07-16T17:07:37.708921",
+      "session_id": "dc6dcfca-9bc5-4e2e-912c-ac60c793ee44",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 0.0,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "parent_task_id": null,
+        "initial_depth": 0
+      }
+    },
+    {
+      "prompt": "Task: model_build - Action: run_model",
+      "result": {
+        "task_id": "dc6dcfca-9bc5-4e2e-912c-ac60c793ee44",
+        "action_type": "run_model",
+        "success": true,
+        "performance_score": 0.6,
+        "message": "Model test executed for AAPL",
+        "next_action": "stop_and_report",
+        "depth": 0,
+        "parameters": {
+          "test": true,
+          "model_type": "test"
+        }
+      },
+      "timestamp": "2025-07-16T17:07:37.712921",
+      "session_id": "dc6dcfca-9bc5-4e2e-912c-ac60c793ee44",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 0.0,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "action_type": "run_model",
+        "depth": 0,
+        "strategy": "run_model"
+      }
+    },
+    {
+      "prompt": "Task completed: Test task for prompt memory integration",
+      "result": {
+        "task_id": "dc6dcfca-9bc5-4e2e-912c-ac60c793ee44",
+        "task_type": "model_build",
+        "status": "completed",
+        "final_success": true,
+        "final_performance_score": 0.6,
+        "total_actions": 1,
+        "depth_reached": 0,
+        "total_execution_time": 0.052023,
+        "action_history": [
+          {
+            "action": "run_model",
+            "timestamp": "2025-07-16T17:07:37.745954",
+            "result": {
+              "success": true,
+              "performance_score": 0.6,
+              "message": "Model test executed for AAPL"
+            },
+            "next_action": "stop_and_report"
+          }
+        ],
+        "performance_history": [
+          {
+            "score": 0.6,
+            "timestamp": "2025-07-16T17:07:37.712921",
+            "action": "run_model"
+          }
+        ]
+      },
+      "timestamp": "2025-07-16T17:07:37.756104",
+      "session_id": "dc6dcfca-9bc5-4e2e-912c-ac60c793ee44",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 0.052023,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "final_depth": 0,
+        "total_actions": 1
+      }
+    },
+    {
+      "prompt": "Test task for prompt memory integration",
+      "result": {
+        "task_id": "80d320d3-f9e3-4400-b20f-600735cda47e",
+        "task_type": "model_build",
+        "status": "started",
+        "parameters": {
+          "test": true,
+          "model_type": "test"
+        },
+        "max_depth": 2,
+        "performance_threshold": 0.5
+      },
+      "timestamp": "2025-07-16T17:08:57.274341",
+      "session_id": "80d320d3-f9e3-4400-b20f-600735cda47e",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 0.0,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "parent_task_id": null,
+        "initial_depth": 0
+      }
+    },
+    {
+      "prompt": "Task: model_build - Action: run_model",
+      "result": {
+        "task_id": "80d320d3-f9e3-4400-b20f-600735cda47e",
+        "action_type": "run_model",
+        "success": true,
+        "performance_score": 0.6,
+        "message": "Model test executed for AAPL",
+        "next_action": "stop_and_report",
+        "depth": 0,
+        "parameters": {
+          "test": true,
+          "model_type": "test"
+        }
+      },
+      "timestamp": "2025-07-16T17:08:57.277441",
+      "session_id": "80d320d3-f9e3-4400-b20f-600735cda47e",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 0.0,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "action_type": "run_model",
+        "depth": 0,
+        "strategy": "run_model"
+      }
+    },
+    {
+      "prompt": "Task completed: Test task for prompt memory integration",
+      "result": {
+        "task_id": "80d320d3-f9e3-4400-b20f-600735cda47e",
+        "task_type": "model_build",
+        "status": "completed",
+        "final_success": true,
+        "final_performance_score": 0.6,
+        "total_actions": 1,
+        "depth_reached": 0,
+        "total_execution_time": 0.039279,
+        "action_history": [
+          {
+            "action": "run_model",
+            "timestamp": "2025-07-16T17:08:57.301205",
+            "result": {
+              "success": true,
+              "performance_score": 0.6,
+              "message": "Model test executed for AAPL"
+            },
+            "next_action": "stop_and_report"
+          }
+        ],
+        "performance_history": [
+          {
+            "score": 0.6,
+            "timestamp": "2025-07-16T17:08:57.277441",
+            "action": "run_model"
+          }
+        ]
+      },
+      "timestamp": "2025-07-16T17:08:57.308211",
+      "session_id": "80d320d3-f9e3-4400-b20f-600735cda47e",
+      "user_id": "task_agent",
+      "agent_type": "TaskAgent",
+      "execution_time": 0.039279,
+      "success": true,
+      "metadata": {
+        "task_type": "model_build",
+        "final_depth": 0,
+        "total_actions": 1
+      }
+    }
+  ],
+  "convenience_user": [
+    {
+      "prompt": "Convenience test prompt 1",
+      "result": {
+        "test_number": 1,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:02:21.188318",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.1,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Convenience test prompt 2",
+      "result": {
+        "test_number": 2,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:02:21.189603",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.2,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Convenience test prompt 3",
+      "result": {
+        "test_number": 3,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:02:21.204966",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.30000000000000004,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Convenience test prompt 1",
+      "result": {
+        "test_number": 1,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:07:06.785270",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.1,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Convenience test prompt 2",
+      "result": {
+        "test_number": 2,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:07:06.787222",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.2,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Convenience test prompt 3",
+      "result": {
+        "test_number": 3,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:07:06.802827",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.30000000000000004,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Convenience test prompt 1",
+      "result": {
+        "test_number": 1,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:07:37.792466",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.1,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Convenience test prompt 2",
+      "result": {
+        "test_number": 2,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:07:37.794543",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.2,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Convenience test prompt 3",
+      "result": {
+        "test_number": 3,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:07:37.811076",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.30000000000000004,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Convenience test prompt 1",
+      "result": {
+        "test_number": 1,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:08:57.332217",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.1,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Convenience test prompt 2",
+      "result": {
+        "test_number": 2,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:08:57.334253",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.2,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "Convenience test prompt 3",
+      "result": {
+        "test_number": 3,
+        "function": "convenience"
+      },
+      "timestamp": "2025-07-16T17:08:57.344559",
+      "session_id": "default",
+      "user_id": "convenience_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.30000000000000004,
+      "success": true,
+      "metadata": {}
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "model_type": "lstm_grid",
+  "best_params": {
+    "lstm_units": 64,
+    "dropout_rate": 0.2,
+    "learning_rate": 0.001,
+    "batch_size": 32,
+    "epochs": 100,
+    "sequence_length": 20
+  },
+  "best_score": 0.6,
+  "timestamp": "2025-07-16T20:26:29.999663",
+  "backend": "grid"
+}

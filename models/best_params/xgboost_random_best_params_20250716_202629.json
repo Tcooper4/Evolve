@@ -1,0 +1,10 @@
+{
+  "model_type": "xgboost_random",
+  "best_params": {
+    "n_estimators": 200,
+    "max_depth": 7
+  },
+  "best_score": 0.5,
+  "timestamp": "2025-07-16T20:26:29.860028",
+  "backend": "random"
+}
