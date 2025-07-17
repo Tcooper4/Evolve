@@ -121,7 +121,7 @@ class Backtester:
         self.risk_metrics_engine = RiskMetricsEngine(
             risk_free_rate=risk_free_rate, period=TRADING_DAYS_PER_YEAR
         )
-        self.performance_analyzer = PerformanceAnalyzer()
+        self.performance_analyzer = PerformanceAnalyzer(cost_model.config if cost_model else None)
         self.visualizer = BacktestVisualizer()
 
         self.cost_model = cost_model if cost_model is not None else CostModel(get_retail_cost_config(), data)

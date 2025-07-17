@@ -5,10 +5,12 @@ import numpy as np
 import pandas as pd
 import torch
 from trading.models.lstm_model import LSTMForecaster
+import logging
+logger = logging.getLogger(__name__)
 
 def test_lstm_model():
     """Test LSTM model functionality without TensorFlow."""
-    print("Testing LSTM model without TensorFlow...")
+    logger.info("Testing LSTM model without TensorFlow...")
     
     # Create sample data
     np.random.seed(42)
@@ -34,40 +36,40 @@ def test_lstm_model():
     
     try:
         # Initialize model
-        print("1. Initializing LSTM model...")
+        logger.info("1. Initializing LSTM model...")
         model = LSTMForecaster(config)
-        print("   ✓ Model initialized successfully")
+        logger.info("   ✓ Model initialized successfully")
         
         # Test data preparation
-        print("2. Testing data preparation...")
+        logger.info("2. Testing data preparation...")
         X = data[config['feature_columns']]
         y = data[config['target_column']]
-        print("   ✓ Data prepared successfully")
+        logger.info("   ✓ Data prepared successfully")
         
         # Test model training (just a few epochs)
-        print("3. Testing model training...")
+        logger.info("3. Testing model training...")
         history = model.fit(X, y, epochs=2, batch_size=16)
-        print("   ✓ Model training completed")
-        print(f"   Training loss: {history['train_loss'][-1]:.4f}")
+        logger.info("   ✓ Model training completed")
+        logger.info(f"   Training loss: {history['train_loss'][-1]:.4f}")
         
         # Test prediction
-        print("4. Testing model prediction...")
+        logger.info("4. Testing model prediction...")
         predictions = model.predict(X)
-        print("   ✓ Model prediction completed")
-        print(f"   Predictions shape: {predictions.shape}")
+        logger.info("   ✓ Model prediction completed")
+        logger.info(f"   Predictions shape: {predictions.shape}")
         
         # Test model save/load
-        print("5. Testing model save/load...")
+        logger.info("5. Testing model save/load...")
         model.save("test_lstm_model.pt")
         new_model = LSTMForecaster(config)
         new_model.load("test_lstm_model.pt")
-        print("   ✓ Model save/load completed")
+        logger.info("   ✓ Model save/load completed")
         
-        print("\n🎉 All tests passed! LSTM model works correctly without TensorFlow.")
-        print("✅ Using PyTorch backend successfully")
+        logger.info("\n🎉 All tests passed! LSTM model works correctly without TensorFlow.")
+        logger.info("✅ Using PyTorch backend successfully")
         
     except Exception as e:
-        print(f"❌ Test failed: {e}")
+        logger.error(f"❌ Test failed: {e}")
         raise
 
 if __name__ == "__main__":

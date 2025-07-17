@@ -8,7 +8,7 @@ import time
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
 
-from optimization.optuna_tuner import OptunaTuner
+from trading.optimization.optuna_tuner import SharpeOptunaTuner
 
 
 class TestOptunaTuner:
@@ -27,7 +27,7 @@ class TestOptunaTuner:
 
     @pytest.fixture
     def tuner(self):
-       Create OptunaTuner instance for testing.        return OptunaTuner(
+       Create SharpeOptunaTuner instance for testing.        return SharpeOptunaTuner(
             study_name="test_study,
             n_trials=5,
             timeout=60,

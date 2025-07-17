@@ -11,12 +11,15 @@ Key Features:
 - Model/strategy selection and backtest decision logic
 - Result formatting and forwarding
 - Error handling and fallback mechanisms
+- TaskAgent integration for recursive task execution
 """
 
 import logging
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
+
+from agents.task_agent import TaskAgent, TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +40,14 @@ class PromptRouter:
     
     def _initialize_components(self):
         """Initialize all required components with error handling."""
+        # Initialize TaskAgent
+        try:
+            self.task_agent = TaskAgent()
+            self.logger.info("✅ TaskAgent initialized successfully")
+        except Exception as e:
+            self.logger.error(f"❌ Failed to initialize TaskAgent: {e}")
+            self.task_agent = None
+        
         # Initialize prompt agent
         try:
             from agents.llm.agent import PromptAgent
@@ -86,13 +97,15 @@ class PromptRouter:
         """
         try:
             # Log the prompt
-            self.agent_logger.log_action(
-                agent_name="PromptRouter",
-                action=AgentAction.MODEL_SYNTHESIS,
-                message=f"Processing prompt: {prompt[:100]}...",
-                data={"prompt": prompt, "user_id": user_id},
-                level=LogLevel.INFO
-            )
+            if self.agent_logger:
+                from trading.memory.agent_logger import AgentAction, LogLevel
+                self.agent_logger.log_action(
+                    agent_name="PromptRouter",
+                    action=AgentAction.MODEL_SYNTHESIS,
+                    message=f"Processing prompt: {prompt[:100]}...",
+                    data={"prompt": prompt, "user_id": user_id},
+                    level=LogLevel.INFO
+                )
             
             # Check if this is a complex task that needs recursive execution
             if self._is_complex_task(prompt):
@@ -179,7 +192,7 @@ class PromptRouter:
     
     async def _handle_complex_task(self, prompt: str, user_id: str) -> Dict[str, Any]:
         """
-        Handle complex tasks that require recursive execution.
+        Handle complex tasks that require recursive execution using TaskAgent.
         
         Args:
             prompt: User prompt
@@ -189,15 +202,20 @@ class PromptRouter:
             Dict containing task execution result
         """
         try:
+            if not self.task_agent:
+                raise Exception("TaskAgent not available")
+            
             # Determine task type from prompt
             task_type = self._determine_task_type(prompt)
             
             # Extract parameters from prompt
             parameters = self._extract_task_parameters(prompt)
             
-            # Execute the complex task
-            result = await self.agent_controller.execute_workflow(
-                "task",
+            # Add user_id to parameters
+            parameters["user_id"] = user_id
+            
+            # Execute the task using TaskAgent
+            result = await self.task_agent.execute_task(
                 prompt=prompt,
                 task_type=task_type,
                 parameters=parameters,
@@ -209,9 +227,11 @@ class PromptRouter:
                 "success": result.success,
                 "response": result.data,
                 "routing_type": "complex_task",
-                "task_type": task_type,
-                "performance_score": result.data.get("performance_score", 0.0),
-                "message": result.data.get("message", "Task completed")
+                "task_type": task_type.value,
+                "performance_score": result.performance_score,
+                "message": result.message,
+                "task_id": result.data.get("task_id") if result.data else None,
+                "depth_reached": result.data.get("depth_reached") if result.data else 0
             }
             
         except Exception as e:
@@ -222,7 +242,7 @@ class PromptRouter:
                 "routing_type": "complex_task_error"
             }
     
-    def _determine_task_type(self, prompt: str) -> str:
+    def _determine_task_type(self, prompt: str) -> TaskType:
         """
         Determine the task type from the prompt.
         
@@ -230,28 +250,35 @@ class PromptRouter:
             prompt: User prompt
             
         Returns:
-            str: Task type
+            TaskType: Task type enum
         """
         prompt_lower = prompt.lower()
         
-        if any(word in prompt_lower for word in ["build", "create", "train", "new model"]):
-            return "model_build"
+        # Check for primary task types first
+        if any(word in prompt_lower for word in ["forecast", "predict", "future", "prediction"]):
+            return TaskType.FORECAST
+        elif any(word in prompt_lower for word in ["strategy", "approach", "method", "trading strategy"]):
+            return TaskType.STRATEGY
+        elif any(word in prompt_lower for word in ["backtest", "back test", "historical test", "validate strategy"]):
+            return TaskType.BACKTEST
+        elif any(word in prompt_lower for word in ["build", "create", "train", "new model"]):
+            return TaskType.MODEL_BUILD
         elif any(word in prompt_lower for word in ["evaluate", "assess", "test", "performance"]):
-            return "model_evaluate"
+            return TaskType.MODEL_EVALUATE
         elif any(word in prompt_lower for word in ["update", "improve", "modify", "optimize"]):
-            return "model_update"
-        elif any(word in prompt_lower for word in ["strategy", "approach", "method"]):
-            return "strategy_optimize"
+            return TaskType.MODEL_UPDATE
+        elif any(word in prompt_lower for word in ["strategy optimize", "optimize strategy"]):
+            return TaskType.STRATEGY_OPTIMIZE
         elif any(word in prompt_lower for word in ["analyze", "data", "insights"]):
-            return "data_analysis"
-        elif any(word in prompt_lower for word in ["forecast", "predict", "future"]):
-            return "forecast_generate"
+            return TaskType.DATA_ANALYSIS
+        elif any(word in prompt_lower for word in ["forecast generate", "generate forecast"]):
+            return TaskType.FORECAST_GENERATE
         elif any(word in prompt_lower for word in ["trade", "buy", "sell", "execute"]):
-            return "trade_execute"
+            return TaskType.TRADE_EXECUTE
         elif any(word in prompt_lower for word in ["risk", "danger", "safety"]):
-            return "risk_assess"
+            return TaskType.RISK_ASSESS
         else:
-            return "general"
+            return TaskType.GENERAL
     
     def _extract_task_parameters(self, prompt: str) -> Dict[str, Any]:
         """
@@ -296,7 +323,7 @@ class PromptRouter:
     
     async def _handle_workflow_prompt(self, prompt: str, user_id: str) -> Dict[str, Any]:
         """
-        Handle workflow-specific prompts.
+        Handle workflow-specific prompts using TaskAgent.
         
         Args:
             prompt: User prompt
@@ -306,14 +333,25 @@ class PromptRouter:
             Dict containing workflow result
         """
         try:
-            # Determine workflow type
-            workflow_type = self._determine_workflow_type(prompt)
+            if not self.task_agent:
+                raise Exception("TaskAgent not available")
             
-            # Execute the workflow
-            result = await self.agent_controller.execute_workflow(
-                workflow_type,
+            # Determine workflow type and map to task type
+            workflow_type = self._determine_workflow_type(prompt)
+            task_type = self._map_workflow_to_task_type(workflow_type)
+            
+            # Extract parameters from prompt
+            parameters = self._extract_task_parameters(prompt)
+            parameters["user_id"] = user_id
+            parameters["workflow_type"] = workflow_type
+            
+            # Execute the workflow using TaskAgent
+            result = await self.task_agent.execute_task(
                 prompt=prompt,
-                user_id=user_id
+                task_type=task_type,
+                parameters=parameters,
+                max_depth=3,
+                performance_threshold=0.7
             )
             
             return {
@@ -321,7 +359,9 @@ class PromptRouter:
                 "response": result.data,
                 "routing_type": "workflow",
                 "workflow_type": workflow_type,
-                "message": result.data.get("message", "Workflow completed")
+                "task_type": task_type.value,
+                "message": result.message,
+                "performance_score": result.performance_score
             }
             
         except Exception as e:
@@ -352,6 +392,24 @@ class PromptRouter:
             return "updater"
         else:
             return "builder"  # Default to builder
+    
+    def _map_workflow_to_task_type(self, workflow_type: str) -> TaskType:
+        """
+        Map workflow type to TaskType enum.
+        
+        Args:
+            workflow_type: Workflow type string
+            
+        Returns:
+            TaskType: Corresponding task type
+        """
+        workflow_mapping = {
+            "builder": TaskType.MODEL_BUILD,
+            "evaluator": TaskType.MODEL_EVALUATE,
+            "updater": TaskType.MODEL_UPDATE
+        }
+        
+        return workflow_mapping.get(workflow_type, TaskType.GENERAL)
     
     async def _process_with_router_agent(self, prompt: str, llm_type: str) -> Dict[str, Any]:
         """
@@ -646,19 +704,20 @@ class PromptRouter:
             return None
     
     async def _handle_builder_workflow(self, prompt: str) -> Dict[str, Any]:
-        """Handle builder workflow requests."""
+        """Handle builder workflow requests using TaskAgent."""
         try:
-            # Extract parameters from prompt (simplified for now)
-            # In a real implementation, you'd use NLP to extract parameters
+            if not self.task_agent:
+                raise Exception("TaskAgent not available")
             
-            # Default parameters
-            params = {
-                "model_type": "lstm",
-                "data_path": "data/sample_data.csv",
-                "target_column": "close"
-            }
+            # Extract parameters from prompt
+            params = self._extract_task_parameters(prompt)
             
-            # Try to extract model type
+            # Set default parameters for builder workflow
+            params.setdefault("model_type", "lstm")
+            params.setdefault("data_path", "data/sample_data.csv")
+            params.setdefault("target_column", "close")
+            
+            # Try to extract model type from prompt
             if "lstm" in prompt.lower():
                 params["model_type"] = "lstm"
             elif "xgboost" in prompt.lower():
@@ -666,15 +725,22 @@ class PromptRouter:
             elif "ensemble" in prompt.lower():
                 params["model_type"] = "ensemble"
             
-            # Execute builder workflow
-            result = await self.agent_controller.execute_workflow("builder", **params)
+            # Execute builder workflow using TaskAgent
+            result = await self.task_agent.execute_task(
+                prompt=prompt,
+                task_type=TaskType.MODEL_BUILD,
+                parameters=params,
+                max_depth=3,
+                performance_threshold=0.7
+            )
             
             return {
                 "success": result.success,
-                "message": f"Model building workflow completed. {result.data.get('message', '')}",
+                "message": f"Model building workflow completed. {result.message}",
                 "data": result.data,
                 "workflow_type": "builder",
-                "execution_time": result.execution_time
+                "performance_score": result.performance_score,
+                "task_id": result.data.get("task_id") if result.data else None
             }
             
         except Exception as e:
@@ -686,23 +752,35 @@ class PromptRouter:
             }
     
     async def _handle_evaluator_workflow(self, prompt: str) -> Dict[str, Any]:
-        """Handle evaluator workflow requests."""
+        """Handle evaluator workflow requests using TaskAgent."""
         try:
-            # Extract parameters from prompt (simplified for now)
-            params = {
-                "model_id": "latest",
-                "model_path": "models/latest.pkl"
-            }
+            if not self.task_agent:
+                raise Exception("TaskAgent not available")
             
-            # Execute evaluator workflow
-            result = await self.agent_controller.execute_workflow("evaluator", **params)
+            # Extract parameters from prompt
+            params = self._extract_task_parameters(prompt)
+            
+            # Set default parameters for evaluator workflow
+            params.setdefault("model_id", "latest")
+            params.setdefault("model_path", "models/latest.pkl")
+            params.setdefault("test_data_path", "data/test_data.csv")
+            
+            # Execute evaluator workflow using TaskAgent
+            result = await self.task_agent.execute_task(
+                prompt=prompt,
+                task_type=TaskType.MODEL_EVALUATE,
+                parameters=params,
+                max_depth=2,
+                performance_threshold=0.6
+            )
             
             return {
                 "success": result.success,
-                "message": f"Model evaluation workflow completed. {result.data.get('message', '')}",
+                "message": f"Model evaluation workflow completed. {result.message}",
                 "data": result.data,
                 "workflow_type": "evaluator",
-                "execution_time": result.execution_time
+                "performance_score": result.performance_score,
+                "task_id": result.data.get("task_id") if result.data else None
             }
             
         except Exception as e:
@@ -714,23 +792,35 @@ class PromptRouter:
             }
     
     async def _handle_updater_workflow(self, prompt: str) -> Dict[str, Any]:
-        """Handle updater workflow requests."""
+        """Handle updater workflow requests using TaskAgent."""
         try:
-            # Extract parameters from prompt (simplified for now)
-            params = {
-                "model_id": "latest",
-                "update_type": "auto"
-            }
+            if not self.task_agent:
+                raise Exception("TaskAgent not available")
             
-            # Execute updater workflow
-            result = await self.agent_controller.execute_workflow("updater", **params)
+            # Extract parameters from prompt
+            params = self._extract_task_parameters(prompt)
+            
+            # Set default parameters for updater workflow
+            params.setdefault("model_id", "latest")
+            params.setdefault("update_type", "auto")
+            params.setdefault("evaluation_result", {})
+            
+            # Execute updater workflow using TaskAgent
+            result = await self.task_agent.execute_task(
+                prompt=prompt,
+                task_type=TaskType.MODEL_UPDATE,
+                parameters=params,
+                max_depth=3,
+                performance_threshold=0.7
+            )
             
             return {
                 "success": result.success,
-                "message": f"Model update workflow completed. {result.data.get('message', '')}",
+                "message": f"Model update workflow completed. {result.message}",
                 "data": result.data,
                 "workflow_type": "updater",
-                "execution_time": result.execution_time
+                "performance_score": result.performance_score,
+                "task_id": result.data.get("task_id") if result.data else None
             }
             
         except Exception as e:
@@ -742,29 +832,36 @@ class PromptRouter:
             }
     
     async def _handle_full_pipeline_workflow(self, prompt: str) -> Dict[str, Any]:
-        """Handle full pipeline workflow requests."""
+        """Handle full pipeline workflow requests using TaskAgent."""
         try:
-            # Extract parameters from prompt (simplified for now)
-            params = {
-                "model_type": "lstm",
-                "data_path": "data/sample_data.csv",
-                "target_column": "close"
-            }
+            if not self.task_agent:
+                raise Exception("TaskAgent not available")
             
-            # Execute full pipeline
-            results = await self.agent_controller.execute_full_pipeline(**params)
+            # Extract parameters from prompt
+            params = self._extract_task_parameters(prompt)
             
-            # Combine results
-            success = all(result.success for result in results.values() if hasattr(result, 'success'))
-            total_time = sum(result.execution_time for result in results.values() if hasattr(result, 'execution_time'))
+            # Set default parameters for full pipeline
+            params.setdefault("model_type", "lstm")
+            params.setdefault("data_path", "data/sample_data.csv")
+            params.setdefault("target_column", "close")
+            
+            # Execute full pipeline using TaskAgent with higher depth for complete workflow
+            result = await self.task_agent.execute_task(
+                prompt=prompt,
+                task_type=TaskType.MODEL_BUILD,  # Start with model build, TaskAgent will handle the full chain
+                parameters=params,
+                max_depth=5,  # Higher depth for full pipeline
+                performance_threshold=0.8  # Higher threshold for full pipeline
+            )
             
             return {
-                "success": success,
-                "message": f"Full pipeline completed in {total_time:.2f}s",
-                "data": {name: result.data for name, result in results.items()},
+                "success": result.success,
+                "message": f"Full pipeline completed. {result.message}",
+                "data": result.data,
                 "workflow_type": "full_pipeline",
-                "execution_time": total_time,
-                "pipeline_results": results
+                "performance_score": result.performance_score,
+                "task_id": result.data.get("task_id") if result.data else None,
+                "depth_reached": result.data.get("depth_reached") if result.data else 0
             }
             
         except Exception as e:

@@ -15,6 +15,8 @@ from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
+import logging
+logger = logging.getLogger(__name__)
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -284,7 +286,7 @@ class TestMarketAnalyzer(unittest.TestCase):
 
     def test_extreme_outliers_and_missing_data(self):
         """Test edge case where market data has extreme outliers or missing months."""
-        print("\n🔍 Testing Extreme Outliers and Missing Data Edge Cases")
+        logger.info("\n🔍 Testing Extreme Outliers and Missing Data Edge Cases")
 
         # Create data with extreme outliers
         dates = pd.date_range(start="2020-01-01", periods=365, freq="D")
@@ -313,7 +315,7 @@ class TestMarketAnalyzer(unittest.TestCase):
             index=dates,
         )
 
-        print(
+        logger.info(
             f"✅ Created test data with {len(outlier_indices)} extreme outliers and {len(missing_months)} missing months"
         )
 
@@ -323,14 +325,14 @@ class TestMarketAnalyzer(unittest.TestCase):
         self.assertTrue(
             len(outliers) > 0, "Should detect outliers in data with extreme values"
         )
-        print(f"✅ Detected {outliers.sum()} outliers in the data")
+        logger.info(f"✅ Detected {outliers.sum()} outliers in the data")
 
         # Test missing data handling
         missing_data_info = self.analyzer._analyze_missing_data(outlier_data)
         self.assertIsInstance(missing_data_info, dict)
         self.assertIn("missing_percentage", missing_data_info)
         self.assertIn("missing_patterns", missing_data_info)
-        print(
+        logger.info(
             f"✅ Missing data analysis: {missing_data_info['missing_percentage']:.1f}% missing"
         )
 
@@ -341,47 +343,47 @@ class TestMarketAnalyzer(unittest.TestCase):
             cleaned_data.isnull().all().any(),
             "Cleaned data should not have all-NaN columns",
         )
-        print(f"✅ Data cleaning completed: {len(cleaned_data)} rows remaining")
+        logger.info(f"✅ Data cleaning completed: {len(cleaned_data)} rows remaining")
 
         # Test analysis with cleaned data
         try:
             trend_result = self.analyzer.analyze_trend(cleaned_data)
             self.assertIsInstance(trend_result, dict)
             self.assertIn("trend_direction", trend_result)
-            print(
+            logger.info(
                 f"✅ Trend analysis with cleaned data: {trend_result['trend_direction']}"
             )
         except Exception as e:
-            print(f"⚠️ Trend analysis failed with cleaned data: {e}")
+            logger.warning(f"⚠️ Trend analysis failed with cleaned data: {e}")
 
         # Test volatility analysis with outliers
         try:
             volatility_result = self.analyzer.analyze_volatility(cleaned_data)
             self.assertIsInstance(volatility_result, dict)
             self.assertIn("volatility", volatility_result)
-            print(f"✅ Volatility analysis: {volatility_result['volatility']:.3f}")
+            logger.info(f"✅ Volatility analysis: {volatility_result['volatility']:.3f}")
         except Exception as e:
-            print(f"⚠️ Volatility analysis failed: {e}")
+            logger.warning(f"⚠️ Volatility analysis failed: {e}")
 
         # Test correlation analysis with missing data
         try:
             correlation_result = self.analyzer.analyze_correlation(cleaned_data)
             self.assertIsInstance(correlation_result, dict)
             self.assertIn("correlation_matrix", correlation_result)
-            print(f"✅ Correlation analysis completed")
+            logger.info(f"✅ Correlation analysis completed")
         except Exception as e:
-            print(f"⚠️ Correlation analysis failed: {e}")
+            logger.warning(f"⚠️ Correlation analysis failed: {e}")
 
         # Test market conditions analysis
         try:
             conditions_result = self.analyzer.analyze_market_conditions(cleaned_data)
             self.assertIsInstance(conditions_result, dict)
             self.assertIn("market_regime", conditions_result)
-            print(f"✅ Market conditions analysis: {conditions_result['market_regime']}")
+            logger.info(f"✅ Market conditions analysis: {conditions_result['market_regime']}")
         except Exception as e:
-            print(f"⚠️ Market conditions analysis failed: {e}")
+            logger.warning(f"⚠️ Market conditions analysis failed: {e}")
 
-        print("✅ Extreme outliers and missing data edge case test completed")
+        logger.info("✅ Extreme outliers and missing data edge case test completed")
 
     def _detect_outliers(self, data):
         """Detect outliers in the data using IQR method."""

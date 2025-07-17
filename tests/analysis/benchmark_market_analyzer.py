@@ -25,6 +25,8 @@ from trading.market.market_analyzer import MarketAnalyzer
 
 warnings.filterwarnings("ignore")
 
+logger = logging.getLogger(__name__)
+
 
 class MarketAnalyzerBenchmark(unittest.TestCase):
     """Benchmark tests for MarketAnalyzer."""
@@ -340,13 +342,13 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
 
     def test_library_comparison(self):
         """Compare performance with different technical analysis libraries."""
-        print("\n📊 Testing Library Comparison")
+        logger.info("\n📊 Testing Library Comparison")
 
         # Test symbols
         symbols = ["AAPL", "MSFT", "GOOGL"]
 
         for symbol in symbols:
-            print(f"\n🔍 Testing {symbol}")
+            logger.info(f"\n🔍 Testing {symbol}")
 
             # Fetch data
             data = self.analyzer.fetch_data(symbol, period="1y")
@@ -379,13 +381,13 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                 }
             )
 
-            print(
+            logger.info(
                 f"✅ pandas_ta: {ta_time:.3f}s, finta: {finta_time:.3f}s, custom: {custom_time:.3f}s"
             )
 
     def test_baseline_metrics_comparison(self):
         """Compare new analyzers against baseline metrics (Sharpe, volatility)."""
-        print("\n📈 Testing Baseline Metrics Comparison")
+        logger.info("\n📈 Testing Baseline Metrics Comparison")
 
         # Define baseline metrics
         baseline_metrics = {
@@ -400,7 +402,7 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
 
         for symbol in symbols:
-            print(f"\n🔍 Testing baseline metrics for {symbol}")
+            logger.info(f"\n🔍 Testing baseline metrics for {symbol}")
 
             # Fetch data
             data = self.analyzer.fetch_data(symbol, period="1y")
@@ -415,7 +417,7 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
             analyzer_results = {}
 
             for analyzer_name, analyzer in analyzers.items():
-                print(f"  📊 Testing {analyzer_name} analyzer...")
+                logger.info(f"  📊 Testing {analyzer_name} analyzer...")
 
                 # Calculate performance metrics
                 start_time = time.time()
@@ -444,7 +446,7 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                             "within_tolerance": deviation <= 0.2,  # 20% tolerance
                         }
 
-                        print(
+                        logger.info(
                             f"    {metric_name}: {actual_value:.3f} (baseline: {baseline_value:.3f}, deviation: {deviation:.1%})"
                         )
 
@@ -462,9 +464,9 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
 
             # Determine best performing analyzer
             best_analyzer = self._find_best_analyzer(analyzer_results, baseline_metrics)
-            print(f"  🏆 Best analyzer: {best_analyzer}")
+            logger.info(f"  🏆 Best analyzer: {best_analyzer}")
 
-        print("\n✅ Baseline metrics comparison completed")
+        logger.info("\n✅ Baseline metrics comparison completed")
 
     def _create_enhanced_analyzer(self):
         """Create an enhanced analyzer with additional features."""
@@ -504,7 +506,7 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
     def _plot_baseline_comparison(self):
         """Plot baseline metrics comparison results."""
         if not self.results["baseline_comparison"]:
-            print("No baseline comparison results to plot.")
+            logger.warning("No baseline comparison results to plot.")
             return
 
         plt.figure(figsize=(12, 8))

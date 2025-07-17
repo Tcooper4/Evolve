@@ -30,7 +30,7 @@ from trading.agents.alpha import (
 from trading.agents.walk_forward_agent import WalkForwardAgent
 from trading.agents.regime_detection_agent import RegimeDetectionAgent
 from trading.validation.walk_forward_utils import walk_forward_validate
-from optimization.optuna_tuner import OptunaTuner
+from trading.optimization.optuna_tuner import SharpeOptunaTuner
 
 
 class TestFullAlphaCycle:
