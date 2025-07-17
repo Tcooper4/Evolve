@@ -363,14 +363,46 @@ class AlphaVantageProvider(DataProvider):
 
 
 class LiveDataFeed:
-    """Main data feed with automatic failover."""
+    """Enhanced data feed with automatic failover and UI integration."""
 
-    def __init__(self):
-        """Initialize the live data feed."""
-        self.providers = [PolygonProvider(), FinnhubProvider(), AlphaVantageProvider()]
+    def __init__(self, enable_alpaca: bool = True, enable_yfinance: bool = True):
+        """Initialize the enhanced live data feed."""
+        # Initialize providers in priority order
+        self.providers = []
+
+        # Add Alpaca as primary provider if available
+        if enable_alpaca and 'AlpacaProvider' in globals():
+            alpaca_provider = AlpacaProvider()
+            if getattr(alpaca_provider, 'is_available', False):
+                self.providers.append(alpaca_provider)
+                logger.info("Alpaca provider initialized")
+
+        # Add existing providers
+        self.providers.extend([PolygonProvider(), FinnhubProvider(), AlphaVantageProvider()])
+
+        # Add YFinance as fallback
+        if enable_yfinance and 'YFinanceProvider' in globals():
+            yfinance_provider = YFinanceProvider()
+            if getattr(yfinance_provider, 'is_available', False):
+                self.providers.append(yfinance_provider)
+                logger.info("YFinance provider initialized as fallback")
+
         self.current_provider_index = 0
         self.cache = {}
         self.cache_ttl = 300  # 5 minutes
+
+        # UI integration features
+        self.auto_refresh = False
+        self.refresh_interval = 30  # seconds
+        self.refresh_thread = None
+        self.refresh_callbacks = []
+        self.last_refresh = None
+
+        # Real-time data tracking
+        self.live_symbols = set()
+        self.live_data_cache = {}
+
+        logger.info(f"LiveDataFeed initialized with {len(self.providers)} providers")
 
     def _get_current_provider(self) -> DataProvider:
         """Get the current active provider."""

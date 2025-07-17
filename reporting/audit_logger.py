@@ -25,7 +25,7 @@ import numpy as np
 from collections import defaultdict, deque
 
 # Local imports
-from utils.common_helpers import safe_json_save, load_config
+from utils.common_helpers import safe_json_saver, load_config
 from utils.cache_utils import cache_result
 
 
@@ -670,7 +670,7 @@ class AuditLogger:
                 data['events'].extend(new_events)
                 
                 # Save updated file
-                safe_json_save(str(self.output_files['json']), data)
+                safe_json_saver(str(self.output_files['json']), data)
             
             # CSV output
             if 'csv' in self.output_files:
@@ -831,7 +831,7 @@ class AuditLogger:
             }
         }
         
-        safe_json_save(str(output_path), report)
+        safe_json_saver(str(output_path), report)
         return str(output_path)
     
     def close_session(self):

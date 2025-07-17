@@ -96,14 +96,17 @@ Fallback agent for unknown or general queries:
 ### Basic Usage
 
 ```python
-from agents.prompt_router_refactored import get_prompt_router, PromptContext
+# Note: This documentation refers to a legacy implementation that has been removed.
+# The current system uses the agent_controller and task_agent for prompt routing.
 
-# Get router instance
-router = get_prompt_router()
+from agents.agent_controller import get_agent_controller
+
+# Get agent controller instance
+controller = get_agent_controller()
 
 # Simple prompt handling
-result = router.handle_prompt("What stocks should I buy today?")
-print(f"Agent used: {result['agent_used']}")
+result = await controller.handle_prompt("What stocks should I buy today?")
+print(f"Workflow used: {result['workflow']}")
 print(f"Message: {result['message']}")
 ```
 

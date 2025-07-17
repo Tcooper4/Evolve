@@ -14,8 +14,8 @@ from trading.optimization.performance_logger import (
 )
 from trading.optimization.strategy_optimizer import (
     StrategyOptimizer,
-    StrategyOptimizerConfig,
 )
+from trading.optimization.base_optimizer import OptimizerConfig
 from trading.optimization.strategy_selection_agent import StrategySelectionAgent
 
 # Test data generation
@@ -171,7 +171,7 @@ def test_data() -> pd.DataFrame:
 def test_strategy_optimizer_initialization(optimizer_config: Dict[str, Any]):
     """Test strategy optimizer initialization."""
     optimizer = StrategyOptimizer(optimizer_config)
-    assert isinstance(optimizer.config, StrategyOptimizerConfig)
+    assert isinstance(optimizer.config, OptimizerConfig)
     assert optimizer.config.optimizer_type == "bayesian"
     assert optimizer.config.n_initial_points == 3
     assert optimizer.config.n_iterations == 10

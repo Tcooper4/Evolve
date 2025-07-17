@@ -1,0 +1,60 @@
+{
+  "json_user": [
+    {
+      "prompt": "JSON backend test",
+      "result": {
+        "backend": "json",
+        "test": true
+      },
+      "timestamp": "2025-07-16T17:02:06.743891",
+      "session_id": "default",
+      "user_id": "json_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.0,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "JSON backend test",
+      "result": {
+        "backend": "json",
+        "test": true
+      },
+      "timestamp": "2025-07-16T17:06:52.072063",
+      "session_id": "default",
+      "user_id": "json_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.0,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "JSON backend test",
+      "result": {
+        "backend": "json",
+        "test": true
+      },
+      "timestamp": "2025-07-16T17:07:20.074424",
+      "session_id": "default",
+      "user_id": "json_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.0,
+      "success": true,
+      "metadata": {}
+    },
+    {
+      "prompt": "JSON backend test",
+      "result": {
+        "backend": "json",
+        "test": true
+      },
+      "timestamp": "2025-07-16T17:08:46.568228",
+      "session_id": "default",
+      "user_id": "json_user",
+      "agent_type": "TestAgent",
+      "execution_time": 0.0,
+      "success": true,
+      "metadata": {}
+    }
+  ]
+}
