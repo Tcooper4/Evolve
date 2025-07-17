@@ -7,6 +7,8 @@ import asyncio
 import sys
 import os
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 
 # Add the project root to the path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -35,7 +37,7 @@ class MockAgent:
 
 async def test_orchestrator():
     """Test the TaskOrchestrator functionality"""
-    print("Testing TaskOrchestrator...")
+    logger.info("Testing TaskOrchestrator...")
     
     # Create orchestrator
     orchestrator = TaskOrchestrator()
@@ -83,33 +85,33 @@ async def test_orchestrator():
     
     orchestrator.tasks = test_tasks
     
-    print(f"Created orchestrator with {len(orchestrator.tasks)} tasks")
+    logger.info(f"Created orchestrator with {len(orchestrator.tasks)} tasks")
     
     # Test system status
     status = orchestrator.get_system_status()
-    print(f"System status: {status['orchestrator_running']}")
-    print(f"Total tasks: {status['total_tasks']}")
+    logger.info(f"System status: {status['orchestrator_running']}")
+    logger.info(f"Total tasks: {status['total_tasks']}")
     
     # Test task execution
-    print("\nTesting task execution...")
+    logger.info("\nTesting task execution...")
     result = await orchestrator.execute_task_now('test_task1', {'test_param': 'value'})
-    print(f"Task execution result: {result}")
+    logger.info(f"Task execution result: {result}")
     
     # Test dependency checking
-    print("\nTesting dependency checking...")
+    logger.info("\nTesting dependency checking...")
     should_execute = await orchestrator._should_execute_task('test_task2')
-    print(f"Should execute test_task2: {should_execute}")
+    logger.info(f"Should execute test_task2: {should_execute}")
     
     # Test condition checking
-    print("\nTesting condition checking...")
+    logger.info("\nTesting condition checking...")
     is_market_hours = await orchestrator._is_market_hours()
-    print(f"Is market hours: {is_market_hours}")
+    logger.info(f"Is market hours: {is_market_hours}")
     
     system_health = await orchestrator._get_system_health()
-    print(f"System health: {system_health}")
+    logger.info(f"System health: {system_health}")
     
     # Test performance tracking
-    print("\nTesting performance tracking...")
+    logger.info("\nTesting performance tracking...")
     execution = orchestrator.TaskExecution(
         task_id="test_exec",
         task_name="test_task1",
@@ -124,14 +126,14 @@ async def test_orchestrator():
     
     # Check updated status
     task_status = orchestrator.get_task_status("test_task1")
-    print(f"Task status: {task_status['success_rate']}")
+    logger.info(f"Task status: {task_status['success_rate']}")
     
     # Export status report
-    print("\nTesting status report export...")
+    logger.info("\nTesting status report export...")
     report_path = orchestrator.export_status_report()
-    print(f"Status report exported to: {report_path}")
+    logger.info(f"Status report exported to: {report_path}")
     
-    print("\nTaskOrchestrator test completed successfully!")
+    logger.info("\nTaskOrchestrator test completed successfully!")
 
 
 if __name__ == "__main__":

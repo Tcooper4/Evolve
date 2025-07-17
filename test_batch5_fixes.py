@@ -5,13 +5,15 @@ Simple test script for Batch 5 fixes
 
 import sys
 import os
+import logging
+logger = logging.getLogger(__name__)
 
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 def test_prompt_agent_fallback():
     """Test prompt agent fallback logic."""
-    print("Testing prompt agent fallback...")
+    logger.info("Testing prompt agent fallback...")
     
     try:
         from agents.prompt_agent import PromptAgent, RequestType
@@ -28,16 +30,16 @@ def test_prompt_agent_fallback():
         assert result.primary_agent == "GeneralAgent"
         assert "No strategy detected" in result.metadata["message"]
         
-        print("✅ Prompt agent fallback test passed")
+        logger.info("✅ Prompt agent fallback test passed")
         return True
         
     except Exception as e:
-        print(f"❌ Prompt agent fallback test failed: {e}")
+        logger.error(f"❌ Prompt agent fallback test failed: {e}")
         return False
 
 def test_strategy_router():
     """Test strategy router functionality."""
-    print("Testing strategy router...")
+    logger.info("Testing strategy router...")
     
     try:
         from trading.strategies.strategy_router import StrategyRouter, StrategyMatch
@@ -53,16 +55,16 @@ def test_strategy_router():
         assert best_match is not None
         assert "RSI" in best_match.strategy_name
         
-        print("✅ Strategy router test passed")
+        logger.info("✅ Strategy router test passed")
         return True
         
     except Exception as e:
-        print(f"❌ Strategy router test failed: {e}")
+        logger.error(f"❌ Strategy router test failed: {e}")
         return False
 
 def test_meta_agent_orchestrator():
     """Test meta agent orchestrator."""
-    print("Testing meta agent orchestrator...")
+    logger.info("Testing meta agent orchestrator...")
     
     try:
         from trading.agents.meta_agent_orchestrator import MetaAgentOrchestrator, AgentCall
@@ -88,16 +90,16 @@ def test_meta_agent_orchestrator():
         assert result.success
         assert result.agent_used == "TestAgent"
         
-        print("✅ Meta agent orchestrator test passed")
+        logger.info("✅ Meta agent orchestrator test passed")
         return True
         
     except Exception as e:
-        print(f"❌ Meta agent orchestrator test failed: {e}")
+        logger.error(f"❌ Meta agent orchestrator test failed: {e}")
         return False
 
 def test_backtest_utils():
     """Test backtest utils guard clauses."""
-    print("Testing backtest utils...")
+    logger.info("Testing backtest utils...")
     
     try:
         import pandas as pd
@@ -116,16 +118,16 @@ def test_backtest_utils():
         assert not report.metadata["validation_passed"]
         assert "Missing 'Buy' column" in report.metadata["error"]
         
-        print("✅ Backtest utils test passed")
+        logger.info("✅ Backtest utils test passed")
         return True
         
     except Exception as e:
-        print(f"❌ Backtest utils test failed: {e}")
+        logger.error(f"❌ Backtest utils test failed: {e}")
         return False
 
 def test_prompt_formatter():
     """Test prompt formatter JSON handling."""
-    print("Testing prompt formatter...")
+    logger.info("Testing prompt formatter...")
     
     try:
         from trading.utils.prompt_formatter import PromptFormatter
@@ -148,16 +150,16 @@ def test_prompt_formatter():
         assert result.validation_passed
         assert "forecast AAPL" in result.formatted_prompt
         
-        print("✅ Prompt formatter test passed")
+        logger.info("✅ Prompt formatter test passed")
         return True
         
     except Exception as e:
-        print(f"❌ Prompt formatter test failed: {e}")
+        logger.error(f"❌ Prompt formatter test failed: {e}")
         return False
 
 def test_prompt_clarification_agent():
     """Test prompt clarification agent."""
-    print("Testing prompt clarification agent...")
+    logger.info("Testing prompt clarification agent...")
     
     try:
         from trading.agents.prompt_clarification_agent import PromptClarificationAgent, AmbiguityType
@@ -175,16 +177,16 @@ def test_prompt_clarification_agent():
         assert clarification is not None
         assert clarification.ambiguity_type == AmbiguityType.VAGUE_REQUEST
         
-        print("✅ Prompt clarification agent test passed")
+        logger.info("✅ Prompt clarification agent test passed")
         return True
         
     except Exception as e:
-        print(f"❌ Prompt clarification agent test failed: {e}")
+        logger.error(f"❌ Prompt clarification agent test failed: {e}")
         return False
 
 def test_strategy_ranking():
     """Test strategy ranking logic."""
-    print("Testing strategy ranking...")
+    logger.info("Testing strategy ranking...")
     
     try:
         from trading.strategies.strategy_ranking import StrategyRanker
@@ -208,16 +210,16 @@ def test_strategy_ranking():
         recommendations = ranker.get_strategy_recommendations("forecast AAPL")
         assert isinstance(recommendations, list)
         
-        print("✅ Strategy ranking test passed")
+        logger.info("✅ Strategy ranking test passed")
         return True
         
     except Exception as e:
-        print(f"❌ Strategy ranking test failed: {e}")
+        logger.error(f"❌ Strategy ranking test failed: {e}")
         return False
 
 def main():
     """Run all Batch 5 fix tests."""
-    print("🧪 Running Batch 5 Fix Tests\n")
+    logger.info("🧪 Running Batch 5 Fix Tests\n")
     
     tests = [
         test_prompt_agent_fallback,
@@ -237,15 +239,15 @@ def main():
             if test():
                 passed += 1
         except Exception as e:
-            print(f"❌ Test {test.__name__} failed with exception: {e}")
+            logger.error(f"❌ Test {test.__name__} failed with exception: {e}")
     
-    print(f"\n📊 Test Results: {passed}/{total} tests passed")
+    logger.info(f"\n📊 Test Results: {passed}/{total} tests passed")
     
     if passed == total:
-        print("🎉 All Batch 5 fixes are working correctly!")
+        logger.info("🎉 All Batch 5 fixes are working correctly!")
         return 0
     else:
-        print("⚠️  Some tests failed. Please check the implementation.")
+        logger.warning("⚠️  Some tests failed. Please check the implementation.")
         return 1
 
 if __name__ == "__main__":
