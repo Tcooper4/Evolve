@@ -134,6 +134,7 @@ class PromptAgent:
         Args:
             config: Configuration dictionary
         """
+        self.logger = logging.getLogger(__name__)
         self.config = config or {}
 
         # Initialize prompt examples system
@@ -145,11 +146,11 @@ class PromptAgent:
             try:
                 self.sentence_transformer = SentenceTransformer('all-MiniLM-L6-v2')
                 self.example_embeddings = self._compute_example_embeddings()
-                logger.info("Prompt examples system initialized successfully")
+                self.logger.info("Prompt examples system initialized successfully")
             except Exception as e:
-                logger.warning(f"Could not initialize sentence transformer: {e}")
+                self.logger.warning(f"Could not initialize sentence transformer: {e}")
         else:
-            logger.info("Prompt examples system disabled (SentenceTransformers not available)")
+            self.logger.info("Prompt examples system disabled (SentenceTransformers not available)")
 
         # Initialize token usage tracking
         self.token_usage = {
@@ -174,11 +175,11 @@ class PromptAgent:
         if TIKTOKEN_AVAILABLE:
             try:
                 self.tokenizer = tiktoken.get_encoding("cl100k_base")  # GPT-4 encoding
-                logger.info("Token counting initialized successfully")
+                self.logger.info("Token counting initialized successfully")
             except Exception as e:
-                logger.warning(f"Could not initialize tokenizer: {e}")
+                self.logger.warning(f"Could not initialize tokenizer: {e}")
         else:
-            logger.info("Token counting disabled (tiktoken not available)")
+            self.logger.info("Token counting disabled (tiktoken not available)")
 
         # Initialize components
         self.forecast_router = ForecastRouter()
@@ -188,9 +189,9 @@ class PromptAgent:
             from trading.agents.model_creator_agent import get_model_creator_agent
 
             self.model_creator = get_model_creator_agent()
-            logger.info("Model creator agent initialized successfully")
+            self.logger.info("Model creator agent initialized successfully")
         except Exception as e:
-            logger.warning(f"Could not initialize model creator: {e}")
+            self.logger.warning(f"Could not initialize model creator: {e}")
             self.model_creator = None
 
         # Initialize prompt router for intelligent routing
@@ -198,9 +199,9 @@ class PromptAgent:
             from trading.agents.prompt_router_agent import create_prompt_router
 
             self.prompt_router = create_prompt_router()
-            logger.info("Prompt router agent initialized successfully")
+            self.logger.info("Prompt router agent initialized successfully")
         except Exception as e:
-            logger.warning(f"Could not initialize prompt router: {e}")
+            self.logger.warning(f"Could not initialize prompt router: {e}")
             self.prompt_router = None
 
         # Default strategy configurations
@@ -264,7 +265,7 @@ class PromptAgent:
             "ridge": "Ridge Regression",
         }
 
-        logger.info("Enhanced Prompt Agent initialized with full pipeline routing")
+        self.logger.info("Enhanced Prompt Agent initialized with full pipeline routing")
 
     def _load_prompt_examples(self) -> Optional[Dict[str, Any]]:
         """Load prompt examples from JSON file.
@@ -277,13 +278,13 @@ class PromptAgent:
             if examples_path.exists():
                 with open(examples_path, 'r') as f:
                     examples = json.load(f)
-                logger.info(f"Loaded {len(examples.get('examples', []))} prompt examples")
+                self.logger.info(f"Loaded {len(examples.get('examples', []))} prompt examples")
                 return examples
             else:
-                logger.warning("Prompt examples file not found")
+                self.logger.warning("Prompt examples file not found")
                 return None
         except Exception as e:
-            logger.error(f"Error loading prompt examples: {e}")
+            self.logger.error(f"Error loading prompt examples: {e}")
             return None
 
     def _compute_example_embeddings(self) -> Optional[np.ndarray]:
@@ -299,10 +300,10 @@ class PromptAgent:
             examples = self.prompt_examples.get('examples', [])
             prompts = [example['prompt'] for example in examples]
             embeddings = self.sentence_transformer.encode(prompts)
-            logger.info(f"Computed embeddings for {len(prompts)} examples")
+            self.logger.info(f"Computed embeddings for {len(prompts)} examples")
             return embeddings
         except Exception as e:
-            logger.error(f"Error computing example embeddings: {e}")
+            self.logger.error(f"Error computing example embeddings: {e}")
             return None
 
     def estimate_token_usage(self, prompt: str, model: str = "gpt-4") -> Dict[str, Any]:
@@ -334,7 +335,7 @@ class PromptAgent:
             }
             
         except Exception as e:
-            logger.warning(f"Error estimating token usage: {e}")
+            self.logger.warning(f"Error estimating token usage: {e}")
             return {
                 "token_count": 0,
                 "estimated_cost": 0.0,
@@ -375,16 +376,16 @@ class PromptAgent:
             # Truncate if too long
             if len(sanitized) > max_length:
                 sanitized = sanitized[:max_length] + "..."
-                logger.warning(f"Prompt truncated from {len(prompt)} to {len(sanitized)} characters")
+                self.logger.warning(f"Prompt truncated from {len(prompt)} to {len(sanitized)} characters")
             
             # Log if significant changes were made
             if len(sanitized) != len(prompt):
-                logger.info(f"Prompt sanitized: {len(prompt)} -> {len(sanitized)} characters")
+                self.logger.info(f"Prompt sanitized: {len(prompt)} -> {len(sanitized)} characters")
             
             return sanitized
             
         except Exception as e:
-            logger.error(f"Error sanitizing prompt: {e}")
+            self.logger.error(f"Error sanitizing prompt: {e}")
             return prompt[:max_length] if len(prompt) > max_length else prompt
 
     def batch_log(self, message: str, level: str = "info"):
@@ -407,8 +408,8 @@ class PromptAgent:
                 
         except Exception as e:
             # Fallback to direct logging
-            logger.error(f"Error in batch logging: {e}")
-            logger.info(message)
+            self.logger.error(f"Error in batch logging: {e}")
+            self.logger.info(message)
 
     def _flush_log_buffer(self):
         """Flush the log buffer to actual logging."""
@@ -428,20 +429,20 @@ class PromptAgent:
             for level, messages in logs_by_level.items():
                 if len(messages) == 1:
                     # Single message, log directly
-                    getattr(logger, level)(messages[0])
+                    getattr(self.logger, level)(messages[0])
                 else:
                     # Multiple messages, log as batch
                     batch_message = f"Batch of {len(messages)} {level} messages: " + "; ".join(messages[:5])
                     if len(messages) > 5:
                         batch_message += f" ... and {len(messages) - 5} more"
-                    getattr(logger, level)(batch_message)
+                    getattr(self.logger, level)(batch_message)
             
             # Clear buffer
             self.log_buffer.clear()
             self.last_log_flush = time.time()
             
         except Exception as e:
-            logger.error(f"Error flushing log buffer: {e}")
+            self.logger.error(f"Error flushing log buffer: {e}")
 
     def update_token_usage(self, tokens_used: int, model: str = "gpt-4"):
         """Update token usage tracking.
@@ -467,7 +468,7 @@ class PromptAgent:
                 )
                 
         except Exception as e:
-            logger.error(f"Error updating token usage: {e}")
+            self.logger.error(f"Error updating token usage: {e}")
 
     def get_token_usage_stats(self) -> Dict[str, Any]:
         """Get current token usage statistics."""
@@ -514,7 +515,7 @@ class PromptAgent:
             return similar_examples
             
         except Exception as e:
-            logger.error(f"Error finding similar examples: {e}")
+            self.logger.error(f"Error finding similar examples: {e}")
             return []
 
     def _create_few_shot_prompt(self, prompt: str, similar_examples: List[Dict[str, Any]]) -> str:
@@ -589,10 +590,10 @@ class PromptAgent:
             if self.sentence_transformer:
                 self.example_embeddings = self._compute_example_embeddings()
                 
-            logger.info(f"Saved successful prompt example: {new_example['id']}")
+            self.logger.info(f"Saved successful prompt example: {new_example['id']}")
             
         except Exception as e:
-            logger.error(f"Error saving prompt example: {e}")
+            self.logger.error(f"Error saving prompt example: {e}")
 
     def _extract_symbols_from_prompt(self, prompt: str) -> List[str]:
         """Extract stock symbols from prompt.
@@ -741,8 +742,8 @@ class PromptAgent:
             enhanced_prompt = self._create_few_shot_prompt(prompt, similar_examples)
             
             if similar_examples:
-                self.batch_log(f"Found {len(similar_examples)} similar examples with scores: "
-                          f"{[f'{ex['similarity_score']:.3f}' for ex in similar_examples]}")
+                scores = [f"{ex['similarity_score']:.3f}" for ex in similar_examples]
+                self.batch_log(f"Found {len(similar_examples)} similar examples with scores: {scores}")
 
             # Parse prompt to extract intent and parameters
             intent, params = self._parse_prompt(prompt)
@@ -798,12 +799,12 @@ class PromptAgent:
                     self._save_successful_example(prompt, parsed_output, category, performance_score)
                     
                 except Exception as e:
-                    logger.warning(f"Could not save successful example: {e}")
+                    self.logger.warning(f"Could not save successful example: {e}")
 
             return response
 
         except Exception as e:
-            logger.error(f"Error processing prompt: {e}")
+            self.logger.error(f"Error processing prompt: {e}")
             return AgentResponse(
                 success=False,
                 message=f"Error processing request: {str(e)}",
@@ -902,7 +903,7 @@ class PromptAgent:
             "prompt": prompt,
         }
 
-        logger.info(f"Parsed prompt - Intent: {intent}, Params: {params}")
+        self.logger.info(f"Parsed prompt - Intent: {intent}, Params: {params}")
 
         return intent, params
 
@@ -1011,7 +1012,7 @@ class PromptAgent:
             )
 
         except Exception as e:
-            logger.error(f"Error in forecast request: {e}")
+            self.logger.error(f"Error in forecast request: {e}")
             return AgentResponse(
                 success=False,
                 message=f"Forecast failed: {str(e)}",
@@ -1057,7 +1058,7 @@ class PromptAgent:
             )
 
         except Exception as e:
-            logger.error(f"Error in strategy request: {e}")
+            self.logger.error(f"Error in strategy request: {e}")
             return AgentResponse(
                 success=False,
                 message=f"Strategy analysis failed: {str(e)}",
@@ -1149,7 +1150,7 @@ class PromptAgent:
             )
 
         except Exception as e:
-            logger.error(f"Error in backtest request: {e}")
+            self.logger.error(f"Error in backtest request: {e}")
             return AgentResponse(
                 success=False,
                 message=f"Backtest failed: {str(e)}",
@@ -1223,7 +1224,7 @@ class PromptAgent:
             )
 
         except Exception as e:
-            logger.error(f"Error in trade request: {e}")
+            self.logger.error(f"Error in trade request: {e}")
             return AgentResponse(
                 success=False,
                 message=f"Trade execution failed: {str(e)}",
@@ -1282,7 +1283,7 @@ class PromptAgent:
             )
 
         except Exception as e:
-            logger.error(f"Error in optimization request: {e}")
+            self.logger.error(f"Error in optimization request: {e}")
             return AgentResponse(
                 success=False,
                 message=f"Optimization failed: {str(e)}",
@@ -1339,7 +1340,7 @@ class PromptAgent:
             )
 
         except Exception as e:
-            logger.error(f"Error in analysis request: {e}")
+            self.logger.error(f"Error in analysis request: {e}")
             return AgentResponse(
                 success=False,
                 message=f"Analysis failed: {str(e)}",
@@ -1420,7 +1421,7 @@ class PromptAgent:
                 )
 
         except Exception as e:
-            logger.error(f"Error in model creation request: {e}")
+            self.logger.error(f"Error in model creation request: {e}")
             return AgentResponse(
                 success=False,
                 message=f"Model creation failed: {str(e)}",
@@ -1578,7 +1579,7 @@ class PromptAgent:
             )
 
         except Exception as e:
-            logger.error(f"Error in general request: {e}")
+            self.logger.error(f"Error in general request: {e}")
             return AgentResponse(
                 success=False,
                 message=f"Analysis failed: {str(e)}",

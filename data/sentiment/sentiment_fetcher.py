@@ -26,7 +26,7 @@ from urllib.parse import urlencode
 import re
 
 # Local imports
-from utils.cache_utils import cache_result
+from utils.cache_utils import cache_model_operation
 from utils.common_helpers import safe_json_save, load_config
 
 
@@ -109,7 +109,7 @@ class SentimentFetcher:
         limit_info['calls'] += 1
         return True
     
-    @cache_result(ttl=300)  # Cache for 5 minutes
+    @cache_model_operation(ttl=300)  # Cache for 5 minutes
     def fetch_news_headlines(self, ticker: str, hours_back: int = 24) -> List[SentimentData]:
         """
         Fetch news headlines from NewsAPI and Finnhub
@@ -214,7 +214,7 @@ class SentimentFetcher:
         
         return headlines
     
-    @cache_result(ttl=600)  # Cache for 10 minutes
+    @cache_model_operation(ttl=600)  # Cache for 10 minutes
     def fetch_reddit_sentiment(self, ticker: str, hours_back: int = 24) -> List[SentimentData]:
         """
         Fetch Reddit posts from r/stocks and r/wallstreetbets via Pushshift API
@@ -286,7 +286,7 @@ class SentimentFetcher:
         
         return reddit_posts
     
-    @cache_result(ttl=300)  # Cache for 5 minutes
+    @cache_model_operation(ttl=300)  # Cache for 5 minutes
     def fetch_twitter_sentiment(self, ticker: str, hours_back: int = 24) -> List[SentimentData]:
         """
         Fetch Twitter mentions via Twitter API v2

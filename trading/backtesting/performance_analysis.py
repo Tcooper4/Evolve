@@ -135,3 +135,67 @@ class PerformanceAnalyzer:
             "avg_loss": np.nan,
             "profit_factor": np.nan,
         }
+
+    def run_monte_carlo_simulation(
+        self,
+        returns: pd.Series,
+        n_paths: int = 1000,
+        noise_std: float = 0.0,
+        output_csv: str = None,
+        output_plot: str = None,
+        seed: int = 42,
+        confidence: float = 0.95,
+    ) -> Dict[str, Any]:
+        """
+        Run Monte Carlo simulation by resampling returns and injecting noise.
+        Args:
+            returns: Series of returns (can be daily, etc.)
+            n_paths: Number of simulation paths
+            noise_std: Stddev of Gaussian noise to inject (as fraction, e.g. 0.01)
+            output_csv: Optional path to save simulated equity paths
+            output_plot: Optional path to save plot of paths and confidence bounds
+            seed: Random seed
+            confidence: Confidence interval (e.g. 0.95 for 95%%)
+        Returns:
+            Dict with mean, worst-case, and confidence bounds
+        """
+        import numpy as np
+        import pandas as pd
+        import matplotlib.pyplot as plt
+
+        np.random.seed(seed)
+        returns = returns.dropna().values
+        n = len(returns)
+        paths = np.zeros((n_paths, n))
+        for i in range(n_paths):
+            sampled = np.random.choice(returns, size=n, replace=True)
+            if noise_std > 0:
+                sampled = sampled + np.random.normal(0, noise_std, size=n)
+            paths[i] = sampled
+        # Simulate equity curves
+        equity_curves = np.cumprod(1 + paths, axis=1)
+        final_equity = equity_curves[:, -1]
+        mean_return = np.mean(final_equity - 1)
+        worst_case = np.min(final_equity - 1)
+        lower = np.percentile(final_equity - 1, (1 - confidence) / 2 * 100)
+        upper = np.percentile(final_equity - 1, (1 + confidence) / 2 * 100)
+        result = {
+            'mean_return': mean_return,
+            'worst_case': worst_case,
+            f'lower_{int(confidence*100)}': lower,
+            f'upper_{int(confidence*100)}': upper,
+        }
+        if output_csv:
+            pd.DataFrame(equity_curves).to_csv(output_csv, index=False)
+        if output_plot:
+            plt.figure(figsize=(12, 6))
+            plt.plot(equity_curves.T, color='gray', alpha=0.01)
+            plt.plot(np.mean(equity_curves, axis=0), color='blue', label='Mean Path')
+            plt.title('Monte Carlo Simulated Equity Paths')
+            plt.xlabel('Time Step')
+            plt.ylabel('Equity')
+            plt.legend()
+            plt.tight_layout()
+            plt.savefig(output_plot)
+            plt.close()
+        return result

@@ -306,8 +306,8 @@ class ForecastController:
             
             # Try to import and instantiate
             if model_name == "ARIMA":
-                from trading.models.arima_model import ARIMAForecaster
-                return ARIMAForecaster()
+                from trading.models.arima_model import ARIMAModel
+                return ARIMAModel()
             elif model_name == "Prophet":
                 from trading.models.prophet_model import ProphetForecaster
                 return ProphetForecaster()

@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 import torch
 
+logger = logging.getLogger(__name__)
+
 # Workaround for pandas_ta numpy compatibility issue
 try:
     # Patch numpy import issue in pandas_ta for newer numpy versions
