@@ -24,6 +24,7 @@ from agents.model_innovation_agent import (
 
 # Import trading utilities
 from utils.weight_registry import get_weight_registry, get_registry_summary
+from utils.service_utils import create_sample_market_data
 
 
 def create_sample_data(n_samples: int = 1000) -> pd.DataFrame:
@@ -37,6 +38,10 @@ def create_sample_data(n_samples: int = 1000) -> pd.DataFrame:
         DataFrame with features and target
     """
     logger.info(f"Creating sample data with {n_samples} samples")
+    
+    # Use shared utility for basic market data
+    basic_data = create_sample_market_data(n_samples)
+    data = basic_data['data']
     
     # Generate dates
     dates = pd.date_range('2023-01-01', periods=n_samples, freq='D')
@@ -74,8 +79,8 @@ def create_sample_data(n_samples: int = 1000) -> pd.DataFrame:
     # Create target (next day's return)
     target = pd.Series(price_returns).shift(-1)
     
-    # Create DataFrame
-    data = pd.DataFrame({
+    # Create DataFrame with enhanced features
+    enhanced_data = pd.DataFrame({
         'date': dates,
         'price': prices,
         'ma_20': ma_20,
@@ -88,10 +93,10 @@ def create_sample_data(n_samples: int = 1000) -> pd.DataFrame:
     })
     
     # Remove NaN values
-    data = data.dropna()
+    enhanced_data = enhanced_data.dropna()
     
-    logger.info(f"Created data with shape: {data.shape}")
-    return data
+    logger.info(f"Created data with shape: {enhanced_data.shape}")
+    return enhanced_data
 
 
 def setup_initial_models():

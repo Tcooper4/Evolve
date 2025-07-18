@@ -10,12 +10,12 @@ This module tests the async strategy runner functionality including:
 
 import asyncio
 import pytest
-import pandas as pd
 import numpy as np
-from datetime import datetime
-from unittest.mock import Mock, patch, AsyncMock
+import pandas as pd
+from unittest.mock import Mock, patch
 
-from trading.strategies.strategy_runner import AsyncStrategyRunner
+from trading.strategies.async_strategy_runner import AsyncStrategyRunner
+from utils.service_utils import create_sample_market_data
 
 
 class MockStrategy:
@@ -23,7 +23,6 @@ class MockStrategy:
     
     def __init__(self, name: str = "MockStrategy"):
         self.name = name
-        self.description = f"Mock {name} strategy"
         self.parameters = {}
     
     def set_parameters(self, params: dict):
@@ -42,18 +41,8 @@ class MockStrategy:
 
 def create_sample_data(rows: int = 100) -> pd.DataFrame:
     """Create sample market data for testing."""
-    dates = pd.date_range(start='2023-01-01', periods=rows, freq='D')
-    prices = 100 + np.cumsum(np.random.randn(rows) * 0.5)
-    
-    data = pd.DataFrame({
-        'open': prices * 0.99,
-        'high': prices * 1.02,
-        'low': prices * 0.98,
-        'close': prices,
-        'volume': np.random.randint(1000000, 10000000, rows)
-    }, index=dates)
-    
-    return data
+    sample_data = create_sample_market_data(rows)
+    return sample_data['data']
 
 
 class TestAsyncStrategyRunner:
