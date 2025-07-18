@@ -283,7 +283,6 @@ def detect_seasonality(data: pd.DataFrame, date_column: str, target_column: str)
     """
     try:
         df = data.copy()
-        dates = pd.to_datetime(df[date_column])
         
         # Calculate autocorrelation for different lags
         target_series = df[target_column]

@@ -461,10 +461,10 @@ def recovery_factor(returns: Union[pd.Series, np.ndarray]) -> float:
     if len(returns) == 0:
         return 0.0
     
-    cumulative_return = cumulative_return(returns)
+    total_return = cumulative_return(returns)
     max_dd = abs(max_drawdown(returns))
     
-    return cumulative_return / max_dd if max_dd != 0 else 0.0
+    return total_return / max_dd if max_dd != 0 else 0.0
 
 
 def risk_reward_ratio(returns: Union[pd.Series, np.ndarray]) -> float:

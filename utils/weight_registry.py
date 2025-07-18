@@ -557,8 +557,6 @@ class WeightRegistry:
             True if successfully imported
         """
         try:
-            imported_count = 0
-            
             for model_name, model_data in import_data.get("models", {}).items():
                 if model_name in self.registry["models"] and not overwrite:
                     logger.warning(f"Model {model_name} already exists, skipping")
@@ -582,10 +580,8 @@ class WeightRegistry:
                 # Update performance if available
                 if "performance" in model_data:
                     self.update_performance(model_name, model_data["performance"])
-                
-                imported_count += 1
             
-            logger.info(f"Imported {imported_count} models")
+            logger.info("Successfully imported models")
             return True
             
         except Exception as e:
@@ -603,14 +599,12 @@ class WeightRegistry:
         cutoff_str = cutoff_date.isoformat()
         
         # Clean up performance history
-        original_count = len(self.registry["performance_history"])
         self.registry["performance_history"] = [
             record for record in self.registry["performance_history"]
             if record["timestamp"] >= cutoff_str
         ]
         
         # Clean up optimization history
-        original_opt_count = len(self.registry["optimization_history"])
         self.registry["optimization_history"] = [
             record for record in self.registry["optimization_history"]
             if record["timestamp"] >= cutoff_str
@@ -618,7 +612,6 @@ class WeightRegistry:
         
         # Clean up individual model histories
         for model_entry in self.registry["models"].values():
-            original_model_count = len(model_entry["history"])
             model_entry["history"] = [
                 record for record in model_entry["history"]
                 if record["timestamp"] >= cutoff_str
