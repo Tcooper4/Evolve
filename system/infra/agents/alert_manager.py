@@ -91,17 +91,14 @@ class AlertManager:
 
         return config
 
-    def setup_logging(self):
-        """Setup logging for alert system."""
-        log_config = self.config["logging"]
-        logging.basicConfig(
-            level=getattr(logging, log_config["level"]),
-            format=log_config["format"],
-            filename=log_config["file"],
-        )
-        self.logger = logging.getLogger("AlertManager")
+    from utils.launch_utils import setup_logging
 
-    def _validate_email_config(self) -> bool:
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="service")
+
+
+def _validate_email_config(self) -> bool:
         """Validate email configuration."""
         email_config = self.config.get("alerts", {}).get("email", {})
 
