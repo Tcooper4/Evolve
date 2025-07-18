@@ -18,42 +18,26 @@ from typing import Any, Dict, List, Optional
 sys.path.append(str(Path(__file__).parent.parent))
 
 from utils.reasoning_service import ReasoningService
-
-
-def setup_logging():
-    """Setup logging configuration."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler("logs/reasoning_service.log"),
-            logging.StreamHandler(),
-        ],
-    )
-
-    return {
-        "success": True,
-        "message": "Initialization completed",
-        "timestamp": datetime.now().isoformat(),
-    }
+from utils.service_utils import setup_service_logging, load_service_config
 
 
 def main():
     """Main launcher function."""
     # Setup logging
-    setup_logging()
-    logger = logging.getLogger(__name__)
-
-    # Create logs directory
-    Path("logs").mkdir(exist_ok=True)
+    logger = setup_service_logging("reasoning_service")
 
     # Get configuration from environment variables
-    config = {
-        "redis_host": os.getenv("REDIS_HOST", "localhost"),
-        "redis_port": int(os.getenv("REDIS_PORT", "6379")),
-        "redis_db": int(os.getenv("REDIS_DB", "0")),
-        "service_name": os.getenv("REASONING_SERVICE_NAME", "reasoning_service"),
-    }
+    config = load_service_config({
+        "redis_host": "REDIS_HOST",
+        "redis_port": "REDIS_PORT", 
+        "redis_db": "REDIS_DB",
+        "service_name": "REASONING_SERVICE_NAME"
+    }, defaults={
+        "redis_host": "localhost",
+        "redis_port": 6379,
+        "redis_db": 0,
+        "service_name": "reasoning_service"
+    })
 
     logger.info("Starting Reasoning Service...")
     logger.info(f"Configuration: {config}")
