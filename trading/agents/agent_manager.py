@@ -17,13 +17,13 @@ import json
 import logging
 import random
 import threading
+import time
 import traceback
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from queue import Queue
 from typing import Any, Dict, List, Optional, Type, Union
-import time
 
 from trading.agents.agent_leaderboard import AgentLeaderboard
 
@@ -698,6 +698,7 @@ class EnhancedAgentManager:
                 self.logger.warning(f"Failed to load config from {config_path}: {e}")
                 config_data = {}
         else:
+            self.logger.warning(f"WARNING: {self.config.config_file} not found. Falling back to default registration.")
             config_data = {}
             self._create_default_config(config_path)
 
@@ -774,8 +775,100 @@ class EnhancedAgentManager:
             "execution_agent": ExecutionAgent,
         }
 
+        registered_count = 0
         for agent_name, agent_class in default_agents.items():
-            self.register_agent(agent_name, agent_class)
+            try:
+                self.register_agent(agent_name, agent_class)
+                registered_count += 1
+            except Exception as e:
+                self.logger.warning(f"Failed to register {agent_name}: {e}")
+        
+        # If no agents were registered successfully, register fallback agents
+        if registered_count == 0:
+            self.logger.warning("No default agents registered successfully. Registering fallback agents.")
+            self._register_fallback_agents()
+        else:
+            self.logger.info(f"Successfully registered {registered_count} default agents")
+    
+    def _register_fallback_agents(self) -> None:
+        """Register fallback agents when no other agents are available."""
+        try:
+            # Try to import and register the mock agent
+            from agents.mock_agent import MockAgent
+            
+            fallback_config = AgentConfig(
+                name="fallback_agent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=30,
+                retry_attempts=1,
+                custom_config={
+                    "agent_type": "fallback",
+                    "capabilities": ["general_query", "system_status", "help", "fallback_response"]
+                }
+            )
+            
+            self.register_agent("fallback_agent", MockAgent, fallback_config)
+            self.logger.info("✅ Registered fallback agent (MockAgent)")
+            
+        except ImportError as e:
+            self.logger.error(f"Failed to import MockAgent: {e}")
+            self._register_minimal_fallback_agent()
+        except Exception as e:
+            self.logger.error(f"Failed to register fallback agent: {e}")
+            self._register_minimal_fallback_agent()
+    
+    def _register_minimal_fallback_agent(self) -> None:
+        """Register a minimal fallback agent when even the mock agent fails."""
+        try:
+            # Create a minimal fallback agent class
+            class MinimalFallbackAgent(BaseAgent):
+                def __init__(self, config: AgentConfig):
+                    super().__init__(config)
+                    self.name = "minimal_fallback"
+                    self.enabled = True
+                
+                def execute(self, **kwargs) -> AgentResult:
+                    return AgentResult(
+                        success=True,
+                        data={
+                            "message": "System is running with minimal fallback agent",
+                            "status": "operational",
+                            "agent_type": "minimal_fallback",
+                            "note": "Real agents are not available. Check configuration and agent registration."
+                        },
+                        message="Minimal fallback agent processed request"
+                    )
+                
+                def get_status(self) -> AgentStatus:
+                    return AgentStatus(
+                        agent_name=self.name,
+                        is_enabled=self.enabled,
+                        is_running=False,
+                        health_score=0.5,
+                        last_heartbeat=datetime.now().isoformat()
+                    )
+            
+            fallback_config = AgentConfig(
+                name="minimal_fallback_agent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=30,
+                retry_attempts=1,
+                custom_config={
+                    "agent_type": "minimal_fallback",
+                    "capabilities": ["basic_response"]
+                }
+            )
+            
+            self.register_agent("minimal_fallback_agent", MinimalFallbackAgent, fallback_config)
+            self.logger.info("✅ Registered minimal fallback agent")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to register minimal fallback agent: {e}")
+            self.logger.error("CRITICAL: No agents available. System may not function properly.")
 
     def register_agent(
         self,
