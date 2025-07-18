@@ -1,11 +1,8 @@
 """Forecast components for Streamlit UI."""
 
-import json
 import logging
-import os
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 import pandas as pd
 import plotly.graph_objects as go

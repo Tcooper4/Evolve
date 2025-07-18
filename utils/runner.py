@@ -9,8 +9,6 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from core.session_utils import safe_session_set, update_last_updated
-
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))

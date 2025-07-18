@@ -12,9 +12,11 @@ logger = logging.getLogger(__name__)
 
 _signal_registry = {}
 
+
 def register_signal(name: str, cls):
     """Register a signal generator class by name."""
     _signal_registry[name] = cls
+
 
 def get_signal_class(name: str):
     """Retrieve a registered signal generator class by name."""
