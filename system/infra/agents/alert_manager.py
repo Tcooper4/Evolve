@@ -93,12 +93,7 @@ class AlertManager:
 
     from utils.launch_utils import setup_logging
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")
-
-
-def _validate_email_config(self) -> bool:
+    def _validate_email_config(self) -> bool:
         """Validate email configuration."""
         email_config = self.config.get("alerts", {}).get("email", {})
 
