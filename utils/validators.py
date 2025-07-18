@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 class SignalSchemaValidator:
     """
     Validator for signal DataFrame schema.

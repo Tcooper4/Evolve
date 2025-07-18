@@ -16,13 +16,14 @@ Components:
 
 import logging
 import os
-
-# Import from trading.utils.data_utils since that's where the actual functions are
 import sys
 from datetime import datetime
 from typing import Any, Dict
 
+# Add trading directory to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "trading"))
+
+# Import from trading.utils.data_utils
 from trading.utils.data_utils import (
     DataPreprocessor,
     DataValidator,
@@ -35,7 +36,7 @@ from trading.utils.data_utils import (
 # Import from config_loader
 from .config_loader import ConfigLoader, config
 
-# Import from actual math_utils
+# Import from math_utils
 from .math_utils import (
     calculate_alpha,
     calculate_beta,
@@ -50,23 +51,15 @@ from .math_utils import (
 # Import from model_utils
 from .model_utils import get_model_info, load_model_state, save_model_state
 
-# Import from strategy_utils
+# Import from strategy_utils (only unique functions)
 from .strategy_utils import (
-    calculate_alpha,
-    calculate_beta,
-    calculate_calmar_ratio,
     calculate_gain_to_pain_ratio,
     calculate_information_ratio,
-    calculate_max_drawdown,
-    calculate_profit_factor,
     calculate_recovery_factor,
     calculate_returns,
     calculate_risk_metrics,
-    calculate_sharpe_ratio,
     calculate_sortino_ratio,
     calculate_ulcer_index,
-    calculate_volatility,
-    calculate_win_rate,
 )
 
 # Import from system_status
@@ -94,15 +87,7 @@ __all__ = [
     "config",
     # Strategy utilities
     "calculate_returns",
-    "calculate_sharpe_ratio",
-    "calculate_max_drawdown",
-    "calculate_win_rate",
-    "calculate_profit_factor",
-    "calculate_volatility",
-    "calculate_beta",
-    "calculate_alpha",
     "calculate_information_ratio",
-    "calculate_calmar_ratio",
     "calculate_sortino_ratio",
     "calculate_ulcer_index",
     "calculate_gain_to_pain_ratio",
