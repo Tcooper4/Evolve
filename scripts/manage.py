@@ -1,113 +1,72 @@
 #!/usr/bin/env python3
 """
-Application management script.
-Provides commands for managing the application lifecycle, including installation, testing, linting, formatting, Docker builds, and cleaning.
+Application Management Script
 
-This script supports:
-- Installing dependencies
-- Running tests
-- Linting and formatting code
-- Building and running Docker containers
-- Cleaning build artifacts
-
-Usage:
-    python manage.py <command> [options]
-
-Commands:
-    install     Install dependencies
-    test        Run tests
-    lint        Run code linting
-    format      Format code
-    docker      Build and run Docker containers
-    clean       Clean build artifacts
-
-Examples:
-    # Install dependencies
-    python manage.py install
-
-    # Run tests
-    python manage.py test
-
-    # Lint code
-    python manage.py lint
-
-    # Format code
-    python manage.py format
-
-    # Build Docker image
-    python manage.py docker --build
-
-    # Clean build artifacts
-    python manage.py clean
+Provides utilities for managing the trading application including:
+- Dependency installation
+- Testing
+- Code formatting and linting
+- Docker operations
+- Cleanup tasks
 """
 
 import argparse
+import json
 import logging
-import logging.config
+import os
 import subprocess
 import sys
-from pathlib import Path
-from typing import List, Optional
-
 import yaml
+from pathlib import Path
+from typing import Dict, List, Optional
+
+from utils.service_utils import setup_service_logging
 
 
 class ApplicationManager:
-    """Application manager for handling lifecycle commands.
-
-    This class provides methods for installing dependencies, running tests,
-    linting, formatting, building Docker images, and cleaning up temporary files.
-
-    Example:
-        manager = ApplicationManager()
-        manager.install_dependencies()
-        manager.run_tests()
-    """
+    """Manages application operations and maintenance tasks."""
 
     def __init__(self, config_path: str = "config/app_config.yaml"):
-        """Initialize the application manager.
+        """
+        Initialize the application manager.
 
         Args:
-            config_path: Path to the application configuration file
+            config_path: Path to the configuration file
         """
+        self.config_path = config_path
         self.config = self._load_config(config_path)
-        self.setup_logging()
-        self.logger = logging.getLogger("trading")
+        self.logger = setup_service_logging("application_manager")
 
     def _load_config(self, config_path: str) -> dict:
-        """Load application configuration.
+        """Load configuration from YAML file.
 
         Args:
             config_path: Path to the configuration file
 
         Returns:
             Configuration dictionary
-
-        Raises:
-            SystemExit: If the configuration file is not found
         """
-        if not Path(config_path).exists():
-            print(f"Error: Configuration file not found: {config_path}")
-            sys.exit(1)
+        try:
+            with open(config_path, "r") as f:
+                return yaml.safe_load(f)
+        except FileNotFoundError:
+            self.logger.warning(f"Config file {config_path} not found, using defaults")
+            return self._get_default_config()
+        except Exception as e:
+            self.logger.error(f"Error loading config: {e}")
+            return self._get_default_config()
 
-        with open(config_path) as f:
-            return yaml.safe_load(f)
+    def _get_default_config(self) -> dict:
+        """Get default configuration.
 
-    def setup_logging(self):
-        """Initialize logging configuration.
-
-        Raises:
-            SystemExit: If the logging configuration file is not found
+        Returns:
+            Default configuration dictionary
         """
-        log_config_path = Path("config/logging_config.yaml")
-        if not log_config_path.exists():
-            print("Error: logging_config.yaml not found")
-            sys.exit(1)
-
-        with open(log_config_path) as f:
-            log_config = yaml.safe_load(f)
-
-        logging.config.dictConfig(log_config)
+        return {
+            "server": {"port": 8000, "host": "localhost"},
+            "database": {"url": "sqlite:///trading.db"},
+            "logging": {"level": "INFO", "file": "logs/app.log"},
+        }
 
     def run_command(self, command: List[str], cwd: Optional[str] = None) -> int:
         """Run a shell command and return its exit code.
@@ -306,64 +265,190 @@ class ApplicationManager:
             self.logger.error("Failed to remove Python cache files")
             return False
 
-        # Remove test cache
-        if self.run_command(["rm", "-rf", ".pytest_cache"]) != 0:
-            self.logger.error("Failed to remove test cache")
+        # Remove .pyc files
+        if (
+            self.run_command(
+                [
+                    "find",
+                    ".",
+                    "-name",
+                    "*.pyc",
+                    "-delete",
+                ]
+            )
+            != 0
+        ):
+            self.logger.error("Failed to remove .pyc files")
             return False
 
-        # Remove coverage files
-        if self.run_command(["rm", "-rf", "htmlcov", ".coverage"]) != 0:
-            self.logger.error("Failed to remove coverage files")
+        # Remove test cache
+        if (
+            self.run_command(
+                [
+                    "find",
+                    ".",
+                    "-type",
+                    "d",
+                    "-name",
+                    ".pytest_cache",
+                    "-exec",
+                    "rm",
+                    "-r",
+                    "{}",
+                    "+",
+                ]
+            )
+            != 0
+        ):
+            self.logger.error("Failed to remove pytest cache")
             return False
 
         self.logger.info("Cleanup completed successfully")
         return True
 
+    def check_health(self):
+        """Check application health.
+
+        Returns:
+            True if application is healthy, False otherwise
+        """
+        self.logger.info("Checking application health...")
+
+        # Check if main application files exist
+        required_files = [
+            "app.py",
+            "requirements.txt",
+            "config/app_config.yaml",
+        ]
+
+        for file_path in required_files:
+            if not Path(file_path).exists():
+                self.logger.error(f"Required file {file_path} not found")
+                return False
+
+        # Check if logs directory exists
+        if not Path("logs").exists():
+            self.logger.warning("Logs directory not found")
+
+        self.logger.info("Application health check passed")
+        return True
+
+    def backup_data(self):
+        """Backup application data.
+
+        Returns:
+            True if backup is successful, False otherwise
+        """
+        self.logger.info("Backing up application data...")
+
+        backup_dir = Path("backups")
+        backup_dir.mkdir(exist_ok=True)
+
+        # Backup database
+        if Path("trading.db").exists():
+            if (
+                self.run_command(
+                    ["cp", "trading.db", f"backups/trading.db.backup"]
+                )
+                != 0
+            ):
+                self.logger.error("Failed to backup database")
+                return False
+
+        # Backup logs
+        if Path("logs").exists():
+            if (
+                self.run_command(
+                    ["tar", "-czf", "backups/logs.tar.gz", "logs/"]
+                )
+                != 0
+            ):
+                self.logger.error("Failed to backup logs")
+                return False
+
+        self.logger.info("Data backup completed successfully")
+        return True
+
+    def restore_data(self):
+        """Restore application data.
+
+        Returns:
+            True if restore is successful, False otherwise
+        """
+        self.logger.info("Restoring application data...")
+
+        # Restore database
+        if Path("backups/trading.db.backup").exists():
+            if (
+                self.run_command(
+                    ["cp", "backups/trading.db.backup", "trading.db"]
+                )
+                != 0
+            ):
+                self.logger.error("Failed to restore database")
+                return False
+
+        # Restore logs
+        if Path("backups/logs.tar.gz").exists():
+            if (
+                self.run_command(
+                    ["tar", "-xzf", "backups/logs.tar.gz"]
+                )
+                != 0
+            ):
+                self.logger.error("Failed to restore logs")
+                return False
+
+        self.logger.info("Data restore completed successfully")
+        return True
+
 
 def main():
-    """Main function."""
+    """Main function to run the application manager."""
     parser = argparse.ArgumentParser(description="Trading Application Manager")
     parser.add_argument(
         "command",
-        choices=["install", "test", "lint", "format", "docker", "clean"],
-        help="Command to run",
+        choices=[
+            "install",
+            "test",
+            "lint",
+            "format",
+            "build",
+            "run",
+            "stop",
+            "clean",
+            "health",
+            "backup",
+            "restore",
+        ],
+        help="Command to execute",
     )
-    parser.add_argument("--help", action="store_true", help="Show usage examples")
+    parser.add_argument(
+        "--config",
+        default="config/app_config.yaml",
+        help="Path to configuration file",
+    )
+
     args = parser.parse_args()
 
-    if args.help:
-        print(__doc__)
-        return {
-            "success": True,
-            "result": {"status": "help_displayed", "command": "help"},
-            "message": "Operation completed successfully",
-            "timestamp": datetime.now().isoformat(),
-        }
+    manager = ApplicationManager(args.config)
 
-    manager = ApplicationManager()
-    result = {"status": "unknown", "command": args.command}
+    commands = {
+        "install": manager.install_dependencies,
+        "test": manager.run_tests,
+        "lint": manager.run_linting,
+        "format": manager.format_code,
+        "build": manager.build_docker,
+        "run": manager.run_docker,
+        "stop": manager.stop_docker,
+        "clean": manager.clean,
+        "health": manager.check_health,
+        "backup": manager.backup_data,
+        "restore": manager.restore_data,
+    }
 
-    if args.command == "install":
-        success = manager.install_dependencies()
-        result["status"] = "success" if success else "failed"
-    elif args.command == "test":
-        success = manager.run_tests()
-        result["status"] = "success" if success else "failed"
-    elif args.command == "lint":
-        success = manager.run_linting()
-        result["status"] = "success" if success else "failed"
-    elif args.command == "format":
-        success = manager.format_code()
-        result["status"] = "success" if success else "failed"
-    elif args.command == "docker":
-        build_success = manager.build_docker()
-        run_success = manager.run_docker() if build_success else False
-        result["status"] = "success" if build_success and run_success else "failed"
-    elif args.command == "clean":
-        success = manager.clean()
-        result["status"] = "success" if success else "failed"
-
-    return result
+    success = commands[args.command]()
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
