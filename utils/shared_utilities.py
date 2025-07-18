@@ -30,34 +30,20 @@ def setup_logging(
     enable_rotating_handlers: bool = True
 ) -> logging.Logger:
     """
-    Unified logging setup function for all services and scripts.
-    
-    Args:
-        service_name: Name of the service for logging identification
-        log_dir: Directory for log files
-        log_level: Logging level
-        enable_file_output: Whether to enable file output
-        enable_rotating_handlers: Whether to enable rotating file handlers
-        
-    Returns:
-        logging.Logger: Configured logger instance
+    Unified logging setup function.
     """
-    # Create logs directory
+    # Create log directory if it doesn't exist
     Path(log_dir).mkdir(parents=True, exist_ok=True)
-    
+
     # Use enhanced logging setup
-    log_manager = setup_enhanced_logging(log_dir, log_level)
-    
-    # Get logger for the service
-    logger_name = service_name or __name__
-    logger = log_manager.get_enhanced_logger(
-        logger_name,
-        log_file=f"{logger_name}.log" if enable_file_output else None,
-        enable_console=True,
-        enable_file=enable_file_output
+    logger = setup_enhanced_logging(
+        service_name=service_name,
+        log_dir=log_dir,
+        log_level=log_level,
+        enable_file_output=enable_file_output,
+        enable_rotating_handlers=enable_rotating_handlers
     )
-    
-    logger.info(f"Logging initialized for {logger_name}")
+
     return logger
 
 
@@ -69,37 +55,23 @@ def create_sample_data(
     trend: float = 0.0
 ) -> pd.DataFrame:
     """
-    Create sample market data for testing and examples.
-    
-    Args:
-        rows: Number of data points to generate
-        start_date: Start date for the data
-        base_price: Base price for the asset
-        volatility: Price volatility (standard deviation of returns)
-        trend: Daily trend component
-        
-    Returns:
-        pd.DataFrame: Sample market data with OHLCV columns
+    Create sample market data for testing.
     """
     dates = pd.date_range(start=start_date, periods=rows, freq='D')
-    
+    np.random.seed(42)  # For reproducible results
+
     # Generate price series with trend and volatility
     returns = np.random.normal(trend, volatility, rows)
     prices = base_price * np.exp(np.cumsum(returns))
-    
-    # Create OHLCV data
+
     data = pd.DataFrame({
-        'open': prices * (1 + np.random.normal(0, 0.001, rows)),
-        'high': prices * (1 + np.abs(np.random.normal(0, 0.01, rows))),
-        'low': prices * (1 - np.abs(np.random.normal(0, 0.01, rows))),
+        'open': prices * 0.99,
+        'high': prices * 1.02,
+        'low': prices * 0.98,
         'close': prices,
         'volume': np.random.randint(1000000, 10000000, rows)
     }, index=dates)
-    
-    # Ensure OHLC relationships are maintained
-    data['high'] = data[['open', 'high', 'close']].max(axis=1)
-    data['low'] = data[['open', 'low', 'close']].min(axis=1)
-    
+
     return data
 
 
@@ -109,36 +81,20 @@ def create_sample_forecast_data(
     target_column: str = 'target'
 ) -> pd.DataFrame:
     """
-    Create sample data for forecasting models.
-    
-    Args:
-        rows: Number of data points
-        features: Number of feature columns
-        target_column: Name of the target column
-        
-    Returns:
-        pd.DataFrame: Sample data with features and target
+    Create sample forecasting data with features and target.
     """
-    dates = pd.date_range(start='2023-01-01', periods=rows, freq='D')
-    
+    np.random.seed(42)  # For reproducible results
+
     # Generate feature data
-    feature_data = {}
-    for i in range(features):
-        feature_data[f'feature_{i}'] = np.random.randn(rows)
-    
+    feature_data = np.random.randn(rows, features)
+    feature_names = [f'feature_{i}' for i in range(features)]
+
     # Generate target with some correlation to features
-    target = np.random.randn(rows)
-    for i in range(min(3, features)):  # Correlate with first 3 features
-        target += 0.3 * feature_data[f'feature_{i}']
-    
-    # Add some trend and seasonality
-    trend = np.linspace(0, 2, rows)
-    seasonality = 0.5 * np.sin(2 * np.pi * np.arange(rows) / 30)  # Monthly seasonality
-    target += trend + seasonality
-    
-    data = pd.DataFrame(feature_data, index=dates)
+    target = np.sum(feature_data[:, :3], axis=1) + np.random.normal(0, 0.1, rows)
+
+    data = pd.DataFrame(feature_data, columns=feature_names)
     data[target_column] = target
-    
+
     return data
 
 
@@ -148,32 +104,25 @@ def main_runner(
     config: Optional[Dict[str, Any]] = None
 ) -> None:
     """
-    Common main function runner for services and scripts.
-    
-    Args:
-        main_func: Main function to run
-        service_name: Name of the service for logging
-        config: Configuration dictionary
+    Common main function pattern for services.
     """
     try:
         # Setup logging
-        logger = setup_logging(service_name)
-        
-        # Log startup
-        logger.info(f"Starting {service_name or 'application'}")
-        if config:
-            logger.info(f"Configuration: {config}")
-        
+        logger = setup_logging(service_name=service_name)
+        logger.info(f"Starting {service_name or 'service'}")
+
         # Run main function
-        if asyncio.iscoroutinefunction(main_func):
-            asyncio.run(main_func())
+        if config:
+            main_func(config)
         else:
             main_func()
-            
+
+        logger.info(f"{service_name or 'Service'} completed successfully")
+
     except KeyboardInterrupt:
-        logger.info(f"Shutting down {service_name or 'application'}...")
+        logger.info(f"{service_name or 'Service'} interrupted by user")
     except Exception as e:
-        logger.error(f"Error in {service_name or 'application'}: {e}")
+        logger.error(f"Error in {service_name or 'service'}: {e}")
         sys.exit(1)
 
 
@@ -184,44 +133,29 @@ async def service_launcher(
     shutdown_handler: Optional[callable] = None
 ) -> None:
     """
-    Common service launcher for async services.
-    
-    Args:
-        service_class: Service class to instantiate
-        service_name: Name of the service
-        config: Service configuration
-        shutdown_handler: Optional shutdown handler function
+    Common async service launching pattern.
     """
-    logger = setup_logging(service_name)
-    logger.info(f"Starting {service_name}...")
-    logger.info(f"Configuration: {config}")
-    
+    logger = setup_logging(service_name=service_name)
+    service = None
+
     try:
-        # Initialize service
+        logger.info(f"Starting {service_name}")
         service = service_class(**config)
-        
-        # Start service
-        if hasattr(service, 'start'):
-            service.start()
-        elif hasattr(service, 'run'):
-            await service.run()
-        else:
-            logger.warning(f"Service {service_name} has no start/run method")
-            return
-        
+        await service.start()
+
         # Keep service running
         while True:
             await asyncio.sleep(1)
-            
+
     except KeyboardInterrupt:
-        logger.info(f"Shutting down {service_name}...")
-        if hasattr(service, 'stop'):
-            service.stop()
-        if shutdown_handler:
-            await shutdown_handler(service)
+        logger.info(f"Shutting down {service_name}")
     except Exception as e:
         logger.error(f"Error in {service_name}: {e}")
-        raise
+    finally:
+        if service and hasattr(service, 'stop'):
+            await service.stop()
+        if shutdown_handler:
+            await shutdown_handler()
 
 
 def load_config_from_env(
@@ -230,31 +164,22 @@ def load_config_from_env(
 ) -> Dict[str, Any]:
     """
     Load configuration from environment variables.
-    
-    Args:
-        config_mapping: Mapping of config keys to environment variable names
-        defaults: Default values for configuration
-        
-    Returns:
-        Dict[str, Any]: Configuration dictionary
     """
     config = defaults or {}
-    
+
     for config_key, env_var in config_mapping.items():
         env_value = os.getenv(env_var)
         if env_value is not None:
-            # Try to convert to appropriate type
             try:
-                # Try integer first
-                config[config_key] = int(env_value)
-            except ValueError:
-                try:
-                    # Try float
-                    config[config_key] = float(env_value)
-                except ValueError:
-                    # Keep as string
+                if env_value.isdigit():
+                    config[config_key] = int(env_value)
+                elif env_value.lower() in ('true', 'false'):
+                    config[config_key] = env_value.lower() == 'true'
+                else:
                     config[config_key] = env_value
-    
+            except ValueError:
+                config[config_key] = env_value
+
     return config
 
 
@@ -265,156 +190,91 @@ def validate_config(
 ) -> bool:
     """
     Validate configuration dictionary.
-    
-    Args:
-        config: Configuration dictionary
-        required_keys: List of required configuration keys
-        optional_keys: List of optional configuration keys
-        
-    Returns:
-        bool: True if configuration is valid
-        
-    Raises:
-        ValueError: If required keys are missing
     """
+    # Check required keys
     missing_keys = [key for key in required_keys if key not in config]
     if missing_keys:
-        raise ValueError(f"Missing required configuration keys: {missing_keys}")
-    
+        logging.error(f"Missing required configuration keys: {missing_keys}")
+        return False
+
+    # Check optional keys (warn if missing)
     if optional_keys:
-        unknown_keys = [key for key in config.keys() 
-                       if key not in required_keys and key not in optional_keys]
-        if unknown_keys:
-            logging.warning(f"Unknown configuration keys: {unknown_keys}")
-    
+        missing_optional = [key for key in optional_keys if key not in config]
+        if missing_optional:
+            logging.warning(f"Missing optional configuration keys: {missing_optional}")
+
     return True
 
 
 def create_directory_structure(base_dir: str, structure: Dict[str, Any]) -> None:
     """
-    Create directory structure for the application.
-    
-    Args:
-        base_dir: Base directory path
-        structure: Dictionary defining directory structure
+    Create directory structure recursively.
     """
-    base_path = Path(base_dir)
-    
-    def create_dirs(current_path: Path, struct: Dict[str, Any]):
-        for name, content in struct.items():
-            dir_path = current_path / name
-            if isinstance(content, dict):
-                dir_path.mkdir(parents=True, exist_ok=True)
-                create_dirs(dir_path, content)
-            else:
-                # Create file
-                dir_path.parent.mkdir(parents=True, exist_ok=True)
-                if not dir_path.exists():
-                    dir_path.touch()
-    
-    create_dirs(base_path, structure)
+    for name, content in structure.items():
+        path = Path(base_dir) / name
+        if isinstance(content, dict):
+            path.mkdir(parents=True, exist_ok=True)
+            create_directory_structure(str(path), content)
+        else:
+            path.mkdir(parents=True, exist_ok=True)
 
 
-# Common directory structure for the application
 DEFAULT_DIRECTORY_STRUCTURE = {
-    "logs": {
-        "models": {},
-        "data": {},
-        "performance": {},
-        "agents": {},
-        "services": {}
-    },
+    "logs": {},
     "data": {
         "raw": {},
         "processed": {},
         "cache": {}
     },
     "models": {
-        "checkpoints": {},
-        "saved": {},
-        "configs": {}
+        "trained": {},
+        "checkpoints": {}
     },
     "reports": {
         "html": {},
         "pdf": {},
-        "json": {}
-    }
+        "csv": {}
+    },
+    "config": {},
+    "backups": {}
 }
 
 
 def initialize_application_directories(base_dir: str = ".") -> None:
     """
     Initialize standard application directory structure.
-    
-    Args:
-        base_dir: Base directory for the application
     """
     create_directory_structure(base_dir, DEFAULT_DIRECTORY_STRUCTURE)
-    logging.info(f"Application directories initialized in {base_dir}")
 
 
 def get_application_root() -> Path:
     """
     Get the application root directory.
-    
-    Returns:
-        Path: Application root directory
     """
-    # Look for common root indicators
-    current = Path.cwd()
-    
-    while current != current.parent:
-        # Check for common root indicators
-        if any((current / indicator).exists() for indicator in [
-            'requirements.txt', 'setup.py', 'pyproject.toml', 
-            'README.md', '.git', 'config'
-        ]):
-            return current
-        current = current.parent
-    
-    return Path.cwd()
+    return Path(__file__).parent.parent
 
 
 def format_timestamp(timestamp: Optional[Union[datetime, str, float]] = None) -> str:
     """
-    Format timestamp for logging and file naming.
-    
-    Args:
-        timestamp: Timestamp to format (defaults to current time)
-        
-    Returns:
-        str: Formatted timestamp string
+    Format timestamp for consistent use across the application.
     """
     if timestamp is None:
         timestamp = datetime.now()
     elif isinstance(timestamp, (int, float)):
         timestamp = datetime.fromtimestamp(timestamp)
     elif isinstance(timestamp, str):
-        timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-    
-    return timestamp.strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.fromisoformat(timestamp)
+
+    return timestamp.strftime("%Y%m%d_%H%M%S")
 
 
 def safe_filename(filename: str) -> str:
     """
-    Convert a string to a safe filename.
-    
-    Args:
-        filename: Original filename
-        
-    Returns:
-        str: Safe filename
+    Create a safe filename by removing/replacing invalid characters.
     """
-    # Replace invalid characters
-    invalid_chars = '<>:"/\\|?*'
-    for char in invalid_chars:
-        filename = filename.replace(char, '_')
-    
+    import re
+    # Remove or replace invalid characters
+    safe_name = re.sub(r'[<>:"/\\|?*]', '_', filename)
     # Remove leading/trailing spaces and dots
-    filename = filename.strip(' .')
-    
-    # Ensure it's not empty
-    if not filename:
-        filename = 'unnamed'
-    
-    return filename 
+    safe_name = safe_name.strip('. ')
+    return safe_name
