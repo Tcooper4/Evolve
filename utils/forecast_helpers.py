@@ -24,14 +24,14 @@ def safe_forecast(
 ):
     """
     Decorator to safely handle forecasting operations with retry logic and error handling.
-    
+
     Args:
         max_retries: Maximum number of retry attempts
         retry_delay: Delay between retries in seconds
         log_errors: Whether to log errors
         return_fallback: Whether to return fallback value on failure
         fallback_value: Value to return if all retries fail
-    
+
     Returns:
         Decorated function that handles exceptions gracefully
     """
@@ -39,38 +39,38 @@ def safe_forecast(
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Union[Tuple[np.ndarray, float], Any]:
             last_exception = None
-            
+
             for attempt in range(max_retries + 1):
                 try:
                     start_time = time.time()
                     result = func(*args, **kwargs)
                     execution_time = time.time() - start_time
-                    
+
                     # Validate result format
                     if isinstance(result, tuple) and len(result) >= 2:
                         predictions, confidence = result[0], result[1]
-                        
+
                         # Basic validation
                         if not isinstance(predictions, (np.ndarray, list, pd.Series)):
                             raise ValueError(f"Invalid prediction format: {type(predictions)}")
-                        
+
                         if not isinstance(confidence, (int, float, np.number)):
                             raise ValueError(f"Invalid confidence format: {type(confidence)}")
-                        
+
                         if log_errors:
                             logger.info(f"Forecast successful in {execution_time:.3f}s (attempt {attempt + 1})")
-                        
+
                         return result
                     else:
                         raise ValueError(f"Invalid result format: expected tuple, got {type(result)}")
-                        
+
                 except Exception as e:
                     last_exception = e
                     if log_errors:
                         logger.warning(
                             f"Forecast attempt {attempt + 1} failed for {func.__name__}: {str(e)}"
                         )
-                    
+
                     if attempt < max_retries:
                         time.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
                     else:
@@ -79,7 +79,7 @@ def safe_forecast(
                                 f"All forecast attempts failed for {func.__name__}: {str(e)}"
                             )
                         break
-            
+
             # Return fallback if specified
             if return_fallback:
                 if log_errors:
@@ -87,7 +87,7 @@ def safe_forecast(
                 return fallback_value
             else:
                 raise last_exception
-        
+
         return wrapper
     return decorator
 
@@ -99,24 +99,24 @@ def validate_forecast_input(
 ) -> bool:
     """
     Validate input data for forecasting operations.
-    
+
     Args:
         data: Input data to validate
         min_length: Minimum required length
         require_numeric: Whether data must be numeric
-    
+
     Returns:
         True if data is valid, False otherwise
-    
+
     Raises:
         ValueError: If data is invalid
     """
     if data is None:
         raise ValueError("Input data cannot be None")
-    
+
     if len(data) < min_length:
         raise ValueError(f"Data length {len(data)} is less than minimum {min_length}")
-    
+
     if require_numeric:
         if isinstance(data, pd.DataFrame):
             if not data.select_dtypes(include=[np.number]).shape[1]:
@@ -124,7 +124,7 @@ def validate_forecast_input(
         elif isinstance(data, (pd.Series, np.ndarray)):
             if not np.issubdtype(data.dtype, np.number):
                 raise ValueError("Data must be numeric")
-    
+
     return True
 
 
@@ -134,25 +134,25 @@ def calculate_forecast_metrics(
 ) -> Dict[str, float]:
     """
     Calculate common forecast accuracy metrics.
-    
+
     Args:
         actual: Actual values
         predicted: Predicted values
-    
+
     Returns:
         Dictionary containing accuracy metrics
     """
     if len(actual) != len(predicted):
         raise ValueError("Actual and predicted arrays must have same length")
-    
+
     # Calculate metrics
     mse = np.mean((actual - predicted) ** 2)
     rmse = np.sqrt(mse)
     mae = np.mean(np.abs(actual - predicted))
-    
+
     # Calculate MAPE (Mean Absolute Percentage Error)
     mape = np.mean(np.abs((actual - predicted) / np.where(actual != 0, actual, 1))) * 100
-    
+
     return {
         "mse": mse,
         "rmse": rmse,
@@ -169,13 +169,13 @@ def normalize_forecast_output(
 ) -> Tuple[np.ndarray, float]:
     """
     Normalize forecast output to ensure valid ranges.
-    
+
     Args:
         predictions: Raw predictions
         confidence: Raw confidence score
         min_confidence: Minimum allowed confidence
         max_confidence: Maximum allowed confidence
-    
+
     Returns:
         Tuple of (normalized_predictions, normalized_confidence)
     """
@@ -183,10 +183,10 @@ def normalize_forecast_output(
     if not np.all(np.isfinite(predictions)):
         logger.warning("Non-finite values detected in predictions, replacing with NaN")
         predictions = np.where(np.isfinite(predictions), predictions, np.nan)
-    
+
     # Normalize confidence to valid range
     confidence = np.clip(confidence, min_confidence, max_confidence)
-    
+
     return predictions, confidence
 
 
@@ -199,7 +199,7 @@ def log_forecast_performance(
 ) -> None:
     """
     Log forecast performance metrics.
-    
+
     Args:
         model_name: Name of the forecasting model
         execution_time: Time taken for forecast
@@ -213,6 +213,6 @@ def log_forecast_performance(
         f"Data length: {data_length}, "
         f"Confidence: {confidence:.3f}"
     )
-    
+
     if metrics:
         logger.info(f"Accuracy metrics: {metrics}") 
