@@ -8,6 +8,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -253,64 +254,42 @@ def create_confidence_interval(
 def create_benchmark_overlay(
     data: pd.DataFrame, benchmark_column: str, prediction_column: str
 ) -> go.Figure:
-    """Create a plot with benchmark overlay.
+    """Create a chart with benchmark and prediction overlay.
 
     Args:
-        data: DataFrame containing predictions and benchmark data
-        benchmark_column: Name of the benchmark column
-        prediction_column: Name of the prediction column
+        data: DataFrame containing benchmark and prediction data
+        benchmark_column: Name of benchmark column
+        prediction_column: Name of prediction column
 
     Returns:
-        Plotly figure with benchmark overlay
+        Plotly figure with overlay
     """
     fig = go.Figure()
-
-    # Add prediction line
-    fig.add_trace(
-        go.Scatter(
-            x=data.index,
-            y=data[prediction_column],
-            name="Prediction",
-            line=dict(color="blue"),
-        )
-    )
 
     # Add benchmark line
     fig.add_trace(
         go.Scatter(
             x=data.index,
             y=data[benchmark_column],
+            mode="lines",
             name="Benchmark",
-            line=dict(color="gray", dash="dash"),
+            line=dict(color="blue", width=2),
         )
     )
 
-    # Add confidence interval if available
-    if "std_error" in data.columns:
-        lower, upper = create_confidence_interval(data)
-        fig.add_trace(
-            go.Scatter(
-                x=data.index,
-                y=upper,
-                fill=None,
-                mode="lines",
-                line_color="rgba(0,100,80,0.2)",
-                name="Upper Bound",
-            )
+    # Add prediction line
+    fig.add_trace(
+        go.Scatter(
+            x=data.index,
+            y=data[prediction_column],
+            mode="lines",
+            name="Prediction",
+            line=dict(color="red", width=2, dash="dash"),
         )
-        fig.add_trace(
-            go.Scatter(
-                x=data.index,
-                y=lower,
-                fill="tonexty",
-                mode="lines",
-                line_color="rgba(0,100,80,0.2)",
-                name="Lower Bound",
-            )
-        )
+    )
 
     fig.update_layout(
-        title="Prediction with Benchmark Overlay",
+        title="Benchmark vs Prediction",
         xaxis_title="Date",
         yaxis_title="Value",
         hovermode="x unified",
@@ -320,124 +299,129 @@ def create_benchmark_overlay(
 
 
 def create_prompt_input() -> Dict[str, Any]:
-    """Create a prompt input component.
+    """Create a prompt input component for LLM interactions.
 
     Returns:
-        Dictionary with prompt text and metadata
+        Dictionary containing prompt and settings
     """
-    try:
-        prompt = st.text_area(
-            "Enter your prompt",
-            placeholder="Describe what you want to analyze or predict...",
-            height=100,
-            key=os.getenv("KEY", ""),
-        )
+    st.subheader("LLM Prompt Configuration")
 
-        if prompt:
-            return {
-                "success": True,
-                "prompt": prompt,
-                "length": len(prompt),
-                "timestamp": datetime.now().isoformat(),
-            }
-        else:
-            return {
-                "success": False,
-                "prompt": "",
-                "message": "No prompt entered",
-                "timestamp": datetime.now().isoformat(),
-            }
+    # Prompt input
+    prompt = st.text_area(
+        "Enter your prompt",
+        height=150,
+        placeholder="Describe what you want to analyze or predict...",
+        key="llm_prompt",
+    )
 
-    except Exception as e:
-        logger.error(f"Error creating prompt input: {e}")
-        return {
-            "success": False,
-            "prompt": "",
-            "message": f"Error creating prompt input: {str(e)}",
-            "timestamp": datetime.now().isoformat(),
-        }
+    # Model selection
+    model_options = ["gpt-4", "gpt-3.5-turbo", "claude-3", "local"]
+    selected_model = st.selectbox("Select LLM Model", model_options, key="llm_model")
+
+    # Temperature setting
+    temperature = st.slider(
+        "Temperature (Creativity)",
+        min_value=0.0,
+        max_value=2.0,
+        value=0.7,
+        step=0.1,
+        key="llm_temperature",
+    )
+
+    # Max tokens
+    max_tokens = st.number_input(
+        "Max Tokens",
+        min_value=100,
+        max_value=4000,
+        value=1000,
+        step=100,
+        key="llm_max_tokens",
+    )
+
+    # Execute button
+    execute = st.button("Execute LLM Analysis", key="llm_execute")
+
+    return {
+        "prompt": prompt,
+        "model": selected_model,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "execute": execute,
+    }
 
 
 def create_sidebar() -> Dict[str, Any]:
-    """Create the main sidebar with navigation and settings.
+    """Create a comprehensive sidebar with all configuration options.
 
     Returns:
-        Dictionary with sidebar configuration and selections
+        Dictionary containing all sidebar selections
     """
-    try:
-        with st.sidebar:
-            st.title("Evolve Trading")
+    st.sidebar.title("Configuration")
 
-            # Navigation
-            page = st.selectbox(
-                "Navigation",
-                ["Dashboard", "Forecast", "Strategy", "Analysis", "Settings"],
-                key=os.getenv("KEY", ""),
-            )
+    # Data source selection
+    st.sidebar.subheader("Data Source")
+    data_source = st.sidebar.selectbox(
+        "Data Source",
+        ["Yahoo Finance", "Alpha Vantage", "Polygon", "Local CSV"],
+        key="data_source",
+    )
 
-            # Model settings
-            st.subheader("Model Settings")
-            model_type = st.selectbox(
-                "Model Type",
-                ["LSTM", "Transformer", "Ensemble", "Custom"],
-                key=os.getenv("KEY", ""),
-            )
+    # Asset selection
+    st.sidebar.subheader("Asset")
+    asset = st.sidebar.text_input("Asset Symbol", value="AAPL", key="asset_symbol")
 
-            # Strategy settings
-            st.subheader("Strategy Settings")
-            strategy_type = st.selectbox(
-                "Strategy Type",
-                ["Momentum", "Mean Reversion", "Breakout", "Custom"],
-                key=os.getenv("KEY", ""),
-            )
+    # Timeframe selection
+    st.sidebar.subheader("Timeframe")
+    timeframe = st.sidebar.selectbox(
+        "Timeframe",
+        ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "1M"],
+        index=6,
+        key="timeframe",
+    )
 
-            # Risk settings
-            st.subheader("Risk Settings")
-            max_position_size = st.slider(
-                "Max Position Size (%)",
-                min_value=1,
-                max_value=100,
-                value=10,
-                key=os.getenv("KEY", ""),
-            )
+    # Date range
+    st.sidebar.subheader("Date Range")
+    days_back = st.sidebar.slider(
+        "Days Back", min_value=1, max_value=365, value=30, key="days_back"
+    )
 
-            stop_loss = st.slider(
-                "Stop Loss (%)",
-                min_value=1,
-                max_value=50,
-                value=5,
-                key=os.getenv("KEY", ""),
-            )
+    # Model selection
+    st.sidebar.subheader("Model")
+    model_type = st.sidebar.selectbox(
+        "Model Type",
+        ["LSTM", "XGBoost", "Ensemble", "TCN", "Hybrid"],
+        key="model_type",
+    )
 
-            # System settings
-            st.subheader("System Settings")
-            auto_refresh = st.checkbox(
-                "Auto Refresh", value=True, key=os.getenv("KEY", "")
-            )
-            debug_mode = st.checkbox(
-                "Debug Mode", value=False, key=os.getenv("KEY", "")
-            )
+    # Strategy selection
+    st.sidebar.subheader("Strategy")
+    strategy_type = st.sidebar.selectbox(
+        "Strategy Type",
+        ["RSI", "MACD", "Bollinger Bands", "SMA", "Custom"],
+        key="strategy_type",
+    )
 
-            return {
-                "success": True,
-                "page": page,
-                "model_type": model_type,
-                "strategy_type": strategy_type,
-                "max_position_size": max_position_size,
-                "stop_loss": stop_loss,
-                "auto_refresh": auto_refresh,
-                "debug_mode": debug_mode,
-                "timestamp": datetime.now().isoformat(),
-            }
+    # Advanced options
+    st.sidebar.subheader("Advanced Options")
+    show_confidence = st.sidebar.checkbox("Show Confidence Intervals", value=True)
+    enable_logging = st.sidebar.checkbox("Enable Detailed Logging", value=False)
+    auto_refresh = st.sidebar.checkbox("Auto Refresh", value=False)
 
-    except Exception as e:
-        logger.error(f"Error creating sidebar: {e}")
-        return {
-            "success": False,
-            "message": f"Error creating sidebar: {str(e)}",
-            "page": "Dashboard",
-            "timestamp": datetime.now().isoformat(),
-        }
+    # Execute button
+    execute = st.sidebar.button("Run Analysis", type="primary")
+
+    return {
+        "data_source": data_source,
+        "asset": asset,
+        "timeframe": timeframe,
+        "days_back": days_back,
+        "model_type": model_type,
+        "strategy_type": strategy_type,
+        "show_confidence": show_confidence,
+        "enable_logging": enable_logging,
+        "auto_refresh": auto_refresh,
+        "execute": execute,
+    }
 
 
 def create_forecast_chart(
@@ -445,73 +429,103 @@ def create_forecast_chart(
     forecast_data: pd.DataFrame,
     title: str = "Price Forecast",
 ) -> go.Figure:
-    """Create an interactive forecast chart.
+    """Create a comprehensive forecast chart with historical and predicted data.
 
     Args:
-        historical_data: Historical price data
-        forecast_data: Forecast data with confidence intervals
+        historical_data: DataFrame with historical price data
+        forecast_data: DataFrame with forecast data
         title: Chart title
 
     Returns:
-        Plotly figure object
+        Plotly figure with forecast visualization
     """
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True)
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.1,
+        subplot_titles=(title, "Volume"),
+        row_heights=[0.7, 0.3],
+    )
 
-    # Add historical data
+    # Historical candlestick
     fig.add_trace(
-        go.Scatter(
+        go.Candlestick(
             x=historical_data.index,
-            y=historical_data["close"],
+            open=historical_data["open"],
+            high=historical_data["high"],
+            low=historical_data["low"],
+            close=historical_data["close"],
             name="Historical",
-            line=dict(color="blue"),
+            increasing_line_color="green",
+            decreasing_line_color="red",
         ),
         row=1,
         col=1,
     )
 
-    # Add forecast
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data.index,
-            y=forecast_data["forecast"],
-            name="Forecast",
-            line=dict(color="red", dash="dash"),
-        ),
-        row=1,
-        col=1,
-    )
+    # Forecast line
+    if "forecast" in forecast_data.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=forecast_data.index,
+                y=forecast_data["forecast"],
+                mode="lines",
+                name="Forecast",
+                line=dict(color="blue", width=2, dash="dash"),
+            ),
+            row=1,
+            col=1,
+        )
 
-    # Add confidence intervals
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data.index,
-            y=forecast_data["upper"],
-            name="Upper Bound",
-            line=dict(color="gray", dash="dot"),
-            showlegend=False,
-        ),
-        row=1,
-        col=1,
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data.index,
-            y=forecast_data["lower"],
-            name="Lower Bound",
-            line=dict(color="gray", dash="dot"),
-            fill="tonexty",
-            showlegend=False,
-        ),
-        row=1,
-        col=1,
-    )
+    # Confidence intervals
+    if "lower_bound" in forecast_data.columns and "upper_bound" in forecast_data.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=forecast_data.index,
+                y=forecast_data["upper_bound"],
+                mode="lines",
+                name="Upper Bound",
+                line=dict(color="lightblue", width=1),
+                showlegend=False,
+            ),
+            row=1,
+            col=1,
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=forecast_data.index,
+                y=forecast_data["lower_bound"],
+                mode="lines",
+                fill="tonexty",
+                name="Confidence Interval",
+                line=dict(color="lightblue", width=1),
+            ),
+            row=1,
+            col=1,
+        )
+
+    # Volume
+    if "volume" in historical_data.columns:
+        fig.add_trace(
+            go.Bar(
+                x=historical_data.index,
+                y=historical_data["volume"],
+                name="Volume",
+                marker_color="gray",
+                opacity=0.5,
+            ),
+            row=2,
+            col=1,
+        )
 
     fig.update_layout(
         title=title,
         xaxis_title="Date",
         yaxis_title="Price",
-        showlegend=True,
         height=600,
+        showlegend=True,
     )
 
     return fig
@@ -520,56 +534,100 @@ def create_forecast_chart(
 def create_strategy_chart(
     data: pd.DataFrame, signals: pd.DataFrame, title: str = "Strategy Signals"
 ) -> go.Figure:
-    """Create an interactive strategy chart.
+    """Create a chart showing strategy signals and performance.
 
     Args:
-        data: Price data
-        signals: Trading signals
+        data: Market data DataFrame
+        signals: Signals DataFrame
         title: Chart title
 
     Returns:
-        Plotly figure object
+        Plotly figure with strategy visualization
     """
-    edge_handler = EdgeCaseHandler()
-    # Validate signals with edge handler
-    validation = edge_handler.validate_signals(
-        signals["signal"]
-        if isinstance(signals, pd.DataFrame) and "signal" in signals.columns
-        else signals
+    fig = make_subplots(
+        rows=3,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.05,
+        subplot_titles=("Price & Signals", "Strategy Returns", "Cumulative Returns"),
+        row_heights=[0.5, 0.25, 0.25],
     )
-    if validation["status"] != "success":
-        st.warning(validation["message"])
-        fallback = edge_handler.create_fallback_chart(data, chart_type="equity")
-        if fallback["chart_data"]:
-            st.write(fallback["message"])
-        return go.Figure()
 
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True)
-
-    # Add price data
+    # Price and signals
     fig.add_trace(
         go.Scatter(
-            x=data.index, y=data["close"], name="Price", line=dict(color="blue")
+            x=data.index,
+            y=data["close"],
+            mode="lines",
+            name="Price",
+            line=dict(color="black", width=1),
         ),
         row=1,
         col=1,
     )
 
-    # Add signals
-    fig.add_trace(
-        go.Scatter(
-            x=signals.index, y=signals["signal"], name="Signal", line=dict(color="red")
-        ),
-        row=2,
-        col=1,
-    )
+    # Buy signals
+    buy_signals = signals[signals["signal"] == 1]
+    if not buy_signals.empty:
+        fig.add_trace(
+            go.Scatter(
+                x=buy_signals.index,
+                y=buy_signals["close"],
+                mode="markers",
+                name="Buy Signal",
+                marker=dict(color="green", size=8, symbol="triangle-up"),
+            ),
+            row=1,
+            col=1,
+        )
+
+    # Sell signals
+    sell_signals = signals[signals["signal"] == -1]
+    if not sell_signals.empty:
+        fig.add_trace(
+            go.Scatter(
+                x=sell_signals.index,
+                y=sell_signals["close"],
+                mode="markers",
+                name="Sell Signal",
+                marker=dict(color="red", size=8, symbol="triangle-down"),
+            ),
+            row=1,
+            col=1,
+        )
+
+    # Strategy returns
+    if "strategy_returns" in signals.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=signals.index,
+                y=signals["strategy_returns"],
+                mode="lines",
+                name="Strategy Returns",
+                line=dict(color="blue", width=1),
+            ),
+            row=2,
+            col=1,
+        )
+
+    # Cumulative returns
+    if "cumulative_returns" in signals.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=signals.index,
+                y=signals["cumulative_returns"],
+                mode="lines",
+                name="Cumulative Returns",
+                line=dict(color="green", width=2),
+            ),
+            row=3,
+            col=1,
+        )
 
     fig.update_layout(
         title=title,
-        xaxis_title="Date",
-        yaxis_title="Value",
-        showlegend=True,
         height=600,
+        showlegend=True,
     )
 
     return fig
@@ -578,119 +636,99 @@ def create_strategy_chart(
 def create_performance_report(
     results: Dict[str, Any], title: str = "Performance Report"
 ) -> Dict[str, Any]:
-    """Create an expandable performance report section.
+    """Create a comprehensive performance report.
 
     Args:
         results: Dictionary containing performance metrics
-        title: Section title
+        title: Report title
 
     Returns:
-        Dictionary with report creation status and metrics summary
+        Dictionary containing report components
     """
-    edge_handler = EdgeCaseHandler()
-    # Validate results for performance metrics
-    if not results or not results.get("total_return"):
-        st.warning("No performance data available.")
-        fallback = edge_handler.create_fallback_chart(
-            pd.DataFrame(), chart_type="performance"
+    st.subheader(title)
+
+    # Key metrics
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric(
+            "Total Return",
+            f"{results.get('total_return', 0):.2%}",
+            delta=f"{results.get('daily_return', 0):.2%}",
         )
-        st.write(
-            fallback["chart_data"]["message"] if fallback["chart_data"] else "No data."
+
+    with col2:
+        st.metric(
+            "Sharpe Ratio",
+            f"{results.get('sharpe_ratio', 0):.2f}",
         )
-        return {"status": "warning", "message": fallback["message"]}
 
-    with st.expander(title, expanded=True):
-        col1, col2, col3 = st.columns(3)
+    with col3:
+        st.metric(
+            "Max Drawdown",
+            f"{results.get('max_drawdown', 0):.2%}",
+        )
 
-        with col1:
-            st.metric("Total Return", f"{results.get('total_return', 0):.2%}")
-            st.metric("Sharpe Ratio", f"{results.get('sharpe_ratio', 0):.2f}")
-            st.metric("Max Drawdown", f"{results.get('max_drawdown', 0):.2%}")
+    with col4:
+        st.metric(
+            "Win Rate",
+            f"{results.get('win_rate', 0):.2%}",
+        )
 
-        with col2:
-            st.metric("Win Rate", f"{results.get('win_rate', 0):.2%}")
-            st.metric("Avg Trade", f"{results.get('avg_trade', 0):.2%}")
-            st.metric("Profit Factor", f"{results.get('profit_factor', 0):.2f}")
+    # Detailed metrics table
+    st.subheader("Detailed Metrics")
+    metrics_df = pd.DataFrame(
+        [
+            ["Total Return", f"{results.get('total_return', 0):.4f}"],
+            ["Annualized Return", f"{results.get('annualized_return', 0):.4f}"],
+            ["Volatility", f"{results.get('volatility', 0):.4f}"],
+            ["Sharpe Ratio", f"{results.get('sharpe_ratio', 0):.4f}"],
+            ["Sortino Ratio", f"{results.get('sortino_ratio', 0):.4f}"],
+            ["Max Drawdown", f"{results.get('max_drawdown', 0):.4f}"],
+            ["Calmar Ratio", f"{results.get('calmar_ratio', 0):.4f}"],
+            ["Win Rate", f"{results.get('win_rate', 0):.4f}"],
+            ["Profit Factor", f"{results.get('profit_factor', 0):.4f}"],
+            ["Total Trades", f"{results.get('total_trades', 0)}"],
+        ],
+        columns=["Metric", "Value"],
+    )
 
-        with col3:
-            st.metric("CAGR", f"{results.get('cagr', 0):.2%}")
-            st.metric("Volatility", f"{results.get('volatility', 0):.2%}")
-            st.metric("Calmar Ratio", f"{results.get('calmar_ratio', 0):.2f}")
+    st.table(metrics_df)
 
-        # Create equity curve
-        if "equity_curve" in results:
-            fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(
-                    x=results["equity_curve"].index,
-                    y=results["equity_curve"].values,
-                    name="Equity",
-                    line=dict(color="blue"),
-                )
-            )
-            fig.update_layout(
-                title="Equity Curve",
-                xaxis_title="Date",
-                yaxis_title="Portfolio Value",
-                height=400,
-            )
-            st.plotly_chart(fig, use_container_width=True)
+    # Risk metrics
+    st.subheader("Risk Analysis")
+    risk_col1, risk_col2 = st.columns(2)
 
-        # Create drawdown chart
-        if "drawdowns" in results:
-            fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(
-                    x=results["drawdowns"].index,
-                    y=results["drawdowns"].values,
-                    name="Drawdown",
-                    fill="tozeroy",
-                    line=dict(color="red"),
-                )
-            )
-            fig.update_layout(
-                title="Drawdowns",
-                xaxis_title="Date",
-                yaxis_title="Drawdown",
-                height=400,
-            )
-            st.plotly_chart(fig, use_container_width=True)
+    with risk_col1:
+        st.write("**Value at Risk (VaR)**")
+        st.write(f"95% VaR: {results.get('var_95', 0):.4f}")
+        st.write(f"99% VaR: {results.get('var_99', 0):.4f}")
 
-    # Log report creation for agentic monitoring
-    logger.info(f"Performance report created: {title}")
+    with risk_col2:
+        st.write("**Expected Shortfall**")
+        st.write(f"95% ES: {results.get('es_95', 0):.4f}")
+        st.write(f"99% ES: {results.get('es_99', 0):.4f}")
 
     return {
-        "success": True,
-        "title": title,
-        "metrics_count": len(results),
-        "has_equity_curve": "equity_curve" in results,
-        "has_drawdowns": "drawdowns" in results,
-        "key_metrics": {
-            "total_return": results.get("total_return", 0),
-            "sharpe_ratio": results.get("sharpe_ratio", 0),
-            "max_drawdown": results.get("max_drawdown", 0),
-        },
+        "metrics": results,
+        "displayed": True,
     }
 
 
 def create_error_block(message: str) -> Dict[str, Any]:
-    """Create an error message block.
+    """Create an error display block.
 
     Args:
         message: Error message to display
 
     Returns:
-        Dictionary with error display status
+        Dictionary containing error information
     """
-    st.error(message)
-    st.info("Try adjusting your parameters or selecting a different strategy.")
-
-    # Log error for agentic monitoring
-    logger.error(f"Error block displayed: {message}")
+    st.error(f"❌ Error: {message}")
+    logger.error(f"UI Error: {message}")
 
     return {
-        "success": True,
-        "error_displayed": True,
+        "error": True,
         "message": message,
         "timestamp": datetime.now().isoformat(),
     }
@@ -700,234 +738,217 @@ def create_loading_spinner(message: str = "Processing...") -> Dict[str, Any]:
     """Create a loading spinner with message.
 
     Args:
-        message: Message to display during loading
+        message: Loading message to display
 
     Returns:
-        Dictionary with spinner creation status
+        Dictionary containing loading state
     """
-    spinner = st.spinner(message)
-
-    # Log spinner creation for agentic monitoring
-    logger.info(f"Loading spinner created: {message}")
+    with st.spinner(message):
+        st.info(f"⏳ {message}")
+        logger.info(f"Loading: {message}")
 
     return {
-        "success": True,
-        "spinner_created": True,
+        "loading": True,
         "message": message,
-        "spinner_object": spinner,
+        "timestamp": datetime.now().isoformat(),
     }
 
 
 def create_forecast_metrics(forecast_results: Dict[str, Any]) -> Dict[str, Any]:
-    """Create forecast metrics display from forecast results.
+    """Create forecast accuracy metrics display.
 
     Args:
         forecast_results: Dictionary containing forecast results and metrics
 
     Returns:
-        Dictionary with metrics display status
+        Dictionary containing metrics display
     """
-    st.subheader("Forecast Metrics")
+    st.subheader("Forecast Accuracy Metrics")
 
     metrics = forecast_results.get("metrics", {})
+    if not metrics:
+        st.warning("No forecast metrics available")
+        return {"displayed": False}
 
-    # Display metrics in columns
+    # Accuracy metrics
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.metric("Accuracy", f"{metrics.get('accuracy', 0):.2%}")
+        st.metric(
+            "RMSE",
+            f"{metrics.get('rmse', 0):.4f}",
+        )
 
     with col2:
-        st.metric("MSE", f"{metrics.get('mse', 0):.4f}")
+        st.metric(
+            "MAE",
+            f"{metrics.get('mae', 0):.4f}",
+        )
 
     with col3:
-        st.metric("RMSE", f"{metrics.get('rmse', 0):.4f}")
+        st.metric(
+            "MAPE",
+            f"{metrics.get('mape', 0):.2f}%",
+        )
 
     with col4:
-        st.metric("MAE", f"{metrics.get('mae', 0):.4f}")
+        st.metric(
+            "R² Score",
+            f"{metrics.get('r2_score', 0):.4f}",
+        )
 
-    # Log metrics for agentic monitoring
-    logger.info(
-        f"Forecast metrics displayed for {forecast_results.get('ticker', 'unknown')}"
+    # Detailed metrics table
+    st.subheader("Detailed Forecast Metrics")
+    forecast_metrics_df = pd.DataFrame(
+        [
+            ["RMSE", f"{metrics.get('rmse', 0):.6f}"],
+            ["MAE", f"{metrics.get('mae', 0):.6f}"],
+            ["MAPE", f"{metrics.get('mape', 0):.4f}%"],
+            ["R² Score", f"{metrics.get('r2_score', 0):.6f}"],
+            ["Explained Variance", f"{metrics.get('explained_variance', 0):.6f}"],
+            ["Mean Absolute Error", f"{metrics.get('mean_absolute_error', 0):.6f}"],
+            ["Median Absolute Error", f"{metrics.get('median_absolute_error', 0):.6f}"],
+            ["Max Error", f"{metrics.get('max_error', 0):.6f}"],
+        ],
+        columns=["Metric", "Value"],
     )
 
+    st.table(forecast_metrics_df)
+
     return {
-        "success": True,
-        "metrics_displayed": True,
-        "ticker": forecast_results.get("ticker", "unknown"),
-        "metrics_count": len(metrics),
-        "key_metrics": {
-            "accuracy": metrics.get("accuracy", 0),
-            "mse": metrics.get("mse", 0),
-            "rmse": metrics.get("rmse", 0),
-            "mae": metrics.get("mae", 0),
-        },
+        "metrics": metrics,
+        "displayed": True,
     }
 
 
 def create_forecast_table(forecast_results: Dict[str, Any]) -> Dict[str, Any]:
-    """Create forecast table display from forecast results.
+    """Create a forecast results table.
 
     Args:
         forecast_results: Dictionary containing forecast results
 
     Returns:
-        Dictionary with table creation status
+        Dictionary containing table display
     """
     st.subheader("Forecast Results")
 
-    # Create a simple table with forecast information
-    forecast_data = {
-        "Metric": ["Ticker", "Model", "Strategy", "Prediction"],
-        "Value": [
-            forecast_results.get("ticker", "N/A"),
-            forecast_results.get("model", "N/A"),
-            forecast_results.get("strategy", "N/A"),
-            forecast_results.get("prediction", "N/A"),
-        ],
-    }
+    forecast_data = forecast_results.get("forecast_data")
+    if forecast_data is None or forecast_data.empty:
+        st.warning("No forecast data available")
+        return {"displayed": False}
 
-    df = pd.DataFrame(forecast_data)
-    st.table(df)
+    # Display forecast table
+    st.dataframe(
+        forecast_data,
+        use_container_width=True,
+        height=400,
+    )
 
-    # Log table creation for agentic monitoring
-    logger.info(
-        f"Forecast table displayed for {forecast_results.get('ticker', 'unknown')}"
+    # Download button
+    csv = forecast_data.to_csv(index=True)
+    st.download_button(
+        label="Download Forecast Data",
+        data=csv,
+        file_name="forecast_results.csv",
+        mime="text/csv",
     )
 
     return {
-        "success": True,
-        "table_created": True,
-        "ticker": forecast_results.get("ticker", "unknown"),
-        "table_rows": len(forecast_data["Metric"]),
-        "forecast_data": forecast_data,
+        "data": forecast_data,
+        "displayed": True,
     }
 
 
 def create_system_metrics_panel(metrics: Dict[str, float]) -> Dict[str, Any]:
-    """Create a system-wide metrics panel showing key performance indicators.
+    """Create a system metrics monitoring panel.
 
     Args:
-        metrics: Dictionary containing performance metrics
+        metrics: Dictionary containing system metrics
 
     Returns:
-        Dictionary with panel creation status and metrics summary
+        Dictionary containing metrics display
     """
-    st.subheader("📊 System Performance Metrics")
+    st.subheader("System Metrics")
 
-    # Create columns for metrics
-    col1, col2, col3, col4, col5 = st.columns(5)
+    if not metrics:
+        st.warning("No system metrics available")
+        return {"displayed": False}
+
+    # System health indicators
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        sharpe = metrics.get("sharpe_ratio", 0.0)
-        if sharpe >= 1.5:
-            st.metric(
-                "Sharpe Ratio", f"{sharpe:.2f}", delta="Excellent", delta_color="normal"
-            )
-        elif sharpe >= 1.0:
-            st.metric(
-                "Sharpe Ratio", f"{sharpe:.2f}", delta="Good", delta_color="normal"
-            )
-        elif sharpe >= 0.5:
-            st.metric("Sharpe Ratio", f"{sharpe:.2f}", delta="Fair", delta_color="off")
-        else:
-            st.metric(
-                "Sharpe Ratio", f"{sharpe:.2f}", delta="Poor", delta_color="inverse"
-            )
+        cpu_usage = metrics.get("cpu_usage", 0)
+        st.metric(
+            "CPU Usage",
+            f"{cpu_usage:.1f}%",
+            delta=f"{cpu_usage - 50:.1f}%" if cpu_usage > 50 else None,
+        )
 
     with col2:
-        total_return = metrics.get("total_return", 0.0)
-        if total_return >= 0.20:
-            st.metric(
-                "Total Return",
-                f"{total_return:.1%}",
-                delta="Strong",
-                delta_color="normal",
-            )
-        elif total_return >= 0.10:
-            st.metric(
-                "Total Return",
-                f"{total_return:.1%}",
-                delta="Good",
-                delta_color="normal",
-            )
-        elif total_return >= 0.05:
-            st.metric(
-                "Total Return",
-                f"{total_return:.1%}",
-                delta="Moderate",
-                delta_color="off",
-            )
-        else:
-            st.metric(
-                "Total Return",
-                f"{total_return:.1%}",
-                delta="Weak",
-                delta_color="inverse",
-            )
+        memory_usage = metrics.get("memory_usage", 0)
+        st.metric(
+            "Memory Usage",
+            f"{memory_usage:.1f}%",
+            delta=f"{memory_usage - 70:.1f}%" if memory_usage > 70 else None,
+        )
 
     with col3:
-        max_dd = metrics.get("max_drawdown", 0.0)
-        if max_dd <= 0.10:
-            st.metric(
-                "Max Drawdown", f"{max_dd:.1%}", delta="Low Risk", delta_color="normal"
-            )
-        elif max_dd <= 0.20:
-            st.metric(
-                "Max Drawdown", f"{max_dd:.1%}", delta="Moderate", delta_color="off"
-            )
-        elif max_dd <= 0.30:
-            st.metric(
-                "Max Drawdown", f"{max_dd:.1%}", delta="High Risk", delta_color="off"
-            )
-        else:
-            st.metric(
-                "Max Drawdown",
-                f"{max_dd:.1%}",
-                delta="Very High Risk",
-                delta_color="inverse",
-            )
+        disk_usage = metrics.get("disk_usage", 0)
+        st.metric(
+            "Disk Usage",
+            f"{disk_usage:.1f}%",
+            delta=f"{disk_usage - 80:.1f}%" if disk_usage > 80 else None,
+        )
 
     with col4:
-        win_rate = metrics.get("win_rate", 0.0)
-        if win_rate >= 0.60:
-            st.metric(
-                "Win Rate", f"{win_rate:.1%}", delta="Excellent", delta_color="normal"
-            )
-        elif win_rate >= 0.50:
-            st.metric("Win Rate", f"{win_rate:.1%}", delta="Good", delta_color="normal")
-        elif win_rate >= 0.40:
-            st.metric("Win Rate", f"{win_rate:.1%}", delta="Fair", delta_color="off")
-        else:
-            st.metric(
-                "Win Rate", f"{win_rate:.1%}", delta="Poor", delta_color="inverse"
-            )
+        network_latency = metrics.get("network_latency", 0)
+        st.metric(
+            "Network Latency",
+            f"{network_latency:.1f}ms",
+        )
 
-    with col5:
-        pnl = metrics.get("total_pnl", 0.0)
-        if pnl >= 10000:
-            st.metric("Total PnL", f"${pnl:,.0f}", delta="Strong", delta_color="normal")
-        elif pnl >= 5000:
-            st.metric("Total PnL", f"${pnl:,.0f}", delta="Good", delta_color="normal")
-        elif pnl >= 1000:
-            st.metric("Total PnL", f"${pnl:,.0f}", delta="Moderate", delta_color="off")
-        else:
-            st.metric("Total PnL", f"${pnl:,.0f}", delta="Weak", delta_color="inverse")
+    # Performance metrics
+    st.subheader("Performance Metrics")
+    perf_col1, perf_col2 = st.columns(2)
 
-    # Log panel creation for agentic monitoring
-    logger.info(f"System metrics panel created with {len(metrics)} metrics")
+    with perf_col1:
+        st.write("**Model Performance**")
+        st.write(f"Average Prediction Time: {metrics.get('avg_prediction_time', 0):.3f}s")
+        st.write(f"Model Accuracy: {metrics.get('model_accuracy', 0):.2%}")
+        st.write(f"Cache Hit Rate: {metrics.get('cache_hit_rate', 0):.2%}")
+
+    with perf_col2:
+        st.write("**System Performance**")
+        st.write(f"Active Connections: {metrics.get('active_connections', 0)}")
+        st.write(f"Request Rate: {metrics.get('request_rate', 0):.1f} req/s")
+        st.write(f"Error Rate: {metrics.get('error_rate', 0):.2%}")
+
+    # System status
+    st.subheader("System Status")
+    status_col1, status_col2, status_col3 = st.columns(3)
+
+    with status_col1:
+        if metrics.get("system_healthy", True):
+            st.success("✅ System Healthy")
+        else:
+            st.error("❌ System Issues Detected")
+
+    with status_col2:
+        if metrics.get("models_loaded", True):
+            st.success("✅ Models Loaded")
+        else:
+            st.error("❌ Model Loading Issues")
+
+    with status_col3:
+        if metrics.get("data_feed_active", True):
+            st.success("✅ Data Feed Active")
+        else:
+            st.error("❌ Data Feed Issues")
 
     return {
-        "success": True,
-        "panel_created": True,
-        "metrics_count": len(metrics),
-        "key_metrics": {
-            "sharpe_ratio": metrics.get("sharpe_ratio", 0.0),
-            "total_return": metrics.get("total_return", 0.0),
-            "max_drawdown": metrics.get("max_drawdown", 0.0),
-            "win_rate": metrics.get("win_rate", 0.0),
-            "total_pnl": metrics.get("total_pnl", 0.0),
-        },
+        "metrics": metrics,
+        "displayed": True,
     }
 
 
@@ -935,170 +956,98 @@ def create_strategy_pipeline_selector(
     key: str = "strategy_pipeline_selector",
     allow_combos: bool = True,
 ) -> Dict[str, Any]:
-    """Create a strategy pipeline selector with combo functionality.
+    """Create a strategy pipeline selector with multiple strategy options.
 
     Args:
         key: Unique key for the Streamlit component
         allow_combos: Whether to allow strategy combinations
 
     Returns:
-        Dictionary containing selected strategies and combo settings
+        Dictionary containing selected strategies and configuration
     """
     try:
-        from strategies.strategy_pipeline import get_strategy_names, get_combine_modes
-        
-        # Get available strategies from pipeline
-        strategy_names = get_strategy_names()
-        combine_modes = get_combine_modes()
-        
-        if not strategy_names:
-            st.warning("No strategies available in pipeline")
-            return {}
-        
-        # Strategy selection
+        from strategies.strategy_pipeline import (
+            AVAILABLE_STRATEGIES,
+            COMBINE_MODES,
+        )
+
+        st.subheader("Strategy Pipeline Configuration")
+
         if allow_combos:
-            st.subheader("🎯 Strategy Selection")
+            # Multiple strategy selection
             selected_strategies = st.multiselect(
-                "Select Strategies",           options=strategy_names,
-                default=[strategy_names[0]] if strategy_names else [],
-                help="Select one or more strategies to combine"
+                "Select Strategies",
+                options=AVAILABLE_STRATEGIES,
+                default=AVAILABLE_STRATEGIES[:2],
+                key=f"{key}_strategies",
             )
-            
-            if not selected_strategies:
-                st.warning("Please select at least one strategy")
-                return {}
-            
-            # Show selected strategies
+
             if len(selected_strategies) > 1:
-                st.info(f"Selected strategies: {', '.join(selected_strategies)}")
-                
                 # Combination mode selection
-                st.subheader("🔗 Combination Mode")
                 combine_mode = st.selectbox(
-                 "How to combine signals",
-                    options=combine_modes,
-                    index=1,  # Default to intersection
-                    help="union: signal if any strategy signals, intersection: signal only if all strategies agree, weighted: weighted sum of signals"
+                    "Combination Mode",
+                    options=COMBINE_MODES,
+                    key=f"{key}_combine_mode",
                 )
-                
-                # Weights for weighted mode
-                weights = None
-                if combine_mode == 'weighted':
-                    st.subheader("⚖️ Strategy Weights")
-                    weights = []
-                    for i, strategy in enumerate(selected_strategies):
+
+                # Weights for weighted combination
+                if combine_mode == "weighted":
+                    st.write("Strategy Weights:")
+                    weights = {}
+                    for strategy in selected_strategies:
                         weight = st.slider(
-                            f"Weight for {strategy}",
+                            f"{strategy} Weight",
                             min_value=0.0,
-                            max_value=2.0,
-                            value=1.0,
+                            max_value=1.0,
+                            value=1.0 / len(selected_strategies),
                             step=0.1,
-                            key=f"{key}_weight_{i}"
+                            key=f"{key}_weight_{strategy}",
                         )
-                        weights.append(weight)
-                    
+                        weights[strategy] = weight
+
                     # Normalize weights
-                    if weights:
-                        total_weight = sum(weights)
-                        if total_weight > 0:
-                            weights = [w / total_weight for w in weights]
-                        st.info(f"Normalized weights: {[f'{w:.2f}' for w in weights]}")
-                
-                # Strategy parameters
-                st.subheader("⚙️ Strategy Parameters")
-                strategy_params = {}
-                
-                for strategy in selected_strategies:
-                    with st.expander(f"Parameters for {strategy}"):
-                        if strategy == "RSI":
-                            strategy_params[strategy] = {
-                             'window': st.slider(f"{strategy} Window", 5, 14, key=f"{key}_rsi_window"),
-                                'overbought': st.slider(f"{strategy} Overbought", 60, 90, key=f"{key}_rsi_overbought"),
-                               'oversold': st.slider(f"{strategy} Oversold", 10, 40, key=f"{key}_rsi_oversold")
-                            }
-                        elif strategy == "MACD":
-                            strategy_params[strategy] = {
-                               'fast': st.slider(f"{strategy} Fast Period", 8, 20, key=f"{key}_macd_fast"),
-                               'slow': st.slider(f"{strategy} Slow Period", 20, 40, key=f"{key}_macd_slow"),
-                             'signal': st.slider(f"{strategy} Signal Period", 5, 15, key=f"{key}_macd_signal")
-                            }
-                        elif strategy == "Bollinger":
-                            strategy_params[strategy] = {
-                             'window': st.slider(f"{strategy} Window", 10, 20, key=f"{key}_bollinger_window"),
-                              'num_std': st.slider(f"{strategy} Standard Deviations", 1.0, 3.0, step=0.1, key=f"{key}_bollinger_std")
-                            }
-                        elif strategy == "SMA":
-                            strategy_params[strategy] = {
-                             'window': st.slider(f"{strategy} Window", 5, 20, key=f"{key}_sma_window")
-                            }
-                
+                    total_weight = sum(weights.values())
+                    if total_weight > 0:
+                        weights = {k: v / total_weight for k, v in weights.items()}
+                else:
+                    weights = None
+
                 result = {
-               'strategies': selected_strategies,
-                 'combine_mode': combine_mode,
-                    'weights': weights,
-               'parameters': strategy_params,
-                  'is_combo': len(selected_strategies) > 1
+                    "strategies": selected_strategies,
+                    "combine_mode": combine_mode,
+                    "weights": weights,
+                    "parameters": {},
+                    "is_combo": True,
                 }
-                
             else:
-                # Single strategy selected
-                strategy = selected_strategies[0]
-                st.info(f"Single strategy selected: {strategy}")
-                
-                # Strategy parameters for single strategy
-                st.subheader("⚙️ Strategy Parameters")
-                strategy_params = {}
-                
-                with st.expander(f"Parameters for {strategy}"):
-                    if strategy == "RSI":
-                        strategy_params[strategy] = {
-                         'window': st.slider(f"{strategy} Window", 5, 14, key=f"{key}_rsi_window"),
-                            'overbought': st.slider(f"{strategy} Overbought", 60, 90, key=f"{key}_rsi_overbought"),
-                           'oversold': st.slider(f"{strategy} Oversold", 10, 40, key=f"{key}_rsi_oversold")
-                        }
-                    elif strategy == "MACD":
-                        strategy_params[strategy] = {
-                           'fast': st.slider(f"{strategy} Fast Period", 8, 20, key=f"{key}_macd_fast"),
-                           'slow': st.slider(f"{strategy} Slow Period", 20, 40, key=f"{key}_macd_slow"),
-                         'signal': st.slider(f"{strategy} Signal Period", 5, 15, key=f"{key}_macd_signal")
-                        }
-                    elif strategy == "Bollinger":
-                        strategy_params[strategy] = {
-                         'window': st.slider(f"{strategy} Window", 10, 20, key=f"{key}_bollinger_window"),
-                          'num_std': st.slider(f"{strategy} Standard Deviations", 1.0, 3.0, step=0.1, key=f"{key}_bollinger_std")
-                        }
-                    elif strategy == "SMA":
-                        strategy_params[strategy] = {
-                         'window': st.slider(f"{strategy} Window", 5, 20, key=f"{key}_sma_window")
-                        }
-                
                 result = {
-               'strategies': selected_strategies,
-                 'combine_mode': None,
-                   'weights': [],
-                'parameters': strategy_params,
-                    'is_combo': False
+                    "strategies": selected_strategies,
+                    "combine_mode": None,
+                    "weights": None,
+                    "parameters": {},
+                    "is_combo": False,
                 }
         else:
             # Single strategy selection only
             selected_strategy = st.selectbox(
-              "Select Strategy",           options=strategy_names,
-                key=key
+                "Select Strategy",
+                options=AVAILABLE_STRATEGIES,
+                key=key,
             )
-            
+
             result = {
-                'strategies': [selected_strategy] if selected_strategy else [],
-                'combine_mode': None,
-                'weights': [],
-                'parameters': {},
-                'is_combo': False
+                "strategies": [selected_strategy] if selected_strategy else [],
+                "combine_mode": None,
+                "weights": [],
+                "parameters": {},
+                "is_combo": False,
             }
-        
+
         # Log selection for agentic monitoring
         logger.info(f"Strategy pipeline selection: {result}")
-        
+
         return result
-        
+
     except ImportError:
         st.error("Strategy pipeline module not available")
         return {}
@@ -1111,7 +1060,7 @@ def create_strategy_pipeline_selector(
 def execute_strategy_pipeline(
     strategy_config: Dict[str, Any],
     market_data: pd.DataFrame,
-    key: str = "strategy_execution"
+    key: str = "strategy_execution",
 ) -> Dict[str, Any]:
     """Execute a strategy pipeline with given configuration and market data.
 
@@ -1125,95 +1074,99 @@ def execute_strategy_pipeline(
     """
     try:
         from strategies.strategy_pipeline import (
-            rsi_strategy, macd_strategy, bollinger_strategy, sma_strategy,
-            combine_signals
+            rsi_strategy,
+            macd_strategy,
+            bollinger_strategy,
+            sma_strategy,
+            combine_signals,
         )
-        
-        if not strategy_config or not strategy_config.get('strategies'):
+
+        if not strategy_config or not strategy_config.get("strategies"):
             st.error("No strategies selected")
             return {}
-        
-        strategies = strategy_config['strategies']
-        parameters = strategy_config.get('parameters', {})
-        combine_mode = strategy_config.get('combine_mode')
-        weights = strategy_config.get('weights')
-        
+
+        strategies = strategy_config["strategies"]
+        parameters = strategy_config.get("parameters", {})
+        combine_mode = strategy_config.get("combine_mode")
+        weights = strategy_config.get("weights")
+
         # Generate individual strategy signals
         signals_list = []
         strategy_names = []
-        
+
         for strategy in strategies:
             strategy_params = parameters.get(strategy, {})
             if strategy == "RSI":
                 signal = rsi_strategy(
                     market_data,
-                    window=strategy_params.get('window', 14),
-                    overbought=strategy_params.get('overbought', 70),
-                    oversold=strategy_params.get('oversold', 30)
+                    window=strategy_params.get("window", 14),
+                    overbought=strategy_params.get("overbought", 70),
+                    oversold=strategy_params.get("oversold", 30),
                 )
             elif strategy == "MACD":
                 signal = macd_strategy(
                     market_data,
-                    fast=strategy_params.get('fast', 12),
-                    slow=strategy_params.get('slow', 26),
-                    signal=strategy_params.get('signal', 9)
+                    fast=strategy_params.get("fast", 12),
+                    slow=strategy_params.get("slow", 26),
+                    signal=strategy_params.get("signal", 9),
                 )
             elif strategy == "Bollinger":
                 signal = bollinger_strategy(
                     market_data,
-                    window=strategy_params.get('window', 20),
-                    num_std=strategy_params.get('num_std', 2.0)
+                    window=strategy_params.get("window", 20),
+                    num_std=strategy_params.get("num_std", 2.0),
                 )
             elif strategy == "SMA":
                 signal = sma_strategy(
                     market_data,
-                    window=strategy_params.get('window', 20)
+                    window=strategy_params.get("window", 20),
                 )
             else:
                 st.warning(f"Unknown strategy: {strategy}")
                 continue
-            
+
             signals_list.append(signal)
             strategy_names.append(strategy)
-        
+
         if not signals_list:
             st.error("No valid signals generated")
             return {}
-        
+
         # Combine signals if multiple strategies
         if len(signals_list) > 1 and combine_mode:
             combined_signal = combine_signals(
-                signals_list,
-                mode=combine_mode,
-                weights=weights
+                signals_list, mode=combine_mode, weights=weights
             )
             final_signal = combined_signal
             signal_type = f"Combined ({combine_mode})"
         else:
             final_signal = signals_list[0]
             signal_type = "Single"
+
         # Calculate basic performance metrics
         performance_metrics = calculate_signal_performance(
             market_data, final_signal, strategy_names
         )
-        
+
         # Create result dictionary
         result = {
-           'signal': final_signal,
-          'individual_signals': dict(zip(strategy_names, signals_list)),
-        'signal_type': signal_type,
-            'strategies_used': strategies,
-         'combine_mode': combine_mode,
-            'weights': weights,
-        'performance': performance_metrics,
-           'execution_time':datetime.now().isoformat()
+            "signal": final_signal,
+            "individual_signals": dict(zip(strategy_names, signals_list)),
+            "signal_type": signal_type,
+            "strategies_used": strategies,
+            "combine_mode": combine_mode,
+            "weights": weights,
+            "performance": performance_metrics,
+            "execution_time": datetime.now().isoformat(),
         }
-        
+
         # Log execution for agentic monitoring
-        logger.info(f"Strategy pipeline executed: {len(strategies)} strategies, mode: {combine_mode}")
-        
+        logger.info(
+            f"Strategy pipeline executed: {len(strategies)} strategies, mode: {combine_mode}"
+        )
+
         return result
-        
+
     except ImportError as e:
         st.error(f"Strategy pipeline module not available: {e}")
         return {}
@@ -1226,13 +1179,13 @@ def execute_strategy_pipeline(
 def calculate_signal_performance(
     market_data: pd.DataFrame,
     signals: pd.Series,
-    strategy_names: List[str]
+    strategy_names: List[str],
 ) -> Dict[str, Any]:
     """Calculate basic performance metrics for strategy signals.
 
     Args:
         market_data: Market data DataFrame
-        signals: Signal series (1y,-1l, 0=hold)
+        signals: Signal series (1=buy, -1=sell, 0=hold)
         strategy_names: List of strategy names used
 
     Returns:
@@ -1240,42 +1193,46 @@ def calculate_signal_performance(
     """
     try:
         # Calculate returns
-        price_returns = market_data['close'].pct_change()
-        
+        price_returns = market_data["close"].pct_change()
+
         # Calculate strategy returns (assuming 100% position size)
         strategy_returns = price_returns * signals.shift(1)
-        
+
         # Basic metrics
         total_return = strategy_returns.sum()
-        sharpe_ratio = strategy_returns.mean() / (strategy_returns.std() + 1e-9) * np.sqrt(252)
-        max_drawdown = (strategy_returns.cumsum() - strategy_returns.cumsum().expanding().max()).min()
-        
+        sharpe_ratio = (
+            strategy_returns.mean() / (strategy_returns.std() + 1e-9) * np.sqrt(252)
+        )
+        max_drawdown = (
+            strategy_returns.cumsum() - strategy_returns.cumsum().expanding().max()
+        ).min()
+
         # Signal statistics
         buy_signals = (signals == 1).sum()
         sell_signals = (signals == -1).sum()
         hold_signals = (signals == 0).sum()
         total_signals = len(signals)
-        
+
         # Win rate (simplified)
         positive_returns = (strategy_returns > 0).sum()
         total_trades = (strategy_returns != 0).sum()
         win_rate = positive_returns / (total_trades + 1e-9)
-        
+
         return {
-         'total_return': total_return,
-         'sharpe_ratio': sharpe_ratio,
-         'max_drawdown': max_drawdown,
-            'buy_signals': buy_signals,
-         'sell_signals': sell_signals,
-         'hold_signals': hold_signals,
-          'total_signals': total_signals,
-         'win_rate': win_rate,
-           'strategy_names': strategy_names
+            "total_return": total_return,
+            "sharpe_ratio": sharpe_ratio,
+            "max_drawdown": max_drawdown,
+            "buy_signals": buy_signals,
+            "sell_signals": sell_signals,
+            "hold_signals": hold_signals,
+            "total_signals": total_signals,
+            "win_rate": win_rate,
+            "strategy_names": strategy_names,
         }
-        
+
     except Exception as e:
         logger.error(f"Error calculating performance metrics: {e}")
         return {
-           'error': str(e),
-           'strategy_names': strategy_names
-        }
+            "error": str(e),
+            "strategy_names": strategy_names,
+        } 
