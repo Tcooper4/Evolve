@@ -13,33 +13,42 @@ import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-# Import NLP libraries with fallback handling
+# Try to import transformers
 try:
     from transformers import pipeline
-
     TRANSFORMERS_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ transformers not available. Disabling advanced NLP features.")
+    print(f"   Missing: {e}")
+    pipeline = None
     TRANSFORMERS_AVAILABLE = False
-    logging.warning("Transformers not available - some features will be disabled")
 
+# Try to import NLTK
 try:
     import nltk
     from nltk.corpus import stopwords
     from nltk.stem import WordNetLemmatizer
     from nltk.tokenize import sent_tokenize, word_tokenize
-
     NLTK_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ NLTK not available. Disabling NLTK-based features.")
+    print(f"   Missing: {e}")
+    nltk = None
+    stopwords = None
+    WordNetLemmatizer = None
+    sent_tokenize = None
+    word_tokenize = None
     NLTK_AVAILABLE = False
-    logging.warning("NLTK not available - some features will be disabled")
 
+# Try to import spaCy
 try:
     import spacy
-
     SPACY_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ spaCy not available. Disabling spaCy-based features.")
+    print(f"   Missing: {e}")
+    spacy = None
     SPACY_AVAILABLE = False
-    logging.warning("spaCy not available - some features will be disabled")
 
 logger = logging.getLogger(__name__)
 

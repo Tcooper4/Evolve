@@ -28,10 +28,24 @@ except Exception as e:
     PANDAS_TA_AVAILABLE = False
     logging.warning(f"pandas_ta import error: {e}")
 
-from sklearn.decomposition import PCA
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.feature_selection import RFE, SelectKBest, VarianceThreshold, f_regression
-from sklearn.preprocessing import StandardScaler
+# Try to import scikit-learn
+try:
+    from sklearn.decomposition import PCA
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.feature_selection import RFE, SelectKBest, VarianceThreshold, f_regression
+    from sklearn.preprocessing import StandardScaler
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling feature engineering capabilities.")
+    print(f"   Missing: {e}")
+    PCA = None
+    RandomForestRegressor = None
+    RFE = None
+    SelectKBest = None
+    VarianceThreshold = None
+    f_regression = None
+    StandardScaler = None
+    SKLEARN_AVAILABLE = False
 
 from trading.feature_engineering import indicators
 from utils.common_helpers import normalize_indicator_name
@@ -46,6 +60,9 @@ class FeatureEngineer(FeatureEngineering):
         Args:
             config: Configuration dictionary for feature engineering
         """
+        if not SKLEARN_AVAILABLE:
+            raise ImportError("scikit-learn is not available. Cannot create FeatureEngineer.")
+            
         self.config = config or {}
         self.scaler = StandardScaler()
         self.pca = PCA(n_components=0.95)  # Keep 95% of variance

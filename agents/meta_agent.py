@@ -91,32 +91,40 @@ class ModelMemory:
     description: Optional[str] = None
 
 
-class MemoryStore:
+from abc import ABC, abstractmethod
+
+class MemoryStore(ABC):
     """Abstract base class for memory stores."""
     
+    @abstractmethod
     def save_model_memory(self, memory: ModelMemory) -> bool:
         """Save model memory to store."""
-        raise NotImplementedError
+        pass
     
+    @abstractmethod
     def load_model_memory(self, model_id: str) -> Optional[ModelMemory]:
         """Load model memory from store."""
-        raise NotImplementedError
+        pass
     
+    @abstractmethod
     def list_model_ids(self) -> List[str]:
         """List all model IDs in store."""
-        raise NotImplementedError
+        pass
     
+    @abstractmethod
     def delete_model_memory(self, model_id: str) -> bool:
         """Delete model memory from store."""
-        raise NotImplementedError
+        pass
     
+    @abstractmethod
     def save_performance(self, performance: ModelPerformance) -> bool:
         """Save performance record."""
-        raise NotImplementedError
+        pass
     
+    @abstractmethod
     def get_performance_history(self, model_id: str, metric: Optional[str] = None) -> List[ModelPerformance]:
         """Get performance history for a model."""
-        raise NotImplementedError
+        pass
 
 
 class JSONMemoryStore(MemoryStore):

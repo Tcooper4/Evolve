@@ -113,23 +113,11 @@ class PerformanceManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    def setup_logging(self):
-        """Initialize logging configuration.
+    from utils.launch_utils import setup_logging
 
-        Raises:
-            SystemExit: If the logging configuration file is not found
-        """
-        log_config_path = Path("config/logging_config.yaml")
-        if not log_config_path.exists():
-            print("Error: logging_config.yaml not found")
-            sys.exit(1)
-
-        with open(log_config_path) as f:
-            log_config = yaml.safe_load(f)
-
-        logging.config.dictConfig(log_config)
-
-    def profile_function(self, func: callable, *args, **kwargs):
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="report_service")def profile_function(self, func: callable, *args, **kwargs):
         """Profile a function's performance.
 
         Args:

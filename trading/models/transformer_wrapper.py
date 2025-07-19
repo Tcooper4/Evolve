@@ -3,9 +3,20 @@ Transformer Wrapper - Batch 17
 Enhanced transformer wrapper with configurable dropout layers for training robustness
 """
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling transformer models.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    F = None
+    TORCH_AVAILABLE = False
+
 from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 import logging
@@ -35,6 +46,8 @@ class MultiHeadAttention(nn.Module):
                  n_heads: int, 
                  dropout_rate: float = 0.1,
                  attention_dropout_rate: float = 0.1):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create MultiHeadAttention.")
         super().__init__()
         assert d_model % n_heads == 0
         
@@ -114,6 +127,8 @@ class FeedForward(nn.Module):
                  d_model: int, 
                  d_ff: int, 
                  dropout_rate: float = 0.1):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create FeedForward.")
         super().__init__()
         self.w_1 = nn.Linear(d_model, d_ff)
         self.w_2 = nn.Linear(d_ff, d_model)
@@ -140,6 +155,8 @@ class TransformerBlock(nn.Module):
                  dropout_rate: float = 0.1,
                  attention_dropout_rate: float = 0.1,
                  enable_dropout: bool = True):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TransformerBlock.")
         super().__init__()
         self.enable_dropout = enable_dropout
         
@@ -192,6 +209,8 @@ class TransformerWrapper(nn.Module):
     """
     
     def __init__(self, config: TransformerConfig):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TransformerWrapper.")
         super().__init__()
         self.config = config
         

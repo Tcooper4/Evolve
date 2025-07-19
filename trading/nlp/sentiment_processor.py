@@ -17,13 +17,28 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 from textstat import textstat
 
-# Try to import embedding libraries for soft-matching
+# Try to import sentence_transformers
 try:
     from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ sentence_transformers not available. Disabling soft-matching features.")
+    print(f"   Missing: {e}")
+    SentenceTransformer = None
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+# Try to import scikit-learn
+try:
     from sklearn.metrics.pairwise import cosine_similarity
-    EMBEDDINGS_AVAILABLE = True
-except ImportError:
-    EMBEDDINGS_AVAILABLE = False
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling cosine similarity calculations.")
+    print(f"   Missing: {e}")
+    cosine_similarity = None
+    SKLEARN_AVAILABLE = False
+
+# Overall embeddings availability
+EMBEDDINGS_AVAILABLE = SENTENCE_TRANSFORMERS_AVAILABLE and SKLEARN_AVAILABLE
 
 logger = logging.getLogger(__name__)
 

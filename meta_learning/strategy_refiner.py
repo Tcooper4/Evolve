@@ -34,12 +34,15 @@ class StrategyPerformance:
     recency_weight: float = 1.0
 
 
-class ScoringFunction:
+from abc import ABC, abstractmethod
+
+class ScoringFunction(ABC):
     """Base class for scoring functions"""
     
+    @abstractmethod
     def calculate_score(self, performance: StrategyPerformance) -> float:
         """Calculate score for a strategy performance"""
-        raise NotImplementedError
+        pass
 
 
 class SharpeScoring(ScoringFunction):

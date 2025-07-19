@@ -18,18 +18,51 @@ from textstat import textstat
 import pickle
 from pathlib import Path
 
-# Try to import ML libraries
+# Try to import PyTorch
 try:
     import torch
     import torch.nn as nn
     from torch.utils.data import Dataset, DataLoader
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling transformer models.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    Dataset = None
+    DataLoader = None
+    TORCH_AVAILABLE = False
+
+# Try to import transformers
+try:
     from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer
+    TRANSFORMERS_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ transformers not available. Disabling transformer models.")
+    print(f"   Missing: {e}")
+    AutoTokenizer = None
+    AutoModelForSequenceClassification = None
+    TrainingArguments = None
+    Trainer = None
+    TRANSFORMERS_AVAILABLE = False
+
+# Try to import scikit-learn
+try:
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import classification_report, accuracy_score
-    ML_AVAILABLE = True
-except ImportError:
-    ML_AVAILABLE = False
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling traditional ML models.")
+    print(f"   Missing: {e}")
+    TfidfVectorizer = None
+    LogisticRegression = None
+    classification_report = None
+    accuracy_score = None
+    SKLEARN_AVAILABLE = False
+
+# Overall ML availability
+ML_AVAILABLE = TORCH_AVAILABLE or SKLEARN_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +131,8 @@ class FinancialNewsDataset(Dataset):
     """Dataset for financial news sentiment classification."""
     
     def __init__(self, texts: List[str], labels: List[str], tokenizer=None, max_length: int = 512):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create FinancialNewsDataset.")
         """
         Initialize dataset.
         
@@ -228,6 +263,8 @@ class TfidfLogisticClassifier:
     """TF-IDF + Logistic Regression classifier."""
     
     def __init__(self, config: ClassifierConfig):
+        if not SKLEARN_AVAILABLE:
+            raise ImportError("scikit-learn is not available. Cannot create TfidfLogisticClassifier.")
         """
         Initialize TF-IDF + Logistic Regression classifier.
         
@@ -310,8 +347,11 @@ class TransformerClassifier:
             config: Classifier configuration
             model_name: Pre-trained model name
         """
-        if not ML_AVAILABLE:
-            raise ImportError("ML libraries not available")
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TransformerClassifier.")
+        
+        if not TRANSFORMERS_AVAILABLE:
+            raise ImportError("transformers is not available. Cannot create TransformerClassifier.")
         
         self.config = config
         self.model_name = model_name

@@ -10,8 +10,25 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-import aiohttp
-from bs4 import BeautifulSoup
+# Try to import aiohttp
+try:
+    import aiohttp
+    AIOHTTP_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ aiohttp not available. Disabling async web scraping.")
+    print(f"   Missing: {e}")
+    aiohttp = None
+    AIOHTTP_AVAILABLE = False
+
+# Try to import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+    BEAUTIFULSOUP_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ beautifulsoup4 not available. Disabling HTML parsing.")
+    print(f"   Missing: {e}")
+    BeautifulSoup = None
+    BEAUTIFULSOUP_AVAILABLE = False
 
 from trading.agents.model_selector_agent import ModelSelectorAgent
 from trading.memory.agent_memory import AgentMemory

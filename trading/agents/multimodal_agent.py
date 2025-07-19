@@ -17,36 +17,67 @@ import numpy as np
 
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 
+# Try to import plotly
 try:
     import plotly.graph_objs as go
-except ImportError:
+    PLOTLY_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ plotly not available. Disabling interactive plotting.")
+    print(f"   Missing: {e}")
     go = None
+    PLOTLY_AVAILABLE = False
 
+# Try to import OpenAI
 try:
     import openai
-except ImportError:
+    OPENAI_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ OpenAI not available. Disabling GPT-4V image analysis.")
+    print(f"   Missing: {e}")
     openai = None
+    OPENAI_AVAILABLE = False
 
+# Try to import PIL and transformers
 try:
     from PIL import Image
     from transformers import BlipForConditionalGeneration, BlipProcessor
-except ImportError:
+    PIL_AVAILABLE = True
+    TRANSFORMERS_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PIL/transformers not available. Disabling BLIP image analysis.")
+    print(f"   Missing: {e}")
+    Image = None
     BlipProcessor = None
     BlipForConditionalGeneration = None
-    Image = None
+    PIL_AVAILABLE = False
+    TRANSFORMERS_AVAILABLE = False
 
+# Try to import audio processing libraries
 try:
     import librosa
     import speech_recognition as sr
-except ImportError:
+    LIBROSA_AVAILABLE = True
+    SPEECH_RECOGNITION_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ librosa/speech_recognition not available. Disabling audio processing.")
+    print(f"   Missing: {e}")
     sr = None
     librosa = None
+    LIBROSA_AVAILABLE = False
+    SPEECH_RECOGNITION_AVAILABLE = False
 
+# Try to import document processing
 try:
     import docx
     import pandas as pd
-except ImportError:
+    DOCX_AVAILABLE = True
+    PANDAS_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ python-docx/pandas not available. Disabling document processing.")
+    print(f"   Missing: {e}")
     docx = None
+    DOCX_AVAILABLE = False
+    PANDAS_AVAILABLE = True  # pandas is usually available
 
 logger = logging.getLogger(__name__)
 

@@ -16,25 +16,11 @@ sys.path.append(str(Path(__file__).parent.parent))
 from report.report_service import ReportService
 
 
+from utils.launch_utils import setup_logging
+
 def setup_logging():
-    """Setup logging configuration."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler("logs/report_service.log"),
-            logging.StreamHandler(),
-        ],
-    )
-
-    return {
-        "success": True,
-        "message": "Initialization completed",
-        "timestamp": datetime.now().isoformat(),
-    }
-
-
-def main():
+    """Set up logging for the service."""
+    return setup_logging(service_name="report_service")def main():
     """Main launcher function."""
     # Setup logging
     setup_logging()

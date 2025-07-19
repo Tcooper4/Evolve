@@ -71,19 +71,11 @@ class HealthManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    def setup_logging(self):
-        """Initialize logging configuration."""
-        log_config_path = Path("config/logging_config.yaml")
-        if not log_config_path.exists():
-            print("Error: logging_config.yaml not found")
-            sys.exit(1)
+    from utils.launch_utils import setup_logging
 
-        with open(log_config_path) as f:
-            log_config = yaml.safe_load(f)
-
-        logging.config.dictConfig(log_config)
-
-    async def collect_metrics(self, duration: int = 300):
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="report_service")def collect_metrics(self, duration: int = 300):
         """Collect system metrics."""
         self.logger.info(f"Collecting metrics for {duration} seconds")
 

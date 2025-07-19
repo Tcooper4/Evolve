@@ -484,10 +484,12 @@ class ModelSelectorAgent(BaseAgent):
 
             return selected_model_id, confidence
 
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError) as e:
             self.logger.error(f"Error in model selection: {e}")
             return self._get_fallback_model(), 0.0
-        # TODO: Specify exception type instead of using bare except
+        except Exception as e:
+            self.logger.error(f"Unexpected error in model selection: {e}")
+            return self._get_fallback_model(), 0.0
 
     def _filter_candidates_fallback(
         self,
@@ -945,3 +947,4 @@ class ModelSelectorAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"Error loading state: {e}")
+

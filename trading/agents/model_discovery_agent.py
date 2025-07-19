@@ -19,27 +19,38 @@ import requests
 
 warnings.filterwarnings("ignore")
 
-# External API imports
+# Try to import arxiv
 try:
     import arxiv
-
     ARXIV_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ arxiv not available. Disabling Arxiv model discovery.")
+    print(f"   Missing: {e}")
+    arxiv = None
     ARXIV_AVAILABLE = False
 
+# Try to import huggingface_hub
 try:
     from huggingface_hub import HfApi
-
     HUGGINGFACE_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ huggingface_hub not available. Disabling HuggingFace model discovery.")
+    print(f"   Missing: {e}")
+    HfApi = None
     HUGGINGFACE_AVAILABLE = False
 
+# Try to import PyTorch for model creation
 try:
-    pass
+    import torch.nn as nn
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling PyTorch model creation.")
+    print(f"   Missing: {e}")
+    nn = None
+    TORCH_AVAILABLE = False
 
-    GITHUB_AVAILABLE = True
-except ImportError:
-    GITHUB_AVAILABLE = False
+# GitHub API availability (using requests)
+GITHUB_AVAILABLE = True  # requests is already imported
 
 logger = logging.getLogger(__name__)
 

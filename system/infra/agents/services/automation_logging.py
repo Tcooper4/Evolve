@@ -94,52 +94,11 @@ class AutomationLogging:
             logger.error(f"Failed to load logging config: {str(e)}")
             return None
 
-    def setup_logging(self):
-        """Configure logging."""
-        try:
-            # Create log directory
-            log_path = Path(self.config.log_dir)
-            log_path.mkdir(parents=True, exist_ok=True)
+    from utils.launch_utils import setup_logging
 
-            # Setup root logger
-            root_logger = logging.getLogger()
-            root_logger.setLevel(self.config.level)
-
-            # Clear existing handlers
-            for handler in root_logger.handlers[:]:
-                root_logger.removeHandler(handler)
-
-            # Add console handler
-            console_handler = logging.StreamHandler(sys.stdout)
-            console_handler.setFormatter(
-                logging.Formatter(self.config.format, datefmt=self.config.date_format)
-            )
-            root_logger.addHandler(console_handler)
-
-            # Add file handler
-            if self.config.rotation == "size":
-                file_handler = RotatingFileHandler(
-                    log_path / "automation.log",
-                    maxBytes=self.config.max_bytes,
-                    backupCount=self.config.backup_count,
-                )
-            else:
-                file_handler = TimedRotatingFileHandler(
-                    log_path / "automation.log",
-                    when=self.config.rotation_interval,
-                    backupCount=self.config.backup_count,
-                )
-
-            file_handler.setFormatter(
-                logging.Formatter(self.config.format, datefmt=self.config.date_format)
-            )
-            root_logger.addHandler(file_handler)
-
-        except Exception as e:
-            logger.error(f"Failed to setup logging: {str(e)}")
-            return None
-
-    def setup_structlog(self):
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="service")def setup_structlog(self):
         """Setup structured logging."""
         try:
             structlog.configure(

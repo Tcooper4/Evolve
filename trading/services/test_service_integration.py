@@ -40,21 +40,11 @@ class ServiceIntegrationTest:
 
         logger.info("Service Integration Test initialized")
 
-    def setup_logging(self):
-        """Set up logging for tests."""
-        log_path = Path("logs/tests")
-        log_path.mkdir(parents=True, exist_ok=True)
+    from utils.launch_utils import setup_logging
 
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.FileHandler(log_path / "service_integration_test.log"),
-                logging.StreamHandler(),
-            ],
-        )
-
-    def log_test_result(self, test_name: str, success: bool, details: str = ""):
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="agent_api")def log_test_result(self, test_name: str, success: bool, details: str = ""):
         """Log test result."""
         result = {
             "test_name": test_name,

@@ -31,11 +31,18 @@ try:
     from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
     from sklearn.model_selection import cross_val_score
     from sklearn.preprocessing import PolynomialFeatures, StandardScaler
-
     SKLEARN_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling Ridge models.")
+    print(f"   Missing: {e}")
+    Ridge = None
+    mean_absolute_error = None
+    mean_squared_error = None
+    r2_score = None
+    cross_val_score = None
+    PolynomialFeatures = None
+    StandardScaler = None
     SKLEARN_AVAILABLE = False
-    warnings.warn("Scikit-learn not available. Install with: pip install scikit-learn")
 
 from .base_model import BaseModel, ModelError, ModelRegistry, ValidationError
 
@@ -85,7 +92,7 @@ class RidgeModel(BaseModel):
         # Validate scikit-learn availability
         if not SKLEARN_AVAILABLE:
             raise ImportError(
-                "Scikit-learn is required for Ridge models. Install with: pip install scikit-learn"
+                "scikit-learn is not available. Cannot create Ridge model."
             )
 
         # Set default configuration

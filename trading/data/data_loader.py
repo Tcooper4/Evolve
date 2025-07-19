@@ -18,7 +18,16 @@ from typing import Any, Dict, List, Optional
 
 import joblib
 import pandas as pd
-import yfinance as yf
+
+# Try to import yfinance
+try:
+    import yfinance as yf
+    YFINANCE_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ yfinance not available. Disabling Yahoo Finance data loading.")
+    print(f"   Missing: {e}")
+    yf = None
+    YFINANCE_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -445,6 +454,13 @@ class DataLoader:
         Returns:
             Data load response
         """
+        if not YFINANCE_AVAILABLE:
+            return DataLoadResponse(
+                success=False,
+                message="yfinance is not available. Cannot load market data.",
+                ticker=request.ticker,
+            )
+        
         try:
             # Check cache first
             cache_key = self._get_cache_key(request)
@@ -601,6 +617,13 @@ class DataLoader:
         Returns:
             Price response
         """
+        if not YFINANCE_AVAILABLE:
+            return PriceResponse(
+                success=False,
+                message="yfinance is not available. Cannot get latest price.",
+                ticker=ticker,
+            )
+        
         try:
             ticker_obj = yf.Ticker(ticker)
             info = ticker_obj.info

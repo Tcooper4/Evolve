@@ -15,11 +15,30 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
+
+# Try to import matplotlib
+try:
+    import matplotlib.pyplot as plt
+    MATPLOTLIB_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ matplotlib not available. Disabling plotting capabilities.")
+    print(f"   Missing: {e}")
+    plt = None
+    MATPLOTLIB_AVAILABLE = False
+
+# Try to import scikit-learn
+try:
+    from sklearn.cluster import KMeans
+    from sklearn.preprocessing import StandardScaler
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling clustering and scaling capabilities.")
+    print(f"   Missing: {e}")
+    KMeans = None
+    StandardScaler = None
+    SKLEARN_AVAILABLE = False
 
 warnings.filterwarnings("ignore")
 
@@ -235,6 +254,9 @@ class RegimeDetector:
             n_regimes: Number of regimes to detect
             lookback_window: Rolling window for feature calculation
         """
+        if not SKLEARN_AVAILABLE:
+            raise ImportError("scikit-learn is not available. Cannot create RegimeDetector.")
+            
         self.n_regimes = n_regimes
         self.lookback_window = lookback_window
         self.scaler = StandardScaler()
@@ -852,6 +874,9 @@ class WalkForwardOptimizer:
         return stability_analysis
 
     def plot_results(self, save_path: Optional[str] = None) -> None:
+        if not MATPLOTLIB_AVAILABLE:
+            self.logger.warning("matplotlib not available. Cannot plot results.")
+            return
         """Plot walk-forward results."""
         if not self.results:
             self.logger.warning("No results to plot")

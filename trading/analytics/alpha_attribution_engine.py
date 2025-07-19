@@ -11,7 +11,16 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LinearRegression
+
+# Try to import scikit-learn
+try:
+    from sklearn.linear_model import LinearRegression
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling linear regression attribution.")
+    print(f"   Missing: {e}")
+    LinearRegression = None
+    SKLEARN_AVAILABLE = False
 
 from trading.memory.agent_memory import AgentMemory
 from trading.utils.performance_metrics import (
@@ -516,6 +525,9 @@ class AlphaAttributionEngine:
     def _decompose_by_factors(
         self, portfolio_returns: pd.Series, factor_data: Dict[str, pd.Series]
     ) -> Dict[str, float]:
+        if not SKLEARN_AVAILABLE:
+            self.logger.warning("scikit-learn not available. Cannot perform factor decomposition.")
+            return {}
         """Decompose returns using factor model."""
         try:
             factor_attribution = {}
@@ -722,16 +734,18 @@ class AlphaAttributionEngine:
 
                     # Alpha is the intercept
                     alphas.iloc[i] = model.intercept_
-                except (ValueError, TypeError, IndexError) as e:
+                except (ValueError, TypeError, AttributeError) as e:
                     self.logger.warning(f"Error calculating alpha for window {i}: {e}")
                     alphas.iloc[i] = np.nan
 
             return alphas.dropna()
 
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError) as e:
             self.logger.error(f"Error calculating rolling alpha: {str(e)}")
             return pd.Series(dtype=float)
-        # TODO: Specify exception type instead of using bare except
+        except Exception as e:
+            self.logger.error(f"Unexpected error calculating rolling alpha: {str(e)}")
+            return pd.Series(dtype=float)
 
     def _calculate_decay_score(self, rolling_alpha: pd.Series) -> float:
         """Calculate decay score from rolling alpha series."""
@@ -1037,3 +1051,4 @@ alpha_attribution_engine = AlphaAttributionEngine()
 def get_alpha_attribution_engine() -> AlphaAttributionEngine:
     """Get the global alpha attribution engine instance."""
     return alpha_attribution_engine
+

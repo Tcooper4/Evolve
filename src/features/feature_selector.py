@@ -10,13 +10,32 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass
-from sklearn.feature_selection import (
-    SelectKBest, f_regression, f_classif, mutual_info_regression, 
-    mutual_info_classif, RFE, SelectFromModel
-)
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.linear_model import Lasso, Ridge
-from sklearn.preprocessing import StandardScaler
+# Try to import scikit-learn
+try:
+    from sklearn.feature_selection import (
+        SelectKBest, f_regression, f_classif, mutual_info_regression, 
+        mutual_info_classif, RFE, SelectFromModel
+    )
+    from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+    from sklearn.linear_model import Lasso, Ridge
+    from sklearn.preprocessing import StandardScaler
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling feature selection capabilities.")
+    print(f"   Missing: {e}")
+    SelectKBest = None
+    f_regression = None
+    f_classif = None
+    mutual_info_regression = None
+    mutual_info_classif = None
+    RFE = None
+    SelectFromModel = None
+    RandomForestRegressor = None
+    RandomForestClassifier = None
+    Lasso = None
+    Ridge = None
+    StandardScaler = None
+    SKLEARN_AVAILABLE = False
 import warnings
 
 logger = logging.getLogger(__name__)
@@ -49,6 +68,9 @@ class FeatureSelector:
         Args:
             config: Configuration dictionary
         """
+        if not SKLEARN_AVAILABLE:
+            raise ImportError("scikit-learn is not available. Cannot create FeatureSelector.")
+            
         self.config = config or {}
         self.selection_methods = {
             "correlation": self._correlation_selection,

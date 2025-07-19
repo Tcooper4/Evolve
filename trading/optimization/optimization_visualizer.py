@@ -2,9 +2,27 @@
 
 from typing import Any, Dict, List, Optional
 
-import optuna
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+# Try to import optuna
+try:
+    import optuna
+    OPTUNA_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ optuna not available. Disabling optuna-based visualization.")
+    print(f"   Missing: {e}")
+    optuna = None
+    OPTUNA_AVAILABLE = False
+
+# Try to import plotly
+try:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    PLOTLY_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ plotly not available. Disabling plotly-based visualization.")
+    print(f"   Missing: {e}")
+    go = None
+    make_subplots = None
+    PLOTLY_AVAILABLE = False
 
 from .base_optimizer import OptimizationResult
 
@@ -113,6 +131,8 @@ class OptimizationVisualizer:
     def plot_parameter_importance(
         self, study: optuna.Study, title: str = "Parameter Importance"
     ) -> go.Figure:
+        if not OPTUNA_AVAILABLE or not PLOTLY_AVAILABLE:
+            raise ImportError("optuna or plotly not available. Cannot create parameter importance plot.")
         """Plot parameter importance.
 
         Args:

@@ -7,9 +7,19 @@ import shutil
 import subprocess
 import sys
 from datetime import datetime
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, Dict
+
+# Try to import importlib.metadata
+try:
+    from importlib.metadata import PackageNotFoundError, version
+    IMPORTLIB_METADATA_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ importlib.metadata not available. Disabling package version checking.")
+    print(f"   Missing: {e}")
+    PackageNotFoundError = None
+    version = None
+    IMPORTLIB_METADATA_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(
@@ -64,6 +74,13 @@ class AutoRepair:
     def check_packages(self) -> Dict[str, Any]:
         """Check for missing or outdated packages."""
         try:
+            if not IMPORTLIB_METADATA_AVAILABLE:
+                return {
+                    "success": False,
+                    "error": "importlib.metadata not available for package checking",
+                    "timestamp": datetime.now().isoformat(),
+                }
+            
             missing = []
             outdated = []
 

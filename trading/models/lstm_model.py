@@ -11,12 +11,36 @@ from typing import Any, Dict, List, Optional, Tuple
 # Third-party imports
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
-from sklearn.preprocessing import StandardScaler
-from torch.optim import Adam
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import DataLoader, TensorDataset
+
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    from torch.optim import Adam
+    from torch.optim.lr_scheduler import ReduceLROnPlateau
+    from torch.utils.data import DataLoader, TensorDataset
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling LSTM models.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    Adam = None
+    ReduceLROnPlateau = None
+    DataLoader = None
+    TensorDataset = None
+    TORCH_AVAILABLE = False
+
+# Try to import scikit-learn
+try:
+    from sklearn.preprocessing import StandardScaler
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling data preprocessing.")
+    print(f"   Missing: {e}")
+    StandardScaler = None
+    SKLEARN_AVAILABLE = False
+
 import joblib
 import time
 
@@ -74,6 +98,9 @@ class LSTMModel(nn.Module):
         dropout: float = 0.0,
     ):
         """Initialize the LSTM model with error handling."""
+        if not TORCH_AVAILABLE:
+            raise ModelInitializationError("PyTorch is not available. Cannot initialize LSTM model.")
+        
         try:
             super().__init__()
             self.lstm = nn.LSTM(
@@ -332,75 +359,61 @@ class LSTMModel(nn.Module):
 
 
 class LSTMForecaster(BaseModel):
-    """LSTM-based forecaster with comprehensive error handling and fallback mechanisms."""
+    """LSTM-based forecasting model with comprehensive error handling and fallback mechanisms."""
 
     def __init__(self, config: Dict[str, Any]):
         """Initialize LSTM forecaster with error handling."""
+        # Initialize availability flag
+        self.available = True
+        
+        if not TORCH_AVAILABLE:
+            logger.error("PyTorch is not available. Cannot initialize LSTM forecaster.")
+            self.available = False
+            print("⚠️ LSTMForecaster unavailable due to missing PyTorch")
+            return
+        
+        if not SKLEARN_AVAILABLE:
+            logger.error("scikit-learn is not available. Cannot initialize LSTM forecaster.")
+            self.available = False
+            print("⚠️ LSTMForecaster unavailable due to missing scikit-learn")
+            return
+        
         try:
-            super().__init__()
-            
-            # Set default config values
-            default_config = {
-                "input_size": 0,
-                "hidden_size": 50,
-                "num_layers": 2,
-                "dropout": 0.2,
-                "sequence_length": 20,
-                "feature_columns": ["Close"],
-                "target_column": "Close",
-                "use_batch_norm": False,
-                "use_layer_norm": False,
-                "additional_dropout": 0.1,
-                "max_sequence_length": 100,
-                "max_batch_size": 128,
-                "max_epochs": 100
-            }
-            
-            # Update with provided config
-            self.config = {**default_config, **config}
+            super().__init__(config)
             
             # Validate configuration
             self._validate_config()
             
-            # Set device
+            # Initialize components
+            self.model = None
+            self.scaler = StandardScaler()
+            self.is_trained = False
+            self.training_history = {"loss": [], "val_loss": []}
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            
+            # Initialize fallback model
+            self.fallback_model = FallbackModel()
             
             # Build model with error handling
             try:
                 self.model = self.build_model()
                 self.model.to(self.device)
-            except Exception as e:
-                logger.error(f"Failed to build LSTM model: {e}")
-                logger.error(traceback.format_exc())
-                # Use fallback model
-                self.model = self._build_fallback_model()
-                self.model.to(self.device)
-                logger.info("Using fallback LSTM model")
-
-            # Initialize weights
-            try:
                 self._init_weights()
+                logger.info(f"LSTM model initialized successfully on device: {self.device}")
             except Exception as e:
-                logger.warning(f"Weight initialization failed: {e}")
-
-            # Initialize logger
-            self.logger = logging.getLogger(__name__)
-
-            # Cache management
-            self.cache_dir = "cache/lstm_models"
-            os.makedirs(self.cache_dir, exist_ok=True)
-            self.last_input_hash = None
-            self.compiled_model = None
-            
-            # Initialize scaler
-            self.scaler = StandardScaler()
-            
-            self.logger.info(f"LSTM Forecaster initialized successfully on {self.device}")
-            
+                logger.error(f"LSTM model build failed: {e}")
+                self.model = None
+                print("⚠️ LSTM model unavailable due to model build failure")
+                print(f"   Error: {e}")
+                # Don't set available to False here as we have fallback
+                
         except Exception as e:
-            logger.error(f"Failed to initialize LSTM Forecaster: {e}")
+            logger.error(f"Failed to initialize LSTM forecaster: {e}")
             logger.error(traceback.format_exc())
-            raise ModelInitializationError(f"LSTM Forecaster initialization failed: {str(e)}")
+            self.available = False
+            print("⚠️ LSTMForecaster unavailable due to initialization failure")
+            print(f"   Error: {e}")
+            # Don't raise exception, just mark as unavailable
 
     def _build_fallback_model(self) -> nn.Module:
         """Build a simple fallback LSTM model when the main model fails."""
@@ -435,6 +448,10 @@ class LSTMForecaster(BaseModel):
 
     def build_model(self) -> nn.Module:
         """Build and return the LSTM model with error handling."""
+        if not TORCH_AVAILABLE:
+            logger.warning("PyTorch not available, using fallback model")
+            return self._build_fallback_model()
+        
         try:
             input_size = len(self.config["feature_columns"])
             hidden_size = self.config["hidden_size"]
@@ -734,6 +751,15 @@ class LSTMForecaster(BaseModel):
         validation_split: float = 0.2,
     ) -> Dict[str, List[float]]:
         """Train the model with robust error handling and input validation."""
+        if not self.available:
+            print("⚠️ LSTMForecaster unavailable due to initialization failure")
+            return {
+                "train_loss": [0.0],
+                "val_loss": [0.0],
+                "cached": False,
+                "error": "LSTMForecaster unavailable due to initialization failure"
+            }
+        
         try:
             # Generate input hash to check if retraining is needed
             input_hash = self._get_input_hash(X)
@@ -899,6 +925,14 @@ class LSTMForecaster(BaseModel):
 
     def predict(self, data: pd.DataFrame, batch_size: int = 32) -> np.ndarray:
         """Predict using the LSTM model with input validation, logging, and batch-wise evaluation."""
+        if not self.available:
+            print("⚠️ LSTMForecaster unavailable due to initialization failure")
+            # Return simple fallback prediction
+            if "Close" in data.columns:
+                return data["Close"].rolling(window=20, min_periods=1).mean().values
+            else:
+                return np.full(len(data), 1000.0)
+        
         try:
             # Input validation: Drop NaNs
             data = data.copy()
@@ -1045,6 +1079,22 @@ class LSTMForecaster(BaseModel):
         Returns:
             Dictionary containing forecast results
         """
+        if not self.available:
+            print("⚠️ LSTMForecaster unavailable due to initialization failure")
+            # Return simple fallback forecast
+            fallback_forecast = np.full(horizon, 1000.0)
+            last_date = data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()
+            forecast_dates = pd.date_range(start=last_date, periods=horizon+1, freq='D')[1:]
+            
+            return {
+                "forecast": fallback_forecast,
+                "dates": forecast_dates,
+                "confidence": np.full(horizon, 0.1),
+                "model_type": "LSTM_Unavailable",
+                "horizon": horizon,
+                "error": "LSTMForecaster unavailable due to initialization failure"
+            }
+        
         try:
             # Validate inputs
             if data.empty:

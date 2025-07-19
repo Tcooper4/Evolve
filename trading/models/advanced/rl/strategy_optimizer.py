@@ -7,9 +7,20 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
-import torch.optim as optim
+
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling RL strategy optimizers.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    optim = None
+    TORCH_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +34,9 @@ class StrategyOptimizer(ABC):
             action_dim (int): Dimension of the action space
             config (Dict[str, Any]): Configuration dictionary
         """
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create StrategyOptimizer.")
+        
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.config = config

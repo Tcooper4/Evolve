@@ -103,23 +103,11 @@ class PipelineManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    def setup_logging(self):
-        """Initialize logging configuration.
+    from utils.launch_utils import setup_logging
 
-        Raises:
-            SystemExit: If the logging configuration file is not found
-        """
-        log_config_path = Path("config/logging_config.yaml")
-        if not log_config_path.exists():
-            print("Error: logging_config.yaml not found")
-            sys.exit(1)
-
-        with open(log_config_path) as f:
-            log_config = yaml.safe_load(f)
-
-        logging.config.dictConfig(log_config)
-
-    async def run_pipeline(self, pipeline_type: str, data_path: Optional[str] = None):
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="report_service")def run_pipeline(self, pipeline_type: str, data_path: Optional[str] = None):
         """Run data processing pipeline.
 
         Args:

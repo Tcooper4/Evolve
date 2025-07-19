@@ -549,16 +549,15 @@ class IntelligentForecastExplainability:
             try:
                 predictions = cross_val_predict(model, X, np.zeros(len(X)), cv=5)
             except (ValueError, TypeError, AttributeError) as e:
-                # Fallback: use single prediction
-                logger.warning(f"Cross-validation failed, using single prediction: {e}")
-                predictions = np.array([model.predict(X)[0]] * 10)
-
-            return predictions
+                logger.error(f"Error getting model predictions: {e}")
+                return np.array([0.0] * 10)
+            except Exception as e:
+                logger.error(f"Unexpected error getting model predictions: {e}")
+                return np.array([0.0] * 10)
 
         except Exception as e:
             logger.error(f"Error getting model predictions: {e}")
             return np.array([0.0] * 10)
-        # TODO: Specify exception type instead of using bare except
 
     def _calculate_model_confidence(
         self, predictions: np.ndarray, forecast_value: float

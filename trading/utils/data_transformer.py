@@ -7,8 +7,20 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
+
+# Try to import scikit-learn
+try:
+    from sklearn.decomposition import PCA
+    from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling data transformation features.")
+    print(f"   Missing: {e}")
+    PCA = None
+    MinMaxScaler = None
+    RobustScaler = None
+    StandardScaler = None
+    SKLEARN_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +35,9 @@ class DataTransformer:
         Args:
             scaler_type: Type of scaler ('standard', 'minmax', 'robust')
         """
+        if not SKLEARN_AVAILABLE:
+            raise ImportError("scikit-learn is not available. Cannot create DataTransformer.")
+        
         self.scaler_type = scaler_type
         self.scaler = self._create_scaler()
         self.pca = None

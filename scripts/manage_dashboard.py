@@ -69,19 +69,11 @@ class DashboardManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    def setup_logging(self):
-        """Initialize logging configuration."""
-        log_config_path = Path("config/logging_config.yaml")
-        if not log_config_path.exists():
-            print("Error: logging_config.yaml not found")
-            sys.exit(1)
+    from utils.launch_utils import setup_logging
 
-        with open(log_config_path) as f:
-            log_config = yaml.safe_load(f)
-
-        logging.config.dictConfig(log_config)
-
-    def create_dashboard(self, dashboard_type: str = "system"):
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="service")def create_dashboard(self, dashboard_type: str = "system"):
         """Create a monitoring dashboard."""
         self.logger.info(f"Creating {dashboard_type} dashboard")
 

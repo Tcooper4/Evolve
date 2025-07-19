@@ -164,7 +164,14 @@ class CacheManager:
             if self.redis_client:
                 # Note: This is a simplified clear - in production you might want
                 # to use SCAN to avoid blocking
-                pass
+                try:
+                    # Clear all keys with our prefix pattern
+                    pattern = f"{self._generate_key('', {})}*"
+                    keys = self.redis_client.keys(pattern)
+                    if keys:
+                        self.redis_client.delete(*keys)
+                except Exception as e:
+                    logger.warning(f"Could not clear Redis cache: {e}")
 
             return True
 

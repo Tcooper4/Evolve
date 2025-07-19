@@ -10,9 +10,28 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import torch
-from sklearn.preprocessing import StandardScaler
-from torch.utils.data import Dataset
+
+# Try to import PyTorch
+try:
+    import torch
+    from torch.utils.data import Dataset
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling deep learning datasets.")
+    print(f"   Missing: {e}")
+    torch = None
+    Dataset = None
+    TORCH_AVAILABLE = False
+
+# Try to import scikit-learn
+try:
+    from sklearn.preprocessing import StandardScaler
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling data preprocessing.")
+    print(f"   Missing: {e}")
+    StandardScaler = None
+    SKLEARN_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +60,12 @@ class TimeSeriesDataset(Dataset):
             feature_cols: List of feature column names
             scaler: Optional scaler for features
         """
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TimeSeriesDataset.")
+        
+        if not SKLEARN_AVAILABLE:
+            raise ImportError("scikit-learn is not available. Cannot perform data scaling.")
+        
         self.sequence_length = sequence_length
         self.target_col = target_col
         self.feature_cols = feature_cols

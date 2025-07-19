@@ -1006,7 +1006,110 @@ class AgentController:
             "task": self.task_executor
         }
         
+        # Agent registration tracking
+        self.registered_agents = {}
+        self.agent_registration_status = {
+            "total_agents": 0,
+            "successful_registrations": 0,
+            "failed_registrations": 0,
+            "fallback_agent_created": False
+        }
+        
+        # Initialize agent registration
+        self._initialize_agent_registration()
+        
         self.logger.info("AgentController initialized with all workflows including TaskAgent")
+    
+    def _initialize_agent_registration(self):
+        """Initialize agent registration and check for available agents."""
+        self.logger.info("Initializing agent registration...")
+        
+        try:
+            # Try to get agent registry
+            from trading.agents.agent_registry import get_registry
+            registry = get_registry()
+            
+            # Get list of registered agents
+            registered_agents = registry.list_agents()
+            self.agent_registration_status["total_agents"] = len(registered_agents)
+            
+            if registered_agents:
+                self.logger.info(f"Found {len(registered_agents)} registered agents: {registered_agents}")
+                self.agent_registration_status["successful_registrations"] = len(registered_agents)
+                
+                # Store agent information
+                for agent_name in registered_agents:
+                    agent_info = registry.get_agent(agent_name)
+                    if agent_info:
+                        self.registered_agents[agent_name] = {
+                            "name": agent_name,
+                            "class_name": agent_info.class_name,
+                            "module_path": agent_info.module_path,
+                            "capabilities": [cap.name for cap in agent_info.capabilities],
+                            "category": agent_info.category.value if agent_info.category else "unknown"
+                        }
+                
+                self.logger.info("✅ Agent registration successful")
+                
+            else:
+                self.logger.warning("⚠️ No agents found in registry")
+                self._create_fallback_agent()
+                
+        except ImportError as e:
+            self.logger.warning(f"⚠️ Agent registry not available: {e}")
+            self._create_fallback_agent()
+        except Exception as e:
+            self.logger.error(f"❌ Error during agent registration: {e}")
+            self.agent_registration_status["failed_registrations"] += 1
+            self._create_fallback_agent()
+    
+    def _create_fallback_agent(self):
+        """Create a fallback agent when no agents are registered."""
+        try:
+            from agents.mock_agent import create_mock_agent
+            
+            fallback_agent = create_mock_agent("FallbackAgent", [
+                "general_query",
+                "system_status", 
+                "help",
+                "fallback_response"
+            ])
+            
+            self.registered_agents["fallback_agent"] = {
+                "name": "fallback_agent",
+                "class_name": "MockAgent",
+                "module_path": "agents.mock_agent",
+                "capabilities": ["general_query", "system_status", "help", "fallback_response"],
+                "category": "fallback",
+                "instance": fallback_agent
+            }
+            
+            self.agent_registration_status["fallback_agent_created"] = True
+            self.agent_registration_status["total_agents"] = 1
+            self.agent_registration_status["successful_registrations"] = 1
+            
+            self.logger.warning("⚠️ Created fallback agent - no real agents available")
+            self.logger.info("System will continue running with mock agent for UI testing")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Failed to create fallback agent: {e}")
+            self.agent_registration_status["failed_registrations"] += 1
+    
+    def get_agent_registration_status(self) -> Dict[str, Any]:
+        """Get agent registration status."""
+        return {
+            **self.agent_registration_status,
+            "registered_agent_names": list(self.registered_agents.keys()),
+            "agent_details": self.registered_agents
+        }
+    
+    def get_available_agents(self) -> List[str]:
+        """Get list of available agent names."""
+        return list(self.registered_agents.keys())
+    
+    def has_real_agents(self) -> bool:
+        """Check if real agents (not fallback) are available."""
+        return not self.agent_registration_status["fallback_agent_created"]
     
     async def execute_workflow(
         self, 

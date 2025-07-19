@@ -10,7 +10,16 @@ from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
+
+# Try to import scipy
+try:
+    from scipy.optimize import minimize
+    SCIPY_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scipy not available. Disabling optimization-based position sizing.")
+    print(f"   Missing: {e}")
+    minimize = None
+    SCIPY_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -640,6 +649,9 @@ class PositionSizingEngine:
         data: pd.DataFrame,
         positions: Dict[str, float],
     ) -> float:
+        if not SCIPY_AVAILABLE:
+            logger.warning("scipy not available. Using equal-weighted position sizing.")
+            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
         """Calculate mean-variance optimal position size."""
         if asset not in data.columns:
             return self._calculate_equal_weighted_size(

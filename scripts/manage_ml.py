@@ -52,42 +52,135 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import bentoml
 import joblib
-import kserve
-import mlflow
-import mlflow.catboost
-import mlflow.fastai
-import mlflow.gluon
-import mlflow.h2o
-import mlflow.lightgbm
-import mlflow.mleap
-import mlflow.onnx
-import mlflow.paddle
-import mlflow.pmdarima
-import mlflow.prophet
-import mlflow.pyfunc
-import mlflow.pyspark.ml
-import mlflow.pytorch
-import mlflow.sklearn
-import mlflow.spacy
-import mlflow.spark
-import mlflow.statsmodels
-import mlflow.xgboost
 import numpy as np
-import optuna
 import pandas as pd
-import ray
-import ray.serve
-import seldon_core
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torchserve
-import triton
 import yaml
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from sklearn.model_selection import GridSearchCV, train_test_split
+
+# Try to import MLflow
+try:
+    import mlflow
+    import mlflow.catboost
+    import mlflow.fastai
+    import mlflow.gluon
+    import mlflow.h2o
+    import mlflow.lightgbm
+    import mlflow.mleap
+    import mlflow.onnx
+    import mlflow.paddle
+    import mlflow.pmdarima
+    import mlflow.prophet
+    import mlflow.pyfunc
+    import mlflow.pyspark.ml
+    import mlflow.pytorch
+    import mlflow.sklearn
+    import mlflow.spacy
+    import mlflow.spark
+    import mlflow.statsmodels
+    import mlflow.xgboost
+    MLFLOW_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ MLflow not available. Disabling MLflow-based model management.")
+    print(f"   Missing: {e}")
+    mlflow = None
+    MLFLOW_AVAILABLE = False
+
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling PyTorch model training.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    optim = None
+    TORCH_AVAILABLE = False
+
+# Try to import scikit-learn
+try:
+    from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+    from sklearn.model_selection import GridSearchCV, train_test_split
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling sklearn-based model training.")
+    print(f"   Missing: {e}")
+    accuracy_score = None
+    f1_score = None
+    precision_score = None
+    recall_score = None
+    GridSearchCV = None
+    train_test_split = None
+    SKLEARN_AVAILABLE = False
+
+# Try to import Optuna
+try:
+    import optuna
+    OPTUNA_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ Optuna not available. Disabling hyperparameter optimization.")
+    print(f"   Missing: {e}")
+    optuna = None
+    OPTUNA_AVAILABLE = False
+
+# Try to import Ray
+try:
+    import ray
+    import ray.serve
+    RAY_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ Ray not available. Disabling Ray-based deployment.")
+    print(f"   Missing: {e}")
+    ray = None
+    RAY_AVAILABLE = False
+
+# Try to import deployment libraries
+try:
+    import bentoml
+    BENTOML_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ BentoML not available. Disabling BentoML deployment.")
+    print(f"   Missing: {e}")
+    bentoml = None
+    BENTOML_AVAILABLE = False
+
+try:
+    import kserve
+    KSERVE_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ KServe not available. Disabling KServe deployment.")
+    print(f"   Missing: {e}")
+    kserve = None
+    KSERVE_AVAILABLE = False
+
+try:
+    import seldon_core
+    SELDON_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ Seldon Core not available. Disabling Seldon deployment.")
+    print(f"   Missing: {e}")
+    seldon_core = None
+    SELDON_AVAILABLE = False
+
+try:
+    import torchserve
+    TORCHSERVE_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ TorchServe not available. Disabling TorchServe deployment.")
+    print(f"   Missing: {e}")
+    torchserve = None
+    TORCHSERVE_AVAILABLE = False
+
+try:
+    import triton
+    TRITON_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ Triton not available. Disabling Triton deployment.")
+    print(f"   Missing: {e}")
+    triton = None
+    TRITON_AVAILABLE = False
 
 
 class MLManager:
@@ -128,7 +221,8 @@ class MLManager:
         self.experiments_dir.mkdir(parents=True, exist_ok=True)
         self.mlflow_dir = Path("mlruns")
         self.mlflow_dir.mkdir(parents=True, exist_ok=True)
-        mlflow.set_tracking_uri(str(self.mlflow_dir))
+        if MLFLOW_AVAILABLE:
+            mlflow.set_tracking_uri(str(self.mlflow_dir))
 
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration.
@@ -194,9 +288,12 @@ class MLManager:
             model = self._initialize_model(model_type, params)
 
             # Train model
-            with mlflow.start_run():
-                # Log parameters
-                mlflow.log_params(params or {})
+            if MLFLOW_AVAILABLE:
+                with mlflow.start_run():
+                    # Log parameters
+                    mlflow.log_params(params or {})
+            else:
+                self.logger.info("MLflow not available, skipping experiment tracking")
 
                 # Train model
                 if model_type in ["pytorch"]:
@@ -459,6 +556,8 @@ class MLManager:
     def _initialize_pytorch_model(
         self, params: Optional[Dict[str, Any]] = None
     ) -> nn.Module:
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create PyTorch model.")
         """Initialize a PyTorch model."""
         try:
             model = nn.Sequential(
@@ -474,6 +573,8 @@ class MLManager:
             raise
 
     def _initialize_sklearn_model(self, params: Optional[Dict[str, Any]] = None) -> Any:
+        if not SKLEARN_AVAILABLE:
+            raise ImportError("scikit-learn is not available. Cannot create sklearn model.")
         """Initialize a scikit-learn model."""
         try:
             from sklearn.ensemble import RandomForestClassifier

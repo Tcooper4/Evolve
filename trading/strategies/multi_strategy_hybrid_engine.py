@@ -15,9 +15,20 @@ from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import VotingRegressor
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
+
+# Try to import scikit-learn
+try:
+    from sklearn.ensemble import VotingRegressor
+    from sklearn.linear_model import LinearRegression
+    from sklearn.preprocessing import StandardScaler
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling ensemble learning capabilities.")
+    print(f"   Missing: {e}")
+    VotingRegressor = None
+    LinearRegression = None
+    StandardScaler = None
+    SKLEARN_AVAILABLE = False
 
 warnings.filterwarnings("ignore")
 
@@ -74,6 +85,8 @@ class MultiStrategyHybridEngine:
         max_position_size: float = 1.0,
         risk_free_rate: float = 0.02,
     ):
+        if not SKLEARN_AVAILABLE:
+            raise ImportError("scikit-learn is not available. Cannot create MultiStrategyHybridEngine.")
         """Initialize the hybrid engine.
 
         Args:

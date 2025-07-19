@@ -40,18 +40,11 @@ class DemoSafeExecutor:
         self.client = None
         self.setup_logging()
 
-    def setup_logging(self):
-        """Setup logging configuration."""
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.StreamHandler(),
-                logging.FileHandler("demo_safe_executor.log"),
-            ],
-        )
+    from utils.launch_utils import setup_logging
 
-    def initialize_client(self) -> bool:
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="reasoning_service")def initialize_client(self) -> bool:
         """Initialize ServiceClient."""
         try:
             logger.info("🔧 Initializing ServiceClient...")

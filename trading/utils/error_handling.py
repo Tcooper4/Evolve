@@ -16,7 +16,11 @@ class TradingError(TradingSystemError):
 
 class RoutingError(TradingError):
     """Raised when routing operations fail."""
-    pass
+    
+    def __init__(self, message: str, route_info: Optional[Dict[str, Any]] = None):
+        super().__init__(message)
+        self.route_info = route_info or {}
+        self.timestamp = datetime.now()
 
 @dataclass
 class ErrorContext:

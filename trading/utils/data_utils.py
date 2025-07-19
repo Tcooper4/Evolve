@@ -9,8 +9,18 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler
+
+# Try to import scikit-learn
+try:
+    from sklearn.impute import SimpleImputer
+    from sklearn.preprocessing import StandardScaler
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling data preprocessing features.")
+    print(f"   Missing: {e}")
+    SimpleImputer = None
+    StandardScaler = None
+    SKLEARN_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +109,9 @@ class DataPreprocessor:
             handle_missing: Whether to handle missing values
             remove_outliers: Whether to remove outliers
         """
+        if not SKLEARN_AVAILABLE:
+            raise ImportError("scikit-learn is not available. Cannot create DataPreprocessor.")
+        
         self.scale_features = scale_features
         self.handle_missing = handle_missing
         self.remove_outliers = remove_outliers

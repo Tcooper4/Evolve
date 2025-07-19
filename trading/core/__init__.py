@@ -17,25 +17,11 @@ from .performance import PerformanceMetrics, PerformanceTracker
 # Configure logging
 
 
+from utils.launch_utils import setup_logging
+
 def setup_logging():
-    """Setup logging configuration for the core module."""
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-
-    # Configure root logger
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.FileHandler(log_dir / "core.log"), logging.StreamHandler()],
-    )
-
-    # Set specific log levels
-    logging.getLogger("trading.core").setLevel(logging.INFO)
-    logging.getLogger("trading.agents").setLevel(logging.INFO)
-    logging.getLogger("trading.performance").setLevel(logging.INFO)
-
-
-def load_agent_registry() -> Dict[str, Any]:
+    """Set up logging for the service."""
+    return setup_logging(service_name="report_service")def load_agent_registry() -> Dict[str, Any]:
     """Load agent registry from configuration files.
 
     Returns:

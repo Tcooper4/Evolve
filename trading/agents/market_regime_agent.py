@@ -411,8 +411,11 @@ class MarketRegimeAgent(BaseAgent):
                         correlation = 0.5
                 else:
                     correlation = 0.5
-            except (ValueError, TypeError, IndexError) as e:
+            except (ValueError, TypeError, AttributeError) as e:
                 logger.warning(f"Error calculating correlation, using default: {e}")
+                correlation = 0.5
+            except Exception as e:
+                logger.error(f"Unexpected error calculating correlation: {e}")
                 correlation = 0.5
 
             # Regime confidence (based on feature consistency)
@@ -429,7 +432,7 @@ class MarketRegimeAgent(BaseAgent):
                 regime_confidence=regime_confidence,
             )
 
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError) as e:
             logger.error(f"Error calculating regime features: {e}")
             return RegimeMetrics(
                 volatility=0.2,
@@ -439,7 +442,16 @@ class MarketRegimeAgent(BaseAgent):
                 correlation=0.5,
                 regime_confidence=0.5,
             )
-        # TODO: Specify exception type instead of using bare except
+        except Exception as e:
+            logger.error(f"Unexpected error calculating regime features: {e}")
+            return RegimeMetrics(
+                volatility=0.2,
+                trend_strength=0.0,
+                momentum=0.0,
+                volume_trend=0.0,
+                correlation=0.5,
+                regime_confidence=0.5,
+            )
 
     def classify_regime(self, metrics: RegimeMetrics) -> Tuple[MarketRegime, float]:
         """Classify market regime based on metrics."""

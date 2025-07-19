@@ -6,14 +6,42 @@ from typing import Any, Dict, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import os
-from sklearn.linear_model import Ridge
-from trading.models.prophet_model import ProphetModel
+
+# Try to import scikit-learn
+try:
+    from sklearn.linear_model import Ridge
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling Ridge regression fallback.")
+    print(f"   Missing: {e}")
+    Ridge = None
+    SKLEARN_AVAILABLE = False
+
+# Try to import Prophet
+try:
+    from trading.models.prophet_model import ProphetModel
+    PROPHET_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ Prophet model not available. Disabling Prophet fallback.")
+    print(f"   Missing: {e}")
+    ProphetModel = None
+    PROPHET_AVAILABLE = False
 
 # Third-party imports
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
+
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling transformer models.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    TORCH_AVAILABLE = False
 
 # Local imports
 from trading.models.base_model import BaseModel, ModelRegistry, ValidationError
@@ -25,6 +53,8 @@ class PositionalEncoding(nn.Module):
     """Positional encoding for transformer model."""
 
     def __init__(self, d_model: int, max_len: int = 5000):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create PositionalEncoding.")
         """Initialize positional encoding.
 
         Args:
@@ -64,6 +94,8 @@ class TransformerForecaster(BaseModel):
     """Transformer model for time series forecasting with fallback mechanisms."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TransformerForecaster.")
         """Initialize transformer forecaster.
 
         Args:
