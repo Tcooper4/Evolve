@@ -16,19 +16,17 @@ This module provides centralized logging configuration and utilities for the Evo
 import logging
 import logging.handlers
 import sys
-import json
-import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, List, Union
+from typing import Any, Dict, Optional
 
 
 class EnhancedLogManager:
     """Enhanced log manager with comprehensive file output and rotating handlers."""
 
     def __init__(
-        self, 
-        log_dir: str = "logs", 
+        self,
+        log_dir: str = "logs",
         log_level: int = logging.INFO,
         enable_file_output: bool = True,
         enable_rotating_handlers: bool = True,
@@ -68,7 +66,7 @@ class EnhancedLogManager:
         """Setup enhanced logging configuration."""
         # Configure root logger
         handlers = [logging.StreamHandler(sys.stdout)]
-        
+
         if self.enable_file_output:
             if self.enable_rotating_handlers:
                 file_handler = logging.handlers.RotatingFileHandler(
@@ -82,7 +80,7 @@ class EnhancedLogManager:
                     self.log_dir / "evolve.log",
                     encoding='utf-8'
                 )
-            
+
             if self.enable_json_logging:
                 file_handler.setFormatter(logging.Formatter(
                     '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "name": "%(name)s", "message": "%(message)s"}'
@@ -91,9 +89,9 @@ class EnhancedLogManager:
                 file_handler.setFormatter(logging.Formatter(
                     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
                 ))
-            
+
             handlers.append(file_handler)
-        
+
         logging.basicConfig(
             level=self.log_level,
             handlers=handlers,
@@ -101,7 +99,7 @@ class EnhancedLogManager:
         )
 
     def get_enhanced_logger(
-        self, 
+        self,
         name: str,
         log_file: Optional[str] = None,
         enable_console: bool = True,
@@ -124,12 +122,12 @@ class EnhancedLogManager:
         if name not in self.loggers:
             logger = logging.getLogger(name)
             logger.setLevel(self.log_level)
-            
+
             # Clear existing handlers
             logger.handlers.clear()
-            
+
             handlers = []
-            
+
             # Add console handler if enabled
             if enable_console:
                 console_handler = logging.StreamHandler(sys.stdout)
@@ -137,12 +135,12 @@ class EnhancedLogManager:
                     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
                 ))
                 handlers.append(console_handler)
-            
+
             # Add file handler if enabled
             if enable_file and self.enable_file_output:
                 if log_file is None:
                     log_file = f"{name.replace('.', '_')}.log"
-                
+
                 if self.enable_rotating_handlers:
                     file_handler = logging.handlers.RotatingFileHandler(
                         self.log_dir / log_file,
@@ -155,7 +153,7 @@ class EnhancedLogManager:
                         self.log_dir / log_file,
                         encoding='utf-8'
                     )
-                
+
                 use_json = enable_json if enable_json is not None else self.enable_json_logging
                 if use_json:
                     file_handler.setFormatter(logging.Formatter(
@@ -165,20 +163,20 @@ class EnhancedLogManager:
                     file_handler.setFormatter(logging.Formatter(
                         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
                     ))
-                
+
                 handlers.append(file_handler)
                 self.handlers[name] = file_handler
-            
+
             # Add all handlers to logger
             for handler in handlers:
                 logger.addHandler(handler)
-            
+
             self.loggers[name] = logger
 
         return self.loggers[name]
 
     def setup_timed_rotating_handler(
-        self, 
+        self,
         name: str,
         log_file: str,
         when: str = 'midnight',
@@ -200,44 +198,39 @@ class EnhancedLogManager:
         """
         logger = logging.getLogger(name)
         logger.setLevel(self.log_level)
-        
+
         # Clear existing handlers
         logger.handlers.clear()
-        
-        # Add console handler
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        ))
-        logger.addHandler(console_handler)
-        
-        # Add timed rotating file handler
-        file_handler = logging.handlers.TimedRotatingFileHandler(
+
+        # Create timed rotating file handler
+        handler = logging.handlers.TimedRotatingFileHandler(
             self.log_dir / log_file,
             when=when,
             interval=interval,
             backupCount=backup_count,
             encoding='utf-8'
         )
-        file_handler.setFormatter(logging.Formatter(
+
+        # Set formatter
+        handler.setFormatter(logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         ))
-        logger.addHandler(file_handler)
-        
+
+        logger.addHandler(handler)
         self.loggers[name] = logger
-        self.handlers[name] = file_handler
-        
+        self.handlers[name] = handler
+
         return logger
 
     def setup_memory_handler(
-        self, 
+        self,
         name: str,
         capacity: int = 1000,
         flushLevel: int = logging.ERROR,
         target_handler: Optional[logging.Handler] = None
     ) -> logging.Logger:
         """
-        Setup a logger with memory handler for buffered logging.
+        Setup a logger with memory handler.
 
         Args:
             name: Logger name
@@ -250,48 +243,38 @@ class EnhancedLogManager:
         """
         logger = logging.getLogger(name)
         logger.setLevel(self.log_level)
-        
+
         # Clear existing handlers
         logger.handlers.clear()
-        
-        # Add console handler
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        ))
-        logger.addHandler(console_handler)
-        
-        # Add memory handler
+
+        # Create memory handler
         if target_handler is None:
-            target_handler = logging.handlers.RotatingFileHandler(
-                self.log_dir / f"{name}_buffered.log",
-                maxBytes=self.max_file_size,
-                backupCount=self.backup_count,
-                encoding='utf-8'
-            )
-            target_handler.setFormatter(logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            ))
-        
-        memory_handler = logging.handlers.MemoryHandler(
+            target_handler = logging.StreamHandler(sys.stdout)
+
+        handler = logging.handlers.MemoryHandler(
             capacity=capacity,
             flushLevel=flushLevel,
             target=target_handler
         )
-        logger.addHandler(memory_handler)
-        
+
+        # Set formatter
+        handler.setFormatter(logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        ))
+
+        logger.addHandler(handler)
         self.loggers[name] = logger
-        self.handlers[name] = memory_handler
-        
+        self.handlers[name] = handler
+
         return logger
 
     def setup_queue_handler(
-        self, 
+        self,
         name: str,
         queue_size: int = 1000
     ) -> logging.Logger:
         """
-        Setup a logger with queue handler for async logging.
+        Setup a logger with queue handler.
 
         Args:
             name: Logger name
@@ -300,339 +283,260 @@ class EnhancedLogManager:
         Returns:
             logging.Logger: Configured logger
         """
-        try:
-            import queue
-            from logging.handlers import QueueHandler, QueueListener
-            
-            logger = logging.getLogger(name)
-            logger.setLevel(self.log_level)
-            
-            # Clear existing handlers
-            logger.handlers.clear()
-            
-            # Create queue and handler
-            log_queue = queue.Queue(maxsize=queue_size)
-            queue_handler = QueueHandler(log_queue)
-            logger.addHandler(queue_handler)
-            
-            # Create listener with file handler
-            file_handler = logging.handlers.RotatingFileHandler(
-                self.log_dir / f"{name}_async.log",
-                maxBytes=self.max_file_size,
-                backupCount=self.backup_count,
-                encoding='utf-8'
-            )
-            file_handler.setFormatter(logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            ))
-            
-            listener = QueueListener(log_queue, file_handler)
-            listener.start()
-            
-            self.loggers[name] = logger
-            self.handlers[name] = listener
-            
-            return logger
-            
-        except ImportError:
-            # Fallback to regular handler if queue not available
-            return self.get_enhanced_logger(name)
+        logger = logging.getLogger(name)
+        logger.setLevel(self.log_level)
+
+        # Clear existing handlers
+        logger.handlers.clear()
+
+        # Create queue handler
+        handler = logging.handlers.QueueHandler(queue_size)
+
+        # Set formatter
+        handler.setFormatter(logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        ))
+
+        logger.addHandler(handler)
+        self.loggers[name] = logger
+        self.handlers[name] = handler
+
+        return logger
 
     def set_log_level(self, level: int):
-        """
-        Set the logging level for all loggers.
-
-        Args:
-            level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        """
+        """Set log level for all loggers."""
         self.log_level = level
         for logger in self.loggers.values():
             logger.setLevel(level)
-        logging.getLogger().setLevel(level)
 
     def get_log_files(self) -> Dict[str, Dict[str, Any]]:
-        """
-        Get detailed information about log files.
-
-        Returns:
-            Dict: Mapping of log file names to their details
-        """
+        """Get information about log files."""
         log_files = {}
-        for log_file in self.log_dir.glob("*.log*"):
-            stat = log_file.stat()
-            log_files[log_file.name] = {
-                "size_kb": f"{stat.st_size / 1024:.1f}",
-                "size_bytes": stat.st_size,
-                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                "created": datetime.fromtimestamp(stat.st_ctime).isoformat()
-            }
+        for log_file in self.log_dir.glob("*.log"):
+            try:
+                stat = log_file.stat()
+                log_files[log_file.name] = {
+                    "size_mb": stat.st_size / (1024 * 1024),
+                    "modified": datetime.fromtimestamp(stat.st_mtime),
+                    "created": datetime.fromtimestamp(stat.st_ctime)
+                }
+            except Exception:
+                continue
         return log_files
 
     def cleanup_old_logs(self, days: int = 30, max_size_mb: Optional[int] = None):
-        """
-        Clean up old log files with size limit option.
+        """Clean up old log files."""
+        cutoff_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        cutoff_date = cutoff_date.replace(day=cutoff_date.day - days)
 
-        Args:
-            days: Number of days to keep logs
-            max_size_mb: Maximum total size in MB
-        """
-        cutoff_time = datetime.now().timestamp() - (days * 24 * 60 * 60)
-        deleted_count = 0
-        deleted_size = 0
-
-        # Get all log files sorted by modification time
-        log_files = sorted(
-            self.log_dir.glob("*.log*"),
-            key=lambda x: x.stat().st_mtime
-        )
-
-        for log_file in log_files:
-            if log_file.stat().st_mtime < cutoff_time:
-                size = log_file.stat().st_size
-                log_file.unlink()
-                deleted_count += 1
-                deleted_size += size
+        cleaned_count = 0
+        for log_file in self.log_dir.glob("*.log*"):
+            try:
+                file_date = datetime.fromtimestamp(log_file.stat().st_mtime)
+                if file_date < cutoff_date:
+                    log_file.unlink()
+                    cleaned_count += 1
+            except Exception:
+                continue
 
         # Size-based cleanup
         if max_size_mb:
-            total_size = sum(f.stat().st_size for f in self.log_dir.glob("*.log*"))
-            max_size_bytes = max_size_mb * 1024 * 1024
-            
-            if total_size > max_size_bytes:
-                for log_file in log_files:
-                    if total_size <= max_size_bytes:
-                        break
-                    size = log_file.stat().st_size
-                    log_file.unlink()
-                    deleted_count += 1
-                    deleted_size += size
-                    total_size -= size
+            total_size = sum(
+                f.stat().st_size for f in self.log_dir.glob("*.log*")
+                if f.is_file()
+            ) / (1024 * 1024)
 
-        if deleted_count > 0:
-            logging.info(f"Cleaned up {deleted_count} old log files ({deleted_size / 1024 / 1024:.1f} MB)")
+            if total_size > max_size_mb:
+                # Remove oldest files until under size limit
+                log_files = []
+                for log_file in self.log_dir.glob("*.log*"):
+                    if log_file.is_file():
+                        log_files.append((log_file, log_file.stat().st_mtime))
+
+                log_files.sort(key=lambda x: x[1])  # Sort by modification time
+
+                for log_file, _ in log_files:
+                    if total_size <= max_size_mb:
+                        break
+                    try:
+                        file_size = log_file.stat().st_size / (1024 * 1024)
+                        log_file.unlink()
+                        total_size -= file_size
+                        cleaned_count += 1
+                    except Exception:
+                        continue
+
+        return cleaned_count
 
     def get_logger_stats(self) -> Dict[str, Any]:
-        """
-        Get statistics about all loggers.
-
-        Returns:
-            Dict: Logger statistics
-        """
-        stats = {
+        """Get statistics about loggers."""
+        return {
             "total_loggers": len(self.loggers),
-            "log_files": self.get_log_files(),
-            "handlers": {}
+            "total_handlers": len(self.handlers),
+            "log_level": self.log_level,
+            "enable_file_output": self.enable_file_output,
+            "enable_rotating_handlers": self.enable_rotating_handlers,
+            "enable_json_logging": self.enable_json_logging
         }
-        
-        for name, handler in self.handlers.items():
-            handler_type = type(handler).__name__
-            stats["handlers"][name] = {
-                "type": handler_type,
-                "level": handler.level if hasattr(handler, 'level') else 'N/A'
-            }
-        
-        return stats
 
     def flush_all_handlers(self):
-        """Flush all handlers to ensure logs are written."""
+        """Flush all handlers."""
         for handler in self.handlers.values():
-            if hasattr(handler, 'flush'):
+            try:
                 handler.flush()
-            elif hasattr(handler, 'target') and hasattr(handler.target, 'flush'):
-                handler.target.flush()
+            except Exception:
+                continue
 
     def close_all_handlers(self):
-        """Close all handlers properly."""
+        """Close all handlers."""
         for handler in self.handlers.values():
-            if hasattr(handler, 'close'):
+            try:
                 handler.close()
-            elif hasattr(handler, 'target') and hasattr(handler.target, 'close'):
-                handler.target.close()
+            except Exception:
+                continue
 
 
-# Legacy compatibility
 class LogManager(EnhancedLogManager):
-    """Legacy LogManager for backward compatibility."""
-    pass
+    """Backward compatibility alias for EnhancedLogManager."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class ModelLogger:
     """Specialized logger for model operations."""
 
     def __init__(self, log_dir: str = "logs/models"):
-        """
-        Initialize model logger.
-
-        Args:
-            log_dir: Directory for model logs
-        """
+        """Initialize model logger."""
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.logger = logging.getLogger("model_operations")
         self._setup_logger()
 
     def _setup_logger(self):
         """Setup the model logger."""
+        self.logger = logging.getLogger("model_logger")
         self.logger.setLevel(logging.INFO)
 
         # Clear existing handlers
         self.logger.handlers.clear()
 
-        # Add handlers
-        handlers = [
-            logging.StreamHandler(sys.stdout),
-            logging.handlers.RotatingFileHandler(
-                self.log_dir / "model_operations.log",
-                maxBytes=10 * 1024 * 1024,
-                backupCount=5,  # 10MB
-            ),
-        ]
-
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        # Add file handler
+        file_handler = logging.FileHandler(
+            self.log_dir / "model_operations.log",
+            encoding='utf-8'
         )
-
-        for handler in handlers:
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
+        file_handler.setFormatter(logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(message)s"
+        ))
+        self.logger.addHandler(file_handler)
 
     def log_model_training(self, model_name: str, metrics: Dict[str, Any]):
-        """Log model training information."""
-        self.logger.info(f"Model training completed: {model_name}")
-        self.logger.info(f"Training metrics: {metrics}")
+        """Log model training metrics."""
+        self.logger.info(f"Model training completed: {model_name}, metrics: {metrics}")
 
     def log_model_prediction(self, model_name: str, prediction: Any, confidence: float):
-        """Log model prediction information."""
-        self.logger.info(
-            f"Model prediction: {model_name} - Confidence: {confidence:.3f}"
-        )
-        self.logger.debug(f"Prediction value: {prediction}")
+        """Log model prediction."""
+        self.logger.info(f"Model prediction: {model_name}, prediction: {prediction}, confidence: {confidence}")
 
     def log_model_error(self, model_name: str, error: Exception):
-        """Log model error information."""
-        self.logger.error(f"Model error in {model_name}: {error}")
+        """Log model error."""
+        self.logger.error(f"Model error: {model_name}, error: {error}")
 
 
 class DataLogger:
     """Specialized logger for data operations."""
 
     def __init__(self, log_dir: str = "logs/data"):
-        """
-        Initialize data logger.
-
-        Args:
-            log_dir: Directory for data logs
-        """
+        """Initialize data logger."""
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.logger = logging.getLogger("data_operations")
         self._setup_logger()
 
     def _setup_logger(self):
         """Setup the data logger."""
+        self.logger = logging.getLogger("data_logger")
         self.logger.setLevel(logging.INFO)
 
         # Clear existing handlers
         self.logger.handlers.clear()
 
-        # Add handlers
-        handlers = [
-            logging.StreamHandler(sys.stdout),
-            logging.handlers.RotatingFileHandler(
-                self.log_dir / "data_operations.log",
-                maxBytes=10 * 1024 * 1024,
-                backupCount=5,  # 10MB
-            ),
-        ]
-
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        # Add file handler
+        file_handler = logging.FileHandler(
+            self.log_dir / "data_operations.log",
+            encoding='utf-8'
         )
-
-        for handler in handlers:
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
+        file_handler.setFormatter(logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(message)s"
+        ))
+        self.logger.addHandler(file_handler)
 
     def log_data_load(self, symbol: str, records: int, date_range: str):
-        """Log data loading information."""
-        self.logger.info(f"Data loaded: {symbol} - {records} records - {date_range}")
+        """Log data loading operation."""
+        self.logger.info(f"Data loaded: {symbol}, records: {records}, range: {date_range}")
 
     def log_data_error(self, symbol: str, error: Exception):
-        """Log data error information."""
-        self.logger.error(f"Data error for {symbol}: {error}")
+        """Log data error."""
+        self.logger.error(f"Data error: {symbol}, error: {error}")
 
 
 class PerformanceLogger:
     """Specialized logger for performance metrics."""
 
     def __init__(self, log_dir: str = "logs/performance"):
-        """
-        Initialize performance logger.
-
-        Args:
-            log_dir: Directory for performance logs
-        """
+        """Initialize performance logger."""
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.logger = logging.getLogger("performance")
         self._setup_logger()
 
     def _setup_logger(self):
         """Setup the performance logger."""
+        self.logger = logging.getLogger("performance_logger")
         self.logger.setLevel(logging.INFO)
 
         # Clear existing handlers
         self.logger.handlers.clear()
 
-        # Add handlers
-        handlers = [
-            logging.StreamHandler(sys.stdout),
-            logging.handlers.RotatingFileHandler(
-                self.log_dir / "performance.log",
-                maxBytes=10 * 1024 * 1024,
-                backupCount=5,  # 10MB
-            ),
-        ]
-
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        # Add file handler
+        file_handler = logging.FileHandler(
+            self.log_dir / "performance_metrics.log",
+            encoding='utf-8'
         )
-
-        for handler in handlers:
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
+        file_handler.setFormatter(logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(message)s"
+        ))
+        self.logger.addHandler(file_handler)
 
     def log_performance_metric(self, metric_name: str, value: float, unit: str = ""):
-        """Log a performance metric."""
-        self.logger.info(f"Performance metric: {metric_name} = {value}{unit}")
+        """Log performance metric."""
+        self.logger.info(f"Performance metric: {metric_name} = {value} {unit}")
 
     def log_system_health(self, health_status: Dict[str, Any]):
-        """Log system health information."""
+        """Log system health status."""
         self.logger.info(f"System health: {health_status}")
 
 
 def setup_logging(log_dir: str = "logs", log_level: int = logging.INFO) -> EnhancedLogManager:
     """
-    Setup logging for the application.
+    Setup enhanced logging.
 
     Args:
         log_dir: Directory for log files
         log_level: Logging level
 
     Returns:
-        EnhancedLogManager: Configured enhanced log manager instance
+        EnhancedLogManager instance
     """
-    return EnhancedLogManager(log_dir, log_level)
+    return EnhancedLogManager(log_dir=log_dir, log_level=log_level)
 
 
 def get_logger(name: str) -> logging.Logger:
     """
-    Get a logger for a specific component using the __name__ pattern.
-    
+    Get a logger instance.
+
     Args:
-        name: Logger name (usually __name__)
-        
+        name: Logger name
+
     Returns:
-        logging.Logger: Configured logger instance
+        logging.Logger instance
     """
     return logging.getLogger(name)
