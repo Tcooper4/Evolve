@@ -365,16 +365,36 @@ class RealTimeSignalCenter:
                         )
 
                 elif config.alert_type == "large_position_change":
-                    # This would check position changes
-                    pass
+                    # Check for large position changes
+                    if signal.quantity > config.conditions.get("threshold", 1000):
+                        self._queue_alert({
+                            "type": "large_position_change",
+                            "message": f"Large position change: {signal.quantity} {signal.symbol}",
+                            "priority": "medium",
+                            "data": {"signal": signal}
+                        })
 
                 elif config.alert_type == "significant_loss":
-                    # This would check for losses in active trades
-                    pass
+                    # Check for losses in active trades
+                    for trade in self.active_trades.values():
+                        if trade.pnl_percent < config.conditions.get("loss_threshold", -0.05):
+                            self._queue_alert({
+                                "type": "significant_loss",
+                                "message": f"Significant loss: {trade.pnl_percent:.2%} on {trade.symbol}",
+                                "priority": "high",
+                                "data": {"trade": trade}
+                            })
 
                 elif config.alert_type == "market_volatility":
-                    # This would check market volatility
-                    pass
+                    # Check market volatility using recent signals
+                    recent_signals = [s for s in self.signals if s.timestamp > datetime.now() - timedelta(minutes=30)]
+                    if len(recent_signals) > config.conditions.get("signal_threshold", 20):
+                        self._queue_alert({
+                            "type": "market_volatility",
+                            "message": f"High market volatility: {len(recent_signals)} signals in 30 minutes",
+                            "priority": "medium",
+                            "data": {"signal_count": len(recent_signals)}
+                        })
 
         except Exception as e:
             logger.error(f"Error checking signal alerts: {e}")

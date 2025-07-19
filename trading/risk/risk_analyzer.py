@@ -7,8 +7,17 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Optional
 
-import openai
 import pandas as pd
+
+# Try to import OpenAI
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ OpenAI not available. Disabling LLM-based risk analysis.")
+    print(f"   Missing: {e}")
+    openai = None
+    OPENAI_AVAILABLE = False
 
 from .risk_metrics import (
     calculate_advanced_metrics,
@@ -66,7 +75,7 @@ class RiskAnalyzer:
             logger.error(f"Failed to create directory for memory_path: {e}")
 
         # Initialize OpenAI if key is available
-        if self.openai_api_key:
+        if self.openai_api_key and OPENAI_AVAILABLE:
             openai.api_key = self.openai_api_key
 
     def analyze_risk(
@@ -195,7 +204,7 @@ class RiskAnalyzer:
         Returns:
             Risk explanation string
         """
-        if not self.openai_api_key:
+        if not self.openai_api_key or not OPENAI_AVAILABLE:
             return self._generate_basic_explanation(
                 risk_level, regime_metrics, forecast_risk_score
             )

@@ -13,9 +13,28 @@ from enum import Enum
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from scipy.optimize import minimize
+
+# Try to import plotly
+try:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    PLOTLY_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ plotly not available. Disabling interactive plotting capabilities.")
+    print(f"   Missing: {e}")
+    go = None
+    make_subplots = None
+    PLOTLY_AVAILABLE = False
+
+# Try to import scipy
+try:
+    from scipy.optimize import minimize
+    SCIPY_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scipy not available. Disabling optimization-based risk management.")
+    print(f"   Missing: {e}")
+    minimize = None
+    SCIPY_AVAILABLE = False
 
 # Try to import GARCH models
 try:
@@ -202,8 +221,9 @@ class DynamicVolatilityModel:
                 # Use GARCH for recent periods, hybrid for older
                 recent_mask = returns.index >= returns.index[-min(100, len(returns))]
                 hybrid_vol[recent_mask] = 0.4 * rolling_vol[recent_mask] + 0.3 * ewma_vol[recent_mask] + 0.3 * garch_vol[recent_mask]
-            except:
-                pass
+            except Exception as e:
+                self.logger.warning(f"GARCH calculation failed in hybrid volatility: {e}")
+                # Continue with rolling and EWMA only
         
         return hybrid_vol
     
@@ -700,6 +720,9 @@ class RiskManager:
     def optimize_position_sizes(
         self, expected_returns: pd.Series, covariance: pd.DataFrame
     ) -> pd.Series:
+        if not SCIPY_AVAILABLE:
+            self.logger.warning("scipy not available. Using equal position sizes.")
+            return pd.Series(1.0 / len(expected_returns), index=expected_returns.index)
         """Optimize position sizes using SLSQP.
 
         Args:
@@ -748,6 +771,9 @@ class RiskManager:
         return pd.Series(result.x, index=expected_returns.index)
 
     def plot_risk_metrics(self) -> go.Figure:
+        if not PLOTLY_AVAILABLE:
+            self.logger.warning("plotly not available. Cannot create interactive plots.")
+            return None
         """Plot time series of risk metrics.
 
         Returns:

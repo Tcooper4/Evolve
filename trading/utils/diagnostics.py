@@ -11,8 +11,26 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import psutil
-import torch
+
+# Try to import psutil
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ psutil not available. Disabling system resource monitoring.")
+    print(f"   Missing: {e}")
+    psutil = None
+    PSUTIL_AVAILABLE = False
+
+# Try to import PyTorch
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling PyTorch diagnostics.")
+    print(f"   Missing: {e}")
+    torch = None
+    TORCH_AVAILABLE = False
 
 from trading.utils.auto_repair import auto_repair
 from trading.utils.error_logger import error_logger
@@ -64,6 +82,16 @@ class SystemDiagnostics:
     def check_forecasting_models(self) -> Tuple[bool, List[str]]:
         """Check forecasting model availability."""
         issues = []
+
+        if not TORCH_AVAILABLE:
+            issues.append("PyTorch not available for model diagnostics")
+            return {
+                "success": True,
+                "result": False,
+                "issues": issues,
+                "message": "PyTorch not available",
+                "timestamp": datetime.now().isoformat(),
+            }
 
         try:
             # Check PyTorch
@@ -127,6 +155,16 @@ class SystemDiagnostics:
     def check_system_resources(self) -> Tuple[bool, List[str]]:
         """Check system resource availability."""
         issues = []
+
+        if not PSUTIL_AVAILABLE:
+            issues.append("psutil not available for system resource monitoring")
+            return {
+                "success": True,
+                "result": False,
+                "issues": issues,
+                "message": "psutil not available",
+                "timestamp": datetime.now().isoformat(),
+            }
 
         # Check CPU
         cpu_percent = psutil.cpu_percent()

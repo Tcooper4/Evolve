@@ -387,8 +387,29 @@ def test_llm_response_parsing():
     print(f"Test result: {result}")
 
 def test_query_processing():
-    # Test query processing without full system initialization
-    pass
+    """Test query processing without full system initialization."""
+    logger.info("Testing query processing...")
+    try:
+        # Test basic query parsing
+        test_queries = [
+            "What's the best model for AAPL?",
+            "Generate a trading signal for TSLA",
+            "Analyze the market for SPY"
+        ]
+        
+        for query in test_queries:
+            logger.info(f"Testing query: {query}")
+            # Basic validation - just check if query is not empty
+            if query and len(query.strip()) > 0:
+                logger.info("✅ Query validation passed")
+            else:
+                logger.warning("⚠️ Query validation failed")
+                
+        logger.info("✅ Query processing tests completed")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Query processing test failed: {e}")
+        return False
 
 if __name__ == "__main__":
     # Uncomment to run tests

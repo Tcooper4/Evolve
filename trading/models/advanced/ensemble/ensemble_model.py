@@ -2,8 +2,26 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-import torch
-from scipy.stats import norm
+
+# Try to import PyTorch
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling ensemble models.")
+    print(f"   Missing: {e}")
+    torch = None
+    TORCH_AVAILABLE = False
+
+# Try to import scipy
+try:
+    from scipy.stats import norm
+    SCIPY_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scipy not available. Disabling statistical functions.")
+    print(f"   Missing: {e}")
+    norm = None
+    SCIPY_AVAILABLE = False
 
 from trading.memory.performance_memory import PerformanceMemory
 from trading.models.base_model import BaseModel
@@ -26,6 +44,9 @@ class EnsembleForecaster(BaseModel):
                 - model_weights: Optional list of model weights
                 - use_lr_scheduler: Whether to use learning rate scheduler (default: False)
         """
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create EnsembleForecaster.")
+        
         if config is None:
             config = {}
         default_config = {

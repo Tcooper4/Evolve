@@ -80,21 +80,11 @@ class AutomationMetrics:
             logger.error(f"Failed to load metrics config: {str(e)}")
             raise
 
-    def setup_logging(self):
-        """Configure logging."""
-        log_path = Path("automation/logs")
-        log_path.mkdir(parents=True, exist_ok=True)
+    from utils.launch_utils import setup_logging
 
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.FileHandler(log_path / "metrics.log"),
-                logging.StreamHandler(),
-            ],
-        )
-
-    def setup_metrics(self):
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="execution_agent")def setup_metrics(self):
         """Setup Prometheus metrics."""
         try:
             # System metrics

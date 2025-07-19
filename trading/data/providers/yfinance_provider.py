@@ -9,13 +9,34 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 import requests
-import yfinance as yf
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
+
+# Try to import yfinance
+try:
+    import yfinance as yf
+    YFINANCE_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ yfinance not available. Disabling Yahoo Finance data provider.")
+    print(f"   Missing: {e}")
+    yf = None
+    YFINANCE_AVAILABLE = False
+
+# Try to import tenacity
+try:
+    from tenacity import (
+        retry,
+        retry_if_exception_type,
+        stop_after_attempt,
+        wait_exponential,
+    )
+    TENACITY_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ tenacity not available. Disabling retry logic.")
+    print(f"   Missing: {e}")
+    retry = None
+    retry_if_exception_type = None
+    stop_after_attempt = None
+    wait_exponential = None
+    TENACITY_AVAILABLE = False
 
 from .base_provider import BaseDataProvider, ProviderConfig
 
@@ -164,13 +185,6 @@ class YFinanceProvider(BaseDataProvider):
         if data.isnull().any().any():
             raise ValueError("Data contains missing values")
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        retry=retry_if_exception_type(
-            (requests.RequestException, ValueError, RuntimeError)
-        ),
-    )
     def fetch(self, symbol: str, interval: str = "1d", **kwargs) -> pd.DataFrame:
         """Fetch data for a given symbol and interval with retry logic.
 
@@ -185,6 +199,9 @@ class YFinanceProvider(BaseDataProvider):
         Raises:
             Exception: If data fetching fails after all retries
         """
+        if not YFINANCE_AVAILABLE:
+            raise RuntimeError("yfinance is not available. Cannot fetch data.")
+        
         if not self.is_enabled():
             raise RuntimeError("Provider is disabled")
 

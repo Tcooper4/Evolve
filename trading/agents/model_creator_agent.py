@@ -18,7 +18,7 @@ import numpy as np
 
 warnings.filterwarnings("ignore")
 
-# ML Framework imports
+# Try to import scikit-learn
 try:
     from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
     from sklearn.linear_model import ElasticNet, Lasso, Ridge
@@ -26,30 +26,53 @@ try:
     from sklearn.model_selection import train_test_split
     from sklearn.neural_network import MLPRegressor
     from sklearn.svm import SVR
-
     SKLEARN_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling sklearn-based models.")
+    print(f"   Missing: {e}")
+    GradientBoostingRegressor = None
+    RandomForestRegressor = None
+    ElasticNet = None
+    Lasso = None
+    Ridge = None
+    mean_absolute_error = None
+    mean_squared_error = None
+    r2_score = None
+    train_test_split = None
+    MLPRegressor = None
+    SVR = None
     SKLEARN_AVAILABLE = False
 
+# Try to import XGBoost
 try:
     import xgboost as xgb
-
     XGBOOST_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ XGBoost not available. Disabling XGBoost models.")
+    print(f"   Missing: {e}")
+    xgb = None
     XGBOOST_AVAILABLE = False
 
+# Try to import LightGBM
 try:
     import lightgbm as lgb
-
     LIGHTGBM_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ LightGBM not available. Disabling LightGBM models.")
+    print(f"   Missing: {e}")
+    lgb = None
     LIGHTGBM_AVAILABLE = False
 
+# Try to import PyTorch
 try:
     import torch.nn as nn
-
+    TORCH_AVAILABLE = True
     PYTORCH_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling PyTorch models.")
+    print(f"   Missing: {e}")
+    nn = None
+    TORCH_AVAILABLE = False
     PYTORCH_AVAILABLE = False
 
 logger = logging.getLogger(__name__)

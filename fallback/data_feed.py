@@ -11,7 +11,16 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
+
+# Try to import yfinance
+try:
+    import yfinance as yf
+    YFINANCE_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ yfinance not available. Disabling yfinance fallback data source.")
+    print(f"   Missing: {e}")
+    yf = None
+    YFINANCE_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -65,15 +74,18 @@ class FallbackDataFeed:
             }
 
             # Try yfinance first as fallback
-            try:
-                data = self._get_yfinance_data(symbol, start_date, end_date, interval)
-                if data is not None and not data.empty:
-                    logger.info(
-                        f"Successfully retrieved data from yfinance for {symbol}"
-                    )
-                    return data
-            except Exception as e:
-                logger.warning(f"yfinance fallback failed for {symbol}: {e}")
+            if YFINANCE_AVAILABLE:
+                try:
+                    data = self._get_yfinance_data(symbol, start_date, end_date, interval)
+                    if data is not None and not data.empty:
+                        logger.info(
+                            f"Successfully retrieved data from yfinance for {symbol}"
+                        )
+                        return data
+                except Exception as e:
+                    logger.warning(f"yfinance fallback failed for {symbol}: {e}")
+            else:
+                logger.info("yfinance not available, using mock data")
 
             # Generate mock data if yfinance fails
             logger.info(f"Generating mock data for {symbol}")
@@ -86,6 +98,9 @@ class FallbackDataFeed:
     def _get_yfinance_data(
         self, symbol: str, start_date: str, end_date: str, interval: str
     ) -> Optional[pd.DataFrame]:
+        if not YFINANCE_AVAILABLE:
+            logger.warning("yfinance not available. Cannot retrieve data.")
+            return None
         """
         Get data from yfinance as a fallback source.
 

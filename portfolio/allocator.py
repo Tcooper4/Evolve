@@ -21,6 +21,16 @@ from enum import Enum
 import warnings
 warnings.filterwarnings('ignore')
 
+# Try to import scipy
+try:
+    from scipy.optimize import minimize
+    SCIPY_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scipy not available. Disabling optimization-based portfolio allocation.")
+    print(f"   Missing: {e}")
+    minimize = None
+    SCIPY_AVAILABLE = False
+
 # Local imports
 from utils.cache_utils import cache_model_operation
 from utils.common_helpers import safe_json_save, load_config
@@ -170,9 +180,11 @@ class PortfolioAllocator:
         # Objective: minimize w'Σw
         # Constraints: sum(w) = 1, w >= 0
         
-        try:
-            from scipy.optimize import minimize
+        if not SCIPY_AVAILABLE:
+            # Fallback to equal weight allocation
+            return self._equal_weight_allocation(assets)
             
+        try:
             def objective(weights):
                 return weights.T @ covariance_matrix @ weights
             

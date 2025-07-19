@@ -7,14 +7,28 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
-import torch
+
+# Try to import PyTorch
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling Autoformer models.")
+    print(f"   Missing: {e}")
+    torch = None
+    TORCH_AVAILABLE = False
 
 from .base_model import BaseModel, ModelRegistry
 
+# Try to import Autoformer
 try:
     from autoformer_pytorch import Autoformer
-except ImportError:
+    AUTOFORMER_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ autoformer-pytorch not available. Disabling Autoformer models.")
+    print(f"   Missing: {e}")
     Autoformer = None
+    AUTOFORMER_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +36,13 @@ logger = logging.getLogger(__name__)
 @ModelRegistry.register("Autoformer")
 class AutoformerModel(BaseModel):
     def __init__(self, config):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create AutoformerModel.")
+        
+        if not AUTOFORMER_AVAILABLE:
+            raise ImportError("autoformer-pytorch is not available. Cannot create AutoformerModel.")
+        
         super().__init__(config)
-        if Autoformer is None:
-            raise ImportError("autoformer-pytorch is not installed.")
         self.model = Autoformer(
             num_time_features=len(config.get("feature_columns", [])),
             seq_len=config.get("sequence_length", 24),

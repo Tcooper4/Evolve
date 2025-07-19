@@ -36,24 +36,30 @@ class PromptEntry:
         return asdict(self)
 
 
-class PromptMemoryBackend:
+from abc import ABC, abstractmethod
+
+class PromptMemoryBackend(ABC):
     """Abstract base class for prompt memory backends."""
     
+    @abstractmethod
     async def log_prompt(self, entry: PromptEntry) -> bool:
         """Log a prompt entry."""
-        raise NotImplementedError
+        pass
     
+    @abstractmethod
     async def get_last_prompt(self, user_id: str = "default") -> Optional[PromptEntry]:
         """Get the last prompt for a user."""
-        raise NotImplementedError
+        pass
     
+    @abstractmethod
     async def get_prompt_history(self, user_id: str = "default", n: int = 10) -> List[PromptEntry]:
         """Get prompt history for a user."""
-        raise NotImplementedError
+        pass
     
+    @abstractmethod
     async def clear_history(self, user_id: str = "default") -> bool:
         """Clear prompt history for a user."""
-        raise NotImplementedError
+        pass
 
 
 class JSONPromptMemory(PromptMemoryBackend):

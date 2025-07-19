@@ -442,10 +442,12 @@ class WalkForwardAgent(BaseAgent):
 
             return metrics
 
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError) as e:
             logger.error(f"Error calculating performance: {e}")
             return {}
-        # TODO: Specify exception type instead of using bare except
+        except Exception as e:
+            logger.error(f"Unexpected error calculating performance: {e}")
+            return {}
 
     def _calculate_max_drawdown(self, returns: pd.Series) -> float:
         """Calculate maximum drawdown.

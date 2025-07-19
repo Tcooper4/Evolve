@@ -7,9 +7,20 @@ from typing import Any, Dict, Optional, Tuple
 # Third-party imports
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling GNN models.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    F = None
+    TORCH_AVAILABLE = False
 
 # Local imports
 from trading.models.base_model import BaseModel, ModelRegistry, ValidationError
@@ -28,6 +39,9 @@ class GNNLayer(nn.Module):
             out_channels: Number of output channels
             dropout: Dropout rate
         """
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create GNNLayer.")
+        
         try:
             from torch_geometric.nn import GCNConv
         except ImportError:
@@ -82,6 +96,9 @@ class GNNForecaster(BaseModel):
                 - learning_rate: Learning rate (default: 0.001)
                 - use_lr_scheduler: Whether to use learning rate scheduler (default: True)
         """
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create GNNForecaster.")
+        
         try:
             pass
         except ImportError:

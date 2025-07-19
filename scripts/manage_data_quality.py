@@ -63,20 +63,11 @@ class DataQualityManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    def setup_logging(self):
-        """Initialize logging configuration."""
-        log_config_path = Path("config/logging_config.yaml")
-        try:
-            if not log_config_path.exists():
-                raise FileNotFoundError("logging_config.yaml not found")
-            with open(log_config_path) as f:
-                log_config = yaml.safe_load(f)
-            logging.config.dictConfig(log_config)
-        except Exception as e:
-            print(f"[DataQualityManager] Warning: Failed to load advanced logging config: {e}. Using basic logging.")
-            logging.basicConfig(level=logging.INFO)
+    from utils.launch_utils import setup_logging
 
-    def validate_data(self, data_path: str, schema_path: Optional[str] = None):
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="report_service")def validate_data(self, data_path: str, schema_path: Optional[str] = None):
         """Validate data against schema and quality rules."""
         self.logger.info(f"Validating data: {data_path}")
 

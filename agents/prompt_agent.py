@@ -44,7 +44,12 @@ try:
     )
     from sentence_transformers import SentenceTransformer
     HUGGINGFACE_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ HuggingFace libraries not available. Disabling advanced NLP features.")
+    print(f"   Missing: {e}")
+    torch = None
+    transformers = None
+    sentence_transformers = None
     HUGGINGFACE_AVAILABLE = False
 
 # Try to import Redis for memory
@@ -451,6 +456,9 @@ class PromptAgent:
             retry_delay_seconds: Initial delay between retries
             redis_url: Redis URL for memory storage
         """
+        # Initialize availability flag
+        self.available = True
+        
         self.openai_api_key = openai_api_key
         self.huggingface_model = huggingface_model
         self.classification_model = classification_model
@@ -469,26 +477,33 @@ class PromptAgent:
         # Initialize memory module
         self.memory = EnhancedPromptMemory(redis_url)
         
-        # Initialize components
-        self._initialize_providers()
-        self._initialize_classification_labels()
-        self._initialize_agent_registry()
-        
-        # Performance tracking
-        self.performance_metrics = {
-            "total_requests": 0,
-            "successful_parses": 0,
-            "huggingface_parses": 0,
-            "openai_parses": 0,
-            "fallback_parses": 0,
-            "avg_parse_time": 0.0,
-            "errors": []
-        }
-        
-        # Initialize prompt trace logger
-        self.trace_logger = PromptTraceLogger()
-        
-        logger.info("Enhanced PromptAgent initialized successfully")
+        # Initialize components with error handling
+        try:
+            self._initialize_providers()
+            self._initialize_classification_labels()
+            self._initialize_agent_registry()
+            
+            # Performance tracking
+            self.performance_metrics = {
+                "total_requests": 0,
+                "successful_parses": 0,
+                "huggingface_parses": 0,
+                "openai_parses": 0,
+                "fallback_parses": 0,
+                "avg_parse_time": 0.0,
+                "errors": []
+            }
+            
+            # Initialize prompt trace logger
+            self.trace_logger = PromptTraceLogger()
+            
+            logger.info("Enhanced PromptAgent initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize PromptAgent: {e}")
+            self.available = False
+            print("⚠️ PromptAgent unavailable due to initialization failure")
+            print(f"   Error: {e}")
 
     def _initialize_providers(self):
         """Initialize LLM providers."""
@@ -498,8 +513,12 @@ class PromptAgent:
         
         # Initialize OpenAI
         if self.use_openai_fallback and self.openai_api_key:
-            openai.api_key = self.openai_api_key
-            logger.info("OpenAI API configured")
+            try:
+                openai.api_key = self.openai_api_key
+                logger.info("OpenAI API configured")
+            except Exception as e:
+                logger.error(f"Failed to configure OpenAI API: {e}")
+                self.use_openai_fallback = False
     
     def _init_huggingface(self):
         """Initialize HuggingFace models."""
@@ -523,6 +542,8 @@ class PromptAgent:
         except Exception as e:
             logger.error(f"Failed to initialize HuggingFace models: {e}")
             self.use_huggingface_first = False
+            print("⚠️ HuggingFace models unavailable due to model load failure")
+            print(f"   Error: {e}")
     
     def _initialize_classification_labels(self):
         """Initialize classification labels for intent detection."""
@@ -624,6 +645,18 @@ class PromptAgent:
         Returns:
             ProcessedPrompt: Processed prompt information
         """
+        if not self.available:
+            print("⚠️ PromptAgent unavailable due to initialization failure")
+            return ProcessedPrompt(
+                original_prompt=prompt,
+                request_type=RequestType.UNKNOWN,
+                confidence=0.0,
+                extracted_parameters={},
+                context=context or PromptContext(),
+                routing_suggestions=[],
+                processing_time=0.0
+            )
+        
         start_time = datetime.now()
         trace_id = self.trace_logger.start_trace(prompt)
 
@@ -1378,6 +1411,15 @@ class PromptAgent:
         Returns:
             Dictionary with routing decision and processing results
         """
+        if not self.available:
+            print("⚠️ PromptAgent unavailable due to initialization failure")
+            return {
+                "success": False,
+                "error": "PromptAgent unavailable due to initialization failure",
+                "trace_id": f"trace_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
+                "processing_time": 0.0,
+            }
+        
         start_time = datetime.now()
         
         # Start trace logging
@@ -1480,11 +1522,6 @@ class PromptAgent:
                 "trace_id": trace_id,
                 "error": str(e),
                 "processing_time": processing_time,
-            }
-            return {
-                "success": False,
-                "error": str(e),
-                "fallback_agent": "AnalysisAgent",
             }
 
 

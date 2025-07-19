@@ -121,8 +121,13 @@ class AlpacaProvider(ExecutionProvider):
         """Connect to Alpaca API."""
         try:
             # Import alpaca-py here to avoid dependency issues
-            from alpaca.trading.client import TradingClient
-            from alpaca.data.historical import StockHistoricalDataClient
+            try:
+                from alpaca.trading.client import TradingClient
+                from alpaca.data.historical import StockHistoricalDataClient
+            except ImportError as e:
+                print("⚠️ alpaca-py not available. Cannot connect to Alpaca.")
+                print(f"   Missing: {e}")
+                return False
             
             self.trading_client = TradingClient(
                 api_key=self.api_key,
@@ -150,8 +155,17 @@ class AlpacaProvider(ExecutionProvider):
 
         try:
             # Import alpaca-py components
-            from alpaca.trading.requests import MarketOrderRequest
-            from alpaca.trading.enums import OrderSide, TimeInForce
+            try:
+                from alpaca.trading.requests import MarketOrderRequest
+                from alpaca.trading.enums import OrderSide, TimeInForce
+            except ImportError as e:
+                print("⚠️ alpaca-py not available. Cannot execute trade.")
+                print(f"   Missing: {e}")
+                return {
+                    "success": False,
+                    "error": "alpaca-py not available",
+                    "timestamp": datetime.utcnow().isoformat()
+                }
             
             # Create market order request
             order_data = MarketOrderRequest(

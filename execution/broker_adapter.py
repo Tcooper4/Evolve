@@ -251,8 +251,14 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
         """Connect to Alpaca"""
         try:
             # Import alpaca-py
-            from alpaca.trading.client import TradingClient
-            from alpaca.data.historical import StockHistoricalDataClient
+            try:
+                from alpaca.trading.client import TradingClient
+                from alpaca.data.historical import StockHistoricalDataClient
+            except ImportError as e:
+                print("⚠️ alpaca-py not available. Cannot connect to Alpaca.")
+                print(f"   Missing: {e}")
+                self.is_connected = False
+                return False
             
             # Initialize trading client
             self.client = TradingClient(
@@ -285,8 +291,13 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
             raise Exception("Rate limit exceeded for orders")
         
         try:
-            from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest, StopOrderRequest
-            from alpaca.trading.enums import OrderSide as AlpacaOrderSide, TimeInForce
+            try:
+                from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest, StopOrderRequest
+                from alpaca.trading.enums import OrderSide as AlpacaOrderSide, TimeInForce
+            except ImportError as e:
+                print("⚠️ alpaca-py not available. Cannot submit order.")
+                print(f"   Missing: {e}")
+                raise Exception("alpaca-py not available")
             
             # Convert order side
             side = AlpacaOrderSide.BUY if order.side == OrderSide.BUY else AlpacaOrderSide.SELL

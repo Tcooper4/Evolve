@@ -6,8 +6,18 @@ from typing import Any, Dict, Optional, Tuple
 # Third-party imports
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
+
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling advanced LSTM models.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    TORCH_AVAILABLE = False
 
 # Local imports
 from trading.models.base_model import BaseModel, ModelRegistry, ValidationError
@@ -18,6 +28,8 @@ class LSTMForecaster(BaseModel):
     """LSTM model for time series forecasting."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create LSTMForecaster.")
         """Initialize LSTM forecaster.
 
         Args:

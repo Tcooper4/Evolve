@@ -12,7 +12,16 @@ from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
-import torch
+
+# Try to import PyTorch
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling GPU acceleration for market indicators.")
+    print(f"   Missing: {e}")
+    torch = None
+    TORCH_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -103,11 +112,15 @@ class MarketIndicators:
         }
 
         # Check for GPU availability
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if self.device.type == "cuda":
-            self.logger.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
+        if TORCH_AVAILABLE:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            if self.device.type == "cuda":
+                self.logger.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
+            else:
+                self.logger.info("Using CPU for calculations")
         else:
-            self.logger.info("Using CPU for calculations")
+            self.device = "cpu"
+            self.logger.info("PyTorch not available, using CPU for calculations")
 
     def _validate_config(self) -> None:
         """Validate configuration parameters."""

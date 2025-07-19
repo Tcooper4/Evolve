@@ -45,14 +45,42 @@ from typing import Any, Dict, List, Optional, Tuple
 import joblib
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
-import torch.optim as optim
 import yaml
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.preprocessing import StandardScaler
-from torch.utils.data import DataLoader, TensorDataset
+
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.utils.data import DataLoader, TensorDataset
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling PyTorch model training.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    optim = None
+    DataLoader = None
+    TensorDataset = None
+    TORCH_AVAILABLE = False
+
+# Try to import scikit-learn
+try:
+    from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+    from sklearn.model_selection import GridSearchCV, train_test_split
+    from sklearn.preprocessing import StandardScaler
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling sklearn-based model training.")
+    print(f"   Missing: {e}")
+    accuracy_score = None
+    f1_score = None
+    precision_score = None
+    recall_score = None
+    GridSearchCV = None
+    train_test_split = None
+    StandardScaler = None
+    SKLEARN_AVAILABLE = False
 
 
 class ModelManager:
@@ -163,6 +191,9 @@ class ModelManager:
             # Initialize base model
             base_model = self._initialize_model(model_type)
 
+            if not SKLEARN_AVAILABLE:
+                raise ImportError("scikit-learn is not available. Cannot perform hyperparameter optimization.")
+            
             # Perform grid search
             grid_search = GridSearchCV(
                 base_model, param_grid, cv=5, scoring="f1", n_jobs=-1
@@ -277,6 +308,8 @@ class ModelManager:
     def _initialize_lstm_model(
         self, params: Optional[Dict[str, Any]] = None
     ) -> nn.Module:
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create LSTM model.")
         """Initialize LSTM model."""
         try:
 

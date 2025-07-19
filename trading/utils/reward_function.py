@@ -116,7 +116,7 @@ class RewardFunction:
                 [p["sharpe"] for p in self.performance_history[-self.lookback_period :]]
             )
         else:
-            pass
+            recent_performance = 0.0  # Default value when no history available
 
         # Determine market regime
         regime = self._classify_market_regime(market_volatility, prediction_variance)

@@ -11,7 +11,16 @@ from typing import Any, Dict, Union
 
 import numpy as np
 import pandas as pd
-import torch
+
+# Try to import PyTorch
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling model utilities.")
+    print(f"   Missing: {e}")
+    torch = None
+    TORCH_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +69,9 @@ def to_device(
     Returns:
         Data on target device
     """
+    if not TORCH_AVAILABLE:
+        raise ImportError("PyTorch is not available. Cannot move data to device.")
+    
     try:
         if isinstance(data, torch.Tensor):
             return data.to(device)
@@ -83,6 +95,9 @@ def from_device(
     Returns:
         Data on CPU
     """
+    if not TORCH_AVAILABLE:
+        raise ImportError("PyTorch is not available. Cannot move data from device.")
+    
     try:
         if isinstance(data, torch.Tensor):
             return data.cpu()
@@ -109,6 +124,9 @@ def safe_forward(model: torch.nn.Module, *args, **kwargs) -> torch.Tensor:
     Raises:
         ModelError: If forward pass fails
     """
+    if not TORCH_AVAILABLE:
+        raise ImportError("PyTorch is not available. Cannot perform forward pass.")
+    
     try:
         if model is None:
             raise ModelError("Model not initialized")
@@ -132,6 +150,9 @@ def compute_loss(
     Returns:
         Computed loss
     """
+    if not TORCH_AVAILABLE:
+        raise ImportError("PyTorch is not available. Cannot compute loss.")
+    
     try:
         return criterion(y_pred, y_true)
     except Exception as e:
@@ -149,6 +170,9 @@ def compute_metrics(y_pred: torch.Tensor, y_true: torch.Tensor) -> list:
     Returns:
         List of metrics [mse, mae, rmse]
     """
+    if not TORCH_AVAILABLE:
+        raise ImportError("PyTorch is not available. Cannot compute metrics.")
+    
     try:
         y_pred_np = y_pred.detach().cpu().numpy().flatten()
         y_true_np = y_true.detach().cpu().numpy().flatten()

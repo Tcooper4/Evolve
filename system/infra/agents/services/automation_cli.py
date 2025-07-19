@@ -73,20 +73,11 @@ class AutomationCLI:
             logger.error(f"Failed to load CLI config: {str(e)}")
             raise
 
-    def setup_logging(self):
-        """Configure logging."""
-        log_path = Path("automation/logs")
-        log_path.mkdir(parents=True, exist_ok=True)
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.FileHandler(log_path / "cli.log"),
-                logging.StreamHandler(),
-            ],
-        )
+    from utils.launch_utils import setup_logging
 
-    def setup_cli(self):
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="service")def setup_cli(self):
         """Setup CLI application."""
         self.app = Typer(
             name="automation", help="Automation system CLI", add_completion=False

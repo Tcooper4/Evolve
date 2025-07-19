@@ -2,9 +2,20 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling advanced TCN models.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    F = None
+    TORCH_AVAILABLE = False
 
 from trading.models.base_model import BaseModel
 
@@ -22,6 +33,8 @@ class TemporalBlock(nn.Module):
         padding: int,
         dropout: float = 0.2,
     ):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TemporalBlock.")
         """Initialize temporal block.
 
         Args:
@@ -89,6 +102,8 @@ class TemporalConvNet(nn.Module):
         kernel_size: int = 2,
         dropout: float = 0.2,
     ):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TemporalConvNet.")
         """Initialize TCN.
 
         Args:
@@ -136,6 +151,8 @@ class TCNModel(BaseModel):
     """Temporal Convolutional Network for time series forecasting."""
 
     def __init__(self, config: Dict[str, Any]):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TCNModel.")
         """Initialize TCN forecaster.
 
         Args:

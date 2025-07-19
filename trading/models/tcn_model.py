@@ -7,8 +7,18 @@ from typing import Any, Dict, List, Optional, Tuple
 # Third-party imports
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
+
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling TCN models.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    TORCH_AVAILABLE = False
 
 # Local imports
 from .base_model import BaseModel, ValidationError
@@ -29,6 +39,8 @@ class TemporalBlock(nn.Module):
         padding: int,
         dropout: float = 0.2,
     ):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TemporalBlock.")
         """Initialize temporal block.
 
         Args:
@@ -104,6 +116,8 @@ class TCNModel(BaseModel):
     """Temporal Convolutional Network for time series forecasting."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TCNModel.")
         """Initialize TCN model.
 
         Args:

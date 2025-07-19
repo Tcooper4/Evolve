@@ -17,13 +17,12 @@ import numpy as np
 # Import sentiment analysis libraries with fallback handling
 try:
     from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
     VADER_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ vaderSentiment not available. Disabling VADER sentiment analysis.")
+    print(f"   Missing: {e}")
+    SentimentIntensityAnalyzer = None
     VADER_AVAILABLE = False
-    logging.warning(
-        "VaderSentiment not available. Install with: pip install vaderSentiment"
-    )
 
 try:
     from textblob import TextBlob

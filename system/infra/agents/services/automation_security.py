@@ -110,21 +110,11 @@ class AutomationSecurity:
             logger.error(f"Failed to load security config: {str(e)}")
             raise
 
-    def setup_logging(self):
-        """Configure logging."""
-        log_path = Path("automation/logs")
-        log_path.mkdir(parents=True, exist_ok=True)
+    from utils.launch_utils import setup_logging
 
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.FileHandler(log_path / "security.log"),
-                logging.StreamHandler(),
-            ],
-        )
-
-    def setup_crypto(self):
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="service")def setup_crypto(self):
         """Setup cryptographic components."""
         try:
             # Setup password hashing

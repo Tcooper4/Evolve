@@ -14,8 +14,26 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
-from alpha_vantage.timeseries import TimeSeries
+
+# Try to import yfinance
+try:
+    import yfinance as yf
+    YFINANCE_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ yfinance not available. Disabling Yahoo Finance data fetching.")
+    print(f"   Missing: {e}")
+    yf = None
+    YFINANCE_AVAILABLE = False
+
+# Try to import alpha_vantage
+try:
+    from alpha_vantage.timeseries import TimeSeries
+    ALPHA_VANTAGE_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ alpha_vantage not available. Disabling Alpha Vantage data fetching.")
+    print(f"   Missing: {e}")
+    TimeSeries = None
+    ALPHA_VANTAGE_AVAILABLE = False
 
 from trading.logs.logger import log_metrics
 
@@ -57,7 +75,7 @@ class MarketData:
         self.cache = OrderedDict()
         self.last_update = {}
         self.alpha_vantage = None
-        if self.config.get("use_alpha_vantage", False):
+        if self.config.get("use_alpha_vantage", False) and ALPHA_VANTAGE_AVAILABLE:
             alpha_vantage_key = os.getenv("ALPHA_VANTAGE_API_KEY")
             if alpha_vantage_key:
                 self.alpha_vantage = TimeSeries(key=alpha_vantage_key)
@@ -145,6 +163,9 @@ class MarketData:
         start_time = time.time()
         attempt = 0
 
+        if not YFINANCE_AVAILABLE:
+            raise ImportError("yfinance is not available. Cannot fetch market data.")
+        
         while attempt < self.config["max_retries"]:
             try:
                 # Try primary source (yfinance)

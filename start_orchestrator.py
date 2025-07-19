@@ -38,6 +38,9 @@ async def start_orchestrator_standalone(config_path: str = "config/task_schedule
         
         orchestrator = await start_orchestrator(config_path)
         
+        # Check agent registration status
+        await _check_agent_registration()
+        
         logger.info("Task Orchestrator started successfully")
         logger.info("Press Ctrl+C to stop...")
         
@@ -67,6 +70,9 @@ async def start_integrated_system(config_path: str = "config/task_schedule.yaml"
         
         integration = await start_integrated_system(config_path)
         
+        # Check agent registration status
+        await _check_agent_registration()
+        
         logger.info("Integrated system started successfully")
         logger.info("Press Ctrl+C to stop...")
         
@@ -95,6 +101,9 @@ async def start_with_monitoring(config_path: str = "config/task_schedule.yaml", 
         from core.task_orchestrator import start_orchestrator
         
         orchestrator = await start_orchestrator(config_path)
+        
+        # Check agent registration status
+        await _check_agent_registration()
         
         logger.info("Task Orchestrator started with monitoring")
         
@@ -135,6 +144,58 @@ async def start_with_monitoring(config_path: str = "config/task_schedule.yaml", 
         return False
     
     return True
+
+
+async def _check_agent_registration():
+    """Check agent registration status and handle fallback if needed."""
+    logger.info("Checking agent registration status...")
+    
+    try:
+        # Try to get agent controller
+        from agents.agent_controller import get_agent_controller
+        agent_controller = get_agent_controller()
+        
+        # Get registration status
+        registration_status = agent_controller.get_agent_registration_status()
+        
+        # Log registration results
+        logger.info(f"Agent registration check completed:")
+        logger.info(f"  Total agents: {registration_status['total_agents']}")
+        logger.info(f"  Successful registrations: {registration_status['successful_registrations']}")
+        logger.info(f"  Failed registrations: {registration_status['failed_registrations']}")
+        logger.info(f"  Fallback agent created: {registration_status['fallback_agent_created']}")
+        
+        # Check if we have real agents
+        if registration_status['total_agents'] == 0:
+            logger.warning("⚠️ No agents registered - system will use fallback agent")
+            logger.info("System will continue running for UI testing and future agent reloads")
+        elif registration_status['fallback_agent_created']:
+            logger.warning("⚠️ Only fallback agent available - real agents failed to register")
+            logger.info("System will continue running with limited functionality")
+        else:
+            logger.info("✅ Real agents registered successfully")
+        
+        # Print registered agent names
+        if registration_status['registered_agent_names']:
+            logger.info(f"Registered agents: {', '.join(registration_status['registered_agent_names'])}")
+            
+            # Print agent details
+            for agent_name, agent_details in registration_status['agent_details'].items():
+                logger.info(f"  {agent_name}: {agent_details['class_name']} ({agent_details['category']})")
+                logger.info(f"    Capabilities: {', '.join(agent_details['capabilities'])}")
+        else:
+            logger.warning("⚠️ No agents found in registration details")
+        
+        return registration_status
+        
+    except ImportError as e:
+        logger.warning(f"⚠️ Agent controller not available: {e}")
+        logger.info("System will continue without agent registration checking")
+        return None
+    except Exception as e:
+        logger.error(f"❌ Error checking agent registration: {e}")
+        logger.info("System will continue without agent registration checking")
+        return None
 
 
 def check_system_requirements():

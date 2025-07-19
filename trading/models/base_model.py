@@ -15,14 +15,38 @@ import matplotlib.pyplot as plt
 # Third-party imports
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
-import torch.optim as optim
+
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.optim.lr_scheduler import ReduceLROnPlateau
+    from torch.utils.data import DataLoader, Dataset
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling deep learning models.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    optim = None
+    ReduceLROnPlateau = None
+    DataLoader = None
+    Dataset = None
+    TORCH_AVAILABLE = False
+
+# Try to import scikit-learn
+try:
+    from sklearn.preprocessing import StandardScaler
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling data preprocessing.")
+    print(f"   Missing: {e}")
+    StandardScaler = None
+    SKLEARN_AVAILABLE = False
+
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
-from sklearn.preprocessing import StandardScaler
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import DataLoader, Dataset
 
 from .dataset import TimeSeriesDataset
 from .model_utils import (
@@ -111,6 +135,9 @@ class TimeSeriesDataset(Dataset):
             feature_cols: List of feature column names
             scaler: Optional scaler for features
         """
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TimeSeriesDataset.")
+        
         self.sequence_length = sequence_length
         self.target_col = target_col
         self.feature_cols = feature_cols
@@ -119,6 +146,9 @@ class TimeSeriesDataset(Dataset):
         self._validate_data(data)
 
         # Scale features
+        if not SKLEARN_AVAILABLE:
+            raise ImportError("scikit-learn is not available. Cannot perform data scaling.")
+        
         if scaler is None:
             self.scaler = StandardScaler()
             self.features = self.scaler.fit_transform(data[feature_cols])
@@ -202,7 +232,11 @@ class BaseModel(ABC):
         self.optimizer = None
         self.scheduler = None
         self.criterion = None
-        self.scaler = StandardScaler()
+        
+        if SKLEARN_AVAILABLE:
+            self.scaler = StandardScaler()
+        else:
+            self.scaler = None
 
         # Training state
         self.train_losses = []
@@ -266,6 +300,8 @@ class BaseModel(ABC):
         Returns:
             PyTorch model
         """
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot build model.")
 
     def _validate_config(self) -> None:
         """Validate model configuration."""

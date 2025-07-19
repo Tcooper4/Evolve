@@ -1,0 +1,311 @@
+# Function Refactoring Report
+
+## generate_sample_data\
+- **Action**: import_and_replace
+- **Target Module**: utils.general_utils
+- **Files to Update**: 9
+
+  - .\demo_async_strategies.py
+  - .\example_async_strategy_runner.py
+  - .\test_enhanced_arima.py
+  - .\examples\enhanced_cost_backtest_example.py
+  - .\examples\ensemble_strategy_example.py
+  - .\examples\optuna_tuner_example.py
+  - .\examples\risk_aware_hybrid_model_example.py
+  - .\examples\strategy_combo_example.py
+  - .\examples\walk_forward_backtest_example.py
+
+## main\
+- **Action**: import_and_replace
+- **Target Module**: utils.general_utils
+- **Files to Update**: 199
+
+  - .\demo_async_strategies.py
+  - .\example_async_strategy_runner.py
+  - .\example_caching_usage.py
+  - .\install_requirements.py
+  - .\main.py
+  - .\start_orchestrator.py
+  - .\test_agent_controller.py
+  - .\test_batch12_imports.py
+  - .\test_batch5_fixes.py
+  - .\test_config_fallback.py
+  - .\test_cost_modeling_simple.py
+  - .\test_fallback_system.py
+  - .\test_modularization.py
+  - .\test_modular_components.py
+  - .\test_modular_simple.py
+  - .\test_prompt_memory.py
+  - .\test_risk_aware_hybrid_simple.py
+  - .\test_task_agent.py
+  - .\update_imports.py
+  - .\archive\legacy_tests\test_modular_refactor.py
+  - .\automate\daily_scheduler.py
+  - .\core\orchestrator\task_orchestrator.py
+  - .\examples\enhanced_arima_example.py
+  - .\examples\enhanced_cost_backtest_example.py
+  - .\examples\ensemble_strategy_example.py
+  - .\examples\execution_engine_example.py
+  - .\examples\explainability_example.py
+  - .\examples\meta_controller_example.py
+  - .\examples\model_performance_logging_example.py
+  - .\examples\monte_carlo_simulation_example.py
+  - .\examples\optuna_tuner_example.py
+  - .\examples\portfolio_management_example.py
+  - .\examples\prompt_examples_demo.py
+  - .\examples\prompt_router_example.py
+  - .\examples\risk_aware_hybrid_model_example.py
+  - .\examples\sentiment_analysis_example.py
+  - .\examples\strategy_combo_example.py
+  - .\examples\strategy_research_example.py
+  - .\examples\task_agent_example.py
+  - .\examples\task_orchestrator_example.py
+  - .\examples\walk_forward_backtest_example.py
+  - .\execution\broker_adapter.py
+  - .\execution\execution_agent.py
+  - .\interface\unified_interface.py
+  - .\models\retrain.py
+  - .\pages\10_Strategy_Health_Dashboard.py
+  - .\pages\18_Alerts.py
+  - .\pages\19_Admin_Panel.py
+  - .\pages\1_Forecast_Trade.py
+  - .\pages\2_Backtest_Strategy.py
+  - .\pages\2_Strategy_Backtest.py
+  - .\pages\3_Trade_Execution.py
+  - .\pages\4_Portfolio_Management.py
+  - .\pages\5_Risk_Analysis.py
+  - .\pages\5_📊_System_Scorecard.py
+  - .\pages\6_Model_Optimization.py
+  - .\pages\6_Strategy_History.py
+  - .\pages\7_Market_Analysis.py
+  - .\pages\7_Optimizer.py
+  - .\pages\7_Strategy_Performance.py
+  - .\pages\8_Agent_Management.py
+  - .\pages\8_Explainability.py
+  - .\pages\9_System_Monitoring.py
+  - .\pages\forecast.py
+  - .\pages\Forecasting.py
+  - .\pages\HybridModel.py
+  - .\pages\Model_Lab.py
+  - .\pages\Model_Performance_Dashboard.py
+  - .\pages\Monte_Carlo_Simulation.py
+  - .\pages\optimization_dashboard.py
+  - .\pages\performance_tracker.py
+  - .\pages\Reports.py
+  - .\pages\risk_preview_dashboard.py
+  - .\pages\settings.py
+  - .\pages\strategy.py
+  - .\pages\Strategy_Combo_Creator.py
+  - .\pages\Strategy_Lab.py
+  - .\pages\Strategy_Pipeline_Demo.py
+  - .\scripts\check_tests.py
+  - .\scripts\cleanup_production.py
+  - .\scripts\cleanup_requirements.py
+  - .\scripts\deploy_to_kube_batch.py
+  - .\scripts\generate_docs.py
+  - .\scripts\integrate_orchestrator.py
+  - .\scripts\launch_institutional_system.py
+  - .\scripts\launch_unified_interface.py
+  - .\scripts\manage.py
+  - .\scripts\manage_api.py
+  - .\scripts\manage_backup.py
+  - .\scripts\manage_config.py
+  - .\scripts\manage_dashboard.py
+  - .\scripts\manage_data.py
+  - .\scripts\manage_data_quality.py
+  - .\scripts\manage_db.py
+  - .\scripts\manage_debug.py
+  - .\scripts\manage_deps.py
+  - .\scripts\manage_docs.py
+  - .\scripts\manage_env.py
+  - .\scripts\manage_health.py
+  - .\scripts\manage_incident.py
+  - .\scripts\manage_logs.py
+  - .\scripts\manage_ml.py
+  - .\scripts\manage_model.py
+  - .\scripts\manage_monitor.py
+  - .\scripts\manage_performance.py
+  - .\scripts\manage_pipeline.py
+  - .\scripts\manage_recovery.py
+  - .\scripts\manage_security.py
+  - .\scripts\monitor_app.py
+  - .\scripts\quick_system_check.py
+  - .\scripts\refactor_duplicates.py
+  - .\scripts\resolve_dependencies.py
+  - .\scripts\run_app.py
+  - .\scripts\run_comprehensive_tests.py
+  - .\scripts\run_forecasting_pipeline.py
+  - .\scripts\run_live_dashboard.py
+  - .\scripts\run_tests.py
+  - .\scripts\run_unified.py
+  - .\scripts\setup_test_env.py
+  - .\scripts\system_check.py
+  - .\scripts\update_imports.py
+  - .\streamlit_pages\ModelTrust.py
+  - .\streamlit_pages\WeightDashboard.py
+  - .\system\orchestrator_integration.py
+  - .\system\bootstrap\runtime_initializer.py
+  - .\system\infra\agents\scripts\deploy_services.py
+  - .\system\infra\agents\scripts\manage_secrets.py
+  - .\system\infra\agents\scripts\monitoring_setup.py
+  - .\system\infra\agents\scripts\setup_environment.py
+  - .\tests\audit_return_statements.py
+  - .\tests\check_system.py
+  - .\tests\complete_optimization_consolidation.py
+  - .\tests\comprehensive_audit.py
+  - .\tests\comprehensive_codebase_review.py
+  - .\tests\comprehensive_return_fix.py
+  - .\tests\demo_unified_interface.py
+  - .\tests\focused_return_fix.py
+  - .\tests\post_upgrade_audit.py
+  - .\tests\post_upgrade_return_audit.py
+  - .\tests\remove_duplicates.py
+  - .\tests\simple_audit.py
+  - .\tests\system_check.py
+  - .\tests\targeted_audit.py
+  - .\tests\test_core_functionality.py
+  - .\tests\test_enhancements.py
+  - .\tests\test_fixes.py
+  - .\tests\test_hybrid_scoring.py
+  - .\tests\test_imports.py
+  - .\tests\test_institutional_upgrade.py
+  - .\tests\test_prompt_hybrid_backtest_improvements.py
+  - .\tests\test_return_statements.py
+  - .\tests\test_system_status.py
+  - .\tests\test_system_upgrade.py
+  - .\tests\test_unified_interface.py
+  - .\tests\integration\test_integration_enhancements.py
+  - .\tests\unit\run_tests.py
+  - .\tools\encoding_utils.py
+  - .\trading\demo_live_market_runner.py
+  - .\trading\launch_live_market_runner.py
+  - .\trading\test_live_market_runner.py
+  - .\trading\agents\agent_loop_manager.py
+  - .\trading\agents\demo_leaderboard.py
+  - .\trading\agents\demo_pluggable_agents.py
+  - .\trading\agents\demo_risk_controls.py
+  - .\trading\agents\launch_execution_agent.py
+  - .\trading\agents\launch_leaderboard_dashboard.py
+  - .\trading\agents\leaderboard_dashboard.py
+  - .\trading\logs\init_logs.py
+  - .\trading\memory\visualize_memory.py
+  - .\trading\nlp\sandbox_nlp.py
+  - .\trading\report\launch_report_service.py
+  - .\trading\report\report_service.py
+  - .\trading\report\test_simple.py
+  - .\trading\services\agent_api_service.py
+  - .\trading\services\demo_quant_gpt.py
+  - .\trading\services\demo_safe_executor.py
+  - .\trading\services\launch_agent_api.py
+  - .\trading\services\launch_meta_tuner.py
+  - .\trading\services\launch_model_builder.py
+  - .\trading\services\launch_multimodal.py
+  - .\trading\services\launch_performance_critic.py
+  - .\trading\services\launch_prompt_router.py
+  - .\trading\services\launch_quant_gpt.py
+  - .\trading\services\launch_research.py
+  - .\trading\services\launch_safe_executor.py
+  - .\trading\services\launch_updater.py
+  - .\trading\services\quant_gpt.py
+  - .\trading\services\quant_gpt_example.py
+  - .\trading\services\service_client.py
+  - .\trading\services\service_manager.py
+  - .\trading\services\test_quant_gpt.py
+  - .\trading\services\test_safe_executor.py
+  - .\trading\services\test_service_integration.py
+  - .\trading\tools\init_logs.py
+  - .\trading\ui\institutional_dashboard.py
+  - .\trading\ui\logging_controls.py
+  - .\trading\utils\demo_reasoning.py
+  - .\trading\utils\launch_reasoning_service.py
+  - .\trading\utils\reasoning_service.py
+
+## setup_logging\
+- **Action**: import_and_replace
+- **Target Module**: utils.general_utils
+- **Files to Update**: 51
+
+  - .\config\logging_config.py
+  - .\scripts\generate_docs.py
+  - .\scripts\manage.py
+  - .\scripts\manage_api.py
+  - .\scripts\manage_backup.py
+  - .\scripts\manage_config.py
+  - .\scripts\manage_dashboard.py
+  - .\scripts\manage_data.py
+  - .\scripts\manage_data_quality.py
+  - .\scripts\manage_db.py
+  - .\scripts\manage_debug.py
+  - .\scripts\manage_deps.py
+  - .\scripts\manage_docs.py
+  - .\scripts\manage_health.py
+  - .\scripts\manage_incident.py
+  - .\scripts\manage_logs.py
+  - .\scripts\manage_ml.py
+  - .\scripts\manage_model.py
+  - .\scripts\manage_monitor.py
+  - .\scripts\manage_performance.py
+  - .\scripts\manage_pipeline.py
+  - .\scripts\manage_recovery.py
+  - .\scripts\manage_security.py
+  - .\scripts\monitor_app.py
+  - .\system\logger_debugger.py
+  - .\system\infra\agents\alert_manager.py
+  - .\system\infra\agents\scripts\monitoring_setup.py
+  - .\system\infra\agents\services\automation_api.py
+  - .\system\infra\agents\services\automation_cli.py
+  - .\system\infra\agents\services\automation_config.py
+  - .\system\infra\agents\services\automation_core.py
+  - .\system\infra\agents\services\automation_health.py
+  - .\system\infra\agents\services\automation_logging.py
+  - .\system\infra\agents\services\automation_metrics.py
+  - .\system\infra\agents\services\automation_monitoring.py
+  - .\system\infra\agents\services\automation_notification.py
+  - .\system\infra\agents\services\automation_security.py
+  - .\system\infra\agents\services\automation_workflows.py
+  - .\trading\launch_live_market_runner.py
+  - .\trading\agents\launch_execution_agent.py
+  - .\trading\core\__init__.py
+  - .\trading\memory\logger_utils.py
+  - .\trading\report\launch_report_service.py
+  - .\trading\services\agent_api_service.py
+  - .\trading\services\demo_safe_executor.py
+  - .\trading\services\launch_agent_api.py
+  - .\trading\services\test_service_integration.py
+  - .\trading\utils\launch_reasoning_service.py
+  - .\trading\utils\logging.py
+  - .\utils\launch_utils.py
+  - .\utils\logging.py
+
+## load_config\
+- **Action**: import_and_replace
+- **Target Module**: utils.general_utils
+- **Files to Update**: 10
+
+  - .\core\orchestrator\task_orchestrator.py
+  - .\system\infra\agents\services\automation_config.py
+  - .\trading\launch_live_market_runner.py
+  - .\trading\agents\launch_execution_agent.py
+  - .\trading\config\configuration.py
+  - .\trading\nlp\sentiment_processor.py
+  - .\trading\services\agent_api_service.py
+  - .\trading\utils\config_manager.py
+  - .\trading\utils\config_utils.py
+  - .\utils\launch_utils.py
+
+## create_sample_data\
+- **Action**: import_and_replace
+- **Target Module**: utils.general_utils
+- **Files to Update**: 3
+
+  - .\examples\model_innovation_example.py
+  - .\tests\test_async_strategy_runner.py
+  - .\utils\launch_utils.py
+
+## parse_args\
+- **Action**: import_and_replace
+- **Target Module**: utils.general_utils
+- **Files to Update**: 2
+
+  - .\models\retrain.py
+  - .\utils\launch_utils.py

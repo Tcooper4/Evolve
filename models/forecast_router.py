@@ -430,9 +430,13 @@ class ForecastRouter:
                 "warnings": self._get_warnings(data, selected_model),
             }
 
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError) as e:
             logger.error(f"Forecast error: {str(e)}")
             # Return fallback result instead of raising
             fallback_result = self._get_fallback_result(data, horizon)
             return fallback_result
-        # TODO: Specify exception type instead of using bare except
+        except Exception as e:
+            logger.error(f"Unexpected forecast error: {str(e)}")
+            # Return fallback result for unexpected errors
+            fallback_result = self._get_fallback_result(data, horizon)
+            return fallback_result

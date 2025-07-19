@@ -7,7 +7,18 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
-from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
+
+# Try to import scikit-learn
+try:
+    from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling feature selection capabilities.")
+    print(f"   Missing: {e}")
+    SelectKBest = None
+    f_regression = None
+    mutual_info_regression = None
+    SKLEARN_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -234,6 +245,9 @@ class FeatureEngineer:
     def select_features(
         self, X: pd.DataFrame, y: pd.Series, method: str = "mutual_info", k: int = 10
     ) -> pd.DataFrame:
+        if not SKLEARN_AVAILABLE:
+            logger.warning("scikit-learn not available. Returning original features.")
+            return X
         """Select the best features using statistical methods."""
         try:
             # Remove NaN values

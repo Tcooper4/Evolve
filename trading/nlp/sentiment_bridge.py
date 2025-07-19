@@ -13,14 +13,30 @@ import hashlib
 
 logger = logging.getLogger(__name__)
 
-# Check for embedding dependencies
+# Try to import sentence_transformers
 try:
     from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ sentence_transformers not available. Disabling soft-matching features.")
+    print(f"   Missing: {e}")
+    SentenceTransformer = None
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+# Try to import scikit-learn
+try:
     from sklearn.metrics.pairwise import cosine_similarity
-    EMBEDDINGS_AVAILABLE = True
-except ImportError:
-    EMBEDDINGS_AVAILABLE = False
-    logger.warning("Sentence transformers not available, soft-matching disabled")
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling cosine similarity calculations.")
+    print(f"   Missing: {e}")
+    cosine_similarity = None
+    SKLEARN_AVAILABLE = False
+
+# Overall embeddings availability
+EMBEDDINGS_AVAILABLE = SENTENCE_TRANSFORMERS_AVAILABLE and SKLEARN_AVAILABLE
+if not EMBEDDINGS_AVAILABLE:
+    logger.warning("Embedding dependencies not available, soft-matching disabled")
 
 @dataclass
 class SoftMatchResult:

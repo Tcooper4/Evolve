@@ -23,12 +23,22 @@ except ImportError:
     openai = None
     OPENAI_AVAILABLE = False
 
-# Try to import HuggingFace
+# Try to import PyTorch and transformers
 try:
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+    TORCH_AVAILABLE = True
+    TRANSFORMERS_AVAILABLE = True
     HUGGINGFACE_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ PyTorch/transformers not available. Disabling local LLM features.")
+    print(f"   Missing: {e}")
+    torch = None
+    AutoModelForCausalLM = None
+    AutoTokenizer = None
+    pipeline = None
+    TORCH_AVAILABLE = False
+    TRANSFORMERS_AVAILABLE = False
     HUGGINGFACE_AVAILABLE = False
 
 logger = logging.getLogger(__name__)

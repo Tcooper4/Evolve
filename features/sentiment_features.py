@@ -29,17 +29,24 @@ warnings.filterwarnings('ignore')
 try:
     from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
     VADER_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ vaderSentiment not available. Disabling VADER sentiment analysis.")
+    print(f"   Missing: {e}")
+    SentimentIntensityAnalyzer = None
     VADER_AVAILABLE = False
-    print("Warning: VADER not available. Install with: pip install vaderSentiment")
 
 try:
     import torch
     from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
     BERT_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ HuggingFace libraries not available. Disabling BERT sentiment analysis.")
+    print(f"   Missing: {e}")
+    torch = None
+    pipeline = None
+    AutoTokenizer = None
+    AutoModelForSequenceClassification = None
     BERT_AVAILABLE = False
-    print("Warning: BERT not available. Install with: pip install transformers torch")
 
 # Local imports
 from data.sentiment.sentiment_fetcher import SentimentData, SentimentFetcher

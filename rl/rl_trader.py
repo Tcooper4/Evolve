@@ -308,7 +308,15 @@ class TrainingCallback(BaseCallback):
             dones = self.locals["dones"]
             if any(dones):
                 # Calculate metrics for completed episodes
-                pass
+                completed_episodes = sum(dones)
+                if completed_episodes > 0:
+                    logger.info(f"Completed {completed_episodes} episodes in this rollout")
+                    
+                    # Calculate average reward for completed episodes
+                    if "rewards" in self.locals:
+                        episode_rewards = self.locals["rewards"]
+                        avg_reward = np.mean(episode_rewards)
+                        logger.info(f"Average episode reward: {avg_reward:.4f}")
 
 
 class RLTrader:

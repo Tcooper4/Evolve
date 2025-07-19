@@ -12,11 +12,40 @@ from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, asdict
 from enum import Enum
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+# Try to import matplotlib
+try:
+    import matplotlib.pyplot as plt
+    MATPLOTLIB_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ matplotlib not available. Disabling plotting capabilities.")
+    print(f"   Missing: {e}")
+    plt = None
+    MATPLOTLIB_AVAILABLE = False
+
+# Try to import seaborn
+try:
+    import seaborn as sns
+    SEABORN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ seaborn not available. Disabling advanced plotting capabilities.")
+    print(f"   Missing: {e}")
+    sns = None
+    SEABORN_AVAILABLE = False
+
+# Try to import scikit-learn
+try:
+    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling evaluation metrics.")
+    print(f"   Missing: {e}")
+    mean_absolute_error = None
+    mean_squared_error = None
+    r2_score = None
+    SKLEARN_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +146,9 @@ class ModelEvaluator:
     def evaluate_model(
         self, y_true: np.ndarray, y_pred: np.ndarray, model_name: str
     ) -> Dict[str, float]:
+        if not SKLEARN_AVAILABLE:
+            logger.warning("scikit-learn not available. Cannot evaluate model metrics.")
+            return {}
         """Evaluate model performance with validation."""
         try:
             metrics = {
@@ -464,6 +496,9 @@ class ModelEvaluator:
     def plot_predictions(
         self, model_name: str, save_path: Optional[str] = None
     ) -> Dict[str, Any]:
+        if not MATPLOTLIB_AVAILABLE:
+            logger.warning("matplotlib not available. Cannot plot predictions.")
+            return {"success": False, "error": "matplotlib not available"}
         """Plot actual vs predicted values.
 
         Returns:

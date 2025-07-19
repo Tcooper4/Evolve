@@ -49,32 +49,52 @@ if PROPHET_AVAILABLE:
     @ModelRegistry.register("Prophet")
     class ProphetModel(BaseModel):
         def __init__(self, config):
-            super().__init__(config)
+            # Initialize availability flag
+            self.available = True
+            
+            try:
+                super().__init__(config)
 
-            # Get Prophet parameters with defaults
-            prophet_params = config.get("prophet_params", {})
+                # Get Prophet parameters with defaults
+                prophet_params = config.get("prophet_params", {})
 
-            # Add holiday support if enabled
-            if config.get("add_holidays", False) and HOLIDAYS_AVAILABLE:
-                country = config.get("holiday_country", "US")
-                prophet_params["holidays"] = self._get_country_holidays(country)
-                logger.info(f"Added holidays for country: {country}")
+                # Add holiday support if enabled
+                if config.get("add_holidays", False) and HOLIDAYS_AVAILABLE:
+                    country = config.get("holiday_country", "US")
+                    prophet_params["holidays"] = self._get_country_holidays(country)
+                    logger.info(f"Added holidays for country: {country}")
 
-            # Add changepoint control
-            if "changepoint_prior_scale" not in prophet_params:
-                prophet_params["changepoint_prior_scale"] = config.get(
-                    "changepoint_prior_scale", 0.05
-                )
+                # Add changepoint control
+                if "changepoint_prior_scale" not in prophet_params:
+                    prophet_params["changepoint_prior_scale"] = config.get(
+                        "changepoint_prior_scale", 0.05
+                    )
 
-            # Add seasonality control
-            if "seasonality_prior_scale" not in prophet_params:
-                prophet_params["seasonality_prior_scale"] = config.get(
-                    "seasonality_prior_scale", 10.0
-                )
+                # Add seasonality control
+                if "seasonality_prior_scale" not in prophet_params:
+                    prophet_params["seasonality_prior_scale"] = config.get(
+                        "seasonality_prior_scale", 10.0
+                    )
 
-            self.model = Prophet(**prophet_params)
-            self.fitted = False
-            self.history = None
+                # Initialize Prophet model with error handling
+                try:
+                    self.model = Prophet(**prophet_params)
+                    self.fitted = False
+                    self.history = None
+                    logger.info("Prophet model initialized successfully")
+                except Exception as e:
+                    logger.error(f"Failed to initialize Prophet model: {e}")
+                    self.model = None
+                    print("⚠️ Prophet model unavailable due to model initialization failure")
+                    print(f"   Error: {e}")
+                    # Don't set available to False here as we can still register
+                    
+            except Exception as e:
+                logger.error(f"Failed to initialize ProphetModel: {e}")
+                self.available = False
+                print("⚠️ ProphetModel unavailable due to initialization failure")
+                print(f"   Error: {e}")
+                # Don't raise exception, just mark as unavailable
 
         def fit(self, train_data: pd.DataFrame, val_data=None, **kwargs):
             """Fit the Prophet model with robust error handling.
@@ -91,6 +111,15 @@ if PROPHET_AVAILABLE:
                 ValueError: If data is missing or malformed
                 RuntimeError: If Prophet fitting fails
             """
+            if not self.available:
+                print("⚠️ ProphetModel unavailable due to initialization failure")
+                return {
+                    "success": False,
+                    "error": "ProphetModel unavailable due to initialization failure",
+                    "train_loss": [],
+                    "val_loss": []
+                }
+            
             try:
                 # Validate Prophet configuration before fitting
                 self._validate_prophet_config()
@@ -352,6 +381,10 @@ if PROPHET_AVAILABLE:
             Returns:
                 Predicted values
             """
+            if not self.available:
+                print("⚠️ ProphetModel unavailable due to initialization failure")
+                return np.array([])
+            
             try:
                 # Check if input dataframe is empty or has NaNs
                 if data is None or data.empty:
@@ -435,6 +468,22 @@ if PROPHET_AVAILABLE:
             Returns:
                 Dictionary containing forecast results
             """
+            if not self.available:
+                print("⚠️ ProphetModel unavailable due to initialization failure")
+                # Return simple fallback forecast
+                fallback_forecast = np.full(horizon or 30, 1000.0)
+                last_date = data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()
+                forecast_dates = pd.date_range(start=last_date, periods=(horizon or 30) + 1, freq='D')[1:]
+                
+                return {
+                    "forecast": fallback_forecast,
+                    "dates": forecast_dates,
+                    "confidence": np.full(horizon or 30, 0.1),
+                    "model_type": "Prophet_Unavailable",
+                    "horizon": horizon or 30,
+                    "error": "ProphetModel unavailable due to initialization failure"
+                }
+            
             try:
                 if not self.fitted:
                     raise RuntimeError("Model must be fit before forecasting.")

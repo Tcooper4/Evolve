@@ -3,10 +3,21 @@ Training Loop - Batch 17
 Enhanced training loop with gradient clipping for training stability
 """
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
+# Try to import PyTorch
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.utils.data import DataLoader
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ PyTorch not available. Disabling training loop capabilities.")
+    print(f"   Missing: {e}")
+    torch = None
+    nn = None
+    optim = None
+    DataLoader = None
+    TORCH_AVAILABLE = False
 from typing import Dict, List, Optional, Tuple, Any, Callable
 from dataclasses import dataclass, field
 import logging
@@ -66,6 +77,8 @@ class TrainingLoop:
                  criterion: Optional[nn.Module] = None,
                  optimizer: Optional[optim.Optimizer] = None,
                  scheduler: Optional[optim.lr_scheduler._LRScheduler] = None):
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is not available. Cannot create TrainingLoop.")
         """
         Initialize training loop.
         

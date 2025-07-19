@@ -82,31 +82,60 @@ class QuantGPTCommentaryAgent:
         Args:
             config: Configuration dictionary
         """
-        self.config = config or {}
-        self.logger = logging.getLogger(__name__)
-        self.llm_interface = LLMInterface()
-        self.market_analyzer = MarketAnalyzer()
-        self.memory = AgentMemory()
+        # Initialize availability flag
+        self.available = True
+        
+        try:
+            self.config = config or {}
+            self.logger = logging.getLogger(__name__)
+            
+            # Initialize components with error handling
+            try:
+                self.llm_interface = LLMInterface()
+            except Exception as e:
+                self.logger.error(f"Failed to initialize LLM interface: {e}")
+                self.llm_interface = None
+                print("⚠️ LLM interface unavailable due to initialization failure")
+                print(f"   Error: {e}")
+            
+            try:
+                self.market_analyzer = MarketAnalyzer()
+            except Exception as e:
+                self.logger.error(f"Failed to initialize market analyzer: {e}")
+                self.market_analyzer = None
+                print("⚠️ Market analyzer unavailable due to initialization failure")
+                print(f"   Error: {e}")
+            
+            try:
+                self.memory = AgentMemory()
+            except Exception as e:
+                self.logger.error(f"Failed to initialize agent memory: {e}")
+                self.memory = None
+                print("⚠️ Agent memory unavailable due to initialization failure")
+                print(f"   Error: {e}")
 
-        # Configuration
-        self.max_context_length = self.config.get("max_context_length", 4000)
-        self.confidence_threshold = self.config.get("confidence_threshold", 0.7)
-        self.overfitting_threshold = self.config.get("overfitting_threshold", 0.8)
-        self.regime_detection_window = self.config.get("regime_detection_window", 60)
+            # Configuration
+            self.max_context_length = self.config.get("max_context_length", 4000)
+            self.confidence_threshold = self.config.get("confidence_threshold", 0.7)
+            self.overfitting_threshold = self.config.get("overfitting_threshold", 0.8)
+            self.regime_detection_window = self.config.get("regime_detection_window", 60)
 
-        # Storage
-        self.commentary_history: List[CommentaryResponse] = []
-        self.overfitting_alerts: List[Dict[str, Any]] = []
-        self.regime_analysis_cache: Dict[str, Dict[str, Any]] = {}
+            # Storage
+            self.commentary_history: List[CommentaryResponse] = []
+            self.overfitting_alerts: List[Dict[str, Any]] = []
+            self.regime_analysis_cache: Dict[str, Dict[str, Any]] = {}
 
-        # Load templates
-        self._load_commentary_templates()
+            # Load templates
+            self._load_commentary_templates()
+            
+            self.logger.info("QuantGPTCommentaryAgent initialized successfully")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        except Exception as e:
+            self.logger.error(f"Failed to initialize QuantGPTCommentaryAgent: {e}")
+            self.available = False
+            print("⚠️ QuantGPTCommentaryAgent unavailable due to initialization failure")
+            print(f"   Error: {e}")
+            # Don't raise exception, just mark as unavailable
 
     async def generate_commentary(
         self, request: CommentaryRequest
@@ -120,6 +149,13 @@ class QuantGPTCommentaryAgent:
         Returns:
             Commentary response with analysis and insights
         """
+        if not self.available:
+            print("⚠️ QuantGPTCommentaryAgent unavailable due to initialization failure")
+            return self._create_error_response(
+                request, 
+                "QuantGPTCommentaryAgent unavailable due to initialization failure"
+            )
+        
         try:
             self.logger.info(
                 f"Generating {request.request_type.value} commentary for {request.symbol}"

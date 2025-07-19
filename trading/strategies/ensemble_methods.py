@@ -16,8 +16,18 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import VotingRegressor
-from sklearn.metrics import mean_squared_error
+
+# Try to import scikit-learn
+try:
+    from sklearn.ensemble import VotingRegressor
+    from sklearn.metrics import mean_squared_error
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling ensemble voting capabilities.")
+    print(f"   Missing: {e}")
+    VotingRegressor = None
+    mean_squared_error = None
+    SKLEARN_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +169,9 @@ class DynamicEnsembleVoter:
             timestamp = datetime.now()
             
         # Calculate MSE
-        if len(actual_returns) > 0 and len(predicted_returns) > 0:
+        if not SKLEARN_AVAILABLE:
+            mse = float('inf')
+        elif len(actual_returns) > 0 and len(predicted_returns) > 0:
             # Align the series
             aligned_actual, aligned_pred = actual_returns.align(predicted_returns, join='inner')
             if len(aligned_actual) > 0:
@@ -663,6 +675,9 @@ def combine_ensemble_model(
     strategy_weights: Dict[str, float],
     confidence_threshold: float = 0.6,
 ) -> HybridSignal:
+    if not SKLEARN_AVAILABLE:
+        logger.warning("scikit-learn not available. Cannot use ensemble model.")
+        return create_fallback_hybrid_signal()
     """Combine signals using ensemble model.
 
     Args:

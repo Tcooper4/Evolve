@@ -13,40 +13,42 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Import NLP libraries with fallback handling
+# Try to import spaCy
 try:
     import spacy
-
     SPACY_AVAILABLE = True
     # Load English model
     try:
         nlp = spacy.load("en_core_web_sm")
     except OSError:
-        logging.warning(
-            "spaCy English model not found. Install with: python -m spacy download en_core_web_sm"
-        )
+        print("⚠️ spaCy English model not found. Install with: python -m spacy download en_core_web_sm")
         SPACY_AVAILABLE = False
-except ImportError:
+except ImportError as e:
+    print("⚠️ spaCy not available. Disabling spaCy-based NLP features.")
+    print(f"   Missing: {e}")
+    spacy = None
     SPACY_AVAILABLE = False
-    logging.warning("spaCy not available. Install with: pip install spacy")
 
+# Try to import transformers
 try:
     from transformers import AutoTokenizer, pipeline
-
     TRANSFORMERS_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ transformers not available. Disabling transformer-based NLP features.")
+    print(f"   Missing: {e}")
+    AutoTokenizer = None
+    pipeline = None
     TRANSFORMERS_AVAILABLE = False
-    logging.warning(
-        "Transformers not available. Install with: pip install transformers"
-    )
 
+# Try to import TextBlob
 try:
     from textblob import TextBlob
-
     TEXTBLOB_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ TextBlob not available. Disabling TextBlob-based features.")
+    print(f"   Missing: {e}")
+    TextBlob = None
     TEXTBLOB_AVAILABLE = False
-    logging.warning("TextBlob not available. Install with: pip install textblob")
 
 from trading.utils.logging_utils import setup_logger
 

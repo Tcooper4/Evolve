@@ -76,7 +76,17 @@ class PromptRouter:
         try:
             from agents.agent_controller import get_agent_controller
             self.agent_controller = get_agent_controller()
-            self.logger.info("✅ Agent controller initialized successfully")
+            
+            # Check agent registration status
+            registration_status = self.agent_controller.get_agent_registration_status()
+            
+            if registration_status['total_agents'] == 0:
+                self.logger.warning("⚠️ No agents registered - will use fallback agent")
+            elif registration_status['fallback_agent_created']:
+                self.logger.warning("⚠️ Only fallback agent available - real agents failed to register")
+            else:
+                self.logger.info(f"✅ Agent controller initialized with {registration_status['total_agents']} agents")
+                
         except ImportError as e:
             self.logger.warning(f"⚠️ Agent controller not available: {e}")
             self.agent_controller = None
@@ -522,16 +532,21 @@ class PromptRouter:
     
     async def _handle_general_prompt(self, prompt: str, user_id: str) -> Dict[str, Any]:
         """
-        Handle general prompts using the prompt agent.
+        Handle general prompts using the prompt agent or mock agent.
         
         Args:
             prompt: User prompt
             user_id: User identifier
             
         Returns:
-            Dict containing prompt agent result
+            Dict containing prompt processing result
         """
         try:
+            # Check if we have real agents available
+            if self.agent_controller and not self.agent_controller.has_real_agents():
+                # Use mock agent as fallback
+                return await self._handle_with_mock_agent(prompt, user_id)
+            
             # Use the prompt agent for general prompts
             if self.prompt_agent:
                 result = await self.prompt_agent.process_prompt(prompt)
@@ -542,20 +557,50 @@ class PromptRouter:
                     "message": result.message
                 }
             else:
-                # Fallback to basic response
-                return {
-                    "success": True,
-                    "response": {"message": "Prompt received and processed"},
-                    "routing_type": "general_prompt",
-                    "message": "General prompt processed"
-                }
+                # Fallback to mock agent if prompt agent not available
+                return await self._handle_with_mock_agent(prompt, user_id)
                 
         except Exception as e:
             self.logger.error(f"Error handling general prompt: {e}")
+            # Fallback to mock agent on error
+            return await self._handle_with_mock_agent(prompt, user_id)
+    
+    async def _handle_with_mock_agent(self, prompt: str, user_id: str) -> Dict[str, Any]:
+        """
+        Handle prompt using mock agent as fallback.
+        
+        Args:
+            prompt: User prompt
+            user_id: User identifier
+            
+        Returns:
+            Dict containing mock agent result
+        """
+        try:
+            from agents.mock_agent import create_mock_agent
+            
+            # Create mock agent
+            mock_agent = create_mock_agent("FallbackAgent")
+            
+            # Execute with mock agent
+            result = await mock_agent.execute(prompt, user_id=user_id)
+            
+            return {
+                "success": result.success,
+                "response": result.data,
+                "routing_type": "mock_agent",
+                "agent_name": result.agent_name,
+                "execution_time": result.execution_time,
+                "message": result.message
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error with mock agent: {e}")
             return {
                 "success": False,
                 "error": str(e),
-                "routing_type": "general_prompt_error"
+                "routing_type": "mock_agent_error",
+                "message": "System is running in fallback mode with limited functionality"
             }
     
     def _extract_navigation_info(self, result: Dict[str, Any]) -> Dict[str, str]:
@@ -654,15 +699,35 @@ class PromptRouter:
         Returns:
             Dict containing fallback response
         """
-        return {
-            "success": True,
-            "message": f"I understand you're asking about: '{prompt}'. I'm currently setting up the specialized agents to help you with this request. Please try again in a moment.",
-            "data": {"fallback_used": True},
-            "navigation_info": {},
-            "processing_time": 0.0,
-            "timestamp": datetime.now().isoformat(),
-            "fallback": True,
-        }
+        try:
+            # Try to use mock agent for fallback
+            from agents.mock_agent import create_mock_agent
+            import asyncio
+            
+            mock_agent = create_mock_agent("FallbackAgent")
+            result = asyncio.run(mock_agent.execute(prompt))
+            
+            return {
+                "success": result.success,
+                "message": result.message,
+                "data": result.data,
+                "navigation_info": {},
+                "processing_time": result.execution_time,
+                "timestamp": datetime.now().isoformat(),
+                "fallback": True,
+                "agent_name": result.agent_name
+            }
+        except Exception as e:
+            # Ultimate fallback if mock agent fails
+            return {
+                "success": True,
+                "message": f"I understand you're asking about: '{prompt}'. I'm currently setting up the specialized agents to help you with this request. Please try again in a moment.",
+                "data": {"fallback_used": True, "error": str(e)},
+                "navigation_info": {},
+                "processing_time": 0.0,
+                "timestamp": datetime.now().isoformat(),
+                "fallback": True,
+            }
     
     async def _check_for_agent_workflow(self, prompt: str) -> Optional[Dict[str, Any]]:
         """

@@ -611,8 +611,8 @@ finally:
             # Clean up sandbox script
             try:
                 os.remove(sandbox_script)
-            except:
-                pass
+            except OSError as e:
+                logger.warning(f"Could not remove sandbox script {sandbox_script}: {e}")
 
             return result
 

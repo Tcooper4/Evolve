@@ -58,21 +58,11 @@ class AutomationCore:
             logger.error(f"Failed to load config: {str(e)}")
             raise
 
-    def setup_logging(self):
-        """Configure logging."""
-        log_path = Path("automation/logs")
-        log_path.mkdir(parents=True, exist_ok=True)
+    from utils.launch_utils import setup_logging
 
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[
-                logging.FileHandler(log_path / "automation.log"),
-                logging.StreamHandler(),
-            ],
-        )
-
-    def setup_cache(self):
+def setup_logging():
+    """Set up logging for the service."""
+    return setup_logging(service_name="service")def setup_cache(self):
         """Setup caching system."""
         self.cache = TTLCache(maxsize=self.config.cache_size, ttl=self.config.cache_ttl)
 

@@ -16,17 +16,32 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Optional
 
+# Try to import OpenAI
 try:
     import openai
-except ImportError:
+    OPENAI_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ OpenAI not available. Disabling OpenAI-based parsing.")
+    print(f"   Missing: {e}")
     openai = None
+    OPENAI_AVAILABLE = False
 
+# Try to import PyTorch and transformers
 try:
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-
+    TORCH_AVAILABLE = True
+    TRANSFORMERS_AVAILABLE = True
     HUGGINGFACE_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print("⚠️ PyTorch/transformers not available. Disabling local LLM features.")
+    print(f"   Missing: {e}")
+    torch = None
+    AutoModelForCausalLM = None
+    AutoTokenizer = None
+    pipeline = None
+    TORCH_AVAILABLE = False
+    TRANSFORMERS_AVAILABLE = False
     HUGGINGFACE_AVAILABLE = False
 
 from prompt_templates import format_template

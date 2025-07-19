@@ -6,8 +6,20 @@ import logging
 from typing import Dict, Optional
 
 import numpy as np
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import cross_val_score
+
+# Try to import scikit-learn
+try:
+    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+    from sklearn.model_selection import cross_val_score
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling model evaluation features.")
+    print(f"   Missing: {e}")
+    mean_absolute_error = None
+    mean_squared_error = None
+    r2_score = None
+    cross_val_score = None
+    SKLEARN_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +34,10 @@ class ModelEvaluator:
         self, y_true: np.ndarray, y_pred: np.ndarray
     ) -> Dict[str, float]:
         """Evaluate regression model performance."""
+        if not SKLEARN_AVAILABLE:
+            logger.warning("scikit-learn not available. Cannot evaluate regression model.")
+            return {}
+        
         try:
             # Remove NaN values
             mask = ~(np.isnan(y_true) | np.isnan(y_pred))
@@ -130,6 +146,10 @@ class ModelEvaluator:
         scoring: str = "neg_mean_squared_error",
     ) -> Dict[str, float]:
         """Perform cross-validation."""
+        if not SKLEARN_AVAILABLE:
+            logger.warning("scikit-learn not available. Cannot perform cross-validation.")
+            return {}
+        
         try:
             scores = cross_val_score(model, X, y, cv=cv, scoring=scoring)
 

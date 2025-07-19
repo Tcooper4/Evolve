@@ -13,8 +13,26 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from scipy import stats
-from sklearn.ensemble import IsolationForest
+
+# Try to import scipy
+try:
+    from scipy import stats
+    SCIPY_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scipy not available. Disabling statistical drift detection.")
+    print(f"   Missing: {e}")
+    stats = None
+    SCIPY_AVAILABLE = False
+
+# Try to import scikit-learn
+try:
+    from sklearn.ensemble import IsolationForest
+    SKLEARN_AVAILABLE = True
+except ImportError as e:
+    print("⚠️ scikit-learn not available. Disabling anomaly detection.")
+    print(f"   Missing: {e}")
+    IsolationForest = None
+    SKLEARN_AVAILABLE = False
 
 from utils.safe_json_saver import safe_save_historical_data
 
@@ -101,7 +119,10 @@ class ModelMonitor:
         )  # model_name -> list of drift scores
 
         # Anomaly detection
-        self.anomaly_detector = IsolationForest(contamination=0.1, random_state=42)
+        if SKLEARN_AVAILABLE:
+            self.anomaly_detector = IsolationForest(contamination=0.1, random_state=42)
+        else:
+            self.anomaly_detector = None
         self.anomaly_scores = defaultdict(list)  # model_name -> list of anomaly scores
         self.behavior_features = defaultdict(
             list
@@ -913,6 +934,9 @@ class ModelMonitor:
         threshold: float = 0.1,
         method: str = "ks_test",
     ) -> Dict[str, Any]:
+        if not SCIPY_AVAILABLE:
+            logger.warning("scipy not available. Cannot perform drift detection.")
+            return {"drift_detected": False, "drift_score": 0.0, "method": method}
         """Detect data drift between current and historical data.
 
         Args:
