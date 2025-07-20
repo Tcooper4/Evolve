@@ -1,17 +1,17 @@
-#!/usr/bin/env python3
 """
-Example script showing how to use joblib caching with long-running model operations.
+Example: Model Caching Usage
 
-This demonstrates the caching functionality for expensive model operations
-like LSTM and XGBoost forecasts.
+This module demonstrates how to use the model caching system for
+improving performance and reducing computational overhead.
 """
 
-import time
-import pandas as pd
-import numpy as np
-from datetime import datetime
-import sys
 import os
+import sys
+import time
+from typing import Dict, Any
+
+import numpy as np
+import pandas as pd
 
 # Add utils to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
@@ -29,6 +29,7 @@ try:
 except ImportError as e:
     print(f"❌ Failed to import model caching utilities: {e}")
     sys.exit(1)
+
 
 def create_sample_trading_data(n_samples=100):
     """Create realistic trading data for testing."""
@@ -57,6 +58,7 @@ def create_sample_trading_data(n_samples=100):
     }, index=dates)
 
     return data
+
 
 def demonstrate_basic_caching():
     """Demonstrate basic caching functionality."""
@@ -115,28 +117,30 @@ def demonstrate_basic_caching():
 
     return True
 
+
 def demonstrate_xgboost_caching():
     """Demonstrate XGBoost caching functionality."""
     print("\n🔧 XGBoost Caching Demonstration")
     print("-" * 40)
 
     # Create sample data
-    data = create_sample_trading_data(80)
+    data = create_sample_trading_data(100)
 
-    xgboost_config = {
-        'auto_feature_engineering': False,
-        'xgboost_params': {
-            'n_estimators': 50,
-            'max_depth': 4,
-            'learning_rate': 0.1,
-            'random_state': 42
-        }
+    # Example 2: XGBoost Forecast
+    print("Example 2: XGBoost Forecast Caching")
+
+    xgb_config = {
+        'n_estimators': 100,
+        'max_depth': 6,
+        'learning_rate': 0.1,
+        'feature_columns': ['entry_price', 'size', 'pnl', 'return'],
+        'target_column': 'entry_price'
     }
 
-    print("First XGBoost forecast (will be slow)...")
+    print("First XGBoost forecast...")
     start_time = time.time()
     try:
-        result1 = cached_xgboost_forecast(data, xgboost_config, horizon=10)
+        result1 = cached_xgboost_forecast(data, xgb_config, horizon=5)
         time1 = time.time() - start_time
         print(f"First run took: {time1:.2f} seconds")
         print(f"Forecast shape: {result1['forecast'].shape}")
@@ -144,10 +148,10 @@ def demonstrate_xgboost_caching():
         print(f"XGBoost forecast failed: {e}")
         return False
 
-    print("Second XGBoost forecast (should be fast due to caching)...")
+    print("Second XGBoost forecast (cached)...")
     start_time = time.time()
     try:
-        result2 = cached_xgboost_forecast(data, xgboost_config, horizon=10)
+        result2 = cached_xgboost_forecast(data, xgb_config, horizon=5)
         time2 = time.time() - start_time
         print(f"Second run took: {time2:.2f} seconds")
 
@@ -169,111 +173,125 @@ def demonstrate_xgboost_caching():
 
     return True
 
+
 def demonstrate_cache_management():
-    """Demonstrate cache management features."""
+    """Demonstrate cache management functionality."""
     print("\n🔧 Cache Management Demonstration")
     print("-" * 40)
 
-    # Get cache information
+    # Get cache info
     cache_info = get_cache_info()
-    print("Current cache information:")
-    for key, value in cache_info.items():
-        print(f"  {key}: {value}")
+    print(f"Current cache size: {cache_info['size']} items")
+    print(f"Cache memory usage: {cache_info['memory_usage']:.2f} MB")
 
     # Clear cache
-    print("\nClearing cache...")
+    print("Clearing cache...")
     clear_model_cache()
-
-    # Get cache information after clearing
+    
+    # Check cache after clearing
     cache_info_after = get_cache_info()
-    print("Cache information after clearing:")
-    for key, value in cache_info_after.items():
-        print(f"  {key}: {value}")
+    print(f"Cache size after clearing: {cache_info_after['size']} items")
+    print(f"Cache memory usage after clearing: {cache_info_after['memory_usage']:.2f} MB")
 
-    print("✅ Cache management demonstration completed")
+    return True
+
 
 def demonstrate_dynamic_caching():
-    """Demonstrate dynamic caching with different parameters."""
+    """Demonstrate dynamic caching with custom functions."""
     print("\n🔧 Dynamic Caching Demonstration")
     print("-" * 40)
 
     # Create sample data
-    data = create_sample_trading_data(60)
+    data = create_sample_trading_data(75)
 
-    # Test with different horizons
-    horizons = [5, 10, 15]
-
-    for horizon in horizons:
-        print(f"\nTesting forecast with horizon={horizon}")
-
-        # Create config with horizon-specific parameters
-        config = {
-            'input_size': 4,
-            'hidden_size': 32,
-            'num_layers': 2,
-            'dropout': 0.2,
-            'sequence_length': min(10, horizon),
-            'feature_columns': ['entry_price', 'size', 'pnl', 'return'],
-            'target_column': 'entry_price'
+    # Create a custom forecast function
+    def custom_forecast(data, config, horizon=5):
+        """Custom forecast function for demonstration."""
+        # Simulate some computation
+        time.sleep(0.1)
+        
+        # Simple moving average forecast
+        prices = data['entry_price'].values
+        forecast = np.mean(prices[-config.get('window', 10):]) * np.ones(horizon)
+        
+        return {
+            'forecast': forecast,
+            'confidence': 0.8,
+            'metadata': {'method': 'custom_ma', 'window': config.get('window', 10)}
         }
 
-        start_time = time.time()
-        try:
-            result = cached_lstm_forecast(data, config, horizon=horizon)
-            time_taken = time.time() - start_time
-            print(f"  Horizon {horizon}: {time_taken:.2f}s, Forecast shape: {result['forecast'].shape}")
-        except Exception as e:
-            print(f"  Horizon {horizon}: Failed - {e}")
+    # Create cached version
+    cached_custom_forecast = create_cached_forecast_function(
+        custom_forecast,
+        cache_key_prefix="custom_ma"
+    )
 
-    print("✅ Dynamic caching demonstration completed")
+    config = {'window': 15}
+
+    print("First custom forecast (will be slow)...")
+    start_time = time.time()
+    result1 = cached_custom_forecast(data, config, horizon=5)
+    time1 = time.time() - start_time
+    print(f"First run took: {time1:.2f} seconds")
+
+    print("Second custom forecast (should be fast)...")
+    start_time = time.time()
+    result2 = cached_custom_forecast(data, config, horizon=5)
+    time2 = time.time() - start_time
+    print(f"Second run took: {time2:.2f} seconds")
+
+    # Verify results are identical
+    if np.allclose(result1['forecast'], result2['forecast']):
+        print("✅ Cached results are identical")
+    else:
+        print("❌ Cached results differ")
+
+    # Check performance improvement
+    if time2 < time1 * 0.5:
+        print("✅ Significant performance improvement from caching")
+    else:
+        print("⚠️ Limited performance improvement")
+
+    return True
+
 
 def main():
-    """Run all caching demonstrations."""
+    """Main demonstration function."""
     print("🚀 Model Caching Usage Examples")
     print("=" * 50)
 
-    # Show initial cache state
-    print("Initial cache state:")
-    cache_info = get_cache_info()
-    for key, value in cache_info.items():
-        print(f"  {key}: {value}")
+    try:
+        # Demonstrate basic caching
+        if not demonstrate_basic_caching():
+            print("❌ Basic caching demonstration failed")
+            return
 
-    # Run demonstrations
-    results = []
+        # Demonstrate XGBoost caching
+        if not demonstrate_xgboost_caching():
+            print("❌ XGBoost caching demonstration failed")
+            return
 
-    results.append(demonstrate_basic_caching())
-    results.append(demonstrate_xgboost_caching())
-    demonstrate_cache_management()
-    demonstrate_dynamic_caching()
+        # Demonstrate cache management
+        if not demonstrate_cache_management():
+            print("❌ Cache management demonstration failed")
+            return
 
-    # Final cache state
-    print("\nFinal cache state:")
-    cache_info = get_cache_info()
-    for key, value in cache_info.items():
-        print(f"  {key}: {value}")
+        # Demonstrate dynamic caching
+        if not demonstrate_dynamic_caching():
+            print("❌ Dynamic caching demonstration failed")
+            return
 
-    # Summary
-    print("\n" + "=" * 50)
-    print("📊 Demonstration Summary:")
-    print(f"✅ Successful demonstrations: {sum(results)}")
-    print(f"❌ Failed demonstrations: {len(results) - sum(results)}")
+        print("\n✅ All caching demonstrations completed successfully!")
+        print("\n📊 Final cache statistics:")
+        cache_info = get_cache_info()
+        print(f"   Cache size: {cache_info['size']} items")
+        print(f"   Memory usage: {cache_info['memory_usage']:.2f} MB")
+        print(f"   Hit rate: {cache_info.get('hit_rate', 0):.2%}")
 
-    if all(results):
-        print("🎉 All demonstrations completed successfully!")
-        print("\n💡 Key Benefits of Model Caching:")
-        print("  • Faster subsequent model runs")
-        print("  • Reduced computational costs")
-        print("  • Consistent results for same inputs")
-        print("  • Automatic cache management")
-    else:
-        print("⚠️ Some demonstrations failed. Check error messages above.")
+    except Exception as e:
+        print(f"❌ Demonstration failed: {e}")
+        raise
 
-    print("\n🔧 Usage Tips:")
-    print("  • Use @cache_model_operation decorator for expensive functions")
-    print("  • Cache is automatically managed by joblib")
-    print("  • Clear cache with clear_model_cache() when needed")
-    print("  • Monitor cache size with get_cache_info()")
 
 if __name__ == "__main__":
-    main()
-
+    main() 

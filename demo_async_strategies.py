@@ -1,20 +1,19 @@
-#!/usr/bin/env python3
 """
 Demo: Async Strategy Execution
 
-This demo shows the exact pattern requested:
-async def run_rsi(): ...
-async def run_macd(): ...
-results = await asyncio.gather(run_rsi(), run_macd(), run_bb())
+This module demonstrates async strategy execution with parallel processing,
+ensemble combination, and performance comparison.
 """
 
 import asyncio
-import pandas as pd
-import numpy as np
-from datetime import datetime
 import logging
+import time
+from typing import Dict, List
 
-# Set up logging
+import numpy as np
+import pandas as pd
+
+# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -134,157 +133,163 @@ class StrategyExecutor:
 
         return result
 
+    async def run_mean_reversion(self) -> dict:
+        """Run Mean Reversion strategy asynchronously."""
+        logger.info("🚀 Starting Mean Reversion strategy...")
+
+        parameters = {
+            "period": 20,
+            "std_dev": 2
+        }
+
+        result = await self.runner.run_mean_reversion_strategy(self.data, parameters)
+
+        if result.get('success'):
+            perf = result.get('performance_metrics', {})
+            logger.info(f"✅ Mean Reversion completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}")
+        else:
+            logger.error(f"❌ Mean Reversion failed: {result.get('error', 'Unknown error')}")
+
+        return result
+
 
 async def demo_parallel_execution():
-    """Demo the exact pattern requested by the user."""
-    logger.info("=" * 60)
-    logger.info("DEMO: Async Strategy Execution")
-    logger.info("=" * 60)
+    """Demo parallel strategy execution."""
+    logger.info("🎯 Demo: Parallel Strategy Execution")
+    logger.info("=" * 50)
 
-    # Initialize executor
     executor = StrategyExecutor()
     await executor.initialize()
 
-    # The exact pattern requested:
-    # async def run_rsi(): ...
-    # async def run_macd(): ...
-    # results = await asyncio.gather(run_rsi(), run_macd(), run_bb())
-
-    logger.info("📊 Running strategies in parallel using asyncio.gather()...")
-    start_time = datetime.now()
-
-    # Execute strategies in parallel - EXACTLY as requested!
+    # Run strategies in parallel
+    start_time = time.time()
     results = await asyncio.gather(
         executor.run_rsi(),
         executor.run_macd(),
-        executor.run_bb()
+        executor.run_bb(),
+        executor.run_momentum(),
+        executor.run_mean_reversion()
     )
+    end_time = time.time()
 
-    execution_time = (datetime.now() - start_time).total_seconds()
+    # Analyze results
+    successful_strategies = [r for r in results if r.get('success')]
+    failed_strategies = [r for r in results if not r.get('success')]
 
-    logger.info(f"⏱️  Parallel execution completed in {execution_time:.2f} seconds")
-    logger.info("=" * 60)
+    logger.info(f"⏱️  Total execution time: {end_time - start_time:.2f}s")
+    logger.info(f"✅ Successful strategies: {len(successful_strategies)}")
+    logger.info(f"❌ Failed strategies: {len(failed_strategies)}")
 
-    # Display results
-    strategy_names = ["RSI", "MACD", "Bollinger Bands"]
-    for i, (name, result) in enumerate(zip(strategy_names, results)):
-        logger.info(f"\n📈 {name} Results:")
-        if result.get('success'):
-            perf = result.get('performance_metrics', {})
-            logger.info(f"   ✅ Success")
-            logger.info(f"   📊 Sharpe Ratio: {perf.get('sharpe_ratio', 0):.3f}")
-            logger.info(f"   📈 Total Return: {perf.get('total_return', 0):.3f}")
-            logger.info(f"   📉 Max Drawdown: {perf.get('max_drawdown', 0):.3f}")
-            logger.info(f"   ⏱️  Execution Time: {result.get('execution_time', 0):.2f}s")
-        else:
-            logger.error(f"   ❌ Failed: {result.get('error', 'Unknown error')}")
+    # Calculate average performance
+    if successful_strategies:
+        avg_sharpe = sum(
+            s.get('performance_metrics', {}).get('sharpe_ratio', 0)
+            for s in successful_strategies
+        ) / len(successful_strategies)
+        logger.info(f"📊 Average Sharpe ratio: {avg_sharpe:.3f}")
 
     return results
 
 
 async def demo_ensemble_execution():
-    """Demo ensemble execution with more strategies."""
-    logger.info("\n" + "=" * 60)
-    logger.info("DEMO: Ensemble Strategy Execution")
-    logger.info("=" * 60)
+    """Demo ensemble strategy execution."""
+    logger.info("🎯 Demo: Ensemble Strategy Execution")
+    logger.info("=" * 50)
 
     executor = StrategyExecutor()
     await executor.initialize()
 
-    logger.info("🎯 Running multiple strategies with ensemble combination...")
-    start_time = datetime.now()
+    # Define strategy list
+    strategies = ["RSI_Strategy", "MACD_Strategy", "Bollinger_Bands"]
+    parameters = {
+        "RSI_Strategy": {"period": 14, "overbought": 70, "oversold": 30},
+        "MACD_Strategy": {"fast_period": 12, "slow_period": 26, "signal_period": 9},
+        "Bollinger_Bands": {"period": 20, "std_dev": 2}
+    }
 
-    # Run multiple strategies including the new momentum strategy
-    results = await asyncio.gather(
-        executor.run_rsi(),
-        executor.run_macd(),
-        executor.run_bb(),
-        executor.run_momentum()
+    # Run ensemble
+    start_time = time.time()
+    result = await executor.runner.run_strategies_parallel(
+        strategies=strategies,
+        data=executor.data,
+        parameters=parameters,
+        ensemble_config={
+            "method": "weighted",
+            "weights": {"RSI_Strategy": 0.4, "MACD_Strategy": 0.3, "Bollinger_Bands": 0.3}
+        }
     )
+    end_time = time.time()
 
-    execution_time = (datetime.now() - start_time).total_seconds()
+    if result.get('success'):
+        logger.info(f"⏱️  Ensemble execution time: {end_time - start_time:.2f}s")
+        logger.info(f"📊 Ensemble result: {result.get('ensemble_result', {})}")
+    else:
+        logger.error(f"❌ Ensemble failed: {result.get('error')}")
 
-    logger.info(f"⏱️  Ensemble execution completed in {execution_time:.2f} seconds")
-
-    # Show ensemble result
-    successful_results = [r for r in results if r.get('success')]
-    logger.info(f"📊 {len(successful_results)}/{len(results)} strategies successful")
-
-    if successful_results:
-        # Calculate average performance
-        avg_sharpe = np.mean([r.get('performance_metrics', {}).get('sharpe_ratio', 0) for r in successful_results])
-        avg_return = np.mean([r.get('performance_metrics', {}).get('total_return', 0) for r in successful_results])
-
-        logger.info(f"📈 Average Sharpe Ratio: {avg_sharpe:.3f}")
-        logger.info(f"📊 Average Total Return: {avg_return:.3f}")
-
-    return results
+    return result
 
 
 async def demo_sequential_vs_parallel():
-    """Demo the performance difference between sequential and parallel execution."""
-    logger.info("\n" + "=" * 60)
-    logger.info("DEMO: Sequential vs Parallel Performance")
-    logger.info("=" * 60)
+    """Demo sequential vs parallel execution comparison."""
+    logger.info("🎯 Demo: Sequential vs Parallel Execution")
+    logger.info("=" * 50)
 
     executor = StrategyExecutor()
     await executor.initialize()
 
     # Sequential execution
     logger.info("🔄 Running strategies sequentially...")
-    start_time = datetime.now()
-
-    rsi_result = await executor.run_rsi()
-    macd_result = await executor.run_macd()
-    bb_result = await executor.run_bb()
-
-    sequential_time = (datetime.now() - start_time).total_seconds()
-    logger.info(f"⏱️  Sequential execution time: {sequential_time:.2f} seconds")
+    start_time = time.time()
+    sequential_results = []
+    for strategy_func in [executor.run_rsi, executor.run_macd, executor.run_bb]:
+        result = await strategy_func()
+        sequential_results.append(result)
+    sequential_time = time.time() - start_time
 
     # Parallel execution
     logger.info("⚡ Running strategies in parallel...")
-    start_time = datetime.now()
-
+    start_time = time.time()
     parallel_results = await asyncio.gather(
         executor.run_rsi(),
         executor.run_macd(),
         executor.run_bb()
     )
+    parallel_time = time.time() - start_time
 
-    parallel_time = (datetime.now() - start_time).total_seconds()
-    logger.info(f"⏱️  Parallel execution time: {parallel_time:.2f} seconds")
-
-    # Calculate speedup
-    speedup = sequential_time / parallel_time if parallel_time > 0 else 0
-    logger.info(f"🚀 Speedup: {speedup:.2f}x faster with parallel execution!")
+    # Comparison
+    logger.info(f"⏱️  Sequential time: {sequential_time:.2f}s")
+    logger.info(f"⏱️  Parallel time: {parallel_time:.2f}s")
+    logger.info(f"🚀 Speedup: {sequential_time / parallel_time:.2f}x")
 
     return {
-        "sequential_time": sequential_time,
-        "parallel_time": parallel_time,
-        "speedup": speedup
+        "sequential": {"time": sequential_time, "results": sequential_results},
+        "parallel": {"time": parallel_time, "results": parallel_results}
     }
 
 
 async def main():
-    """Run all demos."""
+    """Main demo function."""
+    logger.info("🚀 Starting Async Strategy Demo")
+    logger.info("=" * 60)
+
     try:
-        # Demo 1: Basic parallel execution (exact pattern requested)
+        # Demo 1: Parallel execution
         await demo_parallel_execution()
+        logger.info("")
 
         # Demo 2: Ensemble execution
         await demo_ensemble_execution()
+        logger.info("")
 
-        # Demo 3: Performance comparison
+        # Demo 3: Sequential vs Parallel comparison
         await demo_sequential_vs_parallel()
 
-        logger.info("\n🎉 All demos completed successfully!")
+        logger.info("✅ All demos completed successfully!")
 
     except Exception as e:
-        logger.error(f"❌ Error running demos: {e}")
+        logger.error(f"❌ Demo failed: {e}")
         raise
 
 
 if __name__ == "__main__":
-    # Run the demo
-    asyncio.run(main())
-
+    asyncio.run(main()) 

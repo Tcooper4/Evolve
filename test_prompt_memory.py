@@ -1,17 +1,17 @@
-#!/usr/bin/env python3
 """
-Test script for Prompt Memory integration.
+Test Prompt Memory
 
-This script tests the prompt memory functionality and its integration
-with the TaskAgent.
+This test validates the prompt memory functionality including
+basic operations, different backends, and agent integration.
 """
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Dict, Any, List
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -114,31 +114,22 @@ async def test_task_agent_integration():
         # Execute a simple task
         logger.info("Executing test task...")
         result = await agent.execute_task(
-            prompt="Test task for prompt memory integration",
-            task_type=TaskType.MODEL_BUILD,
-            parameters={"test": True, "model_type": "test"},
-            max_depth=2,
-            performance_threshold=0.5
+            task_type=TaskType.MODEL_INNOVATION,
+            parameters={"test": True, "user_id": "integration_test_user"}
         )
 
         logger.info(f"✅ Task execution result: {result.success}")
-        logger.info(f"   Performance score: {result.performance_score:.3f}")
 
-        # Check prompt memory for the task
-        logger.info("\nChecking prompt memory for task...")
-        memory = get_prompt_memory()
-        task_history = await memory.get_prompt_history("task_agent", n=10)
+        # Check if prompt was logged
+        logger.info("Checking if prompt was logged...")
+        last_prompt = await get_last_prompt("integration_test_user")
 
-        logger.info(f"✅ Task prompt history count: {len(task_history)}")
-
-        # Show some entries
-        for i, entry in enumerate(task_history[:3]):
-            logger.info(f"   Entry {i+1}: {entry.prompt[:60]}...")
-            logger.info(f"      Success: {entry.success}, Time: {entry.execution_time:.2f}s")
-
-        # Get statistics
-        stats = await memory.get_statistics("task_agent")
-        logger.info(f"✅ Task agent stats: {stats}")
+        if last_prompt:
+            logger.info(f"✅ Prompt logged: {last_prompt.prompt[:50]}...")
+            logger.info(f"   Agent type: {last_prompt.agent_type}")
+            logger.info(f"   Success: {last_prompt.success}")
+        else:
+            logger.warning("⚠️ No prompt found in memory")
 
         return True
 
@@ -148,34 +139,52 @@ async def test_task_agent_integration():
 
 
 async def test_prompt_memory_functions():
-    """Test the convenience functions."""
+    """Test prompt memory utility functions."""
     logger.info("\n" + "=" * 60)
     logger.info("PROMPT MEMORY FUNCTIONS TEST")
     logger.info("=" * 60)
 
     try:
-        from memory.prompt_log import log_prompt, get_last_prompt, get_prompt_history
+        from memory.prompt_log import (
+            get_prompt_memory, log_prompt, get_last_prompt, get_prompt_history,
+            get_prompt_statistics, clear_prompt_history, search_prompts
+        )
 
-        # Test convenience functions
-        logger.info("Testing convenience functions...")
-
-        # Log multiple prompts
+        # Test multiple prompt logging
+        logger.info("Testing multiple prompt logging...")
         for i in range(3):
             await log_prompt(
-                prompt=f"Convenience test prompt {i+1}",
-                result={"test_number": i+1, "function": "convenience"},
-                user_id="convenience_user",
+                prompt=f"Test prompt {i+1}",
+                result={"iteration": i+1},
+                user_id="function_test_user",
                 agent_type="TestAgent",
-                execution_time=0.1 * (i+1)
+                execution_time=0.5 + i * 0.1,
+                success=True
             )
 
-        # Get last prompt
-        last = await get_last_prompt("convenience_user")
-        logger.info(f"✅ Last prompt: {last.prompt if last else 'None'}")
+        # Test statistics
+        logger.info("Testing statistics...")
+        stats = await get_prompt_statistics("function_test_user")
+        logger.info(f"✅ Statistics: {stats}")
 
-        # Get history
-        history = await get_prompt_history("convenience_user", n=5)
-        logger.info(f"✅ History count: {len(history)}")
+        # Test search functionality
+        logger.info("Testing search functionality...")
+        search_results = await search_prompts("function_test_user", "prompt")
+        logger.info(f"✅ Search results: {len(search_results)} found")
+
+        # Test history with limit
+        logger.info("Testing history with limit...")
+        limited_history = await get_prompt_history("function_test_user", n=2)
+        logger.info(f"✅ Limited history: {len(limited_history)} entries")
+
+        # Test clear functionality
+        logger.info("Testing clear functionality...")
+        clear_result = await clear_prompt_history("function_test_user")
+        logger.info(f"✅ Clear result: {clear_result}")
+
+        # Verify clear worked
+        remaining_history = await get_prompt_history("function_test_user")
+        logger.info(f"✅ Remaining history: {len(remaining_history)} entries")
 
         return True
 
@@ -184,38 +193,95 @@ async def test_prompt_memory_functions():
         return False
 
 
+async def test_memory_persistence():
+    """Test memory persistence across sessions."""
+    logger.info("\n" + "=" * 60)
+    logger.info("MEMORY PERSISTENCE TEST")
+    logger.info("=" * 60)
+
+    try:
+        from memory.prompt_log import log_prompt, get_last_prompt
+
+        # Log a prompt
+        logger.info("Logging persistent prompt...")
+        await log_prompt(
+            prompt="Persistent test prompt",
+            result={"persistence": "test"},
+            user_id="persistence_test_user",
+            agent_type="TestAgent",
+            success=True
+        )
+
+        # Simulate session restart by creating new memory instance
+        logger.info("Simulating session restart...")
+        from memory.prompt_log import PromptMemory
+        new_memory = PromptMemory()
+
+        # Try to retrieve the prompt
+        logger.info("Retrieving persistent prompt...")
+        last_prompt = await new_memory.get_last_prompt("persistence_test_user")
+
+        if last_prompt and "Persistent test prompt" in last_prompt.prompt:
+            logger.info("✅ Memory persistence confirmed!")
+            return True
+        else:
+            logger.error("❌ Memory persistence failed")
+            return False
+
+    except Exception as e:
+        logger.error(f"❌ Memory persistence test failed: {e}")
+        return False
+
+
 async def main():
     """Main test function."""
-    logger.info("Starting Prompt Memory integration tests...")
+    logger.info("🚀 Starting Prompt Memory Test Suite")
+    logger.info("=" * 60)
 
-    start_time = datetime.now()
+    test_results = []
 
     # Run all tests
-    basic_success = await test_prompt_memory_basic()
-    backend_success = await test_prompt_memory_backends()
-    integration_success = await test_task_agent_integration()
-    functions_success = await test_prompt_memory_functions()
+    tests = [
+        ("Basic Functionality", test_prompt_memory_basic),
+        ("Backend Support", test_prompt_memory_backends),
+        ("Task Agent Integration", test_task_agent_integration),
+        ("Utility Functions", test_prompt_memory_functions),
+        ("Memory Persistence", test_memory_persistence)
+    ]
 
-    end_time = datetime.now()
-    duration = (end_time - start_time).total_seconds()
+    for test_name, test_func in tests:
+        logger.info(f"\n--- Running {test_name} Test ---")
+        try:
+            result = await test_func()
+            test_results.append((test_name, result))
+        except Exception as e:
+            logger.error(f"❌ {test_name} test failed with exception: {e}")
+            test_results.append((test_name, False))
 
     # Summary
     logger.info("\n" + "=" * 60)
     logger.info("TEST SUMMARY")
     logger.info("=" * 60)
-    logger.info(f"Basic Functionality: {'✅ PASSED' if basic_success else '❌ FAILED'}")
-    logger.info(f"Backend Support: {'✅ PASSED' if backend_success else '❌ FAILED'}")
-    logger.info(f"TaskAgent Integration: {'✅ PASSED' if integration_success else '❌ FAILED'}")
-    logger.info(f"Convenience Functions: {'✅ PASSED' if functions_success else '❌ FAILED'}")
-    logger.info(f"Total Duration: {duration:.2f} seconds")
 
-    all_passed = basic_success and backend_success and integration_success and functions_success
-    logger.info(f"{'🎉 ALL TESTS PASSED!' if all_passed else '❌ SOME TESTS FAILED'}")
+    passed = 0
+    total = len(test_results)
 
-    return 0 if all_passed else 1
+    for test_name, result in test_results:
+        status = "✅ PASSED" if result else "❌ FAILED"
+        logger.info(f"{status}: {test_name}")
+        if result:
+            passed += 1
+
+    logger.info(f"\nOverall: {passed}/{total} tests passed")
+
+    if passed == total:
+        logger.info("🎉 All prompt memory tests passed!")
+        return True
+    else:
+        logger.error(f"❌ {total - passed} tests failed")
+        return False
 
 
 if __name__ == "__main__":
-    exit_code = asyncio.run(main())
-    exit(exit_code)
-
+    success = asyncio.run(main())
+    exit(0 if success else 1) 

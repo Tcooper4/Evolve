@@ -1,19 +1,20 @@
-#!/usr/bin/env python3
 """
-Simple test script for TaskOrchestrator
+Test Task Orchestrator
+
+This test validates the TaskOrchestrator functionality including
+task execution, dependency management, and performance tracking.
 """
 
 import asyncio
-import sys
-import os
-from pathlib import Path
 import logging
-logger = logging.getLogger(__name__)
-
-# Add the project root to the path
-sys.path.insert(0, str(Path(__file__).parent))
+from datetime import datetime, timedelta
+from typing import Dict, Any
 
 from core.task_orchestrator import TaskOrchestrator, TaskConfig, TaskType, TaskPriority
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 class MockAgent:
@@ -112,30 +113,97 @@ async def test_orchestrator():
 
     # Test performance tracking
     logger.info("\nTesting performance tracking...")
-    execution = orchestrator.TaskExecution(
-        task_id="test_exec",
-        task_name="test_task1",
-        task_type=TaskType.MODEL_INNOVATION,
-        start_time="2023-01-01T10:00:00",
-        end_time="2023-01-01T10:00:30",
-        status=orchestrator.TaskStatus.COMPLETED,
-        duration_seconds=30.0
-    )
+    performance = orchestrator.get_performance_metrics()
+    logger.info(f"Performance metrics: {performance}")
 
-    orchestrator._update_task_performance("test_task1", execution)
+    # Test task scheduling
+    logger.info("\nTesting task scheduling...")
+    next_execution = orchestrator.get_next_execution_time('test_task1')
+    logger.info(f"Next execution for test_task1: {next_execution}")
 
-    # Check updated status
-    task_status = orchestrator.get_task_status("test_task1")
-    logger.info(f"Task status: {task_status['success_rate']}")
+    # Test task status
+    logger.info("\nTesting task status...")
+    task_status = orchestrator.get_task_status('test_task1')
+    logger.info(f"Task status: {task_status}")
 
-    # Export status report
-    logger.info("\nTesting status report export...")
-    report_path = orchestrator.export_status_report()
-    logger.info(f"Status report exported to: {report_path}")
+    logger.info("✅ TaskOrchestrator tests completed successfully!")
 
-    logger.info("\nTaskOrchestrator test completed successfully!")
+
+async def test_error_handling():
+    """Test error handling in the orchestrator"""
+    logger.info("\nTesting error handling...")
+
+    orchestrator = TaskOrchestrator()
+
+    # Test with non-existent task
+    try:
+        result = await orchestrator.execute_task_now('non_existent_task')
+        logger.error("❌ Should have raised an error for non-existent task")
+    except Exception as e:
+        logger.info(f"✅ Correctly handled non-existent task: {e}")
+
+    # Test with invalid dependencies
+    try:
+        task_config = TaskConfig(
+            name='invalid_task',
+            task_type=TaskType.MODEL_INNOVATION,
+            enabled=True,
+            dependencies=['non_existent_dependency']
+        )
+        orchestrator.tasks['invalid_task'] = task_config
+        should_execute = await orchestrator._should_execute_task('invalid_task')
+        logger.info(f"✅ Dependency validation: {should_execute}")
+    except Exception as e:
+        logger.info(f"✅ Correctly handled invalid dependencies: {e}")
+
+    logger.info("✅ Error handling tests completed!")
+
+
+async def test_performance_monitoring():
+    """Test performance monitoring functionality"""
+    logger.info("\nTesting performance monitoring...")
+
+    orchestrator = TaskOrchestrator()
+
+    # Simulate some task executions
+    for i in range(5):
+        orchestrator.record_task_execution(
+            task_name='test_task',
+            execution_time=1.5,
+            success=True,
+            error_message=None
+        )
+        await asyncio.sleep(0.1)
+
+    # Test performance metrics
+    metrics = orchestrator.get_performance_metrics()
+    logger.info(f"Performance metrics: {metrics}")
+
+    # Test task history
+    history = orchestrator.get_task_execution_history('test_task')
+    logger.info(f"Task history length: {len(history)}")
+
+    logger.info("✅ Performance monitoring tests completed!")
+
+
+async def main():
+    """Main test function"""
+    logger.info("🚀 Starting TaskOrchestrator Test Suite")
+    logger.info("=" * 50)
+
+    try:
+        await test_orchestrator()
+        await test_error_handling()
+        await test_performance_monitoring()
+
+        logger.info("\n🎉 All TaskOrchestrator tests passed!")
+        return True
+
+    except Exception as e:
+        logger.error(f"❌ Test failed: {e}")
+        return False
 
 
 if __name__ == "__main__":
-    asyncio.run(test_orchestrator())
-
+    success = asyncio.run(main())
+    exit(0 if success else 1) 

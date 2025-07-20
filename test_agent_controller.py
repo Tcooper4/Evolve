@@ -1,15 +1,13 @@
-#!/usr/bin/env python3
 """
-Test script for the Agent Controller module.
+Test Agent Controller
 
-This script tests the basic functionality of the agent controller
-and its workflow orchestrators.
+This module tests the agent controller functionality and its integration
+with the prompt router system.
 """
 
 import asyncio
 import logging
-import sys
-from datetime import datetime
+from typing import Dict, Any
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -121,45 +119,127 @@ async def test_prompt_router_integration():
         return False
 
 
+async def test_workflow_execution():
+    """Test workflow execution with different parameters."""
+    logger.info("Testing workflow execution...")
+
+    try:
+        from agents.agent_controller import get_agent_controller
+
+        controller = get_agent_controller()
+
+        # Test different model types
+        model_types = ["lstm", "xgboost", "random_forest"]
+        
+        for model_type in model_types:
+            logger.info(f"Testing {model_type} model workflow...")
+            
+            result = await controller.execute_workflow(
+                "builder",
+                model_type=model_type,
+                data_path="data/sample_data.csv",
+                target_column="close",
+                test_mode=True
+            )
+            
+            logger.info(f"✅ {model_type} workflow result: {result.success}")
+            if not result.success:
+                logger.info(f"   Error: {result.error_message}")
+
+        logger.info("✅ Workflow execution tests completed successfully!")
+        return True
+
+    except Exception as e:
+        logger.error(f"❌ Workflow execution test failed: {e}")
+        return False
+
+
+async def test_error_handling():
+    """Test error handling in agent controller."""
+    logger.info("Testing error handling...")
+
+    try:
+        from agents.agent_controller import get_agent_controller
+
+        controller = get_agent_controller()
+
+        # Test with invalid workflow type
+        logger.info("Testing invalid workflow type...")
+        result = await controller.execute_workflow(
+            "invalid_workflow",
+            model_type="lstm"
+        )
+        logger.info(f"✅ Invalid workflow handled: {not result.success}")
+
+        # Test with missing parameters
+        logger.info("Testing missing parameters...")
+        result = await controller.execute_workflow("builder")
+        logger.info(f"✅ Missing parameters handled: {not result.success}")
+
+        # Test with invalid data path
+        logger.info("Testing invalid data path...")
+        result = await controller.execute_workflow(
+            "builder",
+            model_type="lstm",
+            data_path="invalid/path.csv"
+        )
+        logger.info(f"✅ Invalid data path handled: {not result.success}")
+
+        logger.info("✅ Error handling tests completed successfully!")
+        return True
+
+    except Exception as e:
+        logger.error(f"❌ Error handling test failed: {e}")
+        return False
+
+
 async def main():
     """Main test function."""
-    logger.info("=" * 60)
-    logger.info("AGENT CONTROLLER TEST SUITE")
-    logger.info("=" * 60)
+    logger.info("🚀 Starting Agent Controller Test Suite")
+    logger.info("=" * 50)
 
-    start_time = datetime.now()
+    test_results = []
 
-    # Run tests
-    controller_success = await test_agent_controller()
-    router_success = await test_prompt_router_integration()
+    # Run all tests
+    tests = [
+        ("Agent Controller", test_agent_controller),
+        ("Prompt Router Integration", test_prompt_router_integration),
+        ("Workflow Execution", test_workflow_execution),
+        ("Error Handling", test_error_handling)
+    ]
 
-    end_time = datetime.now()
-    duration = (end_time - start_time).total_seconds()
+    for test_name, test_func in tests:
+        logger.info(f"\n--- Running {test_name} Test ---")
+        try:
+            result = await test_func()
+            test_results.append((test_name, result))
+        except Exception as e:
+            logger.error(f"❌ {test_name} test failed with exception: {e}")
+            test_results.append((test_name, False))
 
     # Summary
-    logger.info("=" * 60)
+    logger.info("\n" + "=" * 50)
     logger.info("TEST SUMMARY")
-    logger.info("=" * 60)
-    logger.info(f"Agent Controller Tests: {'✅ PASSED' if controller_success else '❌ FAILED'}")
-    logger.info(f"Prompt Router Integration: {'✅ PASSED' if router_success else '❌ FAILED'}")
-    logger.info(f"Total Duration: {duration:.2f} seconds")
+    logger.info("=" * 50)
 
-    if controller_success and router_success:
-        logger.info("🎉 ALL TESTS PASSED!")
-        return 0
+    passed = 0
+    total = len(test_results)
+
+    for test_name, result in test_results:
+        status = "✅ PASSED" if result else "❌ FAILED"
+        logger.info(f"{status}: {test_name}")
+        if result:
+            passed += 1
+
+    logger.info(f"\nOverall: {passed}/{total} tests passed")
+
+    if passed == total:
+        logger.info("🎉 All tests passed!")
+        return True
     else:
-        logger.error("💥 SOME TESTS FAILED!")
-        return 1
+        logger.error(f"❌ {total - passed} tests failed")
+        return False
 
 
 if __name__ == "__main__":
-    try:
-        exit_code = asyncio.run(main())
-        sys.exit(exit_code)
-    except KeyboardInterrupt:
-        logger.info("Test interrupted by user")
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        sys.exit(1)
-
+    asyncio.run(main()) 

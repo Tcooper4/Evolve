@@ -6,7 +6,9 @@ import pandas as pd
 import torch
 from trading.models.lstm_model import LSTMForecaster
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 def test_lstm_model():
     """Test LSTM model functionality without TensorFlow."""
@@ -72,6 +74,6 @@ def test_lstm_model():
         logger.error(f"❌ Test failed: {e}")
         raise
 
-if __name__ == "__main__":
-    test_lstm_model()
 
+if __name__ == "__main__":
+    test_lstm_model() 

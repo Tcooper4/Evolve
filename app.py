@@ -415,7 +415,7 @@ elif advanced_nav == "📈 Analytics":
     render_performance_analytics_page()
 elif advanced_nav == "🛡️ Risk":
     render_risk_management_page()
-    elif advanced_nav == "🤖 Orchestrator":
+elif advanced_nav == "🤖 Orchestrator":
     render_orchestrator_page()
 
 # --- Footer ---

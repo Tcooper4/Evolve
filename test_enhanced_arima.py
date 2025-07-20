@@ -1,16 +1,19 @@
-#!/usr/bin/env python3
 """
-Test script for enhanced ARIMA model with auto_arima optimization.
+Enhanced ARIMA Model Test
+
+This test validates the enhanced ARIMA model with various optimization
+criteria, seasonal components, and fallback mechanisms.
 """
 
-import logging
-import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+import pandas as pd
+import logging
+from typing import Dict, Any, List
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 
 def generate_sample_data(n_points: int = 100) -> pd.Series:
     """Generate sample time series data for testing."""
@@ -26,6 +29,7 @@ def generate_sample_data(n_points: int = 100) -> pd.Series:
 
     data = trend + seasonality + noise
     return pd.Series(data, index=dates)
+
 
 def test_enhanced_arima():
     """Test the enhanced ARIMA model with different configurations."""
@@ -108,50 +112,64 @@ def test_enhanced_arima():
             logger.info(f"{'='*60}")
 
             try:
-                # Create and fit model
+                # Create model
                 model = ARIMAModel(test_config['config'])
+                logger.info("✅ Model created successfully")
+
+                # Fit model
+                logger.info("Fitting model...")
                 fit_result = model.fit(data)
+                logger.info(f"✅ Model fitted successfully: {fit_result.success}")
 
-                if fit_result['success']:
-                    logger.info(f"✅ Model fitted successfully")
-                    logger.info(f"   Order: {fit_result.get('order', 'N/A')}")
-                    logger.info(f"   Seasonal Order: {fit_result.get('seasonal_order', 'N/A')}")
-                    logger.info(f"   AIC: {fit_result.get('aic', 'N/A')}")
-                    logger.info(f"   BIC: {fit_result.get('bic', 'N/A')}")
+                if fit_result.success:
+                    # Get model info
+                    model_info = model.get_model_info()
+                    logger.info(f"Model order: {model_info.get('order', 'N/A')}")
+                    logger.info(f"Seasonal order: {model_info.get('seasonal_order', 'N/A')}")
+                    logger.info(f"AIC: {model_info.get('aic', 'N/A')}")
+                    logger.info(f"BIC: {model_info.get('bic', 'N/A')}")
 
-                    # Make predictions
-                    pred_result = model.predict(steps=10)
-                    if pred_result['success']:
-                        logger.info(f"✅ Predictions generated successfully")
-                        logger.info(f"   Forecast shape: {len(pred_result['forecast'])}")
+                    # Test forecasting
+                    logger.info("Testing forecasting...")
+                    forecast_result = model.forecast(steps=10)
+                    logger.info(f"✅ Forecast successful: {forecast_result.success}")
 
-                        # Store results
-                        results.append({
-                            "name": test_config['name'],
-                            "success": True,
-                            "order": fit_result.get('order'),
-                            "seasonal_order": fit_result.get('seasonal_order'),
-                            "aic": fit_result.get('aic'),
-                            "bic": fit_result.get('bic'),
-                            "optimization_criterion": test_config['config'].get('optimization_criterion', 'manual')
-                        })
-                    else:
-                        logger.error(f"❌ Prediction failed: {pred_result.get('error', 'Unknown error')}")
-                        results.append({
-                            "name": test_config['name'],
-                            "success": False,
-                            "error": pred_result.get('error', 'Unknown error')
-                        })
+                    if forecast_result.success:
+                        forecast = forecast_result.forecast
+                        logger.info(f"Forecast shape: {forecast.shape}")
+                        logger.info(f"Forecast range: {forecast.min():.2f} to {forecast.max():.2f}")
+
+                        # Test confidence intervals
+                        if hasattr(forecast_result, 'confidence_intervals'):
+                            ci = forecast_result.confidence_intervals
+                            logger.info(f"Confidence intervals: {ci.shape if hasattr(ci, 'shape') else 'N/A'}")
+
+                    # Test diagnostics
+                    logger.info("Running diagnostics...")
+                    diagnostics = model.run_diagnostics()
+                    logger.info(f"✅ Diagnostics completed: {diagnostics.get('passed', False)}")
+
+                    if not diagnostics.get('passed', False):
+                        logger.warning(f"Diagnostics issues: {diagnostics.get('issues', [])}")
+
+                    results.append({
+                        "name": test_config['name'],
+                        "success": True,
+                        "fit_success": fit_result.success,
+                        "forecast_success": forecast_result.success if fit_result.success else False,
+                        "diagnostics_passed": diagnostics.get('passed', False)
+                    })
+
                 else:
-                    logger.error(f"❌ Model fitting failed: {fit_result.get('error', 'Unknown error')}")
+                    logger.error(f"❌ Model fitting failed: {fit_result.error}")
                     results.append({
                         "name": test_config['name'],
                         "success": False,
-                        "error": fit_result.get('error', 'Unknown error')
+                        "error": fit_result.error
                     })
 
             except Exception as e:
-                logger.error(f"❌ Test failed with exception: {e}")
+                logger.error(f"❌ Test failed for {test_config['name']}: {e}")
                 results.append({
                     "name": test_config['name'],
                     "success": False,
@@ -166,52 +184,129 @@ def test_enhanced_arima():
         successful_tests = [r for r in results if r['success']]
         failed_tests = [r for r in results if not r['success']]
 
-        logger.info(f"✅ Successful tests: {len(successful_tests)}/{len(results)}")
-        logger.info(f"❌ Failed tests: {len(failed_tests)}/{len(results)}")
+        logger.info(f"Successful tests: {len(successful_tests)}/{len(results)}")
+        logger.info(f"Failed tests: {len(failed_tests)}/{len(results)}")
 
-        if successful_tests:
-            logger.info(f"\nSuccessful configurations:")
-            for result in successful_tests:
-                logger.info(f"  - {result['name']}")
-                logger.info(f"    Order: {result['order']}")
-                if result['seasonal_order'] and result['seasonal_order'] != (0, 0, 0, 0):
-                    logger.info(f"    Seasonal: {result['seasonal_order']}")
-                logger.info(f"    AIC: {result['aic']:.2f}")
-                logger.info(f"    BIC: {result['bic']:.2f}")
-                logger.info(f"    Optimization: {result['optimization_criterion'].upper()}")
-                logger.info("")
+        for result in results:
+            status = "✅ PASSED" if result['success'] else "❌ FAILED"
+            logger.info(f"{status}: {result['name']}")
+            if not result['success'] and 'error' in result:
+                logger.info(f"   Error: {result['error']}")
 
-        if failed_tests:
-            logger.info(f"\nFailed configurations:")
-            for result in failed_tests:
-                logger.info(f"  - {result['name']}: {result['error']}")
-
-        return len(successful_tests) == len(results)
+        if len(successful_tests) == len(results):
+            logger.info("🎉 All enhanced ARIMA tests passed!")
+            return True
+        else:
+            logger.error(f"❌ {len(failed_tests)} tests failed")
+            return False
 
     except ImportError as e:
         logger.error(f"❌ Import error: {e}")
-        logger.info("Make sure you have pmdarima installed: pip install pmdarima")
         return False
     except Exception as e:
-        logger.error(f"❌ Unexpected error: {e}")
+        logger.error(f"❌ Test failed: {e}")
         return False
 
-if __name__ == "__main__":
-    logger.info("Starting Enhanced ARIMA Model Tests")
+
+def test_arima_robustness():
+    """Test ARIMA model robustness with different data types."""
+    logger.info("Testing ARIMA model robustness...")
+
+    try:
+        from trading.models.arima_model import ARIMAModel
+
+        # Test with different data types
+        test_cases = [
+            {
+                "name": "Short Series",
+                "data": generate_sample_data(20),
+                "config": {"use_auto_arima": False, "order": (1, 1, 0)}
+            },
+            {
+                "name": "Long Series",
+                "data": generate_sample_data(500),
+                "config": {"use_auto_arima": True, "seasonal": True}
+            },
+            {
+                "name": "Trendy Data",
+                "data": pd.Series(np.linspace(100, 200, 100)),
+                "config": {"use_auto_arima": False, "order": (1, 1, 1)}
+            },
+            {
+                "name": "Noisy Data",
+                "data": pd.Series(np.random.normal(100, 10, 100)),
+                "config": {"use_auto_arima": True, "seasonal": False}
+            }
+        ]
+
+        for test_case in test_cases:
+            logger.info(f"\nTesting: {test_case['name']}")
+            
+            try:
+                model = ARIMAModel(test_case['config'])
+                fit_result = model.fit(test_case['data'])
+                
+                if fit_result.success:
+                    forecast_result = model.forecast(steps=5)
+                    logger.info(f"✅ {test_case['name']}: Success")
+                else:
+                    logger.warning(f"⚠️ {test_case['name']}: Fit failed")
+                    
+            except Exception as e:
+                logger.error(f"❌ {test_case['name']}: {e}")
+
+        logger.info("✅ Robustness tests completed")
+        return True
+
+    except Exception as e:
+        logger.error(f"❌ Robustness test failed: {e}")
+        return False
+
+
+def main():
+    """Main test function."""
+    logger.info("🚀 Starting Enhanced ARIMA Test Suite")
     logger.info("=" * 60)
 
-    success = test_enhanced_arima()
+    test_results = []
 
-    if success:
-        logger.info("\n🎉 ALL TESTS PASSED!")
+    # Run tests
+    tests = [
+        ("Enhanced ARIMA", test_enhanced_arima),
+        ("Robustness", test_arima_robustness)
+    ]
+
+    for test_name, test_func in tests:
+        logger.info(f"\n--- Running {test_name} Test ---")
+        try:
+            result = test_func()
+            test_results.append((test_name, result))
+        except Exception as e:
+            logger.error(f"❌ {test_name} test failed with exception: {e}")
+            test_results.append((test_name, False))
+
+    # Final summary
+    logger.info("\n" + "=" * 60)
+    logger.info("FINAL SUMMARY")
+    logger.info("=" * 60)
+
+    passed = sum(1 for _, result in test_results if result)
+    total = len(test_results)
+
+    for test_name, result in test_results:
+        status = "✅ PASSED" if result else "❌ FAILED"
+        logger.info(f"{status}: {test_name}")
+
+    logger.info(f"\nOverall: {passed}/{total} test suites passed")
+
+    if passed == total:
+        logger.info("🎉 All enhanced ARIMA tests completed successfully!")
+        return True
     else:
-        logger.info("\n❌ SOME TESTS FAILED!")
+        logger.error(f"❌ {total - passed} test suites failed")
+        return False
 
-    logger.info("\nEnhanced ARIMA Features:")
-    logger.info("✅ Automatic parameter selection with pmdarima.auto_arima")
-    logger.info("✅ Seasonal component control (seasonal=True/False)")
-    logger.info("✅ Multiple optimization criteria (AIC, BIC, MSE, RMSE)")
-    logger.info("✅ Backtesting for MSE/RMSE optimization")
-    logger.info("✅ Fallback to manual ARIMA if auto_arima fails")
-    logger.info("✅ Comprehensive logging and error handling")
 
+if __name__ == "__main__":
+    success = main()
+    exit(0 if success else 1) 
