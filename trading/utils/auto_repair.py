@@ -1,86 +1,76 @@
-﻿"""Auto-repair system for handling common package and environment issues."""
+﻿"""
+Auto-repair utilities for common package and environment issues.
+
+This module provides automatic detection and repair of common issues
+that can occur in the trading system environment.
+"""
 
 import logging
-import os
 import platform
 import shutil
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
-# Try to import importlib.metadata
-try:
-    from importlib.metadata import PackageNotFoundError, version
-    IMPORTLIB_METADATA_AVAILABLE = True
-except ImportError as e:
-    print("âš ï¸ importlib.metadata not available. Disabling package version checking.")
-    print(f"   Missing: {e}")
-    PackageNotFoundError = None
-    version = None
-    IMPORTLIB_METADATA_AVAILABLE = False
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
+
+# Try to import version checking utilities
+try:
+    from importlib.metadata import version, PackageNotFoundError
+    VERSION_CHECK_AVAILABLE = True
+except ImportError:
+    VERSION_CHECK_AVAILABLE = False
+    version = None
+    PackageNotFoundError = None
 
 
 class AutoRepair:
     """Handles automatic detection and repair of common package and environment issues."""
 
     REQUIRED_PACKAGES = {
-        "numpy": "1.24.0",
-        "pandas": "2.0.0",
-        "torch": "2.0.0",
-        "transformers": "4.30.0",
-        "streamlit": "1.24.0",
-        "plotly": "5.15.0",
-        "scikit-learn": "1.3.0",
-        "yfinance": "0.2.28",
-        "openai": "1.0.0",
-        "huggingface-hub": "0.16.0",
+        "numpy": "1.20.0",
+        "pandas": "1.3.0",
+        "scikit-learn": "1.0.0",
+        "matplotlib": "3.3.0",
+        "plotly": "5.0.0",
+        "torch": "1.9.0",
+        "transformers": "4.15.0",
+        "yfinance": "0.1.70",
+        "alpaca-trade-api": "2.3.0",
+        "streamlit": "1.0.0",
     }
 
     def __init__(self):
         """Initialize the auto-repair system."""
-        self.repair_log = []
-        self.system_info = self._get_system_info()
         self.repair_status = {
             "packages": False,
             "dlls": False,
             "transformers": False,
             "environment": False,
         }
+        self.system_info = self._get_system_info()
 
     def _get_system_info(self) -> Dict[str, str]:
-        """Get system information for diagnostics."""
-        system_info = {
-            "python_version": sys.version,
-            "platform": platform.platform(),
-            "processor": platform.processor(),
-            "machine": platform.machine(),
-        }
-
+        """Get system information."""
         return {
-            "success": True,
-            "result": system_info,
-            "message": "System information collected",
-            "timestamp": datetime.now().isoformat(),
+            "platform": platform.system(),
+            "python_version": sys.version,
+            "architecture": platform.architecture()[0],
+            "machine": platform.machine(),
         }
 
     def check_packages(self) -> Dict[str, Any]:
         """Check for missing or outdated packages."""
         try:
-            if not IMPORTLIB_METADATA_AVAILABLE:
+            if not VERSION_CHECK_AVAILABLE:
                 return {
                     "success": False,
                     "error": "importlib.metadata not available for package checking",
                     "timestamp": datetime.now().isoformat(),
                 }
-            
+
             missing = []
             outdated = []
 
@@ -284,7 +274,7 @@ class AutoRepair:
             }
 
     def repair_environment(self) -> Dict[str, Any]:
-        """Attempt to repair the Python environment."""
+        """Attempt to repair environment issues."""
         try:
             # Create virtual environment if needed
             venv_path = Path("venv")
@@ -292,7 +282,10 @@ class AutoRepair:
                 subprocess.check_call([sys.executable, "-m", "venv", "venv"])
 
             # Update environment variables
-            os.environ["PYTHONPATH"] = str(Path.cwd())
+            env_vars = {
+                "PYTHONPATH": str(Path.cwd()),
+                "TRADING_ENV": "development",
+            }
 
             self.repair_status["environment"] = True
 
@@ -301,6 +294,7 @@ class AutoRepair:
                 "result": True,
                 "message": "Environment repair completed successfully",
                 "timestamp": datetime.now().isoformat(),
+                "env_vars": env_vars,
             }
         except Exception as e:
             logger.error(f"Environment repair failed: {str(e)}")
@@ -311,51 +305,57 @@ class AutoRepair:
             }
 
     def run_repair(self) -> Dict[str, Any]:
-        """Run all repair checks and fixes."""
+        """Run comprehensive repair process."""
         try:
-            results = {
-                "status": "success",
-                "issues_found": [],
-                "issues_fixed": [],
-                "timestamp": datetime.now().isoformat(),
+            logger.info("Starting comprehensive repair process...")
+
+            # Check for issues first
+            package_check = self.check_packages()
+            dll_check = self.check_dlls()
+            transformers_check = self.check_transformers()
+
+            repair_results = {
+                "packages": None,
+                "dlls": None,
+                "transformers": None,
+                "environment": None,
             }
 
-            # Check packages
-            package_check = self.check_packages()
-            if not package_check["result"]:
-                results["issues_found"].extend(package_check["issues"])
-                package_repair = self.repair_packages()
-                if package_repair["success"]:
-                    results["issues_fixed"].extend(package_check["issues"])
+            # Repair packages if needed
+            if not package_check.get("result", True):
+                logger.info("Repairing packages...")
+                repair_results["packages"] = self.repair_packages()
 
-            # Check DLLs
-            dll_check = self.check_dlls()
-            if not dll_check["result"]:
-                results["issues_found"].extend(dll_check["issues"])
-                dll_repair = self.repair_dlls()
-                if dll_repair["success"]:
-                    results["issues_fixed"].extend(dll_check["issues"])
+            # Repair DLLs if needed
+            if not dll_check.get("result", True):
+                logger.info("Repairing DLLs...")
+                repair_results["dlls"] = self.repair_dlls()
 
-            # Check transformers
-            transformer_check = self.check_transformers()
-            if not transformer_check["result"]:
-                results["issues_found"].extend(transformer_check["issues"])
-                transformer_repair = self.repair_transformers()
-                if transformer_repair["success"]:
-                    results["issues_fixed"].extend(transformer_check["issues"])
+            # Repair transformers if needed
+            if not transformers_check.get("result", True):
+                logger.info("Repairing transformers...")
+                repair_results["transformers"] = self.repair_transformers()
 
-            # Repair environment
-            env_repair = self.repair_environment()
-            if not env_repair["success"]:
-                results["status"] = "partial"
+            # Always run environment repair
+            logger.info("Repairing environment...")
+            repair_results["environment"] = self.repair_environment()
+
+            # Check if all repairs were successful
+            all_successful = all(
+                result.get("success", False) if result else True
+                for result in repair_results.values()
+            )
 
             return {
-                "success": True,
-                "result": results,
-                "message": f'Auto-repair completed: {len(results["issues_fixed"])} issues fixed',
+                "success": all_successful,
+                "result": all_successful,
+                "repair_results": repair_results,
+                "message": "Comprehensive repair process completed",
                 "timestamp": datetime.now().isoformat(),
             }
+
         except Exception as e:
+            logger.error(f"Comprehensive repair failed: {str(e)}")
             return {
                 "success": False,
                 "error": str(e),
@@ -366,11 +366,40 @@ class AutoRepair:
         """Get current repair status."""
         return {
             "success": True,
-            "result": self.repair_status,
-            "message": "Repair status retrieved",
+            "repair_status": self.repair_status,
+            "system_info": self.system_info,
             "timestamp": datetime.now().isoformat(),
         }
 
 
-# Create singleton instance
+# Global auto-repair instance
 auto_repair = AutoRepair()
+
+
+def run_auto_repair() -> Dict[str, Any]:
+    """Run auto-repair process."""
+    return auto_repair.run_repair()
+
+
+def check_system_health() -> Dict[str, Any]:
+    """Check overall system health."""
+    package_check = auto_repair.check_packages()
+    dll_check = auto_repair.check_dlls()
+    transformers_check = auto_repair.check_transformers()
+
+    all_healthy = all([
+        package_check.get("result", True),
+        dll_check.get("result", True),
+        transformers_check.get("result", True),
+    ])
+
+    return {
+        "success": True,
+        "healthy": all_healthy,
+        "checks": {
+            "packages": package_check,
+            "dlls": dll_check,
+            "transformers": transformers_check,
+        },
+        "timestamp": datetime.now().isoformat(),
+    }

@@ -29,7 +29,7 @@ def main():
     # Get configuration from environment variables
     config = load_service_config({
         "redis_host": "REDIS_HOST",
-        "redis_port": "REDIS_PORT", 
+        "redis_port": "REDIS_PORT",
         "redis_db": "REDIS_DB",
         "service_name": "REASONING_SERVICE_NAME"
     }, defaults={

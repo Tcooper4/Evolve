@@ -1,26 +1,37 @@
-﻿import logging
-import traceback
+"""
+Error handling utilities for the trading system.
+
+This module provides comprehensive error handling, recovery strategies,
+and logging utilities for the trading system.
+"""
+
+import logging
 import time
+import traceback
+from dataclasses import dataclass, field
 from datetime import datetime
 from functools import wraps
-from typing import Callable, Optional, Type, Any, Dict, List, Union
-from dataclasses import dataclass, field
-
-from trading.exceptions import TradingSystemError, ModelError, StrategyError
+from typing import Any, Callable, Dict, List, Optional, Type
 
 logger = logging.getLogger(__name__)
 
-# Basic error classes
+
+class TradingSystemError(Exception):
+    """Base class for trading system errors."""
+
+
 class TradingError(TradingSystemError):
     """Base class for trading system errors."""
 
+
 class RoutingError(TradingError):
     """Raised when routing operations fail."""
-    
+
     def __init__(self, message: str, route_info: Optional[Dict[str, Any]] = None):
         super().__init__(message)
         self.route_info = route_info or {}
         self.timestamp = datetime.now()
+
 
 @dataclass
 class ErrorContext:
@@ -47,6 +58,7 @@ class ErrorContext:
             "timestamp": self.timestamp.isoformat(),
             "errors": self.errors
         }
+
 
 class ErrorRecoveryStrategy:
     """Base class for error recovery strategies."""
@@ -84,6 +96,7 @@ class ErrorRecoveryStrategy:
             }
         return strategy
 
+
 class ErrorHandler:
     """Centralized error handler with recovery strategies."""
 
@@ -118,8 +131,10 @@ class ErrorHandler:
             "message": str(error)
         }
 
+
 # Global error handler instance
 error_handler = ErrorHandler()
+
 
 # Simple error logging decorator
 def log_errors(
@@ -140,11 +155,13 @@ def log_errors(
         return wrapper
     return decorator
 
+
 def retry_on_error(
     max_retries: int = 3,
-    delay: float =1,
+    delay: float = 1,
     retry_exceptions: tuple[Type[Exception], ...] = (Exception,),
-    backoff_factor: float =10) -> Callable:
+    backoff_factor: float = 10
+) -> Callable:
     """Decorator to retry functions on specific exceptions."""
     def decorator(func: Callable) -> Callable:
         @wraps(func)
@@ -167,6 +184,7 @@ def retry_on_error(
             raise last_exception
         return wrapper
     return decorator
+
 
 def handle_routing_errors(func: Callable) -> Callable:
     """Decorator to handle routing-specific errors."""
@@ -202,6 +220,7 @@ def handle_routing_errors(func: Callable) -> Callable:
 
     return wrapper
 
+
 def with_error_context(func: Callable) -> Callable:
     """Decorator to add error context to function calls."""
     @wraps(func)
@@ -218,20 +237,13 @@ def with_error_context(func: Callable) -> Callable:
             result = func(*args, **kwargs)
             return result
         except Exception as e:
-            # Add error to context
             context.add_error(type(e).__name__, str(e))
+            logger.error(f"Error in {func.__name__}: {e}")
+            logger.error(f"Context: {context.to_dict()}")
+            raise
 
-            # Handle with error handler
-            recovery_result = error_handler.handle_error(e, context)
+    return wrapper
 
-            # Log context for debugging
-            logger.error(f"Error context for {func.__name__}: {context.to_dict()}")
-
-            # Re-raise with context if needed
-            if not recovery_result.get("success", False):
-                raise e
-
-        return wrapper
 
 def safe_execute(
     func: Callable,
@@ -239,39 +251,24 @@ def safe_execute(
     error_types: tuple[Type[Exception], ...] = (Exception,),
     logger: Optional[logging.Logger] = None
 ) -> Any:
-    """Execute a function with error handling."""
+    """Safely execute a function with error handling."""
     try:
         return func()
     except error_types as e:
         log = logger or logging.getLogger(func.__module__)
-        log.error(f"Safe execution failed for {func.__name__}: {e}")
+        log.error(f"Error in {func.__name__}: {e}")
         return default_return
+
 
 def validate_error_context(context: ErrorContext) -> bool:
     """Validate error context structure."""
-    required_fields = ["function_name", "timestamp", "errors"]
-    return all(hasattr(context, field) for field in required_fields)
+    return hasattr(context, 'function_name') and hasattr(context, 'errors')
+
 
 def get_error_summary() -> Dict[str, Any]:
-    """Get a summary of error statistics."""
+    """Get summary of error counts."""
     return {
-        "error_counts": error_handler.error_counts.copy(),
-        "registered_strategies": list(error_handler.recovery_strategies.keys()),
-        "total_errors": sum(error_handler.error_counts.values())
-    }
-
-# Register default recovery strategies
-error_handler.register_recovery_strategy(
-    RoutingError,
-    ErrorRecoveryStrategy.retry(max_attempts=2, delay=0.5)
-)
-
-error_handler.register_recovery_strategy(
-    ModelError,
-    ErrorRecoveryStrategy.fallback(fallback_function="fallback_model")
-)
-
-error_handler.register_recovery_strategy(
-    StrategyError,
-    ErrorRecoveryStrategy.log_and_continue()
-)
+        "error_counts": error_handler.error_counts,
+        "total_errors": sum(error_handler.error_counts.values()),
+        "unique_error_types": len(error_handler.error_counts)
+    } 
