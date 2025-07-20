@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
@@ -48,7 +48,7 @@ def generate_test_data(n_days: int = 100 -> pd.DataFrame:
 
 def test_scoring_methods():
     different scoring methods."""
-    print("🔬 Testing Comprehensive Scoring System)
+    print("ðŸ”¬ Testing Comprehensive Scoring System)
     print(= * 50)   
     # Generate test data
     data = generate_test_data(200)
@@ -79,7 +79,7 @@ def test_scoring_methods():
     results = {}
     
     for method_name, config in scoring_configs.items():
-        print(f"\n📊 Testing {method_name.upper()} scoring method")
+        print(f"\nðŸ“Š Testing {method_name.upper()} scoring method")
         print("-" * 30)
         
         # Create hybrid model
@@ -113,7 +113,7 @@ def test_scoring_methods():
             if perf["status"] == "active:               avg_metrics = perf["avg_metrics]             print(f"  {model}:)             print(f    Sharpe: {avg_metrics['sharpe_ratio']:.3f})             print(f"    Win Rate: {avg_metrics['win_rate']:.3f})             print(f    Max DD:[object Object]avg_metricsmax_drawdown']:.3f})             print(f"    MSE:[object Object]avg_metrics['mse]:.6f})    return results, data, models
 
 def compare_with_old_mse_system():
-ompare new scoring system with old MSE-based approach."nt("\n🔄 Comparing with Old MSE-Based System)
+ompare new scoring system with old MSE-based approach."nt("\nðŸ”„ Comparing with Old MSE-Based System)
     print(= * 50)   
     # Generate test data
     data = generate_test_data(150)
@@ -156,12 +156,12 @@ ompare new scoring system with old MSE-based approach."nt("\n🔄 Comparing with
         old_weight = mse_weights.get(model, 0.0)
         new_weight = new_weights.get(model, 00)
         change = new_weight - old_weight
-        print(f"  {model}: {old_weight:0.3f} → {new_weight:0.3f} ({change:+.3f}))
+        print(f"  {model}: {old_weight:0.3f} â†’ {new_weight:0.3f} ({change:+.3f}))
     
     return mse_weights, new_weights
 
 def visualize_results(results, data, models):
-  ualize the results of different scoring methods."int("\n📈 Creating visualizations...")
+  ualize the results of different scoring methods."int("\nðŸ“ˆ Creating visualizations...")
     
     # Create subplots
     fig, axes = plt.subplots(2, 2figsize=(1512)
@@ -242,12 +242,12 @@ def visualize_results(results, data, models):
     ax4.grid(True, alpha=00.3    
     plt.tight_layout()
     plt.savefig('hybrid_scoring_comparison.png', dpi=300bbox_inches=tight')
-    print("📊 Visualization saved as 'hybrid_scoring_comparison.png')   
+    print("ðŸ“Š Visualization saved as 'hybrid_scoring_comparison.png')   
     return fig
 
 def main():
     """Main test function."""
-    print("🚀 Starting Hybrid Model Scoring System Tests)
+    print("ðŸš€ Starting Hybrid Model Scoring System Tests)
     print(= * 60  # Test different scoring methods
     results, data, models = test_scoring_methods()
     
@@ -258,24 +258,24 @@ def main():
     fig = visualize_results(results, data, models)
     
     # Summary
-    print("\n" + "=" *60 print("📋 SUMMARY)
+    print("\n" + "=" *60 print("ðŸ“‹ SUMMARY)
     print("=" * 60)
-    print("✅ New comprehensive scoring system implemented successfully!) print("✅ Replaced MSE-based weights with Sharpe ratio, drawdown, and win rate")
-    print("✅ Added AHP and composite scoring methods")
-    print("✅ Models with poor Sharpe ratios now get reduced weights")
-    print(✅ System provides better risk-adjusted performance")
+    print("âœ… New comprehensive scoring system implemented successfully!) print("âœ… Replaced MSE-based weights with Sharpe ratio, drawdown, and win rate")
+    print("âœ… Added AHP and composite scoring methods")
+    print("âœ… Models with poor Sharpe ratios now get reduced weights")
+    print(âœ… System provides better risk-adjusted performance")
     
-    print("\n🎯 Key Improvements:")
-    print("  • Sharpe ratio weighting (40ards risk-adjusted returns")
-    print("  • Win rate weighting (30%) - rewards consistency")
-    print("  • Drawdown weighting (20%) - penalizes excessive risk")
-    print( • MSE weighting (10%) - maintains some accuracy focus")
-    print("  • Minimum performance threshold - prevents zero weights")
+    print("\nðŸŽ¯ Key Improvements:")
+    print("  â€¢ Sharpe ratio weighting (40ards risk-adjusted returns")
+    print("  â€¢ Win rate weighting (30%) - rewards consistency")
+    print("  â€¢ Drawdown weighting (20%) - penalizes excessive risk")
+    print( â€¢ MSE weighting (10%) - maintains some accuracy focus")
+    print("  â€¢ Minimum performance threshold - prevents zero weights")
     
-    print("\n🔧 Available Scoring Methods:")
-    print("  • weighted_average: Configurable metric weights")
-    print(  • ahp:Analytic Hierarchy Process")
-    print("  • composite: Trend-adjusted scoring")
+    print("\nðŸ”§ Available Scoring Methods:")
+    print("  â€¢ weighted_average: Configurable metric weights")
+    print(  â€¢ ahp:Analytic Hierarchy Process")
+    print("  â€¢ composite: Trend-adjusted scoring")
     
-    print("\n📊 Test completed successfully!)if __name__ == "__main__":
-    main() 
+    print("\nðŸ“Š Test completed successfully!)if __name__ == "__main__":
+    main()

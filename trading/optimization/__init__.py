@@ -1,4 +1,4 @@
-"""
+﻿"""
 Trading Strategy Optimization Module
 
 This module provides various optimization methods for trading strategies,

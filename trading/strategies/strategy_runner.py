@@ -1,4 +1,4 @@
-"""
+﻿"""
 Async Strategy Runner
 
 This module provides async execution of multiple trading strategies in parallel,
@@ -554,4 +554,4 @@ async def run_strategies_parallel_example(
         ensemble_config={"method": "weighted"}
     )
     
-    return results 
+    return results

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for StrategyResearchAgent
 
 Tests the internet-based strategy discovery and integration functionality.
@@ -586,4 +586,4 @@ class TestStrategyResearchAgentIntegration:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])

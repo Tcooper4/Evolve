@@ -26,7 +26,7 @@ def test_alpaca_imports():
 def test_alpaca_enum_values():
     """Test that alpaca-py enum values are correct"""
     from alpaca.trading.enums import OrderSide, OrderType, TimeInForce
-    
+
     assert OrderSide.BUY.value == "buy"
     assert OrderSide.SELL.value == "sell"
     assert OrderType.MARKET.value == "market"
@@ -38,7 +38,7 @@ def test_alpaca_enum_values():
 def test_alpaca_client_creation():
     """Test that TradingClient can be created"""
     from alpaca.trading.client import TradingClient
-    
+
     # This should not raise an exception
     client = TradingClient(api_key="test", secret_key="test", paper=True)
     assert client is not None
@@ -48,14 +48,14 @@ def test_alpaca_order_request():
     """Test that order requests can be created"""
     from alpaca.trading.requests import MarketOrderRequest
     from alpaca.trading.enums import OrderSide, TimeInForce
-    
+
     order_request = MarketOrderRequest(
         symbol="AAPL",
         qty=10,
         side=OrderSide.BUY,
         time_in_force=TimeInForce.DAY
     )
-    
+
     assert order_request.symbol == "AAPL"
     assert order_request.qty == 10
     assert order_request.side == OrderSide.BUY
@@ -78,4 +78,5 @@ if __name__ == "__main__":
     test_alpaca_client_creation()
     test_alpaca_order_request()
     test_old_api_not_available()
-    logger.info("All Alpaca migration tests passed!") 
+    logger.info("All Alpaca migration tests passed!")
+

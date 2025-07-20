@@ -1,4 +1,4 @@
-"""
+﻿"""
 Agent Swarm Orchestrator
 
 Coordinates multiple agents (Strategy, Risk, Execution, Monitoring, etc.) as async jobs/processes.
@@ -194,4 +194,4 @@ class SwarmOrchestrator:
                 "completed_tasks": len(self.completed_tasks),
                 "failed_tasks": len([t for t in self.completed_tasks.values() if t.status == AgentStatus.FAILED]),
                 "max_concurrent_agents": self.config.max_concurrent_agents
-            } 
+            }

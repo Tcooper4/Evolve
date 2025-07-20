@@ -1,4 +1,4 @@
-"""
+﻿"""
 Enhanced Agent Manager with Batch 12 Features
 
 This module manages all pluggable agents in the system, providing dynamic
@@ -810,7 +810,7 @@ class EnhancedAgentManager:
             )
             
             self.register_agent("fallback_agent", MockAgent, fallback_config)
-            self.logger.info("✅ Registered fallback agent (MockAgent)")
+            self.logger.info("âœ… Registered fallback agent (MockAgent)")
             
         except ImportError as e:
             self.logger.error(f"Failed to import MockAgent: {e}")
@@ -864,7 +864,7 @@ class EnhancedAgentManager:
             )
             
             self.register_agent("minimal_fallback_agent", MinimalFallbackAgent, fallback_config)
-            self.logger.info("✅ Registered minimal fallback agent")
+            self.logger.info("âœ… Registered minimal fallback agent")
             
         except Exception as e:
             self.logger.error(f"Failed to register minimal fallback agent: {e}")

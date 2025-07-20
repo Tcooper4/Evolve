@@ -1,4 +1,4 @@
-"""
+﻿"""
 Prompt Handler - Batch 16
 Enhanced error logging for prompt routing and GPT fallback failures
 """
@@ -485,4 +485,4 @@ class PromptHandler:
 
 def create_prompt_handler(enable_error_logging: bool = True) -> PromptHandler:
     """Factory function to create a prompt handler."""
-    return PromptHandler(enable_error_logging=enable_error_logging) 
+    return PromptHandler(enable_error_logging=enable_error_logging)

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for ensemble voter functionality including audit reporting.
 """
 
@@ -518,4 +518,4 @@ class TestErrorHandling:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__]) 
+    pytest.main([__file__])

@@ -365,7 +365,7 @@ if submit and prompt:
         try:
             from routing.prompt_router import route_prompt
             import asyncio
-            
+
             # Run the async route_prompt function
             result = asyncio.run(route_prompt(prompt, llm_type="default"))
             render_prompt_result(result)
@@ -420,3 +420,4 @@ elif advanced_nav == "🛡️ Risk":
 
 # --- Footer ---
 render_footer()
+

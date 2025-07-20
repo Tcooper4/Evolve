@@ -1,4 +1,4 @@
-"""
+﻿"""
 Prompt Formatter
 
 Formats and validates prompts with JSON input handling and fallback mechanisms.
@@ -288,4 +288,4 @@ class PromptFormatter:
             "enable_json_validation": self.enable_json_validation,
             "default_format": self.default_format,
             "supported_formats": ["text", "json", "template", "fallback"]
-        } 
+        }

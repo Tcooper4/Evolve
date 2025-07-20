@@ -1,8 +1,8 @@
-"""
+﻿"""
 Persistent Memory Module with Batch 12 Features
 
 This module provides persistent memory storage for the trading system,
-enabling long-term learning from past prompt → action → outcome patterns.
+enabling long-term learning from past prompt â†’ action â†’ outcome patterns.
 
 Features:
 - Redis and vector store integration for persistent storage
@@ -917,4 +917,4 @@ async def store_interaction(
         **kwargs
     )
     
-    return await memory.store_interaction(interaction) 
+    return await memory.store_interaction(interaction)

@@ -1,4 +1,4 @@
-"""Genetic Algorithm Optimization Method.
+﻿"""Genetic Algorithm Optimization Method.
 
 This module contains the GeneticAlgorithm optimization method extracted from strategy_optimizer.py.
 """
@@ -227,4 +227,4 @@ class GeneticAlgorithm(OptimizationMethod):
                                 individual[param] = random.randint(space["start"], space["end"])
                             else:
                                 individual[param] = random.uniform(space["start"], space["end"])
-        return offspring 
+        return offspring

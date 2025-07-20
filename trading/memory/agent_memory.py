@@ -1,4 +1,4 @@
-"""
+﻿"""
 AgentMemory: Persistent memory for agent decisions, outcomes, and history.
 Enhanced with expiration logic and memory overflow prevention.
 """

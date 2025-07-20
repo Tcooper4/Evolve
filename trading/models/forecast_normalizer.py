@@ -1,4 +1,4 @@
-"""
+﻿"""
 Forecast Normalizer
 
 This module provides functionality to normalize forecast indexes and align them
@@ -309,4 +309,4 @@ class ForecastNormalizer:
 
 def create_forecast_normalizer(config: Optional[Dict[str, Any]] = None) -> ForecastNormalizer:
     """Create a forecast normalizer instance."""
-    return ForecastNormalizer(config) 
+    return ForecastNormalizer(config)

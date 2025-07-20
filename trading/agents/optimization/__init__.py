@@ -1,4 +1,4 @@
-"""
+﻿"""
 Optimization Agent Package
 
 This package contains the modularized optimization agent components:
@@ -27,4 +27,4 @@ __all__ = [
     'BacktestIntegration',
     'PerformanceAnalyzer',
     'OptimizationResult'
-] 
+]

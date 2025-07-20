@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Example usage of enhanced ARIMA model with auto_arima optimization.
 """
@@ -44,7 +44,7 @@ def main():
     result_aic = model_aic.fit(data)
     
     if result_aic['success']:
-        logger.info(f"✅ Model fitted successfully")
+        logger.info(f"âœ… Model fitted successfully")
         logger.info(f"   Order: {result_aic['order']}")
         logger.info(f"   Seasonal Order: {result_aic['seasonal_order']}")
         logger.info(f"   AIC: {result_aic['aic']:.2f}")
@@ -72,7 +72,7 @@ def main():
     result_bic = model_bic.fit(data)
     
     if result_bic['success']:
-        logger.info(f"✅ Model fitted successfully")
+        logger.info(f"âœ… Model fitted successfully")
         logger.info(f"   Order: {result_bic['order']}")
         logger.info(f"   Seasonal Order: {result_bic['seasonal_order']}")
         logger.info(f"   BIC: {result_bic['bic']:.2f}")
@@ -101,7 +101,7 @@ def main():
     result_mse = model_mse.fit(data)
     
     if result_mse['success']:
-        logger.info(f"✅ Model fitted successfully")
+        logger.info(f"âœ… Model fitted successfully")
         logger.info(f"   Order: {result_mse['order']}")
         logger.info(f"   Seasonal Order: {result_mse['seasonal_order']}")
         logger.info(f"   AIC: {result_mse['aic']:.2f}")
@@ -130,7 +130,7 @@ def main():
     result_rmse = model_rmse.fit(data)
     
     if result_rmse['success']:
-        logger.info(f"✅ Model fitted successfully")
+        logger.info(f"âœ… Model fitted successfully")
         logger.info(f"   Order: {result_rmse['order']}")
         logger.info(f"   Seasonal Order: {result_rmse['seasonal_order']}")
         logger.info(f"   AIC: {result_rmse['aic']:.2f}")
@@ -154,7 +154,7 @@ def main():
     result_manual = model_manual.fit(data)
     
     if result_manual['success']:
-        logger.info(f"✅ Model fitted successfully")
+        logger.info(f"âœ… Model fitted successfully")
         logger.info(f"   Order: {result_manual['order']}")
         logger.info(f"   Seasonal Order: {result_manual['seasonal_order']}")
         logger.info(f"   AIC: {result_manual['aic']:.2f}")
@@ -166,12 +166,12 @@ def main():
     
     logger.info("\n" + "=" * 50)
     logger.info("Enhanced ARIMA Features Summary:")
-    logger.info("✅ Automatic parameter selection with pmdarima.auto_arima")
-    logger.info("✅ Seasonal component control (seasonal=True/False)")
-    logger.info("✅ Multiple optimization criteria (AIC, BIC, MSE, RMSE)")
-    logger.info("✅ Backtesting for MSE/RMSE optimization")
-    logger.info("✅ Fallback to manual ARIMA if auto_arima fails")
-    logger.info("✅ Comprehensive logging and error handling")
+    logger.info("âœ… Automatic parameter selection with pmdarima.auto_arima")
+    logger.info("âœ… Seasonal component control (seasonal=True/False)")
+    logger.info("âœ… Multiple optimization criteria (AIC, BIC, MSE, RMSE)")
+    logger.info("âœ… Backtesting for MSE/RMSE optimization")
+    logger.info("âœ… Fallback to manual ARIMA if auto_arima fails")
+    logger.info("âœ… Comprehensive logging and error handling")
 
 if __name__ == "__main__":
-    main() 
+    main()

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Task Providers Module
 
 This module contains task provider functionality for the task orchestrator.
@@ -292,4 +292,4 @@ def create_task_provider(provider_type: str, config: Dict[str, Any]) -> TaskProv
     elif provider_type == "system":
         return SystemTaskProvider(config)
     else:
-        raise ValueError(f"Unknown provider type: {provider_type}") 
+        raise ValueError(f"Unknown provider type: {provider_type}")

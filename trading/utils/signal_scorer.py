@@ -1,4 +1,4 @@
-"""
+﻿"""
 Signal Scorer - Batch 16
 Rolling score decay with exponential weighting for shorter test windows
 """
@@ -406,4 +406,4 @@ class SignalScorer:
 
 def create_signal_scorer(config: Optional[DecayConfig] = None) -> SignalScorer:
     """Factory function to create a signal scorer."""
-    return SignalScorer(config) 
+    return SignalScorer(config)

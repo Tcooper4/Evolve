@@ -1,4 +1,4 @@
-"""Advanced plotting utilities for time series and performance visualization.
+﻿"""Advanced plotting utilities for time series and performance visualization.
 
 This module provides comprehensive plotting functionality for time series data,
 performance metrics, and model predictions, with support for both Matplotlib

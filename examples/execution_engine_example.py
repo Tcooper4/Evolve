@@ -1,4 +1,4 @@
-"""
+﻿"""
 Execution Engine Example
 
 This example demonstrates the trade execution engine with realistic scenarios:
@@ -323,7 +323,7 @@ class ExecutionEngineExample:
             try:
                 # Test connection
                 connected = await test_broker_connection(broker_type)
-                print(f"  Connection: {'✅ Connected' if connected else '❌ Failed'}")
+                print(f"  Connection: {'âœ… Connected' if connected else 'âŒ Failed'}")
                 
                 if connected:
                     # Create adapter
@@ -333,9 +333,9 @@ class ExecutionEngineExample:
                     # Test market data
                     try:
                         market_data = await adapter.get_market_data("AAPL")
-                        print(f"  Market Data: ✅ {market_data.ticker} @ ${market_data.last:.2f}")
+                        print(f"  Market Data: âœ… {market_data.ticker} @ ${market_data.last:.2f}")
                     except Exception as e:
-                        print(f"  Market Data: ❌ {e}")
+                        print(f"  Market Data: âŒ {e}")
                     
                     # Test order submission (if supported)
                     if broker_type in ["simulation", "alpaca", "ibkr"]:
@@ -349,9 +349,9 @@ class ExecutionEngineExample:
                                 quantity=1
                             )
                             execution = await adapter.submit_order(order)
-                            print(f"  Order Submission: ✅ {execution.status.value}")
+                            print(f"  Order Submission: âœ… {execution.status.value}")
                         except Exception as e:
-                            print(f"  Order Submission: ❌ {e}")
+                            print(f"  Order Submission: âŒ {e}")
                     
                     await adapter.disconnect()
                 
@@ -506,4 +506,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

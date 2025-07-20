@@ -1,4 +1,4 @@
-"""
+﻿"""
 Time utilities for datetime parsing and formatting.
 
 This module provides centralized time formatting and datetime parsing logic
@@ -319,4 +319,4 @@ def normalize_datetime_index(df: pd.DataFrame, enforce_utc: bool = False) -> pd.
             df.index = idx.tz_convert('UTC')
         else:
             df.index = idx.tz_localize(None)
-    return df 
+    return df

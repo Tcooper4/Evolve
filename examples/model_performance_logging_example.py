@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Performance Logging Example
 
 This script demonstrates how to use the model performance logging functionality
@@ -123,43 +123,43 @@ def generate_sample_performance_data():
 
 def demonstrate_logging():
     """Demonstrate the logging functionality."""
-    print("🚀 Model Performance Logging Demonstration")
+    print("ðŸš€ Model Performance Logging Demonstration")
     print("=" * 50)
     
     # Clear existing data
-    print("🗑️ Clearing existing data...")
+    print("ðŸ—‘ï¸ Clearing existing data...")
     clear_model_performance_log()
     
     # Generate and log sample data
-    print("📊 Generating sample performance data...")
+    print("ðŸ“Š Generating sample performance data...")
     sample_data = generate_sample_performance_data()
     
     for i, data in enumerate(sample_data, 1):
         print(f"Logging performance {i}/{len(sample_data)}: {data['model_name']} for {data['ticker']}")
         log_model_performance(**data)
     
-    print(f"✅ Successfully logged {len(sample_data)} performance records!")
+    print(f"âœ… Successfully logged {len(sample_data)} performance records!")
     print()
 
 
 def demonstrate_analysis():
     """Demonstrate the analysis functionality."""
-    print("📈 Performance Analysis Demonstration")
+    print("ðŸ“ˆ Performance Analysis Demonstration")
     print("=" * 50)
     
     # Get available data
     tickers = get_available_tickers()
-    print(f"📊 Available tickers: {', '.join(tickers)}")
+    print(f"ðŸ“Š Available tickers: {', '.join(tickers)}")
     
     # Analyze each ticker
     for ticker in tickers[:3]:  # Show first 3 tickers
-        print(f"\n🎯 Analysis for {ticker}:")
+        print(f"\nðŸŽ¯ Analysis for {ticker}:")
         
         # Get best models for this ticker
         best_models = get_best_models(ticker)
         
         if best_models:
-            print("🏆 Best models:")
+            print("ðŸ† Best models:")
             for metric, data in best_models.items():
                 if data.get("model"):
                     metric_name = metric.replace("best_", "").replace("_", " ").title()
@@ -172,52 +172,52 @@ def demonstrate_analysis():
                     else:
                         formatted_value = f"{value:.3f}"
                     
-                    print(f"  • {metric_name}: {data['model']} ({formatted_value})")
+                    print(f"  â€¢ {metric_name}: {data['model']} ({formatted_value})")
         
         # Get performance history
         history = get_model_performance_history(ticker=ticker)
         if not history.empty:
-            print(f"📈 Performance history: {len(history)} records")
+            print(f"ðŸ“ˆ Performance history: {len(history)} records")
             
             # Show average metrics
             avg_sharpe = history['sharpe'].mean()
             avg_mse = history['mse'].mean()
-            print(f"  • Average Sharpe: {avg_sharpe:.3f}")
-            print(f"  • Average MSE: {avg_mse:.4f}")
+            print(f"  â€¢ Average Sharpe: {avg_sharpe:.3f}")
+            print(f"  â€¢ Average MSE: {avg_mse:.4f}")
     
     print()
 
 
 def demonstrate_filtering():
     """Demonstrate filtering and querying functionality."""
-    print("🔍 Filtering and Querying Demonstration")
+    print("ðŸ” Filtering and Querying Demonstration")
     print("=" * 50)
     
     # Get all performance history
     all_history = get_model_performance_history()
-    print(f"📊 Total performance records: {len(all_history)}")
+    print(f"ðŸ“Š Total performance records: {len(all_history)}")
     
     # Filter by specific model
     lstm_history = get_model_performance_history(model_name="LSTM_v1")
-    print(f"📈 LSTM_v1 records: {len(lstm_history)}")
+    print(f"ðŸ“ˆ LSTM_v1 records: {len(lstm_history)}")
     
     if not lstm_history.empty:
         print("LSTM_v1 performance summary:")
-        print(f"  • Average Sharpe: {lstm_history['sharpe'].mean():.3f}")
-        print(f"  • Average MSE: {lstm_history['mse'].mean():.4f}")
-        print(f"  • Best Sharpe: {lstm_history['sharpe'].max():.3f}")
-        print(f"  • Best MSE: {lstm_history['mse'].min():.4f}")
+        print(f"  â€¢ Average Sharpe: {lstm_history['sharpe'].mean():.3f}")
+        print(f"  â€¢ Average MSE: {lstm_history['mse'].mean():.4f}")
+        print(f"  â€¢ Best Sharpe: {lstm_history['sharpe'].max():.3f}")
+        print(f"  â€¢ Best MSE: {lstm_history['mse'].min():.4f}")
     
     # Filter by recent data
     recent_history = get_model_performance_history(days_back=7)
-    print(f"🕒 Recent records (7 days): {len(recent_history)}")
+    print(f"ðŸ•’ Recent records (7 days): {len(recent_history)}")
     
     print()
 
 
 def demonstrate_model_comparison():
     """Demonstrate model comparison functionality."""
-    print("⚖️ Model Comparison Demonstration")
+    print("âš–ï¸ Model Comparison Demonstration")
     print("=" * 50)
     
     # Get all available models
@@ -228,7 +228,7 @@ def demonstrate_model_comparison():
         models = get_available_models(ticker)
         all_models.update(models)
     
-    print(f"🤖 Available models: {', '.join(sorted(all_models))}")
+    print(f"ðŸ¤– Available models: {', '.join(sorted(all_models))}")
     
     # Compare models across all tickers
     all_history = get_model_performance_history()
@@ -242,23 +242,23 @@ def demonstrate_model_comparison():
             'win_rate': ['mean', 'std']
         }).round(4)
         
-        print("\n📊 Model Performance Summary:")
+        print("\nðŸ“Š Model Performance Summary:")
         print(model_performance)
         
         # Find best overall model by Sharpe ratio
         best_sharpe_model = all_history.loc[all_history['sharpe'].idxmax()]
-        print(f"\n🏆 Best Sharpe Ratio: {best_sharpe_model['model_name']} ({best_sharpe_model['ticker']}) - {best_sharpe_model['sharpe']:.3f}")
+        print(f"\nðŸ† Best Sharpe Ratio: {best_sharpe_model['model_name']} ({best_sharpe_model['ticker']}) - {best_sharpe_model['sharpe']:.3f}")
         
         # Find best overall model by MSE
         best_mse_model = all_history.loc[all_history['mse'].idxmin()]
-        print(f"🎯 Best MSE: {best_mse_model['model_name']} ({best_mse_model['ticker']}) - {best_mse_model['mse']:.4f}")
+        print(f"ðŸŽ¯ Best MSE: {best_mse_model['model_name']} ({best_mse_model['ticker']}) - {best_mse_model['mse']:.4f}")
     
     print()
 
 
 def main():
     """Main demonstration function."""
-    print("🎯 Model Performance Logging System Demo")
+    print("ðŸŽ¯ Model Performance Logging System Demo")
     print("=" * 60)
     print()
     
@@ -269,18 +269,18 @@ def main():
         demonstrate_filtering()
         demonstrate_model_comparison()
         
-        print("✅ All demonstrations completed successfully!")
-        print("\n💡 Next steps:")
+        print("âœ… All demonstrations completed successfully!")
+        print("\nðŸ’¡ Next steps:")
         print("  1. Run the Streamlit dashboard: streamlit run pages/Model_Performance_Dashboard.py")
         print("  2. Use log_model_performance() in your model training scripts")
         print("  3. Analyze performance trends with get_model_performance_history()")
         print("  4. Find best models with get_best_models()")
         
     except Exception as e:
-        print(f"❌ Error during demonstration: {str(e)}")
+        print(f"âŒ Error during demonstration: {str(e)}")
         import traceback
         traceback.print_exc()
 
 
 if __name__ == "__main__":
-    main() 
+    main()

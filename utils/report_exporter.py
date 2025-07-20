@@ -1,4 +1,4 @@
-"""
+﻿"""
 Report Exporter for Trade Reports
 
 Provides functionality to export trade reports in various formats including CSV and PDF.
@@ -367,4 +367,4 @@ def export_trade_report(
         str: Path to the exported file
     """
     exporter = ReportExporter(export_dir)
-    return exporter.export_trade_report(signals, format, filename, include_summary) 
+    return exporter.export_trade_report(signals, format, filename, include_summary)

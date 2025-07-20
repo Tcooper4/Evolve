@@ -1,4 +1,4 @@
-"""
+﻿"""
 LLM module for trading system.
 """
 
@@ -8,4 +8,4 @@ def get_llm_interface():
     from agents.llm.llm_interface import LLMInterface
     return LLMInterface
 
-__all__ = ["get_llm_interface"] 
+__all__ = ["get_llm_interface"]

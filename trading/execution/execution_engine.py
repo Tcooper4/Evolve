@@ -1,4 +1,4 @@
-"""Execution Engine for Trade Execution.
+﻿"""Execution Engine for Trade Execution.
 Enhanced with Batch 10 features: detailed logging for skipped/failure cases.
 """
 
@@ -469,7 +469,7 @@ class ExecutionEngine:
             base_price = 50000.0  # Crypto prices
         
         # Add some randomness
-        variation = random.uniform(-0.02, 0.02)  # ±2% variation
+        variation = random.uniform(-0.02, 0.02)  # Â±2% variation
         return base_price * (1 + variation)
 
     def get_failure_summary(self) -> dict:

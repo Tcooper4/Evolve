@@ -1,4 +1,4 @@
-"""
+﻿"""
 Batch 11 Tests
 
 Comprehensive test suite for Batch 11 implementations:
@@ -853,4 +853,4 @@ def run_batch_11_tests():
 
 if __name__ == "__main__":
     success = run_batch_11_tests()
-    print(f"\nBatch 11 tests {'PASSED' if success else 'FAILED'}") 
+    print(f"\nBatch 11 tests {'PASSED' if success else 'FAILED'}")

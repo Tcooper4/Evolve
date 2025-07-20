@@ -1,4 +1,4 @@
-"""
+﻿"""
 Risk-Aware Hybrid Model Example
 
 This example demonstrates the enhanced hybrid model with risk-aware weighting
@@ -94,36 +94,36 @@ def create_hybrid_model() -> HybridModel:
 
 def demonstrate_risk_aware_weighting():
     """Demonstrate the risk-aware weighting functionality."""
-    print("🚀 Risk-Aware Hybrid Model Demonstration")
+    print("ðŸš€ Risk-Aware Hybrid Model Demonstration")
     print("=" * 60)
     
     # Create sample data
     data = generate_sample_data(252)
-    print(f"✅ Generated {len(data)} days of sample data")
+    print(f"âœ… Generated {len(data)} days of sample data")
     
     # Create hybrid model
     hybrid_model = create_hybrid_model()
-    print("✅ Created hybrid model with 4 mock models")
+    print("âœ… Created hybrid model with 4 mock models")
     
     # Fit models and calculate initial performance
-    print("\n📊 Fitting models and calculating performance...")
+    print("\nðŸ“Š Fitting models and calculating performance...")
     hybrid_model.fit(data)
     
     # Show initial weights
-    print("\n📈 Initial Model Weights:")
+    print("\nðŸ“ˆ Initial Model Weights:")
     for model_name, weight in hybrid_model.weights.items():
         print(f"   {model_name}: {weight:.2%}")
     
     # Test different weighting metrics
     print("\n" + "=" * 60)
-    print("🎯 TESTING DIFFERENT WEIGHTING METRICS")
+    print("ðŸŽ¯ TESTING DIFFERENT WEIGHTING METRICS")
     print("=" * 60)
     
     weighting_metrics = ["sharpe", "drawdown", "mse"]
     results = {}
     
     for metric in weighting_metrics:
-        print(f"\n📊 Testing {metric.upper()} weighting...")
+        print(f"\nðŸ“Š Testing {metric.upper()} weighting...")
         
         # Set weighting metric
         hybrid_model.set_weighting_metric(metric)
@@ -138,7 +138,7 @@ def demonstrate_risk_aware_weighting():
     
     # Analyze results
     print("\n" + "=" * 60)
-    print("📊 WEIGHTING METRIC ANALYSIS")
+    print("ðŸ“Š WEIGHTING METRIC ANALYSIS")
     print("=" * 60)
     
     # Create comparison table
@@ -154,7 +154,7 @@ def demonstrate_risk_aware_weighting():
     print(comparison_df.to_string(index=False))
     
     # Analyze which models benefit from each metric
-    print("\n🔍 Analysis:")
+    print("\nðŸ” Analysis:")
     
     # Find best model for each metric
     for metric in weighting_metrics:
@@ -167,7 +167,7 @@ def demonstrate_risk_aware_weighting():
 def demonstrate_weighting_metric_selection():
     """Demonstrate how to select and configure weighting metrics."""
     print("\n" + "=" * 60)
-    print("⚙️ WEIGHTING METRIC CONFIGURATION")
+    print("âš™ï¸ WEIGHTING METRIC CONFIGURATION")
     print("=" * 60)
     
     # Create hybrid model
@@ -178,16 +178,16 @@ def demonstrate_weighting_metric_selection():
     # Show available weighting metrics
     weighting_info = hybrid_model.get_weighting_metric_info()
     
-    print("\n📋 Available Weighting Metrics:")
+    print("\nðŸ“‹ Available Weighting Metrics:")
     for metric, info in weighting_info["available_metrics"].items():
-        print(f"   • {metric.title()}: {info['description']}")
+        print(f"   â€¢ {metric.title()}: {info['description']}")
     
-    print("\n📋 Available Ensemble Methods:")
+    print("\nðŸ“‹ Available Ensemble Methods:")
     for method, description in weighting_info["available_methods"].items():
-        print(f"   • {method}: {description}")
+        print(f"   â€¢ {method}: {description}")
     
     # Demonstrate metric switching
-    print("\n🔄 Demonstrating metric switching:")
+    print("\nðŸ”„ Demonstrating metric switching:")
     
     for metric in ["sharpe", "drawdown", "mse"]:
         hybrid_model.set_weighting_metric(metric)
@@ -203,7 +203,7 @@ def demonstrate_weighting_metric_selection():
 def demonstrate_performance_analysis():
     """Demonstrate performance analysis and recommendations."""
     print("\n" + "=" * 60)
-    print("📈 PERFORMANCE ANALYSIS")
+    print("ðŸ“ˆ PERFORMANCE ANALYSIS")
     print("=" * 60)
     
     # Create and fit hybrid model
@@ -214,7 +214,7 @@ def demonstrate_performance_analysis():
     # Get performance summary
     summary = hybrid_model.get_model_performance_summary()
     
-    print("\n📊 Model Performance Summary:")
+    print("\nðŸ“Š Model Performance Summary:")
     for model_name, model_info in summary.items():
         if model_info["status"] == "active":
             print(f"\n   {model_name}:")
@@ -230,7 +230,7 @@ def demonstrate_performance_analysis():
     
     # Show current configuration
     config = hybrid_model.scoring_config
-    print(f"\n⚙️ Current Configuration:")
+    print(f"\nâš™ï¸ Current Configuration:")
     print(f"   Method: {config['method']}")
     print(f"   Weighting Metric: {config['weighting_metric']}")
     print(f"   Min Performance Threshold: {config['min_performance_threshold']}")
@@ -242,7 +242,7 @@ def demonstrate_performance_analysis():
 def create_visualization_comparison(hybrid_model: HybridModel, results: Dict[str, Dict[str, float]]):
     """Create visualizations comparing different weighting methods."""
     print("\n" + "=" * 60)
-    print("📊 CREATING VISUALIZATIONS")
+    print("ðŸ“Š CREATING VISUALIZATIONS")
     print("=" * 60)
     
     # Create comparison chart
@@ -333,13 +333,13 @@ def create_visualization_comparison(hybrid_model: HybridModel, results: Dict[str
     plt.savefig('risk_aware_weighting_comparison.png', dpi=300, bbox_inches='tight')
     plt.show()
     
-    print(f"📊 Visualization saved as 'risk_aware_weighting_comparison.png'")
+    print(f"ðŸ“Š Visualization saved as 'risk_aware_weighting_comparison.png'")
 
 
 def demonstrate_streamlit_integration():
     """Demonstrate how to integrate with Streamlit."""
     print("\n" + "=" * 60)
-    print("🎛️ STREAMLIT INTEGRATION EXAMPLE")
+    print("ðŸŽ›ï¸ STREAMLIT INTEGRATION EXAMPLE")
     print("=" * 60)
     
     print("""
@@ -384,7 +384,7 @@ Key Features:
 
 def main():
     """Main function to run the risk-aware hybrid model demonstration."""
-    print("🎯 Risk-Aware Hybrid Model Example")
+    print("ðŸŽ¯ Risk-Aware Hybrid Model Example")
     print("This example demonstrates risk-aware weighting using Sharpe, Drawdown, or MSE")
     
     # Demonstrate risk-aware weighting
@@ -404,16 +404,16 @@ def main():
     
     # Summary
     print("\n" + "=" * 60)
-    print("📋 SUMMARY")
+    print("ðŸ“‹ SUMMARY")
     print("=" * 60)
-    print("✅ Risk-aware weighting successfully implemented")
-    print("✅ Sharpe ratio weighting: weight = Sharpe / total_Sharpe")
-    print("✅ Drawdown weighting: weight = (1 + drawdown) / total")
-    print("✅ MSE weighting: weight = (1/MSE) / total(1/MSE)")
-    print("✅ User-selectable weighting metrics")
-    print("✅ Comprehensive performance analysis")
-    print("✅ Streamlit UI integration")
-    print("✅ Configuration validation and recommendations")
+    print("âœ… Risk-aware weighting successfully implemented")
+    print("âœ… Sharpe ratio weighting: weight = Sharpe / total_Sharpe")
+    print("âœ… Drawdown weighting: weight = (1 + drawdown) / total")
+    print("âœ… MSE weighting: weight = (1/MSE) / total(1/MSE)")
+    print("âœ… User-selectable weighting metrics")
+    print("âœ… Comprehensive performance analysis")
+    print("âœ… Streamlit UI integration")
+    print("âœ… Configuration validation and recommendations")
     
     print("\nKey Benefits:")
     print("- Risk-aware ensemble weighting")
@@ -426,4 +426,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

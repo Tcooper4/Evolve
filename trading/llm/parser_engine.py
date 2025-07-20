@@ -1,4 +1,4 @@
-"""
+﻿"""
 Parser Engine
 
 This module handles LLM prompt parsing logic with fallback mechanisms and
@@ -31,7 +31,7 @@ try:
     TRANSFORMERS_AVAILABLE = True
     HUGGINGFACE_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch/transformers not available. Disabling local LLM features.")
+    print("âš ï¸ PyTorch/transformers not available. Disabling local LLM features.")
     print(f"   Missing: {e}")
     torch = None
     AutoModelForCausalLM = None
@@ -332,15 +332,15 @@ class ParserEngine:
         # Initialize OpenAI if available
         if self.use_openai_fallback and self.openai_api_key:
             openai.api_key = self.openai_api_key
-            logger.info("✅ OpenAI initialized for prompt parsing")
+            logger.info("âœ… OpenAI initialized for prompt parsing")
 
         # Initialize HuggingFace if available
         if self.use_local_llm:
             try:
                 self._init_huggingface()
-                logger.info("✅ HuggingFace initialized for prompt parsing")
+                logger.info("âœ… HuggingFace initialized for prompt parsing")
             except Exception as e:
-                logger.warning(f"⚠️ HuggingFace initialization failed: {e}")
+                logger.warning(f"âš ï¸ HuggingFace initialization failed: {e}")
                 self.use_local_llm = False
 
     def _init_huggingface(self) -> None:
@@ -375,7 +375,7 @@ class ParserEngine:
 
     def parse_intent(self, prompt: str) -> ParsedIntent:
         """
-        Parse intent using the fallback chain: Regex → Local LLM → OpenAI.
+        Parse intent using the fallback chain: Regex â†’ Local LLM â†’ OpenAI.
 
         Args:
             prompt: User prompt
@@ -829,4 +829,4 @@ def create_parser_engine(
         use_regex_first=use_regex_first,
         use_local_llm=use_local_llm,
         use_openai_fallback=use_openai_fallback,
-    ) 
+    )

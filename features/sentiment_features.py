@@ -1,4 +1,4 @@
-"""
+﻿"""
 Sentiment Features Module
 
 This module processes sentiment data from multiple sources and generates
@@ -30,7 +30,7 @@ try:
     from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
     VADER_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ vaderSentiment not available. Disabling VADER sentiment analysis.")
+    print("âš ï¸ vaderSentiment not available. Disabling VADER sentiment analysis.")
     print(f"   Missing: {e}")
     SentimentIntensityAnalyzer = None
     VADER_AVAILABLE = False
@@ -40,7 +40,7 @@ try:
     from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
     BERT_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ HuggingFace libraries not available. Disabling BERT sentiment analysis.")
+    print("âš ï¸ HuggingFace libraries not available. Disabling BERT sentiment analysis.")
     print(f"   Missing: {e}")
     torch = None
     pipeline = None
@@ -564,4 +564,4 @@ if __name__ == "__main__":
     
     # Summary
     summary = analyzer.get_sentiment_summary(multi_features)
-    print(f"\nSummary: {json.dumps(summary, indent=2)}") 
+    print(f"\nSummary: {json.dumps(summary, indent=2)}")

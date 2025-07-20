@@ -1,4 +1,4 @@
-"""Simple Moving Average (SMA) trading strategy implementation.
+﻿"""Simple Moving Average (SMA) trading strategy implementation.
 Enhanced with crossover smoothing logic and asymmetric window sizes.
 """
 

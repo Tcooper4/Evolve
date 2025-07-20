@@ -1,4 +1,4 @@
-"""
+﻿"""
 Market Data Provider with advanced caching and fallback mechanisms.
 
 This module provides robust market data fetching with configurable fallback sources,
@@ -20,7 +20,7 @@ try:
     import yfinance as yf
     YFINANCE_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ yfinance not available. Disabling Yahoo Finance data fetching.")
+    print("âš ï¸ yfinance not available. Disabling Yahoo Finance data fetching.")
     print(f"   Missing: {e}")
     yf = None
     YFINANCE_AVAILABLE = False
@@ -30,7 +30,7 @@ try:
     from alpha_vantage.timeseries import TimeSeries
     ALPHA_VANTAGE_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ alpha_vantage not available. Disabling Alpha Vantage data fetching.")
+    print("âš ï¸ alpha_vantage not available. Disabling Alpha Vantage data fetching.")
     print(f"   Missing: {e}")
     TimeSeries = None
     ALPHA_VANTAGE_AVAILABLE = False

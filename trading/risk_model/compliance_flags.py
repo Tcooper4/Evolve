@@ -1,4 +1,4 @@
-"""
+﻿"""
 Risk Model Compliance Flags - Batch 20
 Dynamic risk thresholds with rolling percentiles and compliance logging
 """
@@ -568,4 +568,4 @@ class RiskModelComplianceFlags:
 
 def create_risk_model_compliance_flags(rolling_window: int = 252) -> RiskModelComplianceFlags:
     """Factory function to create risk model compliance flags."""
-    return RiskModelComplianceFlags(rolling_window=rolling_window) 
+    return RiskModelComplianceFlags(rolling_window=rolling_window)

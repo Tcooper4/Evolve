@@ -1,4 +1,4 @@
-"""
+﻿"""
 Comprehensive tests for forecast task dispatcher and strategy output merger
 
 Tests async task handling, timeouts, error recovery, and strategy merging
@@ -583,4 +583,4 @@ if __name__ == "__main__":
     
     # Run pytest
     import pytest
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])

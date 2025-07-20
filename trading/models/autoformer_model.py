@@ -1,4 +1,4 @@
-"""AutoformerModel: Autoformer wrapper for time series forecasting."""
+﻿"""AutoformerModel: Autoformer wrapper for time series forecasting."""
 import json
 import logging
 import os
@@ -13,7 +13,7 @@ try:
     import torch
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling Autoformer models.")
+    print("âš ï¸ PyTorch not available. Disabling Autoformer models.")
     print(f"   Missing: {e}")
     torch = None
     TORCH_AVAILABLE = False
@@ -25,7 +25,7 @@ try:
     from autoformer_pytorch import Autoformer
     AUTOFORMER_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ autoformer-pytorch not available. Disabling Autoformer models.")
+    print("âš ï¸ autoformer-pytorch not available. Disabling Autoformer models.")
     print(f"   Missing: {e}")
     Autoformer = None
     AUTOFORMER_AVAILABLE = False

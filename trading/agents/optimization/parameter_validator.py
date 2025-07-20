@@ -1,4 +1,4 @@
-"""
+﻿"""
 Parameter Validator Module
 
 This module contains parameter validation functionality for the optimizer agent.
@@ -251,4 +251,4 @@ class ParameterValidator:
 
     def add_parameter_rule(self, param_name: str, rule: Dict[str, Any]) -> None:
         """Add a new parameter validation rule."""
-        self.validation_rules[param_name] = rule 
+        self.validation_rules[param_name] = rule

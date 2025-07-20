@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model evaluation utilities for the trading system.
 """
 
@@ -13,7 +13,7 @@ try:
     from sklearn.model_selection import cross_val_score
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling model evaluation features.")
+    print("âš ï¸ scikit-learn not available. Disabling model evaluation features.")
     print(f"   Missing: {e}")
     mean_absolute_error = None
     mean_squared_error = None

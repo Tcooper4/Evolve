@@ -1,4 +1,4 @@
-"""
+﻿"""
 Parameter Tuner
 
 Tunes hyperparameters with support for user-defined parameter ranges
@@ -684,4 +684,4 @@ class ParameterTuner:
         else:
             raise ValueError(f"Unsupported file format: {file_path.suffix}")
             
-        self.logger.info(f"Saved configuration to {file_path}") 
+        self.logger.info(f"Saved configuration to {file_path}")

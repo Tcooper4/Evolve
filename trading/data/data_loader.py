@@ -1,4 +1,4 @@
-"""
+﻿"""
 Data Loader Module for Market Data
 
 This module provides comprehensive data loading capabilities for market data,
@@ -24,7 +24,7 @@ try:
     import yfinance as yf
     YFINANCE_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ yfinance not available. Disabling Yahoo Finance data loading.")
+    print("âš ï¸ yfinance not available. Disabling Yahoo Finance data loading.")
     print(f"   Missing: {e}")
     yf = None
     YFINANCE_AVAILABLE = False

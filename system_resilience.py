@@ -715,3 +715,4 @@ def get_health_status() -> Dict[str, Any]:
 def get_performance_report() -> Dict[str, Any]:
     """Get performance report."""
     return system_resilience.get_performance_report()
+

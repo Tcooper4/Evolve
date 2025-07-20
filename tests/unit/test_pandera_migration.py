@@ -1,4 +1,4 @@
-"""
+﻿"""
 Test file to verify pandera migration from great_expectations.
 Tests the DataQualityManager functionality with pandera schemas.
 """
@@ -160,4 +160,4 @@ class TestPanderaMigration(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()

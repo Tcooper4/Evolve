@@ -1,4 +1,4 @@
-"""
+﻿"""
 Comprehensive Test Suite for Event Loop, Live Dashboard, and Task Dispatcher Enhancements
 
 This script tests all the production enhancements:
@@ -34,7 +34,7 @@ try:
     EVENT_LOOP_AVAILABLE = True
 except ImportError:
     EVENT_LOOP_AVAILABLE = False
-    print("⚠️ Event loop module not available")
+    print("âš ï¸ Event loop module not available")
 
 try:
     from trading.pipeline.task_dispatcher import (
@@ -44,7 +44,7 @@ try:
     TASK_DISPATCHER_AVAILABLE = True
 except ImportError:
     TASK_DISPATCHER_AVAILABLE = False
-    print("⚠️ Task dispatcher module not available")
+    print("âš ï¸ Task dispatcher module not available")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -692,9 +692,9 @@ if __name__ == "__main__":
     validation_results = validate_enhancements()
     print("Enhancement Validation Results:")
     for component, available in validation_results.items():
-        status = "✅ Available" if available else "❌ Not Available"
+        status = "âœ… Available" if available else "âŒ Not Available"
         print(f"  {component}: {status}")
     
     # Run tests
     print("\nRunning tests...")
-    pytest.main([__file__, "-v", "--asyncio-mode=auto"]) 
+    pytest.main([__file__, "-v", "--asyncio-mode=auto"])

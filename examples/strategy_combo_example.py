@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Strategy Combo Example
 
@@ -451,4 +451,4 @@ def main():
 
 if __name__ == "__main__":
     results = main()
-    print("\nExample execution completed!") 
+    print("\nExample execution completed!")

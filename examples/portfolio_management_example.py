@@ -1,4 +1,4 @@
-"""
+﻿"""
 Portfolio Management Example
 
 This example demonstrates the portfolio allocation and risk management modules
@@ -620,4 +620,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

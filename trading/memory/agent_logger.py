@@ -1,4 +1,4 @@
-"""
+﻿"""
 Agent Logger for Evolve Trading Platform
 
 Comprehensive logging system for all agent actions with:

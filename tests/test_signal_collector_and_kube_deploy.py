@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for enhanced signal collector and Kubernetes deployment script
 
 Tests async strategy handling, timeout protection, fallback mechanisms,
@@ -181,12 +181,12 @@ class TestTwitterSentimentCollector:
     async def test_analyze_tweet_sentiment(self, collector):
         """Test tweet sentiment analysis."""
         # Test positive tweet
-        positive_tweet = "AAPL looking bullish today! 🚀 #stocks"
+        positive_tweet = "AAPL looking bullish today! ðŸš€ #stocks"
         score = await collector._analyze_tweet_sentiment(positive_tweet)
         assert score > 0
         
         # Test negative tweet
-        negative_tweet = "AAPL showing bearish signals 📉"
+        negative_tweet = "AAPL showing bearish signals ðŸ“‰"
         score = await collector._analyze_tweet_sentiment(negative_tweet)
         assert score < 0
 
@@ -657,4 +657,4 @@ if __name__ == "__main__":
     
     # Run pytest
     import pytest
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])

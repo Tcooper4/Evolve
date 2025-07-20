@@ -1,4 +1,4 @@
-"""
+﻿"""
 Reports Page
 
 A clean, production-ready reporting interface with:

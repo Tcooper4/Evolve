@@ -1,4 +1,4 @@
-"""
+﻿"""
 Trade Journal
 
 This module provides comprehensive trade tracking and analysis with
@@ -590,4 +590,4 @@ class TradeJournal:
 
 def create_trade_journal(config: Optional[Dict[str, Any]] = None) -> TradeJournal:
     """Create a trade journal instance."""
-    return TradeJournal(config) 
+    return TradeJournal(config)

@@ -1,4 +1,4 @@
-"""LSTM-based forecasting model with advanced features and robust error handling."""
+﻿"""LSTM-based forecasting model with advanced features and robust error handling."""
 
 # Standard library imports
 import logging
@@ -21,7 +21,7 @@ try:
     from torch.utils.data import DataLoader, TensorDataset
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling LSTM models.")
+    print("âš ï¸ PyTorch not available. Disabling LSTM models.")
     print(f"   Missing: {e}")
     torch = None
     nn = None
@@ -36,7 +36,7 @@ try:
     from sklearn.preprocessing import StandardScaler
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling data preprocessing.")
+    print("âš ï¸ scikit-learn not available. Disabling data preprocessing.")
     print(f"   Missing: {e}")
     StandardScaler = None
     SKLEARN_AVAILABLE = False
@@ -369,13 +369,13 @@ class LSTMForecaster(BaseModel):
         if not TORCH_AVAILABLE:
             logger.error("PyTorch is not available. Cannot initialize LSTM forecaster.")
             self.available = False
-            print("⚠️ LSTMForecaster unavailable due to missing PyTorch")
+            print("âš ï¸ LSTMForecaster unavailable due to missing PyTorch")
             return
         
         if not SKLEARN_AVAILABLE:
             logger.error("scikit-learn is not available. Cannot initialize LSTM forecaster.")
             self.available = False
-            print("⚠️ LSTMForecaster unavailable due to missing scikit-learn")
+            print("âš ï¸ LSTMForecaster unavailable due to missing scikit-learn")
             return
         
         try:
@@ -403,7 +403,7 @@ class LSTMForecaster(BaseModel):
             except Exception as e:
                 logger.error(f"LSTM model build failed: {e}")
                 self.model = None
-                print("⚠️ LSTM model unavailable due to model build failure")
+                print("âš ï¸ LSTM model unavailable due to model build failure")
                 print(f"   Error: {e}")
                 # Don't set available to False here as we have fallback
                 
@@ -411,7 +411,7 @@ class LSTMForecaster(BaseModel):
             logger.error(f"Failed to initialize LSTM forecaster: {e}")
             logger.error(traceback.format_exc())
             self.available = False
-            print("⚠️ LSTMForecaster unavailable due to initialization failure")
+            print("âš ï¸ LSTMForecaster unavailable due to initialization failure")
             print(f"   Error: {e}")
             # Don't raise exception, just mark as unavailable
 
@@ -752,7 +752,7 @@ class LSTMForecaster(BaseModel):
     ) -> Dict[str, List[float]]:
         """Train the model with robust error handling and input validation."""
         if not self.available:
-            print("⚠️ LSTMForecaster unavailable due to initialization failure")
+            print("âš ï¸ LSTMForecaster unavailable due to initialization failure")
             return {
                 "train_loss": [0.0],
                 "val_loss": [0.0],
@@ -926,7 +926,7 @@ class LSTMForecaster(BaseModel):
     def predict(self, data: pd.DataFrame, batch_size: int = 32) -> np.ndarray:
         """Predict using the LSTM model with input validation, logging, and batch-wise evaluation."""
         if not self.available:
-            print("⚠️ LSTMForecaster unavailable due to initialization failure")
+            print("âš ï¸ LSTMForecaster unavailable due to initialization failure")
             # Return simple fallback prediction
             if "Close" in data.columns:
                 return data["Close"].rolling(window=20, min_periods=1).mean().values
@@ -1080,7 +1080,7 @@ class LSTMForecaster(BaseModel):
             Dictionary containing forecast results
         """
         if not self.available:
-            print("⚠️ LSTMForecaster unavailable due to initialization failure")
+            print("âš ï¸ LSTMForecaster unavailable due to initialization failure")
             # Return simple fallback forecast
             fallback_forecast = np.full(horizon, 1000.0)
             last_date = data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()

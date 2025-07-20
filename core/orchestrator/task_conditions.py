@@ -1,4 +1,4 @@
-"""
+﻿"""
 Task Conditions Module
 
 This module contains task condition checking functionality for the task orchestrator.
@@ -169,4 +169,4 @@ class TaskConditions:
         elif condition == "position_count":
             return isinstance(value, str) and value in ["<5", "5-10", ">10"]
         else:
-            return True  # Other conditions don't require specific value validation 
+            return True  # Other conditions don't require specific value validation

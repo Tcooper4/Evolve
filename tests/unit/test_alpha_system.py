@@ -1,4 +1,4 @@
-# Tests for Autonomous Alpha Agent System
+﻿# Tests for Autonomous Alpha Agent System
 
 # This module tests the complete alpha strategy generation and management system.
 import pytest
@@ -844,4 +844,4 @@ class TestIntegration:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])

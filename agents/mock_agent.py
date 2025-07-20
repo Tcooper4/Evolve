@@ -1,4 +1,4 @@
-"""
+﻿"""
 Mock Agent for Fallback
 
 This module provides a mock agent that can be used as a fallback when no agents
@@ -260,4 +260,4 @@ def create_mock_agent(name: str = "MockAgent", capabilities: Optional[list] = No
 
 
 # Default mock agent instance
-default_mock_agent = MockAgent("DefaultMockAgent") 
+default_mock_agent = MockAgent("DefaultMockAgent")

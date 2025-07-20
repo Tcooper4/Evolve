@@ -1,4 +1,4 @@
-"""
+﻿"""
 Data Cleaner
 
 Cleans and preprocesses data with selective NaN handling and context-aware operations.
@@ -313,4 +313,4 @@ class DataCleaner:
     def reset_history(self):
         """Reset cleaning history."""
         self.cleaning_history.clear()
-        self.logger.info("Cleaning history reset") 
+        self.logger.info("Cleaning history reset")

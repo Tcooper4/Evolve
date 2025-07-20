@@ -1,4 +1,4 @@
-"""
+﻿"""
 Backtesting engine for trading strategies.
 
 This module provides a comprehensive backtesting framework with support for:

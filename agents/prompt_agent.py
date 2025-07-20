@@ -1,4 +1,4 @@
-"""
+﻿"""
 Enhanced Prompt Agent with Batch 12 Features
 
 This module consolidates all prompt routing functionality into a single, comprehensive agent:
@@ -45,7 +45,7 @@ try:
     from sentence_transformers import SentenceTransformer
     HUGGINGFACE_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ HuggingFace libraries not available. Disabling advanced NLP features.")
+    print("âš ï¸ HuggingFace libraries not available. Disabling advanced NLP features.")
     print(f"   Missing: {e}")
     torch = None
     transformers = None
@@ -196,7 +196,7 @@ class RoutingDecision:
 
 
 class EnhancedPromptMemory:
-    """Enhanced memory module for persistent prompt → action → outcome learning."""
+    """Enhanced memory module for persistent prompt â†’ action â†’ outcome learning."""
     
     def __init__(self, redis_url: Optional[str] = None):
         """Initialize enhanced prompt memory.
@@ -237,7 +237,7 @@ class EnhancedPromptMemory:
         outcome: Dict[str, Any],
         user_id: Optional[str] = None
     ):
-        """Store a prompt → action → outcome interaction.
+        """Store a prompt â†’ action â†’ outcome interaction.
         
         Args:
             prompt: User prompt
@@ -502,7 +502,7 @@ class PromptAgent:
         except Exception as e:
             logger.error(f"Failed to initialize PromptAgent: {e}")
             self.available = False
-            print("⚠️ PromptAgent unavailable due to initialization failure")
+            print("âš ï¸ PromptAgent unavailable due to initialization failure")
             print(f"   Error: {e}")
 
     def _initialize_providers(self):
@@ -542,7 +542,7 @@ class PromptAgent:
         except Exception as e:
             logger.error(f"Failed to initialize HuggingFace models: {e}")
             self.use_huggingface_first = False
-            print("⚠️ HuggingFace models unavailable due to model load failure")
+            print("âš ï¸ HuggingFace models unavailable due to model load failure")
             print(f"   Error: {e}")
     
     def _initialize_classification_labels(self):
@@ -646,7 +646,7 @@ class PromptAgent:
             ProcessedPrompt: Processed prompt information
         """
         if not self.available:
-            print("⚠️ PromptAgent unavailable due to initialization failure")
+            print("âš ï¸ PromptAgent unavailable due to initialization failure")
             return ProcessedPrompt(
                 original_prompt=prompt,
                 request_type=RequestType.UNKNOWN,
@@ -1412,7 +1412,7 @@ class PromptAgent:
             Dictionary with routing decision and processing results
         """
         if not self.available:
-            print("⚠️ PromptAgent unavailable due to initialization failure")
+            print("âš ï¸ PromptAgent unavailable due to initialization failure")
             return {
                 "success": False,
                 "error": "PromptAgent unavailable due to initialization failure",
@@ -1561,4 +1561,4 @@ def create_prompt_agent(
         use_huggingface_first=use_huggingface_first,
         use_openai_fallback=use_openai_fallback,
         redis_url=redis_url,
-    ) 
+    )

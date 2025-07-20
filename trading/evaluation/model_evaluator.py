@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Evaluator
 
 Evaluates model performance with comprehensive metrics and schema validation
@@ -20,7 +20,7 @@ try:
     import matplotlib.pyplot as plt
     MATPLOTLIB_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ matplotlib not available. Disabling plotting capabilities.")
+    print("âš ï¸ matplotlib not available. Disabling plotting capabilities.")
     print(f"   Missing: {e}")
     plt = None
     MATPLOTLIB_AVAILABLE = False
@@ -30,7 +30,7 @@ try:
     import seaborn as sns
     SEABORN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ seaborn not available. Disabling advanced plotting capabilities.")
+    print("âš ï¸ seaborn not available. Disabling advanced plotting capabilities.")
     print(f"   Missing: {e}")
     sns = None
     SEABORN_AVAILABLE = False
@@ -40,7 +40,7 @@ try:
     from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling evaluation metrics.")
+    print("âš ï¸ scikit-learn not available. Disabling evaluation metrics.")
     print(f"   Missing: {e}")
     mean_absolute_error = None
     mean_squared_error = None
@@ -691,7 +691,7 @@ class ModelEvaluator:
             f"MSE: {metrics.get('mse', 'N/A'):.6f}",
             f"RMSE: {metrics.get('rmse', 'N/A'):.6f}",
             f"MAE: {metrics.get('mae', 'N/A'):.6f}",
-            f"R²: {metrics.get('r2', 'N/A'):.4f}",
+            f"RÂ²: {metrics.get('r2', 'N/A'):.4f}",
         ]
         
         if "directional_accuracy" in metrics:

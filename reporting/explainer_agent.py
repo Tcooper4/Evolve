@@ -1,4 +1,4 @@
-"""
+﻿"""
 Explainer Agent
 
 This module provides comprehensive explainability for trading decisions:
@@ -1019,4 +1019,4 @@ if __name__ == "__main__":
     # Generate summary report
     report = explainer.generate_summary_report()
     print("Explainer Summary Report:")
-    print(json.dumps(report, indent=2)) 
+    print(json.dumps(report, indent=2))

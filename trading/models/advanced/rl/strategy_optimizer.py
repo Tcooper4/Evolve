@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import random
 from abc import ABC
 from collections import deque
@@ -15,7 +15,7 @@ try:
     import torch.optim as optim
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling RL strategy optimizers.")
+    print("âš ï¸ PyTorch not available. Disabling RL strategy optimizers.")
     print(f"   Missing: {e}")
     torch = None
     nn = None

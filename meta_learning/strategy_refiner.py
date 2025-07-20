@@ -1,4 +1,4 @@
-"""
+﻿"""
 Strategy Refiner
 
 This module provides meta-learning capabilities for strategy refinement with
@@ -341,7 +341,7 @@ class StrategyRefiner(BaseAgent):
             for key in ['threshold', 'stop_loss', 'take_profit']:
                 if key in params:
                     current_value = params[key]
-                    # Small random adjustment (±5%)
+                    # Small random adjustment (Â±5%)
                     adjustment = current_value * 0.05 * (np.random.random() - 0.5)
                     params[key] = max(0, current_value + adjustment)
         
@@ -406,7 +406,7 @@ class StrategyRefiner(BaseAgent):
             if np.random.random() < self.parameter_mutation_rate:
                 current_value = params[key]
                 if isinstance(current_value, (int, float)):
-                    # Random adjustment (±20%)
+                    # Random adjustment (Â±20%)
                     adjustment = current_value * 0.2 * (np.random.random() - 0.5)
                     params[key] = max(0, current_value + adjustment)
         
@@ -493,4 +493,4 @@ class StrategyRefiner(BaseAgent):
         """Get performance history, optionally filtered by strategy name."""
         if strategy_name:
             return [p for p in self.performance_history if p.strategy_name == strategy_name]
-        return self.performance_history.copy() 
+        return self.performance_history.copy()

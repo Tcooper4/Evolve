@@ -1,4 +1,4 @@
-"""Trading strategies module."""
+﻿"""Trading strategies module."""
 
 import logging
 from datetime import datetime

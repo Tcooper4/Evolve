@@ -1,4 +1,4 @@
-"""
+﻿"""
 MetaControllerAgent - System Orchestrator
 
 This agent oversees the entire Evolve trading system and makes intelligent decisions
@@ -1116,4 +1116,4 @@ if __name__ == "__main__":
         while True:
             time.sleep(60)
     except KeyboardInterrupt:
-        print("Stopping meta controller...") 
+        print("Stopping meta controller...")

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Audit Logger
 
 This module provides comprehensive audit trail functionality for the Evolve trading platform:
@@ -955,4 +955,4 @@ if __name__ == "__main__":
     )
     
     # Close session
-    logger.close_session() 
+    logger.close_session()

@@ -1,4 +1,4 @@
-"""Base UI components for the trading system.
+﻿"""Base UI components for the trading system.
 
 This module provides reusable UI components that can be used across different pages
 and can be integrated with agentic systems for monitoring and control.
@@ -724,7 +724,7 @@ def create_error_block(message: str) -> Dict[str, Any]:
     Returns:
         Dictionary containing error information
     """
-    st.error(f"❌ Error: {message}")
+    st.error(f"âŒ Error: {message}")
     logger.error(f"UI Error: {message}")
 
     return {
@@ -744,7 +744,7 @@ def create_loading_spinner(message: str = "Processing...") -> Dict[str, Any]:
         Dictionary containing loading state
     """
     with st.spinner(message):
-        st.info(f"⏳ {message}")
+        st.info(f"â³ {message}")
         logger.info(f"Loading: {message}")
 
     return {
@@ -793,7 +793,7 @@ def create_forecast_metrics(forecast_results: Dict[str, Any]) -> Dict[str, Any]:
 
     with col4:
         st.metric(
-            "R² Score",
+            "RÂ² Score",
             f"{metrics.get('r2_score', 0):.4f}",
         )
 
@@ -804,7 +804,7 @@ def create_forecast_metrics(forecast_results: Dict[str, Any]) -> Dict[str, Any]:
             ["RMSE", f"{metrics.get('rmse', 0):.6f}"],
             ["MAE", f"{metrics.get('mae', 0):.6f}"],
             ["MAPE", f"{metrics.get('mape', 0):.4f}%"],
-            ["R² Score", f"{metrics.get('r2_score', 0):.6f}"],
+            ["RÂ² Score", f"{metrics.get('r2_score', 0):.6f}"],
             ["Explained Variance", f"{metrics.get('explained_variance', 0):.6f}"],
             ["Mean Absolute Error", f"{metrics.get('mean_absolute_error', 0):.6f}"],
             ["Median Absolute Error", f"{metrics.get('median_absolute_error', 0):.6f}"],
@@ -930,21 +930,21 @@ def create_system_metrics_panel(metrics: Dict[str, float]) -> Dict[str, Any]:
 
     with status_col1:
         if metrics.get("system_healthy", True):
-            st.success("✅ System Healthy")
+            st.success("âœ… System Healthy")
         else:
-            st.error("❌ System Issues Detected")
+            st.error("âŒ System Issues Detected")
 
     with status_col2:
         if metrics.get("models_loaded", True):
-            st.success("✅ Models Loaded")
+            st.success("âœ… Models Loaded")
         else:
-            st.error("❌ Model Loading Issues")
+            st.error("âŒ Model Loading Issues")
 
     with status_col3:
         if metrics.get("data_feed_active", True):
-            st.success("✅ Data Feed Active")
+            st.success("âœ… Data Feed Active")
         else:
-            st.error("❌ Data Feed Issues")
+            st.error("âŒ Data Feed Issues")
 
     return {
         "metrics": metrics,
@@ -1235,4 +1235,4 @@ def calculate_signal_performance(
         return {
             "error": str(e),
             "strategy_names": strategy_names,
-        } 
+        }

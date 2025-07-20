@@ -1,4 +1,4 @@
-"""
+﻿"""
 Test Alpaca Migration from alpaca-trade-api to alpaca-py
 
 This test suite verifies that the migration from the old alpaca-trade-api
@@ -584,4 +584,4 @@ class TestAlpacaMigrationIntegration:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__]) 
+    pytest.main([__file__])

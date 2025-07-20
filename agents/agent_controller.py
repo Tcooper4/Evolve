@@ -1,4 +1,4 @@
-"""
+﻿"""
 Agent Controller Module
 
 This module centralizes all agent workflow orchestration logic for the Evolve Trading Platform.
@@ -1049,17 +1049,17 @@ class AgentController:
                             "category": agent_info.category.value if agent_info.category else "unknown"
                         }
                 
-                self.logger.info("✅ Agent registration successful")
+                self.logger.info("âœ… Agent registration successful")
                 
             else:
-                self.logger.warning("⚠️ No agents found in registry")
+                self.logger.warning("âš ï¸ No agents found in registry")
                 self._create_fallback_agent()
                 
         except ImportError as e:
-            self.logger.warning(f"⚠️ Agent registry not available: {e}")
+            self.logger.warning(f"âš ï¸ Agent registry not available: {e}")
             self._create_fallback_agent()
         except Exception as e:
-            self.logger.error(f"❌ Error during agent registration: {e}")
+            self.logger.error(f"âŒ Error during agent registration: {e}")
             self.agent_registration_status["failed_registrations"] += 1
             self._create_fallback_agent()
     
@@ -1088,11 +1088,11 @@ class AgentController:
             self.agent_registration_status["total_agents"] = 1
             self.agent_registration_status["successful_registrations"] = 1
             
-            self.logger.warning("⚠️ Created fallback agent - no real agents available")
+            self.logger.warning("âš ï¸ Created fallback agent - no real agents available")
             self.logger.info("System will continue running with mock agent for UI testing")
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to create fallback agent: {e}")
+            self.logger.error(f"âŒ Failed to create fallback agent: {e}")
             self.agent_registration_status["failed_registrations"] += 1
     
     def get_agent_registration_status(self) -> Dict[str, Any]:
@@ -1308,4 +1308,4 @@ async def execute_full_pipeline(
         data_path=data_path,
         target_column=target_column,
         **kwargs
-    ) 
+    )

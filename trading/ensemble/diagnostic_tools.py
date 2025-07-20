@@ -1,4 +1,4 @@
-"""
+﻿"""
 Ensemble Diagnostic Tools - Batch 18
 Enhanced diagnostic tools with confidence score filtering
 """
@@ -426,4 +426,4 @@ class EnsembleDiagnosticTools:
 
 def create_ensemble_diagnostic_tools(confidence_threshold: float = 0.2) -> EnsembleDiagnosticTools:
     """Factory function to create ensemble diagnostic tools."""
-    return EnsembleDiagnosticTools(confidence_threshold=confidence_threshold) 
+    return EnsembleDiagnosticTools(confidence_threshold=confidence_threshold)

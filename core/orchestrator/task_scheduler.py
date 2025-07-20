@@ -1,4 +1,4 @@
-"""
+﻿"""
 Task Scheduler Module
 
 This module contains task scheduling functionality for the task orchestrator.
@@ -140,4 +140,4 @@ class TaskScheduler:
             self.tasks[task_name].enabled = False
             if task_name in self.scheduled_tasks:
                 schedule.clear(task_name)
-                del self.scheduled_tasks[task_name] 
+                del self.scheduled_tasks[task_name]

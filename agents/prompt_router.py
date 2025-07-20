@@ -1,4 +1,4 @@
-"""
+﻿"""
 Prompt Router Module
 
 This module handles prompt processing and routing for the Evolve Trading Platform:

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Enhanced Performance Analysis for Backtesting
 
 This module contains the PerformanceAnalyzer class for aggregating and reporting
@@ -108,7 +108,7 @@ class PerformanceAnalyzer:
             
             # Warn users when Sharpe ratio is low
             if metrics["sharpe_ratio"] < 1:
-                self.logger.warning("⚠️ Warning: Strategy Sharpe ratio below 1.0")
+                self.logger.warning("âš ï¸ Warning: Strategy Sharpe ratio below 1.0")
         else:
             metrics["annualized_return"] = np.nan
             metrics["volatility"] = np.nan
@@ -299,7 +299,7 @@ class PerformanceAnalyzer:
                 
                 # Warn users when win rate is low
                 if metrics["win_rate"] < 0.5:
-                    self.logger.warning("⚠️ Warning: Strategy win rate below 50%")
+                    self.logger.warning("âš ï¸ Warning: Strategy win rate below 50%")
             else:
                 metrics.update({
                     "win_rate": np.nan,

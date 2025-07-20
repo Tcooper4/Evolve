@@ -1,4 +1,4 @@
-"""Enhanced risk management module with comprehensive metrics and safeguards.
+﻿"""Enhanced risk management module with comprehensive metrics and safeguards.
 Enhanced with Batch 11 features: dynamic volatility model integration (rolling std and GARCH)
 to adjust position size.
 """
@@ -20,7 +20,7 @@ try:
     from plotly.subplots import make_subplots
     PLOTLY_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ plotly not available. Disabling interactive plotting capabilities.")
+    print("âš ï¸ plotly not available. Disabling interactive plotting capabilities.")
     print(f"   Missing: {e}")
     go = None
     make_subplots = None
@@ -31,7 +31,7 @@ try:
     from scipy.optimize import minimize
     SCIPY_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scipy not available. Disabling optimization-based risk management.")
+    print("âš ï¸ scipy not available. Disabling optimization-based risk management.")
     print(f"   Missing: {e}")
     minimize = None
     SCIPY_AVAILABLE = False

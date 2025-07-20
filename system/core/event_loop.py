@@ -1,4 +1,4 @@
-"""
+﻿"""
 Enhanced Event Loop Management
 
 This module provides robust event loop management with:
@@ -45,15 +45,15 @@ class EventLoopManager:
             new_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(new_loop)
             self._loop = new_loop
-            logger.info("✅ Created new event loop")
+            logger.info("âœ… Created new event loop")
         except RuntimeError as e:
-            logger.error(f"❌ Failed to create event loop: {e}")
+            logger.error(f"âŒ Failed to create event loop: {e}")
             # Try to recover by cleaning up and retrying
             self._cleanup_crashed_loops()
             new_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(new_loop)
             self._loop = new_loop
-            logger.info("✅ Recovered and created new event loop")
+            logger.info("âœ… Recovered and created new event loop")
     
     def _cleanup_crashed_loops(self) -> None:
         """Clean up crashed event loops."""
@@ -70,7 +70,7 @@ class EventLoopManager:
             gc.collect()
             
         except Exception as e:
-            logger.warning(f"⚠️ Error during loop cleanup: {e}")
+            logger.warning(f"âš ï¸ Error during loop cleanup: {e}")
     
     async def submit_task_with_retry(
         self, 
@@ -88,7 +88,7 @@ class EventLoopManager:
                 
                 # Check if loop is healthy
                 if loop.is_closed():
-                    logger.warning(f"⚠️ Event loop closed, recreating...")
+                    logger.warning(f"âš ï¸ Event loop closed, recreating...")
                     self._create_new_loop()
                     loop = self.get_event_loop()
                 
@@ -98,27 +98,27 @@ class EventLoopManager:
                     timeout=30.0  # 30 second timeout
                 )
                 
-                logger.info(f"✅ Task {task_id} completed successfully")
+                logger.info(f"âœ… Task {task_id} completed successfully")
                 return result
                 
             except asyncio.TimeoutError:
                 delay = self._base_delay * (2 ** attempt)
-                logger.warning(f"⏰ Task {task_id} timed out, retrying in {delay}s (attempt {attempt + 1})")
+                logger.warning(f"â° Task {task_id} timed out, retrying in {delay}s (attempt {attempt + 1})")
                 await asyncio.sleep(delay)
                 
             except RuntimeError as e:
                 if "Event loop is closed" in str(e) or "no running event loop" in str(e):
-                    logger.error(f"❌ Event loop crashed: {e}")
+                    logger.error(f"âŒ Event loop crashed: {e}")
                     self._crashed_loops.add(self._loop)
                     self._create_new_loop()
                     delay = self._base_delay * (2 ** attempt)
-                    logger.info(f"🔄 Retrying task {task_id} in {delay}s after loop recovery")
+                    logger.info(f"ðŸ”„ Retrying task {task_id} in {delay}s after loop recovery")
                     await asyncio.sleep(delay)
                 else:
                     raise
                     
             except Exception as e:
-                logger.error(f"❌ Task {task_id} failed: {e}")
+                logger.error(f"âŒ Task {task_id} failed: {e}")
                 if attempt == self._max_retries - 1:
                     raise
                 delay = self._base_delay * (2 ** attempt)
@@ -166,9 +166,9 @@ class EventLoopManager:
                         self._loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
                     
                     self._loop.close()
-                    logger.info("✅ Event loop manager shutdown complete")
+                    logger.info("âœ… Event loop manager shutdown complete")
                 except Exception as e:
-                    logger.error(f"❌ Error during shutdown: {e}")
+                    logger.error(f"âŒ Error during shutdown: {e}")
 
 # Global instance
 _loop_manager = EventLoopManager()
@@ -260,4 +260,4 @@ def safe_run_async(coro):
         try:
             return loop.run_until_complete(coro)
         finally:
-            loop.close() 
+            loop.close()

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Strategy Router
 
 Routes strategy requests to appropriate strategy implementations based on
@@ -551,4 +551,4 @@ class StrategyRouter:
             "max_cache_size": self.max_cache_size,
         }
         
-        return summary 
+        return summary

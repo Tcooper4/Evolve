@@ -1,4 +1,4 @@
-"""
+﻿"""
 Risk Preview Dashboard
 
 Enhanced with Batch 11 features: Risk preview dashboard with expected loss, margin usage, VaR,
@@ -100,11 +100,11 @@ class RiskPreviewDashboard:
         """Render the main dashboard."""
         st.set_page_config(
             page_title="Risk Preview Dashboard",
-            page_icon="📊",
+            page_icon="ðŸ“Š",
             layout="wide"
         )
         
-        st.title("🎯 Risk Preview Dashboard")
+        st.title("ðŸŽ¯ Risk Preview Dashboard")
         st.markdown("Comprehensive risk monitoring and position sizing recommendations")
         
         # Sidebar configuration
@@ -127,7 +127,7 @@ class RiskPreviewDashboard:
     
     def _render_sidebar(self):
         """Render sidebar with configuration options."""
-        st.sidebar.header("⚙️ Configuration")
+        st.sidebar.header("âš™ï¸ Configuration")
         
         # Risk model selection
         st.sidebar.subheader("Risk Model")
@@ -183,7 +183,7 @@ class RiskPreviewDashboard:
     
     def _render_risk_metrics(self):
         """Render key risk metrics."""
-        st.subheader("📈 Key Risk Metrics")
+        st.subheader("ðŸ“ˆ Key Risk Metrics")
         
         if not self.risk_manager or not self.risk_manager.current_metrics:
             st.info("No risk metrics available. Please load portfolio data.")
@@ -244,7 +244,7 @@ class RiskPreviewDashboard:
     
     def _render_volatility_analysis(self):
         """Render volatility analysis."""
-        st.subheader("📊 Volatility Analysis")
+        st.subheader("ðŸ“Š Volatility Analysis")
         
         if not self.risk_manager or not self.risk_manager.returns is not None:
             st.info("No returns data available for volatility analysis.")
@@ -303,7 +303,7 @@ class RiskPreviewDashboard:
     
     def _render_position_recommendations(self):
         """Render position sizing recommendations."""
-        st.subheader("🎯 Position Recommendations")
+        st.subheader("ðŸŽ¯ Position Recommendations")
         
         # Sample symbols for demonstration
         symbols = ["AAPL", "GOOGL", "MSFT", "TSLA", "NVDA"]
@@ -365,7 +365,7 @@ class RiskPreviewDashboard:
     
     def _render_risk_alerts(self):
         """Render risk alerts and warnings."""
-        st.subheader("⚠️ Risk Alerts")
+        st.subheader("âš ï¸ Risk Alerts")
         
         alerts = []
         
@@ -407,17 +407,17 @@ class RiskPreviewDashboard:
         if alerts:
             for alert in alerts:
                 if alert["color"] == "red":
-                    st.error(f"🚨 {alert['message']}")
+                    st.error(f"ðŸš¨ {alert['message']}")
                 elif alert["color"] == "orange":
-                    st.warning(f"⚠️ {alert['message']}")
+                    st.warning(f"âš ï¸ {alert['message']}")
                 else:
-                    st.info(f"ℹ️ {alert['message']}")
+                    st.info(f"â„¹ï¸ {alert['message']}")
         else:
-            st.success("✅ No risk alerts - portfolio within normal parameters")
+            st.success("âœ… No risk alerts - portfolio within normal parameters")
     
     def _render_risk_charts(self):
         """Render comprehensive risk charts."""
-        st.subheader("📈 Risk Charts")
+        st.subheader("ðŸ“ˆ Risk Charts")
         
         if not self.risk_manager or self.risk_manager.returns is None:
             st.info("No data available for risk charts.")
@@ -490,7 +490,7 @@ class RiskPreviewDashboard:
     
     def _render_strategy_overlays(self):
         """Render strategy overlays based on sidebar settings."""
-        st.subheader("🎛️ Strategy Overlays")
+        st.subheader("ðŸŽ›ï¸ Strategy Overlays")
         
         overlay_settings = getattr(st.session_state, 'overlay_settings', {})
         
@@ -631,4 +631,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

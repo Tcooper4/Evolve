@@ -1,4 +1,4 @@
-"""
+﻿"""
 State Manager
 
 Thread-safe state management with version control, concurrent write protection,
@@ -482,14 +482,14 @@ def save_state(force: bool = False) -> None:
 if __name__ == "__main__":
     # Demo usage
     async def demo():
-        print("🔧 State Manager Demo")
+        print("ðŸ”§ State Manager Demo")
         print("=" * 50)
         
         # Create state manager
         state_manager = StateManager("demo_state.pkl")
         
         # Set some data
-        print("\n📝 Setting test data...")
+        print("\nðŸ“ Setting test data...")
         state_manager.set("test_key", "test_value")
         state_manager.set("timestamp", datetime.now().isoformat())
         state_manager.set("large_data", {"data": "x" * 1000, "timestamp": time.time()})
@@ -500,16 +500,16 @@ if __name__ == "__main__":
         
         # Get stats
         stats = state_manager.get_stats()
-        print(f"\n📊 Stats: {stats}")
+        print(f"\nðŸ“Š Stats: {stats}")
         
         # Save state
-        print("\n💾 Saving state...")
+        print("\nðŸ’¾ Saving state...")
         state_manager.save()
         
         # Clean up demo file
         if os.path.exists("demo_state.pkl"):
             os.remove("demo_state.pkl")
         
-        print("✅ Demo completed!")
+        print("âœ… Demo completed!")
     
-    asyncio.run(demo()) 
+    asyncio.run(demo())

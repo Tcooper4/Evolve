@@ -1,4 +1,4 @@
-"""
+﻿"""
 Unit tests for custom performance metrics module.
 
 This module tests all the financial performance metrics functions
@@ -406,4 +406,4 @@ class TestPerformanceMetrics:
         # VaR should be more extreme than CVaR
         var_95 = value_at_risk(self.returns, confidence_level=0.95)
         cvar_95 = conditional_value_at_risk(self.returns, confidence_level=0.95)
-        assert cvar_95 <= var_95 
+        assert cvar_95 <= var_95

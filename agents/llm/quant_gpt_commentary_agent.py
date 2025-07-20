@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Enhanced QuantGPT Commentary Agent with advanced analysis and explainability.
 """
@@ -95,7 +95,7 @@ class QuantGPTCommentaryAgent:
             except Exception as e:
                 self.logger.error(f"Failed to initialize LLM interface: {e}")
                 self.llm_interface = None
-                print("⚠️ LLM interface unavailable due to initialization failure")
+                print("âš ï¸ LLM interface unavailable due to initialization failure")
                 print(f"   Error: {e}")
             
             try:
@@ -103,7 +103,7 @@ class QuantGPTCommentaryAgent:
             except Exception as e:
                 self.logger.error(f"Failed to initialize market analyzer: {e}")
                 self.market_analyzer = None
-                print("⚠️ Market analyzer unavailable due to initialization failure")
+                print("âš ï¸ Market analyzer unavailable due to initialization failure")
                 print(f"   Error: {e}")
             
             try:
@@ -111,7 +111,7 @@ class QuantGPTCommentaryAgent:
             except Exception as e:
                 self.logger.error(f"Failed to initialize agent memory: {e}")
                 self.memory = None
-                print("⚠️ Agent memory unavailable due to initialization failure")
+                print("âš ï¸ Agent memory unavailable due to initialization failure")
                 print(f"   Error: {e}")
 
             # Configuration
@@ -133,7 +133,7 @@ class QuantGPTCommentaryAgent:
         except Exception as e:
             self.logger.error(f"Failed to initialize QuantGPTCommentaryAgent: {e}")
             self.available = False
-            print("⚠️ QuantGPTCommentaryAgent unavailable due to initialization failure")
+            print("âš ï¸ QuantGPTCommentaryAgent unavailable due to initialization failure")
             print(f"   Error: {e}")
             # Don't raise exception, just mark as unavailable
 
@@ -150,7 +150,7 @@ class QuantGPTCommentaryAgent:
             Commentary response with analysis and insights
         """
         if not self.available:
-            print("⚠️ QuantGPTCommentaryAgent unavailable due to initialization failure")
+            print("âš ï¸ QuantGPTCommentaryAgent unavailable due to initialization failure")
             return self._create_error_response(
                 request, 
                 "QuantGPTCommentaryAgent unavailable due to initialization failure"

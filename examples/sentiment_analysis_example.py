@@ -1,4 +1,4 @@
-"""
+﻿"""
 Sentiment Analysis Example
 
 This example demonstrates how to use the sentiment modules to:
@@ -32,7 +32,7 @@ from features.sentiment_features import (
 
 def main():
     """Main example function"""
-    print("🔍 Sentiment Analysis Example")
+    print("ðŸ” Sentiment Analysis Example")
     print("=" * 50)
     
     # Initialize components
@@ -41,7 +41,7 @@ def main():
     analyzer = create_sentiment_analyzer()
     
     # Example 1: Fetch sentiment data for a single ticker
-    print("\n📊 Fetching sentiment data for AAPL...")
+    print("\nðŸ“Š Fetching sentiment data for AAPL...")
     ticker = "AAPL"
     
     sentiment_data = fetcher.fetch_all_sentiment(ticker, hours_back=24)
@@ -51,7 +51,7 @@ def main():
         print(f"  {source}: {len(data)} items")
     
     # Example 2: Process sentiment data
-    print("\n🧠 Processing sentiment data...")
+    print("\nðŸ§  Processing sentiment data...")
     
     # Flatten all data
     all_data = []
@@ -73,7 +73,7 @@ def main():
             print(f"  Weighted Score: {sample.weighted_score:.3f}")
     
     # Example 3: Generate sentiment features
-    print("\n⚙️ Generating sentiment features...")
+    print("\nâš™ï¸ Generating sentiment features...")
     
     features_df = analyzer.generate_sentiment_features(ticker, hours_back=24)
     
@@ -101,7 +101,7 @@ def main():
         }, index=dates)
     
     # Example 4: Create sentiment trading signal
-    print("\n📈 Creating sentiment trading signal...")
+    print("\nðŸ“ˆ Creating sentiment trading signal...")
     
     signal = analyzer.create_sentiment_signal(features_df, lookback_periods=3)
     
@@ -113,14 +113,14 @@ def main():
         # Signal interpretation
         latest_signal = signal.iloc[-1]
         if latest_signal > 0.3:
-            print("📈 Signal: BULLISH sentiment")
+            print("ðŸ“ˆ Signal: BULLISH sentiment")
         elif latest_signal < -0.3:
-            print("📉 Signal: BEARISH sentiment")
+            print("ðŸ“‰ Signal: BEARISH sentiment")
         else:
-            print("➡️ Signal: NEUTRAL sentiment")
+            print("âž¡ï¸ Signal: NEUTRAL sentiment")
     
     # Example 5: Multi-ticker sentiment analysis
-    print("\n🔍 Multi-ticker sentiment analysis...")
+    print("\nðŸ” Multi-ticker sentiment analysis...")
     
     tickers = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL"]
     
@@ -140,7 +140,7 @@ def main():
     print(f"Generated features for {len(multi_features)} tickers")
     
     # Example 6: Sentiment correlation analysis
-    print("\n📊 Sentiment correlation analysis...")
+    print("\nðŸ“Š Sentiment correlation analysis...")
     
     if len(multi_features) > 1:
         correlation = analyzer.get_sentiment_correlation(multi_features)
@@ -162,7 +162,7 @@ def main():
                     print(f"Highest correlation: {max_pair[0]} vs {max_pair[1]} = {max_corr:.3f}")
     
     # Example 7: Sentiment summary and insights
-    print("\n📋 Sentiment summary and insights...")
+    print("\nðŸ“‹ Sentiment summary and insights...")
     
     if multi_features:
         summary = analyzer.get_sentiment_summary(multi_features)
@@ -184,7 +184,7 @@ def main():
             print(f"    Negative ratio: {ticker_summary['negative_ratio']:.1%}")
     
     # Example 8: Real-time sentiment monitoring
-    print("\n⏰ Real-time sentiment monitoring...")
+    print("\nâ° Real-time sentiment monitoring...")
     
     def monitor_sentiment(ticker: str, interval_minutes: int = 30):
         """Monitor sentiment for a ticker at regular intervals"""
@@ -207,7 +207,7 @@ def main():
                     # Alert on significant changes
                     if abs(latest_signal) > 0.5:
                         direction = "BULLISH" if latest_signal > 0 else "BEARISH"
-                        print(f"🚨 ALERT: {ticker} showing {direction} sentiment!")
+                        print(f"ðŸš¨ ALERT: {ticker} showing {direction} sentiment!")
                 
                 # Wait for next interval
                 time.sleep(interval_minutes * 60)
@@ -220,7 +220,7 @@ def main():
                 time.sleep(60)  # Wait 1 minute before retrying
     
     # Example 9: Sentiment-based trading strategy
-    print("\n🎯 Sentiment-based trading strategy example...")
+    print("\nðŸŽ¯ Sentiment-based trading strategy example...")
     
     def sentiment_trading_strategy(ticker: str, lookback_hours: int = 24):
         """Example sentiment-based trading strategy"""
@@ -276,7 +276,7 @@ def main():
             print(f"  Sentiment Momentum: {strategy_result['sentiment_momentum']:.3f}")
     
     # Example 10: Save and load sentiment data
-    print("\n💾 Saving and loading sentiment data...")
+    print("\nðŸ’¾ Saving and loading sentiment data...")
     
     # Save features
     if multi_features:
@@ -290,12 +290,12 @@ def main():
         loaded_features = analyzer.load_features(str(analyzer.output_dir / filename))
         print(f"Loaded features for {len(loaded_features)} tickers")
     
-    print("\n✅ Sentiment analysis example completed!")
+    print("\nâœ… Sentiment analysis example completed!")
 
 
 def example_news_sentiment():
     """Example focusing on news sentiment analysis"""
-    print("\n📰 News Sentiment Analysis Example")
+    print("\nðŸ“° News Sentiment Analysis Example")
     
     fetcher = create_sentiment_fetcher()
     analyzer = create_sentiment_analyzer()
@@ -329,7 +329,7 @@ def example_news_sentiment():
 
 def example_social_sentiment():
     """Example focusing on social media sentiment analysis"""
-    print("\n📱 Social Media Sentiment Analysis Example")
+    print("\nðŸ“± Social Media Sentiment Analysis Example")
     
     fetcher = create_sentiment_fetcher()
     analyzer = create_sentiment_analyzer()
@@ -372,7 +372,7 @@ def example_social_sentiment():
 
 def example_sentiment_forecasting():
     """Example of using sentiment for price forecasting"""
-    print("\n🔮 Sentiment-Based Price Forecasting Example")
+    print("\nðŸ”® Sentiment-Based Price Forecasting Example")
     
     analyzer = create_sentiment_analyzer()
     
@@ -419,4 +419,4 @@ if __name__ == "__main__":
     example_social_sentiment()
     example_sentiment_forecasting()
     
-    print("\n🎉 All sentiment analysis examples completed!") 
+    print("\nðŸŽ‰ All sentiment analysis examples completed!")

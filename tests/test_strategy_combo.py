@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Test Strategy Combo Functionality
 
@@ -55,7 +55,7 @@ class TestStrategyCombo(unittest.TestCase):
             self.assertEqual(len(combined), len(self.test_data))
             self.assertTrue(all(signal in [-1, 0, 1] for signal in combined))
             
-            print("✅ Backward compatibility test passed")
+            print("âœ… Backward compatibility test passed")
             
         except ImportError as e:
             self.skipTest(f"Could not import strategy pipeline: {e}")
@@ -81,7 +81,7 @@ class TestStrategyCombo(unittest.TestCase):
             self.assertEqual(len(pipeline.strategies), 2)
             self.assertEqual(pipeline.combination_config.mode, 'intersection')
             
-            print("✅ StrategyPipeline creation test passed")
+            print("âœ… StrategyPipeline creation test passed")
             
         except ImportError as e:
             self.skipTest(f"Could not import strategy pipeline: {e}")
@@ -117,7 +117,7 @@ class TestStrategyCombo(unittest.TestCase):
             self.assertEqual(combined_intersection.iloc[0], 1)  # All agree on buy
             self.assertEqual(combined_intersection.iloc[2], -1)  # All agree on sell
             
-            print("✅ Signal combination modes test passed")
+            print("âœ… Signal combination modes test passed")
             
         except ImportError as e:
             self.skipTest(f"Could not import strategy pipeline: {e}")
@@ -138,7 +138,7 @@ class TestStrategyCombo(unittest.TestCase):
             self.assertEqual(len(pipeline.strategies), 2)
             self.assertEqual(pipeline.combination_config.mode, 'weighted')
             
-            print("✅ Strategy combo creation test passed")
+            print("âœ… Strategy combo creation test passed")
             
         except ImportError as e:
             self.skipTest(f"Could not import strategy pipeline: {e}")
@@ -162,7 +162,7 @@ class TestStrategyCombo(unittest.TestCase):
                 self.assertFalse(signal.isna().any())
                 self.assertTrue(all(val in [-1, 0, 1] for val in signal))
             
-            print("✅ Signal validation test passed")
+            print("âœ… Signal validation test passed")
             
         except ImportError as e:
             self.skipTest(f"Could not import strategy pipeline: {e}")
@@ -187,7 +187,7 @@ class TestStrategyCombo(unittest.TestCase):
             # For now, just test that the pipeline can handle the data
             self.assertIsInstance(pipeline, StrategyPipeline)
             
-            print("✅ Performance calculation test passed")
+            print("âœ… Performance calculation test passed")
             
         except ImportError as e:
             self.skipTest(f"Could not import strategy pipeline: {e}")
@@ -208,7 +208,7 @@ class TestStrategyCombo(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pipeline.combine_signals(signals, mode='invalid_mode')
             
-            print("✅ Error handling test passed")
+            print("âœ… Error handling test passed")
             
         except ImportError as e:
             self.skipTest(f"Could not import strategy pipeline: {e}")
@@ -245,7 +245,7 @@ class TestStrategyCombo(unittest.TestCase):
             self.assertIsInstance(metadata, dict)
             self.assertEqual(len(combined_signal), len(self.test_data))
             
-            print("✅ Integration with existing strategies test passed")
+            print("âœ… Integration with existing strategies test passed")
             
         except ImportError as e:
             self.skipTest(f"Could not import strategy pipeline: {e}")
@@ -283,11 +283,11 @@ def run_tests():
             print(f"- {test}: {traceback}")
     
     success = len(result.failures) == 0 and len(result.errors) == 0
-    print(f"\nOverall result: {'✅ PASSED' if success else '❌ FAILED'}")
+    print(f"\nOverall result: {'âœ… PASSED' if success else 'âŒ FAILED'}")
     
     return success
 
 
 if __name__ == "__main__":
     success = run_tests()
-    exit(0 if success else 1) 
+    exit(0 if success else 1)

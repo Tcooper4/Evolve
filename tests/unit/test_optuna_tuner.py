@@ -1,4 +1,4 @@
-Unit tests for OptunaTuner with Prophet support.
+﻿Unit tests for OptunaTuner with Prophet support.
 
 Tests the OptunaTuner class for LSTM, XGBoost, Transformer, and Prophet models.
 port pytest
@@ -196,4 +196,4 @@ class TestOptunaTuner:
             feature_columns=['feature1']
         )
         
-        assert isinstance(result, dict) 
+        assert isinstance(result, dict)

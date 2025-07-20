@@ -1,4 +1,4 @@
-"""
+﻿"""
 Execution Replay System
 
 Enhanced with Batch 10 features: trade-by-trade visualization system for execution replay.
@@ -624,4 +624,4 @@ class ExecutionReplay:
             "total_trades": total_trades,
             "average_return": avg_return,
             "recent_replays": self.replay_history[-5:] if len(self.replay_history) > 5 else self.replay_history
-        } 
+        }

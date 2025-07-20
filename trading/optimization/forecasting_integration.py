@@ -1,4 +1,4 @@
-"""
+﻿"""
 Forecasting Integration Module
 
 This module integrates the Sharpe Optuna tuner with the forecasting/model selection pipeline.
@@ -477,4 +477,4 @@ def integrate_with_forecasting_pipeline(
             'parameters': {},
             'optimization_result': None,
             'recommendation': None
-        } 
+        }

@@ -1,4 +1,4 @@
-"""
+﻿"""
 TaskAgent Example
 
 This example demonstrates how to use the enhanced TaskAgent with the new
@@ -183,10 +183,10 @@ async def main():
         logger.info("\n" + "=" * 50)
         logger.info("SUMMARY")
         logger.info("=" * 50)
-        logger.info(f"Forecast Task: {'✓' if forecast_result.success else '✗'}")
-        logger.info(f"Strategy Task: {'✓' if strategy_result.success else '✗'}")
-        logger.info(f"Backtest Task: {'✓' if backtest_result.success else '✗'}")
-        logger.info(f"Custom Task: {'✓' if custom_result.success else '✗'}")
+        logger.info(f"Forecast Task: {'âœ“' if forecast_result.success else 'âœ—'}")
+        logger.info(f"Strategy Task: {'âœ“' if strategy_result.success else 'âœ—'}")
+        logger.info(f"Backtest Task: {'âœ“' if backtest_result.success else 'âœ—'}")
+        logger.info(f"Custom Task: {'âœ“' if custom_result.success else 'âœ—'}")
         
         # Show task history
         agent = TaskAgent()
@@ -202,4 +202,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

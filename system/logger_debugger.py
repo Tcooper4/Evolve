@@ -1,4 +1,4 @@
-"""
+﻿"""
 Logger Debugger Module
 
 This module provides logging utilities and debugging tools for the trading system.
@@ -467,4 +467,4 @@ def monitor_errors(duration: int = 300) -> List[Dict[str, Any]]:
 def get_logger_status() -> Dict[str, Any]:
     """Get logger status using LoggerDebugger."""
     debugger = LoggerDebugger()
-    return debugger.get_logger_status() 
+    return debugger.get_logger_status()

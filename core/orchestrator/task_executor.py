@@ -1,4 +1,4 @@
-"""
+﻿"""
 Task Executor Module
 
 This module contains task execution functionality for the task orchestrator.
@@ -233,4 +233,4 @@ class TaskExecutor:
     def clear_history(self) -> None:
         """Clear execution history."""
         self.execution_history.clear()
-        self.logger.info("Cleared execution history") 
+        self.logger.info("Cleared execution history")

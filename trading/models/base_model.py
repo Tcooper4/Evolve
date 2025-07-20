@@ -1,4 +1,4 @@
-"""Base class for all ML models with common functionality."""
+﻿"""Base class for all ML models with common functionality."""
 
 # Standard library imports
 import json
@@ -25,7 +25,7 @@ try:
     from torch.utils.data import DataLoader, Dataset
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling deep learning models.")
+    print("âš ï¸ PyTorch not available. Disabling deep learning models.")
     print(f"   Missing: {e}")
     torch = None
     nn = None
@@ -40,7 +40,7 @@ try:
     from sklearn.preprocessing import StandardScaler
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling data preprocessing.")
+    print("âš ï¸ scikit-learn not available. Disabling data preprocessing.")
     print(f"   Missing: {e}")
     StandardScaler = None
     SKLEARN_AVAILABLE = False

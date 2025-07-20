@@ -1,4 +1,4 @@
-"""
+﻿"""
 Feature Selector
 
 Selects features using various methods including SHAP and permutation importance
@@ -21,7 +21,7 @@ try:
     from sklearn.preprocessing import StandardScaler
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling feature selection capabilities.")
+    print("âš ï¸ scikit-learn not available. Disabling feature selection capabilities.")
     print(f"   Missing: {e}")
     SelectKBest = None
     f_regression = None
@@ -572,4 +572,4 @@ class FeatureSelector:
             "ranks": rank_pivot,
             "scores": score_pivot,
             "raw_data": df
-        } 
+        }

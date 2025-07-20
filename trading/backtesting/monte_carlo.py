@@ -1,4 +1,4 @@
-"""
+﻿"""
 Monte Carlo Simulation for Backtesting
 
 This module provides comprehensive Monte Carlo simulation capabilities for backtesting,
@@ -583,4 +583,4 @@ if __name__ == "__main__":
     print(f"95th Percentile Final Value: ${results['summary_statistics']['final_p95']:,.2f}")
     print(f"Probability of Loss: {results['summary_statistics']['probability_of_loss']:.2%}")
     print(f"95% VaR: {results['summary_statistics']['var_95']:.2%}")
-    print(f"95% CVaR: {results['summary_statistics']['cvar_95']:.2%}") 
+    print(f"95% CVaR: {results['summary_statistics']['cvar_95']:.2%}")

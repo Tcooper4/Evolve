@@ -1,4 +1,4 @@
-import pandas as pd
+﻿import pandas as pd
 
 
 class SignalSchemaValidator:
@@ -22,4 +22,4 @@ class SignalSchemaValidator:
     @staticmethod
     def assert_valid(df: pd.DataFrame):
         if not SignalSchemaValidator.validate(df):
-            raise ValueError(f"Signal DataFrame does not meet schema requirements: must have columns {SignalSchemaValidator.REQUIRED_COLS} and non-null index.") 
+            raise ValueError(f"Signal DataFrame does not meet schema requirements: must have columns {SignalSchemaValidator.REQUIRED_COLS} and non-null index.")

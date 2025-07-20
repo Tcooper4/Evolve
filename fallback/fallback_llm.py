@@ -1,4 +1,4 @@
-"""
+﻿"""
 Fallback LLM with Negation Detection
 
 This module provides a fallback LLM system with advanced prompt parsing
@@ -512,4 +512,4 @@ def create_fallback_llm(config: Optional[Dict[str, Any]] = None) -> FallbackLLM:
     Returns:
         FallbackLLM instance
     """
-    return FallbackLLM(config) 
+    return FallbackLLM(config)

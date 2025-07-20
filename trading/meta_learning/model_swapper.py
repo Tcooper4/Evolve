@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Swapper - Batch 19
 Enhanced model swapping with performance validation and safety checks
 """
@@ -538,4 +538,4 @@ class ModelSwapper:
 
 def create_model_swapper(min_sharpe_ratio: float = 0.8) -> ModelSwapper:
     """Factory function to create model swapper."""
-    return ModelSwapper(min_sharpe_ratio=min_sharpe_ratio) 
+    return ModelSwapper(min_sharpe_ratio=min_sharpe_ratio)

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Risk Controls Module
 
 This module contains risk control classes and configurations for the execution agent.
@@ -142,4 +142,4 @@ def create_default_risk_controls() -> RiskControls:
         max_correlation=0.7,
         volatility_limit=0.5,
         trailing_stop=False,
-    ) 
+    )

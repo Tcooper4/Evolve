@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import logging
 import signal
 import sys
@@ -37,4 +37,4 @@ if __name__ == "__main__":
     except Exception as e:
         logger.exception("Fatal error in runtime initializer:")
         traceback.print_exc()
-        sys.exit(1) 
+        sys.exit(1)

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Forecast Formatter
 
 Formats and normalizes forecast data to prevent downstream failures.
@@ -227,4 +227,4 @@ class ForecastFormatter:
         if nan_count > 0:
             validation_result["warnings"].append(f"Found {nan_count} NaN values")
 
-        return validation_result 
+        return validation_result

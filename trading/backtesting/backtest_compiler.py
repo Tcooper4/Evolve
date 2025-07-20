@@ -1,4 +1,4 @@
-"""
+﻿"""
 Backtest Compiler
 
 Enhanced with Batch 10 features: automatic deduplication of signals from overlapping strategies
@@ -440,4 +440,4 @@ class BacktestCompiler:
             
         except Exception as e:
             logger.error(f"Error exporting compilation report: {e}")
-            return False 
+            return False

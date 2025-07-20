@@ -1,7 +1,7 @@
-Enhanced Live Data Feed with Multiple API Support and UI Integration.
+﻿Enhanced Live Data Feed with Multiple API Support and UI Integration.
 
 This module provides a robust data feed with automatic failover between
-multiple data providers: Alpaca → Polygon → Finnhub → yfinance (fallback).
+multiple data providers: Alpaca â†’ Polygon â†’ Finnhub â†’ yfinance (fallback).
 Includes UI integration for refresh controls and real-time data updates.
 "
 
@@ -340,4 +340,4 @@ class YFinanceProvider(DataProvider):
             
         except Exception as e:
             logger.error(f"YFinance OHLCV error: {e}")
-            return None 
+            return None

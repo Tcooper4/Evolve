@@ -1,4 +1,4 @@
-"""
+﻿"""
 Strategy Combo Creator
 
 This page allows users to create and test combinations of multiple trading strategies.
@@ -21,21 +21,21 @@ logger = logging.getLogger(__name__)
 # Page configuration
 st.set_page_config(
     page_title="Strategy Combo Creator",
-    page_icon="🔗",
+    page_icon="ðŸ”—",
     layout="wide"
 )
 
 def main():
     """Main function for the Strategy Combo Creator page."""
-    st.title("🔗 Strategy Combo Creator")
+    st.title("ðŸ”— Strategy Combo Creator")
     st.markdown("Create and test combinations of multiple trading strategies")
     
     # Sidebar configuration
     with st.sidebar:
-        st.header("⚙️ Configuration")
+        st.header("âš™ï¸ Configuration")
         
         # Strategy selection
-        st.subheader("📈 Strategy Selection")
+        st.subheader("ðŸ“ˆ Strategy Selection")
         available_strategies = get_available_strategies()
         
         selected_strategies = st.multiselect(
@@ -45,7 +45,7 @@ def main():
         )
         
         # Combination mode
-        st.subheader("🔄 Combination Mode")
+        st.subheader("ðŸ”„ Combination Mode")
         combine_modes = get_combine_modes()
         selected_mode = st.selectbox(
             "Select combination mode:",
@@ -54,7 +54,7 @@ def main():
         )
         
         # Weights configuration
-        st.subheader("⚖️ Strategy Weights")
+        st.subheader("âš–ï¸ Strategy Weights")
         weights = {}
         if selected_strategies:
             st.write("Configure weights for each strategy:")
@@ -69,7 +69,7 @@ def main():
                 weights[strategy] = weight
         
         # Advanced settings
-        st.subheader("🔧 Advanced Settings")
+        st.subheader("ðŸ”§ Advanced Settings")
         confidence_threshold = st.slider(
             "Confidence Threshold:",
             min_value=0.1,
@@ -102,7 +102,7 @@ def main():
         return
     
     # Data loading
-    st.header("📊 Data & Analysis")
+    st.header("ðŸ“Š Data & Analysis")
     
     # Load sample data or allow user upload
     data_source = st.radio(
@@ -125,7 +125,7 @@ def main():
             return
     
     # Display data preview
-    with st.expander("📋 Data Preview"):
+    with st.expander("ðŸ“‹ Data Preview"):
         st.dataframe(data.head())
         st.write(f"Data shape: {data.shape}")
     
@@ -311,10 +311,10 @@ def display_results(
     pipeline: Any
 ):
     """Display the results of strategy combination."""
-    st.header("📈 Combined Strategy Results")
+    st.header("ðŸ“ˆ Combined Strategy Results")
     
     # Create tabs for different views
-    tab1, tab2, tab3 = st.tabs(["📊 Signal Chart", "📋 Signal Summary", "🔍 Metadata"])
+    tab1, tab2, tab3 = st.tabs(["ðŸ“Š Signal Chart", "ðŸ“‹ Signal Summary", "ðŸ” Metadata"])
     
     with tab1:
         # Plot combined signal with price
@@ -396,7 +396,7 @@ def display_performance_analysis(
     metadata: Dict[str, Any]
 ):
     """Display performance analysis of the combined strategy."""
-    st.header("📊 Performance Analysis")
+    st.header("ðŸ“Š Performance Analysis")
     
     # Calculate basic performance metrics
     try:
@@ -470,7 +470,7 @@ def display_strategy_comparison(
     pipeline: Any
 ):
     """Display comparison of individual strategies."""
-    st.header("🔍 Strategy Comparison")
+    st.header("ðŸ” Strategy Comparison")
     
     try:
         # Generate individual strategy signals
@@ -514,7 +514,7 @@ def display_strategy_comparison(
         
         # Strategy agreement analysis
         if len(individual_signals) > 1:
-            st.subheader("🤝 Strategy Agreement Analysis")
+            st.subheader("ðŸ¤ Strategy Agreement Analysis")
             
             # Calculate agreement matrix
             agreement_data = []
@@ -545,7 +545,7 @@ def display_save_combo(
     weights: Dict[str, float]
 ):
     """Display options to save the strategy combination."""
-    st.header("💾 Save Strategy Combo")
+    st.header("ðŸ’¾ Save Strategy Combo")
     
     # Combo name
     combo_name = st.text_input(
@@ -565,7 +565,7 @@ def display_save_combo(
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("💾 Save Combo"):
+        if st.button("ðŸ’¾ Save Combo"):
             try:
                 # Save combo configuration
                 combo_config = {
@@ -601,7 +601,7 @@ def display_save_combo(
                 st.error(f"Error saving combo: {e}")
     
     with col2:
-        if st.button("📊 Export Results"):
+        if st.button("ðŸ“Š Export Results"):
             try:
                 # Export results to CSV
                 results_data = {
@@ -616,7 +616,7 @@ def display_save_combo(
                 csv = results_df.to_csv(index=False)
                 
                 st.download_button(
-                    label="📥 Download Results CSV",
+                    label="ðŸ“¥ Download Results CSV",
                     data=csv,
                     file_name=f"{combo_name}_results.csv",
                     mime="text/csv"
@@ -627,4 +627,4 @@ def display_save_combo(
 
 
 if __name__ == "__main__":
-    main() 
+    main()

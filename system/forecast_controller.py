@@ -1,4 +1,4 @@
-"""
+﻿"""
 Forecast Controller
 
 This module provides intelligent routing for forecast requests based on context,
@@ -538,4 +538,4 @@ def route_forecast(
         Dictionary containing forecast results
     """
     controller = ForecastController()
-    return controller.route_forecast_request(data, context, horizon, confidence_required) 
+    return controller.route_forecast_request(data, context, horizon, confidence_required)

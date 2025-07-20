@@ -1,4 +1,4 @@
-"""
+﻿"""
 Performance Summarizer
 
 Enhanced with Batch 10 features: configurable risk_free_rate parameter instead of hardcoded value.
@@ -429,4 +429,4 @@ class PerformanceSummarizer:
             return True
         except Exception as e:
             logger.error(f"Error exporting summary history: {e}")
-            return False 
+            return False

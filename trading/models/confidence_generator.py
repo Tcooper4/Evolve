@@ -1,4 +1,4 @@
-"""
+﻿"""
 Confidence Generator
 
 This module provides functionality to generate confidence bands and intervals
@@ -409,4 +409,4 @@ class ConfidenceGenerator:
 
 def create_confidence_generator(config: Optional[Dict[str, Any]] = None) -> ConfidenceGenerator:
     """Create a confidence generator instance."""
-    return ConfidenceGenerator(config) 
+    return ConfidenceGenerator(config)

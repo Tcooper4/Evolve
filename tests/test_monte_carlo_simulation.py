@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Monte Carlo Simulation Module
 
 This module tests the functionality of the Monte Carlo simulation system.
@@ -337,4 +337,4 @@ class TestMonteCarloSimulation(unittest.TestCase):
 
 if __name__ == "__main__":
     # Run tests
-    unittest.main(verbosity=2) 
+    unittest.main(verbosity=2)

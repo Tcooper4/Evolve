@@ -1,4 +1,4 @@
-"""
+﻿"""
 Portfolio Management Module
 
 This module provides comprehensive portfolio management capabilities including:
@@ -191,4 +191,4 @@ def example_usage():
 
 
 if __name__ == "__main__":
-    example_usage() 
+    example_usage()

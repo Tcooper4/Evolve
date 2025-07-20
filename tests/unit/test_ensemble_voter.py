@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 import pandas as pd
 import numpy as np
 from trading.strategies.ensemble import WeightedEnsembleStrategy, EnsembleConfig
@@ -90,4 +90,4 @@ def test_rule_based_fallback_used(ensemble):
     # Assert that the fallback is the last successful signals (rule-based fallback)
     assert fallback.equals(ensemble.last_successful_signals)
     # Assert that the fallback is not all NaN
-    assert not fallback.isnull().all().all() 
+    assert not fallback.isnull().all().all()

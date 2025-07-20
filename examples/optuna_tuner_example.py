@@ -1,4 +1,4 @@
-"""
+﻿"""
 Optuna Tuner Example
 
 This example demonstrates how to use the enhanced Optuna tuner for optimizing
@@ -377,4 +377,4 @@ def main():
         raise
 
 if __name__ == "__main__":
-    main() 
+    main()

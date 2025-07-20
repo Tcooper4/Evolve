@@ -159,7 +159,7 @@ def launch_task_orchestrator(config_path: str, monitor: bool = False) -> Dict[st
     """
     try:
         logger.info("Launching Task Orchestrator...")
-        
+
         # Import orchestrator
         try:
             from core.task_orchestrator import start_orchestrator
@@ -177,7 +177,7 @@ def launch_task_orchestrator(config_path: str, monitor: bool = False) -> Dict[st
                 # Start orchestrator
                 orchestrator = await start_orchestrator(config_path)
                 logger.info("Task Orchestrator started successfully")
-                
+
                 if monitor:
                     logger.info("Starting real-time monitoring...")
                     # Run monitoring for a period
@@ -186,7 +186,7 @@ def launch_task_orchestrator(config_path: str, monitor: bool = False) -> Dict[st
                     # Keep running indefinitely
                     while True:
                         await asyncio.sleep(60)  # Check every minute
-                        
+
             except KeyboardInterrupt:
                 logger.info("Stopping Task Orchestrator...")
                 await orchestrator.stop()
@@ -198,7 +198,7 @@ def launch_task_orchestrator(config_path: str, monitor: bool = False) -> Dict[st
 
         # Run the orchestrator
         asyncio.run(run_orchestrator())
-        
+
         return {
             "status": "success",
             "message": "Task Orchestrator completed",
@@ -229,7 +229,7 @@ def check_system_health() -> Dict[str, Any]:
             "status": "unknown",
             "message": "Task Orchestrator not checked"
         }
-        
+
         try:
             from core.task_orchestrator import TaskOrchestrator
             orchestrator = TaskOrchestrator()
@@ -263,11 +263,11 @@ def check_system_health() -> Dict[str, Any]:
 
         print("\nComponent Status:")
         print("-" * 40)
-        
+
         # Add Task Orchestrator to component status
         components = health["components"].copy()
         components["Task Orchestrator"] = orchestrator_health
-        
+
         for name, component_health in components.items():
             status = component_health.get("status", "unknown")
             status_icon = {
@@ -488,3 +488,4 @@ if __name__ == "__main__":
     result = main()
     if isinstance(result, dict) and result.get("status") == "error":
         sys.exit(1)
+

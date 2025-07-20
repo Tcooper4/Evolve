@@ -1,4 +1,4 @@
-"""
+﻿"""
 Ensemble Integrity Checker - Batch 20
 Distribution drift detection and ensemble health monitoring
 """
@@ -526,4 +526,4 @@ class EnsembleIntegrityChecker:
 
 def create_ensemble_integrity_checker(reference_window: int = 1000) -> EnsembleIntegrityChecker:
     """Factory function to create ensemble integrity checker."""
-    return EnsembleIntegrityChecker(reference_window=reference_window) 
+    return EnsembleIntegrityChecker(reference_window=reference_window)

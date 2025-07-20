@@ -1,4 +1,4 @@
-"""
+﻿"""
 Weight Registry for Hybrid Models
 
 This module provides centralized management of hybrid model weights:
@@ -661,4 +661,4 @@ def optimize_ensemble_weights(model_names: List[str], method: str = "performance
 def get_registry_summary() -> Dict[str, Any]:
     """Get registry summary."""
     registry = get_weight_registry()
-    return registry.get_registry_summary() 
+    return registry.get_registry_summary()

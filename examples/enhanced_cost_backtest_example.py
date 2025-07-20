@@ -1,4 +1,4 @@
-"""
+﻿"""
 Enhanced Cost Backtesting Example
 
 This example demonstrates the enhanced cost modeling capabilities including:
@@ -66,7 +66,7 @@ def create_simple_strategy_signals(data: pd.DataFrame) -> pd.DataFrame:
 
 def run_cost_comparison_backtest():
     """Run backtest with different cost scenarios."""
-    print("🚀 Running Enhanced Cost Backtesting Example")
+    print("ðŸš€ Running Enhanced Cost Backtesting Example")
     print("=" * 60)
     
     # Generate sample data
@@ -99,7 +99,7 @@ def run_cost_comparison_backtest():
     results = {}
     
     for scenario_name, cost_params in cost_scenarios.items():
-        print(f"\n📊 Testing {scenario_name} scenario...")
+        print(f"\nðŸ“Š Testing {scenario_name} scenario...")
         
         # Create cost model
         cost_config = CostConfig(
@@ -181,13 +181,13 @@ def run_cost_comparison_backtest():
                 'final_equity': equity_df['equity_curve'].iloc[-1] if 'equity_curve' in equity_df.columns else 100000
             }
             
-            print(f"✅ {scenario_name}: Final Equity = ${metrics.get('final_equity', 100000):,.2f}")
+            print(f"âœ… {scenario_name}: Final Equity = ${metrics.get('final_equity', 100000):,.2f}")
             print(f"   Total Return: {metrics.get('total_return', 0)*100:.2f}%")
             print(f"   Cost-Adjusted Return: {metrics.get('cost_adjusted_return', 0)*100:.2f}%")
             print(f"   Total Trading Costs: ${metrics.get('total_trading_costs', 0):,.2f}")
             
         except Exception as e:
-            print(f"❌ Error in {scenario_name}: {e}")
+            print(f"âŒ Error in {scenario_name}: {e}")
             results[scenario_name] = None
     
     return results
@@ -196,7 +196,7 @@ def run_cost_comparison_backtest():
 def analyze_cost_impact(results: dict):
     """Analyze the impact of different cost scenarios."""
     print("\n" + "=" * 60)
-    print("📈 COST IMPACT ANALYSIS")
+    print("ðŸ“ˆ COST IMPACT ANALYSIS")
     print("=" * 60)
     
     # Create comparison table
@@ -224,7 +224,7 @@ def analyze_cost_impact(results: dict):
     comparison_df = pd.DataFrame(comparison_data)
     
     # Display comparison table
-    print("\n📊 Performance Comparison:")
+    print("\nðŸ“Š Performance Comparison:")
     print(comparison_df.round(2).to_string(index=False))
     
     # Create visualizations
@@ -306,13 +306,13 @@ def create_cost_impact_visualizations(comparison_df: pd.DataFrame, results: dict
     plt.savefig('cost_impact_analysis.png', dpi=300, bbox_inches='tight')
     plt.show()
     
-    print(f"\n📊 Visualization saved as 'cost_impact_analysis.png'")
+    print(f"\nðŸ“Š Visualization saved as 'cost_impact_analysis.png'")
 
 
 def demonstrate_cost_config_ui():
     """Demonstrate the cost configuration UI component."""
     print("\n" + "=" * 60)
-    print("🎛️ COST CONFIGURATION UI DEMONSTRATION")
+    print("ðŸŽ›ï¸ COST CONFIGURATION UI DEMONSTRATION")
     print("=" * 60)
     
     # This would normally be used in a Streamlit app
@@ -341,7 +341,7 @@ def demonstrate_cost_config_ui():
 
 def main():
     """Main function to run the enhanced cost backtesting example."""
-    print("🎯 Enhanced Cost Backtesting Example")
+    print("ðŸŽ¯ Enhanced Cost Backtesting Example")
     print("This example demonstrates realistic trading cost modeling")
     
     # Run cost comparison backtest
@@ -355,13 +355,13 @@ def main():
     
     # Summary
     print("\n" + "=" * 60)
-    print("📋 SUMMARY")
+    print("ðŸ“‹ SUMMARY")
     print("=" * 60)
-    print("✅ Enhanced cost modeling successfully implemented")
-    print("✅ Cost-adjusted performance metrics calculated")
-    print("✅ Different cost scenarios compared")
-    print("✅ Cost impact analysis completed")
-    print("✅ UI component for cost configuration created")
+    print("âœ… Enhanced cost modeling successfully implemented")
+    print("âœ… Cost-adjusted performance metrics calculated")
+    print("âœ… Different cost scenarios compared")
+    print("âœ… Cost impact analysis completed")
+    print("âœ… UI component for cost configuration created")
     print("\nKey Features:")
     print("- Commission, slippage, and spread calculations")
     print("- Cash drag and idle capital adjustments")
@@ -373,4 +373,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

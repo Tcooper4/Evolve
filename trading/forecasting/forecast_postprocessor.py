@@ -1,4 +1,4 @@
-"""
+﻿"""
 Forecast Postprocessor
 
 Handles post-processing of forecast results including NaN sanitization,
@@ -139,4 +139,4 @@ class ForecastPostprocessor:
             "version": "1.0"
         }
         
-        return processed_data 
+        return processed_data

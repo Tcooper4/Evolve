@@ -1,4 +1,4 @@
-"""Reinforcement Learning Trader for Evolve Trading Platform.
+﻿"""Reinforcement Learning Trader for Evolve Trading Platform.
 
 This module implements a PPO-based RL trader using stable-baselines3
 with a custom Gym-compatible trading environment.

@@ -1,4 +1,4 @@
-Unit tests for walk-forward validation utilities.
+﻿Unit tests for walk-forward validation utilities.
 
 Tests the walk_forward_validate utility function and related helpers.
 
@@ -259,4 +259,4 @@ class TestWalkForwardUtils:
             # Check that custom parameters are used
             assert result[train_window_days'] == 100
             assert result['test_window_days'] == 20
-            assert result['step_size_days'] == 10 
+            assert result['step_size_days'] == 10

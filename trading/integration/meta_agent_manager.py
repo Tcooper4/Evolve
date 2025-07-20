@@ -1,4 +1,4 @@
-"""
+﻿"""
 Meta Agent Manager
 
 Centralized management for meta agents that provide system-wide capabilities
@@ -81,36 +81,36 @@ class MetaAgentManager:
                 from trading.meta_agents.integration_test_handler import IntegrationTestHandler
                 self.agents['integration_test'] = IntegrationTestHandler()
                 self.agent_status['integration_test'] = MetaAgentStatus.IDLE
-                self.logger.info("✅ IntegrationTestHandler initialized")
+                self.logger.info("âœ… IntegrationTestHandler initialized")
             except ImportError as e:
-                self.logger.warning(f"⚠️ IntegrationTestHandler not available: {e}")
+                self.logger.warning(f"âš ï¸ IntegrationTestHandler not available: {e}")
             
             # Log Visualization Handler
             try:
                 from trading.meta_agents.log_visualization_handler import LogVisualizationHandler
                 self.agents['log_visualization'] = LogVisualizationHandler()
                 self.agent_status['log_visualization'] = MetaAgentStatus.IDLE
-                self.logger.info("✅ LogVisualizationHandler initialized")
+                self.logger.info("âœ… LogVisualizationHandler initialized")
             except ImportError as e:
-                self.logger.warning(f"⚠️ LogVisualizationHandler not available: {e}")
+                self.logger.warning(f"âš ï¸ LogVisualizationHandler not available: {e}")
             
             # Documentation Analytics
             try:
                 from trading.meta_agents.documentation_analytics import DocumentationAnalytics
                 self.agents['documentation_analytics'] = DocumentationAnalytics()
                 self.agent_status['documentation_analytics'] = MetaAgentStatus.IDLE
-                self.logger.info("✅ DocumentationAnalytics initialized")
+                self.logger.info("âœ… DocumentationAnalytics initialized")
             except ImportError as e:
-                self.logger.warning(f"⚠️ DocumentationAnalytics not available: {e}")
+                self.logger.warning(f"âš ï¸ DocumentationAnalytics not available: {e}")
             
             # Automation Security
             try:
                 from trading.meta_agents.automation_security import AutomationSecurity
                 self.agents['automation_security'] = AutomationSecurity()
                 self.agent_status['automation_security'] = MetaAgentStatus.IDLE
-                self.logger.info("✅ AutomationSecurity initialized")
+                self.logger.info("âœ… AutomationSecurity initialized")
             except ImportError as e:
-                self.logger.warning(f"⚠️ AutomationSecurity not available: {e}")
+                self.logger.warning(f"âš ï¸ AutomationSecurity not available: {e}")
             
             self.logger.info(f"Initialized {len(self.agents)} meta agents")
             
@@ -166,12 +166,12 @@ class MetaAgentManager:
             self.agent_status[agent_name] = MetaAgentStatus.COMPLETED
             self.execution_history.append(meta_result)
             
-            self.logger.info(f"✅ Meta agent '{agent_name}' completed in {execution_time:.2f}s")
+            self.logger.info(f"âœ… Meta agent '{agent_name}' completed in {execution_time:.2f}s")
             return meta_result
             
         except Exception as e:
             execution_time = (datetime.now() - start_time).total_seconds()
-            self.logger.error(f"❌ Meta agent '{agent_name}' failed: {e}")
+            self.logger.error(f"âŒ Meta agent '{agent_name}' failed: {e}")
             
             meta_result = MetaAgentResult(
                 agent_name=agent_name,
@@ -357,7 +357,7 @@ async def run_security_audit() -> MetaAgentResult:
 if __name__ == "__main__":
     # Demo usage
     async def demo():
-        print("🔧 Meta Agent Manager Demo")
+        print("ðŸ”§ Meta Agent Manager Demo")
         print("=" * 50)
         
         manager = MetaAgentManager()
@@ -366,15 +366,15 @@ if __name__ == "__main__":
         print(f"Agent statuses: {manager.get_all_agent_statuses()}")
         
         # Run integration tests
-        print("\n🧪 Running system integration tests...")
+        print("\nðŸ§ª Running system integration tests...")
         result = await manager.run_system_integration_tests()
         print(f"Result: {result.status} - {result.result}")
         
         # Health check
-        print("\n🏥 Running health check...")
+        print("\nðŸ¥ Running health check...")
         health = await manager.health_check()
         print(f"Overall health: {health['overall_health']}")
         
-        print("\n✅ Demo completed!")
+        print("\nâœ… Demo completed!")
     
-    asyncio.run(demo()) 
+    asyncio.run(demo())

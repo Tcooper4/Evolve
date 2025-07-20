@@ -1,4 +1,4 @@
-"""
+﻿"""
 Custom Performance Metrics Module
 
 This module provides clean, custom implementations of financial performance metrics
@@ -484,4 +484,4 @@ def risk_reward_ratio(returns: Union[pd.Series, np.ndarray]) -> float:
     expected_return = np.mean(returns)
     risk = np.std(returns)
 
-    return expected_return / risk if risk != 0 else 0.0 
+    return expected_return / risk if risk != 0 else 0.0

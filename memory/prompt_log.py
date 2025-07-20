@@ -1,4 +1,4 @@
-"""
+﻿"""
 Prompt Memory Module
 
 This module provides a flexible prompt memory system that can store and retrieve
@@ -440,4 +440,4 @@ async def get_last_prompt(user_id: str = "default") -> Optional[PromptEntry]:
 async def get_prompt_history(user_id: str = "default", n: int = 10) -> List[PromptEntry]:
     """Convenience function to get prompt history."""
     memory = get_prompt_memory()
-    return await memory.get_prompt_history(user_id, n) 
+    return await memory.get_prompt_history(user_id, n)

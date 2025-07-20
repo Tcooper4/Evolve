@@ -1,4 +1,4 @@
-"""
+﻿"""
 Comprehensive tests for productionized modules.
 
 This script tests the hardened and productionized versions of:
@@ -181,7 +181,7 @@ class TestNotificationService:
         
         # Run the test
         asyncio.run(test_send_message())
-        logger.info("✅ Notification service consolidation test passed")
+        logger.info("âœ… Notification service consolidation test passed")
 
 
 class TestAgentMemoryManager:
@@ -211,7 +211,7 @@ class TestAgentMemoryManager:
         assert cache.get("key3") == "value3"  # Still there
         assert cache.get("key4") == "value4"  # New item
         
-        logger.info("✅ LRU cache eviction test passed")
+        logger.info("âœ… LRU cache eviction test passed")
     
     def test_memory_validation(self):
         """Test memory data validation."""
@@ -245,7 +245,7 @@ class TestAgentMemoryManager:
         assert memory_manager._validate_memory_data(valid_data, "interaction", "test.json") == True
         assert memory_manager._validate_memory_data(invalid_data, "interaction", "test.json") == False
         
-        logger.info("✅ Memory validation test passed")
+        logger.info("âœ… Memory validation test passed")
     
     def test_corrupted_file_handling(self):
         """Test handling of corrupted memory files."""
@@ -278,7 +278,7 @@ class TestAgentMemoryManager:
                 import shutil
                 shutil.rmtree(backup_dir)
         
-        logger.info("✅ Corrupted file handling test passed")
+        logger.info("âœ… Corrupted file handling test passed")
 
 
 class TestLSTMForecaster:
@@ -310,7 +310,7 @@ class TestLSTMForecaster:
         unnormalized_data = pd.DataFrame(np.random.rand(100, 5) * 1000)  # Large values
         assert forecaster._check_data_normalization(unnormalized_data) == False
         
-        logger.info("✅ Data normalization check test passed")
+        logger.info("âœ… Data normalization check test passed")
     
     def test_input_validation(self):
         """Test input validation with NaN handling."""
@@ -341,7 +341,7 @@ class TestLSTMForecaster:
         with pytest.raises(ValueError, match="At least 20 data points are required"):
             forecaster.fit(data, target, epochs=1)
         
-        logger.info("✅ Input validation test passed")
+        logger.info("âœ… Input validation test passed")
     
     def test_batch_wise_prediction(self):
         """Test batch-wise prediction to reduce memory usage."""
@@ -367,7 +367,7 @@ class TestLSTMForecaster:
         predictions = forecaster.predict(data, batch_size=10)
         assert len(predictions) > 0
         
-        logger.info("✅ Batch-wise prediction test passed")
+        logger.info("âœ… Batch-wise prediction test passed")
 
 
 class TestProphetForecaster:
@@ -390,7 +390,7 @@ class TestProphetForecaster:
         assert horizon > 0
         assert horizon <= 365  # Max horizon
         
-        logger.info("✅ Dynamic forecast horizon test passed")
+        logger.info("âœ… Dynamic forecast horizon test passed")
     
     def test_time_utilities(self):
         """Test time utility functions."""
@@ -419,7 +419,7 @@ class TestProphetForecaster:
         seasonality = detect_seasonality(data, 'date', 'value')
         assert isinstance(seasonality, dict)
         
-        logger.info("✅ Time utilities test passed")
+        logger.info("âœ… Time utilities test passed")
 
 
 class TestAgent:
@@ -440,7 +440,7 @@ class TestAgent:
         assert "model" in estimate
         assert estimate["model"] == "gpt-4"
         
-        logger.info("✅ Token usage estimation test passed")
+        logger.info("âœ… Token usage estimation test passed")
     
     def test_prompt_sanitization(self):
         """Test prompt sanitization."""
@@ -463,7 +463,7 @@ class TestAgent:
         assert len(truncated) <= 103  # 100 + "..."
         assert truncated.endswith("...")
         
-        logger.info("✅ Prompt sanitization test passed")
+        logger.info("âœ… Prompt sanitization test passed")
     
     def test_log_batching(self):
         """Test log batching functionality."""
@@ -481,7 +481,7 @@ class TestAgent:
         # Check that buffer is empty
         assert len(agent.log_buffer) == 0
         
-        logger.info("✅ Log batching test passed")
+        logger.info("âœ… Log batching test passed")
     
     def test_token_usage_tracking(self):
         """Test token usage tracking."""
@@ -500,54 +500,54 @@ class TestAgent:
         assert stats["requests_count"] == 2
         assert stats["total_cost"] > 0
         
-        logger.info("✅ Token usage tracking test passed")
+        logger.info("âœ… Token usage tracking test passed")
 
 
 def run_all_tests():
     """Run all production module tests."""
-    logger.info("🚀 Starting production module tests...")
+    logger.info("ðŸš€ Starting production module tests...")
     
     # Test notification service
-    logger.info("\n📧 Testing Notification Service...")
+    logger.info("\nðŸ“§ Testing Notification Service...")
     test_notification = TestNotificationService()
     test_notification.test_message_sending_consolidation()
     
     # Test agent memory manager
-    logger.info("\n🧠 Testing Agent Memory Manager...")
+    logger.info("\nðŸ§  Testing Agent Memory Manager...")
     test_memory = TestAgentMemoryManager()
     test_memory.test_lru_cache_eviction()
     test_memory.test_memory_validation()
     test_memory.test_corrupted_file_handling()
     
     # Test LSTM forecaster
-    logger.info("\n🔮 Testing LSTM Forecaster...")
+    logger.info("\nðŸ”® Testing LSTM Forecaster...")
     test_lstm = TestLSTMForecaster()
     test_lstm.test_data_normalization_check()
     test_lstm.test_input_validation()
     test_lstm.test_batch_wise_prediction()
     
     # Test Prophet forecaster
-    logger.info("\n📊 Testing Prophet Forecaster...")
+    logger.info("\nðŸ“Š Testing Prophet Forecaster...")
     test_prophet = TestProphetForecaster()
     test_prophet.test_dynamic_forecast_horizon()
     test_prophet.test_time_utilities()
     
     # Test agent
-    logger.info("\n🤖 Testing Agent...")
+    logger.info("\nðŸ¤– Testing Agent...")
     test_agent = TestAgent()
     test_agent.test_token_usage_estimation()
     test_agent.test_prompt_sanitization()
     test_agent.test_log_batching()
     test_agent.test_token_usage_tracking()
     
-    logger.info("\n✅ All production module tests completed successfully!")
-    logger.info("\n📋 Summary of productionization improvements:")
-    logger.info("• Notification Service: Consolidated send_message with timeout, retry, and error handling")
-    logger.info("• Agent Memory Manager: LRU cache eviction, memory validation, corrupted file handling")
-    logger.info("• LSTM Forecaster: Data normalization checks, input validation, batch-wise prediction")
-    logger.info("• Prophet Forecaster: Dynamic forecast horizon, time utilities extraction")
-    logger.info("• Agent: Token usage estimation, prompt sanitization, log batching")
+    logger.info("\nâœ… All production module tests completed successfully!")
+    logger.info("\nðŸ“‹ Summary of productionization improvements:")
+    logger.info("â€¢ Notification Service: Consolidated send_message with timeout, retry, and error handling")
+    logger.info("â€¢ Agent Memory Manager: LRU cache eviction, memory validation, corrupted file handling")
+    logger.info("â€¢ LSTM Forecaster: Data normalization checks, input validation, batch-wise prediction")
+    logger.info("â€¢ Prophet Forecaster: Dynamic forecast horizon, time utilities extraction")
+    logger.info("â€¢ Agent: Token usage estimation, prompt sanitization, log batching")
 
 
 if __name__ == "__main__":
-    run_all_tests() 
+    run_all_tests()

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Hybrid Engine
 
 This module handles hybrid model logic for combining multiple forecast results.
@@ -643,4 +643,4 @@ class HybridEngine:
             logger.info(f"Combination method set to: {method}")
         else:
             logger.warning(f"Unknown combination method: {method}. Using weighted_average")
-            self.combination_method = "weighted_average" 
+            self.combination_method = "weighted_average"

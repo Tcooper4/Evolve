@@ -1,4 +1,4 @@
-"""
+﻿"""
 Math Helpers Module
 
 Enhanced with Batch 11 features: Removed wrapper functions over NumPy and provides
@@ -583,4 +583,4 @@ def calculate_calmar_ratio(
 
     calmar_ratio = equity_curve.rolling(window=window).apply(rolling_calmar)
 
-    return calmar_ratio 
+    return calmar_ratio

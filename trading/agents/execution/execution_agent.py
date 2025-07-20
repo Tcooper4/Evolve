@@ -1,4 +1,4 @@
-"""
+﻿"""
 Execution Agent
 
 This agent handles trade execution, position tracking, and portfolio management.
@@ -538,4 +538,4 @@ def create_execution_agent(config: Optional[Dict[str, Any]] = None) -> Execution
         config=config
     )
     
-    return ExecutionAgent(agent_config) 
+    return ExecutionAgent(agent_config)

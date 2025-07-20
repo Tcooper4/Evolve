@@ -1,4 +1,4 @@
-"""
+﻿"""
 Batch 18 Tests
 Tests for fault tolerance, clarity, and fallback logic improvements
 """
@@ -359,4 +359,4 @@ class TestBatch18Integration(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()

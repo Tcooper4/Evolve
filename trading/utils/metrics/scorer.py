@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Scorer
 
 Provides scoring functions for model evaluation and selection.
@@ -410,4 +410,4 @@ class ModelScorer:
                 logger.warning(f"Negative error metric {metric}: {score}")
                 return False
 
-        return True 
+        return True

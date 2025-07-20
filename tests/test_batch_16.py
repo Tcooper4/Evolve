@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Batch 16 improvements:
 - Soft-matching sentiment analysis with embeddings
 - Rolling score decay with exponential weighting
@@ -372,4 +372,4 @@ class TestBatch16Improvements(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main() 
+    unittest.main()

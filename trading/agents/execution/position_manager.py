@@ -1,4 +1,4 @@
-"""
+﻿"""
 Position Manager Module
 
 This module contains position management functionality for the execution agent.
@@ -340,4 +340,4 @@ class PositionManager:
 
     def check_daily_loss_limit(self) -> bool:
         """Check if daily loss limit has been exceeded."""
-        return abs(self.daily_pnl) > self.max_daily_loss 
+        return abs(self.daily_pnl) > self.max_daily_loss

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Monte Carlo Simulation Example
 
 This script demonstrates how to use the Monte Carlo simulation functionality
@@ -53,7 +53,7 @@ def generate_realistic_returns(
 
 def demonstrate_basic_simulation():
     """Demonstrate basic Monte Carlo simulation."""
-    print("🎲 Basic Monte Carlo Simulation")
+    print("ðŸŽ² Basic Monte Carlo Simulation")
     print("=" * 50)
     
     # Generate sample returns
@@ -74,7 +74,7 @@ def demonstrate_basic_simulation():
     
     # Display results
     stats = results['summary_statistics']
-    print(f"\n📊 Simulation Results:")
+    print(f"\nðŸ“Š Simulation Results:")
     print(f"Mean Final Value: ${stats['mean_final_value']:,.2f}")
     print(f"5th Percentile: ${stats['final_p5']:,.2f}")
     print(f"95th Percentile: ${stats['final_p95']:,.2f}")
@@ -86,7 +86,7 @@ def demonstrate_basic_simulation():
 
 def demonstrate_bootstrap_methods():
     """Demonstrate different bootstrap methods."""
-    print("\n🔄 Bootstrap Methods Comparison")
+    print("\nðŸ”„ Bootstrap Methods Comparison")
     print("=" * 50)
     
     # Generate returns
@@ -96,7 +96,7 @@ def demonstrate_bootstrap_methods():
     methods = ["historical", "block", "parametric"]
     
     for method in methods:
-        print(f"\n📈 Testing {method.upper()} bootstrap:")
+        print(f"\nðŸ“ˆ Testing {method.upper()} bootstrap:")
         
         config = MonteCarloConfig(
             n_simulations=500,  # Fewer for faster comparison
@@ -116,7 +116,7 @@ def demonstrate_bootstrap_methods():
 
 def demonstrate_confidence_intervals():
     """Demonstrate confidence interval calculations."""
-    print("\n📊 Confidence Intervals Analysis")
+    print("\nðŸ“Š Confidence Intervals Analysis")
     print("=" * 50)
     
     # Generate returns
@@ -147,7 +147,7 @@ def demonstrate_confidence_intervals():
 
 def demonstrate_risk_analysis():
     """Demonstrate comprehensive risk analysis."""
-    print("\n⚠️ Risk Analysis")
+    print("\nâš ï¸ Risk Analysis")
     print("=" * 50)
     
     # Generate returns with different characteristics
@@ -158,7 +158,7 @@ def demonstrate_risk_analysis():
     ]
     
     for scenario_name, mean_ret, vol in scenarios:
-        print(f"\n📈 {scenario_name} Portfolio:")
+        print(f"\nðŸ“ˆ {scenario_name} Portfolio:")
         
         returns = generate_realistic_returns(n_days=252, mean_return=mean_ret, volatility=vol)
         
@@ -181,7 +181,7 @@ def demonstrate_risk_analysis():
 
 def demonstrate_visualization():
     """Demonstrate visualization capabilities."""
-    print("\n🎨 Visualization Demo")
+    print("\nðŸŽ¨ Visualization Demo")
     print("=" * 50)
     
     # Generate returns
@@ -205,11 +205,11 @@ def demonstrate_visualization():
         save_path="monte_carlo_simulation.png"
     )
     
-    print("✅ Visualization created and saved as 'monte_carlo_simulation.png'")
+    print("âœ… Visualization created and saved as 'monte_carlo_simulation.png'")
     
     # Display some key statistics
     stats = simulator.get_summary_statistics()
-    print(f"\n📊 Key Statistics:")
+    print(f"\nðŸ“Š Key Statistics:")
     print(f"  Mean Final Value: ${stats['mean_final_value']:,.2f}")
     print(f"  Best Case: ${stats['max_final_value']:,.2f}")
     print(f"  Worst Case: ${stats['min_final_value']:,.2f}")
@@ -218,7 +218,7 @@ def demonstrate_visualization():
 
 def demonstrate_performance_comparison():
     """Demonstrate performance comparison between different strategies."""
-    print("\n🏆 Performance Comparison")
+    print("\nðŸ† Performance Comparison")
     print("=" * 50)
     
     # Generate different return series (simulating different strategies)
@@ -231,7 +231,7 @@ def demonstrate_performance_comparison():
     results_comparison = {}
     
     for strategy_name, returns in strategies.items():
-        print(f"\n📈 Analyzing {strategy_name}:")
+        print(f"\nðŸ“ˆ Analyzing {strategy_name}:")
         
         results = run_monte_carlo_analysis(
             returns=returns,
@@ -255,7 +255,7 @@ def demonstrate_performance_comparison():
         print(f"  95% VaR: {stats['var_95']:.2%}")
     
     # Create comparison table
-    print(f"\n📊 Strategy Comparison:")
+    print(f"\nðŸ“Š Strategy Comparison:")
     comparison_df = pd.DataFrame(results_comparison).T
     comparison_df['Sharpe_Ratio'] = comparison_df['mean_total_return'] / comparison_df['std_total_return']
     
@@ -264,7 +264,7 @@ def demonstrate_performance_comparison():
 
 def demonstrate_parameter_sensitivity():
     """Demonstrate sensitivity to different parameters."""
-    print("\n🔬 Parameter Sensitivity Analysis")
+    print("\nðŸ”¬ Parameter Sensitivity Analysis")
     print("=" * 50)
     
     # Test different simulation parameters
@@ -301,7 +301,7 @@ def demonstrate_parameter_sensitivity():
 
 def main():
     """Main demonstration function."""
-    print("🎯 Monte Carlo Simulation Examples")
+    print("ðŸŽ¯ Monte Carlo Simulation Examples")
     print("=" * 60)
     print()
     
@@ -315,18 +315,18 @@ def main():
         demonstrate_performance_comparison()
         demonstrate_parameter_sensitivity()
         
-        print("\n✅ All demonstrations completed successfully!")
-        print("\n💡 Next steps:")
+        print("\nâœ… All demonstrations completed successfully!")
+        print("\nðŸ’¡ Next steps:")
         print("  1. Run the Streamlit dashboard: streamlit run pages/Monte_Carlo_Simulation.py")
         print("  2. Use MonteCarloSimulator in your backtesting scripts")
         print("  3. Experiment with different bootstrap methods")
         print("  4. Analyze risk metrics for your strategies")
         
     except Exception as e:
-        print(f"❌ Error during demonstration: {str(e)}")
+        print(f"âŒ Error during demonstration: {str(e)}")
         import traceback
         traceback.print_exc()
 
 
 if __name__ == "__main__":
-    main() 
+    main()

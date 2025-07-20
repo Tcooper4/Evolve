@@ -1,4 +1,4 @@
-"""Performance logging utilities with persistent score tracking."""
+﻿"""Performance logging utilities with persistent score tracking."""
 
 import json
 import logging

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Model management script.
 Provides commands for managing machine learning models, including training, evaluation, deployment, and versioning.
@@ -55,7 +55,7 @@ try:
     from torch.utils.data import DataLoader, TensorDataset
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling PyTorch model training.")
+    print("âš ï¸ PyTorch not available. Disabling PyTorch model training.")
     print(f"   Missing: {e}")
     torch = None
     nn = None
@@ -71,7 +71,7 @@ try:
     from sklearn.preprocessing import StandardScaler
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling sklearn-based model training.")
+    print("âš ï¸ scikit-learn not available. Disabling sklearn-based model training.")
     print(f"   Missing: {e}")
     accuracy_score = None
     f1_score = None

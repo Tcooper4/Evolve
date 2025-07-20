@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Performance Dashboard
 
 This page provides comprehensive model performance tracking and analysis,
@@ -30,43 +30,43 @@ from memory.model_log import (
 def main():
     """Main entry point for the Model Performance Dashboard."""
     st.set_page_config(
-        page_title="📊 Model Performance Dashboard",
+        page_title="ðŸ“Š Model Performance Dashboard",
         layout="wide",
         initial_sidebar_state="expanded"
     )
     
-    st.title("📊 Model Performance Dashboard")
+    st.title("ðŸ“Š Model Performance Dashboard")
     st.markdown(
         "Track and analyze model performance metrics across different tickers and time periods."
     )
     
     # Sidebar for actions
-    st.sidebar.header("🔧 Actions")
+    st.sidebar.header("ðŸ”§ Actions")
     
     # Add sample data button
-    if st.sidebar.button("📊 Add Sample Data", help="Add sample model performance data for testing"):
+    if st.sidebar.button("ðŸ“Š Add Sample Data", help="Add sample model performance data for testing"):
         add_sample_data()
         st.success("Sample data added successfully!")
         st.rerun()
     
     # Clear data button
-    if st.sidebar.button("🗑️ Clear All Data", help="Clear all model performance data"):
+    if st.sidebar.button("ðŸ—‘ï¸ Clear All Data", help="Clear all model performance data"):
         if st.sidebar.checkbox("Confirm deletion"):
             clear_model_performance_log()
             st.success("All data cleared successfully!")
             st.rerun()
     
     # Manual logging section
-    st.sidebar.header("📝 Manual Logging")
+    st.sidebar.header("ðŸ“ Manual Logging")
     
     with st.sidebar.expander("Add New Performance Record"):
         add_manual_performance_record()
     
     # Main content tabs
     tab1, tab2, tab3 = st.tabs([
-        "📈 Performance Dashboard", 
-        "🏆 Best Models Summary", 
-        "📊 Quick Analytics"
+        "ðŸ“ˆ Performance Dashboard", 
+        "ðŸ† Best Models Summary", 
+        "ðŸ“Š Quick Analytics"
     ])
     
     with tab1:
@@ -191,7 +191,7 @@ def add_manual_performance_record():
         accuracy = st.number_input("Accuracy", value=0.0, step=0.01, format="%.2f")
         notes = st.text_area("Notes", placeholder="Additional notes about the model")
     
-    if st.button("📝 Log Performance"):
+    if st.button("ðŸ“ Log Performance"):
         if model_name and ticker:
             try:
                 log_model_performance(
@@ -214,7 +214,7 @@ def add_manual_performance_record():
 
 def render_quick_analytics():
     """Render quick analytics and insights."""
-    st.header("📊 Quick Analytics")
+    st.header("ðŸ“Š Quick Analytics")
     
     # Get available data
     tickers = get_available_tickers()
@@ -223,7 +223,7 @@ def render_quick_analytics():
         return
     
     # Overall statistics
-    st.subheader("📈 Overall Statistics")
+    st.subheader("ðŸ“ˆ Overall Statistics")
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -253,7 +253,7 @@ def render_quick_analytics():
             st.metric("Avg MSE", "N/A")
     
     # Model performance comparison
-    st.subheader("🏆 Top Performing Models")
+    st.subheader("ðŸ† Top Performing Models")
     
     if not df.empty:
         # Find best models by different metrics
@@ -297,7 +297,7 @@ def render_quick_analytics():
                     )
     
     # Recent activity
-    st.subheader("🕒 Recent Activity")
+    st.subheader("ðŸ•’ Recent Activity")
     
     if not df.empty:
         recent_data = df.head(10)[['timestamp', 'ticker', 'model_name', 'sharpe', 'mse']]
@@ -314,7 +314,7 @@ def render_quick_analytics():
         st.dataframe(recent_data, use_container_width=True)
     
     # Performance trends
-    st.subheader("📈 Performance Trends")
+    st.subheader("ðŸ“ˆ Performance Trends")
     
     if not df.empty and len(tickers) > 0:
         selected_ticker = st.selectbox("Select ticker for trend analysis", tickers)
@@ -346,4 +346,4 @@ def render_quick_analytics():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

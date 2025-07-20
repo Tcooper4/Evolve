@@ -1,4 +1,4 @@
-"""
+﻿"""
 XGBoost Model for Time Series Forecasting with Comprehensive Error Handling
 
 This module provides an XGBoost-based model for time series forecasting
@@ -70,7 +70,7 @@ class XGBoostModel(BaseModel):
         if not SKLEARN_AVAILABLE:
             logger.error("scikit-learn is not available. Cannot create XGBoost model.")
             self.available = False
-            print("⚠️ XGBoostModel unavailable due to missing scikit-learn")
+            print("âš ï¸ XGBoostModel unavailable due to missing scikit-learn")
             return
         
         try:
@@ -99,7 +99,7 @@ class XGBoostModel(BaseModel):
             except Exception as e:
                 logger.error(f"XGBoost setup failed, will use fallback: {e}")
                 self.model = None
-                print("⚠️ XGBoost unavailable due to model load failure")
+                print("âš ï¸ XGBoost unavailable due to model load failure")
                 print(f"   Error: {e}")
                 # Don't set available to False here as we have fallback
                 
@@ -107,7 +107,7 @@ class XGBoostModel(BaseModel):
             logger.error(f"Failed to initialize XGBoost model: {e}")
             logger.error(traceback.format_exc())
             self.available = False
-            print("⚠️ XGBoostModel unavailable due to initialization failure")
+            print("âš ï¸ XGBoostModel unavailable due to initialization failure")
             print(f"   Error: {e}")
             # Don't raise exception, just mark as unavailable
 
@@ -380,7 +380,7 @@ class XGBoostModel(BaseModel):
     def train(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Train the model with comprehensive error handling."""
         if not self.available:
-            print("⚠️ XGBoostModel unavailable due to initialization failure")
+            print("âš ï¸ XGBoostModel unavailable due to initialization failure")
             return {
                 "success": False,
                 "error": "XGBoostModel unavailable due to initialization failure",
@@ -441,7 +441,7 @@ class XGBoostModel(BaseModel):
     def predict(self, data: pd.DataFrame) -> np.ndarray:
         """Predict with comprehensive error handling."""
         if not self.available:
-            print("⚠️ XGBoostModel unavailable due to initialization failure")
+            print("âš ï¸ XGBoostModel unavailable due to initialization failure")
             # Return simple fallback prediction
             if "close" in data.columns:
                 return data["close"].rolling(window=20).mean().values
@@ -565,7 +565,7 @@ class XGBoostModel(BaseModel):
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast with comprehensive error handling."""
         if not self.available:
-            print("⚠️ XGBoostModel unavailable due to initialization failure")
+            print("âš ï¸ XGBoostModel unavailable due to initialization failure")
             # Return simple fallback forecast
             fallback_forecast = np.full(horizon, 1000.0)
             last_date = data.index[-1] if hasattr(data.index[-1], 'freq') else pd.Timestamp.now()

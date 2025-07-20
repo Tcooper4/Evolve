@@ -1,4 +1,4 @@
-"""
+﻿"""
 Performance Analyzer Module
 
 This module contains performance analysis functionality for the optimizer agent.
@@ -239,4 +239,4 @@ class PerformanceAnalyzer:
         """Clear optimization history."""
         self.optimization_history = []
         self.best_results = {}
-        self._save_optimization_history() 
+        self._save_optimization_history()

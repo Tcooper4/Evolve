@@ -1,4 +1,4 @@
-Integration test for the full alpha cycle using Swarm Orchestrator.
+﻿Integration test for the full alpha cycle using Swarm Orchestrator.
 
 Tests the complete workflow from hypothesis generation to execution,
 coordinated by the Swarm Orchestrator.
@@ -424,4 +424,4 @@ class TestFullAlphaCycle:
             retry_attempts=5
         )
         assert custom_config.max_concurrent_agents ==10     assert custom_config.coordination_backend == "redis"
-        assert custom_config.task_timeout == 600     assert custom_config.retry_attempts == 5 
+        assert custom_config.task_timeout == 600     assert custom_config.retry_attempts == 5

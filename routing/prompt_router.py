@@ -1,4 +1,4 @@
-"""
+﻿"""
 Prompt Router Module
 
 This module handles all prompt processing and routing logic for the Evolve Trading Platform.
@@ -43,33 +43,33 @@ class PromptRouter:
         # Initialize TaskAgent
         try:
             self.task_agent = TaskAgent()
-            self.logger.info("✅ TaskAgent initialized successfully")
+            self.logger.info("âœ… TaskAgent initialized successfully")
         except Exception as e:
-            self.logger.error(f"❌ Failed to initialize TaskAgent: {e}")
+            self.logger.error(f"âŒ Failed to initialize TaskAgent: {e}")
             self.task_agent = None
         
         # Initialize prompt agent
         try:
             from agents.llm.agent import PromptAgent
             self.prompt_agent = PromptAgent()
-            self.logger.info("✅ Prompt agent initialized successfully")
+            self.logger.info("âœ… Prompt agent initialized successfully")
         except ImportError as e:
-            self.logger.warning(f"⚠️ Prompt agent not available: {e}")
+            self.logger.warning(f"âš ï¸ Prompt agent not available: {e}")
             self.prompt_agent = None
         except Exception as e:
-            self.logger.error(f"❌ Failed to initialize prompt agent: {e}")
+            self.logger.error(f"âŒ Failed to initialize prompt agent: {e}")
             self.prompt_agent = None
         
         # Initialize agent logger
         try:
             from trading.memory.agent_logger import get_agent_logger
             self.agent_logger = get_agent_logger()
-            self.logger.info("✅ Agent logger initialized successfully")
+            self.logger.info("âœ… Agent logger initialized successfully")
         except ImportError as e:
-            self.logger.warning(f"⚠️ Agent logger not available: {e}")
+            self.logger.warning(f"âš ï¸ Agent logger not available: {e}")
             self.agent_logger = None
         except Exception as e:
-            self.logger.error(f"❌ Failed to initialize agent logger: {e}")
+            self.logger.error(f"âŒ Failed to initialize agent logger: {e}")
             self.agent_logger = None
         
         # Initialize agent controller
@@ -81,17 +81,17 @@ class PromptRouter:
             registration_status = self.agent_controller.get_agent_registration_status()
             
             if registration_status['total_agents'] == 0:
-                self.logger.warning("⚠️ No agents registered - will use fallback agent")
+                self.logger.warning("âš ï¸ No agents registered - will use fallback agent")
             elif registration_status['fallback_agent_created']:
-                self.logger.warning("⚠️ Only fallback agent available - real agents failed to register")
+                self.logger.warning("âš ï¸ Only fallback agent available - real agents failed to register")
             else:
-                self.logger.info(f"✅ Agent controller initialized with {registration_status['total_agents']} agents")
+                self.logger.info(f"âœ… Agent controller initialized with {registration_status['total_agents']} agents")
                 
         except ImportError as e:
-            self.logger.warning(f"⚠️ Agent controller not available: {e}")
+            self.logger.warning(f"âš ï¸ Agent controller not available: {e}")
             self.agent_controller = None
         except Exception as e:
-            self.logger.error(f"❌ Failed to initialize agent controller: {e}")
+            self.logger.error(f"âŒ Failed to initialize agent controller: {e}")
             self.agent_controller = None
     
     async def route_prompt(self, prompt: str, user_id: str = "default") -> Dict[str, Any]:
@@ -1002,4 +1002,4 @@ async def route_prompt(prompt: str, llm_type: str = "default") -> Dict[str, Any]
         Dict containing the routing result
     """
     router = get_prompt_router()
-    return await router.route_prompt(prompt, llm_type) 
+    return await router.route_prompt(prompt, llm_type)

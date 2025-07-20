@@ -1,4 +1,4 @@
-"""Execution Models Module.
+﻿"""Execution Models Module.
 
 This module contains execution-related data models extracted from execution_agent.py.
 """
@@ -86,4 +86,4 @@ class ExecutionResult:
             return 0.0
         
         base_cost = self.execution_price * self.position.size
-        return base_cost + self.fees + (self.slippage * self.position.size) 
+        return base_cost + self.fees + (self.slippage * self.position.size)

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Enhanced Optuna Tuner for Model Optimization
 
 This module provides comprehensive hyperparameter optimization using Optuna
@@ -622,4 +622,4 @@ def get_sharpe_optuna_tuner(
         study_name=study_name,
         n_trials=n_trials,
         timeout=timeout
-    ) 
+    )

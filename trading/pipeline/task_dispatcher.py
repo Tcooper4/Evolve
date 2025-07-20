@@ -1,4 +1,4 @@
-"""
+﻿"""
 Enhanced Task Dispatcher with Redis Failover
 
 This module provides robust task dispatching with:
@@ -79,7 +79,7 @@ class TaskRegistry:
         with self._lock:
             # Check for exact duplicate
             if task.id in self._tasks:
-                logger.warning(f"⚠️ Task {task.id} already registered")
+                logger.warning(f"âš ï¸ Task {task.id} already registered")
                 return False
             
             # Check for functional duplicates (same func + args + kwargs)
@@ -91,13 +91,13 @@ class TaskRegistry:
                     if existing_id in self._tasks:
                         existing_task = self._tasks[existing_id]
                         if existing_task.status in [TaskStatus.PENDING, TaskStatus.RUNNING]:
-                            logger.warning(f"⚠️ Duplicate task detected: {task.id} matches {existing_id}")
+                            logger.warning(f"âš ï¸ Duplicate task detected: {task.id} matches {existing_id}")
                             return False
             
             # Register the task
             self._tasks[task.id] = task
             self._task_signatures[signature].append(task.id)
-            logger.info(f"✅ Registered task {task.id}")
+            logger.info(f"âœ… Registered task {task.id}")
             return True
     
     def unregister_task(self, task_id: str) -> bool:
@@ -114,7 +114,7 @@ class TaskRegistry:
                     if not self._task_signatures[signature]:
                         del self._task_signatures[signature]
                 
-                logger.info(f"✅ Unregistered task {task_id}")
+                logger.info(f"âœ… Unregistered task {task_id}")
                 return True
             return False
     
@@ -142,7 +142,7 @@ class TaskRegistry:
             for task_id in to_remove:
                 self.unregister_task(task_id)
             
-            logger.info(f"🧹 Cleaned up {len(to_remove)} completed tasks")
+            logger.info(f"ðŸ§¹ Cleaned up {len(to_remove)} completed tasks")
             return len(to_remove)
     
     def _create_signature(self, task: Task) -> str:
@@ -168,12 +168,12 @@ class LocalTaskQueue:
         """Add task to queue, return False if full."""
         with self._lock:
             if self._size >= self.max_size:
-                logger.warning(f"⚠️ Task queue full ({self._size}/{self.max_size})")
+                logger.warning(f"âš ï¸ Task queue full ({self._size}/{self.max_size})")
                 return False
             
             self._queues[task.priority].append(task)
             self._size += 1
-            logger.debug(f"📥 Added task {task.id} to queue (priority: {task.priority.name})")
+            logger.debug(f"ðŸ“¥ Added task {task.id} to queue (priority: {task.priority.name})")
             return True
     
     def get(self) -> Optional[Task]:
@@ -184,7 +184,7 @@ class LocalTaskQueue:
                 if self._queues[priority]:
                     task = self._queues[priority].popleft()
                     self._size -= 1
-                    logger.debug(f"📤 Retrieved task {task.id} from queue (priority: {priority.name})")
+                    logger.debug(f"ðŸ“¤ Retrieved task {task.id} from queue (priority: {priority.name})")
                     return task
             return None
     
@@ -200,7 +200,7 @@ class LocalTaskQueue:
             for queue in self._queues.values():
                 queue.clear()
             self._size = 0
-            logger.info(f"🧹 Cleared {total_cleared} tasks from queue")
+            logger.info(f"ðŸ§¹ Cleared {total_cleared} tasks from queue")
             return total_cleared
 
 class RedisTaskQueue:
@@ -216,7 +216,7 @@ class RedisTaskQueue:
     def _connect(self) -> bool:
         """Connect to Redis."""
         if not REDIS_AVAILABLE:
-            logger.warning("⚠️ Redis not available, using local queue only")
+            logger.warning("âš ï¸ Redis not available, using local queue only")
             return False
         
         try:
@@ -224,10 +224,10 @@ class RedisTaskQueue:
             # Test connection
             self.redis_client.ping()
             self._connected = True
-            logger.info("✅ Connected to Redis")
+            logger.info("âœ… Connected to Redis")
             return True
         except Exception as e:
-            logger.error(f"❌ Failed to connect to Redis: {e}")
+            logger.error(f"âŒ Failed to connect to Redis: {e}")
             self._connected = False
             return False
     
@@ -239,10 +239,10 @@ class RedisTaskQueue:
         try:
             task_data = pickle.dumps(task)
             self.redis_client.lpush(self.queue_name, task_data)
-            logger.debug(f"📥 Added task {task.id} to Redis queue")
+            logger.debug(f"ðŸ“¥ Added task {task.id} to Redis queue")
             return True
         except Exception as e:
-            logger.error(f"❌ Failed to add task to Redis: {e}")
+            logger.error(f"âŒ Failed to add task to Redis: {e}")
             self._connected = False
             return False
     
@@ -255,11 +255,11 @@ class RedisTaskQueue:
             task_data = self.redis_client.rpop(self.queue_name)
             if task_data:
                 task = pickle.loads(task_data)
-                logger.debug(f"📤 Retrieved task {task.id} from Redis queue")
+                logger.debug(f"ðŸ“¤ Retrieved task {task.id} from Redis queue")
                 return task
             return None
         except Exception as e:
-            logger.error(f"❌ Failed to get task from Redis: {e}")
+            logger.error(f"âŒ Failed to get task from Redis: {e}")
             self._connected = False
             return None
     
@@ -271,7 +271,7 @@ class RedisTaskQueue:
         try:
             return self.redis_client.llen(self.queue_name)
         except Exception as e:
-            logger.error(f"❌ Failed to get Redis queue size: {e}")
+            logger.error(f"âŒ Failed to get Redis queue size: {e}")
             self._connected = False
             return 0
 
@@ -303,7 +303,7 @@ class TaskDispatcher:
         """Start the task dispatcher."""
         async with self._lock:
             if self.running:
-                logger.warning("⚠️ Task dispatcher already running")
+                logger.warning("âš ï¸ Task dispatcher already running")
                 return
             
             self.running = True
@@ -312,7 +312,7 @@ class TaskDispatcher:
                 worker = asyncio.create_task(self._worker(f"worker-{i}"))
                 self.workers.append(worker)
             
-            logger.info(f"✅ Started task dispatcher with {self.max_workers} workers")
+            logger.info(f"âœ… Started task dispatcher with {self.max_workers} workers")
     
     async def stop(self) -> None:
         """Stop the task dispatcher."""
@@ -331,7 +331,7 @@ class TaskDispatcher:
                 await asyncio.gather(*self.workers, return_exceptions=True)
             
             self.workers.clear()
-            logger.info("✅ Stopped task dispatcher")
+            logger.info("âœ… Stopped task dispatcher")
     
     async def submit_task(
         self,
@@ -366,7 +366,7 @@ class TaskDispatcher:
             enqueued = self.redis_queue.put(task)
             if not enqueued:
                 self._metrics['redis_failovers'] += 1
-                logger.warning(f"⚠️ Redis failed, falling back to local queue for task {task_id}")
+                logger.warning(f"âš ï¸ Redis failed, falling back to local queue for task {task_id}")
         
         if not enqueued:
             enqueued = self.local_queue.put(task)
@@ -375,7 +375,7 @@ class TaskDispatcher:
                 raise RuntimeError("Task queue is full")
         
         self._metrics['tasks_submitted'] += 1
-        logger.info(f"📋 Submitted task {task_id} (priority: {priority.name})")
+        logger.info(f"ðŸ“‹ Submitted task {task_id} (priority: {priority.name})")
         return task_id
     
     async def get_task_result(self, task_id: str, timeout: Optional[float] = None) -> Any:
@@ -408,14 +408,14 @@ class TaskDispatcher:
             task.status = TaskStatus.CANCELLED
             task.completed_at = time.time()
             self.registry.unregister_task(task_id)
-            logger.info(f"❌ Cancelled task {task_id}")
+            logger.info(f"âŒ Cancelled task {task_id}")
             return True
         
         return False
     
     async def _worker(self, worker_name: str) -> None:
         """Worker task that processes queued tasks."""
-        logger.info(f"🔄 Started worker {worker_name}")
+        logger.info(f"ðŸ”„ Started worker {worker_name}")
         
         while self.running:
             try:
@@ -435,20 +435,20 @@ class TaskDispatcher:
                 await self._execute_task(task, worker_name)
                 
             except asyncio.CancelledError:
-                logger.info(f"🛑 Worker {worker_name} cancelled")
+                logger.info(f"ðŸ›‘ Worker {worker_name} cancelled")
                 break
             except Exception as e:
-                logger.error(f"❌ Worker {worker_name} error: {e}")
+                logger.error(f"âŒ Worker {worker_name} error: {e}")
                 await asyncio.sleep(1)
         
-        logger.info(f"🛑 Worker {worker_name} stopped")
+        logger.info(f"ðŸ›‘ Worker {worker_name} stopped")
     
     async def _execute_task(self, task: Task, worker_name: str) -> None:
         """Execute a single task with comprehensive error handling."""
         task.status = TaskStatus.RUNNING
         task.started_at = time.time()
         
-        logger.info(f"🚀 Worker {worker_name} executing task {task.id}")
+        logger.info(f"ðŸš€ Worker {worker_name} executing task {task.id}")
         
         try:
             # Execute the task
@@ -471,7 +471,7 @@ class TaskDispatcher:
             task.completed_at = time.time()
             self._metrics['tasks_completed'] += 1
             
-            logger.info(f"✅ Task {task.id} completed successfully")
+            logger.info(f"âœ… Task {task.id} completed successfully")
             
         except asyncio.TimeoutError:
             task.error = TimeoutError(f"Task {task.id} timed out")
@@ -493,7 +493,7 @@ class TaskDispatcher:
             task.status = TaskStatus.RETRYING
             self._metrics['tasks_retried'] += 1
             
-            logger.warning(f"🔄 Retrying task {task.id} (attempt {task.retry_count}/{task.max_retries})")
+            logger.warning(f"ðŸ”„ Retrying task {task.id} (attempt {task.retry_count}/{task.max_retries})")
             
             # Re-queue for retry with exponential backoff
             await asyncio.sleep(2 ** task.retry_count)
@@ -514,7 +514,7 @@ class TaskDispatcher:
             task.completed_at = time.time()
             self._metrics['tasks_failed'] += 1
             
-            logger.error(f"❌ Task {task.id} failed permanently after {task.max_retries} retries")
+            logger.error(f"âŒ Task {task.id} failed permanently after {task.max_retries} retries")
     
     def get_metrics(self) -> Dict[str, Any]:
         """Get current metrics."""
@@ -528,7 +528,7 @@ class TaskDispatcher:
     async def cleanup(self) -> None:
         """Clean up old completed tasks."""
         cleaned = self.registry.cleanup_completed_tasks()
-        logger.info(f"🧹 Cleaned up {cleaned} old tasks")
+        logger.info(f"ðŸ§¹ Cleaned up {cleaned} old tasks")
 
 # Global dispatcher instance
 _dispatcher: Optional[TaskDispatcher] = None
@@ -548,4 +548,4 @@ async def submit_task(func: Callable, *args, **kwargs) -> str:
 async def get_task_result(task_id: str, timeout: Optional[float] = None) -> Any:
     """Get task result using the global dispatcher."""
     dispatcher = get_dispatcher()
-    return await dispatcher.get_task_result(task_id, timeout) 
+    return await dispatcher.get_task_result(task_id, timeout)

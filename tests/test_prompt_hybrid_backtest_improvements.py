@@ -1,4 +1,4 @@
-"""
+﻿"""
 Test script for prompt parser, hybrid model, and backtest improvements.
 
 This script tests the improvements made to:
@@ -604,4 +604,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

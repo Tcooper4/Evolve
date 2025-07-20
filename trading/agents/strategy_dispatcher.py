@@ -1,4 +1,4 @@
-"""
+﻿"""
 Strategy Dispatcher with Validation
 
 This module provides a strategy dispatcher that validates strategies
@@ -603,4 +603,4 @@ def create_strategy_dispatcher(validation_level: ValidationLevel = ValidationLev
     Returns:
         StrategyDispatcher instance
     """
-    return StrategyDispatcher(validation_level) 
+    return StrategyDispatcher(validation_level)

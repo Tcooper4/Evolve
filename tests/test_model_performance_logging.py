@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Model Performance Logging Module
 
 This module tests the functionality of the model performance logging system.
@@ -327,4 +327,4 @@ class TestModelPerformanceLogging(unittest.TestCase):
 
 if __name__ == "__main__":
     # Run tests
-    unittest.main(verbosity=2) 
+    unittest.main(verbosity=2)

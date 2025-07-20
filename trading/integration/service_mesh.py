@@ -1,4 +1,4 @@
-"""
+﻿"""
 Service Mesh
 
 Centralized service orchestration system that provides:
@@ -130,7 +130,7 @@ class ServiceHealthMonitor:
         if health_checker:
             self.health_checkers[service_name] = health_checker
         
-        self.logger.info(f"✅ Service '{service_name}' registered for health monitoring")
+        self.logger.info(f"âœ… Service '{service_name}' registered for health monitoring")
     
     async def unregister_service(self, service_name: str):
         """Unregister a service from health monitoring."""
@@ -139,7 +139,7 @@ class ServiceHealthMonitor:
         if service_name in self.health_checkers:
             del self.health_checkers[service_name]
         
-        self.logger.info(f"✅ Service '{service_name}' unregistered from health monitoring")
+        self.logger.info(f"âœ… Service '{service_name}' unregistered from health monitoring")
     
     async def check_service_health(self, service_name: str) -> ServiceStatus:
         """Check health of a specific service."""
@@ -191,7 +191,7 @@ class ServiceHealthMonitor:
     async def start_monitoring(self):
         """Start continuous health monitoring."""
         self.running = True
-        self.logger.info("🔄 Starting service health monitoring...")
+        self.logger.info("ðŸ”„ Starting service health monitoring...")
         
         while self.running:
             try:
@@ -207,7 +207,7 @@ class ServiceHealthMonitor:
     async def stop_monitoring(self):
         """Stop health monitoring."""
         self.running = False
-        self.logger.info("🛑 Stopped service health monitoring")
+        self.logger.info("ðŸ›‘ Stopped service health monitoring")
     
     def get_all_health_statuses(self) -> Dict[str, ServiceStatus]:
         """Get health status of all services."""
@@ -302,9 +302,9 @@ class ServiceMesh:
         try:
             self.redis_client = redis.from_url(self.redis_url)
             self.redis_client.ping()
-            self.logger.info("✅ Redis connection established")
+            self.logger.info("âœ… Redis connection established")
         except Exception as e:
-            self.logger.warning(f"⚠️ Redis connection failed: {e}")
+            self.logger.warning(f"âš ï¸ Redis connection failed: {e}")
             self.redis_client = None
     
     async def register_service(self, 
@@ -334,11 +334,11 @@ class ServiceMesh:
             if self.redis_client:
                 await self._publish_service_event("service_registered", service_info)
             
-            self.logger.info(f"✅ Service '{service_name}' registered successfully")
+            self.logger.info(f"âœ… Service '{service_name}' registered successfully")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to register service '{service_name}': {e}")
+            self.logger.error(f"âŒ Failed to register service '{service_name}': {e}")
             return False
     
     async def unregister_service(self, service_name: str) -> bool:
@@ -352,14 +352,14 @@ class ServiceMesh:
                 if self.redis_client:
                     await self._publish_service_event("service_unregistered", {"name": service_name})
                 
-                self.logger.info(f"✅ Service '{service_name}' unregistered successfully")
+                self.logger.info(f"âœ… Service '{service_name}' unregistered successfully")
                 return True
             else:
-                self.logger.warning(f"⚠️ Service '{service_name}' not found")
+                self.logger.warning(f"âš ï¸ Service '{service_name}' not found")
                 return False
                 
         except Exception as e:
-            self.logger.error(f"❌ Failed to unregister service '{service_name}': {e}")
+            self.logger.error(f"âŒ Failed to unregister service '{service_name}': {e}")
             return False
     
     async def route_request(self, 
@@ -433,7 +433,7 @@ class ServiceMesh:
                 selected_service.current_requests -= 1
                 
         except Exception as e:
-            self.logger.error(f"❌ Request routing failed: {e}")
+            self.logger.error(f"âŒ Request routing failed: {e}")
             return ServiceResponse(
                 request_id=request_id if 'request_id' in locals() else "unknown",
                 service_name="none",
@@ -528,12 +528,12 @@ class ServiceMesh:
     
     async def start(self):
         """Start the service mesh."""
-        self.logger.info("🚀 Starting ServiceMesh...")
+        self.logger.info("ðŸš€ Starting ServiceMesh...")
         await self.health_monitor.start_monitoring()
     
     async def stop(self):
         """Stop the service mesh."""
-        self.logger.info("🛑 Stopping ServiceMesh...")
+        self.logger.info("ðŸ›‘ Stopping ServiceMesh...")
         await self.health_monitor.stop_monitoring()
     
     def get_service_info(self, service_name: str) -> Optional[Dict[str, Any]]:
@@ -582,14 +582,14 @@ async def register_forecasting_service(mesh: ServiceMesh,
 if __name__ == "__main__":
     # Demo usage
     async def demo():
-        print("🌐 Service Mesh Demo")
+        print("ðŸŒ Service Mesh Demo")
         print("=" * 50)
         
         # Create service mesh
         mesh = ServiceMesh()
         
         # Register example services
-        print("\n🔧 Registering example services...")
+        print("\nðŸ”§ Registering example services...")
         
         await mesh.register_service(
             service_name="forecast_service",
@@ -606,7 +606,7 @@ if __name__ == "__main__":
         )
         
         # Route example requests
-        print("\n📡 Routing example requests...")
+        print("\nðŸ“¡ Routing example requests...")
         
         # Forecast request
         forecast_response = await mesh.route_request(
@@ -625,7 +625,7 @@ if __name__ == "__main__":
         print(f"Analysis response: {analysis_response.status}")
         
         # Get service health
-        print("\n🏥 Service health...")
+        print("\nðŸ¥ Service health...")
         health = await mesh.get_service_health()
         print(f"Overall health: {health['overall_health']}")
         print(f"Total services: {health['total_services']}")
@@ -634,6 +634,6 @@ if __name__ == "__main__":
         # Stop mesh
         await mesh.stop()
         
-        print("\n✅ Demo completed!")
+        print("\nâœ… Demo completed!")
     
-    asyncio.run(demo()) 
+    asyncio.run(demo())

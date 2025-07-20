@@ -1,4 +1,4 @@
-"""Bayesian Optimization Method.
+﻿"""Bayesian Optimization Method.
 
 This module contains the BayesianOptimization method extracted from strategy_optimizer.py.
 """
@@ -137,4 +137,4 @@ class BayesianOptimization(OptimizationMethod):
             self.logger.warning(f"Could not calculate feature importance: {e}")
 
         # Fallback: return equal importance
-        return {param: 1.0 / len(param_names) for param in param_names} 
+        return {param: 1.0 / len(param_names) for param in param_names}

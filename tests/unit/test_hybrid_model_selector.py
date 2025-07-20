@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Hybrid Model Selector
 
 Tests metric selection, equal scores handling, and user-selected evaluation metrics.
@@ -232,4 +232,4 @@ class TestHybridModelSelector(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main() 
+    unittest.main()

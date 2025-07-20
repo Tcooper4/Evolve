@@ -1,4 +1,4 @@
-"""
+﻿"""
 Prompt Bridge - Batch 19
 Enhanced prompt parsing with compound intent handling and regex fallbacks
 """
@@ -511,4 +511,4 @@ class PromptBridge:
 
 def create_prompt_bridge(enable_regex_fallback: bool = True) -> PromptBridge:
     """Factory function to create prompt bridge."""
-    return PromptBridge(enable_regex_fallback=enable_regex_fallback) 
+    return PromptBridge(enable_regex_fallback=enable_regex_fallback)

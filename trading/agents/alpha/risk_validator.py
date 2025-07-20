@@ -1,4 +1,4 @@
-RiskValidator - Risk Validation Agent
+﻿RiskValidator - Risk Validation Agent
 
 This agent validates trading hypotheses by checking correlation, stability, and real-world viability.
 It ensures hypotheses meet risk management standards before deployment.
@@ -742,4 +742,4 @@ Get all validation results.       return self.validation_results.copy()
     
     def clear_results(self) -> None:
       stored validation results."""
-        self.validation_results.clear() 
+        self.validation_results.clear()

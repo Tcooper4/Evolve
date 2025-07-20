@@ -1,4 +1,4 @@
-"""
+﻿"""
 Hybrid Model Configuration UI Component
 
 This module provides a Streamlit sidebar component for configuring the hybrid model's
@@ -39,14 +39,14 @@ def render_hybrid_model_config_sidebar(
     if config_ui is None:
         config_ui = HybridModelConfigUI()
 
-    st.sidebar.header("🤖 Hybrid Model Configuration")
+    st.sidebar.header("ðŸ¤– Hybrid Model Configuration")
 
     # Get current configuration
     current_config = hybrid_model.scoring_config
     weighting_info = hybrid_model.get_weighting_metric_info()
 
     # Ensemble Method Selection
-    st.sidebar.subheader("📊 Ensemble Method")
+    st.sidebar.subheader("ðŸ“Š Ensemble Method")
     method = st.sidebar.selectbox(
         "Select Ensemble Method:",
         options=list(weighting_info["available_methods"].keys()),
@@ -56,7 +56,7 @@ def render_hybrid_model_config_sidebar(
 
     # Weighting Metric Selection (for risk-aware method)
     if method == "risk_aware":
-        st.sidebar.subheader("🎯 Risk-Aware Weighting")
+        st.sidebar.subheader("ðŸŽ¯ Risk-Aware Weighting")
 
         metric = st.sidebar.selectbox(
             "Select Weighting Metric:",
@@ -106,7 +106,7 @@ def render_hybrid_model_config_sidebar(
 
     # Advanced Settings
     if config_ui.show_advanced:
-        st.sidebar.subheader("⚙️ Advanced Settings")
+        st.sidebar.subheader("âš™ï¸ Advanced Settings")
 
         min_performance_threshold = st.sidebar.slider(
             "Min Performance Threshold",
@@ -146,11 +146,11 @@ def render_hybrid_model_config_sidebar(
     # Apply configuration
     if st.sidebar.button("Apply Configuration"):
         hybrid_model.set_scoring_config(current_config)
-        st.sidebar.success("✅ Configuration applied!")
+        st.sidebar.success("âœ… Configuration applied!")
 
     # Performance Summary
     if config_ui.show_performance_summary:
-        st.sidebar.subheader("📈 Model Performance")
+        st.sidebar.subheader("ðŸ“ˆ Model Performance")
 
         summary = hybrid_model.get_model_performance_summary()
 
@@ -185,7 +185,7 @@ def render_weighting_metric_comparison(hybrid_model: HybridModel):
     Args:
         hybrid_model: HybridModel instance
     """
-    st.subheader("📊 Weighting Metric Comparison")
+    st.subheader("ðŸ“Š Weighting Metric Comparison")
 
     # Get current configuration
     original_config = hybrid_model.scoring_config.copy()
@@ -269,7 +269,7 @@ def render_model_performance_dashboard(hybrid_model: HybridModel):
     Args:
         hybrid_model: HybridModel instance
     """
-    st.subheader("📊 Model Performance Dashboard")
+    st.subheader("ðŸ“Š Model Performance Dashboard")
 
     summary = hybrid_model.get_model_performance_summary()
 
@@ -467,7 +467,7 @@ def get_hybrid_model_recommendations(hybrid_model: HybridModel) -> Dict[str, Any
 
 def render_recommendations(hybrid_model: HybridModel):
     """Render hybrid model recommendations."""
-    st.subheader("💡 Recommendations")
+    st.subheader("ðŸ’¡ Recommendations")
 
     recommendations = get_hybrid_model_recommendations(hybrid_model)
 
@@ -475,14 +475,14 @@ def render_recommendations(hybrid_model: HybridModel):
         st.info(f"**Recommended Weighting Metric**: {recommendations['best_weighting_metric'].title()}")
 
     if recommendations["model_improvements"]:
-        st.subheader("🔧 Model Improvements")
+        st.subheader("ðŸ”§ Model Improvements")
         for improvement in recommendations["model_improvements"]:
-            st.write(f"• {improvement}")
+            st.write(f"â€¢ {improvement}")
 
     if recommendations["configuration_suggestions"]:
-        st.subheader("⚙️ Configuration Suggestions")
+        st.subheader("âš™ï¸ Configuration Suggestions")
         for suggestion in recommendations["configuration_suggestions"]:
-            st.write(f"• {suggestion}")
+            st.write(f"â€¢ {suggestion}")
 
 
 def get_hybrid_config_from_session() -> Dict[str, Any]:
@@ -504,4 +504,4 @@ def get_hybrid_config_from_session() -> Dict[str, Any]:
 
 def save_hybrid_config_to_session(config: Dict[str, Any]) -> None:
     """Save hybrid model configuration to Streamlit session state."""
-    st.session_state.hybrid_config = config 
+    st.session_state.hybrid_config = config
