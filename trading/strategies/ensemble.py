@@ -1,25 +1,16 @@
-﻿"""
-Weighted Ensemble Strategy
+"""
+Weighted Ensemble Strategy Implementation.
 
-This module provides a WeightedEnsembleStrategy class that combines multiple
-strategy outputs using configurable weights to produce a final buy/sell signal.
+This module provides a weighted ensemble strategy that combines multiple
+trading strategies using different combination methods.
 """
 
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional
 
-import numpy as np
 import pandas as pd
-
-from trading.strategies.ensemble_methods import (
-    HybridSignal,
-    SignalType,
-    StrategySignal,
-    combine_weighted_average,
-    combine_voting,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -39,126 +30,86 @@ class EnsembleConfig:
 
 
 class WeightedEnsembleStrategy:
-    """
-    Weighted Ensemble Strategy that combines multiple strategy outputs.
-    
-    This class takes multiple strategy signal DataFrames and combines them
-    using configurable weights to produce a final buy/sell signal.
-    """
+    """Weighted ensemble strategy that combines multiple trading strategies."""
 
     def __init__(self, config: Optional[EnsembleConfig] = None):
-        """Initialize the ensemble strategy with configuration."""
-        self.config = config or EnsembleConfig(
-            strategy_weights={"rsi": 0.4, "macd": 0.4, "bollinger": 0.2}
-        )
+        """Initialize the ensemble strategy."""
+        self.config = config or EnsembleConfig(strategy_weights={})
         self.signals = None
         self.positions = None
         self.performance_history = []
-        self.last_rebalance = None
-        self.last_successful_signals = None # Added for fallback
 
     def validate_weights(self, weights: Dict[str, float]) -> bool:
-        """Validate that strategy weights sum to approximately 1.0."""
+        """Validate that weights sum to approximately 1.0."""
         total_weight = sum(weights.values())
-        return abs(total_weight - 1.0) < 0.01
+        return abs(total_weight - 1.0) < 1e-6
 
     def normalize_weights(self, weights: Dict[str, float], epsilon: float = 1e-8) -> Dict[str, float]:
-        """Normalize weights to sum to 1.0, with epsilon to prevent NaNs."""
+        """Normalize weights to sum to 1.0."""
         total_weight = sum(weights.values())
-        if abs(total_weight) < epsilon:
-            # Equal weighting if all weights are zero or near zero
-            num_strategies = len(weights)
-            return {strategy: 1.0 / num_strategies for strategy in weights}
-        return {strategy: weight / (total_weight + epsilon) for strategy, weight in weights.items()}
+        if total_weight < epsilon:
+            # If all weights are zero, distribute equally
+            n_strategies = len(weights)
+            return {name: 1.0 / n_strategies for name in weights.keys()}
+        
+        return {name: weight / total_weight for name, weight in weights.items()}
 
     def combine_signals(
-        self, 
+        self,
         strategy_signals: Dict[str, pd.DataFrame],
         method: Optional[str] = None
     ) -> pd.DataFrame:
-        """
-        Combine multiple strategy signals into a single ensemble signal.
-        
-        Args:
-            strategy_signals: Dictionary mapping strategy names to signal DataFrames
-            method: Combination method ("weighted_average" or "voting")
-            
-        Returns:
-            Combined signal DataFrame
-        """
+        """Combine signals from multiple strategies."""
         if not strategy_signals:
             raise ValueError("No strategy signals provided")
 
-        method = method or self.config.combination_method
+        # Use provided method or default from config
+        combination_method = method or self.config.combination_method
         
-        # Normalize weights
-        weights = self.normalize_weights(self.config.strategy_weights)
-        
-        # Ensure all strategies have signals
-        available_strategies = list(strategy_signals.keys())
-        missing_strategies = [s for s in weights.keys() if s not in available_strategies]
-        if missing_strategies:
-            logger.warning(f"Missing signals for strategies: {missing_strategies}")
-            # Remove missing strategies from weights
-            weights = {k: v for k, v in weights.items() if k in available_strategies}
-            weights = self.normalize_weights(weights)
-
-        # Fallback: If all models return None, return last successful forecast
-        all_none = all(
-            df is None or df.isnull().all().all() for df in strategy_signals.values()
-        )
-        if all_none:
-            if hasattr(self, 'last_successful_signals') and self.last_successful_signals is not None:
-                logger.warning("All models returned None. Using last successful forecast as fallback.")
-                return self.last_successful_signals.copy()
-            else:
-                raise ValueError("All models returned None and no fallback available.")
-
         # Get common index
-        common_index = strategy_signals[available_strategies[0]].index
-        for strategy in available_strategies[1:]:
-            common_index = common_index.intersection(strategy_signals[strategy].index)
-
+        indices = [df.index for df in strategy_signals.values()]
+        common_index = indices[0].intersection(*indices[1:]) if len(indices) > 1 else indices[0]
+        
         if len(common_index) == 0:
-            raise ValueError("No common timestamps found across strategy signals")
+            raise ValueError("No common timestamps found across strategies")
 
-        # Initialize combined signals DataFrame
-        combined_signals = pd.DataFrame(index=common_index)
-        combined_signals["signal"] = 0.0
-        combined_signals["confidence"] = 0.0
-        combined_signals["weighted_score"] = 0.0
-        combined_signals["consensus"] = 0.0
+        # Align all signals to common index
+        aligned_signals = {}
+        for strategy_name, signals in strategy_signals.items():
+            aligned_signals[strategy_name] = signals.loc[common_index]
 
-        if method == "weighted_average":
-            combined_signals = self._combine_weighted_average(
-                strategy_signals, weights, common_index
+        # Combine signals based on method
+        if combination_method == "weighted_average":
+            combined = self._combine_weighted_average(
+                aligned_signals,
+                self.config.strategy_weights,
+                common_index
             )
-        elif method == "voting":
-            combined_signals = self._combine_voting(
-                strategy_signals, weights, common_index
+        elif combination_method == "voting":
+            combined = self._combine_voting(
+                aligned_signals,
+                self.config.strategy_weights,
+                common_index
             )
         else:
-            raise ValueError(f"Unknown combination method: {method}")
-
-        # Clip confidence scores to [0.0, 1.0]
-        combined_signals["confidence"] = combined_signals["confidence"].clip(0.0, 1.0)
+            raise ValueError(f"Unknown combination method: {combination_method}")
 
         # Apply confidence threshold
-        low_confidence_mask = combined_signals["confidence"] < self.config.confidence_threshold
-        combined_signals.loc[low_confidence_mask, "signal"] = 0
+        if self.config.confidence_threshold > 0:
+            mask = combined["confidence"] >= self.config.confidence_threshold
+            combined.loc[~mask, "signal"] = 0.0
 
-        # Apply consensus threshold for stronger signals
-        consensus_mask = combined_signals["consensus"] >= self.config.consensus_threshold
-        combined_signals["strong_signal"] = combined_signals["signal"] * consensus_mask
+        # Apply consensus threshold for voting method
+        if combination_method == "voting" and self.config.consensus_threshold > 0:
+            mask = combined["consensus"] >= self.config.consensus_threshold
+            combined.loc[~mask, "signal"] = 0.0
 
-        self.signals = combined_signals
-        # Save last successful signals for fallback
-        self.last_successful_signals = combined_signals.copy()
-        return combined_signals
+        self.signals = combined
+        return combined
 
     def _combine_weighted_average(
-        self, 
-        strategy_signals: Dict[str, pd.DataFrame], 
+        self,
+        strategy_signals: Dict[str, pd.DataFrame],
         weights: Dict[str, float],
         index: pd.DatetimeIndex
     ) -> pd.DataFrame:
@@ -167,59 +118,33 @@ class WeightedEnsembleStrategy:
         combined["signal"] = 0.0
         combined["confidence"] = 0.0
         combined["weighted_score"] = 0.0
-        combined["consensus"] = 0.0
-
-        # Calculate weighted average of signals
-        total_weight = 0.0
-        signal_scores = []
 
         for strategy_name, weight in weights.items():
             if strategy_name in strategy_signals:
-                signals = strategy_signals[strategy_name].loc[index]
+                signals = strategy_signals[strategy_name]
                 
-                # Extract signal values (assuming 'signal' column exists)
+                # Extract signal values
                 if "signal" in signals.columns:
                     signal_values = signals["signal"].fillna(0)
                 else:
-                    # If no signal column, try to infer from other columns
                     signal_values = self._extract_signal_from_dataframe(signals)
-                
+
                 # Extract confidence values
                 if "confidence" in signals.columns:
                     confidence_values = signals["confidence"].fillna(0.5)
                 else:
-                    confidence_values = pd.Series(0.5, index=index)
+                    confidence_values = pd.Series(0.5, index=signals.index)
 
-                # Weight the signals
-                weighted_signals = signal_values * weight
-                weighted_confidence = confidence_values * weight
-
-                combined["signal"] += weighted_signals
-                combined["confidence"] += weighted_confidence
-                combined["weighted_score"] += signal_values * weight
-
-                signal_scores.append(signal_values)
-                total_weight += weight
-
-        # Normalize by total weight
-        if total_weight > 0:
-            combined["signal"] /= total_weight
-            combined["confidence"] /= total_weight
-            combined["weighted_score"] /= total_weight
-
-        # Calculate consensus (agreement among strategies)
-        if signal_scores:
-            signal_array = np.array(signal_scores)
-            # Count strategies that agree on direction
-            positive_agreement = (signal_array > 0).sum(axis=0) / len(signal_scores)
-            negative_agreement = (signal_array < 0).sum(axis=0) / len(signal_scores)
-            combined["consensus"] = np.maximum(positive_agreement, negative_agreement)
+                # Apply weights
+                combined["signal"] += signal_values * weight
+                combined["confidence"] += confidence_values * weight
+                combined["weighted_score"] += signal_values * confidence_values * weight
 
         return combined
 
     def _combine_voting(
-        self, 
-        strategy_signals: Dict[str, pd.DataFrame], 
+        self,
+        strategy_signals: Dict[str, pd.DataFrame],
         weights: Dict[str, float],
         index: pd.DatetimeIndex
     ) -> pd.DataFrame:
@@ -239,7 +164,7 @@ class WeightedEnsembleStrategy:
             for strategy_name, weight in weights.items():
                 if strategy_name in strategy_signals:
                     signals = strategy_signals[strategy_name].loc[timestamp]
-                    
+
                     # Determine vote based on signal
                     if "signal" in signals:
                         signal_value = signals["signal"]
@@ -265,7 +190,7 @@ class WeightedEnsembleStrategy:
             # Determine winning vote
             if total_weight > 0:
                 winning_vote = max(votes.items(), key=lambda x: x[1])[0]
-                
+
                 if winning_vote == "buy":
                     combined.loc[timestamp, "signal"] = 1.0
                 elif winning_vote == "sell":
@@ -275,7 +200,7 @@ class WeightedEnsembleStrategy:
 
                 # Calculate weighted confidence
                 combined.loc[timestamp, "confidence"] = sum(confidences) / total_weight
-                
+
                 # Calculate consensus (proportion of weight for winning vote)
                 combined.loc[timestamp, "consensus"] = votes[winning_vote] / total_weight
 
@@ -288,7 +213,7 @@ class WeightedEnsembleStrategy:
         for col in signal_columns:
             if col in df.columns:
                 return df[col].fillna(0)
-        
+
         # If no signal column found, try to infer from price-based columns
         if "close" in df.columns and "upper_band" in df.columns and "lower_band" in df.columns:
             # Bollinger Bands logic
@@ -296,7 +221,7 @@ class WeightedEnsembleStrategy:
             signals.loc[df["close"] < df["lower_band"]] = 1  # Buy signal
             signals.loc[df["close"] > df["upper_band"]] = -1  # Sell signal
             return signals
-        
+
         # Default to zero signals
         return pd.Series(0, index=df.index)
 
@@ -304,18 +229,18 @@ class WeightedEnsembleStrategy:
         """Extract signal value from Series when 'signal' key is missing."""
         if "signal" in series:
             return series["signal"]
-        
+
         # Try to infer from other values
         if "close" in series and "upper_band" in series and "lower_band" in series:
             close = series["close"]
             upper = series["upper_band"]
             lower = series["lower_band"]
-            
+
             if close < lower:
                 return 1.0  # Buy signal
             elif close > upper:
                 return -1.0  # Sell signal
-        
+
         return 0.0
 
     def calculate_positions(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -325,13 +250,13 @@ class WeightedEnsembleStrategy:
 
         positions = pd.DataFrame(index=self.signals.index)
         positions["position"] = self.signals["signal"].cumsum()
-        
+
         # Apply position size multiplier
         positions["position"] *= self.config.position_size_multiplier
-        
+
         # Ensure positions are within bounds
         positions["position"] = positions["position"].clip(-1, 1)
-        
+
         # Add confidence and consensus information
         positions["confidence"] = self.signals["confidence"]
         positions["consensus"] = self.signals["consensus"]
@@ -420,11 +345,8 @@ class WeightedEnsembleStrategy:
 
             return {
                 "success": True,
-                "result": {
-                    "status": "parameters_updated",
-                    "new_parameters": self.get_parameters()
-                },
-                "message": "Parameters updated successfully",
+                "result": {"status": "parameters_updated"},
+                "message": "Strategy parameters updated successfully",
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
@@ -432,7 +354,7 @@ class WeightedEnsembleStrategy:
             return {
                 "success": False,
                 "result": {"status": "error", "message": str(e)},
-                "message": "Failed to update parameters",
+                "message": "Failed to update strategy parameters",
                 "timestamp": datetime.now().isoformat(),
             }
 
@@ -442,17 +364,7 @@ def create_ensemble_strategy(
     combination_method: str = "weighted_average",
     **kwargs
 ) -> WeightedEnsembleStrategy:
-    """
-    Factory function to create a WeightedEnsembleStrategy.
-    
-    Args:
-        strategy_weights: Dictionary mapping strategy names to weights
-        combination_method: Method to combine signals ("weighted_average" or "voting")
-        **kwargs: Additional configuration parameters
-        
-    Returns:
-        Configured WeightedEnsembleStrategy instance
-    """
+    """Create an ensemble strategy with specified weights and method."""
     config = EnsembleConfig(
         strategy_weights=strategy_weights,
         combination_method=combination_method,
@@ -461,10 +373,9 @@ def create_ensemble_strategy(
     return WeightedEnsembleStrategy(config)
 
 
-# Example usage and common ensemble configurations
 def create_rsi_macd_bollinger_ensemble() -> WeightedEnsembleStrategy:
-    """Create a common ensemble with RSI, MACD, and Bollinger Bands."""
-    weights = {"rsi": 0.4, "macd": 0.4, "bollinger": 0.2}
+    """Create a balanced ensemble with RSI, MACD, and Bollinger Bands."""
+    weights = {"rsi": 0.4, "macd": 0.35, "bollinger": 0.25}
     return create_ensemble_strategy(weights, "weighted_average")
 
 
@@ -476,10 +387,10 @@ def create_balanced_ensemble() -> WeightedEnsembleStrategy:
 
 def create_conservative_ensemble() -> WeightedEnsembleStrategy:
     """Create a conservative ensemble with higher confidence thresholds."""
-    weights = {"rsi": 0.3, "macd": 0.3, "bollinger": 0.4}
+    weights = {"rsi": 0.5, "macd": 0.3, "bollinger": 0.2}
     return create_ensemble_strategy(
-        weights, 
+        weights,
         "weighted_average",
         confidence_threshold=0.7,
         consensus_threshold=0.6
-    )
+    ) 

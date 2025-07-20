@@ -1,10 +1,15 @@
-﻿"""MACD (Moving Average Convergence Divergence) trading strategy implementation."""
+"""
+MACD Strategy Implementation.
 
+This module provides a MACD (Moving Average Convergence Divergence)
+trading strategy with signal generation and position calculation.
+"""
+
+import numpy as np
+import pandas as pd
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Optional, Tuple
-
-import pandas as pd
 
 # Import centralized technical indicators
 from utils.technical_indicators import calculate_macd
@@ -52,40 +57,40 @@ class MACDStrategy:
     def generate_signals(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         """
         Generate trading signals based on MACD with de-duplication.
-        
+
         Args:
             df: Price data DataFrame with required columns
             **kwargs: Additional parameters (overrides config)
-            
+
         Returns:
             DataFrame with signals and MACD components
-            
+
         Raises:
             ValueError: If required columns are missing or data is invalid
         """
         # Validate input
         if not isinstance(df, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame")
-        
+
         if df.empty:
             raise ValueError("DataFrame is empty")
-        
+
         # Check for required columns (case-insensitive)
         df_lower = df.copy()
         df_lower.columns = df_lower.columns.str.lower()
-        
+
         required_columns = ["close", "volume"]
         missing_columns = [col for col in required_columns if col not in df_lower.columns]
         if missing_columns:
             raise ValueError(f"Data must contain columns: {missing_columns}")
-        
+
         # Handle NaN values
         if df_lower["close"].isna().any():
             df_lower["close"] = df_lower["close"].fillna(method='ffill').fillna(method='bfill')
-        
+
         if df_lower["volume"].isna().any():
             df_lower["volume"] = df_lower["volume"].fillna(0)
-        
+
         # Update config with kwargs if provided
         config = self.config
         if kwargs:
@@ -120,7 +125,7 @@ class MACDStrategy:
                 signals["signal"] = signals["signal"].rolling(
                     window=smoothing_window, center=True, min_periods=1
                 ).mean()
-                
+
                 # Re-quantize smoothed signals
                 signals["signal"] = np.where(signals["signal"] > 0.1, 1,
                                            np.where(signals["signal"] < -0.1, -1, 0))
@@ -146,13 +151,13 @@ class MACDStrategy:
                 # Reindex to match original data
                 signals = signals.reindex(df.index, method='ffill')
                 signals = signals.fillna(0)
-            
+
             # Handle any remaining NaN values in signals
             signals = signals.fillna(0)
 
             self.signals = signals
             return signals
-            
+
         except Exception as e:
             raise ValueError(f"Error generating MACD signals: {str(e)}")
 
@@ -198,4 +203,4 @@ class MACDStrategy:
                 "result": {"status": "error", "message": str(e)},
                 "message": "Operation completed successfully",
                 "timestamp": datetime.now().isoformat(),
-            }
+            } 
