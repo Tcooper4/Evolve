@@ -1,4 +1,4 @@
-"""Risk Calculator Module.
+﻿"""Risk Calculator Module.
 
 This module contains risk calculation logic extracted from execution_agent.py.
 """
@@ -261,4 +261,4 @@ class RiskCalculator:
 
         except Exception as e:
             self.logger.error(f"Error calculating take profit price: {e}")
-            return 0.0 
+            return 0.0

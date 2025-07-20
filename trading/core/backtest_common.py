@@ -1,4 +1,4 @@
-"""
+﻿"""
 Backtest Common Utilities
 
 This module provides common utilities and functions used across backtesting modules,
@@ -582,4 +582,4 @@ def scale_metrics_for_frequency(
         annualization_factor = common._get_annualization_factor(frequency)
         metrics['sharpe_ratio'] = metrics['sharpe_ratio'] * np.sqrt(annualization_factor)
     
-    return metrics 
+    return metrics

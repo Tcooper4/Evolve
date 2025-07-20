@@ -1,4 +1,4 @@
-"""
+﻿"""
 Unit tests for strategy validation and error handling.
 """
 
@@ -108,4 +108,4 @@ class TestStrategyValidation:
         """Test that logger.error is called when strategy fails."""
         empty_df = pd.DataFrame()
         calculate_returns(empty_df)
-        mock_logger.error.assert_called() 
+        mock_logger.error.assert_called()

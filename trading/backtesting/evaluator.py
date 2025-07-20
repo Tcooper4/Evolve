@@ -1,4 +1,4 @@
-"""
+﻿"""
 Backtesting Evaluator
 
 This module provides advanced evaluation functions for trading models and strategies,
@@ -720,4 +720,4 @@ def walk_forward_backtest(
         feature_columns=feature_columns,
         strategy=strategy,
         confidence_threshold=confidence_threshold
-    ) 
+    )

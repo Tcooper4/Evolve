@@ -1,4 +1,4 @@
-"""
+﻿"""
 Report Generator
 
 Generates comprehensive reports after forecast and strategy execution including:
@@ -1013,7 +1013,7 @@ class ReportGenerator:
 
 ---
 
-## 📊 Trade Performance
+## ðŸ“Š Trade Performance
 
 ### Summary
 - **Total Trades:** {{ trade_metrics.total_trades }}
@@ -1029,7 +1029,7 @@ class ReportGenerator:
 
 ---
 
-## 🔥 Trade Profitability Heatmap
+## ðŸ”¥ Trade Profitability Heatmap
 {% if charts.profit_heatmap %}
 ![Profitability Heatmap](data:image/png;base64,{{ charts.profit_heatmap }})
 {% else %}
@@ -1038,7 +1038,7 @@ _No heatmap available._
 
 ---
 
-## 🏆 Model Summary
+## ðŸ† Model Summary
 {% if charts.model_summary %}
 - **Most Successful Model:**
     - Model ID: {{ charts.model_summary.most_successful.model_id }}
@@ -1056,12 +1056,12 @@ _No model summary available._
 
 ---
 
-## 🧾 Per-Trade Execution Log
+## ðŸ§¾ Per-Trade Execution Log
 {{ charts.trade_log_markdown | safe }}
 
 ---
 
-## 🤖 Model Performance
+## ðŸ¤– Model Performance
 
 ### Metrics
 - **MSE:** {{ "%.4f"|format(model_metrics.mse) }}
@@ -1077,7 +1077,7 @@ _No model summary available._
 
 ---
 
-## 🧠 Strategy Reasoning
+## ðŸ§  Strategy Reasoning
 
 ### Summary
 {{ strategy_reasoning.summary }}
@@ -1103,7 +1103,7 @@ _No model summary available._
 
 ---
 
-## 📈 Charts
+## ðŸ“ˆ Charts
 
 {% if charts.equity_curve %}
 ### Equity Curve
@@ -1169,7 +1169,7 @@ _No model summary available._
         </div>
 
         <div class="section">
-            <h2>📊 Trade Performance</h2>
+            <h2>ðŸ“Š Trade Performance</h2>
             <div class="metrics-grid">
                 <div class="metric-card">
                     <h3>Total Trades</h3>
@@ -1200,7 +1200,7 @@ _No model summary available._
 
         <!-- Heatmap Section -->
         <div class="section">
-            <h2>🔥 Trade Profitability Heatmap</h2>
+            <h2>ðŸ”¥ Trade Profitability Heatmap</h2>
             {% if charts.profit_heatmap %}
             <div class="chart-container">
                 <img src="data:image/png;base64,{{ charts.profit_heatmap }}" alt="Profitability Heatmap">
@@ -1212,7 +1212,7 @@ _No model summary available._
 
         <!-- Model Summary Section -->
         <div class="section">
-            <h2>🏆 Model Summary</h2>
+            <h2>ðŸ† Model Summary</h2>
             {% if charts.model_summary %}
             <div>
                 <strong>Most Successful Model:</strong><br>
@@ -1234,7 +1234,7 @@ _No model summary available._
 
         <!-- Per-Trade Execution Log Section -->
         <div class="section">
-            <h2>🧾 Per-Trade Execution Log</h2>
+            <h2>ðŸ§¾ Per-Trade Execution Log</h2>
             {% if charts.trade_log %}
             <table class="trade-log">
                 <thead>
@@ -1264,7 +1264,7 @@ _No model summary available._
         </div>
 
         <div class="section">
-            <h2>🤖 Model Performance</h2>
+            <h2>ðŸ¤– Model Performance</h2>
             <div class="metrics-grid">
                 <div class="metric-card">
                     <h3>MSE</h3>
@@ -1294,7 +1294,7 @@ _No model summary available._
         </div>
 
         <div class="section">
-            <h2>🧠 Strategy Reasoning</h2>
+            <h2>ðŸ§  Strategy Reasoning</h2>
             <div class="reasoning">
                 <h3>Summary</h3>
                 <p>{{ strategy_reasoning.summary }}</p>
@@ -1326,7 +1326,7 @@ _No model summary available._
 
         {% if charts %}
         <div class="section">
-            <h2>📈 Charts</h2>
+            <h2>ðŸ“ˆ Charts</h2>
             {% if charts.equity_curve %}
             <div class="chart-container">
                 <h3>Equity Curve</h3>
@@ -1393,7 +1393,7 @@ _No model summary available._
             win_rate = report_data["trade_metrics"].win_rate
 
             message = {
-                "text": f"📊 Trading Report - {symbol}",
+                "text": f"ðŸ“Š Trading Report - {symbol}",
                 "attachments": [
                     {
                         "color": "good" if total_pnl > 0 else "danger",

@@ -1,4 +1,4 @@
-"""Data utilities for validation and preprocessing.
+﻿"""Data utilities for validation and preprocessing.
 
 This module provides utilities for validating and preprocessing financial data,
 including data quality checks, feature engineering, and data transformation.
@@ -16,7 +16,7 @@ try:
     from sklearn.preprocessing import StandardScaler
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling data preprocessing features.")
+    print("âš ï¸ scikit-learn not available. Disabling data preprocessing features.")
     print(f"   Missing: {e}")
     SimpleImputer = None
     StandardScaler = None

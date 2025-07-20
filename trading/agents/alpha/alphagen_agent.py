@@ -1,4 +1,4 @@
-
+﻿
 Agent - Hypothesis Generation Agent
 
 This agent generates trading hypotheses using LLMs and prompt templates.
@@ -524,4 +524,4 @@ Format your response as a JSON array of hypothesis objects.
 Get all generated hypotheses.       return self.generated_hypotheses.copy()
     
     def clear_hypotheses(self) -> None:
-      stored hypotheses.    self.generated_hypotheses.clear() 
+      stored hypotheses.    self.generated_hypotheses.clear()

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Backtest Integration Module
 
 This module contains backtesting integration functionality for the optimizer agent.
@@ -177,4 +177,4 @@ class BacktestIntegration:
 
     def update_backtest_config(self, updates: Dict[str, Any]) -> None:
         """Update backtest configuration."""
-        self.config.update(updates) 
+        self.config.update(updates)

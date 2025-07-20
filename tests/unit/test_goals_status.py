@@ -1,4 +1,4 @@
-"""
+﻿"""
 Unit tests for goals status tracking and management.
 
 Tests goal status functionality including:
@@ -239,4 +239,4 @@ class TestGoalStatusTracker:
         tracker.get_status_summary()
         
         assert "Goals status missing" in caplog.text
-        assert "Goals progress missing" in caplog.text 
+        assert "Goals progress missing" in caplog.text

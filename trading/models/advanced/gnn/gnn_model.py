@@ -1,4 +1,4 @@
-"""Graph Neural Network for time series forecasting."""
+﻿"""Graph Neural Network for time series forecasting."""
 
 # Standard library imports
 import logging
@@ -15,7 +15,7 @@ try:
     import torch.nn.functional as F
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling GNN models.")
+    print("âš ï¸ PyTorch not available. Disabling GNN models.")
     print(f"   Missing: {e}")
     torch = None
     nn = None

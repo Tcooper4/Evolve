@@ -1,4 +1,4 @@
-"""
+﻿"""
 Time Series Dataset
 
 This module provides the TimeSeriesDataset class for handling time series data
@@ -17,7 +17,7 @@ try:
     from torch.utils.data import Dataset
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling deep learning datasets.")
+    print("âš ï¸ PyTorch not available. Disabling deep learning datasets.")
     print(f"   Missing: {e}")
     torch = None
     Dataset = None
@@ -28,7 +28,7 @@ try:
     from sklearn.preprocessing import StandardScaler
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling data preprocessing.")
+    print("âš ï¸ scikit-learn not available. Disabling data preprocessing.")
     print(f"   Missing: {e}")
     StandardScaler = None
     SKLEARN_AVAILABLE = False

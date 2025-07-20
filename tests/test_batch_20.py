@@ -1,4 +1,4 @@
-"""
+﻿"""
 Batch 20 Tests
 Tests for sentiment, risk, and ensemble validation modules
 """
@@ -391,4 +391,4 @@ class TestBatch20Integration(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()

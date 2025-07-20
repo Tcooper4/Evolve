@@ -1,4 +1,4 @@
-"""
+﻿"""
 Page Renderer Module
 
 This module contains all Streamlit UI rendering code organized into page-specific functions.
@@ -19,7 +19,7 @@ def render_sidebar():
         st.markdown(
             """
         <div style="text-align: center; padding: 1rem 0;">
-            <h2 style="color: #2c3e50; margin-bottom: 0.5rem;">🚀 Evolve AI</h2>
+            <h2 style="color: #2c3e50; margin-bottom: 0.5rem;">ðŸš€ Evolve AI</h2>
             <p style="color: #6c757d; font-size: 0.9rem;">Autonomous Trading Intelligence</p>
         </div>
         """,
@@ -27,50 +27,50 @@ def render_sidebar():
         )
 
         # Main Navigation - Simplified
-        st.markdown("### 📊 Navigation")
+        st.markdown("### ðŸ“Š Navigation")
 
         # Primary Navigation
         primary_nav = st.radio(
             "Main Navigation",
             [
-                "🏠 Home & Chat",
-                "📈 Forecasting",
-                "⚡ Strategy Lab",
-                "🧠 Model Lab",
-                "📋 Reports",
+                "ðŸ  Home & Chat",
+                "ðŸ“ˆ Forecasting",
+                "âš¡ Strategy Lab",
+                "ðŸ§  Model Lab",
+                "ðŸ“‹ Reports",
             ],
             key="primary_nav",
             label_visibility="collapsed",
         )
 
         # Advanced Tools (Collapsible)
-        with st.expander("🔧 Advanced", expanded=False):
+        with st.expander("ðŸ”§ Advanced", expanded=False):
             advanced_nav = st.radio(
                 "Advanced Tools",
-                ["⚙️ Settings", "📊 Monitor", "📈 Analytics", "🛡️ Risk", "🤖 Orchestrator"],
+                ["âš™ï¸ Settings", "ðŸ“Š Monitor", "ðŸ“ˆ Analytics", "ðŸ›¡ï¸ Risk", "ðŸ¤– Orchestrator"],
                 key="advanced_nav",
                 label_visibility="collapsed",
             )
 
         # Developer Tools (Hidden by default)
         if st.session_state.get("dev_mode", False):
-            with st.expander("🛠️ Dev Tools", expanded=False):
-                st.markdown("- 🐛 Debug")
-                st.markdown("- 📝 Logs")
-                st.markdown("- ⚡ Performance")
-                st.markdown("- 🔌 API")
+            with st.expander("ðŸ› ï¸ Dev Tools", expanded=False):
+                st.markdown("- ðŸ› Debug")
+                st.markdown("- ðŸ“ Logs")
+                st.markdown("- âš¡ Performance")
+                st.markdown("- ðŸ”Œ API")
 
         st.markdown("---")
 
         # System Status - Simplified
-        st.markdown("### 🟢 Status")
+        st.markdown("### ðŸŸ¢ Status")
 
         # Status indicators - compact
         status_items = [
-            ("Core Systems", "🟢"),
-            ("Data Feed", "🟢"),
-            ("AI Models", "🟢"),
-            ("Agents", "🟢"),
+            ("Core Systems", "ðŸŸ¢"),
+            ("Data Feed", "ðŸŸ¢"),
+            ("AI Models", "ðŸŸ¢"),
+            ("Agents", "ðŸŸ¢"),
         ]
 
         for name, status in status_items:
@@ -78,16 +78,16 @@ def render_sidebar():
 
         # Quick Stats - Compact
         st.markdown("---")
-        st.markdown("### 📊 Stats")
+        st.markdown("### ðŸ“Š Stats")
 
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("🤖 Models", "12")
-            st.metric("📈 Success", "94.2%")
+            st.metric("ðŸ¤– Models", "12")
+            st.metric("ðŸ“ˆ Success", "94.2%")
 
         with col2:
-            st.metric("⚡ Strategies", "8")
-            st.metric("💰 Return", "2.8%")
+            st.metric("âš¡ Strategies", "8")
+            st.metric("ðŸ’° Return", "2.8%")
     
     return primary_nav, advanced_nav
 
@@ -105,7 +105,7 @@ def render_top_navigation():
     ">
         <div style="display: flex; justify-content: space-between; align-items: center; color: white;">
             <div>
-                <h1 style="margin: 0; font-size: 1.8rem; font-weight: 600;">🚀 Evolve AI Trading</h1>
+                <h1 style="margin: 0; font-size: 1.8rem; font-weight: 600;">ðŸš€ Evolve AI Trading</h1>
                 <p style="margin: 0.2rem 0 0 0; opacity: 0.9; font-size: 0.9rem;">Autonomous Financial Intelligence Platform</p>
             </div>
             <div style="text-align: right;">
@@ -123,12 +123,12 @@ def render_top_navigation():
 def render_voice_input():
     """Render the voice input interface."""
     voice_mode = st.toggle(
-        "🎤 Voice Input", value=False, help="Enable voice prompt (Whisper or Google Speech)"
+        "ðŸŽ¤ Voice Input", value=False, help="Enable voice prompt (Whisper or Google Speech)"
     )
 
     if voice_mode and st.session_state.get("voice_agent"):
         st.markdown("**Click below and speak your trading command:**")
-        if st.button("🎙️ Record Voice Command"):
+        if st.button("ðŸŽ™ï¸ Record Voice Command"):
             with st.spinner("Listening for command..."):
                 try:
                     text = st.session_state.voice_agent.listen_for_command(
@@ -159,7 +159,7 @@ def render_prompt_interface():
         text-align: center;
     ">
         <h2 style="color: #2c3e50; margin-bottom: 1rem; font-size: 1.5rem;">
-            💬 Ask Evolve AI Anything About Trading
+            ðŸ’¬ Ask Evolve AI Anything About Trading
         </h2>
         <p style="color: #6c757d; margin-bottom: 1.5rem; font-size: 1rem;">
             Your autonomous financial intelligence assistant is ready to help
@@ -172,7 +172,7 @@ def render_prompt_interface():
             margin-bottom: 1rem;
         ">
             <p style="color: #495057; font-size: 0.9rem; margin: 0;">
-                <strong>💡 Examples:</strong> "Forecast SPY using the most accurate model",
+                <strong>ðŸ’¡ Examples:</strong> "Forecast SPY using the most accurate model",
                 "Create a new LSTM model for AAPL", "Show me RSI strategy with Bollinger Bands",
                 "What's the current market sentiment for TSLA?"
             </p>
@@ -184,7 +184,7 @@ def render_prompt_interface():
 
     # Professional Prompt Input
     prompt = st.text_input(
-        "🚀 Type your trading prompt here...",
+        "ðŸš€ Type your trading prompt here...",
         value=st.session_state.get("voice_prompt_text", ""),
         placeholder="e.g., 'Forecast SPY using the most accurate model and RSI tuned to 10'",
         help="Ask for forecasts, strategies, model creation, or market analysis",
@@ -193,7 +193,7 @@ def render_prompt_interface():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         submit = st.button(
-            "🚀 Submit Query",
+            "ðŸš€ Submit Query",
             use_container_width=True,
             help="Send your prompt to Evolve AI for processing",
         )
@@ -207,7 +207,7 @@ def render_prompt_result(result: Dict[str, Any]):
         st.markdown(
             f"""
         <div class="result-card">
-            <h3>🤖 AI Response</h3>
+            <h3>ðŸ¤– AI Response</h3>
             <p>{result['message']}</p>
         </div>
         """,
@@ -216,30 +216,30 @@ def render_prompt_result(result: Dict[str, Any]):
 
         # Display strategy and model information if available
         if result.get("strategy_name"):
-            st.metric("📊 Strategy Used", result["strategy_name"])
+            st.metric("ðŸ“Š Strategy Used", result["strategy_name"])
         if result.get("model_used"):
-            st.metric("🧠 Model Used", result["model_used"])
+            st.metric("ðŸ§  Model Used", result["model_used"])
         if result.get("confidence"):
-            st.metric("🎯 Confidence", f"{result['confidence']:.2%}")
+            st.metric("ðŸŽ¯ Confidence", f"{result['confidence']:.2%}")
         if result.get("signal"):
             signal_color = (
-                "🟢"
+                "ðŸŸ¢"
                 if result["signal"].lower() in ["buy", "long"]
-                else "🔴"
+                else "ðŸ”´"
                 if result["signal"].lower() in ["sell", "short"]
-                else "🟡"
+                else "ðŸŸ¡"
             )
-            st.metric("📈 Signal", f"{signal_color} {result['signal']}")
+            st.metric("ðŸ“ˆ Signal", f"{signal_color} {result['signal']}")
     else:
-        st.warning("⚠️ No response received from AI agent")
+        st.warning("âš ï¸ No response received from AI agent")
 
 
 def render_conversation_history():
     """Render the conversation history display."""
     if st.session_state.get("conversation_history"):
-        st.markdown("### 💬 Recent Conversations")
+        st.markdown("### ðŸ’¬ Recent Conversations")
         for i, conv in enumerate(reversed(st.session_state.conversation_history[-5:])):
-            with st.expander(f"💭 {conv['prompt'][:50]}...", expanded=False):
+            with st.expander(f"ðŸ’­ {conv['prompt'][:50]}...", expanded=False):
                 st.markdown(
                     f"""
                 <div style="
@@ -250,13 +250,13 @@ def render_conversation_history():
                     border-left: 4px solid #667eea;
                 ">
                     <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem;">
-                        🤔 Your Question:
+                        ðŸ¤” Your Question:
                     </div>
                     <div style="margin-bottom: 1rem; color: #495057; font-style: italic;">
                         "{conv['prompt']}"
                     </div>
                     <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem;">
-                        🤖 AI Response:
+                        ðŸ¤– AI Response:
                     </div>
                     <div style="color: #495057; background: white; padding: 1rem; border-radius: 5px;">
                         {conv['response'].get('message', 'No response available.')}
@@ -342,11 +342,11 @@ def render_agent_logs():
                     # Display logs
                     for log in filtered_logs[-10:]:  # Show last 10 filtered logs
                         level_color = {
-                            LogLevel.INFO: "🟢",
-                            LogLevel.WARNING: "🟡",
-                            LogLevel.ERROR: "🔴",
-                            LogLevel.CRITICAL: "🔴",
-                        }.get(log.level, "⚪")
+                            LogLevel.INFO: "ðŸŸ¢",
+                            LogLevel.WARNING: "ðŸŸ¡",
+                            LogLevel.ERROR: "ðŸ”´",
+                            LogLevel.CRITICAL: "ðŸ”´",
+                        }.get(log.level, "âšª")
 
                         st.markdown(
                             f"""
@@ -557,7 +557,7 @@ def render_system_monitor_page():
         )
 
         st.metric("API Calls/min", "156", "+12")
-        st.metric("Data Feed", "Active", "🟢")
+        st.metric("Data Feed", "Active", "ðŸŸ¢")
         st.metric("Latency", "45ms", "Good")
 
     with col3:
@@ -656,7 +656,7 @@ def render_risk_management_page():
         ]
 
         for alert in alerts:
-            color = {"Low": "🟡", "Medium": "🟠", "High": "🔴"}[alert["level"]]
+            color = {"Low": "ðŸŸ¡", "Medium": "ðŸŸ ", "High": "ðŸ”´"}[alert["level"]]
             st.markdown(f"{color} **{alert['level']}:** {alert['message']}")
             st.caption(f"*{alert['time']}*")
 
@@ -708,11 +708,11 @@ def render_orchestrator_page():
         
         # Display orchestrator status
         status_icon = {
-            "available": "🟢",
-            "not_available": "🔴",
-            "not_configured": "🟡",
-            "error": "🔴"
-        }.get(orchestrator_status.get("status", "unknown"), "❓")
+            "available": "ðŸŸ¢",
+            "not_available": "ðŸ”´",
+            "not_configured": "ðŸŸ¡",
+            "error": "ðŸ”´"
+        }.get(orchestrator_status.get("status", "unknown"), "â“")
         
         st.markdown(f"{status_icon} **Status:** {orchestrator_status.get('status', 'unknown').title()}")
         
@@ -738,17 +738,17 @@ def render_orchestrator_page():
         col2a, col2b = st.columns(2)
         
         with col2a:
-            if st.button("🔄 Refresh Status", key="refresh_orchestrator"):
+            if st.button("ðŸ”„ Refresh Status", key="refresh_orchestrator"):
                 st.rerun()
             
-            if st.button("📊 Export Report", key="export_orchestrator"):
+            if st.button("ðŸ“Š Export Report", key="export_orchestrator"):
                 st.info("Orchestrator report export functionality would be implemented here")
         
         with col2b:
-            if st.button("⚡ Execute Task", key="execute_task"):
+            if st.button("âš¡ Execute Task", key="execute_task"):
                 st.info("Task execution interface would be implemented here")
             
-            if st.button("⚙️ Configure", key="configure_orchestrator"):
+            if st.button("âš™ï¸ Configure", key="configure_orchestrator"):
                 st.info("Orchestrator configuration interface would be implemented here")
     
     # Task monitoring section
@@ -758,12 +758,12 @@ def render_orchestrator_page():
     if orchestrator_status.get("status") == "available":
         # Mock task status data
         task_data = {
-            "Model Innovation": {"status": "🟢", "last_run": "2 hours ago", "next_run": "22 hours"},
-            "Strategy Research": {"status": "🟢", "last_run": "1 hour ago", "next_run": "11 hours"},
-            "Sentiment Fetch": {"status": "🟢", "last_run": "5 minutes ago", "next_run": "25 minutes"},
-            "Risk Management": {"status": "🟢", "last_run": "10 minutes ago", "next_run": "5 minutes"},
-            "Execution": {"status": "🟢", "last_run": "1 minute ago", "next_run": "1 minute"},
-            "Data Sync": {"status": "🟡", "last_run": "15 minutes ago", "next_run": "5 minutes"},
+            "Model Innovation": {"status": "ðŸŸ¢", "last_run": "2 hours ago", "next_run": "22 hours"},
+            "Strategy Research": {"status": "ðŸŸ¢", "last_run": "1 hour ago", "next_run": "11 hours"},
+            "Sentiment Fetch": {"status": "ðŸŸ¢", "last_run": "5 minutes ago", "next_run": "25 minutes"},
+            "Risk Management": {"status": "ðŸŸ¢", "last_run": "10 minutes ago", "next_run": "5 minutes"},
+            "Execution": {"status": "ðŸŸ¢", "last_run": "1 minute ago", "next_run": "1 minute"},
+            "Data Sync": {"status": "ðŸŸ¡", "last_run": "15 minutes ago", "next_run": "5 minutes"},
         }
         
         # Display task status in a table
@@ -783,7 +783,7 @@ def render_orchestrator_page():
         st.warning("Task monitoring not available - orchestrator not running")
         
         # Installation instructions
-        with st.expander("📋 Installation Instructions"):
+        with st.expander("ðŸ“‹ Installation Instructions"):
             st.markdown("""
             **To install Task Orchestrator:**
             
@@ -820,4 +820,4 @@ def render_footer():
     </div>
     """,
         unsafe_allow_html=True,
-    ) 
+    )

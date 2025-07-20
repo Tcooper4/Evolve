@@ -1,4 +1,4 @@
-"""
+﻿"""
 Backtest Optimizer with Walk-Forward Analysis and Regime Detection
 
 Advanced backtesting framework with walk-forward optimization, regime detection,
@@ -23,7 +23,7 @@ try:
     import matplotlib.pyplot as plt
     MATPLOTLIB_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ matplotlib not available. Disabling plotting capabilities.")
+    print("âš ï¸ matplotlib not available. Disabling plotting capabilities.")
     print(f"   Missing: {e}")
     plt = None
     MATPLOTLIB_AVAILABLE = False
@@ -34,7 +34,7 @@ try:
     from sklearn.preprocessing import StandardScaler
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling clustering and scaling capabilities.")
+    print("âš ï¸ scikit-learn not available. Disabling clustering and scaling capabilities.")
     print(f"   Missing: {e}")
     KMeans = None
     StandardScaler = None

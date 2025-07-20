@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Prompt Examples functionality
 
 This module tests the prompt examples system that uses semantic similarity
@@ -272,4 +272,4 @@ class TestPromptExamples:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__]) 
+    pytest.main([__file__])

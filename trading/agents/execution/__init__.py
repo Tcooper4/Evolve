@@ -1,4 +1,4 @@
-"""
+﻿"""
 Execution Agent Package
 
 This package contains the modularized execution agent components:
@@ -32,4 +32,4 @@ __all__ = [
     'PositionManager',
     'ExitEvent',
     'ExitReason'
-] 
+]

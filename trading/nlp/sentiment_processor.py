@@ -1,4 +1,4 @@
-"""
+﻿"""
 Sentiment Processor with Dynamic Polarity Scaling
 
 This module provides advanced sentiment analysis with dynamic polarity scaling,
@@ -22,7 +22,7 @@ try:
     from sentence_transformers import SentenceTransformer
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ sentence_transformers not available. Disabling soft-matching features.")
+    print("âš ï¸ sentence_transformers not available. Disabling soft-matching features.")
     print(f"   Missing: {e}")
     SentenceTransformer = None
     SENTENCE_TRANSFORMERS_AVAILABLE = False
@@ -32,7 +32,7 @@ try:
     from sklearn.metrics.pairwise import cosine_similarity
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling cosine similarity calculations.")
+    print("âš ï¸ scikit-learn not available. Disabling cosine similarity calculations.")
     print(f"   Missing: {e}")
     cosine_similarity = None
     SKLEARN_AVAILABLE = False
@@ -778,4 +778,4 @@ def create_sentiment_processor(config_path: Optional[str] = None) -> SentimentPr
     Returns:
         SentimentProcessor instance
     """
-    return SentimentProcessor(config_path) 
+    return SentimentProcessor(config_path)

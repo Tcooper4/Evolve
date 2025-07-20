@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 import pandas as pd
 import numpy as np
 from src.utils.data_validator import DataValidator, ValidationResult
@@ -50,4 +50,4 @@ def test_multi_index_reset():
     result = validator.validate_dataframe(df, required_columns=["Close"])
     assert result.metadata["multi_index_detected"]
     assert result.metadata["index_reset_applied"]
-    assert result.is_valid 
+    assert result.is_valid

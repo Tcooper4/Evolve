@@ -1,4 +1,4 @@
-"""
+﻿"""
 Example: Using Weighted Ensemble Strategy
 
 This example demonstrates how to use the WeightedEnsembleStrategy to combine
@@ -267,4 +267,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

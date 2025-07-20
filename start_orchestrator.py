@@ -33,17 +33,17 @@ async def start_orchestrator_standalone(config_path: str = "config/task_schedule
     """Start Task Orchestrator in standalone mode"""
     try:
         logger.info("Starting Task Orchestrator in standalone mode...")
-        
+
         from core.task_orchestrator import start_orchestrator
-        
+
         orchestrator = await start_orchestrator(config_path)
-        
+
         # Check agent registration status
         await _check_agent_registration()
-        
+
         logger.info("Task Orchestrator started successfully")
         logger.info("Press Ctrl+C to stop...")
-        
+
         # Keep running
         try:
             while True:
@@ -53,11 +53,11 @@ async def start_orchestrator_standalone(config_path: str = "config/task_schedule
         finally:
             await orchestrator.stop()
             logger.info("Task Orchestrator stopped")
-            
+
     except Exception as e:
         logger.error(f"Failed to start orchestrator: {e}")
         return False
-    
+
     return True
 
 
@@ -65,17 +65,17 @@ async def start_integrated_system(config_path: str = "config/task_schedule.yaml"
     """Start Task Orchestrator integrated with existing system"""
     try:
         logger.info("Starting integrated system...")
-        
+
         from system.orchestrator_integration import start_integrated_system
-        
+
         integration = await start_integrated_system(config_path)
-        
+
         # Check agent registration status
         await _check_agent_registration()
-        
+
         logger.info("Integrated system started successfully")
         logger.info("Press Ctrl+C to stop...")
-        
+
         # Keep running
         try:
             while True:
@@ -85,11 +85,11 @@ async def start_integrated_system(config_path: str = "config/task_schedule.yaml"
         finally:
             await integration.stop_integrated_system()
             logger.info("Integrated system stopped")
-            
+
     except Exception as e:
         logger.error(f"Failed to start integrated system: {e}")
         return False
-    
+
     return True
 
 
@@ -97,24 +97,24 @@ async def start_with_monitoring(config_path: str = "config/task_schedule.yaml", 
     """Start orchestrator with monitoring for a specified duration"""
     try:
         logger.info(f"Starting orchestrator with monitoring for {duration_minutes} minutes...")
-        
+
         from core.task_orchestrator import start_orchestrator
-        
+
         orchestrator = await start_orchestrator(config_path)
-        
+
         # Check agent registration status
         await _check_agent_registration()
-        
+
         logger.info("Task Orchestrator started with monitoring")
-        
+
         # Monitor for specified duration
         start_time = datetime.now()
         end_time = start_time.replace(minute=start_time.minute + duration_minutes)
-        
+
         while datetime.now() < end_time:
             # Get status every 30 seconds
             status = orchestrator.get_system_status()
-            
+
             print(f"\n{'='*60}")
             print(f"Orchestrator Status - {datetime.now().strftime('%H:%M:%S')}")
             print(f"{'='*60}")
@@ -123,18 +123,18 @@ async def start_with_monitoring(config_path: str = "config/task_schedule.yaml", 
             print(f"Enabled Tasks: {status['enabled_tasks']}")
             print(f"Running Tasks: {status['running_tasks']}")
             print(f"Overall Health: {status['performance_metrics']['overall_health']:.2f}")
-            
+
             # Show agent status
             print(f"\nAgent Status:")
             for agent_name, agent_status in status['agent_status'].items():
                 health_icon = "🟢" if agent_status['health_score'] > 0.8 else "🟡" if agent_status['health_score'] > 0.6 else "🔴"
                 print(f"  {health_icon} {agent_name}: {agent_status['health_score']:.2f}")
-            
+
             await asyncio.sleep(30)
-        
+
         logger.info("Monitoring period completed, shutting down...")
         await orchestrator.stop()
-        
+
     except KeyboardInterrupt:
         logger.info("Monitoring interrupted, shutting down...")
         if 'orchestrator' in locals():
@@ -142,29 +142,29 @@ async def start_with_monitoring(config_path: str = "config/task_schedule.yaml", 
     except Exception as e:
         logger.error(f"Monitoring failed: {e}")
         return False
-    
+
     return True
 
 
 async def _check_agent_registration():
     """Check agent registration status and handle fallback if needed."""
     logger.info("Checking agent registration status...")
-    
+
     try:
         # Try to get agent controller
         from agents.agent_controller import get_agent_controller
         agent_controller = get_agent_controller()
-        
+
         # Get registration status
         registration_status = agent_controller.get_agent_registration_status()
-        
+
         # Log registration results
         logger.info(f"Agent registration check completed:")
         logger.info(f"  Total agents: {registration_status['total_agents']}")
         logger.info(f"  Successful registrations: {registration_status['successful_registrations']}")
         logger.info(f"  Failed registrations: {registration_status['failed_registrations']}")
         logger.info(f"  Fallback agent created: {registration_status['fallback_agent_created']}")
-        
+
         # Check if we have real agents
         if registration_status['total_agents'] == 0:
             logger.warning("⚠️ No agents registered - system will use fallback agent")
@@ -174,20 +174,20 @@ async def _check_agent_registration():
             logger.info("System will continue running with limited functionality")
         else:
             logger.info("✅ Real agents registered successfully")
-        
+
         # Print registered agent names
         if registration_status['registered_agent_names']:
             logger.info(f"Registered agents: {', '.join(registration_status['registered_agent_names'])}")
-            
+
             # Print agent details
             for agent_name, agent_details in registration_status['agent_details'].items():
                 logger.info(f"  {agent_name}: {agent_details['class_name']} ({agent_details['category']})")
                 logger.info(f"    Capabilities: {', '.join(agent_details['capabilities'])}")
         else:
             logger.warning("⚠️ No agents found in registration details")
-        
+
         return registration_status
-        
+
     except ImportError as e:
         logger.warning(f"⚠️ Agent controller not available: {e}")
         logger.info("System will continue without agent registration checking")
@@ -201,16 +201,16 @@ async def _check_agent_registration():
 def check_system_requirements():
     """Check if system requirements are met"""
     logger.info("Checking system requirements...")
-    
+
     requirements_met = True
-    
+
     # Check Python version
     if sys.version_info < (3, 8):
         logger.error("Python 3.8+ required")
         requirements_met = False
     else:
         logger.info(f"✅ Python {sys.version.split()[0]} - OK")
-    
+
     # Check required directories
     required_dirs = ["logs", "config", "core", "agents"]
     for dir_name in required_dirs:
@@ -219,7 +219,7 @@ def check_system_requirements():
             requirements_met = False
         else:
             logger.info(f"✅ Directory '{dir_name}' - OK")
-    
+
     # Check configuration file
     config_path = "config/task_schedule.yaml"
     if not os.path.exists(config_path):
@@ -227,7 +227,7 @@ def check_system_requirements():
         requirements_met = False
     else:
         logger.info(f"✅ Configuration file '{config_path}' - OK")
-    
+
     # Check core modules
     try:
         from core.task_orchestrator import TaskOrchestrator
@@ -235,44 +235,44 @@ def check_system_requirements():
     except ImportError as e:
         logger.error(f"TaskOrchestrator module not available: {e}")
         requirements_met = False
-    
+
     return requirements_met
 
 
 def show_system_status():
     """Show current system status"""
     logger.info("Checking system status...")
-    
+
     try:
         from system.orchestrator_integration import get_system_integration_status
-        
+
         status = get_system_integration_status()
-        
+
         print(f"\n{'='*60}")
         print("EVOLVE TASK ORCHESTRATOR - SYSTEM STATUS")
         print(f"{'='*60}")
-        
+
         status_icon = {
             "available": "🟢",
             "not_available": "🔴",
             "not_configured": "🟡",
             "error": "🔴"
         }.get(status.get("status", "unknown"), "❓")
-        
+
         print(f"Status: {status_icon} {status.get('status', 'unknown').title()}")
-        
+
         if status.get("status") == "available":
             print(f"Total Tasks: {status.get('total_tasks', 0)}")
             print(f"Enabled Tasks: {status.get('enabled_tasks', 0)}")
             print(f"Overall Health: {status.get('overall_health', 0):.1%}")
         else:
             print(f"Message: {status.get('message', 'No message available')}")
-        
+
         print(f"Timestamp: {datetime.now().isoformat()}")
         print(f"{'='*60}")
-        
+
         return status.get("status") == "available"
-        
+
     except Exception as e:
         logger.error(f"Failed to get system status: {e}")
         return False
@@ -292,39 +292,39 @@ Examples:
   python start_orchestrator.py --status                  # Show system status
         """
     )
-    
+
     # Mode selection
     mode_group = parser.add_mutually_exclusive_group(required=True)
-    mode_group.add_argument("--standalone", action="store_true", 
+    mode_group.add_argument("--standalone", action="store_true",
                            help="Start Task Orchestrator in standalone mode")
-    mode_group.add_argument("--integrated", action="store_true", 
+    mode_group.add_argument("--integrated", action="store_true",
                            help="Start integrated system with existing components")
-    mode_group.add_argument("--monitor", action="store_true", 
+    mode_group.add_argument("--monitor", action="store_true",
                            help="Start with monitoring mode")
-    mode_group.add_argument("--check", action="store_true", 
+    mode_group.add_argument("--check", action="store_true",
                            help="Check system requirements")
-    mode_group.add_argument("--status", action="store_true", 
+    mode_group.add_argument("--status", action="store_true",
                            help="Show current system status")
-    
+
     # Optional arguments
     parser.add_argument("--config", type=str, default="config/task_schedule.yaml",
                        help="Path to orchestrator configuration file")
     parser.add_argument("--duration", type=int, default=60,
                        help="Duration in minutes for monitoring mode")
-    parser.add_argument("--log-level", type=str, 
+    parser.add_argument("--log-level", type=str,
                        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
                        default="INFO", help="Logging level")
-    
+
     args = parser.parse_args()
-    
+
     # Set log level
     logging.getLogger().setLevel(getattr(logging, args.log_level))
-    
+
     try:
         logger.info("Evolve Task Orchestrator Startup Script")
         logger.info(f"Python version: {sys.version}")
         logger.info(f"Working directory: {os.getcwd()}")
-        
+
         # Check system requirements
         if args.check:
             if check_system_requirements():
@@ -333,19 +333,19 @@ Examples:
             else:
                 logger.error("❌ System requirements not met")
                 return 1
-        
+
         # Show system status
         if args.status:
             if show_system_status():
                 return 0
             else:
                 return 1
-        
+
         # Check requirements before starting
         if not check_system_requirements():
             logger.error("❌ System requirements not met. Cannot start orchestrator.")
             return 1
-        
+
         # Start appropriate mode
         if args.standalone:
             success = asyncio.run(start_orchestrator_standalone(args.config))
@@ -356,9 +356,9 @@ Examples:
         else:
             logger.error("No valid mode specified")
             return 1
-        
+
         return 0 if success else 1
-        
+
     except KeyboardInterrupt:
         logger.info("Startup script interrupted by user")
         return 0
@@ -369,4 +369,5 @@ Examples:
 
 if __name__ == "__main__":
     exit_code = main()
-    sys.exit(exit_code) 
+    sys.exit(exit_code)
+

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Innovation Agent Example
 
 This example demonstrates how to use the ModelInnovationAgent to automatically
@@ -214,7 +214,7 @@ def run_innovation_demo():
         logger.info(f"  {improvement['timestamp']}: {improvement['model_name']} ({improvement['model_type']})")
         logger.info(f"    MSE: {improvement['metrics']['mse']:.4f}")
         logger.info(f"    Sharpe: {improvement['metrics']['sharpe_ratio']:.4f}")
-        logger.info(f"    R²: {improvement['metrics']['r2_score']:.4f}")
+        logger.info(f"    RÂ²: {improvement['metrics']['r2_score']:.4f}")
     
     # Step 7: Display final registry state
     registry_summary = get_registry_summary()
@@ -329,7 +329,7 @@ def demonstrate_model_evaluation():
         
         logger.info(f"  MSE: {evaluation.mse:.4f}")
         logger.info(f"  MAE: {evaluation.mae:.4f}")
-        logger.info(f"  R² Score: {evaluation.r2_score:.4f}")
+        logger.info(f"  RÂ² Score: {evaluation.r2_score:.4f}")
         logger.info(f"  Sharpe Ratio: {evaluation.sharpe_ratio:.4f}")
         logger.info(f"  Max Drawdown: {evaluation.max_drawdown:.4f}")
         logger.info(f"  Total Return: {evaluation.total_return:.4f}")
@@ -361,4 +361,4 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Demo failed: {e}")
         import traceback
-        traceback.print_exc() 
+        traceback.print_exc()

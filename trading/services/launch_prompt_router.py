@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Prompt Router Service Launcher
 
@@ -306,19 +306,19 @@ class PromptValidationHandler:
 
     def format_error_response(self, validation_result: Dict[str, Any]) -> str:
         """Format a user-friendly error response with suggestions."""
-        error_msg = f"❌ {validation_result['error']}\n\n"
-        error_msg += "💡 Here are some example prompts you can try:\n\n"
+        error_msg = f"âŒ {validation_result['error']}\n\n"
+        error_msg += "ðŸ’¡ Here are some example prompts you can try:\n\n"
 
         suggestions = validation_result.get("suggestions", [])
         for i, suggestion in enumerate(suggestions, 1):
             error_msg += f"{i}. {suggestion}\n"
 
-        error_msg += "\n🔧 Tips for better prompts:\n"
-        error_msg += "• Be specific about what you want to analyze\n"
-        error_msg += "• Include the asset symbol or name\n"
-        error_msg += "• Specify the time frame if relevant\n"
+        error_msg += "\nðŸ”§ Tips for better prompts:\n"
+        error_msg += "â€¢ Be specific about what you want to analyze\n"
+        error_msg += "â€¢ Include the asset symbol or name\n"
+        error_msg += "â€¢ Specify the time frame if relevant\n"
         error_msg += (
-            "• Use clear action words like 'forecast', 'analyze', 'calculate'\n"
+            "â€¢ Use clear action words like 'forecast', 'analyze', 'calculate'\n"
         )
 
         return error_msg

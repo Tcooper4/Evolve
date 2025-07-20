@@ -1,8 +1,8 @@
-"""
+﻿"""
 Task Router with Batch 12 Features
 
 This module handles intelligent task routing for multi-intent prompts,
-sequentially routing to forecast → strategy → report based on prompt analysis.
+sequentially routing to forecast â†’ strategy â†’ report based on prompt analysis.
 
 Features:
 - Multi-intent prompt parsing and decomposition
@@ -967,4 +967,4 @@ async def route_and_execute(prompt: str, context: Optional[TaskContext] = None) 
     """
     router = get_task_router()
     multi_intent = router.parse_multi_intent_prompt(prompt, context)
-    return await router.execute_task_chain(multi_intent) 
+    return await router.execute_task_chain(multi_intent)

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Transformer Wrapper - Batch 17
 Enhanced transformer wrapper with configurable dropout layers for training robustness
 """
@@ -10,7 +10,7 @@ try:
     import torch.nn.functional as F
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling transformer models.")
+    print("âš ï¸ PyTorch not available. Disabling transformer models.")
     print(f"   Missing: {e}")
     torch = None
     nn = None
@@ -384,4 +384,4 @@ def create_transformer_wrapper(config: Optional[TransformerConfig] = None) -> Tr
     """Factory function to create a transformer wrapper."""
     if config is None:
         config = TransformerConfig()
-    return TransformerWrapper(config) 
+    return TransformerWrapper(config)

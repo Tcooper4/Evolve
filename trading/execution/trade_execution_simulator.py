@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Trade Execution Simulator with realistic market impact modeling.
 Enhanced with Batch 9 features: slippage model, random fill success simulation,

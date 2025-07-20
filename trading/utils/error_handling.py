@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import traceback
 import time
 from datetime import datetime
@@ -274,4 +274,4 @@ error_handler.register_recovery_strategy(
 error_handler.register_recovery_strategy(
     StrategyError,
     ErrorRecoveryStrategy.log_and_continue()
-) 
+)

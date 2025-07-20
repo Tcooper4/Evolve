@@ -1,4 +1,4 @@
-Strategy Pipeline Demo Page for Evolve Trading Platform.""
+﻿Strategy Pipeline Demo Page for Evolve Trading Platform.""
 
 import warnings
 from datetime import datetime, timedelta
@@ -18,7 +18,7 @@ from trading.ui.components import (
 warnings.filterwarnings("ignore)
 
 # Page config
-st.set_page_config(page_title=Strategy Pipeline Demo, page_icon=🔗 layout=wide
+st.set_page_config(page_title=Strategy Pipeline Demo, page_icon=ðŸ”— layout=wide
 
 
 def load_sample_data(symbol: str =AAPL, days: int = 365 -> pd.DataFrame:
@@ -139,7 +139,7 @@ def display_performance_metrics(performance: dict) -> None:
         st.error(fError calculating performance: {performance['error']}")
         return
     
-    st.subheader("📊 Performance Metrics")
+    st.subheader("ðŸ“Š Performance Metrics")
     
     # Create metrics columns
     col1, col2 col4t.columns(4)
@@ -169,7 +169,7 @@ def display_performance_metrics(performance: dict) -> None:
         )
     
     # Signal statistics
-    st.subheader("📈 Signal Statistics)   col1, col2 col4t.columns(4)
+    st.subheader("ðŸ“ˆ Signal Statistics)   col1, col2 col4t.columns(4)
     
     with col1:
         st.metric("Buy Signals", performance['buy_signals'])
@@ -186,13 +186,13 @@ def display_performance_metrics(performance: dict) -> None:
 
 def main():
   Main function for the Strategy Pipeline Demo page.
-    st.title("🔗 Strategy Pipeline Demo)
+    st.title("ðŸ”— Strategy Pipeline Demo)
     st.markdown(
        Combine multiple trading strategies using different signal combination modes. "Test how different strategy combinations perform together. )
     
     # Sidebar configuration
     with st.sidebar:
-        st.header("⚙️ Configuration")
+        st.header("âš™ï¸ Configuration")
         
         # Data source selection
         data_source = st.selectbox(
@@ -215,14 +215,14 @@ def main():
         )
         
         # Load data button
-        if st.button("📊 Load Data", type="primary):        st.session_state.data_loaded = True
+        if st.button("ðŸ“Š Load Data", type="primary):        st.session_state.data_loaded = True
             st.session_state.market_data = load_sample_data(symbol, 365        st.success(f"Loaded {len(st.session_state.market_data)} days of data for {symbol})    # Main content
     if not st.session_state.get('data_loaded,false):
-        st.info("👈 Please load data from the sidebar to get started.")
+        st.info("ðŸ‘ˆ Please load data from the sidebar to get started.")
         return
     
     # Strategy pipeline selector
-    st.header("🎯 Strategy Configuration")
+    st.header("ðŸŽ¯ Strategy Configuration")
     strategy_config = create_strategy_pipeline_selector(
         key="pipeline_demo_selector",
         allow_combos=True
@@ -233,7 +233,7 @@ def main():
         return
     
     # Execute strategy button
-    if st.button("🚀 Execute Strategy Pipeline", type="primary"):
+    if st.button("ðŸš€ Execute Strategy Pipeline", type="primary"):
         with st.spinner("Executing strategy pipeline..."):
             strategy_result = execute_strategy_pipeline(
                 strategy_config,
@@ -251,13 +251,13 @@ def main():
     if st.session_state.get('strategy_result'):
         strategy_result = st.session_state.strategy_result
         
-        st.header("📈 Results")
+        st.header("ðŸ“ˆ Results")
         
         # Performance metrics
         display_performance_metrics(strategy_result['performance'])
         
         # Strategy information
-        st.subheader("🔍 Strategy Information")
+        st.subheader("ðŸ” Strategy Information")
         col1, col2lumns(2)
         
         with col1:
@@ -287,7 +287,7 @@ def main():
                 st.info(Only one strategy selected. Individual signals view is the same as combined signals.")
         
         with tab3:
-            st.subheader("📋 Raw Signal Data")
+            st.subheader("ðŸ“‹ Raw Signal Data")
             signal_df = pd.DataFrame({
                 Date: st.session_state.market_data.index,
          Price': st.session_state.market_data['close'],
@@ -302,10 +302,10 @@ def main():
             # Download button
             csv = signal_df.to_csv(index=True)
             st.download_button(
-                label="📥 Download Signal Data,              data=csv,
+                label="ðŸ“¥ Download Signal Data,              data=csv,
                 file_name=f"strategy_signals_{datetime.now().strftime(%Y%m%d_%H%M%S')}.csv,
                 mime="text/csv            )
 
 
 if __name__ == "__main__":
-    main() 
+    main()

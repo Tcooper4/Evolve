@@ -1,4 +1,4 @@
-"""
+﻿"""
 Backtest Utilities
 
 Utility functions for backtesting with safety checks and guard clauses.
@@ -353,4 +353,4 @@ class BacktestUtils:
         if max_consecutive > 3:
             return f"Found {max_consecutive} consecutive signals"
             
-        return None 
+        return None

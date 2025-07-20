@@ -1,4 +1,4 @@
-"""
+﻿"""
 Data Validator
 
 Validates data quality and structure with support for multi-index DataFrames.
@@ -362,4 +362,4 @@ class DataValidator:
             if dropped_count > 0:
                 self.logger.info(f"Dropped {dropped_count} duplicate rows")
                 
-        return fixed_df 
+        return fixed_df

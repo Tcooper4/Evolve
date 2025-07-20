@@ -1,4 +1,4 @@
-"""
+﻿"""
 Composite Strategy with Conflict Resolution
 
 This module implements a composite strategy that combines multiple individual strategies
@@ -409,4 +409,4 @@ class CompositeStrategy:
             
         except Exception as e:
             logger.error(f"Error importing configuration: {e}")
-            return False 
+            return False

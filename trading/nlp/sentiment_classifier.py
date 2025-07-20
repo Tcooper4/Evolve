@@ -1,4 +1,4 @@
-"""
+﻿"""
 Fine-tuned Sentiment Classifier with Readability Scoring
 
 This module provides a fine-tuned classifier for pre-processing sentiment
@@ -25,7 +25,7 @@ try:
     from torch.utils.data import Dataset, DataLoader
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling transformer models.")
+    print("âš ï¸ PyTorch not available. Disabling transformer models.")
     print(f"   Missing: {e}")
     torch = None
     nn = None
@@ -38,7 +38,7 @@ try:
     from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer
     TRANSFORMERS_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ transformers not available. Disabling transformer models.")
+    print("âš ï¸ transformers not available. Disabling transformer models.")
     print(f"   Missing: {e}")
     AutoTokenizer = None
     AutoModelForSequenceClassification = None
@@ -53,7 +53,7 @@ try:
     from sklearn.metrics import classification_report, accuracy_score
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling traditional ML models.")
+    print("âš ï¸ scikit-learn not available. Disabling traditional ML models.")
     print(f"   Missing: {e}")
     TfidfVectorizer = None
     LogisticRegression = None
@@ -788,4 +788,4 @@ def create_sentiment_classifier(config: Optional[ClassifierConfig] = None,
     Returns:
         SentimentClassifier instance
     """
-    return SentimentClassifier(config, model_path) 
+    return SentimentClassifier(config, model_path)

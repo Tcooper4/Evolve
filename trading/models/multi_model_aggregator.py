@@ -1,4 +1,4 @@
-"""
+﻿"""
 Multi-Model Aggregator
 
 This module provides functionality to aggregate forecasts from multiple models
@@ -507,4 +507,4 @@ class MultiModelAggregator:
 
 def create_multi_model_aggregator(config: Optional[Dict[str, Any]] = None) -> MultiModelAggregator:
     """Create a multi-model aggregator instance."""
-    return MultiModelAggregator(config) 
+    return MultiModelAggregator(config)

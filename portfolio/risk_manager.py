@@ -1,4 +1,4 @@
-"""
+﻿"""
 Portfolio Risk Manager
 
 This module implements comprehensive risk management for portfolios:
@@ -708,7 +708,7 @@ if __name__ == "__main__":
     
     print(f"\nRebalancing Actions: {len(actions)}")
     for action in actions:
-        print(f"  {action.action_type.upper()} {action.ticker}: {action.current_weight:.3f} → {action.target_weight:.3f}")
+        print(f"  {action.action_type.upper()} {action.ticker}: {action.current_weight:.3f} â†’ {action.target_weight:.3f}")
         print(f"    Priority: {action.priority}, Reason: {action.reason}")
     
     # Simulate portfolio returns
@@ -721,4 +721,4 @@ if __name__ == "__main__":
     
     # Generate risk report
     report = risk_manager.get_risk_report(positions, risk_metrics, violations)
-    print(f"\nRisk Report Generated: {len(report)} sections") 
+    print(f"\nRisk Report Generated: {len(report)} sections")

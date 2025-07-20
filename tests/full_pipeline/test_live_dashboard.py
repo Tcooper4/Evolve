@@ -1,4 +1,4 @@
-"""
+﻿"""
 Comprehensive Live Dashboard Test Suite
 
 This module tests the live dashboard functionality with:
@@ -504,4 +504,4 @@ async def test_dashboard_end_to_end(free_port):
 
 if __name__ == "__main__":
     # Run tests directly
-    pytest.main([__file__, "-v", "--asyncio-mode=auto"]) 
+    pytest.main([__file__, "-v", "--asyncio-mode=auto"])

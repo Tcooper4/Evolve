@@ -1,4 +1,4 @@
-"""
+﻿"""
 Technical indicators for trading analysis.
 Replacement for the removed core.utils.technical_indicators module.
 """

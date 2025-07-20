@@ -1,4 +1,4 @@
-"""
+﻿"""
 Portfolio Allocator
 
 This module implements various portfolio allocation strategies:
@@ -26,7 +26,7 @@ try:
     from scipy.optimize import minimize
     SCIPY_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scipy not available. Disabling optimization-based portfolio allocation.")
+    print("âš ï¸ scipy not available. Disabling optimization-based portfolio allocation.")
     print(f"   Missing: {e}")
     minimize = None
     SCIPY_AVAILABLE = False
@@ -177,7 +177,7 @@ class PortfolioAllocator:
         """Minimum variance portfolio allocation"""
         n_assets = covariance_matrix.shape[0]
         
-        # Objective: minimize w'Σw
+        # Objective: minimize w'Î£w
         # Constraints: sum(w) = 1, w >= 0
         
         if not SCIPY_AVAILABLE:
@@ -741,4 +741,4 @@ if __name__ == "__main__":
     # Find optimal strategy
     optimal_strategy, optimal_result = allocator.get_optimal_strategy(assets, 'sharpe')
     print(f"\nOptimal Strategy (Sharpe): {optimal_strategy.value}")
-    print(f"Optimal Sharpe Ratio: {optimal_result.sharpe_ratio:.3f}") 
+    print(f"Optimal Sharpe Ratio: {optimal_result.sharpe_ratio:.3f}")

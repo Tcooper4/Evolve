@@ -1,4 +1,4 @@
-"""Auto-repair system for handling common package and environment issues."""
+﻿"""Auto-repair system for handling common package and environment issues."""
 
 import logging
 import os
@@ -15,7 +15,7 @@ try:
     from importlib.metadata import PackageNotFoundError, version
     IMPORTLIB_METADATA_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ importlib.metadata not available. Disabling package version checking.")
+    print("âš ï¸ importlib.metadata not available. Disabling package version checking.")
     print(f"   Missing: {e}")
     PackageNotFoundError = None
     version = None

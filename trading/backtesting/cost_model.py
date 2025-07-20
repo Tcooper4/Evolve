@@ -1,4 +1,4 @@
-"""
+﻿"""
 Robust Cost Model for Backtesting
 
 This module provides realistic cost modeling for backtesting including:
@@ -262,4 +262,4 @@ def get_crypto_cost_config() -> CostConfig:
         slippage_model=SlippageModel.VOLATILITY,
         slippage_rate=0.0005,
         volatility_multiplier=2.0
-    ) 
+    )

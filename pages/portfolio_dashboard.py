@@ -1,4 +1,4 @@
-"""Portfolio dashboard for interactive visualization and management."""
+﻿"""Portfolio dashboard for interactive visualization and management."""
 
 import logging
 import os
@@ -20,7 +20,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from trading.portfolio.portfolio_manager import PortfolioManager, Position
 
 # Page config
-st.set_page_config(page_title="Portfolio Dashboard", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Portfolio Dashboard", page_icon="ðŸ“ˆ", layout="wide")
 
 # Initialize session state
 if "portfolio_manager" not in st.session_state:

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Meta Agent with Memory Store
 
 This module provides a meta-agent that tracks and manages the performance
@@ -740,4 +740,4 @@ def create_meta_agent(store_type: str = "json", memory_store: Optional[MemorySto
     Returns:
         MetaAgent instance
     """
-    return MetaAgent(memory_store=memory_store, store_type=store_type) 
+    return MetaAgent(memory_store=memory_store, store_type=store_type)

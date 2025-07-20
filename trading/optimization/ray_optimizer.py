@@ -1,4 +1,4 @@
-"""Ray Tune Optimization Method.
+﻿"""Ray Tune Optimization Method.
 
 This module contains the RayTuneOptimization method extracted from strategy_optimizer.py.
 """
@@ -166,4 +166,4 @@ class RayTuneOptimization(OptimizationMethod):
                 logger.info("Ray initialized for distributed optimization")
         except Exception as e:
             logger.warning(f"Could not initialize Ray: {e}")
-            raise 
+            raise

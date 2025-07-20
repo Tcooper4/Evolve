@@ -1,4 +1,4 @@
-"""
+﻿"""
 Trading Context Manager - Batch 19
 Enhanced context management with session expiration and strategy limits
 """
@@ -589,4 +589,4 @@ class TradingContextManager:
 
 def create_trading_context_manager(max_active_strategies: int = 10) -> TradingContextManager:
     """Factory function to create trading context manager."""
-    return TradingContextManager(max_active_strategies=max_active_strategies) 
+    return TradingContextManager(max_active_strategies=max_active_strategies)

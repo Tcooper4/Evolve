@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Live Dashboard Runner
 
@@ -75,10 +75,10 @@ class DashboardRunner:
         """Check if required dependencies are available."""
         try:
             import streamlit
-            logger.info(f"✅ Streamlit version: {streamlit.__version__}")
+            logger.info(f"âœ… Streamlit version: {streamlit.__version__}")
             return True
         except ImportError as e:
-            logger.error(f"❌ Streamlit not available: {e}")
+            logger.error(f"âŒ Streamlit not available: {e}")
             logger.error("Please install streamlit: pip install streamlit")
             return False
     
@@ -86,16 +86,16 @@ class DashboardRunner:
         """Check if the main app file exists."""
         app_file = Path("app.py")
         if not app_file.exists():
-            logger.error(f"❌ App file not found: {app_file}")
+            logger.error(f"âŒ App file not found: {app_file}")
             return False
         
-        logger.info(f"✅ App file found: {app_file}")
+        logger.info(f"âœ… App file found: {app_file}")
         return True
     
     def _validate_port(self) -> bool:
         """Validate port number."""
         if not (1024 <= self.port <= 65535):
-            logger.error(f"❌ Invalid port number: {self.port}. Must be between 1024-65535")
+            logger.error(f"âŒ Invalid port number: {self.port}. Must be between 1024-65535")
             return False
         
         # Check if port is available
@@ -103,10 +103,10 @@ class DashboardRunner:
             import socket
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind((self.host, self.port))
-                logger.info(f"✅ Port {self.port} is available")
+                logger.info(f"âœ… Port {self.port} is available")
                 return True
         except OSError:
-            logger.warning(f"⚠️ Port {self.port} may be in use")
+            logger.warning(f"âš ï¸ Port {self.port} may be in use")
             return True  # Continue anyway, let streamlit handle it
     
     def _create_config_file(self):
@@ -138,7 +138,7 @@ showErrorDetails = true
         with open(config_path, 'w') as f:
             f.write(config_content)
         
-        logger.info(f"✅ Created config file: {config_path}")
+        logger.info(f"âœ… Created config file: {config_path}")
     
     def _get_streamlit_command(self) -> list:
         """Build streamlit command with arguments."""
@@ -157,7 +157,7 @@ showErrorDetails = true
     
     def start(self) -> bool:
         """Start the dashboard with error handling."""
-        logger.info("🚀 Starting Live Dashboard...")
+        logger.info("ðŸš€ Starting Live Dashboard...")
         
         # Pre-flight checks
         if not self._check_dependencies():
@@ -196,7 +196,7 @@ showErrorDetails = true
             # Start monitoring threads
             self._start_monitoring()
             
-            logger.info(f"✅ Dashboard started successfully on http://{self.host}:{self.port}")
+            logger.info(f"âœ… Dashboard started successfully on http://{self.host}:{self.port}")
             logger.info("Press Ctrl+C to stop")
             
             # Wait for process
@@ -213,7 +213,7 @@ showErrorDetails = true
             return True
             
         except Exception as e:
-            logger.error(f"❌ Failed to start dashboard: {e}")
+            logger.error(f"âŒ Failed to start dashboard: {e}")
             return False
     
     def _start_monitoring(self):
@@ -236,11 +236,11 @@ showErrorDetails = true
         health_thread = threading.Thread(target=health_check, daemon=True)
         health_thread.start()
         
-        logger.info("✅ Monitoring started")
+        logger.info("âœ… Monitoring started")
     
     def stop(self):
         """Stop the dashboard gracefully."""
-        logger.info("🛑 Stopping dashboard...")
+        logger.info("ðŸ›‘ Stopping dashboard...")
         
         self.running = False
         
@@ -257,7 +257,7 @@ showErrorDetails = true
                     self.process.kill()
                     self.process.wait()
                 
-                logger.info("✅ Dashboard stopped successfully")
+                logger.info("âœ… Dashboard stopped successfully")
                 
             except Exception as e:
                 logger.error(f"Error stopping dashboard: {e}")
@@ -352,4 +352,4 @@ Examples:
 
 
 if __name__ == "__main__":
-    main() 
+    main()

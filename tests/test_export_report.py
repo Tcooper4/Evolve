@@ -1,4 +1,4 @@
-"""
+﻿"""
 Test Export Report Module
 
 Tests for Batch 10 features: file existence verification, content schema validation,
@@ -418,4 +418,4 @@ if __name__ == "__main__":
     if result.errors:
         print("\nErrors:")
         for test, traceback in result.errors:
-            print(f"  {test}: {traceback}") 
+            print(f"  {test}: {traceback}")

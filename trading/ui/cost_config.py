@@ -1,4 +1,4 @@
-"""
+﻿"""
 Trading Cost Configuration Component
 
 This module provides a Streamlit sidebar component for configuring trading costs
@@ -42,7 +42,7 @@ def render_cost_config_sidebar(
     if default_params is None:
         default_params = CostParameters()
 
-    st.sidebar.header("💰 Trading Costs")
+    st.sidebar.header("ðŸ’° Trading Costs")
 
     # Enable/disable cost adjustment
     enable_cost_adjustment = st.sidebar.checkbox(
@@ -56,7 +56,7 @@ def render_cost_config_sidebar(
 
     # Preset configurations
     if config_ui.show_presets:
-        st.sidebar.subheader("📋 Cost Presets")
+        st.sidebar.subheader("ðŸ“‹ Cost Presets")
         preset = st.sidebar.selectbox(
             "Select Cost Preset:",
             options=[
@@ -80,7 +80,7 @@ def render_cost_config_sidebar(
         cost_params = default_params
 
     # Basic cost parameters
-    st.sidebar.subheader("📊 Basic Costs")
+    st.sidebar.subheader("ðŸ“Š Basic Costs")
 
     commission_rate = st.sidebar.slider(
         "Commission Rate (%)",
@@ -111,7 +111,7 @@ def render_cost_config_sidebar(
 
     # Advanced parameters
     if config_ui.show_advanced:
-        st.sidebar.subheader("⚙️ Advanced Settings")
+        st.sidebar.subheader("âš™ï¸ Advanced Settings")
 
         col1, col2 = st.sidebar.columns(2)
 
@@ -146,7 +146,7 @@ def render_cost_config_sidebar(
 
     # Cost breakdown preview
     if config_ui.show_cost_breakdown:
-        st.sidebar.subheader("📈 Cost Impact Preview")
+        st.sidebar.subheader("ðŸ“ˆ Cost Impact Preview")
 
         # Sample trade calculation
         sample_trade_value = st.sidebar.number_input(
@@ -274,11 +274,11 @@ def _show_cost_breakdown_preview(
 
     # Color coding based on cost level
     if cost_percentage < 0.1:
-        st.sidebar.success("✅ Low cost")
+        st.sidebar.success("âœ… Low cost")
     elif cost_percentage < 0.3:
-        st.sidebar.info("ℹ️ Moderate cost")
+        st.sidebar.info("â„¹ï¸ Moderate cost")
     else:
-        st.sidebar.warning("⚠️ High cost")
+        st.sidebar.warning("âš ï¸ High cost")
 
 
 def _validate_cost_parameters(
@@ -323,7 +323,7 @@ def render_cost_summary(metrics: Dict[str, Any]) -> None:
     if not metrics:
         return
 
-    st.subheader("💰 Trading Cost Summary")
+    st.subheader("ðŸ’° Trading Cost Summary")
 
     # Check if cost metrics are available
     cost_metrics = [
@@ -385,7 +385,7 @@ def render_cost_summary(metrics: Dict[str, Any]) -> None:
 
     # Cost breakdown chart
     if all(metric in metrics for metric in ["total_commission", "total_slippage", "total_spread"]):
-        st.subheader("📊 Cost Breakdown")
+        st.subheader("ðŸ“Š Cost Breakdown")
 
         cost_data = {
             "Commission": metrics["total_commission"],
@@ -405,7 +405,7 @@ def render_cost_summary(metrics: Dict[str, Any]) -> None:
 
     # Cash efficiency metrics
     if any(metric in metrics for metric in ["avg_cash_utilization", "cash_drag_cost", "cash_drag_percentage"]):
-        st.subheader("💵 Cash Efficiency")
+        st.subheader("ðŸ’µ Cash Efficiency")
 
         col1, col2, col3 = st.columns(3)
 
@@ -441,4 +441,4 @@ def get_cost_config_from_session() -> CostParameters:
 
 def save_cost_config_to_session(cost_params: CostParameters) -> None:
     """Save cost configuration to Streamlit session state."""
-    st.session_state.cost_params = cost_params 
+    st.session_state.cost_params = cost_params

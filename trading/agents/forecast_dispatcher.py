@@ -1,4 +1,4 @@
-"""
+﻿"""
 Forecast Dispatcher
 
 This module provides intelligent forecast dispatching with fallback mechanisms,
@@ -85,7 +85,7 @@ class ForecastDispatcher(BaseAgent):
         self._load_performance_history()
         
         # Confidence interval settings
-        self.confidence_levels = [0.68, 0.95, 0.99]  # 1σ, 2σ, 3σ
+        self.confidence_levels = [0.68, 0.95, 0.99]  # 1Ïƒ, 2Ïƒ, 3Ïƒ
         
     def _load_performance_history(self) -> None:
         """Load model performance history."""
@@ -483,4 +483,4 @@ class ForecastDispatcher(BaseAgent):
         """Reset performance tracking."""
         self.model_performance = {}
         self.last_working_model = None
-        self._save_performance_history() 
+        self._save_performance_history()

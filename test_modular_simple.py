@@ -15,7 +15,7 @@ def test_file_structure():
     """Test that all modular files exist and have correct structure."""
     logger.info("🧪 Testing Modular File Structure")
     logger.info("=" * 50)
-    
+
     # Test execution agent modular structure
     execution_files = [
         "trading/agents/execution/__init__.py",
@@ -25,14 +25,14 @@ def test_file_structure():
         "trading/agents/execution/position_manager.py",
         "trading/agents/execution/execution_agent.py"
     ]
-    
+
     logger.info("📁 Checking Execution Agent Modular Files:")
     for file_path in execution_files:
         if os.path.exists(file_path):
             logger.info(f"  ✅ {file_path}")
         else:
             logger.error(f"  ❌ {file_path} - MISSING")
-    
+
     # Test optimizer agent modular structure
     optimization_files = [
         "trading/agents/optimization/__init__.py",
@@ -42,14 +42,14 @@ def test_file_structure():
         "trading/agents/optimization/performance_analyzer.py",
         "trading/agents/optimization/optimizer_agent.py"
     ]
-    
+
     logger.info("\n📁 Checking Optimizer Agent Modular Files:")
     for file_path in optimization_files:
         if os.path.exists(file_path):
             logger.info(f"  ✅ {file_path}")
         else:
             logger.error(f"  ❌ {file_path} - MISSING")
-    
+
     # Test task orchestrator modular structure
     orchestrator_files = [
         "core/orchestrator/__init__.py",
@@ -61,14 +61,14 @@ def test_file_structure():
         "core/orchestrator/task_providers.py",
         "core/orchestrator/task_orchestrator.py"
     ]
-    
+
     logger.info("\n📁 Checking Task Orchestrator Modular Files:")
     for file_path in orchestrator_files:
         if os.path.exists(file_path):
             logger.info(f"  ✅ {file_path}")
         else:
             logger.error(f"  ❌ {file_path} - MISSING")
-    
+
     # Test updated test files
     test_files = [
         "trading/agents/test_execution_agent.py",
@@ -76,7 +76,7 @@ def test_file_structure():
         "tests/test_optimization_modular.py",
         "tests/test_task_orchestrator.py"
     ]
-    
+
     logger.info("\n📁 Checking Updated Test Files:")
     for file_path in test_files:
         if os.path.exists(file_path):
@@ -89,14 +89,14 @@ def test_file_sizes():
     """Test that the original large files have been reduced in size."""
     logger.info("\n📊 Testing File Size Reduction")
     logger.info("=" * 50)
-    
+
     # Check if original large files still exist
     original_files = [
         "trading/agents/execution_agent.py",
         "trading/agents/optimizer_agent.py",
         "core/task_orchestrator.py"
     ]
-    
+
     for file_path in original_files:
         if os.path.exists(file_path):
             size = os.path.getsize(file_path)
@@ -109,7 +109,7 @@ def test_import_structure():
     """Test the import structure of modular components."""
     logger.info("\n🔗 Testing Import Structure")
     logger.info("=" * 50)
-    
+
     # Test execution agent imports
     try:
         with open("trading/agents/execution/__init__.py", "r") as f:
@@ -120,7 +120,7 @@ def test_import_structure():
                 logger.error("  ❌ Execution agent __init__.py missing exports")
     except Exception as e:
         logger.error(f"  ❌ Error reading execution agent __init__.py: {e}")
-    
+
     # Test optimizer agent imports
     try:
         with open("trading/agents/optimization/__init__.py", "r") as f:
@@ -131,7 +131,7 @@ def test_import_structure():
                 logger.error("  ❌ Optimizer agent __init__.py missing exports")
     except Exception as e:
         logger.error(f"  ❌ Error reading optimizer agent __init__.py: {e}")
-    
+
     # Test orchestrator imports
     try:
         with open("core/orchestrator/__init__.py", "r") as f:
@@ -148,16 +148,16 @@ def main():
     """Run all modular structure tests."""
     logger.info("🚀 Starting Modular Structure Tests")
     logger.info("=" * 60)
-    
+
     test_file_structure()
     test_file_sizes()
     test_import_structure()
-    
+
     logger.info("\n🎉 Modular Structure Tests Completed!")
     logger.info("=" * 60)
     logger.info("\n📋 Summary of Modularization:")
     logger.info("✅ ExecutionAgent (2110 lines) → 6 modular files")
-    logger.info("✅ OptimizerAgent (1642 lines) → 6 modular files") 
+    logger.info("✅ OptimizerAgent (1642 lines) → 6 modular files")
     logger.info("✅ TaskOrchestrator (952 lines) → 8 modular files")
     logger.info("✅ All associated tests updated")
     logger.info("✅ Import structures properly configured")
@@ -165,4 +165,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()
+

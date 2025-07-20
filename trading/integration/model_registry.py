@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Registry
 
 Centralized model management system that provides:
@@ -208,11 +208,11 @@ class ModelRegistry:
             # Save registry
             self._save_registry()
             
-            self.logger.info(f"✅ Model '{name}' registered successfully")
+            self.logger.info(f"âœ… Model '{name}' registered successfully")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to register model '{name}': {e}")
+            self.logger.error(f"âŒ Failed to register model '{name}': {e}")
             return False
     
     def unregister_model(self, name: str) -> bool:
@@ -227,14 +227,14 @@ class ModelRegistry:
                     del self.model_instances[name]
                 
                 self._save_registry()
-                self.logger.info(f"✅ Model '{name}' unregistered successfully")
+                self.logger.info(f"âœ… Model '{name}' unregistered successfully")
                 return True
             else:
-                self.logger.warning(f"⚠️ Model '{name}' not found in registry")
+                self.logger.warning(f"âš ï¸ Model '{name}' not found in registry")
                 return False
                 
         except Exception as e:
-            self.logger.error(f"❌ Failed to unregister model '{name}': {e}")
+            self.logger.error(f"âŒ Failed to unregister model '{name}': {e}")
             return False
     
     def get_model(self, name: str) -> Optional[Type]:
@@ -257,11 +257,11 @@ class ModelRegistry:
             instance = model_class(**kwargs)
             self.model_instances[name] = instance
             
-            self.logger.info(f"✅ Created instance of model '{name}'")
+            self.logger.info(f"âœ… Created instance of model '{name}'")
             return instance
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to create instance of model '{name}': {e}")
+            self.logger.error(f"âŒ Failed to create instance of model '{name}': {e}")
             return None
     
     def get_best_model(self, 
@@ -306,14 +306,14 @@ class ModelRegistry:
                     best_model = name
             
             if best_model:
-                self.logger.info(f"✅ Best model for {task_type.value}: {best_model} (score: {best_score:.4f})")
+                self.logger.info(f"âœ… Best model for {task_type.value}: {best_model} (score: {best_score:.4f})")
             else:
-                self.logger.warning(f"⚠️ No suitable model found for {task_type.value}")
+                self.logger.warning(f"âš ï¸ No suitable model found for {task_type.value}")
             
             return best_model
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to get best model: {e}")
+            self.logger.error(f"âŒ Failed to get best model: {e}")
             return None
     
     def track_performance(self, 
@@ -346,11 +346,11 @@ class ModelRegistry:
             # Save registry
             self._save_registry()
             
-            self.logger.info(f"✅ Performance tracked for model '{model_name}'")
+            self.logger.info(f"âœ… Performance tracked for model '{model_name}'")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to track performance for model '{model_name}': {e}")
+            self.logger.error(f"âŒ Failed to track performance for model '{model_name}': {e}")
             return False
     
     def get_performance_history(self, 
@@ -370,7 +370,7 @@ class ModelRegistry:
             return sorted(history, key=lambda x: x.timestamp)
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to get performance history for model '{model_name}': {e}")
+            self.logger.error(f"âŒ Failed to get performance history for model '{model_name}': {e}")
             return []
     
     def get_model_info(self, name: str) -> Optional[Dict[str, Any]]:
@@ -404,7 +404,7 @@ class ModelRegistry:
             }
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to get model info for '{name}': {e}")
+            self.logger.error(f"âŒ Failed to get model info for '{name}': {e}")
             return None
     
     def list_models(self, 
@@ -427,7 +427,7 @@ class ModelRegistry:
             return models
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to list models: {e}")
+            self.logger.error(f"âŒ Failed to list models: {e}")
             return []
     
     def get_registry_summary(self) -> Dict[str, Any]:
@@ -454,7 +454,7 @@ class ModelRegistry:
             }
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to get registry summary: {e}")
+            self.logger.error(f"âŒ Failed to get registry summary: {e}")
             return {}
     
     async def health_check(self) -> Dict[str, Any]:
@@ -515,13 +515,13 @@ def track_model_performance(model_name: str, task_type: TaskType, **metrics) -> 
 if __name__ == "__main__":
     # Demo usage
     async def demo():
-        print("📊 Model Registry Demo")
+        print("ðŸ“Š Model Registry Demo")
         print("=" * 50)
         
         registry = ModelRegistry()
         
         # Register some example models
-        print("\n🔧 Registering example models...")
+        print("\nðŸ”§ Registering example models...")
         
         # Example model classes (these would be actual model classes in practice)
         class ExampleLSTM:
@@ -550,7 +550,7 @@ if __name__ == "__main__":
         )
         
         # Track performance
-        print("\n📈 Tracking performance...")
+        print("\nðŸ“ˆ Tracking performance...")
         registry.track_performance(
             "lstm_forecaster",
             TaskType.FORECASTING,
@@ -570,7 +570,7 @@ if __name__ == "__main__":
         )
         
         # Get best models
-        print("\n🏆 Getting best models...")
+        print("\nðŸ† Getting best models...")
         best_forecaster = registry.get_best_model(TaskType.FORECASTING)
         best_classifier = registry.get_best_model(TaskType.CLASSIFICATION)
         
@@ -578,11 +578,11 @@ if __name__ == "__main__":
         print(f"Best classifier: {best_classifier}")
         
         # Get registry summary
-        print("\n📋 Registry summary...")
+        print("\nðŸ“‹ Registry summary...")
         summary = registry.get_registry_summary()
         print(f"Total models: {summary['total_models']}")
         print(f"Task type distribution: {summary['task_type_distribution']}")
         
-        print("\n✅ Demo completed!")
+        print("\nâœ… Demo completed!")
     
-    asyncio.run(demo()) 
+    asyncio.run(demo())

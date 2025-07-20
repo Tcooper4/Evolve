@@ -1,4 +1,4 @@
-"""
+﻿"""
 Signal Trace - Batch 21
 Safe signal tracing with ast.literal_eval() instead of eval()
 """
@@ -370,4 +370,4 @@ class SignalTracer:
 
 def create_signal_tracer(enable_safe_eval: bool = True) -> SignalTracer:
     """Factory function to create signal tracer."""
-    return SignalTracer(enable_safe_eval=enable_safe_eval) 
+    return SignalTracer(enable_safe_eval=enable_safe_eval)

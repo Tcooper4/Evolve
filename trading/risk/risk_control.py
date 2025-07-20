@@ -1,4 +1,4 @@
-"""
+﻿"""
 Risk Control Module
 
 Provides risk control logic using rolling standard deviation and threshold comparison
@@ -176,4 +176,4 @@ class RiskControl:
         elif risk_count == 2:
             return 0.5
         else:
-            return 0.25 
+            return 0.25

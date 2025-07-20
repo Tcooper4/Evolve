@@ -1,4 +1,4 @@
-Forward Validation Utilities
+﻿Forward Validation Utilities
 
 This module provides utility functions for walk-forward validation,
 wrapping the existing WalkForwardAgent for easier use.
@@ -151,4 +151,4 @@ def get_walk_forward_agent() -> WalkForwardAgent:
         timeout_seconds=30     retry_attempts=3,
         custom_config={}
     )
-    return WalkForwardAgent(config) 
+    return WalkForwardAgent(config)

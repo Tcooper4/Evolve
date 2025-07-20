@@ -1,4 +1,4 @@
-"""Transformer model for time series forecasting."""
+﻿"""Transformer model for time series forecasting."""
 
 # Standard library imports
 import logging
@@ -12,7 +12,7 @@ try:
     from sklearn.linear_model import Ridge
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling Ridge regression fallback.")
+    print("âš ï¸ scikit-learn not available. Disabling Ridge regression fallback.")
     print(f"   Missing: {e}")
     Ridge = None
     SKLEARN_AVAILABLE = False
@@ -22,7 +22,7 @@ try:
     from trading.models.prophet_model import ProphetModel
     PROPHET_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ Prophet model not available. Disabling Prophet fallback.")
+    print("âš ï¸ Prophet model not available. Disabling Prophet fallback.")
     print(f"   Missing: {e}")
     ProphetModel = None
     PROPHET_AVAILABLE = False
@@ -37,7 +37,7 @@ try:
     import torch.nn as nn
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling transformer models.")
+    print("âš ï¸ PyTorch not available. Disabling transformer models.")
     print(f"   Missing: {e}")
     torch = None
     nn = None

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Forecast Helper Utilities
 
 This module provides shared utilities for forecasting operations, including
@@ -215,4 +215,4 @@ def log_forecast_performance(
     )
 
     if metrics:
-        logger.info(f"Accuracy metrics: {metrics}") 
+        logger.info(f"Accuracy metrics: {metrics}")

@@ -15,29 +15,29 @@ logger = logging.getLogger(__name__)
 def generate_sample_data(n_points: int = 100) -> pd.Series:
     """Generate sample time series data for testing."""
     np.random.seed(42)
-    
+
     # Create time index
     dates = pd.date_range(start='2020-01-01', periods=n_points, freq='D')
-    
+
     # Generate trend + seasonality + noise
     trend = np.linspace(100, 150, n_points)
     seasonality = 10 * np.sin(2 * np.pi * np.arange(n_points) / 7)  # Weekly seasonality
     noise = np.random.normal(0, 5, n_points)
-    
+
     data = trend + seasonality + noise
     return pd.Series(data, index=dates)
 
 def test_enhanced_arima():
     """Test the enhanced ARIMA model with different configurations."""
-    
+
     try:
         from trading.models.arima_model import ARIMAModel
-        
+
         # Generate sample data
         logger.info("Generating sample time series data...")
         data = generate_sample_data(100)
         logger.info(f"Generated {len(data)} data points")
-        
+
         # Test configurations
         configs = [
             {
@@ -99,32 +99,32 @@ def test_enhanced_arima():
                 }
             }
         ]
-        
+
         results = []
-        
+
         for test_config in configs:
             logger.info(f"\n{'='*60}")
             logger.info(f"Testing: {test_config['name']}")
             logger.info(f"{'='*60}")
-            
+
             try:
                 # Create and fit model
                 model = ARIMAModel(test_config['config'])
                 fit_result = model.fit(data)
-                
+
                 if fit_result['success']:
                     logger.info(f"✅ Model fitted successfully")
                     logger.info(f"   Order: {fit_result.get('order', 'N/A')}")
                     logger.info(f"   Seasonal Order: {fit_result.get('seasonal_order', 'N/A')}")
                     logger.info(f"   AIC: {fit_result.get('aic', 'N/A')}")
                     logger.info(f"   BIC: {fit_result.get('bic', 'N/A')}")
-                    
+
                     # Make predictions
                     pred_result = model.predict(steps=10)
                     if pred_result['success']:
                         logger.info(f"✅ Predictions generated successfully")
                         logger.info(f"   Forecast shape: {len(pred_result['forecast'])}")
-                        
+
                         # Store results
                         results.append({
                             "name": test_config['name'],
@@ -149,7 +149,7 @@ def test_enhanced_arima():
                         "success": False,
                         "error": fit_result.get('error', 'Unknown error')
                     })
-                    
+
             except Exception as e:
                 logger.error(f"❌ Test failed with exception: {e}")
                 results.append({
@@ -157,18 +157,18 @@ def test_enhanced_arima():
                     "success": False,
                     "error": str(e)
                 })
-        
+
         # Summary
         logger.info(f"\n{'='*60}")
         logger.info("TEST SUMMARY")
         logger.info(f"{'='*60}")
-        
+
         successful_tests = [r for r in results if r['success']]
         failed_tests = [r for r in results if not r['success']]
-        
+
         logger.info(f"✅ Successful tests: {len(successful_tests)}/{len(results)}")
         logger.info(f"❌ Failed tests: {len(failed_tests)}/{len(results)}")
-        
+
         if successful_tests:
             logger.info(f"\nSuccessful configurations:")
             for result in successful_tests:
@@ -180,14 +180,14 @@ def test_enhanced_arima():
                 logger.info(f"    BIC: {result['bic']:.2f}")
                 logger.info(f"    Optimization: {result['optimization_criterion'].upper()}")
                 logger.info("")
-        
+
         if failed_tests:
             logger.info(f"\nFailed configurations:")
             for result in failed_tests:
                 logger.info(f"  - {result['name']}: {result['error']}")
-        
+
         return len(successful_tests) == len(results)
-        
+
     except ImportError as e:
         logger.error(f"❌ Import error: {e}")
         logger.info("Make sure you have pmdarima installed: pip install pmdarima")
@@ -199,18 +199,19 @@ def test_enhanced_arima():
 if __name__ == "__main__":
     logger.info("Starting Enhanced ARIMA Model Tests")
     logger.info("=" * 60)
-    
+
     success = test_enhanced_arima()
-    
+
     if success:
         logger.info("\n🎉 ALL TESTS PASSED!")
     else:
         logger.info("\n❌ SOME TESTS FAILED!")
-    
+
     logger.info("\nEnhanced ARIMA Features:")
     logger.info("✅ Automatic parameter selection with pmdarima.auto_arima")
     logger.info("✅ Seasonal component control (seasonal=True/False)")
     logger.info("✅ Multiple optimization criteria (AIC, BIC, MSE, RMSE)")
     logger.info("✅ Backtesting for MSE/RMSE optimization")
     logger.info("✅ Fallback to manual ARIMA if auto_arima fails")
-    logger.info("✅ Comprehensive logging and error handling") 
+    logger.info("✅ Comprehensive logging and error handling")
+

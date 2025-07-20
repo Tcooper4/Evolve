@@ -1,4 +1,4 @@
-"""
+﻿"""
 Training Loop - Batch 17
 Enhanced training loop with gradient clipping for training stability
 """
@@ -11,7 +11,7 @@ try:
     from torch.utils.data import DataLoader
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling training loop capabilities.")
+    print("âš ï¸ PyTorch not available. Disabling training loop capabilities.")
     print(f"   Missing: {e}")
     torch = None
     nn = None
@@ -449,4 +449,4 @@ def create_training_loop(model: nn.Module,
                         train_loader: DataLoader,
                         val_loader: Optional[DataLoader] = None) -> TrainingLoop:
     """Factory function to create a training loop."""
-    return TrainingLoop(model, config, train_loader, val_loader) 
+    return TrainingLoop(model, config, train_loader, val_loader)

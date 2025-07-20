@@ -1,4 +1,4 @@
-"""
+﻿"""
 Unit tests for XGBoost forecaster model.
 
 Tests XGBoost model functionality with synthetic time series data,

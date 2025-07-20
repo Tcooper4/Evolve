@@ -1,4 +1,4 @@
-"""
+﻿"""
 Broker Adapter
 
 This module provides a unified interface for multiple brokers:
@@ -255,7 +255,7 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
                 from alpaca.trading.client import TradingClient
                 from alpaca.data.historical import StockHistoricalDataClient
             except ImportError as e:
-                print("⚠️ alpaca-py not available. Cannot connect to Alpaca.")
+                print("âš ï¸ alpaca-py not available. Cannot connect to Alpaca.")
                 print(f"   Missing: {e}")
                 self.is_connected = False
                 return False
@@ -295,7 +295,7 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
                 from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest, StopOrderRequest
                 from alpaca.trading.enums import OrderSide as AlpacaOrderSide, TimeInForce
             except ImportError as e:
-                print("⚠️ alpaca-py not available. Cannot submit order.")
+                print("âš ï¸ alpaca-py not available. Cannot submit order.")
                 print(f"   Missing: {e}")
                 raise Exception("alpaca-py not available")
             
@@ -1084,4 +1084,4 @@ if __name__ == "__main__":
         
         await adapter.disconnect()
     
-    asyncio.run(main()) 
+    asyncio.run(main())

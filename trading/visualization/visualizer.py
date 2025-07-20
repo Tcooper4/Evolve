@@ -1,4 +1,4 @@
-"""
+﻿"""
 Enhanced Visualizer Module
 
 Enhanced with Batch 11 features: comprehensive input validation for all DataFrame overlays

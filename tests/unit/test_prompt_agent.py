@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Prompt Agent
 
 Comprehensive tests including edge cases, invalid prompts, and error handling.
@@ -123,9 +123,9 @@ class TestPromptAgent:
     def test_mixed_language_prompt(self):
         """Test handling of mixed language prompts."""
         mixed_prompts = [
-            "forecast AAPL mañana",
+            "forecast AAPL maÃ±ana",
             "RSI strategy pour AAPL",
-            "analyze marché for AAPL"
+            "analyze marchÃ© for AAPL"
         ]
         
         for prompt in mixed_prompts:
@@ -136,9 +136,9 @@ class TestPromptAgent:
     def test_prompt_with_emojis(self):
         """Test handling of prompts with emojis."""
         emoji_prompts = [
-            "📈 forecast AAPL 📊",
-            "💰 RSI strategy 💸",
-            "🎯 analyze market 🎲"
+            "ðŸ“ˆ forecast AAPL ðŸ“Š",
+            "ðŸ’° RSI strategy ðŸ’¸",
+            "ðŸŽ¯ analyze market ðŸŽ²"
         ]
         
         for prompt in emoji_prompts:
@@ -160,9 +160,9 @@ class TestPromptAgent:
     def test_prompt_with_unicode(self):
         """Test handling of prompts with unicode characters."""
         unicode_prompts = [
-            "forecast AAPL αβγδε",
-            "RSI strategy 中文",
-            "analyze market café"
+            "forecast AAPL Î±Î²Î³Î´Îµ",
+            "RSI strategy ä¸­æ–‡",
+            "analyze market cafÃ©"
         ]
         
         for prompt in unicode_prompts:

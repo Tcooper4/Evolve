@@ -1,4 +1,4 @@
-"""
+﻿"""
 Monte Carlo Simulation Dashboard
 
 This page provides an interactive interface for running Monte Carlo simulations
@@ -190,7 +190,7 @@ def create_monte_carlo_plot(
 def display_summary_statistics(stats: dict):
     """Display summary statistics in a clean format."""
     
-    st.subheader("📊 Summary Statistics")
+    st.subheader("ðŸ“Š Summary Statistics")
     
     # Create columns for metrics
     col1, col2, col3, col4 = st.columns(4)
@@ -247,19 +247,19 @@ def main():
     """Main function for the Monte Carlo Simulation dashboard."""
     
     st.set_page_config(
-        page_title="🎲 Monte Carlo Simulation",
+        page_title="ðŸŽ² Monte Carlo Simulation",
         layout="wide",
         initial_sidebar_state="expanded"
     )
     
-    st.title("🎲 Monte Carlo Simulation Dashboard")
+    st.title("ðŸŽ² Monte Carlo Simulation Dashboard")
     st.markdown(
         "Simulate portfolio performance using bootstrapped historical returns "
         "and analyze risk through percentile bands and confidence intervals."
     )
     
     # Sidebar configuration
-    st.sidebar.header("⚙️ Simulation Configuration")
+    st.sidebar.header("âš™ï¸ Simulation Configuration")
     
     # Data source selection
     data_source = st.sidebar.selectbox(
@@ -270,7 +270,7 @@ def main():
     
     if data_source == "Sample Data":
         # Sample data configuration
-        st.sidebar.subheader("📊 Sample Data Parameters")
+        st.sidebar.subheader("ðŸ“Š Sample Data Parameters")
         
         n_days = st.sidebar.slider(
             "Number of Days",
@@ -299,7 +299,7 @@ def main():
         
     else:
         # File upload
-        st.sidebar.subheader("📁 Upload Returns File")
+        st.sidebar.subheader("ðŸ“ Upload Returns File")
         uploaded_file = st.sidebar.file_uploader(
             "Upload CSV file with returns",
             type=['csv'],
@@ -325,7 +325,7 @@ def main():
             return
     
     # Simulation parameters
-    st.sidebar.subheader("🎯 Simulation Parameters")
+    st.sidebar.subheader("ðŸŽ¯ Simulation Parameters")
     
     initial_capital = st.sidebar.number_input(
         "Initial Capital ($)",
@@ -363,7 +363,7 @@ def main():
         block_size = 20
     
     # Confidence levels
-    st.sidebar.subheader("📈 Confidence Levels")
+    st.sidebar.subheader("ðŸ“ˆ Confidence Levels")
     
     p5 = st.sidebar.checkbox("5th Percentile", value=True)
     p50 = st.sidebar.checkbox("50th Percentile (Median)", value=True)
@@ -382,7 +382,7 @@ def main():
         return
     
     # Run simulation button
-    if st.sidebar.button("🚀 Run Monte Carlo Simulation", type="primary"):
+    if st.sidebar.button("ðŸš€ Run Monte Carlo Simulation", type="primary"):
         with st.spinner("Running Monte Carlo simulation..."):
             try:
                 # Create configuration
@@ -403,10 +403,10 @@ def main():
                 st.session_state.simulator = simulator
                 st.session_state.results = simulator.create_detailed_report()
                 
-                st.success(f"✅ Simulation completed! Generated {n_simulations} paths.")
+                st.success(f"âœ… Simulation completed! Generated {n_simulations} paths.")
                 
             except Exception as e:
-                st.error(f"❌ Simulation failed: {str(e)}")
+                st.error(f"âŒ Simulation failed: {str(e)}")
                 return
     
     # Display results if available
@@ -419,10 +419,10 @@ def main():
         
         # Create tabs for different views
         tab1, tab2, tab3, tab4 = st.tabs([
-            "📈 Portfolio Paths", 
-            "📊 Risk Analysis", 
-            "📋 Detailed Report",
-            "🎨 Custom Visualization"
+            "ðŸ“ˆ Portfolio Paths", 
+            "ðŸ“Š Risk Analysis", 
+            "ðŸ“‹ Detailed Report",
+            "ðŸŽ¨ Custom Visualization"
         ])
         
         with tab1:
@@ -461,7 +461,7 @@ def main():
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("### 📉 Value at Risk (VaR)")
+                st.markdown("### ðŸ“‰ Value at Risk (VaR)")
                 
                 risk_data = {
                     "Metric": ["95% VaR", "99% VaR", "95% CVaR", "99% CVaR"],
@@ -477,7 +477,7 @@ def main():
                 st.dataframe(risk_df, use_container_width=True)
             
             with col2:
-                st.markdown("### 🎯 Probability Analysis")
+                st.markdown("### ðŸŽ¯ Probability Analysis")
                 
                 prob_data = {
                     "Event": [
@@ -496,7 +496,7 @@ def main():
                 st.dataframe(prob_df, use_container_width=True)
             
             # Volatility analysis
-            st.markdown("### 📊 Volatility Analysis")
+            st.markdown("### ðŸ“Š Volatility Analysis")
             
             vol_analysis = results['percentile_analysis']['volatility_analysis']
             
@@ -522,7 +522,7 @@ def main():
             report_json = json.dumps(results, indent=2, default=str)
             
             st.download_button(
-                label="📥 Download Report (JSON)",
+                label="ðŸ“¥ Download Report (JSON)",
                 data=report_json,
                 file_name=f"monte_carlo_report_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.json",
                 mime="application/json"
@@ -613,7 +613,7 @@ def main():
     
     else:
         # Show data preview
-        st.subheader("📊 Data Preview")
+        st.subheader("ðŸ“Š Data Preview")
         
         col1, col2 = st.columns(2)
         
@@ -641,8 +641,8 @@ def main():
             )
             st.plotly_chart(fig, use_container_width=True)
         
-        st.info("👈 Configure simulation parameters in the sidebar and click 'Run Monte Carlo Simulation' to start.")
+        st.info("ðŸ‘ˆ Configure simulation parameters in the sidebar and click 'Run Monte Carlo Simulation' to start.")
 
 
 if __name__ == "__main__":
-    main() 
+    main()

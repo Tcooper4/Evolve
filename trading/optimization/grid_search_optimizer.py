@@ -1,4 +1,4 @@
-"""Grid Search Optimization Method.
+﻿"""Grid Search Optimization Method.
 
 This module contains the GridSearch optimization method extracted from strategy_optimizer.py.
 """
@@ -324,4 +324,4 @@ class GridSearch(OptimizationMethod):
 
         # Generate all combinations
         combinations = list(itertools.product(*param_values))
-        return [dict(zip(param_names, combo)) for combo in combinations] 
+        return [dict(zip(param_names, combo)) for combo in combinations]

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Dependency Resolution Script
 
@@ -29,15 +29,15 @@ def run_command(cmd, capture_output=True):
 
 def test_pip_compile():
     """Test pip-compile with the current requirements.in."""
-    print("🔍 Testing pip-compile with current requirements.in...")
+    print("ðŸ” Testing pip-compile with current requirements.in...")
     
     success, stdout, stderr = run_command("pip-compile requirements.in --upgrade")
     
     if success:
-        print("✅ pip-compile succeeded!")
+        print("âœ… pip-compile succeeded!")
         return True
     else:
-        print("❌ pip-compile failed:")
+        print("âŒ pip-compile failed:")
         print(stderr)
         return False
 
@@ -50,16 +50,16 @@ def test_problematic_packages():
         "bentoml==1.4.17"
     ]
     
-    print("\n🔍 Testing problematic packages individually...")
+    print("\nðŸ” Testing problematic packages individually...")
     
     for package in problematic_packages:
         print(f"\nTesting {package}...")
         success, stdout, stderr = run_command(f"pip install {package}")
         
         if success:
-            print(f"✅ {package} installed successfully")
+            print(f"âœ… {package} installed successfully")
         else:
-            print(f"❌ {package} failed to install:")
+            print(f"âŒ {package} failed to install:")
             print(stderr[:500] + "..." if len(stderr) > 500 else stderr)
 
 def create_alternative_requirements():
@@ -119,13 +119,13 @@ flake8>=6.0.0,<7.0.0
     with open("requirements-stable.in", "w") as f:
         f.write(stable_requirements)
     
-    print("📝 Created alternative requirements files:")
+    print("ðŸ“ Created alternative requirements files:")
     print("  - requirements-minimal.in (core functionality only)")
     print("  - requirements-stable.in (stable packages only)")
 
 def test_alternative_requirements():
     """Test pip-compile with alternative requirements files."""
-    print("\n🔍 Testing alternative requirements files...")
+    print("\nðŸ” Testing alternative requirements files...")
     
     for req_file in ["requirements-minimal.in", "requirements-stable.in"]:
         if os.path.exists(req_file):
@@ -133,14 +133,14 @@ def test_alternative_requirements():
             success, stdout, stderr = run_command(f"pip-compile {req_file} --upgrade")
             
             if success:
-                print(f"✅ {req_file} compiled successfully")
+                print(f"âœ… {req_file} compiled successfully")
             else:
-                print(f"❌ {req_file} failed:")
+                print(f"âŒ {req_file} failed:")
                 print(stderr[:300] + "..." if len(stderr) > 300 else stderr)
 
 def generate_recommendations():
     """Generate recommendations for dependency management."""
-    print("\n📋 Dependency Management Recommendations:")
+    print("\nðŸ“‹ Dependency Management Recommendations:")
     print("\n1. Use requirements-stable.in for production:")
     print("   pip-compile requirements-stable.in --upgrade --generate-hashes")
     
@@ -163,12 +163,12 @@ def generate_recommendations():
 
 def main():
     """Main function to run dependency resolution."""
-    print("🚀 Dependency Resolution Script")
+    print("ðŸš€ Dependency Resolution Script")
     print("=" * 50)
     
     # Test current setup
     if not test_pip_compile():
-        print("\n⚠️  Current requirements.in has issues")
+        print("\nâš ï¸  Current requirements.in has issues")
     
     # Test problematic packages
     test_problematic_packages()
@@ -182,7 +182,7 @@ def main():
     # Generate recommendations
     generate_recommendations()
     
-    print("\n✅ Dependency resolution analysis complete!")
+    print("\nâœ… Dependency resolution analysis complete!")
 
 if __name__ == "__main__":
-    main() 
+    main()

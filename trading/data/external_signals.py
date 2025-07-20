@@ -1,4 +1,4 @@
-"""
+﻿"""
 External Signal Integration
 
 This module provides comprehensive integration with external data sources for enhanced
@@ -503,12 +503,12 @@ class TwitterSentimentCollector:
             positive_words = {
                 "bullish", "positive", "growth", "profit", "gain", "rise", "up",
                 "strong", "buy", "outperform", "beat", "exceed", "surge", "rally",
-                "moon", "rocket", "🚀", "📈", "💎"
+                "moon", "rocket", "ðŸš€", "ðŸ“ˆ", "ðŸ’Ž"
             }
             negative_words = {
                 "bearish", "negative", "decline", "loss", "fall", "down", "weak",
                 "sell", "underperform", "miss", "drop", "crash", "plunge",
-                "dump", "💩", "📉", "🔥"
+                "dump", "ðŸ’©", "ðŸ“‰", "ðŸ”¥"
             }
             
             words = set(text.lower().split())

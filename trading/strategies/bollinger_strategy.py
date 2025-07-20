@@ -1,4 +1,4 @@
-"""Bollinger Bands trading strategy implementation."""
+﻿"""Bollinger Bands trading strategy implementation."""
 
 from dataclasses import dataclass
 from datetime import datetime

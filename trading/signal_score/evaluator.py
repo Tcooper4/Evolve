@@ -1,4 +1,4 @@
-"""
+﻿"""
 Signal Score Evaluator - Batch 19
 Enhanced signal evaluation with multiple strategy support and numerical safety
 """
@@ -550,4 +550,4 @@ class SignalScoreEvaluator:
 
 def create_signal_score_evaluator(enable_nan_protection: bool = True) -> SignalScoreEvaluator:
     """Factory function to create signal score evaluator."""
-    return SignalScoreEvaluator(enable_nan_protection=enable_nan_protection) 
+    return SignalScoreEvaluator(enable_nan_protection=enable_nan_protection)

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Feature Generator
 
 Generates features for machine learning models with comprehensive logging
@@ -335,4 +335,4 @@ class FeatureGenerator:
     def clear_cache(self):
         """Clear feature cache."""
         self.feature_cache.clear()
-        self.logger.info("Feature cache cleared") 
+        self.logger.info("Feature cache cleared")

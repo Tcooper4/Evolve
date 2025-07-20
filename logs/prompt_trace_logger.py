@@ -1,4 +1,4 @@
-"""
+﻿"""
 Prompt Trace Logger
 
 This module provides logging functionality for tracking prompt processing
@@ -318,4 +318,4 @@ def create_prompt_trace_logger(log_file: Optional[str] = None) -> PromptTraceLog
     Returns:
         PromptTraceLogger instance
     """
-    return PromptTraceLogger(log_file) 
+    return PromptTraceLogger(log_file)

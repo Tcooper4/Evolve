@@ -1,4 +1,4 @@
-"""
+﻿"""
 Task Orchestrator Package
 
 This package contains the modularized task orchestrator components:
@@ -35,4 +35,4 @@ __all__ = [
     'TaskConditions',
     'TaskProvider',
     'AgentTaskProvider'
-] 
+]

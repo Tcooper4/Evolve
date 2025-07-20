@@ -1,4 +1,4 @@
-"""
+﻿"""
 Integration Enhancement Tests
 
 Comprehensive tests for the new integration components:
@@ -29,7 +29,7 @@ try:
     from trading.integration.service_mesh import ServiceMesh, ServiceStatus, RequestType
     INTEGRATION_AVAILABLE = True
 except ImportError as e:
-    print(f"⚠️ Integration components not available: {e}")
+    print(f"âš ï¸ Integration components not available: {e}")
     INTEGRATION_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ class TestIntegrationEnhancements:
     
     async def test_meta_agent_manager(self):
         """Test MetaAgentManager functionality."""
-        self.logger.info("🧪 Testing MetaAgentManager...")
+        self.logger.info("ðŸ§ª Testing MetaAgentManager...")
         
         try:
             # Create MetaAgentManager
@@ -90,16 +90,16 @@ class TestIntegrationEnhancements:
                 for result in results:
                     self.logger.info(f"Agent {result.agent_name}: {result.status}")
             
-            self.logger.info("✅ MetaAgentManager tests completed")
+            self.logger.info("âœ… MetaAgentManager tests completed")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ MetaAgentManager test failed: {e}")
+            self.logger.error(f"âŒ MetaAgentManager test failed: {e}")
             return False
     
     async def test_model_registry(self):
         """Test ModelRegistry functionality."""
-        self.logger.info("🧪 Testing ModelRegistry...")
+        self.logger.info("ðŸ§ª Testing ModelRegistry...")
         
         try:
             # Create ModelRegistry with temp directory
@@ -120,7 +120,7 @@ class TestIntegrationEnhancements:
             )
             
             assert success, "Model registration failed"
-            self.logger.info("✅ Model registration successful")
+            self.logger.info("âœ… Model registration successful")
             
             # Test performance tracking
             success = registry.track_performance(
@@ -132,7 +132,7 @@ class TestIntegrationEnhancements:
             )
             
             assert success, "Performance tracking failed"
-            self.logger.info("✅ Performance tracking successful")
+            self.logger.info("âœ… Performance tracking successful")
             
             # Test getting best model
             best_model = registry.get_best_model(TaskType.FORECASTING)
@@ -141,7 +141,7 @@ class TestIntegrationEnhancements:
             # Test model info
             model_info = registry.get_model_info("test_lstm")
             assert model_info is not None, "Model info retrieval failed"
-            self.logger.info("✅ Model info retrieval successful")
+            self.logger.info("âœ… Model info retrieval successful")
             
             # Test registry summary
             summary = registry.get_registry_summary()
@@ -151,16 +151,16 @@ class TestIntegrationEnhancements:
             health = await registry.health_check()
             self.logger.info(f"Registry health: {health['status']}")
             
-            self.logger.info("✅ ModelRegistry tests completed")
+            self.logger.info("âœ… ModelRegistry tests completed")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ ModelRegistry test failed: {e}")
+            self.logger.error(f"âŒ ModelRegistry test failed: {e}")
             return False
     
     async def test_service_mesh(self):
         """Test ServiceMesh functionality."""
-        self.logger.info("🧪 Testing ServiceMesh...")
+        self.logger.info("ðŸ§ª Testing ServiceMesh...")
         
         try:
             # Create ServiceMesh
@@ -175,7 +175,7 @@ class TestIntegrationEnhancements:
             )
             
             assert success, "Service registration failed"
-            self.logger.info("✅ Service registration successful")
+            self.logger.info("âœ… Service registration successful")
             
             # Test service listing
             services = mesh.list_services()
@@ -184,7 +184,7 @@ class TestIntegrationEnhancements:
             # Test service info
             service_info = mesh.get_service_info("test_forecast_service")
             assert service_info is not None, "Service info retrieval failed"
-            self.logger.info("✅ Service info retrieval successful")
+            self.logger.info("âœ… Service info retrieval successful")
             
             # Test health status
             health = await mesh.get_service_health()
@@ -203,18 +203,18 @@ class TestIntegrationEnhancements:
             # Test service unregistration
             success = await mesh.unregister_service("test_forecast_service")
             assert success, "Service unregistration failed"
-            self.logger.info("✅ Service unregistration successful")
+            self.logger.info("âœ… Service unregistration successful")
             
-            self.logger.info("✅ ServiceMesh tests completed")
+            self.logger.info("âœ… ServiceMesh tests completed")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ ServiceMesh test failed: {e}")
+            self.logger.error(f"âŒ ServiceMesh test failed: {e}")
             return False
     
     async def test_integration_workflow(self):
         """Test integration workflow between components."""
-        self.logger.info("🧪 Testing Integration Workflow...")
+        self.logger.info("ðŸ§ª Testing Integration Workflow...")
         
         try:
             # Create all components
@@ -266,46 +266,46 @@ class TestIntegrationEnhancements:
                 results = await meta_manager.run_all_meta_agents()
                 self.logger.info(f"Meta agents executed: {len(results)}")
             
-            self.logger.info("✅ Integration workflow tests completed")
+            self.logger.info("âœ… Integration workflow tests completed")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Integration workflow test failed: {e}")
+            self.logger.error(f"âŒ Integration workflow test failed: {e}")
             return False
     
     async def test_error_handling(self):
         """Test error handling and resilience."""
-        self.logger.info("🧪 Testing Error Handling...")
+        self.logger.info("ðŸ§ª Testing Error Handling...")
         
         try:
             # Test MetaAgentManager with non-existent agent
             manager = MetaAgentManager()
             result = await manager.execute_agent("non_existent_agent")
             assert result.status == MetaAgentStatus.ERROR, "Should handle non-existent agent"
-            self.logger.info("✅ MetaAgentManager error handling works")
+            self.logger.info("âœ… MetaAgentManager error handling works")
             
             # Test ModelRegistry with non-existent model
             registry = ModelRegistry()
             model_info = registry.get_model_info("non_existent_model")
             assert model_info is None, "Should handle non-existent model"
-            self.logger.info("✅ ModelRegistry error handling works")
+            self.logger.info("âœ… ModelRegistry error handling works")
             
             # Test ServiceMesh with non-existent service
             mesh = ServiceMesh()
             service_info = mesh.get_service_info("non_existent_service")
             assert service_info is None, "Should handle non-existent service"
-            self.logger.info("✅ ServiceMesh error handling works")
+            self.logger.info("âœ… ServiceMesh error handling works")
             
-            self.logger.info("✅ Error handling tests completed")
+            self.logger.info("âœ… Error handling tests completed")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Error handling test failed: {e}")
+            self.logger.error(f"âŒ Error handling test failed: {e}")
             return False
     
     async def test_performance_metrics(self):
         """Test performance metrics and monitoring."""
-        self.logger.info("🧪 Testing Performance Metrics...")
+        self.logger.info("ðŸ§ª Testing Performance Metrics...")
         
         try:
             # Test ModelRegistry performance tracking
@@ -335,7 +335,7 @@ class TestIntegrationEnhancements:
             # Get performance history
             history = registry.get_performance_history("perf_model")
             assert len(history) == 5, f"Expected 5 performance entries, got {len(history)}"
-            self.logger.info(f"✅ Performance history tracking works: {len(history)} entries")
+            self.logger.info(f"âœ… Performance history tracking works: {len(history)} entries")
             
             # Test health checks
             meta_health = await MetaAgentManager().health_check()
@@ -344,20 +344,20 @@ class TestIntegrationEnhancements:
             self.logger.info(f"MetaAgent health: {meta_health['status']}")
             self.logger.info(f"Registry health: {registry_health['status']}")
             
-            self.logger.info("✅ Performance metrics tests completed")
+            self.logger.info("âœ… Performance metrics tests completed")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Performance metrics test failed: {e}")
+            self.logger.error(f"âŒ Performance metrics test failed: {e}")
             return False
     
     async def run_all_tests(self):
         """Run all integration tests."""
-        self.logger.info("🚀 Starting Integration Enhancement Tests")
+        self.logger.info("ðŸš€ Starting Integration Enhancement Tests")
         self.logger.info("=" * 60)
         
         if not INTEGRATION_AVAILABLE:
-            self.logger.error("❌ Integration components not available - skipping tests")
+            self.logger.error("âŒ Integration components not available - skipping tests")
             return False
         
         self.setup()
@@ -381,19 +381,19 @@ class TestIntegrationEnhancements:
                     result = await test_method()
                     if result:
                         passed += 1
-                        self.logger.info(f"✅ {test_method.__name__} PASSED")
+                        self.logger.info(f"âœ… {test_method.__name__} PASSED")
                     else:
-                        self.logger.error(f"❌ {test_method.__name__} FAILED")
+                        self.logger.error(f"âŒ {test_method.__name__} FAILED")
                 except Exception as e:
-                    self.logger.error(f"❌ {test_method.__name__} ERROR: {e}")
+                    self.logger.error(f"âŒ {test_method.__name__} ERROR: {e}")
             
             self.logger.info(f"\n{'='*60}")
-            self.logger.info(f"📊 Test Results: {passed}/{total} tests passed")
+            self.logger.info(f"ðŸ“Š Test Results: {passed}/{total} tests passed")
             
             if passed == total:
-                self.logger.info("🎉 All integration enhancement tests passed!")
+                self.logger.info("ðŸŽ‰ All integration enhancement tests passed!")
             else:
-                self.logger.warning(f"⚠️ {total - passed} tests failed")
+                self.logger.warning(f"âš ï¸ {total - passed} tests failed")
             
             return passed == total
             
@@ -407,13 +407,13 @@ async def main():
     success = await tester.run_all_tests()
     
     if success:
-        print("\n🎉 Integration Enhancement Tests: ALL PASSED")
+        print("\nðŸŽ‰ Integration Enhancement Tests: ALL PASSED")
         return 0
     else:
-        print("\n❌ Integration Enhancement Tests: SOME FAILED")
+        print("\nâŒ Integration Enhancement Tests: SOME FAILED")
         return 1
 
 
 if __name__ == "__main__":
     exit_code = asyncio.run(main())
-    sys.exit(exit_code) 
+    sys.exit(exit_code)

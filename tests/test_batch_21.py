@@ -1,4 +1,4 @@
-"""
+﻿"""
 Batch 21 Tests
 Tests for enhanced commentary generator, signal trace, and existing file enhancements
 """
@@ -437,4 +437,4 @@ class TestBatch21Integration(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main() 
+    unittest.main()

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Test Enhancements
 
 Comprehensive tests for the enhanced components:
@@ -30,7 +30,7 @@ try:
     from trading.signals.strategy_executor import StrategyExecutor, TaskStatus, submit_strategy_task
     ENHANCEMENTS_AVAILABLE = True
 except ImportError as e:
-    print(f"⚠️ Enhanced components not available: {e}")
+    print(f"âš ï¸ Enhanced components not available: {e}")
     ENHANCEMENTS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ class TestEnhancements:
     
     async def test_state_manager_enhancements(self):
         """Test StateManager enhancements."""
-        self.logger.info("🧪 Testing StateManager Enhancements...")
+        self.logger.info("ðŸ§ª Testing StateManager Enhancements...")
         
         try:
             # Create state manager with temp file
@@ -130,16 +130,16 @@ class TestEnhancements:
             stats = state_manager.get_stats()
             self.logger.info(f"State stats: {stats}")
             
-            self.logger.info("✅ StateManager enhancements tests completed")
+            self.logger.info("âœ… StateManager enhancements tests completed")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ StateManager enhancements test failed: {e}")
+            self.logger.error(f"âŒ StateManager enhancements test failed: {e}")
             return False
     
     async def test_dashboard_runner_enhancements(self):
         """Test DashboardRunner enhancements."""
-        self.logger.info("🧪 Testing DashboardRunner Enhancements...")
+        self.logger.info("ðŸ§ª Testing DashboardRunner Enhancements...")
         
         try:
             # Test dependency checking
@@ -188,16 +188,16 @@ class TestEnhancements:
             if app_file.exists() and app_file.stat().st_size < 100:
                 app_file.unlink()
             
-            self.logger.info("✅ DashboardRunner enhancements tests completed")
+            self.logger.info("âœ… DashboardRunner enhancements tests completed")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ DashboardRunner enhancements test failed: {e}")
+            self.logger.error(f"âŒ DashboardRunner enhancements test failed: {e}")
             return False
     
     async def test_strategy_executor_enhancements(self):
         """Test StrategyExecutor enhancements."""
-        self.logger.info("🧪 Testing StrategyExecutor Enhancements...")
+        self.logger.info("ðŸ§ª Testing StrategyExecutor Enhancements...")
         
         try:
             # Create executor with small limits for testing
@@ -273,16 +273,16 @@ class TestEnhancements:
             await executor.stop()
             executor_task.cancel()
             
-            self.logger.info("✅ StrategyExecutor enhancements tests completed")
+            self.logger.info("âœ… StrategyExecutor enhancements tests completed")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ StrategyExecutor enhancements test failed: {e}")
+            self.logger.error(f"âŒ StrategyExecutor enhancements test failed: {e}")
             return False
     
     async def test_integration_workflow(self):
         """Test integration between enhanced components."""
-        self.logger.info("🧪 Testing Integration Workflow...")
+        self.logger.info("ðŸ§ª Testing Integration Workflow...")
         
         try:
             # Create components
@@ -326,16 +326,16 @@ class TestEnhancements:
             await executor.stop()
             executor_task.cancel()
             
-            self.logger.info("✅ Integration workflow tests completed")
+            self.logger.info("âœ… Integration workflow tests completed")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Integration workflow test failed: {e}")
+            self.logger.error(f"âŒ Integration workflow test failed: {e}")
             return False
     
     async def test_error_handling(self):
         """Test error handling and resilience."""
-        self.logger.info("🧪 Testing Error Handling...")
+        self.logger.info("ðŸ§ª Testing Error Handling...")
         
         try:
             # Test StateManager with invalid file
@@ -343,7 +343,7 @@ class TestEnhancements:
                 invalid_state = StateManager("/invalid/path/state.pkl")
                 # Should handle gracefully
                 invalid_state.set("test", "value")
-                self.logger.info("✅ StateManager handles invalid paths gracefully")
+                self.logger.info("âœ… StateManager handles invalid paths gracefully")
             except Exception as e:
                 self.logger.warning(f"StateManager error handling: {e}")
             
@@ -361,25 +361,25 @@ class TestEnhancements:
             # Check that error was handled
             status = executor.get_task_status(task_id)
             if status and status.status == TaskStatus.FAILED:
-                self.logger.info("✅ StrategyExecutor handles errors gracefully")
+                self.logger.info("âœ… StrategyExecutor handles errors gracefully")
             
             await executor.stop()
             executor_task.cancel()
             
-            self.logger.info("✅ Error handling tests completed")
+            self.logger.info("âœ… Error handling tests completed")
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Error handling test failed: {e}")
+            self.logger.error(f"âŒ Error handling test failed: {e}")
             return False
     
     async def run_all_tests(self):
         """Run all enhancement tests."""
-        self.logger.info("🚀 Starting Enhancement Tests")
+        self.logger.info("ðŸš€ Starting Enhancement Tests")
         self.logger.info("=" * 60)
         
         if not ENHANCEMENTS_AVAILABLE:
-            self.logger.error("❌ Enhanced components not available - skipping tests")
+            self.logger.error("âŒ Enhanced components not available - skipping tests")
             return False
         
         self.setup()
@@ -402,19 +402,19 @@ class TestEnhancements:
                     result = await test_method()
                     if result:
                         passed += 1
-                        self.logger.info(f"✅ {test_method.__name__} PASSED")
+                        self.logger.info(f"âœ… {test_method.__name__} PASSED")
                     else:
-                        self.logger.error(f"❌ {test_method.__name__} FAILED")
+                        self.logger.error(f"âŒ {test_method.__name__} FAILED")
                 except Exception as e:
-                    self.logger.error(f"❌ {test_method.__name__} ERROR: {e}")
+                    self.logger.error(f"âŒ {test_method.__name__} ERROR: {e}")
             
             self.logger.info(f"\n{'='*60}")
-            self.logger.info(f"📊 Test Results: {passed}/{total} tests passed")
+            self.logger.info(f"ðŸ“Š Test Results: {passed}/{total} tests passed")
             
             if passed == total:
-                self.logger.info("🎉 All enhancement tests passed!")
+                self.logger.info("ðŸŽ‰ All enhancement tests passed!")
             else:
-                self.logger.warning(f"⚠️ {total - passed} tests failed")
+                self.logger.warning(f"âš ï¸ {total - passed} tests failed")
             
             return passed == total
             
@@ -428,13 +428,13 @@ async def main():
     success = await tester.run_all_tests()
     
     if success:
-        print("\n🎉 Enhancement Tests: ALL PASSED")
+        print("\nðŸŽ‰ Enhancement Tests: ALL PASSED")
         return 0
     else:
-        print("\n❌ Enhancement Tests: SOME FAILED")
+        print("\nâŒ Enhancement Tests: SOME FAILED")
         return 1
 
 
 if __name__ == "__main__":
     exit_code = asyncio.run(main())
-    sys.exit(exit_code) 
+    sys.exit(exit_code)

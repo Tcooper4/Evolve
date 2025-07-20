@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Enhanced Kubernetes Deployment Script
 
@@ -505,15 +505,15 @@ Examples:
     
     if success:
         logger.info("Deployment completed successfully!")
-        print(f"\n✅ Deployment successful!")
-        print(f"📦 Image: {deployer.full_image_name}")
-        print(f"🏗️  Namespace: {deployer.namespace}")
-        print(f"🌐 Access the application at your configured ingress URL")
+        print(f"\nâœ… Deployment successful!")
+        print(f"ðŸ“¦ Image: {deployer.full_image_name}")
+        print(f"ðŸ—ï¸  Namespace: {deployer.namespace}")
+        print(f"ðŸŒ Access the application at your configured ingress URL")
     else:
         logger.error("Deployment failed!")
-        print(f"\n❌ Deployment failed!")
-        print(f"📋 Check the logs above for details")
+        print(f"\nâŒ Deployment failed!")
+        print(f"ðŸ“‹ Check the logs above for details")
         sys.exit(1)
 
 if __name__ == "__main__":
-    main() 
+    main()

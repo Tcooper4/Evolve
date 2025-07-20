@@ -1,4 +1,4 @@
-"""
+﻿"""
 Custom Strategy Handler
 
 This module provides functionality for users to define and run custom strategies

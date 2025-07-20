@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Task Orchestrator Integration Script
 
@@ -72,81 +72,81 @@ class EvolveOrchestratorIntegration:
         try:
             from agents.model_innovation_agent import ModelInnovationAgent
             discovered_agents['model_innovation'] = ModelInnovationAgent()
-            self.logger.info("✅ ModelInnovationAgent discovered")
+            self.logger.info("âœ… ModelInnovationAgent discovered")
         except ImportError:
-            self.logger.warning("⚠️ ModelInnovationAgent not available")
+            self.logger.warning("âš ï¸ ModelInnovationAgent not available")
         
         # Strategy Research Agent
         try:
             from agents.strategy_research_agent import StrategyResearchAgent
             discovered_agents['strategy_research'] = StrategyResearchAgent()
-            self.logger.info("✅ StrategyResearchAgent discovered")
+            self.logger.info("âœ… StrategyResearchAgent discovered")
         except ImportError:
-            self.logger.warning("⚠️ StrategyResearchAgent not available")
+            self.logger.warning("âš ï¸ StrategyResearchAgent not available")
         
         # Sentiment Analyzer
         try:
             from trading.nlp.sentiment_analyzer import SentimentAnalyzer
             discovered_agents['sentiment_fetch'] = SentimentAnalyzer()
-            self.logger.info("✅ SentimentAnalyzer discovered")
+            self.logger.info("âœ… SentimentAnalyzer discovered")
         except ImportError:
-            self.logger.warning("⚠️ SentimentAnalyzer not available")
+            self.logger.warning("âš ï¸ SentimentAnalyzer not available")
         
         # Risk Manager
         try:
             from trading.risk.risk_manager import RiskManager
             discovered_agents['risk_management'] = RiskManager()
-            self.logger.info("✅ RiskManager discovered")
+            self.logger.info("âœ… RiskManager discovered")
         except ImportError:
-            self.logger.warning("⚠️ RiskManager not available")
+            self.logger.warning("âš ï¸ RiskManager not available")
         
         # Execution Agent
         try:
             from execution.execution_agent import ExecutionAgent
             discovered_agents['execution'] = ExecutionAgent()
-            self.logger.info("✅ ExecutionAgent discovered")
+            self.logger.info("âœ… ExecutionAgent discovered")
         except ImportError:
-            self.logger.warning("⚠️ ExecutionAgent not available")
+            self.logger.warning("âš ï¸ ExecutionAgent not available")
         
         # Explainer Agent
         try:
             from reporting.explainer_agent import ExplainerAgent
             discovered_agents['explanation'] = ExplainerAgent()
-            self.logger.info("✅ ExplainerAgent discovered")
+            self.logger.info("âœ… ExplainerAgent discovered")
         except ImportError:
-            self.logger.warning("⚠️ ExplainerAgent not available")
+            self.logger.warning("âš ï¸ ExplainerAgent not available")
         
         # Meta Controller (if exists)
         try:
             from meta.meta_controller import MetaControllerAgent
             discovered_agents['meta_control'] = MetaControllerAgent()
-            self.logger.info("✅ MetaControllerAgent discovered")
+            self.logger.info("âœ… MetaControllerAgent discovered")
         except ImportError:
-            self.logger.warning("⚠️ MetaControllerAgent not available")
+            self.logger.warning("âš ï¸ MetaControllerAgent not available")
         
         # Data Sync components
         try:
             from trading.data.data_manager import DataManager
             discovered_agents['data_sync'] = DataManager()
-            self.logger.info("✅ DataManager discovered")
+            self.logger.info("âœ… DataManager discovered")
         except ImportError:
-            self.logger.warning("⚠️ DataManager not available")
+            self.logger.warning("âš ï¸ DataManager not available")
         
         # Performance Analysis
         try:
             from trading.evaluation.performance_analyzer import PerformanceAnalyzer
             discovered_agents['performance_analysis'] = PerformanceAnalyzer()
-            self.logger.info("✅ PerformanceAnalyzer discovered")
+            self.logger.info("âœ… PerformanceAnalyzer discovered")
         except ImportError:
-            self.logger.warning("⚠️ PerformanceAnalyzer not available")
+            self.logger.warning("âš ï¸ PerformanceAnalyzer not available")
         
         # System Health Monitor
         try:
             from system.health_monitor import SystemHealthMonitor
             discovered_agents['system_health'] = SystemHealthMonitor()
-            self.logger.info("✅ SystemHealthMonitor discovered")
+            self.logger.info("âœ… SystemHealthMonitor discovered")
         except ImportError:
-            self.logger.warning("⚠️ SystemHealthMonitor not available")
+            self.logger.warning("âš ï¸ SystemHealthMonitor not available")
         
         # Update orchestrator agents
         self.orchestrator.agents.update(discovered_agents)
@@ -268,7 +268,7 @@ async def main():
         success = await integration.integrate_with_existing_agents()
         
         if success:
-            print("✅ Integration completed successfully")
+            print("âœ… Integration completed successfully")
             
             # Show integration status
             status = integration.get_integration_status()
@@ -278,11 +278,11 @@ async def main():
             print(f"  Overall Health: {status['overall_health']:.2f}")
             
             if args.start:
-                print("\n🚀 Starting Task Orchestrator...")
+                print("\nðŸš€ Starting Task Orchestrator...")
                 await integration.start_orchestrator()
                 
                 if args.monitor:
-                    print("📊 Monitoring mode enabled - Press Ctrl+C to stop")
+                    print("ðŸ“Š Monitoring mode enabled - Press Ctrl+C to stop")
                     try:
                         while True:
                             await asyncio.sleep(30)
@@ -291,21 +291,21 @@ async def main():
                                   f"Agents: {status['total_agents']} | "
                                   f"Tasks: {status['enabled_tasks']}")
                     except KeyboardInterrupt:
-                        print("\n⏹️ Stopping orchestrator...")
+                        print("\nâ¹ï¸ Stopping orchestrator...")
                 else:
                     # Keep running
                     await asyncio.sleep(3600)  # Run for 1 hour
                 
                 await integration.stop_orchestrator()
         else:
-            print("❌ Integration failed")
+            print("âŒ Integration failed")
             return 1
             
     except KeyboardInterrupt:
-        print("\n⏹️ Integration interrupted")
+        print("\nâ¹ï¸ Integration interrupted")
         await integration.stop_orchestrator()
     except Exception as e:
-        print(f"❌ Error during integration: {e}")
+        print(f"âŒ Error during integration: {e}")
         return 1
     
     return 0
@@ -313,4 +313,4 @@ async def main():
 
 if __name__ == "__main__":
     exit_code = asyncio.run(main())
-    sys.exit(exit_code) 
+    sys.exit(exit_code)

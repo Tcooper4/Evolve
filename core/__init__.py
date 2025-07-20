@@ -1,4 +1,4 @@
-"""
+﻿"""
 Core module for the Evolve trading system.
 This module provides core functionality including task orchestration.
 """
@@ -23,4 +23,4 @@ try:
     ]
 except ImportError as e:
     # Fallback if orchestrator modules are not available
-    __all__ = [] 
+    __all__ = []

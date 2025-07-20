@@ -1,4 +1,4 @@
-"""
+﻿"""
 Hybrid Model Selector
 
 Allows metric selection for model evaluation and selection in hybrid models.
@@ -195,4 +195,4 @@ class HybridModelSelector:
             if not any(metric in scores for metric in self.available_metrics):
                 logger.warning(f"No valid metrics found for model {model_name}")
                 
-        return True 
+        return True

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Task Orchestrator
 
 This module provides a centralized task orchestration system for the Evolve trading platform.
@@ -445,4 +445,4 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             await orchestrator.stop()
     
-    asyncio.run(main()) 
+    asyncio.run(main())

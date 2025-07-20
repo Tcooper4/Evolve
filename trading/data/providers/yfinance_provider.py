@@ -1,4 +1,4 @@
-"""Yahoo Finance data provider with caching and logging."""
+﻿"""Yahoo Finance data provider with caching and logging."""
 
 import logging
 import pickle
@@ -15,7 +15,7 @@ try:
     import yfinance as yf
     YFINANCE_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ yfinance not available. Disabling Yahoo Finance data provider.")
+    print("âš ï¸ yfinance not available. Disabling Yahoo Finance data provider.")
     print(f"   Missing: {e}")
     yf = None
     YFINANCE_AVAILABLE = False
@@ -30,7 +30,7 @@ try:
     )
     TENACITY_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ tenacity not available. Disabling retry logic.")
+    print("âš ï¸ tenacity not available. Disabling retry logic.")
     print(f"   Missing: {e}")
     retry = None
     retry_if_exception_type = None

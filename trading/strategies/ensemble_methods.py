@@ -1,4 +1,4 @@
-"""
+﻿"""
 Ensemble Methods
 
 This module contains methods for combining multiple strategy signals into
@@ -23,7 +23,7 @@ try:
     from sklearn.metrics import mean_squared_error
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling ensemble voting capabilities.")
+    print("âš ï¸ scikit-learn not available. Disabling ensemble voting capabilities.")
     print(f"   Missing: {e}")
     VotingRegressor = None
     mean_squared_error = None

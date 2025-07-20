@@ -1,4 +1,4 @@
-"""
+﻿"""
 Sentiment Bridge - Batch 16
 Refactored lexicon-based scoring with soft-matching support using cosine similarity
 """
@@ -18,7 +18,7 @@ try:
     from sentence_transformers import SentenceTransformer
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ sentence_transformers not available. Disabling soft-matching features.")
+    print("âš ï¸ sentence_transformers not available. Disabling soft-matching features.")
     print(f"   Missing: {e}")
     SentenceTransformer = None
     SENTENCE_TRANSFORMERS_AVAILABLE = False
@@ -28,7 +28,7 @@ try:
     from sklearn.metrics.pairwise import cosine_similarity
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling cosine similarity calculations.")
+    print("âš ï¸ scikit-learn not available. Disabling cosine similarity calculations.")
     print(f"   Missing: {e}")
     cosine_similarity = None
     SKLEARN_AVAILABLE = False
@@ -333,4 +333,4 @@ class SentimentBridge:
 
 def create_sentiment_bridge(enable_soft_matching: bool = True) -> SentimentBridge:
     """Factory function to create a sentiment bridge."""
-    return SentimentBridge(enable_soft_matching=enable_soft_matching) 
+    return SentimentBridge(enable_soft_matching=enable_soft_matching)

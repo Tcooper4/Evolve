@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Innovation Agent
 
 This agent automatically discovers and evaluates new forecasting models using AutoML.
@@ -192,7 +192,7 @@ class ModelInnovationAgent:
         }
         
         for dep, available in dependencies.items():
-            status = "✅" if available else "❌"
+            status = "âœ…" if available else "âŒ"
             self.logger.info(f"{status} {dep}: {'Available' if available else 'Not available'}")
         
         if not any([FLAML_AVAILABLE, OPTUNA_AVAILABLE]):
@@ -658,7 +658,7 @@ class ModelInnovationAgent:
         )
         
         self.logger.info(f"Evaluation complete: {candidate.name}")
-        self.logger.info(f"  MSE: {mse:.4f}, R²: {r2:.4f}, Sharpe: {sharpe_ratio:.4f}")
+        self.logger.info(f"  MSE: {mse:.4f}, RÂ²: {r2:.4f}, Sharpe: {sharpe_ratio:.4f}")
         
         return evaluation
     
@@ -721,10 +721,10 @@ class ModelInnovationAgent:
             sharpe_improvement = (evaluation.sharpe_ratio - ensemble_metrics["sharpe"]) / abs(ensemble_metrics["sharpe"])
             improvements.append(f"Sharpe ratio improved by {sharpe_improvement:.2%}")
         
-        # R² improvement (higher is better)
+        # RÂ² improvement (higher is better)
         if evaluation.r2_score > ensemble_metrics["r2"]:
             r2_improvement = (evaluation.r2_score - ensemble_metrics["r2"]) / abs(ensemble_metrics["r2"])
-            improvements.append(f"R² improved by {r2_improvement:.2%}")
+            improvements.append(f"RÂ² improved by {r2_improvement:.2%}")
         
         # Overall improvement
         has_improvement = len(improvements) > 0 and any([
@@ -988,4 +988,4 @@ if __name__ == "__main__":
     
     # Get statistics
     stats = agent.get_innovation_statistics()
-    print(f"Innovation statistics: {stats}") 
+    print(f"Innovation statistics: {stats}")

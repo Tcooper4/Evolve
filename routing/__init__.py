@@ -1,4 +1,4 @@
-"""
+﻿"""
 Routing Module
 
 This module provides routing functionality for the Evolve Trading Platform.
@@ -11,4 +11,4 @@ __all__ = [
     "route_prompt",
     "get_prompt_router", 
     "PromptRouter"
-] 
+]

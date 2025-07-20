@@ -1,4 +1,4 @@
-"""
+﻿"""
 Task Orchestrator System Integration
 
 This module provides seamless integration between the TaskOrchestrator
@@ -76,9 +76,9 @@ class EvolveSystemIntegration:
             if hasattr(self.orchestrator, 'data_manager'):
                 self.orchestrator.data_manager = DataManager()
                 components_connected += 1
-                self.logger.info("✅ Connected with DataManager")
+                self.logger.info("âœ… Connected with DataManager")
         except ImportError:
-            self.logger.warning("⚠️ DataManager not available")
+            self.logger.warning("âš ï¸ DataManager not available")
         
         # Connect with risk management
         try:
@@ -86,9 +86,9 @@ class EvolveSystemIntegration:
             if hasattr(self.orchestrator, 'risk_manager'):
                 self.orchestrator.risk_manager = RiskManager()
                 components_connected += 1
-                self.logger.info("✅ Connected with RiskManager")
+                self.logger.info("âœ… Connected with RiskManager")
         except ImportError:
-            self.logger.warning("⚠️ RiskManager not available")
+            self.logger.warning("âš ï¸ RiskManager not available")
         
         # Connect with portfolio management
         try:
@@ -96,9 +96,9 @@ class EvolveSystemIntegration:
             if hasattr(self.orchestrator, 'portfolio_manager'):
                 self.orchestrator.portfolio_manager = PortfolioManager()
                 components_connected += 1
-                self.logger.info("✅ Connected with PortfolioManager")
+                self.logger.info("âœ… Connected with PortfolioManager")
         except ImportError:
-            self.logger.warning("⚠️ PortfolioManager not available")
+            self.logger.warning("âš ï¸ PortfolioManager not available")
         
         # Connect with market analysis
         try:
@@ -106,9 +106,9 @@ class EvolveSystemIntegration:
             if hasattr(self.orchestrator, 'market_analyzer'):
                 self.orchestrator.market_analyzer = MarketAnalyzer()
                 components_connected += 1
-                self.logger.info("✅ Connected with MarketAnalyzer")
+                self.logger.info("âœ… Connected with MarketAnalyzer")
         except ImportError:
-            self.logger.warning("⚠️ MarketAnalyzer not available")
+            self.logger.warning("âš ï¸ MarketAnalyzer not available")
         
         # Connect with reporting system
         try:
@@ -116,9 +116,9 @@ class EvolveSystemIntegration:
             if hasattr(self.orchestrator, 'report_generator'):
                 self.orchestrator.report_generator = ReportGenerator()
                 components_connected += 1
-                self.logger.info("✅ Connected with ReportGenerator")
+                self.logger.info("âœ… Connected with ReportGenerator")
         except ImportError:
-            self.logger.warning("⚠️ ReportGenerator not available")
+            self.logger.warning("âš ï¸ ReportGenerator not available")
         
         # Connect with caching system
         try:
@@ -126,9 +126,9 @@ class EvolveSystemIntegration:
             if hasattr(self.orchestrator, 'cache_manager'):
                 self.orchestrator.cache_manager = CacheManager()
                 components_connected += 1
-                self.logger.info("✅ Connected with CacheManager")
+                self.logger.info("âœ… Connected with CacheManager")
         except ImportError:
-            self.logger.warning("⚠️ CacheManager not available")
+            self.logger.warning("âš ï¸ CacheManager not available")
         
         self.integration_status["components_connected"] = components_connected
         self.logger.info(f"Connected with {components_connected} system components")
@@ -160,12 +160,12 @@ class EvolveSystemIntegration:
                 
                 self.orchestrator.agents[agent_name] = agent_instance
                 agents_connected += 1
-                self.logger.info(f"✅ Connected with {agent_name}")
+                self.logger.info(f"âœ… Connected with {agent_name}")
                 
             except ImportError:
-                self.logger.warning(f"⚠️ {agent_name} not available")
+                self.logger.warning(f"âš ï¸ {agent_name} not available")
             except Exception as e:
-                self.logger.warning(f"⚠️ Failed to connect {agent_name}: {e}")
+                self.logger.warning(f"âš ï¸ Failed to connect {agent_name}: {e}")
         
         # Initialize agent status
         for agent_name in self.orchestrator.agents.keys():
@@ -185,17 +185,17 @@ class EvolveSystemIntegration:
         try:
             from system.health_monitor import SystemHealthMonitor
             self.orchestrator.health_monitor = SystemHealthMonitor()
-            self.logger.info("✅ Health monitoring setup")
+            self.logger.info("âœ… Health monitoring setup")
         except ImportError:
-            self.logger.warning("⚠️ Health monitoring not available")
+            self.logger.warning("âš ï¸ Health monitoring not available")
         
         # Setup performance monitoring
         try:
             from system.performance_monitor import PerformanceMonitor
             self.orchestrator.performance_monitor = PerformanceMonitor()
-            self.logger.info("✅ Performance monitoring setup")
+            self.logger.info("âœ… Performance monitoring setup")
         except ImportError:
-            self.logger.warning("⚠️ Performance monitoring not available")
+            self.logger.warning("âš ï¸ Performance monitoring not available")
     
     async def start_integrated_system(self) -> bool:
         """Start the integrated system"""
@@ -226,25 +226,25 @@ class EvolveSystemIntegration:
         if hasattr(self.orchestrator, 'data_manager'):
             try:
                 await self.orchestrator.data_manager.start()
-                self.logger.info("✅ Data manager started")
+                self.logger.info("âœ… Data manager started")
             except Exception as e:
-                self.logger.warning(f"⚠️ Failed to start data manager: {e}")
+                self.logger.warning(f"âš ï¸ Failed to start data manager: {e}")
         
         # Start risk monitoring
         if hasattr(self.orchestrator, 'risk_manager'):
             try:
                 await self.orchestrator.risk_manager.start()
-                self.logger.info("✅ Risk manager started")
+                self.logger.info("âœ… Risk manager started")
             except Exception as e:
-                self.logger.warning(f"⚠️ Failed to start risk manager: {e}")
+                self.logger.warning(f"âš ï¸ Failed to start risk manager: {e}")
         
         # Start portfolio monitoring
         if hasattr(self.orchestrator, 'portfolio_manager'):
             try:
                 await self.orchestrator.portfolio_manager.start()
-                self.logger.info("✅ Portfolio manager started")
+                self.logger.info("âœ… Portfolio manager started")
             except Exception as e:
-                self.logger.warning(f"⚠️ Failed to start portfolio manager: {e}")
+                self.logger.warning(f"âš ï¸ Failed to start portfolio manager: {e}")
     
     async def stop_integrated_system(self):
         """Stop the integrated system"""
@@ -271,25 +271,25 @@ class EvolveSystemIntegration:
         if hasattr(self.orchestrator, 'data_manager'):
             try:
                 await self.orchestrator.data_manager.stop()
-                self.logger.info("✅ Data manager stopped")
+                self.logger.info("âœ… Data manager stopped")
             except Exception as e:
-                self.logger.warning(f"⚠️ Failed to stop data manager: {e}")
+                self.logger.warning(f"âš ï¸ Failed to stop data manager: {e}")
         
         # Stop risk monitoring
         if hasattr(self.orchestrator, 'risk_manager'):
             try:
                 await self.orchestrator.risk_manager.stop()
-                self.logger.info("✅ Risk manager stopped")
+                self.logger.info("âœ… Risk manager stopped")
             except Exception as e:
-                self.logger.warning(f"⚠️ Failed to stop risk manager: {e}")
+                self.logger.warning(f"âš ï¸ Failed to stop risk manager: {e}")
         
         # Stop portfolio monitoring
         if hasattr(self.orchestrator, 'portfolio_manager'):
             try:
                 await self.orchestrator.portfolio_manager.stop()
-                self.logger.info("✅ Portfolio manager stopped")
+                self.logger.info("âœ… Portfolio manager stopped")
             except Exception as e:
-                self.logger.warning(f"⚠️ Failed to stop portfolio manager: {e}")
+                self.logger.warning(f"âš ï¸ Failed to stop portfolio manager: {e}")
     
     def get_system_status(self) -> Dict[str, Any]:
         """Get comprehensive system status"""
@@ -436,4 +436,4 @@ if __name__ == "__main__":
         finally:
             await integration.stop_integrated_system()
     
-    asyncio.run(main()) 
+    asyncio.run(main())

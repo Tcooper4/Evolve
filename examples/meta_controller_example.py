@@ -1,4 +1,4 @@
-"""
+﻿"""
 MetaControllerAgent Example
 
 This example demonstrates how to use the MetaControllerAgent to:
@@ -28,7 +28,7 @@ from meta.meta_controller import (
 
 def main():
     """Main example function"""
-    print("🎛️ MetaControllerAgent Example")
+    print("ðŸŽ›ï¸ MetaControllerAgent Example")
     print("=" * 50)
     
     # Initialize the meta controller
@@ -36,7 +36,7 @@ def main():
     controller = create_meta_controller()
     
     # Example 1: System monitoring and metrics collection
-    print("\n📊 System Monitoring and Metrics Collection")
+    print("\nðŸ“Š System Monitoring and Metrics Collection")
     
     # Collect system metrics
     metrics = controller.collect_system_metrics()
@@ -66,7 +66,7 @@ def main():
         print("No system metrics collected")
     
     # Example 2: Trigger evaluation
-    print("\n🔍 Trigger Evaluation")
+    print("\nðŸ” Trigger Evaluation")
     
     decisions = controller.evaluate_triggers(metrics) if metrics else []
     
@@ -83,7 +83,7 @@ def main():
         print(f"    Affected Components: {', '.join(decision.affected_components)}")
     
     # Example 3: Action execution
-    print("\n⚡ Action Execution")
+    print("\nâš¡ Action Execution")
     
     if decisions:
         print("Executing high-priority actions...")
@@ -108,7 +108,7 @@ def main():
         print("No actions to execute")
     
     # Example 4: Performance summary and recommendations
-    print("\n📈 Performance Summary and Recommendations")
+    print("\nðŸ“ˆ Performance Summary and Recommendations")
     
     summary = controller._get_performance_summary()
     
@@ -130,7 +130,7 @@ def main():
         print(f"  {i}. {recommendation}")
     
     # Example 5: System health monitoring
-    print("\n🏥 System Health Monitoring")
+    print("\nðŸ¥ System Health Monitoring")
     
     # Simulate health check
     health_decision = controller._evaluate_system_health(metrics) if metrics else None
@@ -143,18 +143,18 @@ def main():
         
         # Execute health check
         health_result = asyncio.run(controller.execute_action(health_decision))
-        print(f"  Health Check Result: {'✅ Healthy' if health_result.success else '❌ Issues Found'}")
+        print(f"  Health Check Result: {'âœ… Healthy' if health_result.success else 'âŒ Issues Found'}")
         
         if health_result.results and 'components' in health_result.results:
             print("  Component Status:")
             for component, status in health_result.results['components'].items():
-                status_icon = "✅" if status['status'] == 'healthy' else "⚠️" if status['status'] == 'warning' else "❌"
+                status_icon = "âœ…" if status['status'] == 'healthy' else "âš ï¸" if status['status'] == 'warning' else "âŒ"
                 print(f"    {status_icon} {component}: {status['status']}")
     else:
         print("System health is good - no health check required")
     
     # Example 6: Action history and audit trail
-    print("\n📋 Action History and Audit Trail")
+    print("\nðŸ“‹ Action History and Audit Trail")
     
     recent_actions = controller._get_recent_actions(hours=24)
     
@@ -187,7 +187,7 @@ def main():
         print("No recent actions found")
     
     # Example 7: Threshold configuration
-    print("\n⚙️ Threshold Configuration")
+    print("\nâš™ï¸ Threshold Configuration")
     
     print("Current Trigger Thresholds:")
     for trigger_type, thresholds in controller.thresholds.items():
@@ -199,7 +199,7 @@ def main():
                 print(f"    {key}: {len(value)} sub-thresholds")
     
     # Example 8: Market state monitoring
-    print("\n📈 Market State Monitoring")
+    print("\nðŸ“ˆ Market State Monitoring")
     
     print(f"Current Market State:")
     print(f"  Volatility: {controller.market_state['volatility']:.3f}")
@@ -208,7 +208,7 @@ def main():
     print(f"  Volume: {controller.market_state['volume']:.3f}")
     
     # Example 9: Scheduled monitoring
-    print("\n⏰ Scheduled Monitoring Setup")
+    print("\nâ° Scheduled Monitoring Setup")
     
     # Start the scheduler in background
     print("Starting scheduled monitoring...")
@@ -224,12 +224,12 @@ def main():
     print(f"  Scheduler Started: {results['scheduler_started']}")
     print(f"  System Status: {results['system_status']}")
     
-    print("\n✅ MetaControllerAgent example completed!")
+    print("\nâœ… MetaControllerAgent example completed!")
 
 
 def example_manual_trigger():
     """Example of manually triggering actions"""
-    print("\n🎯 Manual Action Trigger Example")
+    print("\nðŸŽ¯ Manual Action Trigger Example")
     
     controller = create_meta_controller()
     
@@ -268,7 +268,7 @@ def example_manual_trigger():
 
 def example_performance_monitoring():
     """Example of performance monitoring"""
-    print("\n📊 Performance Monitoring Example")
+    print("\nðŸ“Š Performance Monitoring Example")
     
     controller = create_meta_controller()
     
@@ -302,14 +302,14 @@ def example_performance_monitoring():
         df = pd.DataFrame(performance_data)
         
         print(f"Performance Analysis ({len(df)} data points):")
-        print(f"  Model Performance: {df['model_performance'].mean():.3f} ± {df['model_performance'].std():.3f}")
-        print(f"  Strategy Performance: {df['strategy_performance'].mean():.3f} ± {df['strategy_performance'].std():.3f}")
+        print(f"  Model Performance: {df['model_performance'].mean():.3f} Â± {df['model_performance'].std():.3f}")
+        print(f"  Strategy Performance: {df['strategy_performance'].mean():.3f} Â± {df['strategy_performance'].std():.3f}")
         print(f"  Average Error Count: {df['error_count'].mean():.1f}")
         print(f"  Average Active Trades: {df['active_trades'].mean():.1f}")
         
         # Detect trends
-        model_trend = "📈 Improving" if df['model_performance'].iloc[-1] > df['model_performance'].iloc[0] else "📉 Declining"
-        strategy_trend = "📈 Improving" if df['strategy_performance'].iloc[-1] > df['strategy_performance'].iloc[0] else "📉 Declining"
+        model_trend = "ðŸ“ˆ Improving" if df['model_performance'].iloc[-1] > df['model_performance'].iloc[0] else "ðŸ“‰ Declining"
+        strategy_trend = "ðŸ“ˆ Improving" if df['strategy_performance'].iloc[-1] > df['strategy_performance'].iloc[0] else "ðŸ“‰ Declining"
         
         print(f"  Model Trend: {model_trend}")
         print(f"  Strategy Trend: {strategy_trend}")
@@ -317,7 +317,7 @@ def example_performance_monitoring():
 
 def example_threshold_adjustment():
     """Example of adjusting thresholds dynamically"""
-    print("\n⚙️ Dynamic Threshold Adjustment Example")
+    print("\nâš™ï¸ Dynamic Threshold Adjustment Example")
     
     controller = create_meta_controller()
     
@@ -333,7 +333,7 @@ def example_threshold_adjustment():
     original_threshold = model_thresholds['performance_threshold']
     model_thresholds['performance_threshold'] = original_threshold * 0.8  # More sensitive
     
-    print(f"Adjusted performance threshold: {original_threshold:.3f} → {model_thresholds['performance_threshold']:.3f}")
+    print(f"Adjusted performance threshold: {original_threshold:.3f} â†’ {model_thresholds['performance_threshold']:.3f}")
     
     # Test trigger evaluation with adjusted thresholds
     metrics = controller.collect_system_metrics()
@@ -353,7 +353,7 @@ def example_threshold_adjustment():
 
 def example_error_handling():
     """Example of error handling and recovery"""
-    print("\n🛡️ Error Handling and Recovery Example")
+    print("\nðŸ›¡ï¸ Error Handling and Recovery Example")
     
     controller = create_meta_controller()
     
@@ -392,7 +392,7 @@ def example_error_handling():
         if decision.priority >= 4:
             print(f"    Executing high-priority action...")
             result = asyncio.run(controller.execute_action(decision))
-            print(f"    Result: {'✅ Success' if result.success else '❌ Failed'}")
+            print(f"    Result: {'âœ… Success' if result.success else 'âŒ Failed'}")
             
             if result.errors:
                 print(f"    Errors: {', '.join(result.errors)}")
@@ -411,4 +411,4 @@ if __name__ == "__main__":
     example_threshold_adjustment()
     example_error_handling()
     
-    print("\n🎉 All MetaControllerAgent examples completed!") 
+    print("\nðŸŽ‰ All MetaControllerAgent examples completed!")

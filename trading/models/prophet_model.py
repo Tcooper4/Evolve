@@ -1,4 +1,4 @@
-"""ProphetModel: Facebook Prophet wrapper for time series forecasting with holidays and macro support."""
+﻿"""ProphetModel: Facebook Prophet wrapper for time series forecasting with holidays and macro support."""
 import json
 import logging
 import os
@@ -85,14 +85,14 @@ if PROPHET_AVAILABLE:
                 except Exception as e:
                     logger.error(f"Failed to initialize Prophet model: {e}")
                     self.model = None
-                    print("⚠️ Prophet model unavailable due to model initialization failure")
+                    print("âš ï¸ Prophet model unavailable due to model initialization failure")
                     print(f"   Error: {e}")
                     # Don't set available to False here as we can still register
                     
             except Exception as e:
                 logger.error(f"Failed to initialize ProphetModel: {e}")
                 self.available = False
-                print("⚠️ ProphetModel unavailable due to initialization failure")
+                print("âš ï¸ ProphetModel unavailable due to initialization failure")
                 print(f"   Error: {e}")
                 # Don't raise exception, just mark as unavailable
 
@@ -112,7 +112,7 @@ if PROPHET_AVAILABLE:
                 RuntimeError: If Prophet fitting fails
             """
             if not self.available:
-                print("⚠️ ProphetModel unavailable due to initialization failure")
+                print("âš ï¸ ProphetModel unavailable due to initialization failure")
                 return {
                     "success": False,
                     "error": "ProphetModel unavailable due to initialization failure",
@@ -382,7 +382,7 @@ if PROPHET_AVAILABLE:
                 Predicted values
             """
             if not self.available:
-                print("⚠️ ProphetModel unavailable due to initialization failure")
+                print("âš ï¸ ProphetModel unavailable due to initialization failure")
                 return np.array([])
             
             try:
@@ -469,7 +469,7 @@ if PROPHET_AVAILABLE:
                 Dictionary containing forecast results
             """
             if not self.available:
-                print("⚠️ ProphetModel unavailable due to initialization failure")
+                print("âš ï¸ ProphetModel unavailable due to initialization failure")
                 # Return simple fallback forecast
                 fallback_forecast = np.full(horizon or 30, 1000.0)
                 last_date = data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()

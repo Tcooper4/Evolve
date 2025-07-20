@@ -1,4 +1,4 @@
-SentimentIngestion - Real-time Sentiment Collection
+﻿SentimentIngestion - Real-time Sentiment Collection
 
 This module collects real-time sentiment data from Reddit, Twitter, Substack, and other sources.
 It creates a centralized sentiment score index for alpha strategy development.
@@ -623,4 +623,4 @@ class SentimentIngestion(BaseAgent):ent that collects real-time sentiment data."
     def clear_data(self) -> None:
       stored sentiment data.
         self.sentiment_data.clear()
-        self.sentiment_index.clear() 
+        self.sentiment_index.clear()

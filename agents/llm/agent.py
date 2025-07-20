@@ -1,4 +1,4 @@
-"""
+﻿"""
 Enhanced LLM Agent with full trading pipeline routing.
 
 This module provides a comprehensive LLM agent that can handle various
@@ -1493,7 +1493,7 @@ class PromptAgent:
             Agent response
         """
         try:
-            # Run full pipeline: Forecast → Strategy → Backtest → Report
+            # Run full pipeline: Forecast â†’ Strategy â†’ Backtest â†’ Report
             results = {}
 
             # 1. Generate forecast
@@ -1515,12 +1515,12 @@ class PromptAgent:
             message = f"Complete Analysis for {params['symbol']}:\n\n"
 
             if "forecast" in results:
-                message += "📈 FORECAST:\n"
+                message += "ðŸ“ˆ FORECAST:\n"
                 message += f"Model: {results['forecast']['model']}\n"
                 message += f"Confidence: {results['forecast']['confidence']:.2%}\n\n"
 
             if "strategy" in results:
-                message += "🎯 STRATEGY:\n"
+                message += "ðŸŽ¯ STRATEGY:\n"
                 message += (
                     f"Health Score: {results['strategy'].get('health_score', 'N/A')}\n"
                 )
@@ -1530,7 +1530,7 @@ class PromptAgent:
 
             if "backtest" in results:
                 metrics = results["backtest"]["metrics"]
-                message += "📊 BACKTEST RESULTS:\n"
+                message += "ðŸ“Š BACKTEST RESULTS:\n"
                 message += f"Sharpe Ratio: {metrics.get('sharpe_ratio', 0):.2f}\n"
                 message += f"Total Return: {metrics.get('total_return', 0):.2%}\n"
                 message += f"Max Drawdown: {metrics.get('max_drawdown', 0):.2%}\n"
@@ -1544,15 +1544,15 @@ class PromptAgent:
 
                 if sharpe >= 1.0:
                     recommendations.append(
-                        "✅ Strategy performing well - consider live trading"
+                        "âœ… Strategy performing well - consider live trading"
                     )
                 elif sharpe >= 0.5:
                     recommendations.append(
-                        "⚠️ Strategy needs optimization - run parameter tuning"
+                        "âš ï¸ Strategy needs optimization - run parameter tuning"
                     )
                 else:
                     recommendations.append(
-                        "❌ Strategy underperforming - try alternative approach"
+                        "âŒ Strategy underperforming - try alternative approach"
                     )
 
             recommendations.extend(

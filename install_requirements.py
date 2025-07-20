@@ -34,7 +34,7 @@ def main():
     batches = {
         "Core HTTP/API": [
             "aiohttp==3.12.14",
-            "aiosmtplib==4.0.1", 
+            "aiosmtplib==4.0.1",
             "alpaca-py==0.20.0",
             "alpha_vantage==3.0.0",
             "requests>=2.25.0"
@@ -84,18 +84,19 @@ def main():
             "prophet==1.1.7"
         ]
     }
-    
+
     print("Starting batch installation of requirements...")
-    
+
     # Install each batch
     for batch_name, packages in batches.items():
         success = install_packages(packages, batch_name)
         if not success:
             print(f"Warning: {batch_name} installation failed, continuing...")
-    
+
     print("\n--- Installation Complete ---")
     print("Note: Some packages may have failed due to dependency conflicts.")
     print("You can try installing individual packages manually if needed.")
 
 if __name__ == "__main__":
-    main() 
+    main()
+

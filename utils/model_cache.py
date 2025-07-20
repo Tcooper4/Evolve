@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Caching Utility
 
 Provides joblib-based caching for long-running model operations like
@@ -320,4 +320,4 @@ def create_cached_forecast_function(model_type: str) -> Callable:
     if model_type.lower() not in model_functions:
         raise ValueError(f"Unsupported model type: {model_type}")
 
-    return model_functions[model_type.lower()] 
+    return model_functions[model_type.lower()]

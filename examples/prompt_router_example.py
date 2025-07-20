@@ -1,4 +1,4 @@
-"""
+﻿"""
 Prompt Router Example
 
 This example demonstrates how the updated prompt router uses TaskAgent
@@ -176,13 +176,13 @@ async def main():
         logger.info("\n" + "=" * 60)
         logger.info("SUMMARY")
         logger.info("=" * 60)
-        logger.info(f"Forecast Prompt: {'✓' if forecast_result['success'] else '✗'}")
-        logger.info(f"Strategy Prompt: {'✓' if strategy_result['success'] else '✗'}")
-        logger.info(f"Backtest Prompt: {'✓' if backtest_result['success'] else '✗'}")
-        logger.info(f"Builder Workflow: {'✓' if builder_result['success'] else '✗'}")
-        logger.info(f"Evaluator Workflow: {'✓' if evaluator_result['success'] else '✗'}")
-        logger.info(f"Updater Workflow: {'✓' if updater_result['success'] else '✗'}")
-        logger.info(f"Full Pipeline: {'✓' if pipeline_result['success'] else '✗'}")
+        logger.info(f"Forecast Prompt: {'âœ“' if forecast_result['success'] else 'âœ—'}")
+        logger.info(f"Strategy Prompt: {'âœ“' if strategy_result['success'] else 'âœ—'}")
+        logger.info(f"Backtest Prompt: {'âœ“' if backtest_result['success'] else 'âœ—'}")
+        logger.info(f"Builder Workflow: {'âœ“' if builder_result['success'] else 'âœ—'}")
+        logger.info(f"Evaluator Workflow: {'âœ“' if evaluator_result['success'] else 'âœ—'}")
+        logger.info(f"Updater Workflow: {'âœ“' if updater_result['success'] else 'âœ—'}")
+        logger.info(f"Full Pipeline: {'âœ“' if pipeline_result['success'] else 'âœ—'}")
         
         # Show routing statistics
         router = get_prompt_router()
@@ -206,4 +206,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

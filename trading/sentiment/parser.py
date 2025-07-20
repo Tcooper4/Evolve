@@ -1,4 +1,4 @@
-"""
+﻿"""
 Sentiment Parser - Batch 20
 Enhanced text cleaning with financial context preservation
 """
@@ -405,4 +405,4 @@ class SentimentParser:
 
 def create_sentiment_parser(preserve_financial_symbols: bool = True) -> SentimentParser:
     """Factory function to create sentiment parser."""
-    return SentimentParser(preserve_financial_symbols=preserve_financial_symbols) 
+    return SentimentParser(preserve_financial_symbols=preserve_financial_symbols)

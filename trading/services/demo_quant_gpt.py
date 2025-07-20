@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 QuantGPT Demonstration
 
@@ -149,7 +149,7 @@ def demo_quant_gpt() -> dict:
     """Demonstrate QuantGPT functionality."""
 
     try:
-        logger.info("🤖 QuantGPT Trading Interface Demonstration")
+        logger.info("ðŸ¤– QuantGPT Trading Interface Demonstration")
         logger.info("=" * 60)
         logger.info(
             "This demo shows how to use natural language to interact with the trading system."
@@ -157,14 +157,14 @@ def demo_quant_gpt() -> dict:
         logger.info("=" * 60)
 
         # Initialize QuantGPT
-        logger.info("\n🔧 Initializing QuantGPT...")
+        logger.info("\nðŸ”§ Initializing QuantGPT...")
         quant_gpt = QuantGPT(
             openai_api_key=os.getenv("OPENAI_API_KEY"),
             redis_host="localhost",
             redis_port=6379,
         )
 
-        logger.info("✅ QuantGPT initialized successfully!")
+        logger.info("âœ… QuantGPT initialized successfully!")
 
         # Initialize safe response parser
         response_parser = SafeLLMResponseParser()
@@ -189,14 +189,14 @@ def demo_quant_gpt() -> dict:
             },
         ]
 
-        logger.info(f"\n📝 Running {len(demo_queries)} demo queries...")
+        logger.info(f"\nðŸ“ Running {len(demo_queries)} demo queries...")
         logger.info("-" * 60)
 
         for i, demo in enumerate(demo_queries, 1):
             query = demo["query"]
             description = demo["description"]
 
-            logger.info(f"\n🎯 Demo {i}: {description}")
+            logger.info(f"\nðŸŽ¯ Demo {i}: {description}")
             logger.info(f"Query: '{query}'")
             logger.info("-" * 50)
 
@@ -213,7 +213,7 @@ def demo_quant_gpt() -> dict:
 
                 if not parsed_result["success"]:
                     logger.error(
-                        f"❌ Failed to parse response: {parsed_result['error']}"
+                        f"âŒ Failed to parse response: {parsed_result['error']}"
                     )
                     continue
 
@@ -223,50 +223,50 @@ def demo_quant_gpt() -> dict:
                     results = result.get("results", {})
                     commentary = result.get("gpt_commentary", "")
 
-                    logger.info(f"⏱️  Processing Time: {processing_time:.2f} seconds")
-                    logger.info(f"🎯 Intent: {parsed.get('intent', 'unknown')}")
-                    logger.info(f"📈 Symbol: {parsed.get('symbol', 'N/A')}")
-                    logger.info(f"⏰ Timeframe: {parsed.get('timeframe', 'N/A')}")
-                    logger.info(f"📅 Period: {parsed.get('period', 'N/A')}")
+                    logger.info(f"â±ï¸  Processing Time: {processing_time:.2f} seconds")
+                    logger.info(f"ðŸŽ¯ Intent: {parsed.get('intent', 'unknown')}")
+                    logger.info(f"ðŸ“ˆ Symbol: {parsed.get('symbol', 'N/A')}")
+                    logger.info(f"â° Timeframe: {parsed.get('timeframe', 'N/A')}")
+                    logger.info(f"ðŸ“… Period: {parsed.get('period', 'N/A')}")
 
                     # Display action-specific results
                     action = results.get("action", "unknown")
-                    logger.info(f"🎯 Action: {action}")
+                    logger.info(f"ðŸŽ¯ Action: {action}")
 
                     if action == "model_recommendation":
                         best_model = results.get("best_model")
                         if best_model:
                             logger.info(
-                                f"🏆 Best Model: {best_model['model_type'].upper()}"
+                                f"ðŸ† Best Model: {best_model['model_type'].upper()}"
                             )
                             logger.info(
-                                f"📊 Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}"
+                                f"ðŸ“Š Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}"
                             )
                             logger.info(
-                                f"📈 Models Built: {results.get('models_built', 0)}"
+                                f"ðŸ“ˆ Models Built: {results.get('models_built', 0)}"
                             )
                             logger.info(
-                                f"🔍 Models Evaluated: {results.get('models_evaluated', 0)}"
+                                f"ðŸ” Models Evaluated: {results.get('models_evaluated', 0)}"
                             )
 
                     elif action == "trading_signal":
                         signal = results.get("signal", {})
                         if signal:
-                            logger.info(f"📊 Signal: {signal['signal']}")
-                            logger.info(f"💪 Strength: {signal['strength']}")
-                            logger.info(f"🎯 Confidence: {signal['confidence']:.1%}")
-                            logger.info(f"🧠 Model Score: {signal['model_score']:.2f}")
-                            logger.info(f"💭 Reasoning: {signal['reasoning']}")
+                            logger.info(f"ðŸ“Š Signal: {signal['signal']}")
+                            logger.info(f"ðŸ’ª Strength: {signal['strength']}")
+                            logger.info(f"ðŸŽ¯ Confidence: {signal['confidence']:.1%}")
+                            logger.info(f"ðŸ§  Model Score: {signal['model_score']:.2f}")
+                            logger.info(f"ðŸ’­ Reasoning: {signal['reasoning']}")
 
                     elif action == "market_analysis":
                         logger.info(
-                            f"📊 Market Data Available: {'Yes' if results.get('market_data') else 'No'}"
+                            f"ðŸ“Š Market Data Available: {'Yes' if results.get('market_data') else 'No'}"
                         )
                         logger.info(
-                            f"📈 Plots Generated: {len(results.get('plots', []))}"
+                            f"ðŸ“ˆ Plots Generated: {len(results.get('plots', []))}"
                         )
                         logger.info(
-                            f"🤖 Model Analysis: {'Available' if results.get('model_analysis') else 'Not available'}"
+                            f"ðŸ¤– Model Analysis: {'Available' if results.get('model_analysis') else 'Not available'}"
                         )
 
                     # Safely parse and display GPT commentary
@@ -276,35 +276,35 @@ def demo_quant_gpt() -> dict:
                         )
                         if parsed_commentary["success"]:
                             safe_commentary = parsed_commentary["parsed_data"]["text"]
-                            logger.info(f"\n🤖 GPT Commentary:")
+                            logger.info(f"\nðŸ¤– GPT Commentary:")
                             logger.info("-" * 30)
                             logger.info(safe_commentary)
                         else:
                             logger.warning(
-                                f"⚠️  Could not parse commentary: {parsed_commentary['error']}"
+                                f"âš ï¸  Could not parse commentary: {parsed_commentary['error']}"
                             )
 
-                    logger.info("✅ Query processed successfully!")
+                    logger.info("âœ… Query processed successfully!")
 
                 else:
                     error = result.get("error", "Unknown error")
-                    logger.error(f"❌ Error: {error}")
-                    logger.error("💡 This might be due to missing services or data.")
+                    logger.error(f"âŒ Error: {error}")
+                    logger.error("ðŸ’¡ This might be due to missing services or data.")
 
             except QueryParsingError as e:
-                logger.error(f"❌ Query parsing error: {e}")
-                logger.error("💡 Please rephrase your query with more specific details.")
+                logger.error(f"âŒ Query parsing error: {e}")
+                logger.error("ðŸ’¡ Please rephrase your query with more specific details.")
             except AgentExecutionError as e:
-                logger.error(f"❌ Agent execution error: {e}")
-                logger.error(f"💡 Context: {e.get_context_summary()}")
+                logger.error(f"âŒ Agent execution error: {e}")
+                logger.error(f"ðŸ’¡ Context: {e.get_context_summary()}")
             except Exception as e:
-                logger.error(f"❌ Exception: {e}")
-                logger.error("💡 This might be due to missing dependencies or services.")
+                logger.error(f"âŒ Exception: {e}")
+                logger.error("ðŸ’¡ This might be due to missing dependencies or services.")
 
             logger.info("\n" + "=" * 60)
 
         # Show available parameters
-        logger.info("\n📋 Available Parameters")
+        logger.info("\nðŸ“‹ Available Parameters")
         logger.info("-" * 30)
         logger.info(
             f"Symbols: {', '.join(quant_gpt.trading_context['available_symbols'])}"
@@ -320,14 +320,14 @@ def demo_quant_gpt() -> dict:
         )
 
         # Clean up
-        logger.info("\n🧹 Cleaning up...")
+        logger.info("\nðŸ§¹ Cleaning up...")
         quant_gpt.close()
-        logger.info("✅ Demo completed!")
+        logger.info("âœ… Demo completed!")
 
         logger.info("\n" + "=" * 60)
-        logger.info("🎉 QuantGPT Demonstration Complete!")
+        logger.info("ðŸŽ‰ QuantGPT Demonstration Complete!")
         logger.info("=" * 60)
-        logger.info("\n💡 Tips for using QuantGPT:")
+        logger.info("\nðŸ’¡ Tips for using QuantGPT:")
         logger.info("- Be specific about symbols, timeframes, and periods")
         logger.info(
             "- Ask for model recommendations, trading signals, or market analysis"
@@ -336,7 +336,7 @@ def demo_quant_gpt() -> dict:
         logger.info(
             "- The system will automatically route your query to the right services"
         )
-        logger.info("\n🚀 Ready to start trading with natural language!")
+        logger.info("\nðŸš€ Ready to start trading with natural language!")
         return {
             "success": True,
             "message": "QuantGPT demo completed successfully",
@@ -361,15 +361,15 @@ def main() -> dict:
             "demo_result": result,
         }
     except KeyboardInterrupt:
-        logger.info("\n\n⏹️  Demo interrupted by user")
+        logger.info("\n\nâ¹ï¸  Demo interrupted by user")
         return {
             "success": False,
             "error": "Demo interrupted by user",
             "timestamp": datetime.datetime.now().isoformat(),
         }
     except Exception as e:
-        logger.error(f"\n❌ Demo failed: {e}")
-        logger.error("💡 Make sure Redis is running and all services are available")
+        logger.error(f"\nâŒ Demo failed: {e}")
+        logger.error("ðŸ’¡ Make sure Redis is running and all services are available")
         return {
             "success": False,
             "error": str(e),
@@ -401,14 +401,14 @@ def test_query_processing():
             logger.info(f"Testing query: {query}")
             # Basic validation - just check if query is not empty
             if query and len(query.strip()) > 0:
-                logger.info("✅ Query validation passed")
+                logger.info("âœ… Query validation passed")
             else:
-                logger.warning("⚠️ Query validation failed")
+                logger.warning("âš ï¸ Query validation failed")
                 
-        logger.info("✅ Query processing tests completed")
+        logger.info("âœ… Query processing tests completed")
         return True
     except Exception as e:
-        logger.error(f"❌ Query processing test failed: {e}")
+        logger.error(f"âŒ Query processing test failed: {e}")
         return False
 
 if __name__ == "__main__":

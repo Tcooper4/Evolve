@@ -1,4 +1,4 @@
-"""
+﻿"""
 Strategy Optimizer Module
 
 This module contains strategy optimization functionality for the optimizer agent.
@@ -494,4 +494,4 @@ class StrategyOptimizer:
             )
             return composite
         else:
-            return 0.0 
+            return 0.0

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Performance Logging Module
 
 This module provides functionality for logging model performance metrics
@@ -263,7 +263,7 @@ def clear_model_performance_log():
 # Streamlit UI Components
 def render_model_performance_dashboard():
     """Render a comprehensive model performance dashboard in Streamlit."""
-    st.header("📊 Model Performance Dashboard")
+    st.header("ðŸ“Š Model Performance Dashboard")
     
     # Get available data
     tickers = get_available_tickers()
@@ -272,7 +272,7 @@ def render_model_performance_dashboard():
         return
     
     # Sidebar filters
-    st.sidebar.header("🔧 Filters")
+    st.sidebar.header("ðŸ”§ Filters")
     
     selected_ticker = st.sidebar.selectbox(
         "Select Ticker",
@@ -308,7 +308,7 @@ def render_model_performance_dashboard():
         return
     
     # Display best models for this ticker
-    st.subheader(f"🏆 Best Models for {selected_ticker}")
+    st.subheader(f"ðŸ† Best Models for {selected_ticker}")
     best_models = get_best_models(selected_ticker)
     
     if best_models:
@@ -360,7 +360,7 @@ def render_model_performance_dashboard():
                 )
     
     # Create tabs for different views
-    tab1, tab2, tab3, tab4 = st.tabs(["📈 Performance Trends", "📊 Metrics Comparison", "🏆 Leaderboard", "📋 Raw Data"])
+    tab1, tab2, tab3, tab4 = st.tabs(["ðŸ“ˆ Performance Trends", "ðŸ“Š Metrics Comparison", "ðŸ† Leaderboard", "ðŸ“‹ Raw Data"])
     
     with tab1:
         st.subheader("Performance Trends Over Time")
@@ -438,7 +438,7 @@ def render_model_performance_dashboard():
         # Download button
         csv = df.to_csv(index=False)
         st.download_button(
-            label="📥 Download Performance Data",
+            label="ðŸ“¥ Download Performance Data",
             data=csv,
             file_name=f"model_performance_{selected_ticker}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv"
@@ -447,7 +447,7 @@ def render_model_performance_dashboard():
 
 def render_best_models_summary():
     """Render a summary of best models across all tickers."""
-    st.header("🏆 Best Models Summary")
+    st.header("ðŸ† Best Models Summary")
     
     best_models = get_best_models()
     if not best_models:
@@ -530,4 +530,4 @@ def example_usage():
 
 if __name__ == "__main__":
     # Run example if executed directly
-    example_usage() 
+    example_usage()

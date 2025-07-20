@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Weighted Ensemble Strategy
 
 This module tests the WeightedEnsembleStrategy functionality.
@@ -279,4 +279,4 @@ class TestWeightedEnsembleStrategy:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__]) 
+    pytest.main([__file__])

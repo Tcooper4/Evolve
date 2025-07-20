@@ -1,4 +1,4 @@
-"""
+﻿"""
 Execution Providers Module
 
 This module contains execution provider classes for different trading platforms.
@@ -125,7 +125,7 @@ class AlpacaProvider(ExecutionProvider):
                 from alpaca.trading.client import TradingClient
                 from alpaca.data.historical import StockHistoricalDataClient
             except ImportError as e:
-                print("⚠️ alpaca-py not available. Cannot connect to Alpaca.")
+                print("âš ï¸ alpaca-py not available. Cannot connect to Alpaca.")
                 print(f"   Missing: {e}")
                 return False
             
@@ -159,7 +159,7 @@ class AlpacaProvider(ExecutionProvider):
                 from alpaca.trading.requests import MarketOrderRequest
                 from alpaca.trading.enums import OrderSide, TimeInForce
             except ImportError as e:
-                print("⚠️ alpaca-py not available. Cannot execute trade.")
+                print("âš ï¸ alpaca-py not available. Cannot execute trade.")
                 print(f"   Missing: {e}")
                 return {
                     "success": False,
@@ -415,4 +415,4 @@ def create_execution_provider(mode: ExecutionMode, config: Dict[str, Any]) -> Ex
     elif mode == ExecutionMode.ROBINHOOD:
         return RobinhoodProvider(config)
     else:
-        raise ValueError(f"Unsupported execution mode: {mode}") 
+        raise ValueError(f"Unsupported execution mode: {mode}")

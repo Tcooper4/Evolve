@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 import logging
 from unittest.mock import Mock, patch
 from trading.utils.error_handling import (
@@ -341,4 +341,4 @@ class TestIntegration:
             test_function("value1", "value2")
         
         # Note: In a real implementation, the context would be captured
-        # This test verifies the structure is in place 
+        # This test verifies the structure is in place

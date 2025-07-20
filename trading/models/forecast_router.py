@@ -1,4 +1,4 @@
-"""Forecast router for managing and selecting forecasting models.
+﻿"""Forecast router for managing and selecting forecasting models.
 
 This module provides a router for selecting and managing different forecasting models
 based on data characteristics, performance history, and user preferences. It supports

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Async Forecast Task Dispatcher
 
 Handles concurrent forecast model execution with proper error handling,
@@ -455,4 +455,4 @@ class ModelForecastDispatcher(ForecastTaskDispatcher):
                 }
             }
         except Exception as e:
-            raise RuntimeError(f"Model execution failed: {e}") 
+            raise RuntimeError(f"Model execution failed: {e}")

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Task Orchestrator (Modular)
 
 Tests core/orchestrator/task_orchestrator.py functionality including:
@@ -535,4 +535,4 @@ class TestIntegration:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__]) 
+    pytest.main([__file__])

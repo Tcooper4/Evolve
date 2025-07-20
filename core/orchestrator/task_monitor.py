@@ -1,4 +1,4 @@
-"""
+﻿"""
 Task Monitor Module
 
 This module contains task monitoring functionality for the task orchestrator.
@@ -270,4 +270,4 @@ class TaskMonitor:
         self.performance_metrics.clear()
         self.error_counts.clear()
         self.success_rates.clear()
-        self.logger.info("Reset all performance metrics") 
+        self.logger.info("Reset all performance metrics")

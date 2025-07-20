@@ -1,4 +1,4 @@
-"""Particle Swarm Optimization Method.
+﻿"""Particle Swarm Optimization Method.
 
 This module contains the ParticleSwarmOptimization method extracted from strategy_optimizer.py.
 """
@@ -161,4 +161,4 @@ class ParticleSwarmOptimization(OptimizationMethod):
             particles.append(particle)
             velocities.append(velocity)
 
-        return particles, velocities 
+        return particles, velocities

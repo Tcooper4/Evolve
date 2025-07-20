@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Utility Functions
 
 This module contains utility functions for model operations including
@@ -17,7 +17,7 @@ try:
     import torch
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling model utilities.")
+    print("âš ï¸ PyTorch not available. Disabling model utilities.")
     print(f"   Missing: {e}")
     torch = None
     TORCH_AVAILABLE = False

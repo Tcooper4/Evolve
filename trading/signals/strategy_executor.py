@@ -1,4 +1,4 @@
-"""
+﻿"""
 Strategy Executor
 
 Enhanced strategy execution with:
@@ -130,7 +130,7 @@ class StrategyExecutor:
             return
         
         self.running = True
-        logger.info("🚀 Starting StrategyExecutor...")
+        logger.info("ðŸš€ Starting StrategyExecutor...")
         
         # Start worker tasks
         workers = []
@@ -150,11 +150,11 @@ class StrategyExecutor:
             logger.error(f"Worker error: {e}")
         finally:
             self.running = False
-            logger.info("🛑 StrategyExecutor stopped")
+            logger.info("ðŸ›‘ StrategyExecutor stopped")
     
     async def stop(self):
         """Stop the strategy executor gracefully."""
-        logger.info("🛑 Stopping StrategyExecutor...")
+        logger.info("ðŸ›‘ Stopping StrategyExecutor...")
         self.running = False
         
         # Cancel running tasks
@@ -167,7 +167,7 @@ class StrategyExecutor:
         if self.running_tasks:
             await asyncio.gather(*self.running_tasks.values(), return_exceptions=True)
         
-        logger.info("✅ StrategyExecutor stopped gracefully")
+        logger.info("âœ… StrategyExecutor stopped gracefully")
     
     async def submit_task(self, 
                          strategy_name: str,
@@ -300,7 +300,7 @@ class StrategyExecutor:
             self.completed_tasks.append(task_result)
             self.metrics['completed_tasks'] += 1
             
-            logger.info(f"✅ Task {task.task_id} completed in {execution_time:.2f}s")
+            logger.info(f"âœ… Task {task.task_id} completed in {execution_time:.2f}s")
             
         except asyncio.TimeoutError:
             # Task timed out
@@ -315,7 +315,7 @@ class StrategyExecutor:
             self.failed_tasks.append(task_result)
             self.metrics['timeout_tasks'] += 1
             
-            logger.error(f"⏰ Task {task.task_id} timed out after {execution_time:.2f}s")
+            logger.error(f"â° Task {task.task_id} timed out after {execution_time:.2f}s")
             
         except Exception as e:
             # Task failed
@@ -330,7 +330,7 @@ class StrategyExecutor:
             self.failed_tasks.append(task_result)
             self.metrics['failed_tasks'] += 1
             
-            logger.error(f"❌ Task {task.task_id} failed after {execution_time:.2f}s: {e}")
+            logger.error(f"âŒ Task {task.task_id} failed after {execution_time:.2f}s: {e}")
             
         finally:
             # Remove from running tasks
@@ -360,7 +360,7 @@ class StrategyExecutor:
     
     async def _metrics_collector(self):
         """Collect and log performance metrics."""
-        logger.info("📊 Metrics collector started")
+        logger.info("ðŸ“Š Metrics collector started")
         
         while self.running:
             try:
@@ -372,18 +372,18 @@ class StrategyExecutor:
                     self.metrics['average_execution_time'] = total_time / len(self.completed_tasks)
                 
                 # Log metrics
-                logger.info(f"📊 Metrics: {self.metrics}")
+                logger.info(f"ðŸ“Š Metrics: {self.metrics}")
                 
                 # Log failed/dropped tasks summary
                 if self.failed_tasks or self.dropped_tasks:
-                    logger.warning(f"⚠️ Failed tasks: {len(self.failed_tasks)}, Dropped tasks: {len(self.dropped_tasks)}")
+                    logger.warning(f"âš ï¸ Failed tasks: {len(self.failed_tasks)}, Dropped tasks: {len(self.dropped_tasks)}")
                 
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"Metrics collector error: {e}")
         
-        logger.info("📊 Metrics collector stopped")
+        logger.info("ðŸ“Š Metrics collector stopped")
     
     def get_task_status(self, task_id: str) -> Optional[TaskResult]:
         """Get status of a specific task."""
@@ -548,7 +548,7 @@ async def submit_strategy_task(strategy_name: str,
 if __name__ == "__main__":
     # Demo usage
     async def demo():
-        print("🎯 Strategy Executor Demo")
+        print("ðŸŽ¯ Strategy Executor Demo")
         print("=" * 50)
         
         # Create executor
@@ -575,7 +575,7 @@ if __name__ == "__main__":
         executor_task = asyncio.create_task(executor.start())
         
         # Submit tasks
-        print("\n📝 Submitting tasks...")
+        print("\nðŸ“ Submitting tasks...")
         tasks = [
             ("strategy_1", sample_strategy_1),
             ("strategy_2", sample_strategy_2),
@@ -595,16 +595,16 @@ if __name__ == "__main__":
         
         # Get metrics
         metrics = executor.get_metrics()
-        print(f"\n📊 Metrics: {metrics}")
+        print(f"\nðŸ“Š Metrics: {metrics}")
         
         # Get failed tasks summary
         failed_summary = executor.get_failed_tasks_summary()
-        print(f"\n❌ Failed tasks: {failed_summary}")
+        print(f"\nâŒ Failed tasks: {failed_summary}")
         
         # Stop executor
         await executor.stop()
         executor_task.cancel()
         
-        print("\n✅ Demo completed!")
+        print("\nâœ… Demo completed!")
     
-    asyncio.run(demo()) 
+    asyncio.run(demo())

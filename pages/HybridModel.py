@@ -1,4 +1,4 @@
-"""
+﻿"""
 Hybrid Model Page
 
 This page provides a comprehensive interface for hybrid model management with
@@ -176,7 +176,7 @@ class HybridModelManager:
 
 def create_ensemble_composition_sidebar(manager: HybridModelManager):
     """Create sidebar showing active ensemble composition."""
-    st.sidebar.header("🎯 Ensemble Composition")
+    st.sidebar.header("ðŸŽ¯ Ensemble Composition")
     
     if not manager.current_weights:
         st.sidebar.info("No active ensemble weights")
@@ -197,7 +197,7 @@ def create_ensemble_composition_sidebar(manager: HybridModelManager):
         st.sidebar.caption(f"**{model}**")
     
     # Performance summary
-    st.sidebar.subheader("📊 Performance Summary")
+    st.sidebar.subheader("ðŸ“Š Performance Summary")
     summary = manager.get_performance_summary()
     
     # Active models count
@@ -216,9 +216,9 @@ def create_ensemble_composition_sidebar(manager: HybridModelManager):
     
     # Performance trends
     if summary["performance_trends"]:
-        st.sidebar.subheader("📈 Performance Trends")
+        st.sidebar.subheader("ðŸ“ˆ Performance Trends")
         for model, trend in summary["performance_trends"].items():
-            trend_icon = "📈" if trend > 0 else "📉" if trend < 0 else "➡️"
+            trend_icon = "ðŸ“ˆ" if trend > 0 else "ðŸ“‰" if trend < 0 else "âž¡ï¸"
             st.sidebar.write(f"{trend_icon} {model}: {trend:+.1%}")
 
 
@@ -305,7 +305,7 @@ def create_performance_comparison_chart(manager: HybridModelManager):
 
 def create_ensemble_optimization_interface(manager: HybridModelManager):
     """Create interface for ensemble optimization."""
-    st.header("🔧 Ensemble Optimization")
+    st.header("ðŸ”§ Ensemble Optimization")
     
     col1, col2 = st.columns(2)
     
@@ -342,7 +342,7 @@ def create_ensemble_optimization_interface(manager: HybridModelManager):
             st.metric(model, f"{perf:.3f}")
     
     # Calculate new weights
-    if st.button("🔄 Recalculate Weights"):
+    if st.button("ðŸ”„ Recalculate Weights"):
         new_weights = manager.calculate_adaptive_weights(
             mock_performances,
             method=weighting_method,
@@ -361,7 +361,7 @@ def create_ensemble_optimization_interface(manager: HybridModelManager):
 
 def create_backtest_interface(manager: HybridModelManager):
     """Create interface for backtesting the ensemble."""
-    st.header("🧪 Backtesting")
+    st.header("ðŸ§ª Backtesting")
     
     col1, col2 = st.columns(2)
     
@@ -394,7 +394,7 @@ def create_backtest_interface(manager: HybridModelManager):
             step=0.1
         ) / 100
     
-    if st.button("🚀 Run Backtest"):
+    if st.button("ðŸš€ Run Backtest"):
         with st.spinner("Running backtest..."):
             # Mock backtest results (replace with actual backtesting)
             backtest_results = {
@@ -428,11 +428,11 @@ def main():
     """Main function for the Hybrid Model page."""
     st.set_page_config(
         page_title="Hybrid Model",
-        page_icon="🎯",
+        page_icon="ðŸŽ¯",
         layout="wide"
     )
     
-    st.title("🎯 Hybrid Model Management")
+    st.title("ðŸŽ¯ Hybrid Model Management")
     st.markdown("---")
     
     # Initialize manager
@@ -446,14 +446,14 @@ def main():
     
     # Main content
     tab1, tab2, tab3, tab4 = st.tabs([
-        "📊 Overview", 
-        "🔧 Optimization", 
-        "🧪 Backtesting", 
-        "📈 Analytics"
+        "ðŸ“Š Overview", 
+        "ðŸ”§ Optimization", 
+        "ðŸ§ª Backtesting", 
+        "ðŸ“ˆ Analytics"
     ])
     
     with tab1:
-        st.header("📊 Ensemble Overview")
+        st.header("ðŸ“Š Ensemble Overview")
         
         if manager.current_weights:
             # Current ensemble status
@@ -501,7 +501,7 @@ def main():
         create_backtest_interface(manager)
     
     with tab4:
-        st.header("📈 Analytics")
+        st.header("ðŸ“ˆ Analytics")
         
         col1, col2 = st.columns(2)
         
@@ -515,7 +515,7 @@ def main():
         
         # Additional analytics
         if manager.performance_history:
-            st.subheader("📋 Detailed Performance")
+            st.subheader("ðŸ“‹ Detailed Performance")
             
             # Create performance table
             performance_data = []
@@ -535,4 +535,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

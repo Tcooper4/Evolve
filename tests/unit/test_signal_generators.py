@@ -1,4 +1,4 @@
-"""
+﻿"""
 Unit tests for signal generators.
 
 Tests signal generation edge cases including overlapping buy signals,
@@ -179,4 +179,4 @@ class TestSignalGenerators:
             assert get_signal_class("NonExistentSignal") is None
             
         except ImportError:
-            pytest.skip("Signal registration utilities not available") 
+            pytest.skip("Signal registration utilities not available")

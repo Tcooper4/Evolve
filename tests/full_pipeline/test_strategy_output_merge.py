@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for strategy output merging functionality
 
 Tests duplicate timestamp handling, None/empty DataFrame fallbacks,
@@ -534,4 +534,4 @@ class TestStrategyIntegration:
 
 if __name__ == "__main__":
     # Run tests
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])

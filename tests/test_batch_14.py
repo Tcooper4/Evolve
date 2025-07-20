@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Batch 14 fixes
 
 Tests the following Batch 14 improvements:
@@ -424,4 +424,4 @@ class TestBatch14Integration(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main() 
+    unittest.main()

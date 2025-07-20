@@ -1,4 +1,4 @@
-"""
+﻿"""
 Model Discovery Agent
 
 This module provides dynamic model discovery capabilities for the autonomous orchestrator.
@@ -406,4 +406,4 @@ def get_model_discovery_agent() -> ModelDiscoveryAgent:
     """Get singleton instance of ModelDiscoveryAgent."""
     if not hasattr(get_model_discovery_agent, "_instance"):
         get_model_discovery_agent._instance = ModelDiscoveryAgent()
-    return get_model_discovery_agent._instance 
+    return get_model_discovery_agent._instance

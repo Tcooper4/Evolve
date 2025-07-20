@@ -1,7 +1,7 @@
-AlphaOrchestrator - Autonomous Alpha Strategy Orchestrator
+﻿AlphaOrchestrator - Autonomous Alpha Strategy Orchestrator
 
 This is the top-level orchestrator that manages the complete alpha strategy lifecycle:
-idea → test → validate → register → monitor
+idea â†’ test â†’ validate â†’ register â†’ monitor
 
 It coordinates all other alpha agents and ensures transparent logging of every decision.
 
@@ -707,4 +707,4 @@ class AlphaOrchestrator(BaseAgent):ent that orchestrates the complete alpha stra
         return {
          dependencies": self.__dependencies__,
             agent_configs": ["alphagen", signal_tester,risk_validator,alpha_registry", "sentiment_ingestion"],
-            data_sources: ["market_data,sentiment_data", "news_data"]        } 
+            data_sources: ["market_data,sentiment_data", "news_data"]        }

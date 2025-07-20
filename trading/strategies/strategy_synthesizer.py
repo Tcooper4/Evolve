@@ -1,4 +1,4 @@
-"""
+﻿"""
 Strategy Synthesizer for combining multiple technical indicators.
 
 This module provides a framework for combining signals from different technical
@@ -371,4 +371,4 @@ class StrategySynthesizer:
         for strategy, weight in self.weights.items():
             summary.append(f"  {strategy}: {weight:.3f}")
 
-        return "\n".join(summary) 
+        return "\n".join(summary)

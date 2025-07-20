@@ -1,4 +1,4 @@
-"""
+﻿"""
 Cache Utilities for Model Operations
 
 This module provides centralized caching functionality for model operations:
@@ -498,4 +498,4 @@ def get_cache_stats() -> Dict[str, Any]:
 def cleanup_cache():
     """Clean up expired cache files."""
     cache = get_model_cache()
-    cache.cleanup() 
+    cache.cleanup()

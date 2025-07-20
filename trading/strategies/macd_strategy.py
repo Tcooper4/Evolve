@@ -1,4 +1,4 @@
-"""MACD (Moving Average Convergence Divergence) trading strategy implementation."""
+﻿"""MACD (Moving Average Convergence Divergence) trading strategy implementation."""
 
 from dataclasses import dataclass
 from datetime import datetime

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Enhanced Cost Modeling
 
 This module contains comprehensive tests for the enhanced cost modeling system
@@ -464,4 +464,4 @@ class TestEdgeCases:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])

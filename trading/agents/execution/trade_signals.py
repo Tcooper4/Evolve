@@ -1,4 +1,4 @@
-"""
+﻿"""
 Trade Signals Module
 
 This module contains trade signal classes and execution request/result models.
@@ -96,4 +96,4 @@ class ExecutionResult:
         result_dict["signal"] = self.signal.to_dict()
         if self.position:
             result_dict["position"] = self.position.to_dict()
-        return result_dict 
+        return result_dict

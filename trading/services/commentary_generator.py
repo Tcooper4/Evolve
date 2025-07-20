@@ -1,4 +1,4 @@
-"""
+﻿"""
 Commentary Generator Module
 
 Handles generation of GPT-powered and fallback commentary for trading analysis results.

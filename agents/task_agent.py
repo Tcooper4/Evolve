@@ -1,4 +1,4 @@
-"""
+﻿"""
 Task Agent Module
 
 This module provides a TaskAgent class that implements recursive task execution
@@ -1031,4 +1031,4 @@ async def execute_backtest_task(
     **kwargs
 ) -> TaskResult:
     """Convenience function to execute a backtest task."""
-    return await execute_task(prompt, TaskType.BACKTEST, parameters, **kwargs) 
+    return await execute_task(prompt, TaskType.BACKTEST, parameters, **kwargs)

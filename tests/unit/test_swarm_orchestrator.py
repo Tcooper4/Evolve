@@ -1,4 +1,4 @@
-Unit tests for Swarm Orchestrator.
+﻿Unit tests for Swarm Orchestrator.
 
 Tests the SwarmOrchestrator class for coordinating multiple agents as async jobs.
 
@@ -328,4 +328,4 @@ class TestSwarmOrchestrator:
         
         # Should raise ValueError
         with pytest.raises(ValueError):
-            asyncio.run(orchestrator._run_agent(task)) 
+            asyncio.run(orchestrator._run_agent(task))

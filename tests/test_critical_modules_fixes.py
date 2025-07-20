@@ -1,4 +1,4 @@
-"""
+﻿"""
 Test script for critical module fixes.
 
 Tests the improvements made to:
@@ -459,14 +459,14 @@ if __name__ == "__main__":
     print("ALL TESTS COMPLETED SUCCESSFULLY!")
     print("="*50)
     print("\nSummary of improvements tested:")
-    print("✅ Report Generator: Defensive checks and export logic")
-    print("✅ Parser Engine: LLM prompt parsing with fallback")
-    print("✅ Prompt Agent: Integration with parser engine")
-    print("✅ Backtester: NaN handling and error logging")
-    print("✅ Model Loader: Model verification and fallback")
+    print("âœ… Report Generator: Defensive checks and export logic")
+    print("âœ… Parser Engine: LLM prompt parsing with fallback")
+    print("âœ… Prompt Agent: Integration with parser engine")
+    print("âœ… Backtester: NaN handling and error logging")
+    print("âœ… Model Loader: Model verification and fallback")
     print("\nAll modules are now production-ready with:")
     print("- Robust error handling")
     print("- Defensive programming")
     print("- Fallback mechanisms")
     print("- Comprehensive logging")
-    print("- Data validation") 
+    print("- Data validation")

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Explainability and Audit Trail Example
 
 This example demonstrates the comprehensive explainability and audit trail system:
@@ -643,4 +643,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

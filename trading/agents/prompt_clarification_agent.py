@@ -1,4 +1,4 @@
-"""
+﻿"""
 Prompt Clarification Agent
 
 Agent that detects ambiguous prompts and asks for clarification from users.
@@ -310,4 +310,4 @@ class PromptClarificationAgent:
             "strategy_keywords": len(self.strategy_keywords),
             "timeframe_keywords": len(self.timeframe_keywords),
             "supported_ambiguity_types": [t.value for t in AmbiguityType]
-        } 
+        }

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Unit tests for LSTM forecaster model.
 
 Tests LSTM model functionality with synthetic time series data,

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Meta Agent Orchestrator
 
 Orchestrates multiple agents with error handling and fallback mechanisms.
@@ -298,4 +298,4 @@ class MetaAgentOrchestrator:
             except Exception as e:
                 status[agent_name] = {"available": False, "error": str(e)}
                 
-        return status 
+        return status

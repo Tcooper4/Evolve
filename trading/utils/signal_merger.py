@@ -1,4 +1,4 @@
-"""
+﻿"""
 Signal Merger
 
 Merges signal DataFrames with index validation to ensure compatibility.
@@ -177,4 +177,4 @@ class SignalMerger:
             summary["common_columns"] = list(set(df1.columns) & set(df2.columns))
             summary["index_overlap"] = len(df1.index.intersection(df2.index))
 
-        return summary 
+        return summary

@@ -1,4 +1,4 @@
-AlphaRegistry - Strategy Lifecycle Management
+﻿AlphaRegistry - Strategy Lifecycle Management
 
 This module tracks the lifecycle of alpha strategies and detects alpha decay.
 It maintains a registry of strategies with performance history and decay detection.
@@ -806,4 +806,4 @@ class AlphaRegistry(BaseAgent):ent that manages strategy lifecycle and detects a
     
     def __del__(self):
 atabase connection."if self.connection:
-            self.connection.close() 
+            self.connection.close()

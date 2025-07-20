@@ -1,4 +1,4 @@
-"""
+﻿"""
 Task Models Module
 
 This module contains task-related data classes and models for the task orchestrator.
@@ -93,4 +93,4 @@ class AgentStatus:
     failure_count: int = 0
     average_duration: float = 0.0
     health_score: float = 1.0
-    error_history: List[str] = field(default_factory=list) 
+    error_history: List[str] = field(default_factory=list)

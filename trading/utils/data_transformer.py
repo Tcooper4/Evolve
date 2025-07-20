@@ -1,4 +1,4 @@
-"""
+﻿"""
 Data transformation utilities for the trading system.
 """
 
@@ -14,7 +14,7 @@ try:
     from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling data transformation features.")
+    print("âš ï¸ scikit-learn not available. Disabling data transformation features.")
     print(f"   Missing: {e}")
     PCA = None
     MinMaxScaler = None

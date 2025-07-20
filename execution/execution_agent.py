@@ -1,4 +1,4 @@
-"""
+﻿"""
 Trade Execution Agent
 
 This module provides realistic trade execution simulation and live trading capabilities:
@@ -791,4 +791,4 @@ if __name__ == "__main__":
         
         await agent.stop()
     
-    asyncio.run(main()) 
+    asyncio.run(main())

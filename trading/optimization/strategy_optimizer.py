@@ -1,4 +1,4 @@
-"""Strategy Optimizer - Main Orchestrator.
+﻿"""Strategy Optimizer - Main Orchestrator.
 
 This module orchestrates different optimization methods for trading strategies.
 It has been refactored to use modular optimization components.

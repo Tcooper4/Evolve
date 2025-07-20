@@ -1,4 +1,4 @@
-"""
+﻿"""
 Enhanced Strategy Pipeline for Signal Combination
 
 This module provides comprehensive signal combination functionality for multiple trading strategies.
@@ -539,4 +539,4 @@ def create_strategy_combo(
         if name in STRATEGY_FUNCTIONS:
             pipeline.strategy_functions[name] = STRATEGY_FUNCTIONS[name]
     
-    return pipeline 
+    return pipeline

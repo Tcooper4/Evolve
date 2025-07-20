@@ -1,4 +1,4 @@
-"""
+﻿"""
 StrategyResearchAgent - Internet-based strategy discovery and integration
 
 This agent scans multiple sources for new trading strategies and models:
@@ -1086,4 +1086,4 @@ if __name__ == "__main__":
         while True:
             time.sleep(60)
     except KeyboardInterrupt:
-        print("Stopping strategy research agent...") 
+        print("Stopping strategy research agent...")

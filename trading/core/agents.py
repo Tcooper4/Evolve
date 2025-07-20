@@ -1,4 +1,4 @@
-"""
+﻿"""
 Agent Management and Callback System for Trading Performance
 
 This module provides agent management capabilities, status tracking, and callback
@@ -226,7 +226,7 @@ class AgentManager:
 
                 # Log status transition
                 logger.info(
-                    f"Agent {agent_id} status transition: {old_status.value} → {status.value}"
+                    f"Agent {agent_id} status transition: {old_status.value} â†’ {status.value}"
                 )
 
                 self._save_agents()

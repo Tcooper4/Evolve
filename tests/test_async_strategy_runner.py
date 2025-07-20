@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Async Strategy Runner
 
 This module tests the async strategy runner functionality including:
@@ -372,4 +372,4 @@ class TestConvenienceFunctions:
 
 if __name__ == "__main__":
     # Run tests
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])

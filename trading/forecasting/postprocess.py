@@ -1,4 +1,4 @@
-"""
+﻿"""
 Forecasting Postprocessor - Batch 17
 Dynamic EWMA alpha tuning for improved forecast processing
 """
@@ -378,4 +378,4 @@ class ForecastPostprocessor:
 
 def create_forecast_postprocessor(config: Optional[PostprocessConfig] = None) -> ForecastPostprocessor:
     """Factory function to create a forecast postprocessor."""
-    return ForecastPostprocessor(config) 
+    return ForecastPostprocessor(config)

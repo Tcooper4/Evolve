@@ -1,4 +1,4 @@
-"""
+﻿"""
 Prompt Response Validator - Batch 18
 Schema validation for strategy results and prompt responses
 """
@@ -507,4 +507,4 @@ class PromptResponseValidator:
 
 def create_prompt_response_validator(validation_level: ValidationLevel = ValidationLevel.NORMAL) -> PromptResponseValidator:
     """Factory function to create prompt response validator."""
-    return PromptResponseValidator(validation_level=validation_level) 
+    return PromptResponseValidator(validation_level=validation_level)

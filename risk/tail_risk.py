@@ -1,4 +1,4 @@
-"""Risk & Tail Exposure Engine for Evolve Trading Platform.
+﻿"""Risk & Tail Exposure Engine for Evolve Trading Platform.
 
 This module provides comprehensive risk analysis including VaR, CVaR,
 drawdown analysis, and regime-based risk metrics.

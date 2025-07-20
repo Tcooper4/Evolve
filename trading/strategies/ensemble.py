@@ -1,4 +1,4 @@
-"""
+﻿"""
 Weighted Ensemble Strategy
 
 This module provides a WeightedEnsembleStrategy class that combines multiple
@@ -482,4 +482,4 @@ def create_conservative_ensemble() -> WeightedEnsembleStrategy:
         "weighted_average",
         confidence_threshold=0.7,
         consensus_threshold=0.6
-    ) 
+    )

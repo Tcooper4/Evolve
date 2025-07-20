@@ -1,4 +1,4 @@
-"""
+﻿"""
 Walk-Forward Backtest Example
 
 This example demonstrates how to use the walk-forward backtest function
@@ -523,4 +523,4 @@ def main():
         raise
 
 if __name__ == "__main__":
-    main() 
+    main()

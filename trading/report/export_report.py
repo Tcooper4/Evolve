@@ -1,4 +1,4 @@
-"""
+﻿"""
 Export Report Module
 
 Enhanced with Batch 10 features: comprehensive error handling for all file writing operations
@@ -675,4 +675,4 @@ class ExportReport:
             return {
                 "success": False,
                 "error": error_msg
-            } 
+            }

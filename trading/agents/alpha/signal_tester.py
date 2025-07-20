@@ -1,4 +1,4 @@
-ester - Hypothesis Testing Module
+﻿ester - Hypothesis Testing Module
 
 This module tests trading hypotheses across multiple tickers, timeframes, and market regimes.
 It evaluates performance using Sharpe ratio, drawdown, win rate, and other metrics.
@@ -701,4 +701,4 @@ Execute hypothesis testing."""
     
     def clear_results(self) -> None:
      Clear stored test results."""
-        self.test_results.clear() 
+        self.test_results.clear()

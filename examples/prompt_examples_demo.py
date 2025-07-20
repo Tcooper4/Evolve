@@ -1,4 +1,4 @@
-"""
+﻿"""
 Prompt Examples System Demo
 
 This script demonstrates the prompt examples functionality that uses semantic
@@ -13,7 +13,7 @@ from agents.llm.agent import PromptAgent
 
 def demo_prompt_examples():
     """Demonstrate the prompt examples system."""
-    print("🚀 Prompt Examples System Demo")
+    print("ðŸš€ Prompt Examples System Demo")
     print("=" * 50)
     
     # Initialize the prompt agent
@@ -24,14 +24,14 @@ def demo_prompt_examples():
     print("\n2. Initial Prompt Examples Statistics:")
     stats = agent.get_prompt_examples_stats()
     if "error" in stats:
-        print(f"   ❌ {stats['error']}")
+        print(f"   âŒ {stats['error']}")
     else:
-        print(f"   📊 Total examples: {stats['total_examples']}")
-        print(f"   📂 Categories: {list(stats['categories'].keys())}")
-        print(f"   🏷️  Unique symbols: {stats['unique_symbols']}")
-        print(f"   📈 Average performance score: {stats['average_performance_score']:.3f}")
-        print(f"   🔍 Embeddings available: {stats['embeddings_available']}")
-        print(f"   🤖 Sentence transformer available: {stats['sentence_transformer_available']}")
+        print(f"   ðŸ“Š Total examples: {stats['total_examples']}")
+        print(f"   ðŸ“‚ Categories: {list(stats['categories'].keys())}")
+        print(f"   ðŸ·ï¸  Unique symbols: {stats['unique_symbols']}")
+        print(f"   ðŸ“ˆ Average performance score: {stats['average_performance_score']:.3f}")
+        print(f"   ðŸ” Embeddings available: {stats['embeddings_available']}")
+        print(f"   ðŸ¤– Sentence transformer available: {stats['sentence_transformer_available']}")
     
     # Test finding similar examples
     print("\n3. Testing Similar Example Finding:")
@@ -50,7 +50,7 @@ def demo_prompt_examples():
         similar_examples = agent._find_similar_examples(prompt, top_k=2)
         
         if similar_examples:
-            print(f"   ✅ Found {len(similar_examples)} similar examples:")
+            print(f"   âœ… Found {len(similar_examples)} similar examples:")
             for j, example_data in enumerate(similar_examples, 1):
                 example = example_data['example']
                 similarity = example_data['similarity_score']
@@ -59,7 +59,7 @@ def demo_prompt_examples():
                 print(f"         Category: {example.get('category', 'unknown')}")
                 print(f"         Performance: {example.get('performance_score', 0.0):.2f}")
         else:
-            print("   ❌ No similar examples found")
+            print("   âŒ No similar examples found")
     
     # Test few-shot prompt creation
     print("\n4. Testing Few-Shot Prompt Creation:")
@@ -72,7 +72,7 @@ def demo_prompt_examples():
         print(f"   Enhanced prompt length: {len(enhanced_prompt)} characters")
         print(f"   Enhanced prompt preview: {enhanced_prompt[:200]}...")
     else:
-        print("   ❌ No examples available for few-shot prompt creation")
+        print("   âŒ No examples available for few-shot prompt creation")
     
     # Test symbol and timeframe extraction
     print("\n5. Testing Prompt Parsing:")
@@ -113,19 +113,19 @@ def demo_prompt_examples():
         
         # Check updated statistics
         updated_stats = agent.get_prompt_examples_stats()
-        print(f"   ✅ Successfully saved new example")
-        print(f"   📊 Updated total examples: {updated_stats['total_examples']}")
+        print(f"   âœ… Successfully saved new example")
+        print(f"   ðŸ“Š Updated total examples: {updated_stats['total_examples']}")
         
     except Exception as e:
-        print(f"   ❌ Error saving example: {e}")
+        print(f"   âŒ Error saving example: {e}")
     
     print("\n" + "=" * 50)
-    print("🎉 Demo completed!")
+    print("ðŸŽ‰ Demo completed!")
 
 
 def demo_similarity_search():
     """Demonstrate similarity search functionality."""
-    print("\n🔍 Similarity Search Demo")
+    print("\nðŸ” Similarity Search Demo")
     print("=" * 30)
     
     agent = PromptAgent()
@@ -159,7 +159,7 @@ def demo_similarity_search():
 
 def demo_performance_tracking():
     """Demonstrate performance tracking functionality."""
-    print("\n📈 Performance Tracking Demo")
+    print("\nðŸ“ˆ Performance Tracking Demo")
     print("=" * 30)
     
     agent = PromptAgent()
@@ -196,16 +196,16 @@ def demo_performance_tracking():
             if similar_examples:
                 avg_similarity = sum(ex['similarity_score'] for ex in similar_examples) / len(similar_examples)
                 final_score = min(1.0, base_score + avg_similarity * 0.1)
-                print(f"  ✅ Success with {len(similar_examples)} similar examples")
-                print(f"  📊 Base score: {base_score:.2f}")
-                print(f"  📈 Similarity boost: {avg_similarity:.3f}")
-                print(f"  🎯 Final score: {final_score:.2f}")
+                print(f"  âœ… Success with {len(similar_examples)} similar examples")
+                print(f"  ðŸ“Š Base score: {base_score:.2f}")
+                print(f"  ðŸ“ˆ Similarity boost: {avg_similarity:.3f}")
+                print(f"  ðŸŽ¯ Final score: {final_score:.2f}")
             else:
-                print(f"  ✅ Success (no similar examples)")
-                print(f"  📊 Score: {base_score:.2f}")
+                print(f"  âœ… Success (no similar examples)")
+                print(f"  ðŸ“Š Score: {base_score:.2f}")
         else:
-            print(f"  ❌ Failed")
-            print(f"  📊 Score: 0.0")
+            print(f"  âŒ Failed")
+            print(f"  ðŸ“Š Score: 0.0")
 
 
 def main():
@@ -219,20 +219,20 @@ def main():
         demo_performance_tracking()
         
         print("\n" + "=" * 50)
-        print("🎯 All demos completed successfully!")
+        print("ðŸŽ¯ All demos completed successfully!")
         print("\nKey Features Demonstrated:")
-        print("✅ Loading prompt examples from JSON")
-        print("✅ Semantic similarity search using SentenceTransformers")
-        print("✅ Few-shot prompt creation")
-        print("✅ Symbol and timeframe extraction")
-        print("✅ Performance tracking and scoring")
-        print("✅ Automatic example saving")
+        print("âœ… Loading prompt examples from JSON")
+        print("âœ… Semantic similarity search using SentenceTransformers")
+        print("âœ… Few-shot prompt creation")
+        print("âœ… Symbol and timeframe extraction")
+        print("âœ… Performance tracking and scoring")
+        print("âœ… Automatic example saving")
         
     except Exception as e:
-        print(f"❌ Error running demos: {e}")
+        print(f"âŒ Error running demos: {e}")
         import traceback
         traceback.print_exc()
 
 
 if __name__ == "__main__":
-    main() 
+    main()

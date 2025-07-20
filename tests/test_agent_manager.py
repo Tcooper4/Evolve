@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for Enhanced Agent Manager with Batch 12 Features
 
 This module tests the enhanced agent manager with comprehensive retry/backoff logic,
@@ -537,4 +537,4 @@ class TestAgentTask:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__]) 
+    pytest.main([__file__])

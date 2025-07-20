@@ -1,4 +1,4 @@
-"""
+﻿"""
 Configuration Loader
 
 This module provides a centralized configuration loading system with validation,
@@ -395,4 +395,4 @@ def set_config(section: str, key: str, value: Any) -> bool:
 def validate_config() -> bool:
     """Validate all configurations."""
     loader = get_config_loader()
-    return not loader.has_errors() 
+    return not loader.has_errors()

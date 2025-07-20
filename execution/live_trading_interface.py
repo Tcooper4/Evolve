@@ -1,4 +1,4 @@
-"""Live Trading Interface for Evolve Trading Platform.
+﻿"""Live Trading Interface for Evolve Trading Platform.
 
 This module provides live trading capabilities with simulated execution
 and optional real broker integration (Alpaca).

@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from typing import Callable, Dict, Optional, Union
 
 import numpy as np
@@ -36,7 +36,7 @@ try:
     from sklearn.preprocessing import StandardScaler
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling feature engineering capabilities.")
+    print("âš ï¸ scikit-learn not available. Disabling feature engineering capabilities.")
     print(f"   Missing: {e}")
     PCA = None
     RandomForestRegressor = None

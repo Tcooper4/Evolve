@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Data quality management script.
 Provides commands for assessing and improving data quality, including profiling, fixing, and reporting issues.
@@ -491,17 +491,17 @@ def setup_logging():
 
         print("\nSchema Validation:")
         if results["schema_validation"]["success"]:
-            print("  ✅ Schema validation passed")
+            print("  âœ… Schema validation passed")
         else:
-            print("  ❌ Schema validation failed")
+            print("  âŒ Schema validation failed")
             for result in results["schema_validation"]["results"]:
                 print(f"    - {result['message']}")
 
         print("\nQuality Validation:")
         if results["quality_validation"]["success"]:
-            print("  ✅ Quality validation passed")
+            print("  âœ… Quality validation passed")
         else:
-            print("  ❌ Quality validation failed")
+            print("  âŒ Quality validation failed")
             for result in results["quality_validation"]["results"]:
                 print(f"    - {result['message']}")
 

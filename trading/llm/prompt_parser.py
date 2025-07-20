@@ -1,4 +1,4 @@
-"""
+﻿"""
 Advanced Prompt Parser
 
 This module provides intelligent prompt parsing using spaCy NLP and GPT-based classification
@@ -540,4 +540,4 @@ def parse_prompts(prompts: List[str]) -> List[ActionPlan]:
         List of ActionPlan objects
     """
     parser = PromptParser()
-    return parser.parse_batch(prompts) 
+    return parser.parse_batch(prompts)

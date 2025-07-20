@@ -1,4 +1,4 @@
-"""
+﻿"""
 StrategyResearchAgent Example
 
 This example demonstrates how to use the StrategyResearchAgent to:
@@ -21,7 +21,7 @@ from utils.common_helpers import safe_json_save
 
 def main():
     """Main example function"""
-    print("🚀 StrategyResearchAgent Example")
+    print("ðŸš€ StrategyResearchAgent Example")
     print("=" * 50)
     
     # Initialize the agent
@@ -29,7 +29,7 @@ def main():
     agent = StrategyResearchAgent()
     
     # Example 1: Run a single research scan
-    print("\n📊 Running research scan...")
+    print("\nðŸ“Š Running research scan...")
     results = agent.run()
     
     print(f"Scan Results:")
@@ -38,7 +38,7 @@ def main():
     print(f"  - Status: {results['status']}")
     
     if results['status'] == 'success':
-        print("\n📈 Discovery Summary:")
+        print("\nðŸ“ˆ Discovery Summary:")
         summary = results['summary']
         print(f"  - Total discoveries: {summary['total_discoveries']}")
         print(f"  - By source: {summary['by_source']}")
@@ -47,13 +47,13 @@ def main():
         
         # Show recent discoveries
         if summary['recent_discoveries']:
-            print("\n🔍 Recent Discoveries:")
+            print("\nðŸ” Recent Discoveries:")
             for discovery in summary['recent_discoveries'][:5]:
                 print(f"  - {discovery['title']} ({discovery['source']})")
                 print(f"    Type: {discovery['type']}, Confidence: {discovery['confidence']:.2f}")
     
     # Example 2: Manual search of specific sources
-    print("\n🔍 Manual source search...")
+    print("\nðŸ” Manual source search...")
     
     # Search arXiv
     print("Searching arXiv...")
@@ -77,7 +77,7 @@ def main():
     
     # Example 3: Generate and test a specific strategy
     if arxiv_discoveries:
-        print("\n🧪 Testing discovered strategy...")
+        print("\nðŸ§ª Testing discovered strategy...")
         test_discovery = arxiv_discoveries[0]
         
         print(f"Testing: {test_discovery.title}")
@@ -89,7 +89,7 @@ def main():
         strategy_code = agent.generate_strategy_code(test_discovery)
         
         if strategy_code:
-            print("✅ Strategy code generated successfully")
+            print("âœ… Strategy code generated successfully")
             
             # Save strategy code to file
             strategy_filename = f"discovered_{test_discovery.title.replace(' ', '_')[:30]}.py"
@@ -106,15 +106,15 @@ def main():
             test_results = agent.test_discovered_strategy(test_discovery)
             
             if 'error' not in test_results:
-                print("✅ Backtest completed successfully")
+                print("âœ… Backtest completed successfully")
                 print(f"Results: {json.dumps(test_results, indent=2)}")
             else:
-                print(f"❌ Backtest failed: {test_results['error']}")
+                print(f"âŒ Backtest failed: {test_results['error']}")
         else:
-            print("❌ Failed to generate strategy code")
+            print("âŒ Failed to generate strategy code")
     
     # Example 4: Strategy analysis and filtering
-    print("\n📊 Strategy Analysis...")
+    print("\nðŸ“Š Strategy Analysis...")
     
     # Filter by confidence
     high_confidence = [d for d in agent.discovered_strategies if d.confidence_score > 0.7]
@@ -135,7 +135,7 @@ def main():
     print(f"ML strategies: {len(ml_strategies)}")
     
     # Example 5: Save discoveries to different formats
-    print("\n💾 Saving discoveries...")
+    print("\nðŸ’¾ Saving discoveries...")
     
     # Save as JSON
     discoveries_data = []
@@ -168,7 +168,7 @@ def main():
     print("Summary report saved to: examples/strategy_research_report.json")
     
     # Example 6: Schedule periodic scans
-    print("\n⏰ Scheduling periodic scans...")
+    print("\nâ° Scheduling periodic scans...")
     
     # Schedule scans every 12 hours
     agent.schedule_periodic_scans(interval_hours=12)
@@ -176,7 +176,7 @@ def main():
     print("Agent will continue running in background...")
     
     # Example 7: Interactive strategy exploration
-    print("\n🔍 Interactive Strategy Exploration")
+    print("\nðŸ” Interactive Strategy Exploration")
     print("Available commands:")
     print("  - 'list': List all discovered strategies")
     print("  - 'test <index>': Test strategy by index")
@@ -239,12 +239,12 @@ def main():
             print("\nExiting...")
             break
     
-    print("\n✅ StrategyResearchAgent example completed!")
+    print("\nâœ… StrategyResearchAgent example completed!")
 
 
 def example_arxiv_search():
     """Example of searching arXiv specifically"""
-    print("\n📚 arXiv Search Example")
+    print("\nðŸ“š arXiv Search Example")
     
     agent = StrategyResearchAgent()
     
@@ -269,7 +269,7 @@ def example_arxiv_search():
 
 def example_github_search():
     """Example of searching GitHub specifically"""
-    print("\n🐙 GitHub Search Example")
+    print("\nðŸ™ GitHub Search Example")
     
     agent = StrategyResearchAgent()
     
@@ -294,7 +294,7 @@ def example_github_search():
 
 def example_strategy_generation():
     """Example of generating strategy code"""
-    print("\n⚙️ Strategy Code Generation Example")
+    print("\nâš™ï¸ Strategy Code Generation Example")
     
     agent = StrategyResearchAgent()
     
@@ -319,7 +319,7 @@ def example_strategy_generation():
     strategy_code = agent.generate_strategy_code(sample_discovery)
     
     if strategy_code:
-        print("✅ Strategy code generated:")
+        print("âœ… Strategy code generated:")
         print("-" * 40)
         print(strategy_code[:500] + "..." if len(strategy_code) > 500 else strategy_code)
         print("-" * 40)
@@ -329,7 +329,7 @@ def example_strategy_generation():
             f.write(strategy_code)
         print("Strategy code saved to: examples/generated_strategy.py")
     else:
-        print("❌ Failed to generate strategy code")
+        print("âŒ Failed to generate strategy code")
 
 
 if __name__ == "__main__":
@@ -341,4 +341,4 @@ if __name__ == "__main__":
     example_github_search()
     example_strategy_generation()
     
-    print("\n🎉 All examples completed!") 
+    print("\nðŸŽ‰ All examples completed!")

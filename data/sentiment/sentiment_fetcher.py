@@ -1,4 +1,4 @@
-"""
+﻿"""
 Multi-Source Sentiment Fetcher
 
 This module fetches real-time sentiment data from multiple sources:
@@ -521,4 +521,4 @@ if __name__ == "__main__":
     
     # Get summary
     summary = fetcher.get_sentiment_summary(ticker, hours_back=6)
-    print(f"\nSummary: {json.dumps(summary, indent=2)}") 
+    print(f"\nSummary: {json.dumps(summary, indent=2)}")

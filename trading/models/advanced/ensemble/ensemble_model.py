@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+﻿from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -8,7 +8,7 @@ try:
     import torch
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling ensemble models.")
+    print("âš ï¸ PyTorch not available. Disabling ensemble models.")
     print(f"   Missing: {e}")
     torch = None
     TORCH_AVAILABLE = False
@@ -18,7 +18,7 @@ try:
     from scipy.stats import norm
     SCIPY_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scipy not available. Disabling statistical functions.")
+    print("âš ï¸ scipy not available. Disabling statistical functions.")
     print(f"   Missing: {e}")
     norm = None
     SCIPY_AVAILABLE = False

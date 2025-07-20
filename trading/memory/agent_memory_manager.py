@@ -1,4 +1,4 @@
-"""
+﻿"""
 Agent Memory Manager for Evolve Trading Platform
 
 This module provides institutional-level agent memory management:
