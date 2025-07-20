@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 """
-Test script for the fallback system
+Test Fallback System
 
-This script tests the agent registration fallback system to ensure
-it works correctly when no agents are registered.
+This test validates the fallback system functionality including
+agent controller fallbacks, mock agents, and prompt router fallbacks.
 """
 
 import asyncio
@@ -112,20 +111,23 @@ async def test_prompt_router_fallback():
         # Test prompts
         test_prompts = [
             "What is the system status?",
-            "Help me with trading",
-            "Forecast stock prices",
-            "Generate a strategy"
+            "Can you help me with trading?",
+            "Forecast the price of AAPL",
+            "Generate a trading strategy",
+            "Analyze the market trends",
+            "Hello, how are you?"
         ]
 
         results = []
         for prompt in test_prompts:
-            logger.info(f"Testing router with prompt: {prompt}")
-            result = await router.route_prompt(prompt, user_id="test_user")
+            logger.info(f"Testing prompt: {prompt}")
+            result = await router.route_prompt(prompt)
             results.append(result)
 
             logger.info(f"  Success: {result.get('success', False)}")
             logger.info(f"  Routing type: {result.get('routing_type', 'unknown')}")
-            logger.info(f"  Message: {result.get('message', 'No message')}")
+            logger.info(f"  Agent used: {result.get('agent_used', 'unknown')}")
+            logger.info(f"  Fallback used: {result.get('fallback_used', False)}")
 
         return results
 
@@ -139,95 +141,136 @@ async def test_startup_fallback():
     logger.info("Testing startup fallback...")
 
     try:
-        from start_orchestrator import _check_agent_registration
+        from fallback.startup_fallback import StartupFallback
 
-        # Test agent registration check
-        status = await _check_agent_registration()
+        # Create startup fallback
+        startup_fallback = StartupFallback()
 
-        if status:
-            logger.info("Startup fallback test completed successfully")
-            logger.info(f"Registration status: {status}")
-        else:
-            logger.warning("Startup fallback test returned None")
+        # Test system initialization
+        logger.info("Testing system initialization...")
+        init_result = await startup_fallback.initialize_system()
+        logger.info(f"  Initialization success: {init_result.success}")
+        logger.info(f"  Components initialized: {init_result.components_initialized}")
+        logger.info(f"  Fallbacks used: {init_result.fallbacks_used}")
 
-        return status
+        # Test component health check
+        logger.info("Testing component health check...")
+        health_result = await startup_fallback.check_component_health()
+        logger.info(f"  Health check success: {health_result.success}")
+        logger.info(f"  Healthy components: {health_result.healthy_components}")
+        logger.info(f"  Failed components: {health_result.failed_components}")
+
+        # Test fallback activation
+        logger.info("Testing fallback activation...")
+        fallback_result = await startup_fallback.activate_fallbacks()
+        logger.info(f"  Fallback activation success: {fallback_result.success}")
+        logger.info(f"  Fallbacks activated: {fallback_result.activated_fallbacks}")
+
+        return {
+            "initialization": init_result,
+            "health_check": health_result,
+            "fallback_activation": fallback_result
+        }
 
     except Exception as e:
         logger.error(f"Error testing startup fallback: {e}")
         return None
 
 
+async def test_error_recovery():
+    """Test error recovery functionality."""
+    logger.info("Testing error recovery...")
+
+    try:
+        from fallback.error_recovery import ErrorRecovery
+
+        # Create error recovery
+        error_recovery = ErrorRecovery()
+
+        # Test error detection
+        logger.info("Testing error detection...")
+        error_result = await error_recovery.detect_errors()
+        logger.info(f"  Error detection success: {error_result.success}")
+        logger.info(f"  Errors detected: {error_result.errors_detected}")
+
+        # Test recovery strategies
+        logger.info("Testing recovery strategies...")
+        recovery_result = await error_recovery.apply_recovery_strategies()
+        logger.info(f"  Recovery success: {recovery_result.success}")
+        logger.info(f"  Strategies applied: {recovery_result.strategies_applied}")
+
+        # Test system restoration
+        logger.info("Testing system restoration...")
+        restoration_result = await error_recovery.restore_system()
+        logger.info(f"  Restoration success: {restoration_result.success}")
+        logger.info(f"  System restored: {restoration_result.system_restored}")
+
+        return {
+            "error_detection": error_result,
+            "recovery_strategies": recovery_result,
+            "system_restoration": restoration_result
+        }
+
+    except Exception as e:
+        logger.error(f"Error testing error recovery: {e}")
+        return None
+
+
 async def main():
-    """Run all fallback tests."""
-    logger.info("Starting fallback system tests...")
+    """Main test function."""
+    logger.info("🚀 Starting Fallback System Test Suite")
+    logger.info("=" * 60)
 
-    # Test 1: Agent controller fallback
-    logger.info("\n" + "="*60)
-    logger.info("TEST 1: Agent Controller Fallback")
-    logger.info("="*60)
-    controller_status = await test_agent_controller_fallback()
+    test_results = []
 
-    # Test 2: Mock agent functionality
-    logger.info("\n" + "="*60)
-    logger.info("TEST 2: Mock Agent Functionality")
-    logger.info("="*60)
-    mock_results = await test_mock_agent()
+    # Run all tests
+    tests = [
+        ("Agent Controller Fallback", test_agent_controller_fallback),
+        ("Mock Agent", test_mock_agent),
+        ("Prompt Router Fallback", test_prompt_router_fallback),
+        ("Startup Fallback", test_startup_fallback),
+        ("Error Recovery", test_error_recovery)
+    ]
 
-    # Test 3: Prompt router fallback
-    logger.info("\n" + "="*60)
-    logger.info("TEST 3: Prompt Router Fallback")
-    logger.info("="*60)
-    router_results = await test_prompt_router_fallback()
-
-    # Test 4: Startup fallback
-    logger.info("\n" + "="*60)
-    logger.info("TEST 4: Startup Fallback")
-    logger.info("="*60)
-    startup_status = await test_startup_fallback()
+    for test_name, test_func in tests:
+        logger.info(f"\n--- Running {test_name} Test ---")
+        try:
+            result = await test_func()
+            test_results.append((test_name, result is not None))
+            
+            if result:
+                logger.info(f"✅ {test_name} test completed successfully")
+            else:
+                logger.error(f"❌ {test_name} test failed")
+                
+        except Exception as e:
+            logger.error(f"❌ {test_name} test failed with exception: {e}")
+            test_results.append((test_name, False))
 
     # Summary
-    logger.info("\n" + "="*60)
+    logger.info("\n" + "=" * 60)
     logger.info("TEST SUMMARY")
-    logger.info("="*60)
+    logger.info("=" * 60)
 
-    tests_passed = 0
-    total_tests = 4
+    passed = 0
+    total = len(test_results)
 
-    if controller_status:
-        logger.info("✅ Agent controller fallback: PASSED")
-        tests_passed += 1
+    for test_name, result in test_results:
+        status = "✅ PASSED" if result else "❌ FAILED"
+        logger.info(f"{status}: {test_name}")
+        if result:
+            passed += 1
+
+    logger.info(f"\nOverall: {passed}/{total} tests passed")
+
+    if passed == total:
+        logger.info("🎉 All fallback system tests passed!")
+        return True
     else:
-        logger.error("❌ Agent controller fallback: FAILED")
-
-    if mock_results:
-        logger.info("✅ Mock agent functionality: PASSED")
-        tests_passed += 1
-    else:
-        logger.error("❌ Mock agent functionality: FAILED")
-
-    if router_results:
-        logger.info("✅ Prompt router fallback: PASSED")
-        tests_passed += 1
-    else:
-        logger.error("❌ Prompt router fallback: FAILED")
-
-    if startup_status is not None:
-        logger.info("✅ Startup fallback: PASSED")
-        tests_passed += 1
-    else:
-        logger.error("❌ Startup fallback: FAILED")
-
-    logger.info(f"\nOverall result: {tests_passed}/{total_tests} tests passed")
-
-    if tests_passed == total_tests:
-        logger.info("🎉 All fallback tests passed! System is ready for fallback operation.")
-    else:
-        logger.warning("⚠️ Some tests failed. Check the logs for details.")
-
-    return tests_passed == total_tests
+        logger.error(f"❌ {total - passed} tests failed")
+        return False
 
 
 if __name__ == "__main__":
     success = asyncio.run(main())
-    sys.exit(0 if success else 1)
-
+    exit(0 if success else 1) 

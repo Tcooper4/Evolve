@@ -1,4 +1,4 @@
-﻿"""
+"""
 Base Strategy Module
 
 Defines the abstract base class for all trading strategies.
@@ -15,7 +15,7 @@ class BaseStrategy(ABC):
 
     def __init__(self, name: str, description: str = ""):
         """Initialize strategy.
-        
+
         Args:
             name: Strategy name
             description: Strategy description
@@ -27,11 +27,11 @@ class BaseStrategy(ABC):
     @abstractmethod
     def generate_signals(self, data: pd.DataFrame, **kwargs) -> pd.DataFrame:
         """Generate trading signals from market data.
-        
+
         Args:
             data: Market data DataFrame with OHLCV columns
             **kwargs: Additional parameters
-            
+
         Returns:
             DataFrame with trading signals
         """
@@ -39,14 +39,14 @@ class BaseStrategy(ABC):
     @abstractmethod
     def get_parameter_space(self) -> Dict[str, Any]:
         """Get the parameter space for optimization.
-        
+
         Returns:
             Dictionary defining parameter ranges and types
         """
 
     def set_parameters(self, parameters: Dict[str, Any]):
         """Set strategy parameters.
-        
+
         Args:
             parameters: Dictionary of parameter names and values
         """
@@ -54,7 +54,7 @@ class BaseStrategy(ABC):
 
     def get_parameters(self) -> Dict[str, Any]:
         """Get current parameters.
-        
+
         Returns:
             Copy of current parameters dictionary
         """
@@ -62,10 +62,10 @@ class BaseStrategy(ABC):
 
     def validate_data(self, data: pd.DataFrame) -> bool:
         """Validate input data.
-        
+
         Args:
             data: Market data DataFrame
-            
+
         Returns:
             True if data is valid, False otherwise
         """
@@ -74,7 +74,7 @@ class BaseStrategy(ABC):
 
     def get_name(self) -> str:
         """Get strategy name.
-        
+
         Returns:
             Strategy name
         """
@@ -82,7 +82,7 @@ class BaseStrategy(ABC):
 
     def get_description(self) -> str:
         """Get strategy description.
-        
+
         Returns:
             Strategy description
         """
@@ -94,4 +94,4 @@ class BaseStrategy(ABC):
 
     def __repr__(self) -> str:
         """Detailed string representation of the strategy."""
-        return f"{self.__class__.__name__}(name='{self.name}', description='{self.description}', parameters={self.parameters})"
+        return f"{self.__class__.__name__}(name='{self.name}', description='{self.description}', parameters={self.parameters})" 

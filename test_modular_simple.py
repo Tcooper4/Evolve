@@ -1,15 +1,17 @@
-#!/usr/bin/env python3
 """
-Simple Test for Modular Components
+Simple Modular Test
 
-This script tests the modularized components without importing problematic dependencies.
+This test validates the modular structure of the trading system
+without importing complex dependencies.
 """
 
 import os
 import sys
 from pathlib import Path
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 def test_file_structure():
     """Test that all modular files exist and have correct structure."""
@@ -107,63 +109,90 @@ def test_file_sizes():
 
 def test_import_structure():
     """Test the import structure of modular components."""
-    logger.info("\n🔗 Testing Import Structure")
+    logger.info("\n📦 Testing Import Structure")
     logger.info("=" * 50)
 
-    # Test execution agent imports
     try:
-        with open("trading/agents/execution/__init__.py", "r") as f:
-            content = f.read()
-            if "ExecutionAgent" in content and "create_execution_agent" in content:
-                logger.info("  ✅ Execution agent __init__.py has correct exports")
-            else:
-                logger.error("  ❌ Execution agent __init__.py missing exports")
-    except Exception as e:
-        logger.error(f"  ❌ Error reading execution agent __init__.py: {e}")
+        # Test execution agent imports
+        from trading.agents.execution import ExecutionAgent
+        logger.info("  ✅ ExecutionAgent import successful")
 
-    # Test optimizer agent imports
-    try:
-        with open("trading/agents/optimization/__init__.py", "r") as f:
-            content = f.read()
-            if "OptimizerAgent" in content and "create_optimizer_agent" in content:
-                logger.info("  ✅ Optimizer agent __init__.py has correct exports")
-            else:
-                logger.error("  ❌ Optimizer agent __init__.py missing exports")
-    except Exception as e:
-        logger.error(f"  ❌ Error reading optimizer agent __init__.py: {e}")
+        # Test optimizer agent imports
+        from trading.agents.optimization import OptimizerAgent
+        logger.info("  ✅ OptimizerAgent import successful")
 
-    # Test orchestrator imports
-    try:
-        with open("core/orchestrator/__init__.py", "r") as f:
-            content = f.read()
-            if "TaskOrchestrator" in content and "create_task_orchestrator" in content:
-                logger.info("  ✅ Task orchestrator __init__.py has correct exports")
-            else:
-                logger.error("  ❌ Task orchestrator __init__.py missing exports")
+        # Test task orchestrator imports
+        from core.orchestrator import TaskOrchestrator
+        logger.info("  ✅ TaskOrchestrator import successful")
+
+        logger.info("  ✅ All modular imports successful")
+
+    except ImportError as e:
+        logger.error(f"  ❌ Import error: {e}")
+        return False
     except Exception as e:
-        logger.error(f"  ❌ Error reading task orchestrator __init__.py: {e}")
+        logger.error(f"  ❌ Unexpected error: {e}")
+        return False
+
+    return True
+
+
+def test_basic_functionality():
+    """Test basic functionality of modular components."""
+    logger.info("\n🔧 Testing Basic Functionality")
+    logger.info("=" * 50)
+
+    try:
+        # Test execution agent creation
+        from trading.agents.execution import create_execution_agent
+        execution_agent = create_execution_agent({"execution_mode": "simulation"})
+        logger.info("  ✅ Execution agent creation successful")
+
+        # Test optimizer agent creation
+        from trading.agents.optimization import create_optimizer_agent
+        optimizer_agent = create_optimizer_agent({"optimization_type": "grid_search"})
+        logger.info("  ✅ Optimizer agent creation successful")
+
+        # Test task orchestrator creation
+        from core.orchestrator import create_task_orchestrator
+        orchestrator = create_task_orchestrator()
+        logger.info("  ✅ Task orchestrator creation successful")
+
+        logger.info("  ✅ All basic functionality tests passed")
+
+    except Exception as e:
+        logger.error(f"  ❌ Functionality test failed: {e}")
+        return False
+
+    return True
 
 
 def main():
-    """Run all modular structure tests."""
-    logger.info("🚀 Starting Modular Structure Tests")
+    """Main test function."""
+    logger.info("🚀 Starting Modular Structure Test")
     logger.info("=" * 60)
 
+    # Run tests
     test_file_structure()
     test_file_sizes()
-    test_import_structure()
+    
+    import_success = test_import_structure()
+    functionality_success = test_basic_functionality()
 
-    logger.info("\n🎉 Modular Structure Tests Completed!")
+    # Summary
+    logger.info("\n" + "=" * 60)
+    logger.info("TEST SUMMARY")
     logger.info("=" * 60)
-    logger.info("\n📋 Summary of Modularization:")
-    logger.info("✅ ExecutionAgent (2110 lines) → 6 modular files")
-    logger.info("✅ OptimizerAgent (1642 lines) → 6 modular files")
-    logger.info("✅ TaskOrchestrator (952 lines) → 8 modular files")
-    logger.info("✅ All associated tests updated")
-    logger.info("✅ Import structures properly configured")
-    logger.info("✅ Factory functions created for easy instantiation")
+
+    if import_success and functionality_success:
+        logger.info("🎉 All modular structure tests passed!")
+        logger.info("✅ System has been successfully modularized")
+        return True
+    else:
+        logger.error("❌ Some modular structure tests failed")
+        return False
 
 
 if __name__ == "__main__":
-    main()
-
+    success = main()
+    sys.exit(0 if success else 1) 

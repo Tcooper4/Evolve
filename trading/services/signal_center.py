@@ -17,7 +17,6 @@ warnings.filterwarnings("ignore")
 # Try to import webhook libraries
 try:
     import requests
-
     REQUESTS_AVAILABLE = True
 except ImportError:
     REQUESTS_AVAILABLE = False
@@ -27,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 class SignalType(Enum):
     """Signal types."""
-
     BUY = "buy"
     SELL = "sell"
     HOLD = "hold"
@@ -38,7 +36,6 @@ class SignalType(Enum):
 
 class SignalStatus(Enum):
     """Signal status."""
-
     ACTIVE = "active"
     TRIGGERED = "triggered"
     EXPIRED = "expired"
@@ -49,7 +46,6 @@ class SignalStatus(Enum):
 @dataclass
 class Signal:
     """Trading signal."""
-
     signal_id: str
     symbol: str
     signal_type: SignalType
@@ -67,7 +63,6 @@ class Signal:
 @dataclass
 class ActiveTrade:
     """Active trade information."""
-
     trade_id: str
     symbol: str
     side: str
@@ -98,39 +93,26 @@ class SignalCenter:
         self.max_active_signals = self.config.get("max_active_signals", 100)
         self.min_confidence_threshold = self.config.get("min_confidence_threshold", 0.6)
 
-        # Webhook settings
-        self.webhook_config = self.config.get(
-            "webhook_config",
-            {
-                "discord_webhook_url": "",
-                "email_webhook_url": "",
-                "slack_webhook_url": "",
-                "enable_alerts": True,
-                "alert_confidence_threshold": 0.7,
-            },
-        )
+        # Alert settings
+        self.enable_discord_alerts = self.config.get("enable_discord_alerts", False)
+        self.enable_email_alerts = self.config.get("enable_email_alerts", False)
+        self.enable_slack_alerts = self.config.get("enable_slack_alerts", False)
+        self.discord_webhook_url = self.config.get("discord_webhook_url", "")
+        self.email_webhook_url = self.config.get("email_webhook_url", "")
+        self.slack_webhook_url = self.config.get("slack_webhook_url", "")
 
-        # Signal storage
-        self.active_signals = {}
-        self.signal_history = []
-        self.active_trades = {}
-        self.trade_history = []
+        # Data storage
+        self.signals: Dict[str, Signal] = {}
+        self.trades: Dict[str, ActiveTrade] = {}
+        self.performance_history: List[Dict[str, Any]] = []
 
         # Performance tracking
-        self.signal_performance = {}
-        self.strategy_performance = {}
+        self.strategy_performance: Dict[str, Dict[str, Any]] = {}
+        self.total_signals = 0
+        self.total_trades = 0
+        self.successful_trades = 0
 
-        # Alert history
-        self.alert_history = []
-
-        logger.info("Signal Center initialized")
-
-        return {
-            "success": True,
-            "message": "Signal Center initialized successfully",
-            "timestamp": datetime.now().isoformat(),
-            "config": self.config,
-        }
+        logger.info("SignalCenter initialized successfully")
 
     def add_signal(
         self,
@@ -147,9 +129,9 @@ class SignalCenter:
 
         Args:
             symbol: Trading symbol
-            signal_type: Signal type
+            signal_type: Type of signal
             strategy: Strategy name
-            confidence: Signal confidence (0-1)
+            confidence: Signal confidence (0.0 to 1.0)
             price: Current price
             target_price: Target price (optional)
             stop_loss: Stop loss price (optional)
@@ -158,67 +140,65 @@ class SignalCenter:
         Returns:
             Signal ID
         """
-        try:
-            # Generate signal ID
-            signal_id = f"{symbol}_{signal_type.value}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        # Validate confidence
+        if not 0.0 <= confidence <= 1.0:
+            logger.warning(f"Invalid confidence {confidence}, clamping to [0, 1]")
+            confidence = max(0.0, min(1.0, confidence))
 
-            # Set default values
-            if target_price is None:
-                if signal_type in [SignalType.BUY, SignalType.STRONG_BUY]:
-                    target_price = price * 1.05  # 5% target
-                else:
-                    target_price = price * 0.95  # 5% target
+        # Check confidence threshold
+        if confidence < self.min_confidence_threshold:
+            logger.info(f"Signal confidence {confidence} below threshold {self.min_confidence_threshold}, skipping")
+            return ""
 
-            if stop_loss is None:
-                if signal_type in [SignalType.BUY, SignalType.STRONG_BUY]:
-                    stop_loss = price * 0.98  # 2% stop loss
-                else:
-                    stop_loss = price * 1.02  # 2% stop loss
+        # Generate signal ID
+        signal_id = f"signal_{len(self.signals)}_{int(datetime.now().timestamp())}"
 
-            # Create signal
-            signal = Signal(
-                signal_id=signal_id,
-                symbol=symbol,
-                signal_type=signal_type,
-                strategy=strategy,
-                confidence=confidence,
-                price=price,
-                target_price=target_price,
-                stop_loss=stop_loss,
-                timestamp=datetime.now(),
-                expiry=datetime.now() + timedelta(hours=self.signal_expiry_hours),
-                status=SignalStatus.ACTIVE,
-                metadata=metadata or {},
-            )
+        # Calculate expiry time
+        expiry = datetime.now() + timedelta(hours=self.signal_expiry_hours)
 
-            # Store signal
-            self.active_signals[signal_id] = signal
-            self.signal_history.append(signal)
+        # Set default target and stop loss if not provided
+        if target_price is None:
+            if signal_type in [SignalType.BUY, SignalType.STRONG_BUY]:
+                target_price = price * 1.05  # 5% target
+            else:
+                target_price = price * 0.95  # 5% target
 
-            # Check if signal should trigger alert
-            if (
-                self.webhook_config["enable_alerts"]
-                and confidence >= self.webhook_config["alert_confidence_threshold"]
-            ):
-                self._send_alert(signal)
+        if stop_loss is None:
+            if signal_type in [SignalType.BUY, SignalType.STRONG_BUY]:
+                stop_loss = price * 0.98  # 2% stop loss
+            else:
+                stop_loss = price * 1.02  # 2% stop loss
 
-            # Clean up old signals
+        # Create signal
+        signal = Signal(
+            signal_id=signal_id,
+            symbol=symbol,
+            signal_type=signal_type,
+            strategy=strategy,
+            confidence=confidence,
+            price=price,
+            target_price=target_price,
+            stop_loss=stop_loss,
+            timestamp=datetime.now(),
+            expiry=expiry,
+            status=SignalStatus.ACTIVE,
+            metadata=metadata or {}
+        )
+
+        # Store signal
+        self.signals[signal_id] = signal
+        self.total_signals += 1
+
+        # Cleanup old signals if needed
+        if len(self.signals) > self.max_active_signals:
             self._cleanup_expired_signals()
 
-            logger.info(
-                f"Added signal {signal_id}: {signal_type.value} {symbol} "
-                f"at {price:.2f} (confidence: {confidence:.2%})"
-            )
+        # Send alert
+        if self.enable_discord_alerts or self.enable_email_alerts or self.enable_slack_alerts:
+            self._send_alert(signal)
 
-            return signal_id
-
-        except Exception as e:
-            logger.error(f"Error adding signal: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        logger.info(f"Added signal {signal_id}: {symbol} {signal_type.value} (confidence: {confidence:.2f})")
+        return signal_id
 
     def update_signal_status(
         self,
@@ -234,37 +214,20 @@ class SignalCenter:
             metadata: Additional metadata
 
         Returns:
-            Update result
+            Updated signal information
         """
-        try:
-            if signal_id not in self.active_signals:
-                return {
-                    "success": False,
-                    "error": "Signal not found",
-                    "timestamp": datetime.now().isoformat(),
-                }
+        if signal_id not in self.signals:
+            logger.error(f"Signal {signal_id} not found")
+            return {"error": "Signal not found"}
 
-            signal = self.active_signals[signal_id]
-            signal.status = status
+        signal = self.signals[signal_id]
+        signal.status = status
 
-            if metadata:
-                signal.metadata.update(metadata)
+        if metadata:
+            signal.metadata.update(metadata)
 
-            logger.info(f"Updated signal {signal_id} status to {status.value}")
-
-            return {
-                "success": True,
-                "message": "Signal status updated successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            logger.error(f"Error updating signal status: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        logger.info(f"Updated signal {signal_id} status to {status.value}")
+        return self._signal_to_dict(signal)
 
     def add_trade(
         self,
@@ -290,46 +253,34 @@ class SignalCenter:
             metadata: Additional metadata
 
         Returns:
-            Trade result
+            Trade information
         """
-        try:
-            # Create trade
-            trade = ActiveTrade(
-                trade_id=trade_id,
-                symbol=symbol,
-                side=side,
-                entry_price=entry_price,
-                current_price=entry_price,
-                quantity=quantity,
-                pnl=0.0,
-                pnl_pct=0.0,
-                time_open=datetime.now(),
-                strategy=strategy,
-                signal_id=signal_id,
-                metadata=metadata or {},
-            )
+        # Create trade
+        trade = ActiveTrade(
+            trade_id=trade_id,
+            symbol=symbol,
+            side=side,
+            entry_price=entry_price,
+            current_price=entry_price,
+            quantity=quantity,
+            pnl=0.0,
+            pnl_pct=0.0,
+            time_open=datetime.now(),
+            strategy=strategy,
+            signal_id=signal_id,
+            metadata=metadata or {}
+        )
 
-            # Store trade
-            self.active_trades[trade_id] = trade
-            self.trade_history.append(trade)
+        # Store trade
+        self.trades[trade_id] = trade
+        self.total_trades += 1
 
-            logger.info(
-                f"Added trade {trade_id}: {side} {quantity} {symbol} at {entry_price:.2f}"
-            )
+        # Update signal status if associated
+        if signal_id in self.signals:
+            self.update_signal_status(signal_id, SignalStatus.EXECUTED)
 
-            return {
-                "success": True,
-                "message": "Trade added successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            logger.error(f"Error adding trade: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        logger.info(f"Added trade {trade_id}: {symbol} {side} {quantity} @ {entry_price}")
+        return self._trade_to_dict(trade)
 
     def update_trade_price(self, trade_id: str, current_price: float) -> Dict[str, Any]:
         """Update trade current price and P&L.
@@ -339,40 +290,24 @@ class SignalCenter:
             current_price: Current market price
 
         Returns:
-            Update result
+            Updated trade information
         """
-        try:
-            if trade_id not in self.active_trades:
-                return {
-                    "success": False,
-                    "error": "Trade not found",
-                    "timestamp": datetime.now().isoformat(),
-                }
+        if trade_id not in self.trades:
+            logger.error(f"Trade {trade_id} not found")
+            return {"error": "Trade not found"}
 
-            trade = self.active_trades[trade_id]
-            trade.current_price = current_price
+        trade = self.trades[trade_id]
+        trade.current_price = current_price
 
-            # Calculate P&L
-            if trade.side.lower() == "buy":
-                trade.pnl = (current_price - trade.entry_price) * trade.quantity
-                trade.pnl_pct = (current_price - trade.entry_price) / trade.entry_price
-            else:
-                trade.pnl = (trade.entry_price - current_price) * trade.quantity
-                trade.pnl_pct = (trade.entry_price - current_price) / trade.entry_price
+        # Calculate P&L
+        if trade.side.lower() == "buy":
+            trade.pnl = (current_price - trade.entry_price) * trade.quantity
+            trade.pnl_pct = ((current_price - trade.entry_price) / trade.entry_price) * 100
+        else:
+            trade.pnl = (trade.entry_price - current_price) * trade.quantity
+            trade.pnl_pct = ((trade.entry_price - current_price) / trade.entry_price) * 100
 
-            return {
-                "success": True,
-                "message": "Trade price updated successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            logger.error(f"Error updating trade price: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        return self._trade_to_dict(trade)
 
     def close_trade(
         self, trade_id: str, exit_price: float, exit_reason: str = "manual"
@@ -385,49 +320,36 @@ class SignalCenter:
             exit_reason: Reason for closing
 
         Returns:
-            Close result
+            Closed trade information
         """
-        try:
-            if trade_id not in self.active_trades:
-                return {
-                    "success": False,
-                    "error": "Trade not found",
-                    "timestamp": datetime.now().isoformat(),
-                }
+        if trade_id not in self.trades:
+            logger.error(f"Trade {trade_id} not found")
+            return {"error": "Trade not found"}
 
-            trade = self.active_trades[trade_id]
+        trade = self.trades[trade_id]
 
-            # Calculate final P&L
-            if trade.side.lower() == "buy":
-                final_pnl = (exit_price - trade.entry_price) * trade.quantity
-                final_pnl_pct = (exit_price - trade.entry_price) / trade.entry_price
-            else:
-                final_pnl = (trade.entry_price - exit_price) * trade.quantity
-                final_pnl_pct = (trade.entry_price - exit_price) / trade.entry_price
+        # Calculate final P&L
+        if trade.side.lower() == "buy":
+            final_pnl = (exit_price - trade.entry_price) * trade.quantity
+            final_pnl_pct = ((exit_price - trade.entry_price) / trade.entry_price) * 100
+        else:
+            final_pnl = (trade.entry_price - exit_price) * trade.quantity
+            final_pnl_pct = ((trade.entry_price - exit_price) / trade.entry_price) * 100
 
-            # Update performance tracking
-            self._update_performance_tracking(trade, final_pnl_pct)
+        # Update performance tracking
+        self._update_performance_tracking(trade, final_pnl_pct)
 
-            # Remove from active trades
-            del self.active_trades[trade_id]
+        # Remove from active trades
+        closed_trade = self.trades.pop(trade_id)
 
-            logger.info(
-                f"Closed trade {trade_id}: P&L {final_pnl:.2f} ({final_pnl_pct:.2%})"
-            )
-
-            return {
-                "success": True,
-                "message": "Trade closed successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            logger.error(f"Error closing trade: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        logger.info(f"Closed trade {trade_id}: P&L {final_pnl:.2f} ({final_pnl_pct:.2f}%)")
+        return {
+            "trade_id": trade_id,
+            "final_pnl": final_pnl,
+            "final_pnl_pct": final_pnl_pct,
+            "exit_reason": exit_reason,
+            "duration": datetime.now() - trade.time_open
+        }
 
     def get_active_signals(self, symbol: Optional[str] = None) -> List[Signal]:
         """Get active signals.
@@ -438,28 +360,12 @@ class SignalCenter:
         Returns:
             List of active signals
         """
-        try:
-            if symbol:
-                signals = [
-                    s for s in self.active_signals.values() if s.symbol == symbol
-                ]
-            else:
-                signals = list(self.active_signals.values())
-
-            return {
-                "success": True,
-                "result": signals,
-                "message": "Active signals retrieved successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            logger.error(f"Error getting active signals: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        active_signals = []
+        for signal in self.signals.values():
+            if signal.status == SignalStatus.ACTIVE:
+                if symbol is None or signal.symbol == symbol:
+                    active_signals.append(signal)
+        return active_signals
 
     def get_active_trades(self, symbol: Optional[str] = None) -> List[ActiveTrade]:
         """Get active trades.
@@ -470,390 +376,233 @@ class SignalCenter:
         Returns:
             List of active trades
         """
-        try:
-            if symbol:
-                trades = [t for t in self.active_trades.values() if t.symbol == symbol]
-            else:
-                trades = list(self.active_trades.values())
-
-            return {
-                "success": True,
-                "result": trades,
-                "message": "Active trades retrieved successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            logger.error(f"Error getting active trades: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        active_trades = []
+        for trade in self.trades.values():
+            if symbol is None or trade.symbol == symbol:
+                active_trades.append(trade)
+        return active_trades
 
     def get_signal_summary(self) -> Dict[str, Any]:
-        """Get signal summary statistics.
+        """Get signal summary statistics."""
+        active_signals = self.get_active_signals()
+        active_trades = self.get_active_trades()
 
-        Returns:
-            Summary statistics
-        """
-        try:
-            total_signals = len(self.signal_history)
-            active_signals = len(self.active_signals)
-            total_trades = len(self.trade_history)
-            active_trades = len(self.active_trades)
+        summary = {
+            "total_signals": self.total_signals,
+            "active_signals": len(active_signals),
+            "total_trades": self.total_trades,
+            "active_trades": len(active_trades),
+            "successful_trades": self.successful_trades,
+            "success_rate": (self.successful_trades / self.total_trades * 100) if self.total_trades > 0 else 0.0,
+            "signals_by_type": {},
+            "signals_by_strategy": {}
+        }
 
-            # Calculate performance metrics
-            if self.trade_history:
-                total_pnl = sum(
-                    trade.pnl for trade in self.trade_history if hasattr(trade, "pnl")
-                )
-                avg_pnl = total_pnl / len(self.trade_history)
-            else:
-                total_pnl = 0
-                avg_pnl = 0
+        # Count signals by type
+        for signal in active_signals:
+            signal_type = signal.signal_type.value
+            summary["signals_by_type"][signal_type] = summary["signals_by_type"].get(signal_type, 0) + 1
 
-            summary = {
-                "total_signals": total_signals,
-                "active_signals": active_signals,
-                "total_trades": total_trades,
-                "active_trades": active_trades,
-                "total_pnl": total_pnl,
-                "avg_pnl": avg_pnl,
-                "timestamp": datetime.now().isoformat(),
-            }
+        # Count signals by strategy
+        for signal in active_signals:
+            strategy = signal.strategy
+            summary["signals_by_strategy"][strategy] = summary["signals_by_strategy"].get(strategy, 0) + 1
 
-            return {
-                "success": True,
-                "result": summary,
-                "message": "Signal summary retrieved successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            logger.error(f"Error getting signal summary: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        return summary
 
     def get_signal_performance(
         self, strategy: Optional[str] = None, days: int = 30
     ) -> Dict[str, Any]:
-        """Get signal performance metrics.
+        """Get signal performance statistics.
 
         Args:
             strategy: Filter by strategy (optional)
-            days: Number of days to analyze
+            days: Number of days to look back
 
         Returns:
-            Performance metrics
+            Performance statistics
         """
-        try:
-            cutoff_date = datetime.now() - timedelta(days=days)
+        cutoff_date = datetime.now() - timedelta(days=days)
+        performance_data = []
 
-            # Filter signals by date and strategy
-            recent_signals = [
-                s for s in self.signal_history if s.timestamp >= cutoff_date
-            ]
+        for record in self.performance_history:
+            if record["timestamp"] >= cutoff_date:
+                if strategy is None or record["strategy"] == strategy:
+                    performance_data.append(record)
 
-            if strategy:
-                recent_signals = [s for s in recent_signals if s.strategy == strategy]
+        if not performance_data:
+            return {"message": "No performance data available"}
 
-            if not recent_signals:
-                return {
-                    "success": True,
-                    "result": {},
-                    "message": "No signals found for period",
-                    "timestamp": datetime.now().isoformat(),
-                }
+        # Calculate statistics
+        pnl_values = [record["pnl_pct"] for record in performance_data]
+        total_trades = len(performance_data)
+        successful_trades = len([p for p in pnl_values if p > 0])
 
-            # Calculate metrics
-            total_signals = len(recent_signals)
-            avg_confidence = sum(s.confidence for s in recent_signals) / total_signals
-
-            # Signal type distribution
-            signal_types = {}
-            for signal in recent_signals:
-                signal_type = signal.signal_type.value
-                signal_types[signal_type] = signal_types.get(signal_type, 0) + 1
-
-            performance = {
-                "total_signals": total_signals,
-                "avg_confidence": avg_confidence,
-                "signal_types": signal_types,
-                "period_days": days,
-                "strategy": strategy,
-                "timestamp": datetime.now().isoformat(),
-            }
-
-            return {
-                "success": True,
-                "result": performance,
-                "message": "Performance metrics retrieved successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            logger.error(f"Error getting signal performance: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        return {
+            "total_trades": total_trades,
+            "successful_trades": successful_trades,
+            "success_rate": (successful_trades / total_trades * 100) if total_trades > 0 else 0.0,
+            "average_pnl": sum(pnl_values) / len(pnl_values) if pnl_values else 0.0,
+            "max_profit": max(pnl_values) if pnl_values else 0.0,
+            "max_loss": min(pnl_values) if pnl_values else 0.0,
+            "strategy": strategy or "all"
+        }
 
     def _send_alert(self, signal: Signal):
-        """Send alert for signal."""
-        try:
-            message = self._create_alert_message(signal)
+        """Send alert for a new signal."""
+        if not (self.enable_discord_alerts or self.enable_email_alerts or self.enable_slack_alerts):
+            return
 
-            # Send to different platforms
-            if self.webhook_config.get("discord_webhook_url"):
-                self._send_discord_alert(message, signal)
+        message = self._create_alert_message(signal)
 
-            if self.webhook_config.get("email_webhook_url"):
-                self._send_email_alert(message, signal)
+        if self.enable_discord_alerts and self.discord_webhook_url:
+            self._send_discord_alert(message, signal)
 
-            if self.webhook_config.get("slack_webhook_url"):
-                self._send_slack_alert(message, signal)
+        if self.enable_email_alerts and self.email_webhook_url:
+            self._send_email_alert(message, signal)
 
-            # Log alert
-            self.alert_history.append(
-                {
-                    "signal_id": signal.signal_id,
-                    "message": message,
-                    "timestamp": datetime.now().isoformat(),
-                }
-            )
-
-            return {
-                "success": True,
-                "message": "Alert sent successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            logger.error(f"Error sending alert: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        if self.enable_slack_alerts and self.slack_webhook_url:
+            self._send_slack_alert(message, signal)
 
     def _create_alert_message(self, signal: Signal) -> str:
-        """Create alert message for signal."""
-        try:
-            message = f"🚨 **{signal.signal_type.value.upper()}** Signal\n"
-            message += f"**Symbol:** {signal.symbol}\n"
-            message += f"**Strategy:** {signal.strategy}\n"
-            message += f"**Price:** ${signal.price:.2f}\n"
-            message += f"**Target:** ${signal.target_price:.2f}\n"
-            message += f"**Stop Loss:** ${signal.stop_loss:.2f}\n"
-            message += f"**Confidence:** {signal.confidence:.1%}\n"
-            message += f"**Time:** {signal.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        """Create alert message for a signal."""
+        emoji_map = {
+            SignalType.BUY: "🟢",
+            SignalType.SELL: "🔴",
+            SignalType.STRONG_BUY: "🟢🟢",
+            SignalType.STRONG_SELL: "🔴🔴",
+            SignalType.HOLD: "🟡",
+            SignalType.ALERT: "⚠️"
+        }
 
-            return {
-                "success": True,
-                "result": message,
-                "message": "Alert message created successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
+        emoji = emoji_map.get(signal.signal_type, "📊")
+        confidence_pct = signal.confidence * 100
 
-        except Exception as e:
-            logger.error(f"Error creating alert message: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        message = f"""
+{emoji} **NEW SIGNAL** {emoji}
+
+**Symbol**: {signal.symbol}
+**Type**: {signal.signal_type.value.upper()}
+**Strategy**: {signal.strategy}
+**Confidence**: {confidence_pct:.1f}%
+**Price**: ${signal.price:.2f}
+**Target**: ${signal.target_price:.2f}
+**Stop Loss**: ${signal.stop_loss:.2f}
+
+*Signal ID: {signal.signal_id}*
+        """.strip()
+
+        return message
 
     def _send_discord_alert(self, message: str, signal: Signal):
-        """Send Discord alert."""
+        """Send Discord webhook alert."""
+        if not REQUESTS_AVAILABLE:
+            logger.warning("Requests library not available, skipping Discord alert")
+            return
+
         try:
-            if not REQUESTS_AVAILABLE:
-                logger.warning("Requests library not available for Discord alerts")
-                return {
-                    "success": False,
-                    "error": "Requests library not available",
-                    "timestamp": datetime.now().isoformat(),
-                }
+            payload = {
+                "content": message,
+                "username": "Trading Bot",
+                "avatar_url": "https://example.com/bot-avatar.png"
+            }
 
-            webhook_url = self.webhook_config.get("discord_webhook_url")
-            if not webhook_url:
-                return {
-                    "success": False,
-                    "error": "Discord webhook URL not configured",
-                    "timestamp": datetime.now().isoformat(),
-                }
-
-            payload = {"content": message, "username": "Trading Signal Bot"}
-
-            response = requests.post(webhook_url, json=payload, timeout=10)
+            response = requests.post(self.discord_webhook_url, json=payload, timeout=10)
             response.raise_for_status()
 
-            return {
-                "success": True,
-                "message": "Discord alert sent successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
+            logger.info(f"Discord alert sent for signal {signal.signal_id}")
 
         except Exception as e:
-            logger.error(f"Error sending Discord alert: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+            logger.error(f"Failed to send Discord alert: {e}")
 
     def _send_email_alert(self, message: str, signal: Signal):
-        """Send email alert."""
+        """Send email webhook alert."""
+        if not REQUESTS_AVAILABLE:
+            logger.warning("Requests library not available, skipping email alert")
+            return
+
         try:
-            if not REQUESTS_AVAILABLE:
-                logger.warning("Requests library not available for email alerts")
-                return {
-                    "success": False,
-                    "error": "Requests library not available",
-                    "timestamp": datetime.now().isoformat(),
-                }
-
-            webhook_url = self.webhook_config.get("email_webhook_url")
-            if not webhook_url:
-                return {
-                    "success": False,
-                    "error": "Email webhook URL not configured",
-                    "timestamp": datetime.now().isoformat(),
-                }
-
             payload = {
-                "subject": f"Trading Signal: {signal.signal_type.value.upper()} {signal.symbol}",
-                "body": message,
+                "to": "trading@example.com",
+                "subject": f"Trading Signal: {signal.symbol} {signal.signal_type.value.upper()}",
+                "body": message
             }
 
-            response = requests.post(webhook_url, json=payload, timeout=10)
+            response = requests.post(self.email_webhook_url, json=payload, timeout=10)
             response.raise_for_status()
 
-            return {
-                "success": True,
-                "message": "Email alert sent successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
+            logger.info(f"Email alert sent for signal {signal.signal_id}")
 
         except Exception as e:
-            logger.error(f"Error sending email alert: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+            logger.error(f"Failed to send email alert: {e}")
 
     def _send_slack_alert(self, message: str, signal: Signal):
-        """Send Slack alert."""
+        """Send Slack webhook alert."""
+        if not REQUESTS_AVAILABLE:
+            logger.warning("Requests library not available, skipping Slack alert")
+            return
+
         try:
-            if not REQUESTS_AVAILABLE:
-                logger.warning("Requests library not available for Slack alerts")
-                return {
-                    "success": False,
-                    "error": "Requests library not available",
-                    "timestamp": datetime.now().isoformat(),
-                }
+            payload = {
+                "text": message,
+                "username": "Trading Bot",
+                "icon_emoji": ":chart_with_upwards_trend:"
+            }
 
-            webhook_url = self.webhook_config.get("slack_webhook_url")
-            if not webhook_url:
-                return {
-                    "success": False,
-                    "error": "Slack webhook URL not configured",
-                    "timestamp": datetime.now().isoformat(),
-                }
-
-            payload = {"text": message}
-
-            response = requests.post(webhook_url, json=payload, timeout=10)
+            response = requests.post(self.slack_webhook_url, json=payload, timeout=10)
             response.raise_for_status()
 
-            return {
-                "success": True,
-                "message": "Slack alert sent successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
+            logger.info(f"Slack alert sent for signal {signal.signal_id}")
 
         except Exception as e:
-            logger.error(f"Error sending Slack alert: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+            logger.error(f"Failed to send Slack alert: {e}")
 
     def _cleanup_expired_signals(self):
-        """Clean up expired signals."""
-        try:
-            current_time = datetime.now()
-            expired_signals = []
+        """Remove expired signals."""
+        current_time = datetime.now()
+        expired_signals = []
 
-            for signal_id, signal in self.active_signals.items():
-                if signal.expiry < current_time:
-                    expired_signals.append(signal_id)
-                    signal.status = SignalStatus.EXPIRED
+        for signal_id, signal in self.signals.items():
+            if signal.expiry < current_time:
+                expired_signals.append(signal_id)
 
-            for signal_id in expired_signals:
-                del self.active_signals[signal_id]
-
-            if expired_signals:
-                logger.info(f"Cleaned up {len(expired_signals)} expired signals")
-
-            return {
-                "success": True,
-                "message": f"Cleaned up {len(expired_signals)} expired signals",
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        except Exception as e:
-            logger.error(f"Error cleaning up expired signals: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        for signal_id in expired_signals:
+            self.signals[signal_id].status = SignalStatus.EXPIRED
+            logger.info(f"Signal {signal_id} expired")
 
     def _update_performance_tracking(self, trade: ActiveTrade, final_pnl_pct: float):
-        """Update performance tracking for trade."""
-        try:
-            # Update strategy performance
-            strategy = trade.strategy
-            if strategy not in self.strategy_performance:
-                self.strategy_performance[strategy] = {
-                    "total_trades": 0,
-                    "winning_trades": 0,
-                    "total_pnl": 0.0,
-                    "avg_pnl": 0.0,
-                }
+        """Update performance tracking."""
+        record = {
+            "timestamp": datetime.now(),
+            "trade_id": trade.trade_id,
+            "symbol": trade.symbol,
+            "strategy": trade.strategy,
+            "pnl_pct": final_pnl_pct,
+            "duration": datetime.now() - trade.time_open
+        }
 
-            perf = self.strategy_performance[strategy]
-            perf["total_trades"] += 1
-            perf["total_pnl"] += final_pnl_pct
+        self.performance_history.append(record)
 
-            if final_pnl_pct > 0:
-                perf["winning_trades"] += 1
+        if final_pnl_pct > 0:
+            self.successful_trades += 1
 
-            perf["avg_pnl"] = perf["total_pnl"] / perf["total_trades"]
-
-            return {
-                "success": True,
-                "message": "Performance tracking updated successfully",
-                "timestamp": datetime.now().isoformat(),
+        # Update strategy performance
+        if trade.strategy not in self.strategy_performance:
+            self.strategy_performance[trade.strategy] = {
+                "total_trades": 0,
+                "successful_trades": 0,
+                "total_pnl": 0.0
             }
 
-        except Exception as e:
-            logger.error(f"Error updating performance tracking: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+        perf = self.strategy_performance[trade.strategy]
+        perf["total_trades"] += 1
+        perf["total_pnl"] += final_pnl_pct
+
+        if final_pnl_pct > 0:
+            perf["successful_trades"] += 1
 
     def export_signal_report(self, filepath: str) -> Dict[str, Any]:
-        """Export signal report to file.
+        """Export signal report to JSON file.
 
         Args:
             filepath: Output file path
@@ -865,34 +614,21 @@ class SignalCenter:
             report = {
                 "timestamp": datetime.now().isoformat(),
                 "summary": self.get_signal_summary(),
-                "active_signals": [
-                    self._signal_to_dict(s) for s in self.active_signals.values()
-                ],
-                "active_trades": [
-                    self._trade_to_dict(t) for t in self.active_trades.values()
-                ],
-                "strategy_performance": self.strategy_performance,
-                "alert_history": self.alert_history[-100:],  # Last 100 alerts
+                "active_signals": [self._signal_to_dict(s) for s in self.get_active_signals()],
+                "active_trades": [self._trade_to_dict(t) for t in self.get_active_trades()],
+                "performance_history": self.performance_history[-100:],  # Last 100 records
+                "strategy_performance": self.strategy_performance
             }
 
-            with open(filepath, "w") as f:
+            with open(filepath, 'w') as f:
                 json.dump(report, f, indent=2, default=str)
 
             logger.info(f"Signal report exported to {filepath}")
-
-            return {
-                "success": True,
-                "message": f"Signal report exported to {filepath}",
-                "timestamp": datetime.now().isoformat(),
-            }
+            return {"success": True, "filepath": filepath}
 
         except Exception as e:
-            logger.error(f"Error exporting signal report: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+            logger.error(f"Failed to export signal report: {e}")
+            return {"success": False, "error": str(e)}
 
     def _signal_to_dict(self, signal: Signal) -> Dict[str, Any]:
         """Convert signal to dictionary."""
@@ -908,7 +644,7 @@ class SignalCenter:
             "timestamp": signal.timestamp.isoformat(),
             "expiry": signal.expiry.isoformat(),
             "status": signal.status.value,
-            "metadata": signal.metadata,
+            "metadata": signal.metadata
         }
 
     def _trade_to_dict(self, trade: ActiveTrade) -> Dict[str, Any]:
@@ -925,31 +661,13 @@ class SignalCenter:
             "time_open": trade.time_open.isoformat(),
             "strategy": trade.strategy,
             "signal_id": trade.signal_id,
-            "metadata": trade.metadata,
+            "metadata": trade.metadata
         }
-
-
-# Global signal center instance
-signal_center = SignalCenter()
 
 
 def get_signal_center() -> Dict[str, Any]:
     """Get signal center instance."""
-    try:
-        # This would typically return a singleton instance
-        # For now, return a new instance
-        signal_center = SignalCenter()
-        return {
-            "success": True,
-            "result": signal_center,
-            "message": "Signal center instance created successfully",
-            "timestamp": datetime.now().isoformat(),
-        }
-
-    except Exception as e:
-        logger.error(f"Error creating signal center: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "timestamp": datetime.now().isoformat(),
-        }
+    return {
+        "message": "Signal center functionality available",
+        "status": "ready"
+    } 

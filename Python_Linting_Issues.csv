@@ -1,0 +1,309 @@
+File,Issue
+Evolve-main/app.py,Trailing whitespace on line 368
+Evolve-main/demo_async_strategies.py,Trailing whitespace on line 26; Missing final newline
+Evolve-main/example_async_strategy_runner.py,Trailing whitespace on line 28; Missing final newline
+Evolve-main/example_caching_usage.py,Trailing whitespace on line 21; Missing final newline
+Evolve-main/install_requirements.py,Trailing whitespace on line 37; Missing final newline
+Evolve-main/main.py,Trailing whitespace on line 162
+Evolve-main/start_orchestrator.py,Trailing whitespace on line 36; Missing final newline
+Evolve-main/test_agent_controller.py,Trailing whitespace on line 22; Missing final newline
+Evolve-main/test_alpaca_simple.py,Trailing whitespace on line 29; Missing final newline
+Evolve-main/test_batch12_imports.py,Trailing whitespace on line 25; Missing final newline
+Evolve-main/test_batch5_fixes.py,Trailing whitespace on line 17; Missing final newline
+Evolve-main/test_cost_modeling_simple.py,Trailing whitespace on line 22; Missing final newline
+Evolve-main/test_enhanced_arima.py,Trailing whitespace on line 18; Missing final newline
+Evolve-main/test_lstm_no_tensorflow.py,Trailing whitespace on line 14; Missing final newline
+Evolve-main/test_modular_components.py,Trailing whitespace on line 31; Missing final newline
+Evolve-main/test_modular_simple.py,Trailing whitespace on line 18; Missing final newline
+Evolve-main/test_modularization.py,Trailing whitespace on line 15; Missing final newline
+Evolve-main/test_orchestrator.py,Trailing whitespace on line 21; Missing final newline
+Evolve-main/test_prompt_memory.py,Trailing whitespace on line 23; Missing final newline
+Evolve-main/test_risk_aware_hybrid_simple.py,Trailing whitespace on line 21; Missing final newline
+Evolve-main/test_task_agent.py,Trailing whitespace on line 23; Missing final newline
+Evolve-main/agents/agent_controller.py,Trailing whitespace on line 7; Missing final newline
+Evolve-main/agents/meta_agent.py,Trailing whitespace on line 96; Missing final newline
+Evolve-main/agents/model_discovery_agent.py,Trailing whitespace on line 23; Missing final newline
+Evolve-main/agents/model_innovation_agent.py,Trailing whitespace on line 80; Missing final newline
+Evolve-main/agents/prompt_agent.py,Trailing whitespace on line 40; Missing final newline
+Evolve-main/agents/prompt_router.py,Trailing whitespace on line 92
+Evolve-main/agents/strategy_research_agent.py,Trailing whitespace on line 63; Missing final newline
+Evolve-main/agents/task_agent.py,Trailing whitespace on line 82; Missing final newline
+Evolve-main/agents/task_router.py,Trailing whitespace on line 30; Missing final newline
+Evolve-main/agents/llm/agent.py,Trailing whitespace on line 144
+Evolve-main/agents/llm/model_loader.py,Trailing whitespace on line 69
+Evolve-main/config/config_loader.py,Trailing whitespace on line 41; Missing final newline
+Evolve-main/core/__init__.py,Trailing whitespace on line 14; Missing final newline
+Evolve-main/core/orchestrator/__init__.py,Trailing whitespace on line 38; Missing final newline
+Evolve-main/core/orchestrator/task_conditions.py,Trailing whitespace on line 51; Missing final newline
+Evolve-main/core/orchestrator/task_executor.py,Trailing whitespace on line 24; Missing final newline
+Evolve-main/core/orchestrator/task_models.py,Trailing whitespace on line 96; Missing final newline
+Evolve-main/core/orchestrator/task_monitor.py,Trailing whitespace on line 23; Missing final newline
+Evolve-main/core/orchestrator/task_orchestrator.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/core/orchestrator/task_providers.py,Trailing whitespace on line 45; Missing final newline
+Evolve-main/core/orchestrator/task_scheduler.py,Trailing whitespace on line 23; Missing final newline
+Evolve-main/data/live_data_feed.py,Trailing whitespace on line 113; Missing final newline
+Evolve-main/data/sentiment/sentiment_fetcher.py,Trailing whitespace on line 51; Missing final newline
+Evolve-main/examples/enhanced_arima_example.py,Trailing whitespace on line 17; Missing final newline
+Evolve-main/examples/enhanced_cost_backtest_example.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/examples/ensemble_strategy_example.py,Trailing whitespace on line 28; Missing final newline
+Evolve-main/examples/execution_engine_example.py,Trailing whitespace on line 45; Missing final newline
+Evolve-main/examples/explainability_example.py,Trailing whitespace on line 48; Missing final newline
+Evolve-main/examples/meta_controller_example.py,Trailing whitespace on line 33; Missing final newline
+Evolve-main/examples/model_innovation_example.py,Trailing whitespace on line 32; Missing final newline
+Evolve-main/examples/model_performance_logging_example.py,Trailing whitespace on line 29; Missing final newline
+Evolve-main/examples/monte_carlo_simulation_example.py,Trailing whitespace on line 33; Missing final newline
+Evolve-main/examples/optuna_tuner_example.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/examples/portfolio_management_example.py,Trailing whitespace on line 23; Missing final newline
+Evolve-main/examples/prompt_examples_demo.py,Trailing whitespace on line 18; Missing final newline
+Evolve-main/examples/prompt_router_example.py,Trailing whitespace on line 22; Missing final newline
+Evolve-main/examples/risk_aware_hybrid_model_example.py,Trailing whitespace on line 22; Missing final newline
+Evolve-main/examples/sentiment_analysis_example.py,Trailing whitespace on line 21; Missing final newline
+Evolve-main/examples/strategy_combo_example.py,Trailing whitespace on line 32; Missing final newline
+Evolve-main/examples/strategy_research_example.py,Trailing whitespace on line 26; Missing final newline
+Evolve-main/examples/task_agent_example.py,Trailing whitespace on line 15; Missing final newline
+Evolve-main/examples/task_orchestrator_example.py,Trailing whitespace on line 51; Missing final newline
+Evolve-main/examples/walk_forward_backtest_example.py,Trailing whitespace on line 20; Missing final newline
+Evolve-main/execution/broker_adapter.py,Trailing whitespace on line 140; Missing final newline
+Evolve-main/execution/execution_agent.py,Trailing whitespace on line 129; Missing final newline
+Evolve-main/execution/live_trading_interface.py,Trailing whitespace on line 543
+Evolve-main/fallback/fallback_llm.py,Trailing whitespace on line 77; Missing final newline
+Evolve-main/features/sentiment_features.py,Trailing whitespace on line 70; Missing final newline
+Evolve-main/logs/prompt_trace_logger.py,Trailing whitespace on line 59; Missing final newline
+Evolve-main/memory/model_log.py,Trailing whitespace on line 26; Missing final newline
+Evolve-main/memory/prompt_log.py,Trailing whitespace on line 23; Missing final newline
+Evolve-main/meta/meta_controller.py,Trailing whitespace on line 127; Missing final newline
+Evolve-main/meta_learning/strategy_refiner.py,Trailing whitespace on line 39; Missing final newline
+Evolve-main/pages/HybridModel.py,Trailing whitespace on line 29; Missing final newline
+Evolve-main/pages/Model_Performance_Dashboard.py,Trailing whitespace on line 37; Missing final newline
+Evolve-main/pages/Monte_Carlo_Simulation.py,Trailing whitespace on line 51; Missing final newline
+Evolve-main/pages/Reports.py,Trailing whitespace on line 838
+Evolve-main/pages/Strategy_Combo_Creator.py,Trailing whitespace on line 32; Missing final newline
+Evolve-main/pages/Strategy_Pipeline_Demo.py,Trailing whitespace on line 29; Missing final newline
+Evolve-main/pages/portfolio_dashboard.py,Trailing whitespace on line 523
+Evolve-main/pages/risk_preview_dashboard.py,Trailing whitespace on line 57; Missing final newline
+Evolve-main/portfolio/__init__.py,Trailing whitespace on line 48; Missing final newline
+Evolve-main/portfolio/allocator.py,Trailing whitespace on line 74; Missing final newline
+Evolve-main/portfolio/risk_manager.py,Trailing whitespace on line 97; Missing final newline
+Evolve-main/reporting/audit_logger.py,Trailing whitespace on line 169; Missing final newline
+Evolve-main/reporting/explainer_agent.py,Trailing whitespace on line 125; Missing final newline
+Evolve-main/risk/tail_risk.py,Trailing whitespace on line 229
+Evolve-main/routing/__init__.py,Trailing whitespace on line 12; Missing final newline
+Evolve-main/routing/prompt_router.py,Trailing whitespace on line 30; Missing final newline
+Evolve-main/scripts/deploy_to_kube_batch.py,Trailing whitespace on line 37; Missing final newline
+Evolve-main/scripts/integrate_orchestrator.py,Trailing whitespace on line 26; Missing final newline
+Evolve-main/scripts/manage_data_quality.py,Trailing whitespace on line 203
+Evolve-main/scripts/resolve_dependencies.py,Trailing whitespace on line 20; Missing final newline
+Evolve-main/scripts/run_live_dashboard.py,Trailing whitespace on line 30; Missing final newline
+Evolve-main/src/features/feature_generator.py,Trailing whitespace on line 32; Missing final newline
+Evolve-main/src/features/feature_selector.py,Trailing whitespace on line 14; Missing final newline
+Evolve-main/src/optimization/parameter_tuner.py,Trailing whitespace on line 51; Missing final newline
+Evolve-main/src/utils/data_cleaner.py,Trailing whitespace on line 31; Missing final newline
+Evolve-main/src/utils/data_validator.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/strategies/strategy_pipeline.py,Trailing whitespace on line 47; Missing final newline
+Evolve-main/system/forecast_controller.py,Trailing whitespace on line 26; Missing final newline
+Evolve-main/system/hybrid_engine.py,Trailing whitespace on line 23; Missing final newline
+Evolve-main/system/logger_debugger.py,Trailing whitespace on line 470; Missing final newline
+Evolve-main/system/orchestrator_integration.py,Trailing whitespace on line 26; Missing final newline
+Evolve-main/system/bootstrap/runtime_initializer.py,Trailing whitespace on line 40; Missing final newline
+Evolve-main/system/core/event_loop.py,Trailing whitespace on line 25; Missing final newline
+Evolve-main/system/infra/agents/services/notification_service.py,Trailing whitespace on line 1363
+Evolve-main/tests/test_agent_manager.py,Trailing whitespace on line 34; Missing final newline
+Evolve-main/tests/test_async_strategy_runner.py,Trailing whitespace on line 23; Missing final newline
+Evolve-main/tests/test_batch_11.py,Trailing whitespace on line 77; Missing final newline
+Evolve-main/tests/test_batch_14.py,Trailing whitespace on line 18; Missing final newline
+Evolve-main/tests/test_batch_16.py,Trailing whitespace on line 24; Missing final newline
+Evolve-main/tests/test_batch_18.py,Trailing whitespace on line 21; Missing final newline
+Evolve-main/tests/test_batch_19.py,Trailing whitespace on line 21; Missing final newline
+Evolve-main/tests/test_batch_20.py,Trailing whitespace on line 20; Missing final newline
+Evolve-main/tests/test_batch_21.py,Trailing whitespace on line 25; Missing final newline
+Evolve-main/tests/test_critical_modules_fixes.py,Trailing whitespace on line 39; Missing final newline
+Evolve-main/tests/test_data_validator.py,Trailing whitespace on line 53; Missing final newline
+Evolve-main/tests/test_enhanced_cost_modeling.py,Trailing whitespace on line 20; Missing final newline
+Evolve-main/tests/test_enhancements.py,Trailing whitespace on line 41; Missing final newline
+Evolve-main/tests/test_enhancements_event_loop_task_dispatcher.py,Trailing whitespace on line 55; Missing final newline
+Evolve-main/tests/test_export_report.py,Trailing whitespace on line 37; Missing final newline
+Evolve-main/tests/test_forecast_dispatcher_and_strategy_merge.py,Trailing whitespace on line 40; Missing final newline
+Evolve-main/tests/test_hybrid_scoring.py,Trailing whitespace on line 15; Missing final newline
+Evolve-main/tests/test_model_innovation_agent.py,Trailing whitespace on line 30; Missing final newline
+Evolve-main/tests/test_model_performance_logging.py,Trailing whitespace on line 32; Missing final newline
+Evolve-main/tests/test_monte_carlo_simulation.py,Trailing whitespace on line 28; Missing final newline
+Evolve-main/tests/test_optimization_modular.py,Trailing whitespace on line 32; Missing final newline
+Evolve-main/tests/test_production_modules.py,Trailing whitespace on line 6; Missing final newline
+Evolve-main/tests/test_prompt_examples.py,Trailing whitespace on line 87; Missing final newline
+Evolve-main/tests/test_prompt_hybrid_backtest_improvements.py,Trailing whitespace on line 52; Missing final newline
+Evolve-main/tests/test_signal_collector_and_kube_deploy.py,Trailing whitespace on line 39; Missing final newline
+Evolve-main/tests/test_strategy_combo.py,Trailing whitespace on line 17; Missing final newline
+Evolve-main/tests/test_strategy_research_agent.py,Trailing whitespace on line 18; Missing final newline
+Evolve-main/tests/test_task_orchestrator.py,Trailing whitespace on line 78; Missing final newline
+Evolve-main/tests/full_pipeline/test_live_dashboard.py,Trailing whitespace on line 33; Missing final newline
+Evolve-main/tests/full_pipeline/test_strategy_output_merge.py,Trailing whitespace on line 23; Missing final newline
+Evolve-main/tests/integration/test_full_alpha_cycle.py,Trailing whitespace on line 41; Missing final newline
+Evolve-main/tests/integration/test_integration_enhancements.py,Trailing whitespace on line 40; Missing final newline
+Evolve-main/tests/test_agents/test_ensemble_voter.py,Trailing whitespace on line 77; Missing final newline
+Evolve-main/tests/test_agents/test_execution_agent_risk_controls.py,Trailing whitespace on line 28
+Evolve-main/tests/test_strategies/test_ensemble_strategy.py,Trailing whitespace on line 24; Missing final newline
+Evolve-main/tests/unit/test_alpaca_migration.py,Trailing whitespace on line 42; Missing final newline
+Evolve-main/tests/unit/test_alpha_system.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/tests/unit/test_ensemble_voter.py,Trailing whitespace on line 43; Missing final newline
+Evolve-main/tests/unit/test_error_handling.py,Trailing whitespace on line 20; Missing final newline
+Evolve-main/tests/unit/test_goals_status.py,Trailing whitespace on line 60; Missing final newline
+Evolve-main/tests/unit/test_hybrid_model_selector.py,Trailing whitespace on line 17; Missing final newline
+Evolve-main/tests/unit/test_lstm_forecaster.py,Trailing whitespace on line 422
+Evolve-main/tests/unit/test_optuna_tuner.py,Trailing whitespace on line 15; Missing final newline
+Evolve-main/tests/unit/test_pandera_migration.py,Trailing whitespace on line 24; Missing final newline
+Evolve-main/tests/unit/test_performance_metrics.py,Trailing whitespace on line 44; Missing final newline
+Evolve-main/tests/unit/test_prompt_agent.py,Trailing whitespace on line 13
+Evolve-main/tests/unit/test_signal_generators.py,Trailing whitespace on line 73; Missing final newline
+Evolve-main/tests/unit/test_strategy_validation.py,Trailing whitespace on line 111; Missing final newline
+Evolve-main/tests/unit/test_swarm_orchestrator.py,Trailing whitespace on line 68; Missing final newline
+Evolve-main/tests/unit/test_walk_forward_utils.py,Trailing whitespace on line 59; Missing final newline
+Evolve-main/tests/unit/test_xgboost_forecaster.py,Trailing whitespace on line 409
+Evolve-main/trading/agents/agent_manager.py,Trailing whitespace on line 46
+Evolve-main/trading/agents/forecast_dispatcher.py,Trailing whitespace on line 49; Missing final newline
+Evolve-main/trading/agents/meta_agent_orchestrator.py,Trailing whitespace on line 41; Missing final newline
+Evolve-main/trading/agents/prompt_clarification_agent.py,Trailing whitespace on line 39; Missing final newline
+Evolve-main/trading/agents/prompt_response_validator.py,Trailing whitespace on line 45; Missing final newline
+Evolve-main/trading/agents/strategy_dispatcher.py,Trailing whitespace on line 85; Missing final newline
+Evolve-main/trading/agents/swarm_orchestrator.py,Trailing whitespace on line 197; Missing final newline
+Evolve-main/trading/agents/test_execution_agent.py,Trailing whitespace on line 112
+Evolve-main/trading/agents/alpha/__init__.py,Missing final newline
+Evolve-main/trading/agents/alpha/alpha_orchestrator.py,Trailing whitespace on line 32; Missing final newline
+Evolve-main/trading/agents/alpha/alpha_registry.py,Trailing whitespace on line 30; Missing final newline
+Evolve-main/trading/agents/alpha/alphagen_agent.py,Trailing whitespace on line 25; Missing final newline
+Evolve-main/trading/agents/alpha/risk_validator.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/trading/agents/alpha/sentiment_ingestion.py,Trailing whitespace on line 32; Missing final newline
+Evolve-main/trading/agents/alpha/signal_tester.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/trading/agents/execution/__init__.py,Trailing whitespace on line 35; Missing final newline
+Evolve-main/trading/agents/execution/execution_agent.py,Trailing whitespace on line 44; Missing final newline
+Evolve-main/trading/agents/execution/execution_models.py,Trailing whitespace on line 87; Missing final newline
+Evolve-main/trading/agents/execution/execution_providers.py,Trailing whitespace on line 84; Missing final newline
+Evolve-main/trading/agents/execution/position_manager.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/trading/agents/execution/risk_calculator.py,Trailing whitespace on line 211; Missing final newline
+Evolve-main/trading/agents/execution/risk_controls.py,Trailing whitespace on line 145; Missing final newline
+Evolve-main/trading/agents/execution/trade_signals.py,Trailing whitespace on line 99; Missing final newline
+Evolve-main/trading/agents/optimization/__init__.py,Trailing whitespace on line 30; Missing final newline
+Evolve-main/trading/agents/optimization/backtest_integration.py,Trailing whitespace on line 39; Missing final newline
+Evolve-main/trading/agents/optimization/optimizer_agent.py,Trailing whitespace on line 31; Missing final newline
+Evolve-main/trading/agents/optimization/parameter_validator.py,Trailing whitespace on line 60; Missing final newline
+Evolve-main/trading/agents/optimization/performance_analyzer.py,Trailing whitespace on line 48; Missing final newline
+Evolve-main/trading/agents/optimization/strategy_optimizer.py,Trailing whitespace on line 167; Missing final newline
+Evolve-main/trading/async_utils/forecast_task_dispatcher.py,Trailing whitespace on line 50; Missing final newline
+Evolve-main/trading/backtesting/backtest_compiler.py,Trailing whitespace on line 22; Missing final newline
+Evolve-main/trading/backtesting/backtest_utils.py,Trailing whitespace on line 33; Missing final newline
+Evolve-main/trading/backtesting/backtester.py,Trailing whitespace on line 100
+Evolve-main/trading/backtesting/cost_model.py,Trailing whitespace on line 265; Missing final newline
+Evolve-main/trading/backtesting/evaluator.py,Trailing whitespace on line 29; Missing final newline
+Evolve-main/trading/backtesting/monte_carlo.py,Trailing whitespace on line 34; Missing final newline
+Evolve-main/trading/backtesting/performance_analysis.py,Trailing whitespace on line 40
+Evolve-main/trading/context_manager/trading_context.py,Trailing whitespace on line 62; Missing final newline
+Evolve-main/trading/core/agents.py,Trailing whitespace on line 907
+Evolve-main/trading/core/backtest_common.py,Trailing whitespace on line 35; Missing final newline
+Evolve-main/trading/data/external_signals.py,Trailing whitespace on line 83
+Evolve-main/trading/ensemble/diagnostic_tools.py,Trailing whitespace on line 47; Missing final newline
+Evolve-main/trading/ensemble/integrity_checker.py,Trailing whitespace on line 61; Missing final newline
+Evolve-main/trading/evaluation/model_evaluator.py,Trailing whitespace on line 44
+Evolve-main/trading/execution/execution_engine.py,Trailing whitespace on line 164
+Evolve-main/trading/execution/execution_replay.py,Trailing whitespace on line 25; Missing final newline
+Evolve-main/trading/execution/trade_execution_simulator.py,Trailing whitespace on line 164
+Evolve-main/trading/execution/trade_journal.py,Trailing whitespace on line 72; Missing final newline
+Evolve-main/trading/explainability/signal_trace.py,Trailing whitespace on line 37; Missing final newline
+Evolve-main/trading/forecasting/forecast_postprocessor.py,Trailing whitespace on line 18; Missing final newline
+Evolve-main/trading/forecasting/hybrid_model.py,Trailing whitespace on line 55; Missing final newline
+Evolve-main/trading/forecasting/hybrid_model_selector.py,Trailing whitespace on line 17; Missing final newline
+Evolve-main/trading/forecasting/postprocess.py,Trailing whitespace on line 36; Missing final newline
+Evolve-main/trading/integration/meta_agent_manager.py,Trailing whitespace on line 44; Missing final newline
+Evolve-main/trading/integration/model_registry.py,Trailing whitespace on line 60; Missing final newline
+Evolve-main/trading/integration/service_mesh.py,Trailing whitespace on line 66; Missing final newline
+Evolve-main/trading/llm/__init__.py,Trailing whitespace on line 11; Missing final newline
+Evolve-main/trading/llm/parser_engine.py,Trailing whitespace on line 63; Missing final newline
+Evolve-main/trading/llm/prompt_parser.py,Trailing whitespace on line 24; Missing final newline
+Evolve-main/trading/memory/agent_logger.py,Trailing whitespace on line 187
+Evolve-main/trading/memory/agent_memory.py,Trailing whitespace on line 333
+Evolve-main/trading/memory/agent_memory_manager.py,Trailing whitespace on line 191
+Evolve-main/trading/memory/performance_logger.py,Trailing whitespace on line 37
+Evolve-main/trading/memory/persistent_memory.py,Trailing whitespace on line 51; Missing final newline
+Evolve-main/trading/memory/state_manager.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/trading/memory/goals/status.py,Trailing whitespace on line 170
+Evolve-main/trading/meta_learning/model_swapper.py,Trailing whitespace on line 69; Missing final newline
+Evolve-main/trading/models/arima_model.py,Trailing whitespace on line 50
+Evolve-main/trading/models/confidence_generator.py,Trailing whitespace on line 43; Missing final newline
+Evolve-main/trading/models/ensemble_model.py,Trailing whitespace on line 426
+Evolve-main/trading/models/forecast_normalizer.py,Trailing whitespace on line 31; Missing final newline
+Evolve-main/trading/models/forecast_router.py,Trailing whitespace on line 292
+Evolve-main/trading/models/lstm_model.py,Trailing whitespace on line 341
+Evolve-main/trading/models/model_utils.py,Trailing whitespace on line 250
+Evolve-main/trading/models/multi_model_aggregator.py,Trailing whitespace on line 46; Missing final newline
+Evolve-main/trading/models/prophet_model.py,Trailing whitespace on line 405
+Evolve-main/trading/models/transformer_wrapper.py,Trailing whitespace on line 32; Missing final newline
+Evolve-main/trading/models/xgboost_model.py,Trailing whitespace on line 37
+Evolve-main/trading/models/advanced/transformer/time_series_transformer.py,Trailing whitespace on line 111
+Evolve-main/trading/nlp/prompt_bridge.py,Trailing whitespace on line 49; Missing final newline
+Evolve-main/trading/nlp/sentiment_bridge.py,Trailing whitespace on line 46; Missing final newline
+Evolve-main/trading/nlp/sentiment_classifier.py,Trailing whitespace on line 99; Missing final newline
+Evolve-main/trading/nlp/sentiment_processor.py,Trailing whitespace on line 107; Missing final newline
+Evolve-main/trading/optimization/__init__.py,Trailing whitespace on line 18
+Evolve-main/trading/optimization/bayesian_optimizer.py,Trailing whitespace on line 55; Missing final newline
+Evolve-main/trading/optimization/forecasting_integration.py,Trailing whitespace on line 25; Missing final newline
+Evolve-main/trading/optimization/genetic_optimizer.py,Trailing whitespace on line 162; Missing final newline
+Evolve-main/trading/optimization/grid_search_optimizer.py,Trailing whitespace on line 175; Missing final newline
+Evolve-main/trading/optimization/optuna_tuner.py,Trailing whitespace on line 9; Missing final newline
+Evolve-main/trading/optimization/pso_optimizer.py,Trailing whitespace on line 164; Missing final newline
+Evolve-main/trading/optimization/ray_optimizer.py,Trailing whitespace on line 169; Missing final newline
+Evolve-main/trading/optimization/strategy_optimizer.py,Trailing whitespace on line 43
+Evolve-main/trading/pipeline/task_dispatcher.py,Trailing whitespace on line 71; Missing final newline
+Evolve-main/trading/report/export_report.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/trading/report/performance_summarizer.py,Trailing whitespace on line 21; Missing final newline
+Evolve-main/trading/report/report_generator.py,Trailing whitespace on line 87
+Evolve-main/trading/risk/risk_control.py,Trailing whitespace on line 18; Missing final newline
+Evolve-main/trading/risk/risk_manager.py,Trailing whitespace on line 39
+Evolve-main/trading/risk_model/compliance_flags.py,Trailing whitespace on line 65; Missing final newline
+Evolve-main/trading/sentiment/parser.py,Trailing whitespace on line 47; Missing final newline
+Evolve-main/trading/services/commentary_generator.py,Trailing whitespace on line 45
+Evolve-main/trading/services/launch_prompt_router.py,Trailing whitespace on line 85
+Evolve-main/trading/services/prompt_handler.py,Trailing whitespace on line 52; Missing final newline
+Evolve-main/trading/signal_score/evaluator.py,Trailing whitespace on line 57; Missing final newline
+Evolve-main/trading/signals/strategy_executor.py,Trailing whitespace on line 47; Missing final newline
+Evolve-main/trading/strategies/__init__.py,Trailing whitespace on line 85
+Evolve-main/trading/strategies/base_strategy.py,Trailing whitespace on line 18; Missing final newline
+Evolve-main/trading/strategies/bollinger_strategy.py,Trailing whitespace on line 59
+Evolve-main/trading/strategies/composite_strategy.py,Trailing whitespace on line 40; Missing final newline
+Evolve-main/trading/strategies/custom_strategy_handler.py,Trailing whitespace on line 405
+Evolve-main/trading/strategies/ensemble.py,Trailing whitespace on line 44; Missing final newline
+Evolve-main/trading/strategies/ensemble_methods.py,Trailing whitespace on line 67
+Evolve-main/trading/strategies/macd_strategy.py,Trailing whitespace on line 55
+Evolve-main/trading/strategies/sma_strategy.py,Trailing whitespace on line 213
+Evolve-main/trading/strategies/strategy_chain_router.py,Trailing whitespace on line 69; Missing final newline
+Evolve-main/trading/strategies/strategy_composer.py,Trailing whitespace on line 30; Missing final newline
+Evolve-main/trading/strategies/strategy_fallback.py,Trailing whitespace on line 51; Missing final newline
+Evolve-main/trading/strategies/strategy_ranking.py,Trailing whitespace on line 32; Missing final newline
+Evolve-main/trading/strategies/strategy_router.py,Trailing whitespace on line 72; Missing final newline
+Evolve-main/trading/strategies/strategy_runner.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/trading/strategies/strategy_synthesizer.py,Trailing whitespace on line 26; Missing final newline
+Evolve-main/trading/training/loop.py,Trailing whitespace on line 51; Missing final newline
+Evolve-main/trading/ui/components.py,Trailing whitespace on line 949
+Evolve-main/trading/ui/cost_config.py,Trailing whitespace on line 31; Missing final newline
+Evolve-main/trading/ui/hybrid_model_config.py,Trailing whitespace on line 31; Missing final newline
+Evolve-main/trading/utils/env_manager.py,Trailing whitespace on line 84
+Evolve-main/trading/utils/error_handling.py,Trailing whitespace on line 273; Missing final newline
+Evolve-main/trading/utils/forecast_formatter.py,Trailing whitespace on line 17; Missing final newline
+Evolve-main/trading/utils/prompt_formatter.py,Trailing whitespace on line 29; Missing final newline
+Evolve-main/trading/utils/signal_merger.py,Trailing whitespace on line 16; Missing final newline
+Evolve-main/trading/utils/signal_scorer.py,Trailing whitespace on line 41; Missing final newline
+Evolve-main/trading/utils/visualization.py,Trailing whitespace on line 286
+Evolve-main/trading/utils/metrics/__init__.py,Trailing whitespace on line 9; Missing final newline
+Evolve-main/trading/utils/metrics/scorer.py,Trailing whitespace on line 19; Missing final newline
+Evolve-main/trading/validation/walk_forward_utils.py,Trailing whitespace on line 32; Missing final newline
+Evolve-main/trading/visualization/plotting.py,Trailing whitespace on line 165
+Evolve-main/trading/visualization/visualizer.py,Trailing whitespace on line 37; Missing final newline
+Evolve-main/ui/page_renderer.py,Trailing whitespace on line 91; Missing final newline
+Evolve-main/utils/cache_utils.py,Trailing whitespace on line 30; Missing final newline
+Evolve-main/utils/forecast_helpers.py,Trailing whitespace on line 27; Missing final newline
+Evolve-main/utils/logging.py,Trailing whitespace on line 30
+Evolve-main/utils/math_helpers.py,Trailing whitespace on line 29; Missing final newline
+Evolve-main/utils/model_cache.py,Trailing whitespace on line 24; Missing final newline
+Evolve-main/utils/performance_metrics.py,Trailing whitespace on line 14; Missing final newline
+Evolve-main/utils/report_exporter.py,Trailing whitespace on line 28; Missing final newline
+Evolve-main/utils/technical_indicators.py,Trailing whitespace on line 18
+Evolve-main/utils/time_utils.py,Trailing whitespace on line 18; Missing final newline
+Evolve-main/utils/validators.py,Trailing whitespace on line 24; Missing final newline
+Evolve-main/utils/weight_registry.py,Trailing whitespace on line 27; Missing final newline

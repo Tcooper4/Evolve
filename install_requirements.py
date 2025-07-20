@@ -1,11 +1,14 @@
-#!/usr/bin/env python3
 """
-Script to install requirements in batches to handle dependency conflicts.
+Requirements Installation Script
+
+This script installs all required packages for the Evolve trading system
+in logical batches to handle dependency conflicts gracefully.
 """
 
 import subprocess
 import sys
 import os
+
 
 def run_command(cmd):
     """Run a command and return success status."""
@@ -23,11 +26,13 @@ def run_command(cmd):
         print(f"Error: {e}")
         return False
 
+
 def install_packages(packages, batch_name):
     """Install a batch of packages."""
     print(f"\n--- Installing {batch_name} ---")
     cmd = f"pip install {' '.join(packages)}"
     return run_command(cmd)
+
 
 def main():
     # Define packages in logical batches
@@ -97,6 +102,6 @@ def main():
     print("Note: Some packages may have failed due to dependency conflicts.")
     print("You can try installing individual packages manually if needed.")
 
-if __name__ == "__main__":
-    main()
 
+if __name__ == "__main__":
+    main() 

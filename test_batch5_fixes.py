@@ -1,15 +1,23 @@
-#!/usr/bin/env python3
 """
-Simple test script for Batch 5 fixes
+Test script for Batch 5 fixes.
+
+This script tests various fixes and improvements made in Batch 5,
+including fallback logic, strategy routing, and error handling.
 """
 
-import sys
 import os
+import sys
 import logging
+import asyncio
+from typing import Dict, Any
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 
 def test_prompt_agent_fallback():
     """Test prompt agent fallback logic."""
@@ -37,6 +45,7 @@ def test_prompt_agent_fallback():
         logger.error(f"❌ Prompt agent fallback test failed: {e}")
         return False
 
+
 def test_strategy_router():
     """Test strategy router functionality."""
     logger.info("Testing strategy router...")
@@ -61,6 +70,7 @@ def test_strategy_router():
     except Exception as e:
         logger.error(f"❌ Strategy router test failed: {e}")
         return False
+
 
 def test_meta_agent_orchestrator():
     """Test meta agent orchestrator."""
@@ -97,6 +107,7 @@ def test_meta_agent_orchestrator():
         logger.error(f"❌ Meta agent orchestrator test failed: {e}")
         return False
 
+
 def test_backtest_utils():
     """Test backtest utils guard clauses."""
     logger.info("Testing backtest utils...")
@@ -107,16 +118,28 @@ def test_backtest_utils():
 
         utils = BacktestUtils()
 
-        # Test missing 'Buy' column guard clause
-        df = pd.DataFrame({
-            'Close': [100, 101, 102],
-            'Sell': [0, 0, 1]
-        })
+        # Test with empty data
+        empty_df = pd.DataFrame()
+        result = utils.validate_backtest_data(empty_df)
+        assert not result['valid']
+        assert "empty" in result['error'].lower()
 
-        report = utils.generate_backtest_report(df)
-        assert report is not None
-        assert not report.metadata["validation_passed"]
-        assert "Missing 'Buy' column" in report.metadata["error"]
+        # Test with missing required columns
+        invalid_df = pd.DataFrame({'price': [100, 101, 102]})
+        result = utils.validate_backtest_data(invalid_df)
+        assert not result['valid']
+        assert "required" in result['error'].lower()
+
+        # Test with valid data
+        valid_df = pd.DataFrame({
+            'open': [100, 101, 102],
+            'high': [105, 106, 107],
+            'low': [95, 96, 97],
+            'close': [103, 104, 105],
+            'volume': [1000, 1100, 1200]
+        })
+        result = utils.validate_backtest_data(valid_df)
+        assert result['valid']
 
         logger.info("✅ Backtest utils test passed")
         return True
@@ -125,30 +148,28 @@ def test_backtest_utils():
         logger.error(f"❌ Backtest utils test failed: {e}")
         return False
 
+
 def test_prompt_formatter():
-    """Test prompt formatter JSON handling."""
+    """Test prompt formatter improvements."""
     logger.info("Testing prompt formatter...")
 
     try:
-        from trading.utils.prompt_formatter import PromptFormatter
+        from trading.nlp.prompt_formatter import PromptFormatter
 
         formatter = PromptFormatter()
 
-        # Test malformed JSON fallback
-        malformed_json = '{"prompt": "forecast AAPL",'
-        result = formatter.format_prompt(malformed_json)
+        # Test context extraction
+        prompt = "Use RSI strategy with period 14 for AAPL stock"
+        context = formatter.extract_context(prompt)
+        assert context['strategy'] == 'RSI'
+        assert context['symbol'] == 'AAPL'
+        assert context['parameters']['period'] == 14
 
-        assert result.format_type == "fallback"
-        assert not result.validation_passed
-        assert "JSON decode error" in result.errors[0]
-
-        # Test valid JSON
-        valid_json = '{"prompt": "forecast AAPL", "timeframe": "7d"}'
-        result = formatter.format_prompt(valid_json)
-
-        assert result.format_type == "json"
-        assert result.validation_passed
-        assert "forecast AAPL" in result.formatted_prompt
+        # Test prompt enhancement
+        enhanced = formatter.enhance_prompt(prompt)
+        assert "RSI" in enhanced
+        assert "AAPL" in enhanced
+        assert "period" in enhanced
 
         logger.info("✅ Prompt formatter test passed")
         return True
@@ -157,25 +178,30 @@ def test_prompt_formatter():
         logger.error(f"❌ Prompt formatter test failed: {e}")
         return False
 
+
 def test_prompt_clarification_agent():
     """Test prompt clarification agent."""
     logger.info("Testing prompt clarification agent...")
 
     try:
-        from trading.agents.prompt_clarification_agent import PromptClarificationAgent, AmbiguityType
+        from trading.agents.prompt_clarification_agent import PromptClarificationAgent
 
         agent = PromptClarificationAgent()
 
-        # Test multiple strategy ambiguity detection
-        clarification = agent.analyze_prompt("use RSI and MACD strategy")
-        assert clarification is not None
-        assert clarification.ambiguity_type == AmbiguityType.MULTIPLE_STRATEGIES
-        assert len(clarification.options) >= 2
+        # Test ambiguous prompt detection
+        ambiguous_prompt = "use strategy"
+        is_ambiguous = agent.is_ambiguous(ambiguous_prompt)
+        assert is_ambiguous
 
-        # Test vague request detection
-        clarification = agent.analyze_prompt("analyze check examine market")
-        assert clarification is not None
-        assert clarification.ambiguity_type == AmbiguityType.VAGUE_REQUEST
+        # Test clarification generation
+        clarifications = agent.generate_clarifications(ambiguous_prompt)
+        assert len(clarifications) > 0
+        assert any("strategy" in c.lower() for c in clarifications)
+
+        # Test clear prompt
+        clear_prompt = "Use RSI strategy with period 14 for AAPL"
+        is_ambiguous = agent.is_ambiguous(clear_prompt)
+        assert not is_ambiguous
 
         logger.info("✅ Prompt clarification agent test passed")
         return True
@@ -184,8 +210,9 @@ def test_prompt_clarification_agent():
         logger.error(f"❌ Prompt clarification agent test failed: {e}")
         return False
 
+
 def test_strategy_ranking():
-    """Test strategy ranking logic."""
+    """Test strategy ranking improvements."""
     logger.info("Testing strategy ranking...")
 
     try:
@@ -193,22 +220,16 @@ def test_strategy_ranking():
 
         ranker = StrategyRanker()
 
-        # Test strategy usage recording
-        ranker.record_strategy_usage(
-            strategy_name="RSI_Strategy",
-            prompt="use RSI strategy",
-            success=True,
-            confidence=0.8,
-            performance_metrics={"returns": 0.05}
-        )
+        # Test strategy scoring
+        strategies = ["RSI", "MACD", "Bollinger Bands"]
+        scores = ranker.score_strategies(strategies, "AAPL")
+        assert len(scores) == len(strategies)
+        assert all(0 <= score <= 1 for score in scores.values())
 
-        # Test ranking
-        rankings = ranker.rank_strategies()
-        assert len(rankings) >= 1
-
-        # Test recommendations
-        recommendations = ranker.get_strategy_recommendations("forecast AAPL")
-        assert isinstance(recommendations, list)
+        # Test strategy ranking
+        ranked = ranker.rank_strategies(strategies, "AAPL")
+        assert len(ranked) == len(strategies)
+        assert ranked[0]['score'] >= ranked[1]['score']  # Should be sorted
 
         logger.info("✅ Strategy ranking test passed")
         return True
@@ -217,39 +238,58 @@ def test_strategy_ranking():
         logger.error(f"❌ Strategy ranking test failed: {e}")
         return False
 
-def main():
-    """Run all Batch 5 fix tests."""
-    logger.info("🧪 Running Batch 5 Fix Tests\n")
 
+def main():
+    """Main test function."""
+    logger.info("🚀 Starting Batch 5 Fixes Test Suite")
+    logger.info("=" * 50)
+
+    test_results = []
+
+    # Run all tests
     tests = [
-        test_prompt_agent_fallback,
-        test_strategy_router,
-        test_meta_agent_orchestrator,
-        test_backtest_utils,
-        test_prompt_formatter,
-        test_prompt_clarification_agent,
-        test_strategy_ranking
+        ("Prompt Agent Fallback", test_prompt_agent_fallback),
+        ("Strategy Router", test_strategy_router),
+        ("Meta Agent Orchestrator", test_meta_agent_orchestrator),
+        ("Backtest Utils", test_backtest_utils),
+        ("Prompt Formatter", test_prompt_formatter),
+        ("Prompt Clarification Agent", test_prompt_clarification_agent),
+        ("Strategy Ranking", test_strategy_ranking)
     ]
 
-    passed = 0
-    total = len(tests)
-
-    for test in tests:
+    for test_name, test_func in tests:
+        logger.info(f"\n--- Running {test_name} Test ---")
         try:
-            if test():
-                passed += 1
+            result = test_func()
+            test_results.append((test_name, result))
         except Exception as e:
-            logger.error(f"❌ Test {test.__name__} failed with exception: {e}")
+            logger.error(f"❌ {test_name} test failed with exception: {e}")
+            test_results.append((test_name, False))
 
-    logger.info(f"\n📊 Test Results: {passed}/{total} tests passed")
+    # Summary
+    logger.info("\n" + "=" * 50)
+    logger.info("TEST SUMMARY")
+    logger.info("=" * 50)
+
+    passed = 0
+    total = len(test_results)
+
+    for test_name, result in test_results:
+        status = "✅ PASSED" if result else "❌ FAILED"
+        logger.info(f"{status}: {test_name}")
+        if result:
+            passed += 1
+
+    logger.info(f"\nOverall: {passed}/{total} tests passed")
 
     if passed == total:
-        logger.info("🎉 All Batch 5 fixes are working correctly!")
-        return 0
+        logger.info("🎉 All Batch 5 fixes working correctly!")
+        return True
     else:
-        logger.warning("⚠️  Some tests failed. Please check the implementation.")
-        return 1
+        logger.error(f"❌ {total - passed} tests failed")
+        return False
+
 
 if __name__ == "__main__":
-    sys.exit(main())
-
+    success = main()
+    sys.exit(0 if success else 1) 

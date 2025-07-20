@@ -15,8 +15,6 @@ from typing import Any, Dict
 
 import redis
 
-# Add report service import
-
 logger = logging.getLogger(__name__)
 
 
@@ -99,91 +97,63 @@ class ServiceManager:
                 "process": None,
                 "pid": None,
             },
-            "quant_gpt": {
-                "script": "launch_quant_gpt.py",
-                "description": "QuantGPT Natural Language Interface",
+            "real_time_signal_center": {
+                "script": "launch_real_time_signal_center.py",
+                "description": "Real-time Signal Center Service",
                 "status": "stopped",
                 "process": None,
                 "pid": None,
             },
-            "safe_executor": {
-                "script": "launch_safe_executor.py",
-                "description": "Safe Executor for User-Defined Models",
-                "status": "stopped",
-                "process": None,
-                "pid": None,
-            },
-            "report": {
+            "report_service": {
                 "script": "launch_report_service.py",
-                "description": "Report Generation Service",
-                "status": "stopped",
-                "process": None,
-                "pid": None,
-            },
-            "reasoning": {
-                "script": "launch_reasoning_service.py",
-                "description": "Reasoning Logger Service",
+                "description": "Report Service",
                 "status": "stopped",
                 "process": None,
                 "pid": None,
             },
         }
 
-        # Manager state
-        self.is_running = False
+        # Monitoring
+        self.monitoring_active = False
         self.monitor_thread = None
 
-        # Subscribe to all service output channels
-        self._subscribe_to_services()
+        # Statistics
+        self.stats = {
+            "total_services": len(self.services),
+            "running_services": 0,
+            "stopped_services": len(self.services),
+            "failed_services": 0,
+            "start_time": time.time(),
+        }
 
-        logger.info("ServiceManager initialized")
+        logger.info(f"ServiceManager initialized with {len(self.services)} services")
 
     def _subscribe_to_services(self):
-        """Subscribe to all service output channels."""
-        channels = [f"{service_name}_output" for service_name in self.services.keys()]
+        """Subscribe to service status channels."""
+        channels = [f"service:{name}" for name in self.services.keys()]
         self.pubsub.subscribe(*channels)
-
-        # Start monitoring thread
-        self.is_running = True
-        self.monitor_thread = threading.Thread(
-            target=self._monitor_services, daemon=True
-        )
-        self.monitor_thread.start()
+        logger.info(f"Subscribed to {len(channels)} service channels")
 
     def _monitor_services(self):
-        """Monitor service messages and update status."""
+        """Monitor service status via Redis pub/sub."""
         logger.info("Starting service monitoring...")
+        self._subscribe_to_services()
 
-        while self.is_running:
-            try:
-                message = self.pubsub.get_message(timeout=1.0)
-                if message and message["type"] == "message":
-                    self._handle_service_message(message)
-            except Exception as e:
-                logger.error(f"Error in service monitoring: {e}")
-                time.sleep(1)
+        for message in self.pubsub.listen():
+            if message["type"] == "message":
+                self._handle_service_message(message)
 
     def _handle_service_message(self, message):
-        """Handle messages from services."""
+        """Handle service status messages."""
         try:
+            channel = message["channel"].decode("utf-8")
             data = json.loads(message["data"].decode("utf-8"))
-            service_name = data.get("service")
-            message_type = data.get("type")
 
+            service_name = channel.split(":")[1]
             if service_name in self.services:
-                if message_type == "service_started":
-                    self.services[service_name]["status"] = "running"
-                    logger.info(f"{service_name} service started")
-                elif message_type == "service_stopped":
-                    self.services[service_name]["status"] = "stopped"
-                    logger.info(f"{service_name} service stopped")
-                elif message_type == "status":
-                    self.services[service_name]["status"] = data.get(
-                        "status", "unknown"
-                    )
+                self.services[service_name]["status"] = data.get("status", "unknown")
+                logger.info(f"Service {service_name} status: {data.get('status')}")
 
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to decode service message: {e}")
         except Exception as e:
             logger.error(f"Error handling service message: {e}")
 
@@ -195,50 +165,53 @@ class ServiceManager:
             service_name: Name of the service to start
 
         Returns:
-            Result dictionary with status and details
+            Dictionary with start result
         """
         if service_name not in self.services:
-            return {"success": False, "error": f"Unknown service: {service_name}"}
+            return {"success": False, "error": f"Service '{service_name}' not found"}
 
-        service_config = self.services[service_name]
+        service = self.services[service_name]
 
-        if service_config["status"] == "running":
-            return {"success": False, "error": f"{service_name} is already running"}
+        if service["status"] == "running":
+            return {"success": False, "error": f"Service '{service_name}' is already running"}
 
         try:
-            # Get the script path
-            script_path = Path(__file__).parent / service_config["script"]
-
+            # Find the script file
+            script_path = Path(__file__).parent / service["script"]
             if not script_path.exists():
-                return {
-                    "success": False,
-                    "error": f"Service script not found: {script_path}",
-                }
+                return {"success": False, "error": f"Script '{service['script']}' not found"}
 
             # Start the service process
             process = subprocess.Popen(
-                [sys.executable, str(script_path)],
+                ["python", str(script_path)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                cwd=Path(__file__).parent,
+                text=True
             )
 
-            # Update service configuration
-            service_config["process"] = process
-            service_config["pid"] = process.pid
-            service_config["status"] = "starting"
+            # Update service status
+            service["process"] = process
+            service["pid"] = process.pid
+            service["status"] = "starting"
 
-            logger.info(f"Started {service_name} service (PID: {process.pid})")
+            # Update statistics
+            self.stats["running_services"] += 1
+            self.stats["stopped_services"] -= 1
+
+            logger.info(f"Started service '{service_name}' with PID {process.pid}")
 
             return {
                 "success": True,
                 "service_name": service_name,
                 "pid": process.pid,
-                "status": "starting",
+                "status": "starting"
             }
 
         except Exception as e:
-            logger.error(f"Error starting {service_name} service: {e}")
+            logger.error(f"Failed to start service '{service_name}': {e}")
+            service["status"] = "failed"
+            self.stats["failed_services"] += 1
+
             return {"success": False, "error": str(e)}
 
     def stop_service(self, service_name: str) -> Dict[str, Any]:
@@ -249,44 +222,49 @@ class ServiceManager:
             service_name: Name of the service to stop
 
         Returns:
-            Result dictionary with status and details
+            Dictionary with stop result
         """
         if service_name not in self.services:
-            return {"success": False, "error": f"Unknown service: {service_name}"}
+            return {"success": False, "error": f"Service '{service_name}' not found"}
 
-        service_config = self.services[service_name]
+        service = self.services[service_name]
 
-        if service_config["status"] == "stopped":
-            return {"success": False, "error": f"{service_name} is already stopped"}
+        if service["status"] == "stopped":
+            return {"success": False, "error": f"Service '{service_name}' is already stopped"}
 
         try:
-            # Send stop command via Redis
-            self.redis_client.publish(
-                f"{service_name}_control", json.dumps({"type": "stop"})
-            )
+            if service["process"]:
+                # Send termination signal
+                service["process"].terminate()
 
-            # Wait a bit for graceful shutdown
-            time.sleep(2)
+                # Wait for process to terminate
+                try:
+                    service["process"].wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    # Force kill if timeout
+                    service["process"].kill()
+                    service["process"].wait()
 
-            # Force kill if still running
-            if service_config["process"] and service_config["process"].poll() is None:
-                service_config["process"].terminate()
-                time.sleep(1)
+            # Update service status
+            service["process"] = None
+            service["pid"] = None
+            service["status"] = "stopped"
 
-                if service_config["process"].poll() is None:
-                    service_config["process"].kill()
+            # Update statistics
+            if service["status"] == "running":
+                self.stats["running_services"] -= 1
+            self.stats["stopped_services"] += 1
 
-            # Update service configuration
-            service_config["status"] = "stopped"
-            service_config["process"] = None
-            service_config["pid"] = None
+            logger.info(f"Stopped service '{service_name}'")
 
-            logger.info(f"Stopped {service_name} service")
-
-            return {"success": True, "service_name": service_name, "status": "stopped"}
+            return {
+                "success": True,
+                "service_name": service_name,
+                "status": "stopped"
+            }
 
         except Exception as e:
-            logger.error(f"Error stopping {service_name} service: {e}")
+            logger.error(f"Failed to stop service '{service_name}': {e}")
             return {"success": False, "error": str(e)}
 
     def start_all_services(self) -> Dict[str, Any]:
@@ -294,13 +272,11 @@ class ServiceManager:
         Start all services.
 
         Returns:
-            Result dictionary with status for each service
+            Dictionary with start results
         """
         results = {}
-
         for service_name in self.services.keys():
             results[service_name] = self.start_service(service_name)
-            time.sleep(1)  # Small delay between starts
 
         return results
 
@@ -309,13 +285,11 @@ class ServiceManager:
         Stop all services.
 
         Returns:
-            Result dictionary with status for each service
+            Dictionary with stop results
         """
         results = {}
-
         for service_name in self.services.keys():
             results[service_name] = self.stop_service(service_name)
-            time.sleep(1)  # Small delay between stops
 
         return results
 
@@ -324,40 +298,42 @@ class ServiceManager:
         Get status of services.
 
         Args:
-            service_name: Specific service name or None for all
+            service_name: Specific service name (optional)
 
         Returns:
-            Status dictionary
+            Dictionary with service status(es)
         """
         if service_name:
             if service_name not in self.services:
-                return {"error": f"Unknown service: {service_name}"}
+                return {"error": f"Service '{service_name}' not found"}
 
-            service_config = self.services[service_name]
+            service = self.services[service_name]
             return {
                 "service_name": service_name,
-                "status": service_config["status"],
-                "pid": service_config["pid"],
-                "description": service_config["description"],
+                "status": service["status"],
+                "pid": service["pid"],
+                "description": service["description"]
             }
-        else:
-            return {
-                service_name: {
-                    "status": config["status"],
-                    "pid": config["pid"],
-                    "description": config["description"],
-                }
-                for service_name, config in self.services.items()
+
+        # Return all services status
+        statuses = {}
+        for name, service in self.services.items():
+            statuses[name] = {
+                "status": service["status"],
+                "pid": service["pid"],
+                "description": service["description"]
             }
+
+        return statuses
 
     def send_message(
         self, service_name: str, message_type: str, data: Dict[str, Any]
     ) -> bool:
         """
-        Send a message to a specific service.
+        Send message to a service via Redis.
 
         Args:
-            service_name: Name of the target service
+            service_name: Target service name
             message_type: Type of message
             data: Message data
 
@@ -365,132 +341,83 @@ class ServiceManager:
             True if message sent successfully
         """
         try:
-            message = {"type": message_type, "data": data, "timestamp": time.time()}
+            message = {
+                "type": message_type,
+                "data": data,
+                "timestamp": time.time()
+            }
 
-            self.redis_client.publish(f"{service_name}_input", json.dumps(message))
+            channel = f"service:{service_name}:command"
+            self.redis_client.publish(channel, json.dumps(message))
 
+            logger.info(f"Sent {message_type} message to {service_name}")
             return True
 
         except Exception as e:
-            logger.error(f"Error sending message to {service_name}: {e}")
+            logger.error(f"Failed to send message to {service_name}: {e}")
             return False
 
     def get_manager_stats(self) -> Dict[str, Any]:
         """Get manager statistics."""
-        running_services = sum(
-            1 for config in self.services.values() if config["status"] == "running"
-        )
-
         return {
-            "total_services": len(self.services),
-            "running_services": running_services,
-            "stopped_services": len(self.services) - running_services,
-            "services": self.get_service_status(),
+            "stats": self.stats,
+            "uptime": time.time() - self.stats["start_time"],
+            "monitoring_active": self.monitoring_active
         }
 
     def shutdown(self) -> Dict[str, Any]:
-        """Shutdown the service manager."""
-        try:
-            logger.info("Shutting down ServiceManager...")
+        """
+        Shutdown the service manager.
 
-            self.is_running = False
+        Returns:
+            Dictionary with shutdown result
+        """
+        try:
+            # Stop monitoring
+            if self.monitoring_active:
+                self.monitoring_active = False
+                if self.monitor_thread:
+                    self.monitor_thread.join(timeout=5)
 
             # Stop all services
             stop_results = self.stop_all_services()
 
             # Close Redis connection
             self.pubsub.close()
+            self.redis_client.close()
 
-            logger.info("ServiceManager shutdown complete")
-            return {
-                "status": "success",
-                "message": "ServiceManager shutdown complete",
-                "stop_results": stop_results,
-            }
-        except Exception as e:
-            logger.error(f"Error during shutdown: {e}")
+            logger.info("ServiceManager shutdown completed")
+
             return {
                 "success": True,
-                "result": {"status": "error", "message": str(e)},
-                "message": "Operation completed successfully",
-                "timestamp": datetime.now().isoformat(),
+                "stop_results": stop_results,
+                "message": "ServiceManager shutdown completed"
             }
+
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
+            return {"success": False, "error": str(e)}
 
 
 def main():
-    """Main function for running the ServiceManager."""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Trading Agent Service Manager")
-    parser.add_argument(
-        "--action",
-        choices=["start", "stop", "status", "start-all", "stop-all"],
-        default="status",
-        help="Action to perform",
-    )
-    parser.add_argument("--service", help="Service name for start/stop actions")
-    parser.add_argument("--redis-host", default="localhost", help="Redis host")
-    parser.add_argument("--redis-port", type=int, default=6379, help="Redis port")
-
-    args = parser.parse_args()
-
-    # Initialize service manager
-    manager = ServiceManager(redis_host=args.redis_host, redis_port=args.redis_port)
-
+    """Main function for running the service manager."""
+    manager = ServiceManager()
+    
     try:
-        if args.action == "start":
-            if not args.service:
-                logger.error("Error: --service is required for start action")
-                return {
-                    "status": "failed",
-                    "action": "start",
-                    "error": "Missing service parameter",
-                }
-            result = manager.start_service(args.service)
-            logger.info(json.dumps(result, indent=2))
-            return {"status": "completed", "action": "start", "result": result}
+        # Start monitoring in background
+        manager.monitoring_active = True
+        manager.monitor_thread = threading.Thread(target=manager._monitor_services)
+        manager.monitor_thread.daemon = True
+        manager.monitor_thread.start()
 
-        elif args.action == "stop":
-            if not args.service:
-                logger.error("Error: --service is required for stop action")
-                return {
-                    "status": "failed",
-                    "action": "stop",
-                    "error": "Missing service parameter",
-                }
-            result = manager.stop_service(args.service)
-            logger.info(json.dumps(result, indent=2))
-            return {"status": "completed", "action": "stop", "result": result}
-
-        elif args.action == "start-all":
-            result = manager.start_all_services()
-            logger.info(json.dumps(result, indent=2))
-            return {"status": "completed", "action": "start-all", "result": result}
-
-        elif args.action == "stop-all":
-            result = manager.stop_all_services()
-            logger.info(json.dumps(result, indent=2))
-            return {"status": "completed", "action": "stop-all", "result": result}
-
-        elif args.action == "status":
-            result = manager.get_service_status()
-            logger.info(json.dumps(result, indent=2))
-            return {
-                "success": True,
-                "result": {"status": "completed", "action": "status", "result": result},
-                "message": "Operation completed successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
+        # Keep running
+        while True:
+            time.sleep(1)
 
     except KeyboardInterrupt:
-        logger.info("\nShutting down...")
-        return {"status": "interrupted", "action": args.action}
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        return {"status": "failed", "action": args.action, "error": str(e)}
-    finally:
+        logger.info("Received shutdown signal")
         manager.shutdown()
 
 
 if __name__ == "__main__":
-    main()
+    main() 

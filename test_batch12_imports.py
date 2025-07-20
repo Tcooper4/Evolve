@@ -4,7 +4,9 @@
 import sys
 import traceback
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 def test_import(module_name, class_name=None):
     """Test importing a module and optionally a class."""
@@ -17,6 +19,7 @@ def test_import(module_name, class_name=None):
     except Exception as e:
         logger.error(f"✗ {module_name}{'.' + class_name if class_name else ''}: {e}")
         return False
+
 
 def main():
     """Test all Batch 12 imports."""
@@ -49,6 +52,6 @@ def main():
         logger.error("❌ Some imports failed")
         return 1
 
-if __name__ == "__main__":
-    sys.exit(main())
 
+if __name__ == "__main__":
+    sys.exit(main()) 

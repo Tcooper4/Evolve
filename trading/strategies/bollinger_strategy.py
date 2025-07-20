@@ -1,15 +1,18 @@
-﻿"""Bollinger Bands trading strategy implementation."""
+"""
+Bollinger Bands Strategy
 
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Dict, Optional, Tuple
+This module implements a Bollinger Bands trading strategy with squeeze detection
+and signal generation capabilities.
+"""
 
-import pandas as pd
 import logging
+from dataclasses import dataclass
+from typing import Dict, Optional, Tuple, Any
 
-# Import centralized technical indicators
-from utils.technical_indicators import calculate_bollinger_bands
+import numpy as np
+import pandas as pd
 
+from .base_strategy import BaseStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -25,45 +28,46 @@ class BollingerConfig:
     squeeze_threshold: float = 0.1  # Threshold for squeeze detection (bandwidth ratio)
 
 
-class BollingerStrategy:
-    """Bollinger Bands trading strategy implementation."""
+class BollingerStrategy(BaseStrategy):
+    """Bollinger Bands trading strategy with squeeze detection."""
 
     def __init__(self, config: Optional[BollingerConfig] = None):
-        """Initialize the strategy with configuration."""
+        """Initialize Bollinger Bands strategy."""
+        super().__init__("Bollinger_Bands", "Bollinger Bands mean reversion strategy")
         self.config = config or BollingerConfig()
         self.signals = None
-        self.positions = None
 
     def calculate_bands(
         self, data: pd.DataFrame
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
-        """Calculate Bollinger Bands for the given data."""
-        if "close" not in data.columns:
-            raise ValueError("Data must contain 'close' column")
+        """
+        Calculate Bollinger Bands.
 
-        # Use centralized Bollinger Bands calculation
-        upper_band, middle_band, lower_band = calculate_bollinger_bands(
-            data["close"], self.config.window, self.config.num_std
-        )
+        Args:
+            data: Price data with 'close' column
 
-        # Drop NaNs from rolling calculations to avoid front-window issues
-        upper_band = upper_band.dropna()
-        middle_band = middle_band.dropna()
-        lower_band = lower_band.dropna()
+        Returns:
+            Tuple of (upper_band, middle_band, lower_band)
+        """
+        close_prices = data['close']
+        middle_band = close_prices.rolling(window=self.config.window).mean()
+        std = close_prices.rolling(window=self.config.window).std()
+        upper_band = middle_band + (self.config.num_std * std)
+        lower_band = middle_band - (self.config.num_std * std)
 
         return upper_band, middle_band, lower_band
 
     def generate_signals(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         """
         Generate trading signals based on Bollinger Bands.
-        
+
         Args:
             df: Price data DataFrame with required columns
             **kwargs: Additional parameters (overrides config)
-            
+
         Returns:
             DataFrame with signals and Bollinger Bands components
-            
+
         Raises:
             ValueError: If required columns are missing or data is invalid
         """
@@ -71,28 +75,28 @@ class BollingerStrategy:
         if not isinstance(df, pd.DataFrame):
             logger.error("Input must be a pandas DataFrame")
             raise ValueError("Input must be a pandas DataFrame")
-        
+
         if df.empty:
             logger.warning("DataFrame is empty; skipping signal generation.")
             raise ValueError("DataFrame is empty")
-        
+
         # Check for required columns (case-insensitive)
         df_lower = df.copy()
         df_lower.columns = df_lower.columns.str.lower()
-        
+
         required_columns = ["close", "volume"]
         missing_columns = [col for col in required_columns if col not in df_lower.columns]
         if missing_columns:
             logger.error(f"Data must contain columns: {missing_columns}")
             raise ValueError(f"Data must contain columns: {missing_columns}")
-        
+
         # Clean NaNs
         df_lower = df_lower.drop_duplicates(subset=df_lower.index)
         df_lower = df_lower.dropna()
         if len(df_lower) < 2:
             logger.warning("Not enough data after NaN cleaning; skipping signal generation.")
             raise ValueError("Not enough data after NaN cleaning")
-        
+
         # Fallback for constant price series
         if df_lower["close"].std() == 0:
             logger.warning("Constant price series detected (stddev=0); skipping signal generation.")
@@ -105,14 +109,14 @@ class BollingerStrategy:
             signals["squeeze"] = False
             self.signals = signals
             return signals
-        
+
         # Handle NaN values
         if df_lower["close"].isna().any():
             df_lower["close"] = df_lower["close"].fillna(method='ffill').fillna(method='bfill')
-        
+
         if df_lower["volume"].isna().any():
             df_lower["volume"] = df_lower["volume"].fillna(0)
-        
+
         # Update config with kwargs if provided
         config = self.config
         if kwargs:
@@ -126,9 +130,7 @@ class BollingerStrategy:
 
         try:
             # Calculate Bollinger Bands
-            upper_band, middle_band, lower_band = calculate_bollinger_bands(
-                df_lower["close"], config.window, config.num_std
-            )
+            upper_band, middle_band, lower_band = self.calculate_bands(df_lower)
 
             # Calculate squeeze condition (bandwidth)
             bandwidth = (upper_band - lower_band) / middle_band
@@ -154,32 +156,41 @@ class BollingerStrategy:
             signals["middle_band"] = middle_band
             signals["lower_band"] = lower_band
 
-            # Filter signals based on volume and price
-            volume_mask = df_lower["volume"] >= config.min_volume
-            price_mask = df_lower["close"] >= config.min_price
-            signals.loc[~(volume_mask & price_mask), "signal"] = 0
+            # Add volume filter
+            volume_filter = df_lower["volume"] >= config.min_volume
+            signals.loc[~volume_filter, "signal"] = 0
 
-            # Handle any remaining NaN values in signals
-            signals = signals.fillna(0)
+            # Add price filter
+            price_filter = df_lower["close"] >= config.min_price
+            signals.loc[~price_filter, "signal"] = 0
 
+            # Store signals
             self.signals = signals
+
+            logger.info(f"Generated {len(signals[signals['signal'] != 0])} Bollinger Bands signals")
             return signals
-            
+
         except Exception as e:
-            raise ValueError(f"Error generating Bollinger Bands signals: {str(e)}")
+            logger.error(f"Error generating Bollinger Bands signals: {e}")
+            raise
 
     def calculate_positions(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Calculate trading positions based on signals."""
+        """
+        Calculate position sizes based on signals.
+
+        Args:
+            data: Market data
+
+        Returns:
+            DataFrame with position sizes
+        """
         if self.signals is None:
             self.generate_signals(data)
 
-        positions = pd.DataFrame(index=data.index)
-        positions["position"] = self.signals["signal"].cumsum()
+        positions = self.signals.copy()
+        positions["position"] = positions["signal"].cumsum()
+        positions["position"] = positions["position"].clip(-1, 1)  # Limit positions
 
-        # Ensure positions are within bounds
-        positions["position"] = positions["position"].clip(-1, 1)
-
-        self.positions = positions
         return positions
 
     def get_parameters(self) -> Dict:
@@ -189,24 +200,30 @@ class BollingerStrategy:
             "num_std": self.config.num_std,
             "min_volume": self.config.min_volume,
             "min_price": self.config.min_price,
-            "squeeze_threshold": self.config.squeeze_threshold,
+            "squeeze_threshold": self.config.squeeze_threshold
         }
 
     def set_parameters(self, params: Dict) -> Dict:
         """Set strategy parameters."""
-        try:
-            self.config = BollingerConfig(**params)
-            self.signals = None
-            self.positions = None
-            return {
-                "status": "success",
-                "parameters_updated": True,
-                "config": self.get_parameters(),
-            }
-        except Exception as e:
-            return {
-                "success": True,
-                "result": {"status": "error", "message": str(e)},
-                "message": "Operation completed successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
+        if "window" in params:
+            self.config.window = params["window"]
+        if "num_std" in params:
+            self.config.num_std = params["num_std"]
+        if "min_volume" in params:
+            self.config.min_volume = params["min_volume"]
+        if "min_price" in params:
+            self.config.min_price = params["min_price"]
+        if "squeeze_threshold" in params:
+            self.config.squeeze_threshold = params["squeeze_threshold"]
+
+        return self.get_parameters()
+
+    def get_parameter_space(self) -> Dict[str, Any]:
+        """Get parameter space for optimization."""
+        return {
+            "window": {"type": "int", "min": 5, "max": 50, "default": 20},
+            "num_std": {"type": "float", "min": 1.0, "max": 3.0, "default": 2.0},
+            "min_volume": {"type": "float", "min": 100.0, "max": 10000.0, "default": 1000.0},
+            "min_price": {"type": "float", "min": 0.1, "max": 10.0, "default": 1.0},
+            "squeeze_threshold": {"type": "float", "min": 0.05, "max": 0.3, "default": 0.1}
+        } 

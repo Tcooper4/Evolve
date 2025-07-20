@@ -1,27 +1,18 @@
-#!/usr/bin/env python3
 """
 Test Modular Components
 
-This script tests all the modularized components of the Evolve trading platform:
-- Execution Agent (modular)
-- Optimizer Agent (modular)
-- Task Orchestrator (modular)
+This test validates the modular components of the trading system,
+including execution agents, optimizer agents, and task orchestrators.
 """
 
 import asyncio
 import logging
 import sys
-from pathlib import Path
+from typing import Dict, Any, List
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-# Add project root to path
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
 
 
 async def test_execution_agent_modular():
@@ -122,15 +113,14 @@ async def test_optimizer_agent_modular():
             backtest_results={},
             optimization_score=1.5
         )
-        analyzer.add_optimization_result(result)
-        stats = analyzer.get_optimization_stats()
-        logger.info(f"✅ Performance analysis: {stats['total_optimizations']} optimizations")
+        analyzed_result = analyzer.analyze_optimization_result(result)
+        logger.info(f"✅ Performance analysis completed: score={analyzed_result.optimization_score}")
 
         # Test optimizer agent creation
         config = {
-            "optimizer_config": {},
-            "backtest_config": {},
-            "performance_config": {}
+            "optimization_type": OptimizationType.GRID_SEARCH,
+            "max_iterations": 10,
+            "parallel_workers": 2
         }
         agent = create_optimizer_agent(config)
         logger.info("✅ Optimizer agent created successfully")
@@ -151,58 +141,50 @@ async def test_task_orchestrator_modular():
     try:
         # Test imports
         from core.orchestrator import (
-            TaskOrchestrator, create_task_orchestrator, start_orchestrator,
-            TaskScheduler, TaskConfig, TaskStatus, TaskPriority, TaskType,
-            TaskExecutor, TaskExecution,
-            TaskMonitor, AgentStatus,
-            TaskConditions,
-            TaskProvider, AgentTaskProvider
+            TaskOrchestrator, create_task_orchestrator,
+            TaskDefinition, TaskStatus, TaskPriority,
+            TaskScheduler, TaskExecutor, TaskMonitor,
+            OrchestrationConfig, TaskResult, TaskError
         )
         logger.info("✅ All task orchestrator imports successful")
 
-        # Test task models
-        task_config = TaskConfig(
+        # Test task definition
+        task_def = TaskDefinition(
             name="test_task",
-            task_type=TaskType.SYSTEM_HEALTH,
-            enabled=True,
-            interval_minutes=5,
-            priority=TaskPriority.MEDIUM
+            function_name="test_function",
+            parameters={"param1": "value1"},
+            priority=TaskPriority.NORMAL,
+            timeout=30.0
         )
-        logger.info(f"✅ Task config created: {task_config.name}")
+        logger.info(f"✅ Task definition created: {task_def.name}")
 
         # Test task scheduler
         scheduler = TaskScheduler()
-        scheduler.add_task(task_config)
-        scheduled_tasks = scheduler.get_scheduled_tasks()
-        logger.info(f"✅ Task scheduler: {len(scheduled_tasks)} scheduled tasks")
+        scheduled_task = scheduler.schedule_task(task_def)
+        logger.info(f"✅ Task scheduled: {scheduled_task.task_id}")
 
         # Test task executor
         executor = TaskExecutor()
-        logger.info("✅ Task executor created")
+        executor_result = await executor.execute_task(scheduled_task)
+        logger.info(f"✅ Task execution completed: {executor_result.status}")
 
         # Test task monitor
         monitor = TaskMonitor()
-        health_status = await monitor.check_system_health()
-        logger.info(f"✅ Task monitor: health score {health_status.get('overall_health', 0):.2f}")
+        monitor_status = monitor.get_task_status(scheduled_task.task_id)
+        logger.info(f"✅ Task monitoring: {monitor_status}")
 
-        # Test task conditions
-        conditions = TaskConditions()
-        available_conditions = conditions.get_available_conditions()
-        logger.info(f"✅ Task conditions: {len(available_conditions)} available conditions")
-
-        # Test task orchestrator creation
-        orchestrator = create_task_orchestrator()
+        # Test orchestrator creation
+        config = OrchestrationConfig(
+            max_concurrent_tasks=5,
+            task_timeout=60.0,
+            enable_monitoring=True
+        )
+        orchestrator = create_task_orchestrator(config)
         logger.info("✅ Task orchestrator created successfully")
 
-        # Test orchestrator start/stop
-        await orchestrator.start()
-        logger.info("✅ Task orchestrator started")
-
-        system_status = orchestrator.get_system_status()
-        logger.info(f"✅ System status: {system_status.get('orchestrator_status', 'unknown')}")
-
-        await orchestrator.stop()
-        logger.info("✅ Task orchestrator stopped")
+        # Test orchestrator functionality
+        orchestrator_result = await orchestrator.submit_task(task_def)
+        logger.info(f"✅ Orchestrator task submission: {orchestrator_result.success}")
 
         logger.info("✅ Modular Task Orchestrator tests completed!\n")
 
@@ -214,30 +196,33 @@ async def test_task_orchestrator_modular():
 
 async def test_integration():
     """Test integration between modular components."""
-    logger.info("🧪 Testing Integration Between Modular Components")
+    logger.info("🧪 Testing Component Integration")
     logger.info("=" * 50)
 
     try:
-        # Test execution agent with orchestrator
+        # Test execution + optimizer integration
         from trading.agents.execution import create_execution_agent
-        from core.orchestrator import create_task_orchestrator
+        from trading.agents.optimization import create_optimizer_agent
 
-        # Create components
         execution_agent = create_execution_agent({"execution_mode": "simulation"})
-        orchestrator = create_task_orchestrator()
+        optimizer_agent = create_optimizer_agent({"optimization_type": "grid_search"})
 
-        logger.info("✅ Integration test: Components created successfully")
+        logger.info("✅ Execution and optimizer agents created for integration")
 
-        # Test that components can work together
-        await orchestrator.start()
+        # Test orchestrator + agents integration
+        from core.orchestrator import create_task_orchestrator, OrchestrationConfig
 
-        # Execute a task that would use the execution agent
-        task_id = await orchestrator.execute_task_now("execution", {"test": True})
-        logger.info(f"✅ Integration test: Task executed with ID {task_id}")
+        orchestrator = create_task_orchestrator(OrchestrationConfig())
+        logger.info("✅ Orchestrator created for integration")
 
-        await orchestrator.stop()
+        # Test workflow
+        workflow_result = await orchestrator.run_workflow([
+            {"agent": optimizer_agent, "task": "optimize_strategy"},
+            {"agent": execution_agent, "task": "execute_signals"}
+        ])
+        logger.info(f"✅ Workflow execution: {workflow_result.success}")
 
-        logger.info("✅ Integration tests completed!\n")
+        logger.info("✅ Component Integration tests completed!\n")
 
     except Exception as e:
         logger.error(f"❌ Integration test failed: {e}")
@@ -246,22 +231,53 @@ async def test_integration():
 
 
 async def main():
-    """Run all modular component tests."""
-    logger.info("🚀 Starting Modular Component Tests")
+    """Main test function."""
+    logger.info("🚀 Starting Modular Components Test Suite")
     logger.info("=" * 60)
 
-    # Test each modular component
-    await test_execution_agent_modular()
-    await test_optimizer_agent_modular()
-    await test_task_orchestrator_modular()
+    test_results = []
 
-    # Test integration
-    await test_integration()
+    # Run all tests
+    tests = [
+        ("Execution Agent", test_execution_agent_modular),
+        ("Optimizer Agent", test_optimizer_agent_modular),
+        ("Task Orchestrator", test_task_orchestrator_modular),
+        ("Integration", test_integration)
+    ]
 
-    logger.info("🎉 All Modular Component Tests Completed!")
+    for test_name, test_func in tests:
+        logger.info(f"\n--- Running {test_name} Test ---")
+        try:
+            await test_func()
+            test_results.append((test_name, True))
+        except Exception as e:
+            logger.error(f"❌ {test_name} test failed with exception: {e}")
+            test_results.append((test_name, False))
+
+    # Summary
+    logger.info("\n" + "=" * 60)
+    logger.info("TEST SUMMARY")
     logger.info("=" * 60)
+
+    passed = 0
+    total = len(test_results)
+
+    for test_name, result in test_results:
+        status = "✅ PASSED" if result else "❌ FAILED"
+        logger.info(f"{status}: {test_name}")
+        if result:
+            passed += 1
+
+    logger.info(f"\nOverall: {passed}/{total} tests passed")
+
+    if passed == total:
+        logger.info("🎉 All modular component tests passed!")
+        return True
+    else:
+        logger.error(f"❌ {total - passed} tests failed")
+        return False
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
-
+    success = asyncio.run(main())
+    sys.exit(0 if success else 1) 
