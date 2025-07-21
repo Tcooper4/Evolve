@@ -1,5 +1,7 @@
 """
 Memory module for logging and monitoring.
+
+# NOTE: Flake8 compliance changes applied.
 """
 
 # from trading.logger_utils import LoggerUtils

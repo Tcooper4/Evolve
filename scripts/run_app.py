@@ -8,13 +8,14 @@ import logging
 import sys
 from pathlib import Path
 
+from trading.config.config_loader import ConfigLoader
+from trading.core.trading_agent import TradingAgent
+from trading.utils.logger_utils import setup_logging
+
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from trading.config.config_loader import ConfigLoader
-from trading.core.trading_agent import TradingAgent
-from trading.utils.logger_utils import setup_logging
 
 logger = logging.getLogger(__name__)
 

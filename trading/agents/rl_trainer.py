@@ -177,9 +177,11 @@ class TradingEnvironment(gym.Env):
             [
                 self.balance / self.initial_balance,  # Normalized balance
                 self.shares_held,  # Shares held
-                self.current_price / self.data.iloc[0]["close"]
-                if "close" in self.data.columns
-                else 1.0,  # Price ratio
+                (
+                    self.current_price / self.data.iloc[0]["close"]
+                    if "close" in self.data.columns
+                    else 1.0
+                ),  # Price ratio
             ],
             dtype=np.float32,
         )
@@ -358,12 +360,16 @@ class RLTrainer:
                     "episode_rewards": callback.episode_rewards,
                     "episode_lengths": callback.episode_lengths,
                     "portfolio_values": callback.portfolio_values,
-                    "final_portfolio_value": callback.portfolio_values[-1]
-                    if callback.portfolio_values
-                    else 0,
-                    "total_return": (callback.portfolio_values[-1] - 10000) / 10000
-                    if callback.portfolio_values
-                    else 0,
+                    "final_portfolio_value": (
+                        callback.portfolio_values[-1]
+                        if callback.portfolio_values
+                        else 0
+                    ),
+                    "total_return": (
+                        (callback.portfolio_values[-1] - 10000) / 10000
+                        if callback.portfolio_values
+                        else 0
+                    ),
                 },
                 "timestamp": timestamp,
             }
@@ -469,12 +475,16 @@ class RLTrainer:
                     "episode_rewards": callback.episode_rewards,
                     "episode_lengths": callback.episode_lengths,
                     "portfolio_values": callback.portfolio_values,
-                    "final_portfolio_value": callback.portfolio_values[-1]
-                    if callback.portfolio_values
-                    else 0,
-                    "total_return": (callback.portfolio_values[-1] - 10000) / 10000
-                    if callback.portfolio_values
-                    else 0,
+                    "final_portfolio_value": (
+                        callback.portfolio_values[-1]
+                        if callback.portfolio_values
+                        else 0
+                    ),
+                    "total_return": (
+                        (callback.portfolio_values[-1] - 10000) / 10000
+                        if callback.portfolio_values
+                        else 0
+                    ),
                 },
                 "timestamp": timestamp,
             }

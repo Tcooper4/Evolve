@@ -11,13 +11,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from trading.optimization.base_optimizer import OptimizerConfig
 from trading.optimization.strategy_optimizer import (
     GeneticAlgorithm,
     OptimizationResult,
     ParticleSwarmOptimization,
     StrategyOptimizer,
 )
-from trading.optimization.base_optimizer import OptimizerConfig
 
 
 class TestGeneticAlgorithm:

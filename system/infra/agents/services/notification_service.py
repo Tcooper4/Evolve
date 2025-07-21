@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from enum import Enum
@@ -6,15 +6,6 @@ from typing import Any, Dict, List, Optional, Set
 from uuid import uuid4
 
 import aiohttp
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
-    after_log,
-)
-
 from automation.notifications.notification_manager import (
     NotificationManager,
     NotificationPriority,
@@ -42,6 +33,14 @@ from automation.services.transaction_service import TransactionService
 from automation.services.validation_service import ValidationService
 from automation.services.worker_service import WorkerService
 from pydantic import BaseModel, Field, validator
+from tenacity import (
+    after_log,
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -453,6 +452,7 @@ class NotificationDelivery(BaseModel):
 
 class MessageChannel(str, Enum):
     """Supported message channels."""
+
     EMAIL = "email"
     SLACK = "slack"
     WEBHOOK = "webhook"
@@ -462,6 +462,7 @@ class MessageChannel(str, Enum):
 
 class MessageConfig(BaseModel):
     """Configuration for message sending."""
+
     channel: MessageChannel
     timeout: int = Field(default=10, ge=1, le=60)  # 10s default timeout
     max_retries: int = Field(default=3, ge=0, le=10)
@@ -473,6 +474,7 @@ class MessageConfig(BaseModel):
 
 class SendMessageResult(BaseModel):
     """Result of message sending operation."""
+
     success: bool
     message_id: str
     channel: MessageChannel
@@ -1360,7 +1362,7 @@ class NotificationService:
         template_vars: Optional[Dict[str, Any]] = None,
     ) -> SendMessageResult:
         """Consolidated message sending function with timeout, retry, and error handling.
-        
+
         Args:
             message: Message content
             title: Message title
@@ -1368,14 +1370,14 @@ class NotificationService:
             recipients: List of recipient identifiers
             config: Message configuration (timeout, retries, etc.)
             template_vars: Template variables for message formatting
-            
+
         Returns:
             SendMessageResult with success status and details
         """
         message_id = str(uuid4())
         config = config or MessageConfig(channel=channel)
         template_vars = template_vars or {}
-        
+
         # Format message with template variables
         try:
             formatted_message = message.format(**template_vars)
@@ -1388,89 +1390,103 @@ class NotificationService:
                 message_id=message_id,
                 channel=channel,
                 error=error_msg,
-                attempts=0
+                attempts=0,
             )
-        
+
         # Log attempt
-        logger.info(f"Sending message {message_id} via {channel} to {len(recipients)} recipients")
-        
+        logger.info(
+            f"Sending message {message_id} via {channel} to {len(recipients)} recipients"
+        )
+
         # Retry decorator configuration
         retry_decorator = retry(
             stop=stop_after_attempt(config.max_retries),
             wait=wait_exponential(
-                multiplier=config.retry_delay,
-                exp_base=config.exponential_base
+                multiplier=config.retry_delay, exp_base=config.exponential_base
             ),
-            retry=retry_if_exception_type((
-                aiohttp.ClientError,
-                asyncio.TimeoutError,
-                ConnectionError,
-                OSError
-            )),
+            retry=retry_if_exception_type(
+                (aiohttp.ClientError, asyncio.TimeoutError, ConnectionError, OSError)
+            ),
             before_sleep=before_sleep_log(logger, logging.WARNING),
-            after=after_log(logger, logging.INFO)
+            after=after_log(logger, logging.INFO),
         )
-        
+
         @retry_decorator
         async def _send_with_retry() -> Dict[str, Any]:
             """Internal retry function for sending messages."""
-            start_time = datetime.utcnow()
-            
+            datetime.utcnow()
+
             try:
                 async with aiohttp.ClientSession(
                     timeout=aiohttp.ClientTimeout(total=config.timeout)
                 ) as session:
                     if channel == MessageChannel.EMAIL:
                         return await self._send_email_internal(
-                            session, recipients, formatted_title, formatted_message, config
+                            session,
+                            recipients,
+                            formatted_title,
+                            formatted_message,
+                            config,
                         )
                     elif channel == MessageChannel.SLACK:
                         return await self._send_slack_internal(
-                            session, recipients, formatted_title, formatted_message, config
+                            session,
+                            recipients,
+                            formatted_title,
+                            formatted_message,
+                            config,
                         )
                     elif channel == MessageChannel.WEBHOOK:
                         return await self._send_webhook_internal(
-                            session, recipients, formatted_title, formatted_message, config
+                            session,
+                            recipients,
+                            formatted_title,
+                            formatted_message,
+                            config,
                         )
                     else:
                         raise ValueError(f"Unsupported channel: {channel}")
-                        
+
             except asyncio.TimeoutError:
                 raise asyncio.TimeoutError(f"Request timeout after {config.timeout}s")
             except aiohttp.ClientError as e:
                 raise aiohttp.ClientError(f"HTTP client error: {e}")
             except Exception as e:
                 raise Exception(f"Unexpected error: {e}")
-        
+
         try:
             result = await _send_with_retry()
             response_time = (datetime.utcnow() - start_time).total_seconds()
-            
-            logger.info(f"Message {message_id} sent successfully via {channel} in {response_time:.2f}s")
-            
+
+            logger.info(
+                f"Message {message_id} sent successfully via {channel} in {response_time:.2f}s"
+            )
+
             return SendMessageResult(
                 success=True,
                 message_id=message_id,
                 channel=channel,
                 attempts=result.get("attempts", 1),
                 response_time=response_time,
-                status_code=result.get("status_code")
+                status_code=result.get("status_code"),
             )
-            
+
         except Exception as e:
             error_msg = f"Failed to send message via {channel}: {str(e)}"
             logger.error(f"Message {message_id} failed: {error_msg}")
-            
+
             # Log detailed error context
-            logger.error(f"Error context - Channel: {channel}, Recipients: {recipients}, "
-                        f"Config: {config.dict()}, Error: {type(e).__name__}: {str(e)}")
-            
+            logger.error(
+                f"Error context - Channel: {channel}, Recipients: {recipients}, "
+                f"Config: {config.dict()}, Error: {type(e).__name__}: {str(e)}"
+            )
+
             return SendMessageResult(
                 success=False,
                 message_id=message_id,
                 channel=channel,
                 error=error_msg,
-                attempts=config.max_retries
+                attempts=config.max_retries,
             )
 
     async def _send_email_internal(
@@ -1488,15 +1504,15 @@ class NotificationService:
             "to": recipients,
             "subject": title,
             "text": message,
-            "html": f"<h1>{title}</h1><p>{message}</p>"
+            "html": f"<h1>{title}</h1><p>{message}</p>",
         }
-        
+
         # Simulate API call with timeout
         async with session.post(
             "https://api.emailservice.com/send",
             json=email_data,
             headers=config.headers or {"Content-Type": "application/json"},
-            timeout=aiohttp.ClientTimeout(total=config.timeout)
+            timeout=aiohttp.ClientTimeout(total=config.timeout),
         ) as response:
             if response.status == 200:
                 return {"status_code": 200, "attempts": 1}
@@ -1516,15 +1532,15 @@ class NotificationService:
             "channel": recipients[0] if recipients else "#general",
             "text": f"*{title}*\n{message}",
             "username": "Trading Bot",
-            "icon_emoji": ":robot_face:"
+            "icon_emoji": ":robot_face:",
         }
-        
+
         # Simulate Slack API call with timeout
         async with session.post(
             "https://hooks.slack.com/services/YOUR/WEBHOOK/URL",
             json=slack_data,
             headers=config.headers or {"Content-Type": "application/json"},
-            timeout=aiohttp.ClientTimeout(total=config.timeout)
+            timeout=aiohttp.ClientTimeout(total=config.timeout),
         ) as response:
             if response.status == 200:
                 return {"status_code": 200, "attempts": 1}
@@ -1544,20 +1560,22 @@ class NotificationService:
             "title": title,
             "message": message,
             "timestamp": datetime.utcnow().isoformat(),
-            "recipients": recipients
+            "recipients": recipients,
         }
-        
+
         # Send to each webhook URL
         for webhook_url in recipients:
             async with session.post(
                 webhook_url,
                 json=webhook_data,
                 headers=config.headers or {"Content-Type": "application/json"},
-                timeout=aiohttp.ClientTimeout(total=config.timeout)
+                timeout=aiohttp.ClientTimeout(total=config.timeout),
             ) as response:
                 if response.status not in [200, 201, 202]:
-                    raise aiohttp.ClientError(f"Webhook {webhook_url} returned {response.status}")
-        
+                    raise aiohttp.ClientError(
+                        f"Webhook {webhook_url} returned {response.status}"
+                    )
+
         return {"status_code": 200, "attempts": 1}
 
     async def notify_task_created(
@@ -2067,9 +2085,9 @@ class NotificationService:
                 "session_id": session_id,
                 "correlation_id": correlation_id,
                 "notification_type": notification_type,
-                "priority": priority.value
-                if hasattr(priority, "value")
-                else str(priority),
+                "priority": (
+                    priority.value if hasattr(priority, "value") else str(priority)
+                ),
                 "broadcast_type": broadcast_type,
                 "success": success,
                 "error": error,
@@ -2187,9 +2205,9 @@ class NotificationService:
                 "message": message,
                 "title": title,
                 "timestamp": datetime.utcnow().isoformat(),
-                "priority": priority.value
-                if hasattr(priority, "value")
-                else str(priority),
+                "priority": (
+                    priority.value if hasattr(priority, "value") else str(priority)
+                ),
             }
 
             # Send to each user

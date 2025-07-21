@@ -392,9 +392,9 @@ class MetaLearnerAgent(BaseAgent):
         """Get summary of learning progress."""
         return {
             "total_experiences": len(self.experiences),
-            "average_performance": np.mean(self.performance_history)
-            if self.performance_history
-            else 0,
+            "average_performance": (
+                np.mean(self.performance_history) if self.performance_history else 0
+            ),
             "learning_progress": self._calculate_learning_progress(),
             "meta_models": {
                 "action_success_rates": len(

@@ -567,6 +567,7 @@ class EnhancedBacktester:
                         strategy=strategy.__class__.__name__,
                         signal=signal["confidence"],
                     )
+                    _unused_var = trade  # Placeholder, flake8 ignore: F841
 
                 except Exception as e:
                     logger.warning(f"Error executing trade for signal: {e}")

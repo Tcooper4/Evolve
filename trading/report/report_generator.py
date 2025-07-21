@@ -1,4 +1,4 @@
-﻿"""
+"""
 Report Generator
 
 Generates comprehensive reports after forecast and strategy execution including:
@@ -23,7 +23,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -84,7 +84,7 @@ class StrategyReasoning:
 @dataclass
 class HyperparameterExport:
     """Hyperparameter export data."""
-    
+
     strategy_name: str
     parameters: Dict[str, Any]
     timestamp: datetime
@@ -189,7 +189,9 @@ class ReportGenerator:
 
             # Export hyperparameters if provided
             hyperparameter_path = None
-            if hyperparameters and self.report_config.get("hyperparameter_export", True):
+            if hyperparameters and self.report_config.get(
+                "hyperparameter_export", True
+            ):
                 hyperparameter_path = self._export_hyperparameters(
                     hyperparameters, trade_metrics, model_metrics, report_id, symbol
                 )
@@ -219,7 +221,7 @@ class ReportGenerator:
                 "html": str(html_path),
                 "pdf": str(pdf_path),
             }
-            
+
             if hyperparameter_path:
                 report_data["files"]["hyperparameters"] = str(hyperparameter_path)
 
@@ -609,12 +611,14 @@ class ReportGenerator:
                     best = model_group.sort_values("sum", ascending=False).head(1)
                     worst = model_group.sort_values("sum", ascending=True).head(1)
                     summary = {
-                        "most_successful": best.to_dict(orient="records")[0]
-                        if not best.empty
-                        else {},
-                        "least_successful": worst.to_dict(orient="records")[0]
-                        if not worst.empty
-                        else {},
+                        "most_successful": (
+                            best.to_dict(orient="records")[0] if not best.empty else {}
+                        ),
+                        "least_successful": (
+                            worst.to_dict(orient="records")[0]
+                            if not worst.empty
+                            else {}
+                        ),
                     }
                     charts["model_summary"] = summary
             # 6. Per-trade execution log
@@ -631,7 +635,17 @@ class ReportGenerator:
                 # Markdown table
                 md_table = "| Time | Action | PnL | Result | Model ID |\n|---|---|---|---|---|\n"
                 for _, row in log_df.iterrows():
-                    md_table += f"| {row.get('timestamp','')} | {row.get('action','')} | {row.get('pnl','')} | {row.get('result','')} | {row.get('model_id','')} |\n"
+                    md_table += f"| {
+                        row.get(
+                            'timestamp', '')} | {
+                        row.get(
+                            'action', '')} | {
+                        row.get(
+                            'pnl', '')} | {
+                        row.get(
+                            'result', '')} | {
+                        row.get(
+                            'model_id', '')} |\n"
                 charts["trade_log_markdown"] = md_table
                 # For HTML, pass as list of dicts
                 charts["trade_log"] = log_df.to_dict(orient="records")
@@ -640,21 +654,21 @@ class ReportGenerator:
         return charts
 
     def export_signals(
-        self, 
-        signals_df: pd.DataFrame, 
-        output_path: str, 
-        buy_col: str = 'Buy', 
-        sell_col: str = 'Sell'
+        self,
+        signals_df: pd.DataFrame,
+        output_path: str,
+        buy_col: str = "Buy",
+        sell_col: str = "Sell",
     ) -> bool:
         """
         Export signals DataFrame with defensive checks.
-        
+
         Args:
             signals_df: DataFrame containing signals
             output_path: Path to save the exported file
             buy_col: Column name for buy signals (default: 'Buy')
             sell_col: Column name for sell signals (default: 'Sell')
-            
+
         Returns:
             bool: True if export successful, False otherwise
         """
@@ -663,38 +677,44 @@ class ReportGenerator:
             if signals_df is None or signals_df.empty:
                 logger.warning("Signals DataFrame is empty or None, skipping export")
                 return False
-            
+
             # Check for required columns
             required_cols = [buy_col, sell_col]
-            missing_cols = [col for col in required_cols if col not in signals_df.columns]
+            missing_cols = [
+                col for col in required_cols if col not in signals_df.columns
+            ]
             if missing_cols:
-                logger.warning(f"Missing required columns: {missing_cols}, skipping export")
+                logger.warning(
+                    f"Missing required columns: {missing_cols}, skipping export"
+                )
                 return False
-            
+
             # Check for data quality issues
             if signals_df[buy_col].isna().all() and signals_df[sell_col].isna().all():
-                logger.warning("All signal columns contain only NaN values, skipping export")
+                logger.warning(
+                    "All signal columns contain only NaN values, skipping export"
+                )
                 return False
-            
+
             # Create output directory if it doesn't exist
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             # Export based on file extension
-            if output_path.suffix.lower() == '.csv':
+            if output_path.suffix.lower() == ".csv":
                 signals_df.to_csv(output_path, index=True)
-            elif output_path.suffix.lower() == '.json':
-                signals_df.to_json(output_path, orient='records')
-            elif output_path.suffix.lower() == '.parquet':
+            elif output_path.suffix.lower() == ".json":
+                signals_df.to_json(output_path, orient="records")
+            elif output_path.suffix.lower() == ".parquet":
                 signals_df.to_parquet(output_path, index=True)
             else:
                 # Default to CSV
-                output_path = output_path.with_suffix('.csv')
+                output_path = output_path.with_suffix(".csv")
                 signals_df.to_csv(output_path, index=True)
-            
+
             logger.info(f"Successfully exported signals to {output_path}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error exporting signals: {e}")
             return False
@@ -767,14 +787,14 @@ class ReportGenerator:
         symbol: str,
     ) -> Optional[Path]:
         """Export strategy hyperparameters to file.
-        
+
         Args:
             hyperparameters: Strategy hyperparameters
             trade_metrics: Trade performance metrics
             model_metrics: Model performance metrics
             report_id: Report identifier
             symbol: Trading symbol
-            
+
         Returns:
             Path to exported hyperparameter file or None if failed
         """
@@ -798,14 +818,16 @@ class ReportGenerator:
                     "report_id": report_id,
                     "symbol": symbol,
                     "export_timestamp": datetime.now().isoformat(),
-                }
+                },
             )
-            
+
             # Create filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"hyperparameters_{export_data.strategy_name}_{symbol}_{timestamp}.json"
+            filename = (
+                f"hyperparameters_{export_data.strategy_name}_{symbol}_{timestamp}.json"
+            )
             filepath = self.output_dir / "hyperparameters" / filename
-            
+
             # Export to JSON
             export_dict = {
                 "strategy_name": export_data.strategy_name,
@@ -814,30 +836,30 @@ class ReportGenerator:
                 "performance_metrics": export_data.performance_metrics,
                 "metadata": export_data.metadata,
             }
-            
-            with open(filepath, 'w') as f:
+
+            with open(filepath, "w") as f:
                 json.dump(export_dict, f, indent=2)
-                
+
             logger.info(f"Hyperparameters exported to {filepath}")
             return filepath
-            
+
         except Exception as e:
             logger.error(f"Error exporting hyperparameters: {e}")
             return None
-            
+
     def export_hyperparameters_batch(
         self,
         hyperparameters_list: List[Dict[str, Any]],
         output_path: Optional[str] = None,
-        format: str = "json"
+        format: str = "json",
     ) -> Optional[Path]:
         """Export multiple hyperparameter sets in batch.
-        
+
         Args:
             hyperparameters_list: List of hyperparameter dictionaries
             output_path: Output file path
             format: Export format ('json', 'csv', 'excel')
-            
+
         Returns:
             Path to exported file or None if failed
         """
@@ -845,22 +867,26 @@ class ReportGenerator:
             if not hyperparameters_list:
                 logger.warning("No hyperparameters to export")
                 return None
-                
+
             # Generate output path if not provided
             if output_path is None:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                output_path = self.output_dir / "hyperparameters" / f"batch_export_{timestamp}.{format}"
+                output_path = (
+                    self.output_dir
+                    / "hyperparameters"
+                    / f"batch_export_{timestamp}.{format}"
+                )
             else:
                 output_path = Path(output_path)
-                
+
             # Ensure directory exists
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             if format == "json":
                 # Export as JSON array
-                with open(output_path, 'w') as f:
+                with open(output_path, "w") as f:
                     json.dump(hyperparameters_list, f, indent=2)
-                    
+
             elif format == "csv":
                 # Flatten for CSV export
                 flat_data = []
@@ -871,20 +897,22 @@ class ReportGenerator:
                         "symbol": hp.get("metadata", {}).get("symbol", ""),
                         "report_id": hp.get("metadata", {}).get("report_id", ""),
                     }
-                    
+
                     # Add parameters
                     for param_name, param_value in hp.get("parameters", {}).items():
                         base_record[f"param_{param_name}"] = param_value
-                        
+
                     # Add performance metrics
-                    for metric_name, metric_value in hp.get("performance_metrics", {}).items():
+                    for metric_name, metric_value in hp.get(
+                        "performance_metrics", {}
+                    ).items():
                         base_record[f"metric_{metric_name}"] = metric_value
-                        
+
                     flat_data.append(base_record)
-                    
+
                 df = pd.DataFrame(flat_data)
                 df.to_csv(output_path, index=False)
-                
+
             elif format == "excel":
                 # Flatten for Excel export
                 flat_data = []
@@ -895,50 +923,51 @@ class ReportGenerator:
                         "symbol": hp.get("metadata", {}).get("symbol", ""),
                         "report_id": hp.get("metadata", {}).get("report_id", ""),
                     }
-                    
+
                     # Add parameters
                     for param_name, param_value in hp.get("parameters", {}).items():
                         base_record[f"param_{param_name}"] = param_value
-                        
+
                     # Add performance metrics
-                    for metric_name, metric_value in hp.get("performance_metrics", {}).items():
+                    for metric_name, metric_value in hp.get(
+                        "performance_metrics", {}
+                    ).items():
                         base_record[f"metric_{metric_name}"] = metric_value
-                        
+
                     flat_data.append(base_record)
-                    
+
                 df = pd.DataFrame(flat_data)
                 df.to_excel(output_path, index=False)
-                
+
             logger.info(f"Batch hyperparameter export completed: {output_path}")
             return output_path
-            
+
         except Exception as e:
             logger.error(f"Error in batch hyperparameter export: {e}")
             return None
-            
+
     def get_hyperparameter_summary(
-        self,
-        hyperparameters_list: List[Dict[str, Any]]
+        self, hyperparameters_list: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Generate summary statistics for hyperparameters.
-        
+
         Args:
             hyperparameters_list: List of hyperparameter dictionaries
-            
+
         Returns:
             Dictionary with summary statistics
         """
         try:
             if not hyperparameters_list:
                 return {"message": "No hyperparameters to analyze"}
-                
+
             summary = {
                 "total_runs": len(hyperparameters_list),
                 "strategies": {},
                 "parameter_ranges": {},
                 "performance_correlation": {},
             }
-            
+
             # Group by strategy
             strategy_groups = {}
             for hp in hyperparameters_list:
@@ -946,28 +975,48 @@ class ReportGenerator:
                 if strategy_name not in strategy_groups:
                     strategy_groups[strategy_name] = []
                 strategy_groups[strategy_name].append(hp)
-                
+
             # Analyze each strategy
             for strategy_name, runs in strategy_groups.items():
                 summary["strategies"][strategy_name] = {
                     "run_count": len(runs),
-                    "avg_win_rate": np.mean([r.get("performance_metrics", {}).get("win_rate", 0) for r in runs]),
-                    "avg_sharpe": np.mean([r.get("performance_metrics", {}).get("sharpe_ratio", 0) for r in runs]),
-                    "best_win_rate": max([r.get("performance_metrics", {}).get("win_rate", 0) for r in runs]),
-                    "best_sharpe": max([r.get("performance_metrics", {}).get("sharpe_ratio", 0) for r in runs]),
+                    "avg_win_rate": np.mean(
+                        [
+                            r.get("performance_metrics", {}).get("win_rate", 0)
+                            for r in runs
+                        ]
+                    ),
+                    "avg_sharpe": np.mean(
+                        [
+                            r.get("performance_metrics", {}).get("sharpe_ratio", 0)
+                            for r in runs
+                        ]
+                    ),
+                    "best_win_rate": max(
+                        [
+                            r.get("performance_metrics", {}).get("win_rate", 0)
+                            for r in runs
+                        ]
+                    ),
+                    "best_sharpe": max(
+                        [
+                            r.get("performance_metrics", {}).get("sharpe_ratio", 0)
+                            for r in runs
+                        ]
+                    ),
                 }
-                
+
             # Analyze parameter ranges
             all_params = set()
             for hp in hyperparameters_list:
                 all_params.update(hp.get("parameters", {}).keys())
-                
+
             for param_name in all_params:
                 param_values = []
                 for hp in hyperparameters_list:
                     if param_name in hp.get("parameters", {}):
                         param_values.append(hp["parameters"][param_name])
-                        
+
                 if param_values:
                     summary["parameter_ranges"][param_name] = {
                         "min": min(param_values),
@@ -976,26 +1025,30 @@ class ReportGenerator:
                         "std": np.std(param_values),
                         "count": len(param_values),
                     }
-                    
+
             # Performance correlation analysis
             for param_name in all_params:
                 param_values = []
                 win_rates = []
-                
+
                 for hp in hyperparameters_list:
                     if param_name in hp.get("parameters", {}):
                         param_values.append(hp["parameters"][param_name])
-                        win_rates.append(hp.get("performance_metrics", {}).get("win_rate", 0))
-                        
+                        win_rates.append(
+                            hp.get("performance_metrics", {}).get("win_rate", 0)
+                        )
+
                 if len(param_values) > 1:
                     correlation = np.corrcoef(param_values, win_rates)[0, 1]
                     summary["performance_correlation"][param_name] = {
-                        "correlation_with_win_rate": correlation if not np.isnan(correlation) else 0,
+                        "correlation_with_win_rate": (
+                            correlation if not np.isnan(correlation) else 0
+                        ),
                         "sample_size": len(param_values),
                     }
-                    
+
             return summary
-            
+
         except Exception as e:
             logger.error(f"Error generating hyperparameter summary: {e}")
             return {"error": str(e)}

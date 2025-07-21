@@ -1,20 +1,21 @@
-﻿"""
+"""
 Strategy Chain Router - Batch 17
 Enhanced strategy routing with fallback mechanisms and comprehensive logging
 """
 
-import logging
-from typing import Dict, List, Optional, Tuple, Any, Union
-from dataclasses import dataclass, field
-from enum import Enum
 import hashlib
+import logging
+from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class StrategyType(Enum):
     """Types of trading strategies."""
+
     MOMENTUM = "momentum"
     MEAN_REVERSION = "mean_reversion"
     TREND_FOLLOWING = "trend_following"
@@ -26,6 +27,7 @@ class StrategyType(Enum):
 
 class StrategyStatus(Enum):
     """Status of strategy execution."""
+
     VALID = "valid"
     INVALID = "invalid"
     MISSING = "missing"
@@ -36,6 +38,7 @@ class StrategyStatus(Enum):
 @dataclass
 class StrategyConfig:
     """Configuration for a strategy."""
+
     name: str
     strategy_type: StrategyType
     parameters: Dict[str, Any]
@@ -48,6 +51,7 @@ class StrategyConfig:
 @dataclass
 class StrategyResult:
     """Result of strategy execution."""
+
     strategy_name: str
     status: StrategyStatus
     signal: Optional[str] = None
@@ -61,6 +65,7 @@ class StrategyResult:
 @dataclass
 class PromptStrategyMapping:
     """Mapping between prompts and strategies."""
+
     prompt_hash: str
     strategy_name: str
     confidence: float
@@ -81,10 +86,12 @@ class StrategyChainRouter:
     - Performance tracking
     """
 
-    def __init__(self,
-                 enable_fallbacks: bool = True,
-                 log_warnings: bool = True,
-                 max_fallback_depth: int = 3):
+    def __init__(
+        self,
+        enable_fallbacks: bool = True,
+        log_warnings: bool = True,
+        max_fallback_depth: int = 3,
+    ):
         """
         Initialize strategy chain router.
 
@@ -111,7 +118,7 @@ class StrategyChainRouter:
                 parameters={"period": 14, "overbought": 70, "oversold": 30},
                 enabled=True,
                 priority=1,
-                fallback_strategies=[]
+                fallback_strategies=[],
             ),
             "SMA": StrategyConfig(
                 name="SMA",
@@ -119,7 +126,7 @@ class StrategyChainRouter:
                 parameters={"short_period": 10, "long_period": 20},
                 enabled=True,
                 priority=1,
-                fallback_strategies=[]
+                fallback_strategies=[],
             ),
             "MACD": StrategyConfig(
                 name="MACD",
@@ -127,7 +134,7 @@ class StrategyChainRouter:
                 parameters={"fast": 12, "slow": 26, "signal": 9},
                 enabled=True,
                 priority=1,
-                fallback_strategies=[]
+                fallback_strategies=[],
             ),
             "Bollinger": StrategyConfig(
                 name="Bollinger",
@@ -135,8 +142,8 @@ class StrategyChainRouter:
                 parameters={"period": 20, "std_dev": 2},
                 enabled=True,
                 priority=1,
-                fallback_strategies=[]
-            )
+                fallback_strategies=[],
+            ),
         }
 
         # Performance tracking
@@ -204,10 +211,9 @@ class StrategyChainRouter:
 
         return True
 
-    def link_prompt_to_strategy(self,
-                               prompt: str,
-                               strategy_name: str,
-                               confidence: float = 1.0) -> bool:
+    def link_prompt_to_strategy(
+        self, prompt: str, strategy_name: str, confidence: float = 1.0
+    ) -> bool:
         """
         Link a prompt to a specific strategy.
 
@@ -222,9 +228,14 @@ class StrategyChainRouter:
         prompt_hash = self._generate_prompt_hash(prompt)
 
         # Check if strategy exists
-        if strategy_name not in self.strategies and strategy_name not in self.base_strategies:
+        if (
+            strategy_name not in self.strategies
+            and strategy_name not in self.base_strategies
+        ):
             if self.log_warnings:
-                logger.warning(f"Attempted to link prompt to non-existent strategy: {strategy_name}")
+                logger.warning(
+                    f"Attempted to link prompt to non-existent strategy: {strategy_name}"
+                )
             return False
 
         # Create or update mapping
@@ -241,16 +252,16 @@ class StrategyChainRouter:
                 confidence=confidence,
                 created_at=datetime.now(),
                 last_used=datetime.now(),
-                usage_count=1
+                usage_count=1,
             )
             self.prompt_mappings[prompt_hash] = mapping
 
         logger.info(f"Linked prompt (hash: {prompt_hash}) to strategy: {strategy_name}")
         return True
 
-    def route_strategy(self,
-                      prompt: str,
-                      context: Optional[Dict[str, Any]] = None) -> StrategyResult:
+    def route_strategy(
+        self, prompt: str, context: Optional[Dict[str, Any]] = None
+    ) -> StrategyResult:
         """
         Route prompt to appropriate strategy with fallback.
 
@@ -283,7 +294,7 @@ class StrategyChainRouter:
                 strategy_name="unknown",
                 status=StrategyStatus.ERROR,
                 error_message="No valid strategy found",
-                execution_time=(datetime.now() - start_time).total_seconds()
+                execution_time=(datetime.now() - start_time).total_seconds(),
             )
 
         except Exception as e:
@@ -292,7 +303,7 @@ class StrategyChainRouter:
                 strategy_name="unknown",
                 status=StrategyStatus.ERROR,
                 error_message=str(e),
-                execution_time=(datetime.now() - start_time).total_seconds()
+                execution_time=(datetime.now() - start_time).total_seconds(),
             )
 
     def _get_linked_strategy(self, prompt_hash: str) -> Optional[str]:
@@ -310,15 +321,17 @@ class StrategyChainRouter:
             strategy_name = mapping.strategy_name
 
             # Check if strategy exists and is enabled
-            if (strategy_name in self.strategies and
-                self.strategies[strategy_name].enabled):
+            if (
+                strategy_name in self.strategies
+                and self.strategies[strategy_name].enabled
+            ):
                 return strategy_name
 
         return None
 
-    def _execute_strategy(self,
-                         strategy_name: str,
-                         context: Optional[Dict[str, Any]] = None) -> StrategyResult:
+    def _execute_strategy(
+        self, strategy_name: str, context: Optional[Dict[str, Any]] = None
+    ) -> StrategyResult:
         """
         Execute a specific strategy.
 
@@ -342,7 +355,7 @@ class StrategyChainRouter:
                     strategy_name=strategy_name,
                     status=StrategyStatus.MISSING,
                     error_message=f"Strategy not found: {strategy_name}",
-                    execution_time=(datetime.now() - start_time).total_seconds()
+                    execution_time=(datetime.now() - start_time).total_seconds(),
                 )
 
             # Check if enabled
@@ -351,7 +364,7 @@ class StrategyChainRouter:
                     strategy_name=strategy_name,
                     status=StrategyStatus.DISABLED,
                     error_message=f"Strategy disabled: {strategy_name}",
-                    execution_time=(datetime.now() - start_time).total_seconds()
+                    execution_time=(datetime.now() - start_time).total_seconds(),
                 )
 
             # Simulate strategy execution
@@ -363,7 +376,7 @@ class StrategyChainRouter:
                 signal=signal,
                 confidence=0.8,
                 parameters=strategy_config.parameters,
-                execution_time=(datetime.now() - start_time).total_seconds()
+                execution_time=(datetime.now() - start_time).total_seconds(),
             )
 
             # Track execution
@@ -376,12 +389,12 @@ class StrategyChainRouter:
                 strategy_name=strategy_name,
                 status=StrategyStatus.ERROR,
                 error_message=str(e),
-                execution_time=(datetime.now() - start_time).total_seconds()
+                execution_time=(datetime.now() - start_time).total_seconds(),
             )
 
-    def _execute_fallback_strategies(self,
-                                   prompt: str,
-                                   context: Optional[Dict[str, Any]] = None) -> Optional[StrategyResult]:
+    def _execute_fallback_strategies(
+        self, prompt: str, context: Optional[Dict[str, Any]] = None
+    ) -> Optional[StrategyResult]:
         """
         Execute fallback strategies.
 
@@ -403,20 +416,24 @@ class StrategyChainRouter:
                 result = self._execute_strategy(strategy_name, context)
                 if result.status == StrategyStatus.VALID:
                     # Track fallback usage
-                    self.fallback_usage[strategy_name] = self.fallback_usage.get(strategy_name, 0) + 1
+                    self.fallback_usage[strategy_name] = (
+                        self.fallback_usage.get(strategy_name, 0) + 1
+                    )
 
                     if result.confidence > best_confidence:
                         best_result = result
                         best_confidence = result.confidence
 
             except Exception as e:
-                logger.warning(f"Error executing fallback strategy {strategy_name}: {e}")
+                logger.warning(
+                    f"Error executing fallback strategy {strategy_name}: {e}"
+                )
 
         return best_result
 
-    def _simulate_strategy_execution(self,
-                                   strategy_config: StrategyConfig,
-                                   context: Optional[Dict[str, Any]] = None) -> str:
+    def _simulate_strategy_execution(
+        self, strategy_config: StrategyConfig, context: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         Simulate strategy execution.
 
@@ -450,10 +467,18 @@ class StrategyChainRouter:
         """
         if strategy_name in self.strategies:
             strategy_config = self.strategies[strategy_name]
-            return StrategyStatus.VALID if strategy_config.enabled else StrategyStatus.DISABLED
+            return (
+                StrategyStatus.VALID
+                if strategy_config.enabled
+                else StrategyStatus.DISABLED
+            )
         elif strategy_name in self.base_strategies:
             strategy_config = self.base_strategies[strategy_name]
-            return StrategyStatus.VALID if strategy_config.enabled else StrategyStatus.DISABLED
+            return (
+                StrategyStatus.VALID
+                if strategy_config.enabled
+                else StrategyStatus.DISABLED
+            )
         else:
             return StrategyStatus.MISSING
 
@@ -467,7 +492,11 @@ class StrategyChainRouter:
         return {
             "total_fallbacks": sum(self.fallback_usage.values()),
             "fallback_usage": self.fallback_usage.copy(),
-            "most_used_fallback": max(self.fallback_usage.items(), key=lambda x: x[1])[0] if self.fallback_usage else None
+            "most_used_fallback": (
+                max(self.fallback_usage.items(), key=lambda x: x[1])[0]
+                if self.fallback_usage
+                else None
+            ),
         }
 
     def get_prompt_mapping_statistics(self) -> Dict[str, Any]:
@@ -478,12 +507,19 @@ class StrategyChainRouter:
             Mapping statistics
         """
         total_mappings = len(self.prompt_mappings)
-        total_usage = sum(mapping.usage_count for mapping in self.prompt_mappings.values())
+        total_usage = sum(
+            mapping.usage_count for mapping in self.prompt_mappings.values()
+        )
 
         return {
             "total_mappings": total_mappings,
             "total_usage": total_usage,
-            "average_confidence": sum(mapping.confidence for mapping in self.prompt_mappings.values()) / total_mappings if total_mappings > 0 else 0.0
+            "average_confidence": (
+                sum(mapping.confidence for mapping in self.prompt_mappings.values())
+                / total_mappings
+                if total_mappings > 0
+                else 0.0
+            ),
         }
 
     def clear_invalid_mappings(self):
@@ -491,8 +527,10 @@ class StrategyChainRouter:
         invalid_mappings = []
         for prompt_hash, mapping in self.prompt_mappings.items():
             strategy_name = mapping.strategy_name
-            if (strategy_name not in self.strategies and
-                strategy_name not in self.base_strategies):
+            if (
+                strategy_name not in self.strategies
+                and strategy_name not in self.base_strategies
+            ):
                 invalid_mappings.append(prompt_hash)
 
         for prompt_hash in invalid_mappings:

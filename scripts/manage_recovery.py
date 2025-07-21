@@ -36,7 +36,6 @@ import logging.config
 import shutil
 import socket
 import sys
-import tarfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
@@ -45,6 +44,8 @@ import psutil
 import redis
 import requests
 import yaml
+
+from utils.launch_utils import setup_logging
 
 
 class RecoveryManager:
@@ -67,69 +68,31 @@ class RecoveryManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def create_recovery_point(self, components: List[str] = None):
-        """Create a system recovery point."""
-        self.logger.info("Creating system recovery point")
+    def create_recovery_point(self, components: List[str] = None):
+        """Create a recovery point for specified components."""
+        self.logger.info(f"Creating recovery point for components: {components}")
 
         try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            recovery_point = {
-                "timestamp": timestamp,
-                "components": {},
-                "system_state": {},
-                "checksums": {},
-            }
-
-            # Backup components
-            if components is None:
-                components = ["config", "data", "database", "logs", "models"]
-
-            for component in components:
-                if component == "config":
-                    recovery_point["components"]["config"] = await self._backup_config()
-                elif component == "data":
-                    recovery_point["components"]["data"] = await self._backup_data()
-                elif component == "database":
-                    recovery_point["components"][
-                        "database"
-                    ] = await self._backup_database()
-                elif component == "logs":
-                    recovery_point["components"]["logs"] = await self._backup_logs()
-                elif component == "models":
-                    recovery_point["components"]["models"] = await self._backup_models()
-
-            # Capture system state
-            recovery_point["system_state"] = await self._capture_system_state()
-
-            # Calculate checksums
-            recovery_point["checksums"] = await self._calculate_checksums(
-                recovery_point
+            # Create recovery point directory
+            recovery_point_dir = (
+                self.recovery_dir
+                / f"recovery_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             )
+            recovery_point_dir.mkdir(parents=True, exist_ok=True)
 
-            # Save recovery point
-            recovery_file = self.recovery_dir / f"recovery_point_{timestamp}.json"
-            with open(recovery_file, "w") as f:
-                json.dump(recovery_point, f, indent=2)
+            # Save component states
+            for component in components or []:
+                self._save_component_state(component, recovery_point_dir)
 
-            # Create backup archive
-            archive_file = self.backup_dir / f"recovery_point_{timestamp}.tar.gz"
-            with tarfile.open(archive_file, "w:gz") as tar:
-                tar.add(self.recovery_dir / f"recovery_point_{timestamp}.json")
-                for component, paths in recovery_point["components"].items():
-                    for path in paths:
-                        tar.add(path)
-
-            self.logger.info(f"Recovery point created: {recovery_file}")
-            self.logger.info(f"Backup archive created: {archive_file}")
-
-            return recovery_point
+            self.logger.info(f"Recovery point created: {recovery_point_dir}")
+            return True
         except Exception as e:
             self.logger.error(f"Failed to create recovery point: {e}")
-            raise
+            return False
 
     async def restore_from_point(self, recovery_point: str):
         """Restore system from recovery point."""

@@ -68,7 +68,7 @@ def calculate_sharpe_ratio(
 
 
 def calculate_max_drawdown(
-    equity_curve: Union[pd.Series, np.ndarray, List[float]]
+    equity_curve: Union[pd.Series, np.ndarray, List[float]],
 ) -> Dict[str, float]:
     """
     Calculate maximum drawdown and related metrics.
@@ -200,7 +200,7 @@ def calculate_win_rate(
 
 
 def calculate_profit_factor(
-    returns: Union[pd.Series, np.ndarray, List[float]]
+    returns: Union[pd.Series, np.ndarray, List[float]],
 ) -> float:
     """
     Calculate the profit factor (gross profit / gross loss).

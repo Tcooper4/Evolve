@@ -42,6 +42,8 @@ import hvac
 import yaml
 from cryptography.fernet import Fernet
 
+from utils.launch_utils import setup_logging
+
 
 class ConfigManager:
     def __init__(self, config_path: str = "config/app_config.yaml"):
@@ -50,8 +52,7 @@ class ConfigManager:
         self.setup_logging()
         self.logger = logging.getLogger("trading")
         self.config_dir = Path("config")
-        self.secrets_dir = Path("secrets")
-        self.secrets_dir.mkdir(parents=True, exist_ok=True)
+        self.config_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
@@ -62,38 +63,34 @@ class ConfigManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def generate_config(self, template: str = "default"):
-        """Generate configuration files from template."""
+    def generate_config(self, template: str = "default"):
+        """Generate configuration from template."""
         self.logger.info(f"Generating configuration from template: {template}")
 
         try:
             # Load template
             template_file = self.config_dir / f"templates/{template}.yaml"
             if not template_file.exists():
-                raise FileNotFoundError(f"Template not found: {template_file}")
+                self.logger.error(f"Template not found: {template_file}")
+                return False
 
             with open(template_file) as f:
-                template_config = yaml.safe_load(f)
+                config = yaml.safe_load(f)
 
-            # Generate configurations
-            for env in ["development", "staging", "production"]:
-                config = self._customize_config(template_config, env)
+            # Save configuration
+            config_file = self.config_dir / "app_config.yaml"
+            with open(config_file, "w") as f:
+                yaml.dump(config, f, default_flow_style=False, indent=2)
 
-                # Save configuration
-                config_file = self.config_dir / f"app_config_{env}.yaml"
-                with open(config_file, "w") as f:
-                    yaml.dump(config, f, default_flow_style=False)
-
-                self.logger.info(f"Generated configuration for {env}: {config_file}")
-
+            self.logger.info(f"Configuration generated: {config_file}")
             return True
         except Exception as e:
             self.logger.error(f"Failed to generate configuration: {e}")
-            raise
+            return False
 
     def validate_config(self, config_path: str):
         """Validate configuration file."""

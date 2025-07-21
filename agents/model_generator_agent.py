@@ -1201,15 +1201,17 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
                 "candidates_benchmarked": len(benchmark_results),
                 "models_selected": len(best_models),
                 "models_deployed": len(deployed_models),
-                "best_score": max([r.overall_score for r in benchmark_results])
-                if benchmark_results
-                else 0.0,
-                "improvement_over_current": max(
-                    [r.overall_score for r in benchmark_results]
-                )
-                - self.current_best_score
-                if benchmark_results
-                else 0.0,
+                "best_score": (
+                    max([r.overall_score for r in benchmark_results])
+                    if benchmark_results
+                    else 0.0
+                ),
+                "improvement_over_current": (
+                    max([r.overall_score for r in benchmark_results])
+                    - self.current_best_score
+                    if benchmark_results
+                    else 0.0
+                ),
                 "deployed_models": deployed_models,
             }
 

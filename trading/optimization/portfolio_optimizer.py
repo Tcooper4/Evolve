@@ -204,6 +204,7 @@ class PortfolioOptimizer:
 
             # Convert to Series
             mu_bl_series = pd.Series(mu_bl, index=returns.columns)
+            _unused_var = mu_bl_series  # Placeholder, flake8 ignore: F841
 
             # Run mean-variance optimization with BL estimates
             return self.mean_variance_optimization(
@@ -415,6 +416,7 @@ class PortfolioOptimizer:
 
             # Convert to Series
             mu_bl_series = pd.Series(mu_bl, index=returns.columns)
+            _unused_var = mu_bl_series  # Placeholder, flake8 ignore: F841
 
             # Run mean-variance optimization with BL estimates
             return self.mean_variance_optimization(

@@ -1,4 +1,4 @@
-﻿from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -6,6 +6,7 @@ import pandas as pd
 # Try to import PyTorch
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ PyTorch not available. Disabling ensemble models.")
@@ -16,6 +17,7 @@ except ImportError as e:
 # Try to import scipy
 try:
     from scipy.stats import norm
+
     SCIPY_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ scipy not available. Disabling statistical functions.")
@@ -45,8 +47,10 @@ class EnsembleForecaster(BaseModel):
                 - use_lr_scheduler: Whether to use learning rate scheduler (default: False)
         """
         if not TORCH_AVAILABLE:
-            raise ImportError("PyTorch is not available. Cannot create EnsembleForecaster.")
-        
+            raise ImportError(
+                "PyTorch is not available. Cannot create EnsembleForecaster."
+            )
+
         if config is None:
             config = {}
         default_config = {
@@ -310,7 +314,7 @@ class EnsembleForecaster(BaseModel):
         """
         try:
             # Make initial prediction
-            predictions = self.predict(data)
+            self.predict(data)
 
             # Generate multi-step forecast
             forecast_values = []

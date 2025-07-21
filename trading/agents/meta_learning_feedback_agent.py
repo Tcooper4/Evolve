@@ -192,20 +192,56 @@ class MetaLearningFeedbackAgent(BaseAgent):
         """Store feedback in history, skipping or using last valid if metrics are NaN."""
         try:
             # Check for NaN in key metrics
-            key_metrics = [feedback.mse, feedback.sharpe_ratio, feedback.win_rate, feedback.max_drawdown, feedback.actual_return, feedback.predicted_return]
-            if any(isinstance(x, float) and (np.isnan(x) or x is None) for x in key_metrics):
+            key_metrics = [
+                feedback.mse,
+                feedback.sharpe_ratio,
+                feedback.win_rate,
+                feedback.max_drawdown,
+                feedback.actual_return,
+                feedback.predicted_return,
+            ]
+            if any(
+                isinstance(x, float) and (np.isnan(x) or x is None) for x in key_metrics
+            ):
                 # Fallback: use last valid feedback if available
-                if feedback.model_name in self.feedback_history and self.feedback_history[feedback.model_name]:
-                    last_valid = next((f for f in reversed(self.feedback_history[feedback.model_name])
-                                       if not any(isinstance(x, float) and (np.isnan(x) or x is None) for x in [f.mse, f.sharpe_ratio, f.win_rate, f.max_drawdown, f.actual_return, f.predicted_return])), None)
+                if (
+                    feedback.model_name in self.feedback_history
+                    and self.feedback_history[feedback.model_name]
+                ):
+                    last_valid = next(
+                        (
+                            f
+                            for f in reversed(
+                                self.feedback_history[feedback.model_name]
+                            )
+                            if not any(
+                                isinstance(x, float) and (np.isnan(x) or x is None)
+                                for x in [
+                                    f.mse,
+                                    f.sharpe_ratio,
+                                    f.win_rate,
+                                    f.max_drawdown,
+                                    f.actual_return,
+                                    f.predicted_return,
+                                ]
+                            )
+                        ),
+                        None,
+                    )
                     if last_valid:
-                        self.logger.warning(f"NaN detected in feedback for {feedback.model_name}, using last valid feedback instead.")
+                        self.logger.warning(
+                            f"NaN detected in feedback for {feedback.model_name}, using last valid feedback instead."
+                        )
                         feedback = last_valid
                     else:
-                        self.logger.warning(f"NaN detected in feedback for {feedback.model_name}, and no valid previous feedback. Skipping update.")
+                        self.logger.warning(
+                            f"NaN detected in feedback for {
+                                feedback.model_name}, and no valid previous feedback. Skipping update.")
                         return
                 else:
-                    self.logger.warning(f"NaN detected in feedback for {feedback.model_name}, and no previous feedback. Skipping update.")
+                    self.logger.warning(
+                        f"NaN detected in feedback for {
+                            feedback.model_name}, and no previous feedback. Skipping update.")
                     return
 
             if feedback.model_name not in self.feedback_history:
@@ -642,9 +678,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
                 "recent_max_drawdown": np.mean(
                     [f.max_drawdown for f in recent_feedback]
                 ),
-                "last_updated": recent_feedback[-1].timestamp
-                if recent_feedback
-                else None,
+                "last_updated": (
+                    recent_feedback[-1].timestamp if recent_feedback else None
+                ),
             }
 
         except Exception as e:

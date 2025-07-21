@@ -1,4 +1,4 @@
-﻿"""Execution Models Module.
+"""Execution Models Module.
 
 This module contains execution-related data models extracted from execution_agent.py.
 """
@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from trading.portfolio.portfolio_manager import Position
+
 from .trade_signals import TradeSignal
 
 
@@ -24,6 +25,7 @@ class ExecutionRequest:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         from dataclasses import asdict
+
         request_dict = asdict(self)
         request_dict["timestamp"] = self.timestamp.isoformat()
         if self.signal:
@@ -58,6 +60,7 @@ class ExecutionResult:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         from dataclasses import asdict
+
         result_dict = asdict(self)
         result_dict["timestamp"] = self.timestamp.isoformat()
         result_dict["signal"] = self.signal.to_dict()
@@ -73,6 +76,7 @@ class ExecutionResult:
         data["signal"] = TradeSignal.from_dict(data["signal"])
         if "position" in data and data["position"]:
             from trading.portfolio.portfolio_manager import Position
+
             data["position"] = Position.from_dict(data["position"])
         return cls(**data)
 
@@ -84,6 +88,6 @@ class ExecutionResult:
         """Calculate total cost including fees and slippage."""
         if not self.execution_price or not self.position:
             return 0.0
-        
+
         base_cost = self.execution_price * self.position.size
         return base_cost + self.fees + (self.slippage * self.position.size)

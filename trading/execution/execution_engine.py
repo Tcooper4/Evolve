@@ -1,11 +1,11 @@
-﻿"""Execution Engine for Trade Execution.
+"""Execution Engine for Trade Execution.
 Enhanced with Batch 10 features: detailed logging for skipped/failure cases.
 """
 
 import logging
 import warnings
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Optional
 
 warnings.filterwarnings("ignore")
 
@@ -61,10 +61,14 @@ class ExecutionEngine:
         self.skipped_orders = []  # Track skipped orders for analysis
 
         # Enhanced logging configuration
-        self.log_failures = getattr(self.config, 'log_failures', True)
-        self.log_skips = getattr(self.config, 'log_skips', True)
-        self.max_slippage_threshold = getattr(self.config, 'max_slippage_threshold', 0.05)  # 5%
-        self.min_price_threshold = getattr(self.config, 'min_price_threshold', 0.01)  # $0.01
+        self.log_failures = getattr(self.config, "log_failures", True)
+        self.log_skips = getattr(self.config, "log_skips", True)
+        self.max_slippage_threshold = getattr(
+            self.config, "max_slippage_threshold", 0.05
+        )  # 5%
+        self.min_price_threshold = getattr(
+            self.config, "min_price_threshold", 0.01
+        )  # $0.01
 
         # Initialize broker connections
         self._init_brokers()
@@ -79,7 +83,7 @@ class ExecutionEngine:
                 self.brokers["alpaca"] = TradingClient(
                     api_key=self.config.broker_api_key,
                     secret_key=self.config.broker_secret_key,
-                    paper=True
+                    paper=True,
                 )
                 logger.info("Alpaca broker initialized (alpaca-py)")
             except Exception as e:
@@ -108,7 +112,9 @@ class ExecutionEngine:
             validated_order = self._validate_order(order)
             if not validated_order:
                 failure_reason = "Invalid order parameters"
-                self._log_failure("validation", order.get("symbol", "unknown"), failure_reason)
+                self._log_failure(
+                    "validation", order.get("symbol", "unknown"), failure_reason
+                )
                 return {"status": "error", "message": failure_reason}
 
             # Check pre-execution conditions
@@ -125,26 +131,39 @@ class ExecutionEngine:
 
             # Log execution result
             if result.get("status") == "error":
-                self._log_failure("execution", validated_order["symbol"], result.get("message", "Unknown error"))
+                self._log_failure(
+                    "execution",
+                    validated_order["symbol"],
+                    result.get("message", "Unknown error"),
+                )
             elif result.get("status") == "skipped":
-                self._log_skip(validated_order["symbol"], result.get("message", "Unknown skip reason"))
+                self._log_skip(
+                    validated_order["symbol"],
+                    result.get("message", "Unknown skip reason"),
+                )
 
             # Store execution
             execution_record = {
                 "timestamp": datetime.now().isoformat(),
                 "order": validated_order,
                 "result": result,
-                "failure_reason": result.get("message") if result.get("status") in ["error", "skipped"] else None
+                "failure_reason": (
+                    result.get("message")
+                    if result.get("status") in ["error", "skipped"]
+                    else None
+                ),
             }
             self.execution_history.append(execution_record)
 
             # Update memory
-            self.memory.memory.append({
-                "timestamp": datetime.now().isoformat(),
-                "type": "order_execution",
-                "data": result,
-                "failure_logged": result.get("status") in ["error", "skipped"]
-            })
+            self.memory.memory.append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "type": "order_execution",
+                    "data": result,
+                    "failure_logged": result.get("status") in ["error", "skipped"],
+                }
+            )
 
             return result
 
@@ -161,9 +180,11 @@ class ExecutionEngine:
             current_price = self._get_current_price(order["symbol"])
             if current_price is None:
                 return "Price unavailable for symbol"
-            
+
             if current_price < self.min_price_threshold:
-                return f"Price too low: ${current_price:.4f} < ${self.min_price_threshold}"
+                return (
+                    f"Price too low: ${current_price:.4f} < ${self.min_price_threshold}"
+                )
 
             # Check slippage conditions
             if "limit_price" in order and order["limit_price"]:
@@ -196,7 +217,7 @@ class ExecutionEngine:
                 if "alpaca" in self.brokers:
                     bar = self.brokers["alpaca"].get_latest_bar(symbol)
                     return bar.c if bar else None
-            
+
             # Fallback to simulated price
             return self._get_simulated_price(symbol)
 
@@ -231,16 +252,19 @@ class ExecutionEngine:
             "symbol": symbol,
             "reason": reason,
             "execution_mode": self.config.execution_mode,
-            "brokers_available": list(self.brokers.keys())
+            "brokers_available": list(self.brokers.keys()),
         }
 
         self.failed_orders.append(failure_record)
-        
-        logger.error(f"EXECUTION FAILURE - Type: {failure_type}, Symbol: {symbol}, Reason: {reason}")
-        
+
+        logger.error(
+            f"EXECUTION FAILURE - Type: {failure_type}, Symbol: {symbol}, Reason: {reason}"
+        )
+
         # Log to file for analysis
         try:
             import json
+
             with open("logs/execution_failures.json", "a") as f:
                 f.write(json.dumps(failure_record) + "\n")
         except Exception as e:
@@ -257,16 +281,17 @@ class ExecutionEngine:
             "reason": reason,
             "execution_mode": self.config.execution_mode,
             "current_price": self._get_current_price(symbol),
-            "market_open": self._is_market_open()
+            "market_open": self._is_market_open(),
         }
 
         self.skipped_orders.append(skip_record)
-        
+
         logger.warning(f"ORDER SKIPPED - Symbol: {symbol}, Reason: {reason}")
-        
+
         # Log to file for analysis
         try:
             import json
+
             with open("logs/execution_skips.json", "a") as f:
                 f.write(json.dumps(skip_record) + "\n")
         except Exception as e:
@@ -330,7 +355,11 @@ class ExecutionEngine:
 
         try:
             # Prepare order request
-            side = AlpacaOrderSide.BUY if order["side"].lower() == "buy" else AlpacaOrderSide.SELL
+            side = (
+                AlpacaOrderSide.BUY
+                if order["side"].lower() == "buy"
+                else AlpacaOrderSide.SELL
+            )
             tif = TimeInForce[order["time_in_force"].upper()]
             order_type = order["order_type"].lower()
             if order_type == "market":
@@ -338,7 +367,7 @@ class ExecutionEngine:
                     symbol=order["symbol"],
                     qty=order["quantity"],
                     side=side,
-                    time_in_force=tif
+                    time_in_force=tif,
                 )
             elif order_type == "limit":
                 order_request = LimitOrderRequest(
@@ -346,7 +375,7 @@ class ExecutionEngine:
                     qty=order["quantity"],
                     side=side,
                     time_in_force=tif,
-                    limit_price=order["limit_price"]
+                    limit_price=order["limit_price"],
                 )
             elif order_type == "stop":
                 order_request = StopOrderRequest(
@@ -354,10 +383,13 @@ class ExecutionEngine:
                     qty=order["quantity"],
                     side=side,
                     time_in_force=tif,
-                    stop_price=order["stop_price"]
+                    stop_price=order["stop_price"],
                 )
             else:
-                return {"status": "error", "message": f"Unsupported order type: {order_type}"}
+                return {
+                    "status": "error",
+                    "message": f"Unsupported order type: {order_type}",
+                }
 
             alpaca_order = self.brokers["alpaca"].submit_order(order_request)
 
@@ -434,6 +466,7 @@ class ExecutionEngine:
 
             # Simulate execution delay and slippage
             import time
+
             time.sleep(0.1)  # Simulate execution delay
 
             # Calculate slippage
@@ -464,10 +497,11 @@ class ExecutionEngine:
         """Get simulated price for symbol."""
         # Simple price simulation - in real implementation, this would use market data
         import random
+
         base_price = 100.0
         if symbol.endswith("USD"):
             base_price = 50000.0  # Crypto prices
-        
+
         # Add some randomness
         variation = random.uniform(-0.02, 0.02)  # Â±2% variation
         return base_price * (1 + variation)
@@ -479,11 +513,11 @@ class ExecutionEngine:
 
         failure_types = {}
         symbols_failed = {}
-        
+
         for failure in self.failed_orders:
             failure_type = failure["failure_type"]
             symbol = failure["symbol"]
-            
+
             failure_types[failure_type] = failure_types.get(failure_type, 0) + 1
             symbols_failed[symbol] = symbols_failed.get(symbol, 0) + 1
 
@@ -491,7 +525,11 @@ class ExecutionEngine:
             "total_failures": len(self.failed_orders),
             "failure_types": failure_types,
             "symbols_failed": symbols_failed,
-            "recent_failures": self.failed_orders[-10:] if len(self.failed_orders) > 10 else self.failed_orders
+            "recent_failures": (
+                self.failed_orders[-10:]
+                if len(self.failed_orders) > 10
+                else self.failed_orders
+            ),
         }
 
     def get_skip_summary(self) -> dict:
@@ -501,11 +539,11 @@ class ExecutionEngine:
 
         skip_reasons = {}
         symbols_skipped = {}
-        
+
         for skip in self.skipped_orders:
             reason = skip["reason"]
             symbol = skip["symbol"]
-            
+
             skip_reasons[reason] = skip_reasons.get(reason, 0) + 1
             symbols_skipped[symbol] = symbols_skipped.get(symbol, 0) + 1
 
@@ -513,7 +551,11 @@ class ExecutionEngine:
             "total_skips": len(self.skipped_orders),
             "skip_reasons": skip_reasons,
             "symbols_skipped": symbols_skipped,
-            "recent_skips": self.skipped_orders[-10:] if len(self.skipped_orders) > 10 else self.skipped_orders
+            "recent_skips": (
+                self.skipped_orders[-10:]
+                if len(self.skipped_orders) > 10
+                else self.skipped_orders
+            ),
         }
 
     def cancel_order(self, order_id: str) -> dict:
@@ -591,9 +633,9 @@ class ExecutionEngine:
             "total_orders": total_orders,
             "successful_orders": successful_orders,
             "failed_orders": failed_orders,
-            "success_rate": successful_orders / total_orders
-            if total_orders > 0
-            else 0.0,
+            "success_rate": (
+                successful_orders / total_orders if total_orders > 0 else 0.0
+            ),
             "total_volume": total_volume,
             "avg_execution_time": 0.0,  # Would need timing data
         }

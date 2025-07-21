@@ -1,21 +1,22 @@
-﻿"""
+"""
 Strategy Fallback - Batch 18
 Enhanced strategy fallback with ranked fallback pool based on historical performance
 """
 
 import logging
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 
 class FallbackStrategy(Enum):
     """Available fallback strategies."""
+
     RSI = "RSI"
     SMA = "SMA"
     MACD = "MACD"
@@ -27,6 +28,7 @@ class FallbackStrategy(Enum):
 @dataclass
 class StrategyPerformance:
     """Performance metrics for a strategy."""
+
     strategy_name: str
     win_rate: float
     total_trades: int
@@ -40,6 +42,7 @@ class StrategyPerformance:
 @dataclass
 class FallbackResult:
     """Result of fallback strategy execution."""
+
     strategy_name: str
     signal: str
     confidence: float
@@ -60,10 +63,12 @@ class StrategyFallback:
     - Performance-based strategy selection
     """
 
-    def __init__(self,
-                 fallback_pool: Optional[List[str]] = None,
-                 performance_window: int = 30,
-                 min_trades_for_ranking: int = 5):
+    def __init__(
+        self,
+        fallback_pool: Optional[List[str]] = None,
+        performance_window: int = 30,
+        min_trades_for_ranking: int = 5,
+    ):
         """
         Initialize strategy fallback.
 
@@ -93,7 +98,7 @@ class StrategyFallback:
             "MACD": {"win_rate": 0.58, "avg_return": 0.025, "sharpe": 0.9},
             "Bollinger": {"win_rate": 0.53, "avg_return": 0.018, "sharpe": 0.7},
             "Momentum": {"win_rate": 0.56, "avg_return": 0.022, "sharpe": 0.85},
-            "MeanReversion": {"win_rate": 0.54, "avg_return": 0.019, "sharpe": 0.75}
+            "MeanReversion": {"win_rate": 0.54, "avg_return": 0.019, "sharpe": 0.75},
         }
 
         for strategy_name in self.fallback_pool:
@@ -107,7 +112,7 @@ class StrategyFallback:
                     sharpe_ratio=perf["sharpe"],
                     max_drawdown=0.05,
                     last_updated=datetime.now(),
-                    confidence_score=0.7
+                    confidence_score=0.7,
                 )
             else:
                 # Initialize with conservative defaults
@@ -119,7 +124,7 @@ class StrategyFallback:
                     sharpe_ratio=0.5,
                     max_drawdown=0.1,
                     last_updated=datetime.now(),
-                    confidence_score=0.5
+                    confidence_score=0.5,
                 )
 
     def get_ranked_fallbacks(self) -> List[Tuple[str, float]]:
@@ -172,17 +177,17 @@ class StrategyFallback:
             data_penalty = 0.7
 
         score = (
-            win_rate_weight * normalized_win_rate +
-            sharpe_weight * normalized_sharpe +
-            return_weight * normalized_return +
-            confidence_weight * performance.confidence_score
+            win_rate_weight * normalized_win_rate
+            + sharpe_weight * normalized_sharpe
+            + return_weight * normalized_return
+            + confidence_weight * performance.confidence_score
         ) * data_penalty
 
         return score
 
-    def execute_fallback(self,
-                        market_data: pd.DataFrame,
-                        context: Optional[Dict[str, Any]] = None) -> FallbackResult:
+    def execute_fallback(
+        self, market_data: pd.DataFrame, context: Optional[Dict[str, Any]] = None
+    ) -> FallbackResult:
         """
         Execute the best fallback strategy.
 
@@ -211,21 +216,27 @@ class StrategyFallback:
                     execution_time = (datetime.now() - start_time).total_seconds()
                     result.execution_time = execution_time
 
-                    logger.info(f"Executed fallback strategy: {strategy_name} (rank {rank + 1}, score: {score:.3f})")
+                    logger.info(
+                        f"Executed fallback strategy: {strategy_name} (rank {rank + 1}, score: {score:.3f})"
+                    )
                     return result
 
             except Exception as e:
-                logger.warning(f"Failed to execute fallback strategy {strategy_name}: {e}")
+                logger.warning(
+                    f"Failed to execute fallback strategy {strategy_name}: {e}"
+                )
                 continue
 
         # If all strategies fail, return error result
         logger.error("All fallback strategies failed")
         return self._create_error_result("All fallbacks failed")
 
-    def _execute_strategy(self,
-                         strategy_name: str,
-                         market_data: pd.DataFrame,
-                         context: Optional[Dict[str, Any]] = None) -> Optional[FallbackResult]:
+    def _execute_strategy(
+        self,
+        strategy_name: str,
+        market_data: pd.DataFrame,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Optional[FallbackResult]:
         """
         Execute a specific fallback strategy.
 
@@ -258,9 +269,9 @@ class StrategyFallback:
             logger.error(f"Error executing strategy {strategy_name}: {e}")
             return None
 
-    def _execute_rsi_strategy(self,
-                            market_data: pd.DataFrame,
-                            context: Optional[Dict[str, Any]] = None) -> FallbackResult:
+    def _execute_rsi_strategy(
+        self, market_data: pd.DataFrame, context: Optional[Dict[str, Any]] = None
+    ) -> FallbackResult:
         """Execute RSI strategy."""
         try:
             # Simple RSI logic
@@ -288,16 +299,16 @@ class StrategyFallback:
                 confidence=confidence,
                 performance_metrics=self._get_performance_metrics("RSI"),
                 execution_time=0.0,
-                fallback_rank=0
+                fallback_rank=0,
             )
 
         except Exception as e:
             logger.error(f"Error in RSI strategy: {e}")
             return self._create_error_result(f"RSI error: {e}")
 
-    def _execute_sma_strategy(self,
-                            market_data: pd.DataFrame,
-                            context: Optional[Dict[str, Any]] = None) -> FallbackResult:
+    def _execute_sma_strategy(
+        self, market_data: pd.DataFrame, context: Optional[Dict[str, Any]] = None
+    ) -> FallbackResult:
         """Execute SMA strategy."""
         try:
             if "close" in market_data.columns:
@@ -328,16 +339,16 @@ class StrategyFallback:
                 confidence=confidence,
                 performance_metrics=self._get_performance_metrics("SMA"),
                 execution_time=0.0,
-                fallback_rank=0
+                fallback_rank=0,
             )
 
         except Exception as e:
             logger.error(f"Error in SMA strategy: {e}")
             return self._create_error_result(f"SMA error: {e}")
 
-    def _execute_macd_strategy(self,
-                             market_data: pd.DataFrame,
-                             context: Optional[Dict[str, Any]] = None) -> FallbackResult:
+    def _execute_macd_strategy(
+        self, market_data: pd.DataFrame, context: Optional[Dict[str, Any]] = None
+    ) -> FallbackResult:
         """Execute MACD strategy."""
         try:
             if "close" in market_data.columns:
@@ -367,16 +378,16 @@ class StrategyFallback:
                 confidence=confidence,
                 performance_metrics=self._get_performance_metrics("MACD"),
                 execution_time=0.0,
-                fallback_rank=0
+                fallback_rank=0,
             )
 
         except Exception as e:
             logger.error(f"Error in MACD strategy: {e}")
             return self._create_error_result(f"MACD error: {e}")
 
-    def _execute_bollinger_strategy(self,
-                                  market_data: pd.DataFrame,
-                                  context: Optional[Dict[str, Any]] = None) -> FallbackResult:
+    def _execute_bollinger_strategy(
+        self, market_data: pd.DataFrame, context: Optional[Dict[str, Any]] = None
+    ) -> FallbackResult:
         """Execute Bollinger Bands strategy."""
         try:
             if "close" in market_data.columns:
@@ -410,16 +421,16 @@ class StrategyFallback:
                 confidence=confidence,
                 performance_metrics=self._get_performance_metrics("Bollinger"),
                 execution_time=0.0,
-                fallback_rank=0
+                fallback_rank=0,
             )
 
         except Exception as e:
             logger.error(f"Error in Bollinger strategy: {e}")
             return self._create_error_result(f"Bollinger error: {e}")
 
-    def _execute_momentum_strategy(self,
-                                 market_data: pd.DataFrame,
-                                 context: Optional[Dict[str, Any]] = None) -> FallbackResult:
+    def _execute_momentum_strategy(
+        self, market_data: pd.DataFrame, context: Optional[Dict[str, Any]] = None
+    ) -> FallbackResult:
         """Execute Momentum strategy."""
         try:
             if "close" in market_data.columns:
@@ -448,16 +459,16 @@ class StrategyFallback:
                 confidence=confidence,
                 performance_metrics=self._get_performance_metrics("Momentum"),
                 execution_time=0.0,
-                fallback_rank=0
+                fallback_rank=0,
             )
 
         except Exception as e:
             logger.error(f"Error in Momentum strategy: {e}")
             return self._create_error_result(f"Momentum error: {e}")
 
-    def _execute_mean_reversion_strategy(self,
-                                       market_data: pd.DataFrame,
-                                       context: Optional[Dict[str, Any]] = None) -> FallbackResult:
+    def _execute_mean_reversion_strategy(
+        self, market_data: pd.DataFrame, context: Optional[Dict[str, Any]] = None
+    ) -> FallbackResult:
         """Execute Mean Reversion strategy."""
         try:
             if "close" in market_data.columns:
@@ -498,7 +509,7 @@ class StrategyFallback:
                 confidence=confidence,
                 performance_metrics=self._get_performance_metrics("MeanReversion"),
                 execution_time=0.0,
-                fallback_rank=0
+                fallback_rank=0,
             )
 
         except Exception as e:
@@ -513,12 +524,12 @@ class StrategyFallback:
             confidence=0.0,
             performance_metrics={},
             execution_time=0.0,
-            fallback_rank=999
+            fallback_rank=999,
         )
 
-    def update_strategy_performance(self,
-                                  strategy_name: str,
-                                  trade_result: Dict[str, Any]):
+    def update_strategy_performance(
+        self, strategy_name: str, trade_result: Dict[str, Any]
+    ):
         """
         Update performance metrics for a strategy.
 
@@ -546,7 +557,8 @@ class StrategyFallback:
         try:
             # Filter trades for this strategy
             strategy_trades = [
-                trade for trade in self.trade_history
+                trade
+                for trade in self.trade_history
                 if trade.get("strategy") == strategy_name
             ]
 
@@ -579,10 +591,7 @@ class StrategyFallback:
         Returns:
             Performance summary dictionary
         """
-        summary = {
-            "total_strategies": len(self.strategy_performance),
-            "strategies": {}
-        }
+        summary = {"total_strategies": len(self.strategy_performance), "strategies": {}}
 
         for name, perf in self.strategy_performance.items():
             summary["strategies"][name] = {
@@ -591,7 +600,7 @@ class StrategyFallback:
                 "avg_return": perf.avg_return,
                 "sharpe_ratio": perf.sharpe_ratio,
                 "confidence_score": perf.confidence_score,
-                "last_updated": perf.last_updated.isoformat()
+                "last_updated": perf.last_updated.isoformat(),
             }
 
         return summary
@@ -605,7 +614,9 @@ class StrategyFallback:
         rsi = 100 - (100 / (1 + rs))
         return rsi
 
-    def _calculate_macd(self, prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> Tuple[pd.Series, pd.Series]:
+    def _calculate_macd(
+        self, prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9
+    ) -> Tuple[pd.Series, pd.Series]:
         """Calculate MACD indicator."""
         ema_fast = prices.ewm(span=fast).mean()
         ema_slow = prices.ewm(span=slow).mean()
@@ -613,7 +624,9 @@ class StrategyFallback:
         signal_line = macd.ewm(span=signal).mean()
         return macd, signal_line
 
-    def _calculate_bollinger_bands(self, prices: pd.Series, period: int = 20, std_dev: float = 2) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    def _calculate_bollinger_bands(
+        self, prices: pd.Series, period: int = 20, std_dev: float = 2
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Calculate Bollinger Bands."""
         middle = prices.rolling(window=period).mean()
         std = prices.rolling(window=period).std()
@@ -633,12 +646,14 @@ class StrategyFallback:
                 "win_rate": perf.win_rate,
                 "avg_return": perf.avg_return,
                 "sharpe_ratio": perf.sharpe_ratio,
-                "confidence_score": perf.confidence_score
+                "confidence_score": perf.confidence_score,
             }
         return {}
 
 
-def create_strategy_fallback(fallback_pool: Optional[List[str]] = None) -> StrategyFallback:
+def create_strategy_fallback(
+    fallback_pool: Optional[List[str]] = None,
+) -> StrategyFallback:
     """
     Create a strategy fallback instance.
 

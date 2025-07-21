@@ -17,6 +17,7 @@ warnings.filterwarnings("ignore")
 # Try to import webhook libraries
 try:
     import requests
+
     REQUESTS_AVAILABLE = True
 except ImportError:
     REQUESTS_AVAILABLE = False
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 class SignalType(Enum):
     """Signal types."""
+
     BUY = "buy"
     SELL = "sell"
     HOLD = "hold"
@@ -36,6 +38,7 @@ class SignalType(Enum):
 
 class SignalStatus(Enum):
     """Signal status."""
+
     ACTIVE = "active"
     TRIGGERED = "triggered"
     EXPIRED = "expired"
@@ -46,6 +49,7 @@ class SignalStatus(Enum):
 @dataclass
 class Signal:
     """Trading signal."""
+
     signal_id: str
     symbol: str
     signal_type: SignalType
@@ -63,6 +67,7 @@ class Signal:
 @dataclass
 class ActiveTrade:
     """Active trade information."""
+
     trade_id: str
     symbol: str
     side: str
@@ -147,7 +152,9 @@ class SignalCenter:
 
         # Check confidence threshold
         if confidence < self.min_confidence_threshold:
-            logger.info(f"Signal confidence {confidence} below threshold {self.min_confidence_threshold}, skipping")
+            logger.info(
+                f"Signal confidence {confidence} below threshold {self.min_confidence_threshold}, skipping"
+            )
             return ""
 
         # Generate signal ID
@@ -182,7 +189,7 @@ class SignalCenter:
             timestamp=datetime.now(),
             expiry=expiry,
             status=SignalStatus.ACTIVE,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         # Store signal
@@ -194,10 +201,16 @@ class SignalCenter:
             self._cleanup_expired_signals()
 
         # Send alert
-        if self.enable_discord_alerts or self.enable_email_alerts or self.enable_slack_alerts:
+        if (
+            self.enable_discord_alerts
+            or self.enable_email_alerts
+            or self.enable_slack_alerts
+        ):
             self._send_alert(signal)
 
-        logger.info(f"Added signal {signal_id}: {symbol} {signal_type.value} (confidence: {confidence:.2f})")
+        logger.info(
+            f"Added signal {signal_id}: {symbol} {signal_type.value} (confidence: {confidence:.2f})"
+        )
         return signal_id
 
     def update_signal_status(
@@ -268,7 +281,7 @@ class SignalCenter:
             time_open=datetime.now(),
             strategy=strategy,
             signal_id=signal_id,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         # Store trade
@@ -279,7 +292,9 @@ class SignalCenter:
         if signal_id in self.signals:
             self.update_signal_status(signal_id, SignalStatus.EXECUTED)
 
-        logger.info(f"Added trade {trade_id}: {symbol} {side} {quantity} @ {entry_price}")
+        logger.info(
+            f"Added trade {trade_id}: {symbol} {side} {quantity} @ {entry_price}"
+        )
         return self._trade_to_dict(trade)
 
     def update_trade_price(self, trade_id: str, current_price: float) -> Dict[str, Any]:
@@ -302,10 +317,14 @@ class SignalCenter:
         # Calculate P&L
         if trade.side.lower() == "buy":
             trade.pnl = (current_price - trade.entry_price) * trade.quantity
-            trade.pnl_pct = ((current_price - trade.entry_price) / trade.entry_price) * 100
+            trade.pnl_pct = (
+                (current_price - trade.entry_price) / trade.entry_price
+            ) * 100
         else:
             trade.pnl = (trade.entry_price - current_price) * trade.quantity
-            trade.pnl_pct = ((trade.entry_price - current_price) / trade.entry_price) * 100
+            trade.pnl_pct = (
+                (trade.entry_price - current_price) / trade.entry_price
+            ) * 100
 
         return self._trade_to_dict(trade)
 
@@ -340,15 +359,17 @@ class SignalCenter:
         self._update_performance_tracking(trade, final_pnl_pct)
 
         # Remove from active trades
-        closed_trade = self.trades.pop(trade_id)
+        self.trades.pop(trade_id)
 
-        logger.info(f"Closed trade {trade_id}: P&L {final_pnl:.2f} ({final_pnl_pct:.2f}%)")
+        logger.info(
+            f"Closed trade {trade_id}: P&L {final_pnl:.2f} ({final_pnl_pct:.2f}%)"
+        )
         return {
             "trade_id": trade_id,
             "final_pnl": final_pnl,
             "final_pnl_pct": final_pnl_pct,
             "exit_reason": exit_reason,
-            "duration": datetime.now() - trade.time_open
+            "duration": datetime.now() - trade.time_open,
         }
 
     def get_active_signals(self, symbol: Optional[str] = None) -> List[Signal]:
@@ -393,20 +414,28 @@ class SignalCenter:
             "total_trades": self.total_trades,
             "active_trades": len(active_trades),
             "successful_trades": self.successful_trades,
-            "success_rate": (self.successful_trades / self.total_trades * 100) if self.total_trades > 0 else 0.0,
+            "success_rate": (
+                (self.successful_trades / self.total_trades * 100)
+                if self.total_trades > 0
+                else 0.0
+            ),
             "signals_by_type": {},
-            "signals_by_strategy": {}
+            "signals_by_strategy": {},
         }
 
         # Count signals by type
         for signal in active_signals:
             signal_type = signal.signal_type.value
-            summary["signals_by_type"][signal_type] = summary["signals_by_type"].get(signal_type, 0) + 1
+            summary["signals_by_type"][signal_type] = (
+                summary["signals_by_type"].get(signal_type, 0) + 1
+            )
 
         # Count signals by strategy
         for signal in active_signals:
             strategy = signal.strategy
-            summary["signals_by_strategy"][strategy] = summary["signals_by_strategy"].get(strategy, 0) + 1
+            summary["signals_by_strategy"][strategy] = (
+                summary["signals_by_strategy"].get(strategy, 0) + 1
+            )
 
         return summary
 
@@ -441,16 +470,22 @@ class SignalCenter:
         return {
             "total_trades": total_trades,
             "successful_trades": successful_trades,
-            "success_rate": (successful_trades / total_trades * 100) if total_trades > 0 else 0.0,
+            "success_rate": (
+                (successful_trades / total_trades * 100) if total_trades > 0 else 0.0
+            ),
             "average_pnl": sum(pnl_values) / len(pnl_values) if pnl_values else 0.0,
             "max_profit": max(pnl_values) if pnl_values else 0.0,
             "max_loss": min(pnl_values) if pnl_values else 0.0,
-            "strategy": strategy or "all"
+            "strategy": strategy or "all",
         }
 
     def _send_alert(self, signal: Signal):
         """Send alert for a new signal."""
-        if not (self.enable_discord_alerts or self.enable_email_alerts or self.enable_slack_alerts):
+        if not (
+            self.enable_discord_alerts
+            or self.enable_email_alerts
+            or self.enable_slack_alerts
+        ):
             return
 
         message = self._create_alert_message(signal)
@@ -472,7 +507,7 @@ class SignalCenter:
             SignalType.STRONG_BUY: "🟢🟢",
             SignalType.STRONG_SELL: "🔴🔴",
             SignalType.HOLD: "🟡",
-            SignalType.ALERT: "⚠️"
+            SignalType.ALERT: "⚠️",
         }
 
         emoji = emoji_map.get(signal.signal_type, "📊")
@@ -504,7 +539,7 @@ class SignalCenter:
             payload = {
                 "content": message,
                 "username": "Trading Bot",
-                "avatar_url": "https://example.com/bot-avatar.png"
+                "avatar_url": "https://example.com/bot-avatar.png",
             }
 
             response = requests.post(self.discord_webhook_url, json=payload, timeout=10)
@@ -525,7 +560,7 @@ class SignalCenter:
             payload = {
                 "to": "trading@example.com",
                 "subject": f"Trading Signal: {signal.symbol} {signal.signal_type.value.upper()}",
-                "body": message
+                "body": message,
             }
 
             response = requests.post(self.email_webhook_url, json=payload, timeout=10)
@@ -546,7 +581,7 @@ class SignalCenter:
             payload = {
                 "text": message,
                 "username": "Trading Bot",
-                "icon_emoji": ":chart_with_upwards_trend:"
+                "icon_emoji": ":chart_with_upwards_trend:",
             }
 
             response = requests.post(self.slack_webhook_url, json=payload, timeout=10)
@@ -578,7 +613,7 @@ class SignalCenter:
             "symbol": trade.symbol,
             "strategy": trade.strategy,
             "pnl_pct": final_pnl_pct,
-            "duration": datetime.now() - trade.time_open
+            "duration": datetime.now() - trade.time_open,
         }
 
         self.performance_history.append(record)
@@ -591,7 +626,7 @@ class SignalCenter:
             self.strategy_performance[trade.strategy] = {
                 "total_trades": 0,
                 "successful_trades": 0,
-                "total_pnl": 0.0
+                "total_pnl": 0.0,
             }
 
         perf = self.strategy_performance[trade.strategy]
@@ -614,13 +649,19 @@ class SignalCenter:
             report = {
                 "timestamp": datetime.now().isoformat(),
                 "summary": self.get_signal_summary(),
-                "active_signals": [self._signal_to_dict(s) for s in self.get_active_signals()],
-                "active_trades": [self._trade_to_dict(t) for t in self.get_active_trades()],
-                "performance_history": self.performance_history[-100:],  # Last 100 records
-                "strategy_performance": self.strategy_performance
+                "active_signals": [
+                    self._signal_to_dict(s) for s in self.get_active_signals()
+                ],
+                "active_trades": [
+                    self._trade_to_dict(t) for t in self.get_active_trades()
+                ],
+                "performance_history": self.performance_history[
+                    -100:
+                ],  # Last 100 records
+                "strategy_performance": self.strategy_performance,
             }
 
-            with open(filepath, 'w') as f:
+            with open(filepath, "w") as f:
                 json.dump(report, f, indent=2, default=str)
 
             logger.info(f"Signal report exported to {filepath}")
@@ -644,7 +685,7 @@ class SignalCenter:
             "timestamp": signal.timestamp.isoformat(),
             "expiry": signal.expiry.isoformat(),
             "status": signal.status.value,
-            "metadata": signal.metadata
+            "metadata": signal.metadata,
         }
 
     def _trade_to_dict(self, trade: ActiveTrade) -> Dict[str, Any]:
@@ -661,13 +702,10 @@ class SignalCenter:
             "time_open": trade.time_open.isoformat(),
             "strategy": trade.strategy,
             "signal_id": trade.signal_id,
-            "metadata": trade.metadata
+            "metadata": trade.metadata,
         }
 
 
 def get_signal_center() -> Dict[str, Any]:
     """Get signal center instance."""
-    return {
-        "message": "Signal center functionality available",
-        "status": "ready"
-    } 
+    return {"message": "Signal center functionality available", "status": "ready"}

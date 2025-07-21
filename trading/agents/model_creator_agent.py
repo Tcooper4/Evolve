@@ -26,6 +26,7 @@ try:
     from sklearn.model_selection import train_test_split
     from sklearn.neural_network import MLPRegressor
     from sklearn.svm import SVR
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("⚠️ scikit-learn not available. Disabling sklearn-based models.")
@@ -46,6 +47,7 @@ except ImportError as e:
 # Try to import XGBoost
 try:
     import xgboost as xgb
+
     XGBOOST_AVAILABLE = True
 except ImportError as e:
     print("⚠️ XGBoost not available. Disabling XGBoost models.")
@@ -56,6 +58,7 @@ except ImportError as e:
 # Try to import LightGBM
 try:
     import lightgbm as lgb
+
     LIGHTGBM_AVAILABLE = True
 except ImportError as e:
     print("⚠️ LightGBM not available. Disabling LightGBM models.")
@@ -66,6 +69,7 @@ except ImportError as e:
 # Try to import PyTorch
 try:
     import torch.nn as nn
+
     TORCH_AVAILABLE = True
     PYTORCH_AVAILABLE = True
 except ImportError as e:
@@ -209,6 +213,7 @@ class BacktestEngine:
 
     def __init__(self):
         self.backtest_results = {}
+        self.logger = logging.getLogger(__name__)
 
     def run_backtest(
         self, model, X: np.ndarray, y: np.ndarray, test_size: float = 0.2
@@ -261,13 +266,15 @@ class BacktestEngine:
                 "win_rate": win_rate,
                 "sharpe_ratio": sharpe_ratio,
                 "max_drawdown": max_drawdown,
-                "total_return": cumulative_returns[-1] - 1
-                if len(cumulative_returns) > 0
-                else 0,
+                "total_return": (
+                    cumulative_returns[-1] - 1 if len(cumulative_returns) > 0 else 0
+                ),
                 "volatility": np.std(returns) * np.sqrt(252) if len(returns) > 0 else 0,
-                "calmar_ratio": (np.mean(returns) * 252) / abs(max_drawdown)
-                if max_drawdown != 0
-                else 0,
+                "calmar_ratio": (
+                    (np.mean(returns) * 252) / abs(max_drawdown)
+                    if max_drawdown != 0
+                    else 0
+                ),
             }
 
         except Exception as e:
@@ -329,7 +336,8 @@ class ModelEvaluator:
             }
 
         except Exception as e:
-            self.logger.error(f"Error calculating metrics: {e}")
+            # Static method - no logger available, use print for error reporting
+            print(f"Error calculating metrics: {e}")
             return {}
 
     @staticmethod
@@ -398,7 +406,8 @@ class ModelEvaluator:
             return grade, overall_score
 
         except Exception as e:
-            self.logger.error(f"Error grading performance: {e}")
+            # Static method - no logger available
+            print(f"Error grading performance: {e}")
             return "F", 0.0
 
 
@@ -408,6 +417,7 @@ class ModelLeaderboard:
     def __init__(self, leaderboard_file: str = "data/model_leaderboard.json"):
         self.leaderboard_file = Path(leaderboard_file)
         self.entries: List[ModelLeaderboardEntry] = []
+        self.logger = logging.getLogger(__name__)
         self.load_leaderboard()
 
     def add_entry(self, entry: ModelLeaderboardEntry):
@@ -511,12 +521,12 @@ class EnhancedModelCreatorAgent:
             "sklearn": {
                 "available": SKLEARN_AVAILABLE,
                 "models": {
-                    "RandomForest": RandomForestRegressor
-                    if SKLEARN_AVAILABLE
-                    else None,
-                    "GradientBoosting": GradientBoostingRegressor
-                    if SKLEARN_AVAILABLE
-                    else None,
+                    "RandomForest": (
+                        RandomForestRegressor if SKLEARN_AVAILABLE else None
+                    ),
+                    "GradientBoosting": (
+                        GradientBoostingRegressor if SKLEARN_AVAILABLE else None
+                    ),
                     "Ridge": Ridge if SKLEARN_AVAILABLE else None,
                     "Lasso": Lasso if SKLEARN_AVAILABLE else None,
                     "ElasticNet": ElasticNet if SKLEARN_AVAILABLE else None,
@@ -647,7 +657,9 @@ class EnhancedModelCreatorAgent:
             if self.framework_registry[framework_pref]["available"]:
                 return framework_pref
             else:
-                self.logger.warning(f"Preferred framework {framework_pref} not available")
+                self.logger.warning(
+                    f"Preferred framework {framework_pref} not available"
+                )
 
         # Auto-select based on requirements
         if model_type == "forecasting" and PYTORCH_AVAILABLE:
@@ -738,7 +750,9 @@ class EnhancedModelCreatorAgent:
                 self.model_registry[model_name] = asdict(spec)
                 self.creation_history.append(asdict(spec))
                 self._save_model_registry()
-                self.logger.info(f"Successfully created and validated model: {model_name}")
+                self.logger.info(
+                    f"Successfully created and validated model: {model_name}"
+                )
 
             return spec, spec.validation_status == "passed", validation_errors
 
@@ -1153,7 +1167,7 @@ class EnhancedModelCreatorAgent:
             import sys
 
             return sys.getsizeof(model) / (1024 * 1024)  # Convert to MB
-        except:
+        except BaseException:
             return 0.0
 
     # Public interface methods
@@ -1197,7 +1211,7 @@ class EnhancedModelCreatorAgent:
 
 
 def get_model_creator_agent(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> EnhancedModelCreatorAgent:
     """Get a configured enhanced model creator agent."""
     return EnhancedModelCreatorAgent(config)

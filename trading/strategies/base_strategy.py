@@ -94,4 +94,8 @@ class BaseStrategy(ABC):
 
     def __repr__(self) -> str:
         """Detailed string representation of the strategy."""
-        return f"{self.__class__.__name__}(name='{self.name}', description='{self.description}', parameters={self.parameters})" 
+        return f"{
+            self.__class__.__name__}(name='{
+            self.name}', description='{
+            self.description}', parameters={
+                self.parameters})"

@@ -12,12 +12,13 @@ import traceback
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-# Add the trading directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
 from trading.agents.updater_agent import UpdaterAgent
 from trading.memory.agent_memory import AgentMemory
 from trading.services.base_service import BaseService
+
+# Add the trading directory to the path
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
 
 logger = logging.getLogger(__name__)
 

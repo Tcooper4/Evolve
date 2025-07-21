@@ -1,15 +1,16 @@
-﻿"""Risk Calculator Module.
+"""Risk Calculator Module.
 
 This module contains risk calculation logic extracted from execution_agent.py.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
 
 from trading.portfolio.portfolio_manager import Position
+
 from .risk_controls import RiskControls, RiskThresholdType
 
 logger = logging.getLogger(__name__)
@@ -121,14 +122,20 @@ class RiskCalculator:
                 else:
                     pnl = (position.entry_price - current_price) * position.size
                 metrics["unrealized_pnl"] = pnl
-                metrics["unrealized_pnl_pct"] = pnl / (position.entry_price * position.size)
+                metrics["unrealized_pnl_pct"] = pnl / (
+                    position.entry_price * position.size
+                )
 
             # Calculate drawdown
             if position.entry_price > 0:
                 if position.direction.value == "long":
-                    drawdown = (position.entry_price - current_price) / position.entry_price
+                    drawdown = (
+                        position.entry_price - current_price
+                    ) / position.entry_price
                 else:
-                    drawdown = (current_price - position.entry_price) / position.entry_price
+                    drawdown = (
+                        current_price - position.entry_price
+                    ) / position.entry_price
                 metrics["drawdown"] = drawdown
 
             # Calculate volatility (if market data available)
@@ -159,7 +166,9 @@ class RiskCalculator:
             total_pnl = 0.0
             positions = market_data.get("portfolio_positions", {})
             for position in positions.values():
-                current_price = market_data.get(position.symbol, {}).get("current_price", 0)
+                current_price = market_data.get(position.symbol, {}).get(
+                    "current_price", 0
+                )
                 if current_price > 0:
                     if position.direction.value == "long":
                         pnl = (current_price - position.entry_price) * position.size
@@ -178,10 +187,14 @@ class RiskCalculator:
                 metrics["portfolio_volatility"] = float(np.std(portfolio_returns))
 
             # Calculate correlation
-            metrics["portfolio_correlation"] = self.calculate_portfolio_correlation(market_data)
+            metrics["portfolio_correlation"] = self.calculate_portfolio_correlation(
+                market_data
+            )
 
             # Calculate risk exposure
-            metrics["risk_exposure"] = self.calculate_portfolio_risk_exposure(market_data)
+            metrics["risk_exposure"] = self.calculate_portfolio_risk_exposure(
+                market_data
+            )
 
             return metrics
 
@@ -206,9 +219,11 @@ class RiskCalculator:
                     return position.entry_price * (1 + threshold.value)
 
             elif threshold.threshold_type == RiskThresholdType.ATR_BASED:
-                atr = self.calculate_atr(position.symbol, threshold.atr_period, market_data)
+                atr = self.calculate_atr(
+                    position.symbol, threshold.atr_period, market_data
+                )
                 multiplier = threshold.atr_multiplier or 2.0
-                
+
                 if position.direction.value == "long":
                     return position.entry_price - (atr * multiplier)
                 else:
@@ -243,9 +258,11 @@ class RiskCalculator:
                     return position.entry_price * (1 - threshold.value)
 
             elif threshold.threshold_type == RiskThresholdType.ATR_BASED:
-                atr = self.calculate_atr(position.symbol, threshold.atr_period, market_data)
+                atr = self.calculate_atr(
+                    position.symbol, threshold.atr_period, market_data
+                )
                 multiplier = threshold.atr_multiplier or 3.0
-                
+
                 if position.direction.value == "long":
                     return position.entry_price + (atr * multiplier)
                 else:

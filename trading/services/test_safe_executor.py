@@ -9,12 +9,13 @@ import logging
 import sys
 from pathlib import Path
 
-# Add the trading directory to the path
-sys.path.append(str(Path(__file__).parent.parent))
-
 from services.service_client import ServiceClient
 
 from trading.utils.safe_executor import ExecutionStatus, SafeExecutor
+
+# Add the trading directory to the path
+sys.path.append(str(Path(__file__).parent.parent))
+
 
 logger = logging.getLogger(__name__)
 
@@ -441,7 +442,7 @@ def main():
 
     results = []
     for test_name, test_func in tests:
-        logger.info(f"\n{'='*20} {test_name} {'='*20}")
+        logger.info(f"\n{'=' * 20} {test_name} {'=' * 20}")
         try:
             result = test_func()
             results.append((test_name, result))
@@ -450,7 +451,7 @@ def main():
             results.append((test_name, False))
 
     # Summary
-    logger.info(f"\n{'='*60}")
+    logger.info(f"\n{'=' * 60}")
     logger.info("📊 Test Results Summary")
     logger.info("=" * 60)
 

@@ -1,21 +1,23 @@
-﻿"""
+"""
 Signal Scorer - Batch 16
 Rolling score decay with exponential weighting for shorter test windows
 """
 
+import logging
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Tuple, Optional, Union, Any
-from dataclasses import dataclass, field
-import logging
-from datetime import datetime, timedelta
-from enum import Enum
 
 logger = logging.getLogger(__name__)
 
 
 class DecayMethod(Enum):
     """Methods for score decay calculation."""
+
     EXPONENTIAL = "exponential"
     LINEAR = "linear"
     STEP = "step"
@@ -24,6 +26,7 @@ class DecayMethod(Enum):
 @dataclass
 class ScoreRecord:
     """Record of a score measurement."""
+
     timestamp: datetime
     scores: Dict[str, float]
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -32,6 +35,7 @@ class ScoreRecord:
 @dataclass
 class DecayConfig:
     """Configuration for score decay."""
+
     method: DecayMethod = DecayMethod.EXPONENTIAL
     span: int = 5  # ewm span parameter
     min_window_size: int = 3
@@ -64,11 +68,13 @@ class SignalScorer:
 
         logger.info(f"SignalScorer initialized with {self.config.method.value} decay")
 
-    def add_score(self,
-                  signal_name: str,
-                  scores: Dict[str, float],
-                  timestamp: Optional[datetime] = None,
-                  metadata: Optional[Dict[str, Any]] = None):
+    def add_score(
+        self,
+        signal_name: str,
+        scores: Dict[str, float],
+        timestamp: Optional[datetime] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ):
         """
         Add a score measurement.
 
@@ -85,9 +91,7 @@ class SignalScorer:
             metadata = {}
 
         record = ScoreRecord(
-            timestamp=timestamp,
-            scores=scores.copy(),
-            metadata=metadata
+            timestamp=timestamp, scores=scores.copy(), metadata=metadata
         )
 
         if signal_name not in self.score_history:
@@ -100,11 +104,13 @@ class SignalScorer:
 
         logger.debug(f"Added score for {signal_name}: {scores}")
 
-    def get_decayed_score(self,
-                         signal_name: str,
-                         metric: str,
-                         current_score: float,
-                         timestamp: Optional[datetime] = None) -> float:
+    def get_decayed_score(
+        self,
+        signal_name: str,
+        metric: str,
+        current_score: float,
+        timestamp: Optional[datetime] = None,
+    ) -> float:
         """
         Get decayed score using rolling decay.
 
@@ -149,9 +155,9 @@ class SignalScorer:
         else:
             return current_score
 
-    def _apply_exponential_decay(self,
-                                historical_scores: List[float],
-                                current_score: float) -> float:
+    def _apply_exponential_decay(
+        self, historical_scores: List[float], current_score: float
+    ) -> float:
         """
         Apply exponential decay using pandas ewm.
 
@@ -176,9 +182,9 @@ class SignalScorer:
             logger.error(f"Error applying exponential decay: {e}")
             return current_score
 
-    def _apply_linear_decay(self,
-                           historical_scores: List[float],
-                           current_score: float) -> float:
+    def _apply_linear_decay(
+        self, historical_scores: List[float], current_score: float
+    ) -> float:
         """
         Apply linear decay.
 
@@ -197,14 +203,16 @@ class SignalScorer:
         weights = np.linspace(0.1, 1.0, n + 1)  # +1 for current score
 
         # Apply weights
-        weighted_sum = sum(score * weight for score, weight in zip(historical_scores, weights[:-1]))
+        weighted_sum = sum(
+            score * weight for score, weight in zip(historical_scores, weights[:-1])
+        )
         weighted_sum += current_score * weights[-1]
 
         return weighted_sum / weights.sum()
 
-    def _apply_step_decay(self,
-                         historical_scores: List[float],
-                         current_score: float) -> float:
+    def _apply_step_decay(
+        self, historical_scores: List[float], current_score: float
+    ) -> float:
         """
         Apply step decay with configurable decay factor.
 
@@ -228,10 +236,9 @@ class SignalScorer:
         all_scores = decayed_historical + [current_score]
         return np.mean(all_scores)
 
-    def get_score_trend(self,
-                       signal_name: str,
-                       metric: str,
-                       window: Optional[int] = None) -> Dict[str, Any]:
+    def get_score_trend(
+        self, signal_name: str, metric: str, window: Optional[int] = None
+    ) -> Dict[str, Any]:
         """
         Get trend analysis for a signal metric.
 
@@ -289,8 +296,14 @@ class SignalScorer:
                 "r_squared": float(r_squared),
                 "current_value": float(recent_scores[-1]),
                 "data_points": len(recent_scores),
-                "time_span": (recent_timestamps[-1] - recent_timestamps[0]).total_seconds(),
-                "trend_direction": "increasing" if slope > 0 else "decreasing" if slope < 0 else "stable"
+                "time_span": (
+                    recent_timestamps[-1] - recent_timestamps[0]
+                ).total_seconds(),
+                "trend_direction": (
+                    "increasing"
+                    if slope > 0
+                    else "decreasing" if slope < 0 else "stable"
+                ),
             }
 
         return {}
@@ -323,13 +336,18 @@ class SignalScorer:
             "metrics": list(all_metrics),
             "first_measurement": history[0].timestamp.isoformat(),
             "last_measurement": history[-1].timestamp.isoformat(),
-            "time_span_hours": (history[-1].timestamp - history[0].timestamp).total_seconds() / 3600
+            "time_span_hours": (
+                history[-1].timestamp - history[0].timestamp
+            ).total_seconds()
+            / 3600,
         }
 
         # Add statistics for each metric
         metric_stats = {}
         for metric in all_metrics:
-            scores = [record.scores[metric] for record in history if metric in record.scores]
+            scores = [
+                record.scores[metric] for record in history if metric in record.scores
+            ]
             if scores:
                 metric_stats[metric] = {
                     "count": len(scores),
@@ -337,7 +355,7 @@ class SignalScorer:
                     "std": float(np.std(scores)),
                     "min": float(np.min(scores)),
                     "max": float(np.max(scores)),
-                    "current": float(scores[-1])
+                    "current": float(scores[-1]),
                 }
 
         summary["metric_statistics"] = metric_stats
@@ -375,13 +393,16 @@ class SignalScorer:
 
         if format == "json":
             import json
+
             data = []
             for record in history:
-                data.append({
-                    "timestamp": record.timestamp.isoformat(),
-                    "scores": record.scores,
-                    "metadata": record.metadata
-                })
+                data.append(
+                    {
+                        "timestamp": record.timestamp.isoformat(),
+                        "scores": record.scores,
+                        "metadata": record.metadata,
+                    }
+                )
             return json.dumps(data, indent=2)
 
         elif format == "csv":
@@ -401,7 +422,9 @@ class SignalScorer:
     def update_config(self, new_config: DecayConfig):
         """Update decay configuration."""
         self.config = new_config
-        logger.info(f"Updated decay config: {new_config.method.value}, span={new_config.span}")
+        logger.info(
+            f"Updated decay config: {new_config.method.value}, span={new_config.span}"
+        )
 
 
 def create_signal_scorer(config: Optional[DecayConfig] = None) -> SignalScorer:

@@ -8,19 +8,19 @@ of upgraded models using a persistent memory store (JSON/SQLite).
 import json
 import logging
 import sqlite3
+from abc import ABC, abstractmethod
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from dataclasses import dataclass, field, asdict
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
-import pickle
-import hashlib
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class ModelStatus(Enum):
     """Model upgrade status."""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     TESTING = "testing"
@@ -30,6 +30,7 @@ class ModelStatus(Enum):
 
 class PerformanceMetric(Enum):
     """Performance metrics for models."""
+
     ACCURACY = "accuracy"
     PRECISION = "precision"
     RECALL = "recall"
@@ -44,6 +45,7 @@ class PerformanceMetric(Enum):
 @dataclass
 class ModelPerformance:
     """Model performance record."""
+
     model_id: str
     model_name: str
     version: str
@@ -58,6 +60,7 @@ class ModelPerformance:
 @dataclass
 class ModelUpgrade:
     """Model upgrade record."""
+
     upgrade_id: str
     original_model_id: str
     new_model_id: str
@@ -74,6 +77,7 @@ class ModelUpgrade:
 @dataclass
 class ModelMemory:
     """Model memory record."""
+
     model_id: str
     model_name: str
     current_version: str
@@ -91,40 +95,34 @@ class ModelMemory:
     description: Optional[str] = None
 
 
-from abc import ABC, abstractmethod
-
 class MemoryStore(ABC):
     """Abstract base class for memory stores."""
 
     @abstractmethod
     def save_model_memory(self, memory: ModelMemory) -> bool:
         """Save model memory to store."""
-        pass
 
     @abstractmethod
     def load_model_memory(self, model_id: str) -> Optional[ModelMemory]:
         """Load model memory from store."""
-        pass
 
     @abstractmethod
     def list_model_ids(self) -> List[str]:
         """List all model IDs in store."""
-        pass
 
     @abstractmethod
     def delete_model_memory(self, model_id: str) -> bool:
         """Delete model memory from store."""
-        pass
 
     @abstractmethod
     def save_performance(self, performance: ModelPerformance) -> bool:
         """Save performance record."""
-        pass
 
     @abstractmethod
-    def get_performance_history(self, model_id: str, metric: Optional[str] = None) -> List[ModelPerformance]:
+    def get_performance_history(
+        self, model_id: str, metric: Optional[str] = None
+    ) -> List[ModelPerformance]:
         """Get performance history for a model."""
-        pass
 
 
 class JSONMemoryStore(MemoryStore):
@@ -144,32 +142,41 @@ class JSONMemoryStore(MemoryStore):
                 "upgrade_records": [],
                 "metadata": {
                     "created_at": datetime.now().isoformat(),
-                    "version": "1.0"
-                }
+                    "version": "1.0",
+                },
             }
-            with open(self.file_path, 'w') as f:
+            with open(self.file_path, "w") as f:
                 json.dump(initial_data, f, indent=2, default=str)
 
     def _load_data(self) -> Dict[str, Any]:
         """Load data from JSON file."""
         try:
-            with open(self.file_path, 'r') as f:
+            with open(self.file_path, "r") as f:
                 data = json.load(f)
                 # Convert datetime strings back to datetime objects
                 for model_data in data.get("models", {}).values():
                     if "created_at" in model_data:
-                        model_data["created_at"] = datetime.fromisoformat(model_data["created_at"])
+                        model_data["created_at"] = datetime.fromisoformat(
+                            model_data["created_at"]
+                        )
                     if "last_updated" in model_data:
-                        model_data["last_updated"] = datetime.fromisoformat(model_data["last_updated"])
+                        model_data["last_updated"] = datetime.fromisoformat(
+                            model_data["last_updated"]
+                        )
                 return data
         except Exception as e:
             logger.error(f"Error loading JSON memory store: {e}")
-            return {"models": {}, "performance_records": [], "upgrade_records": [], "metadata": {}}
+            return {
+                "models": {},
+                "performance_records": [],
+                "upgrade_records": [],
+                "metadata": {},
+            }
 
     def _save_data(self, data: Dict[str, Any]):
         """Save data to JSON file."""
         try:
-            with open(self.file_path, 'w') as f:
+            with open(self.file_path, "w") as f:
                 json.dump(data, f, indent=2, default=str)
         except Exception as e:
             logger.error(f"Error saving JSON memory store: {e}")
@@ -236,7 +243,9 @@ class JSONMemoryStore(MemoryStore):
             logger.error(f"Error saving performance record: {e}")
             return False
 
-    def get_performance_history(self, model_id: str, metric: Optional[str] = None) -> List[ModelPerformance]:
+    def get_performance_history(
+        self, model_id: str, metric: Optional[str] = None
+    ) -> List[ModelPerformance]:
         """Get performance history for a model."""
         try:
             data = self._load_data()
@@ -266,7 +275,8 @@ class SQLiteMemoryStore(MemoryStore):
                 cursor = conn.cursor()
 
                 # Create models table
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS models (
                         model_id TEXT PRIMARY KEY,
                         model_name TEXT NOT NULL,
@@ -282,10 +292,12 @@ class SQLiteMemoryStore(MemoryStore):
                         tags TEXT,
                         description TEXT
                     )
-                """)
+                """
+                )
 
                 # Create performance records table
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS performance_records (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         model_id TEXT NOT NULL,
@@ -299,10 +311,12 @@ class SQLiteMemoryStore(MemoryStore):
                         context TEXT,
                         FOREIGN KEY (model_id) REFERENCES models (model_id)
                     )
-                """)
+                """
+                )
 
                 # Create upgrade records table
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS upgrade_records (
                         upgrade_id TEXT PRIMARY KEY,
                         original_model_id TEXT NOT NULL,
@@ -318,7 +332,8 @@ class SQLiteMemoryStore(MemoryStore):
                         FOREIGN KEY (original_model_id) REFERENCES models (model_id),
                         FOREIGN KEY (new_model_id) REFERENCES models (model_id)
                     )
-                """)
+                """
+                )
 
                 conn.commit()
                 logger.info("SQLite memory store initialized")
@@ -332,27 +347,30 @@ class SQLiteMemoryStore(MemoryStore):
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
 
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT OR REPLACE INTO models
                     (model_id, model_name, current_version, status, created_at, last_updated,
                      total_upgrades, successful_upgrades, avg_performance, best_performance,
                      worst_performance, tags, description)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    memory.model_id,
-                    memory.model_name,
-                    memory.current_version,
-                    memory.status.value,
-                    memory.created_at.isoformat(),
-                    memory.last_updated.isoformat(),
-                    memory.total_upgrades,
-                    memory.successful_upgrades,
-                    json.dumps(memory.avg_performance),
-                    json.dumps(memory.best_performance),
-                    json.dumps(memory.worst_performance),
-                    json.dumps(memory.tags),
-                    memory.description
-                ))
+                """,
+                    (
+                        memory.model_id,
+                        memory.model_name,
+                        memory.current_version,
+                        memory.status.value,
+                        memory.created_at.isoformat(),
+                        memory.last_updated.isoformat(),
+                        memory.total_upgrades,
+                        memory.successful_upgrades,
+                        json.dumps(memory.avg_performance),
+                        json.dumps(memory.best_performance),
+                        json.dumps(memory.worst_performance),
+                        json.dumps(memory.tags),
+                        memory.description,
+                    ),
+                )
 
                 conn.commit()
                 logger.info(f"Saved model memory for {memory.model_id}")
@@ -367,9 +385,12 @@ class SQLiteMemoryStore(MemoryStore):
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
 
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT * FROM models WHERE model_id = ?
-                """, (model_id,))
+                """,
+                    (model_id,),
+                )
 
                 row = cursor.fetchone()
                 if row:
@@ -386,7 +407,7 @@ class SQLiteMemoryStore(MemoryStore):
                         best_performance=json.loads(row[9]) if row[9] else {},
                         worst_performance=json.loads(row[10]) if row[10] else {},
                         tags=json.loads(row[11]) if row[11] else [],
-                        description=row[12]
+                        description=row[12],
                     )
                 return None
         except Exception as e:
@@ -423,22 +444,33 @@ class SQLiteMemoryStore(MemoryStore):
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
 
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT INTO performance_records
                     (model_id, model_name, version, timestamp, metric_name, metric_value,
                      confidence_interval, sample_size, context)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    performance.model_id,
-                    performance.model_name,
-                    performance.version,
-                    performance.timestamp.isoformat(),
-                    performance.metric_name,
-                    performance.metric_value,
-                    json.dumps(performance.confidence_interval) if performance.confidence_interval else None,
-                    performance.sample_size,
-                    json.dumps(performance.context) if performance.context else None
-                ))
+                """,
+                    (
+                        performance.model_id,
+                        performance.model_name,
+                        performance.version,
+                        performance.timestamp.isoformat(),
+                        performance.metric_name,
+                        performance.metric_value,
+                        (
+                            json.dumps(performance.confidence_interval)
+                            if performance.confidence_interval
+                            else None
+                        ),
+                        performance.sample_size,
+                        (
+                            json.dumps(performance.context)
+                            if performance.context
+                            else None
+                        ),
+                    ),
+                )
 
                 conn.commit()
                 logger.info(f"Saved performance record for {performance.model_id}")
@@ -447,38 +479,48 @@ class SQLiteMemoryStore(MemoryStore):
             logger.error(f"Error saving performance record: {e}")
             return False
 
-    def get_performance_history(self, model_id: str, metric: Optional[str] = None) -> List[ModelPerformance]:
+    def get_performance_history(
+        self, model_id: str, metric: Optional[str] = None
+    ) -> List[ModelPerformance]:
         """Get performance history for a model."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
 
                 if metric:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         SELECT * FROM performance_records
                         WHERE model_id = ? AND metric_name = ?
                         ORDER BY timestamp DESC
-                    """, (model_id, metric))
+                    """,
+                        (model_id, metric),
+                    )
                 else:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         SELECT * FROM performance_records
                         WHERE model_id = ?
                         ORDER BY timestamp DESC
-                    """, (model_id,))
+                    """,
+                        (model_id,),
+                    )
 
                 records = []
                 for row in cursor.fetchall():
-                    records.append(ModelPerformance(
-                        model_id=row[1],
-                        model_name=row[2],
-                        version=row[3],
-                        timestamp=datetime.fromisoformat(row[4]),
-                        metric_name=row[5],
-                        metric_value=row[6],
-                        confidence_interval=json.loads(row[7]) if row[7] else None,
-                        sample_size=row[8],
-                        context=json.loads(row[9]) if row[9] else None
-                    ))
+                    records.append(
+                        ModelPerformance(
+                            model_id=row[1],
+                            model_name=row[2],
+                            version=row[3],
+                            timestamp=datetime.fromisoformat(row[4]),
+                            metric_name=row[5],
+                            metric_value=row[6],
+                            confidence_interval=json.loads(row[7]) if row[7] else None,
+                            sample_size=row[8],
+                            context=json.loads(row[9]) if row[9] else None,
+                        )
+                    )
 
                 return records
         except Exception as e:
@@ -491,7 +533,9 @@ class MetaAgent:
     Meta agent that tracks and manages model performance using a memory store.
     """
 
-    def __init__(self, memory_store: Optional[MemoryStore] = None, store_type: str = "json"):
+    def __init__(
+        self, memory_store: Optional[MemoryStore] = None, store_type: str = "json"
+    ):
         """
         Initialize meta agent.
 
@@ -509,8 +553,14 @@ class MetaAgent:
 
         logger.info(f"MetaAgent initialized with {store_type} memory store")
 
-    def register_model(self, model_id: str, model_name: str, version: str,
-                      description: Optional[str] = None, tags: Optional[List[str]] = None) -> bool:
+    def register_model(
+        self,
+        model_id: str,
+        model_name: str,
+        version: str,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+    ) -> bool:
         """
         Register a new model in the memory store.
 
@@ -533,7 +583,7 @@ class MetaAgent:
                 created_at=datetime.now(),
                 last_updated=datetime.now(),
                 description=description,
-                tags=tags or []
+                tags=tags or [],
             )
 
             return self.memory_store.save_model_memory(memory)
@@ -541,11 +591,17 @@ class MetaAgent:
             logger.error(f"Error registering model: {e}")
             return False
 
-    def record_performance(self, model_id: str, model_name: str, version: str,
-                          metric_name: str, metric_value: float,
-                          confidence_interval: Optional[Tuple[float, float]] = None,
-                          sample_size: Optional[int] = None,
-                          context: Optional[Dict[str, Any]] = None) -> bool:
+    def record_performance(
+        self,
+        model_id: str,
+        model_name: str,
+        version: str,
+        metric_name: str,
+        metric_value: float,
+        confidence_interval: Optional[Tuple[float, float]] = None,
+        sample_size: Optional[int] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> bool:
         """
         Record model performance.
 
@@ -572,7 +628,7 @@ class MetaAgent:
                 metric_value=metric_value,
                 confidence_interval=confidence_interval,
                 sample_size=sample_size,
-                context=context
+                context=context,
             )
 
             success = self.memory_store.save_performance(performance)
@@ -586,7 +642,9 @@ class MetaAgent:
             logger.error(f"Error recording performance: {e}")
             return False
 
-    def _update_model_performance(self, model_id: str, metric_name: str, metric_value: float):
+    def _update_model_performance(
+        self, model_id: str, metric_name: str, metric_value: float
+    ):
         """Update model memory with latest performance metrics."""
         try:
             memory = self.memory_store.load_model_memory(model_id)
@@ -602,11 +660,17 @@ class MetaAgent:
                 memory.avg_performance[metric_name] = (current_avg + metric_value) / 2
 
             # Update best performance
-            if metric_name not in memory.best_performance or metric_value > memory.best_performance[metric_name]:
+            if (
+                metric_name not in memory.best_performance
+                or metric_value > memory.best_performance[metric_name]
+            ):
                 memory.best_performance[metric_name] = metric_value
 
             # Update worst performance
-            if metric_name not in memory.worst_performance or metric_value < memory.worst_performance[metric_name]:
+            if (
+                metric_name not in memory.worst_performance
+                or metric_value < memory.worst_performance[metric_name]
+            ):
                 memory.worst_performance[metric_name] = metric_value
 
             memory.last_updated = datetime.now()
@@ -615,7 +679,9 @@ class MetaAgent:
         except Exception as e:
             logger.error(f"Error updating model performance: {e}")
 
-    def get_model_performance(self, model_id: str, metric: Optional[str] = None) -> Dict[str, Any]:
+    def get_model_performance(
+        self, model_id: str, metric: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Get model performance summary.
 
@@ -631,7 +697,9 @@ class MetaAgent:
             if not memory:
                 return {}
 
-            performance_history = self.memory_store.get_performance_history(model_id, metric)
+            performance_history = self.memory_store.get_performance_history(
+                model_id, metric
+            )
 
             return {
                 "model_info": {
@@ -642,22 +710,22 @@ class MetaAgent:
                     "total_upgrades": memory.total_upgrades,
                     "successful_upgrades": memory.successful_upgrades,
                     "tags": memory.tags,
-                    "description": memory.description
+                    "description": memory.description,
                 },
                 "performance_summary": {
                     "avg_performance": memory.avg_performance,
                     "best_performance": memory.best_performance,
-                    "worst_performance": memory.worst_performance
+                    "worst_performance": memory.worst_performance,
                 },
                 "performance_history": [
                     {
                         "timestamp": p.timestamp.isoformat(),
                         "metric_name": p.metric_name,
                         "metric_value": p.metric_value,
-                        "version": p.version
+                        "version": p.version,
                     }
                     for p in performance_history
-                ]
+                ],
             }
         except Exception as e:
             logger.error(f"Error getting model performance: {e}")
@@ -677,23 +745,27 @@ class MetaAgent:
             for model_id in model_ids:
                 memory = self.memory_store.load_model_memory(model_id)
                 if memory:
-                    models.append({
-                        "model_id": memory.model_id,
-                        "model_name": memory.model_name,
-                        "current_version": memory.current_version,
-                        "status": memory.status.value,
-                        "total_upgrades": memory.total_upgrades,
-                        "successful_upgrades": memory.successful_upgrades,
-                        "last_updated": memory.last_updated.isoformat(),
-                        "tags": memory.tags
-                    })
+                    models.append(
+                        {
+                            "model_id": memory.model_id,
+                            "model_name": memory.model_name,
+                            "current_version": memory.current_version,
+                            "status": memory.status.value,
+                            "total_upgrades": memory.total_upgrades,
+                            "successful_upgrades": memory.successful_upgrades,
+                            "last_updated": memory.last_updated.isoformat(),
+                            "tags": memory.tags,
+                        }
+                    )
 
             return models
         except Exception as e:
             logger.error(f"Error listing models: {e}")
             return []
 
-    def get_performance_trends(self, model_id: str, metric: str, days: int = 30) -> List[Dict[str, Any]]:
+    def get_performance_trends(
+        self, model_id: str, metric: str, days: int = 30
+    ) -> List[Dict[str, Any]]:
         """
         Get performance trends for a model.
 
@@ -707,12 +779,13 @@ class MetaAgent:
         """
         try:
             cutoff_date = datetime.now() - timedelta(days=days)
-            performance_history = self.memory_store.get_performance_history(model_id, metric)
+            performance_history = self.memory_store.get_performance_history(
+                model_id, metric
+            )
 
             # Filter by date
             recent_performance = [
-                p for p in performance_history
-                if p.timestamp >= cutoff_date
+                p for p in performance_history if p.timestamp >= cutoff_date
             ]
 
             return [
@@ -720,7 +793,7 @@ class MetaAgent:
                     "timestamp": p.timestamp.isoformat(),
                     "metric_value": p.metric_value,
                     "version": p.version,
-                    "confidence_interval": p.confidence_interval
+                    "confidence_interval": p.confidence_interval,
                 }
                 for p in recent_performance
             ]
@@ -729,7 +802,9 @@ class MetaAgent:
             return []
 
 
-def create_meta_agent(store_type: str = "json", memory_store: Optional[MemoryStore] = None) -> MetaAgent:
+def create_meta_agent(
+    store_type: str = "json", memory_store: Optional[MemoryStore] = None
+) -> MetaAgent:
     """
     Create a meta agent instance.
 
@@ -740,4 +815,4 @@ def create_meta_agent(store_type: str = "json", memory_store: Optional[MemorySto
     Returns:
         MetaAgent instance
     """
-    return MetaAgent(memory_store=memory_store, store_type=store_type) 
+    return MetaAgent(memory_store=memory_store, store_type=store_type)

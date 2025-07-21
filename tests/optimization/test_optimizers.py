@@ -10,15 +10,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-# Add parent directory to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
 from trading.optimization.base_optimizer import BaseOptimizer
 from trading.optimization.performance_logger import (
     PerformanceLogger,
     PerformanceMetrics,
 )
 from trading.optimization.strategy_selection_agent import StrategySelectionAgent
+
+# Add parent directory to path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -395,9 +396,10 @@ def test_dynamic_strategy_crossover_grid_search(
     best_params = None
     best_metrics = None
 
-    print(
-        f"  🔍 Testing {len(param_grid['short_window'])} x {len(param_grid['long_window'])} x {len(param_grid['crossover_threshold'])} x {len(param_grid['signal_strength'])} = {len(param_grid['short_window']) * len(param_grid['long_window']) * len(param_grid['crossover_threshold']) * len(param_grid['signal_strength'])} combinations"
-    )
+    print(f"  🔍 Testing {len(param_grid['short_window'])} x {len(param_grid['long_window'])} x {len(param_grid['crossover_threshold'])} x {len(param_grid['signal_strength'])} = {len(param_grid['short_window']) *
+                                                                                                                                                                                  len(param_grid['long_window']) *
+                                                                                                                                                                                  len(param_grid['crossover_threshold']) *
+                                                                                                                                                                                  len(param_grid['signal_strength'])} combinations")
 
     # Grid search with validation
     for short in param_grid["short_window"]:
@@ -444,8 +446,10 @@ def test_dynamic_strategy_crossover_grid_search(
     print(f"  🏆 Best crossover params: {best_params}")
     print(f"  📊 Best score: {best_score:.3f}")
     print(
-        f"  📈 Best metrics: Sharpe={best_metrics['sharpe_ratio']:.3f}, Win Rate={best_metrics['win_rate']:.3f}, Max DD={best_metrics['max_drawdown']:.3f}"
-    )
+        f"  📈 Best metrics: Sharpe={
+            best_metrics['sharpe_ratio']:.3f}, Win Rate={
+            best_metrics['win_rate']:.3f}, Max DD={
+                best_metrics['max_drawdown']:.3f}")
 
     # Test parameter sensitivity analysis
     print(f"\n  📊 Testing parameter sensitivity...")

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Technical indicators for trading analysis.
 Replacement for the removed core.utils.technical_indicators module.
 """
@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 def calculate_sma(data: pd.Series, window: int) -> pd.Series:
     """
     Calculate Simple Moving Average over a specified period.
-    
+
     Args:
         data (pd.Series): Price series.
         window (int): Period for SMA calculation.
-        
+
     Returns:
         pd.Series: Simple Moving Average values.
     """
@@ -33,11 +33,11 @@ def calculate_sma(data: pd.Series, window: int) -> pd.Series:
 def calculate_ema(data: pd.Series, window: int) -> pd.Series:
     """
     Calculate Exponential Moving Average over a specified period.
-    
+
     Args:
         data (pd.Series): Price series.
         window (int): Period for EMA calculation.
-        
+
     Returns:
         pd.Series: Exponential Moving Average values.
     """
@@ -51,11 +51,11 @@ def calculate_ema(data: pd.Series, window: int) -> pd.Series:
 def calculate_rsi(data: pd.Series, window: int = 14) -> pd.Series:
     """
     Calculate RSI over a specified period.
-    
+
     Args:
         data (pd.Series): Price series.
         window (int): Period for RSI calculation.
-        
+
     Returns:
         pd.Series: RSI values.
     """

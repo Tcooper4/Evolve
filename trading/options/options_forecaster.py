@@ -412,9 +412,11 @@ class OptionsForecaster:
         try:
             if time_to_expiry <= 0:
                 return {
-                    "delta": 1.0
-                    if option_type == "call" and underlying_price > strike
-                    else 0.0,
+                    "delta": (
+                        1.0
+                        if option_type == "call" and underlying_price > strike
+                        else 0.0
+                    ),
                     "gamma": 0.0,
                     "theta": 0.0,
                     "vega": 0.0,

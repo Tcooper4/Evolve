@@ -32,7 +32,7 @@ class EnhancedLogManager:
         enable_rotating_handlers: bool = True,
         max_file_size: int = 10 * 1024 * 1024,  # 10MB
         backup_count: int = 5,
-        enable_json_logging: bool = False
+        enable_json_logging: bool = False,
     ):
         """
         Initialize the enhanced log manager.
@@ -73,30 +73,29 @@ class EnhancedLogManager:
                     self.log_dir / "evolve.log",
                     maxBytes=self.max_file_size,
                     backupCount=self.backup_count,
-                    encoding='utf-8'
+                    encoding="utf-8",
                 )
             else:
                 file_handler = logging.FileHandler(
-                    self.log_dir / "evolve.log",
-                    encoding='utf-8'
+                    self.log_dir / "evolve.log", encoding="utf-8"
                 )
 
             if self.enable_json_logging:
-                file_handler.setFormatter(logging.Formatter(
-                    '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "name": "%(name)s", "message": "%(message)s"}'
-                ))
+                file_handler.setFormatter(
+                    logging.Formatter(
+                        '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "name": "%(name)s", "message": "%(message)s"}'
+                    )
+                )
             else:
-                file_handler.setFormatter(logging.Formatter(
-                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-                ))
+                file_handler.setFormatter(
+                    logging.Formatter(
+                        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                    )
+                )
 
             handlers.append(file_handler)
 
-        logging.basicConfig(
-            level=self.log_level,
-            handlers=handlers,
-            force=True
-        )
+        logging.basicConfig(level=self.log_level, handlers=handlers, force=True)
 
     def get_enhanced_logger(
         self,
@@ -104,7 +103,7 @@ class EnhancedLogManager:
         log_file: Optional[str] = None,
         enable_console: bool = True,
         enable_file: bool = True,
-        enable_json: Optional[bool] = None
+        enable_json: Optional[bool] = None,
     ) -> logging.Logger:
         """
         Get an enhanced logger for a specific component.
@@ -131,9 +130,11 @@ class EnhancedLogManager:
             # Add console handler if enabled
             if enable_console:
                 console_handler = logging.StreamHandler(sys.stdout)
-                console_handler.setFormatter(logging.Formatter(
-                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-                ))
+                console_handler.setFormatter(
+                    logging.Formatter(
+                        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                    )
+                )
                 handlers.append(console_handler)
 
             # Add file handler if enabled
@@ -146,23 +147,28 @@ class EnhancedLogManager:
                         self.log_dir / log_file,
                         maxBytes=self.max_file_size,
                         backupCount=self.backup_count,
-                        encoding='utf-8'
+                        encoding="utf-8",
                     )
                 else:
                     file_handler = logging.FileHandler(
-                        self.log_dir / log_file,
-                        encoding='utf-8'
+                        self.log_dir / log_file, encoding="utf-8"
                     )
 
-                use_json = enable_json if enable_json is not None else self.enable_json_logging
+                use_json = (
+                    enable_json if enable_json is not None else self.enable_json_logging
+                )
                 if use_json:
-                    file_handler.setFormatter(logging.Formatter(
-                        '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "name": "%(name)s", "message": "%(message)s"}'
-                    ))
+                    file_handler.setFormatter(
+                        logging.Formatter(
+                            '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "name": "%(name)s", "message": "%(message)s"}'
+                        )
+                    )
                 else:
-                    file_handler.setFormatter(logging.Formatter(
-                        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-                    ))
+                    file_handler.setFormatter(
+                        logging.Formatter(
+                            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                        )
+                    )
 
                 handlers.append(file_handler)
                 self.handlers[name] = file_handler
@@ -179,9 +185,9 @@ class EnhancedLogManager:
         self,
         name: str,
         log_file: str,
-        when: str = 'midnight',
+        when: str = "midnight",
         interval: int = 1,
-        backup_count: int = 30
+        backup_count: int = 30,
     ) -> logging.Logger:
         """
         Setup a logger with timed rotating file handler.
@@ -208,13 +214,13 @@ class EnhancedLogManager:
             when=when,
             interval=interval,
             backupCount=backup_count,
-            encoding='utf-8'
+            encoding="utf-8",
         )
 
         # Set formatter
-        handler.setFormatter(logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        ))
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
 
         logger.addHandler(handler)
         self.loggers[name] = logger
@@ -227,7 +233,7 @@ class EnhancedLogManager:
         name: str,
         capacity: int = 1000,
         flushLevel: int = logging.ERROR,
-        target_handler: Optional[logging.Handler] = None
+        target_handler: Optional[logging.Handler] = None,
     ) -> logging.Logger:
         """
         Setup a logger with memory handler.
@@ -252,15 +258,13 @@ class EnhancedLogManager:
             target_handler = logging.StreamHandler(sys.stdout)
 
         handler = logging.handlers.MemoryHandler(
-            capacity=capacity,
-            flushLevel=flushLevel,
-            target=target_handler
+            capacity=capacity, flushLevel=flushLevel, target=target_handler
         )
 
         # Set formatter
-        handler.setFormatter(logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        ))
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
 
         logger.addHandler(handler)
         self.loggers[name] = logger
@@ -268,11 +272,7 @@ class EnhancedLogManager:
 
         return logger
 
-    def setup_queue_handler(
-        self,
-        name: str,
-        queue_size: int = 1000
-    ) -> logging.Logger:
+    def setup_queue_handler(self, name: str, queue_size: int = 1000) -> logging.Logger:
         """
         Setup a logger with queue handler.
 
@@ -293,9 +293,9 @@ class EnhancedLogManager:
         handler = logging.handlers.QueueHandler(queue_size)
 
         # Set formatter
-        handler.setFormatter(logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        ))
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
 
         logger.addHandler(handler)
         self.loggers[name] = logger
@@ -318,7 +318,7 @@ class EnhancedLogManager:
                 log_files[log_file.name] = {
                     "size_mb": stat.st_size / (1024 * 1024),
                     "modified": datetime.fromtimestamp(stat.st_mtime),
-                    "created": datetime.fromtimestamp(stat.st_ctime)
+                    "created": datetime.fromtimestamp(stat.st_ctime),
                 }
             except Exception:
                 continue
@@ -342,8 +342,7 @@ class EnhancedLogManager:
         # Size-based cleanup
         if max_size_mb:
             total_size = sum(
-                f.stat().st_size for f in self.log_dir.glob("*.log*")
-                if f.is_file()
+                f.stat().st_size for f in self.log_dir.glob("*.log*") if f.is_file()
             ) / (1024 * 1024)
 
             if total_size > max_size_mb:
@@ -376,7 +375,7 @@ class EnhancedLogManager:
             "log_level": self.log_level,
             "enable_file_output": self.enable_file_output,
             "enable_rotating_handlers": self.enable_rotating_handlers,
-            "enable_json_logging": self.enable_json_logging
+            "enable_json_logging": self.enable_json_logging,
         }
 
     def flush_all_handlers(self):
@@ -422,12 +421,11 @@ class ModelLogger:
 
         # Add file handler
         file_handler = logging.FileHandler(
-            self.log_dir / "model_operations.log",
-            encoding='utf-8'
+            self.log_dir / "model_operations.log", encoding="utf-8"
         )
-        file_handler.setFormatter(logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(message)s"
-        ))
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        )
         self.logger.addHandler(file_handler)
 
     def log_model_training(self, model_name: str, metrics: Dict[str, Any]):
@@ -436,7 +434,9 @@ class ModelLogger:
 
     def log_model_prediction(self, model_name: str, prediction: Any, confidence: float):
         """Log model prediction."""
-        self.logger.info(f"Model prediction: {model_name}, prediction: {prediction}, confidence: {confidence}")
+        self.logger.info(
+            f"Model prediction: {model_name}, prediction: {prediction}, confidence: {confidence}"
+        )
 
     def log_model_error(self, model_name: str, error: Exception):
         """Log model error."""
@@ -462,17 +462,18 @@ class DataLogger:
 
         # Add file handler
         file_handler = logging.FileHandler(
-            self.log_dir / "data_operations.log",
-            encoding='utf-8'
+            self.log_dir / "data_operations.log", encoding="utf-8"
         )
-        file_handler.setFormatter(logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(message)s"
-        ))
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        )
         self.logger.addHandler(file_handler)
 
     def log_data_load(self, symbol: str, records: int, date_range: str):
         """Log data loading operation."""
-        self.logger.info(f"Data loaded: {symbol}, records: {records}, range: {date_range}")
+        self.logger.info(
+            f"Data loaded: {symbol}, records: {records}, range: {date_range}"
+        )
 
     def log_data_error(self, symbol: str, error: Exception):
         """Log data error."""
@@ -498,12 +499,11 @@ class PerformanceLogger:
 
         # Add file handler
         file_handler = logging.FileHandler(
-            self.log_dir / "performance_metrics.log",
-            encoding='utf-8'
+            self.log_dir / "performance_metrics.log", encoding="utf-8"
         )
-        file_handler.setFormatter(logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(message)s"
-        ))
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        )
         self.logger.addHandler(file_handler)
 
     def log_performance_metric(self, metric_name: str, value: float, unit: str = ""):
@@ -515,7 +515,9 @@ class PerformanceLogger:
         self.logger.info(f"System health: {health_status}")
 
 
-def setup_logging(log_dir: str = "logs", log_level: int = logging.INFO) -> EnhancedLogManager:
+def setup_logging(
+    log_dir: str = "logs", log_level: int = logging.INFO
+) -> EnhancedLogManager:
     """
     Setup enhanced logging.
 

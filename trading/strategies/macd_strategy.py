@@ -5,15 +5,17 @@ This module provides a MACD (Moving Average Convergence Divergence)
 trading strategy with signal generation and position calculation.
 """
 
-import numpy as np
-import pandas as pd
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Optional, Tuple
 
+import numpy as np
+import pandas as pd
+
+from utils.strategy_utils import macd_crossover_signals
+
 # Import centralized technical indicators
 from utils.technical_indicators import calculate_macd
-from utils.strategy_utils import macd_crossover_signals
 
 
 @dataclass
@@ -80,13 +82,17 @@ class MACDStrategy:
         df_lower.columns = df_lower.columns.str.lower()
 
         required_columns = ["close", "volume"]
-        missing_columns = [col for col in required_columns if col not in df_lower.columns]
+        missing_columns = [
+            col for col in required_columns if col not in df_lower.columns
+        ]
         if missing_columns:
             raise ValueError(f"Data must contain columns: {missing_columns}")
 
         # Handle NaN values
         if df_lower["close"].isna().any():
-            df_lower["close"] = df_lower["close"].fillna(method='ffill').fillna(method='bfill')
+            df_lower["close"] = (
+                df_lower["close"].fillna(method="ffill").fillna(method="bfill")
+            )
 
         if df_lower["volume"].isna().any():
             df_lower["volume"] = df_lower["volume"].fillna(0)
@@ -95,12 +101,12 @@ class MACDStrategy:
         config = self.config
         if kwargs:
             config = MACDConfig(
-                fast_period=kwargs.get('fast_period', self.config.fast_period),
-                slow_period=kwargs.get('slow_period', self.config.slow_period),
-                signal_period=kwargs.get('signal_period', self.config.signal_period),
-                min_volume=kwargs.get('min_volume', self.config.min_volume),
-                min_price=kwargs.get('min_price', self.config.min_price),
-                tolerance=kwargs.get('tolerance', self.config.tolerance),
+                fast_period=kwargs.get("fast_period", self.config.fast_period),
+                slow_period=kwargs.get("slow_period", self.config.slow_period),
+                signal_period=kwargs.get("signal_period", self.config.signal_period),
+                min_volume=kwargs.get("min_volume", self.config.min_volume),
+                min_price=kwargs.get("min_price", self.config.min_price),
+                tolerance=kwargs.get("tolerance", self.config.tolerance),
             )
 
         try:
@@ -117,18 +123,25 @@ class MACDStrategy:
             signals["signal"] = 0
 
             # Generate signals based on MACD line crossing signal line with tolerance buffer
-            signals["signal"] = macd_crossover_signals(macd_line, signal_line, config.tolerance)
+            signals["signal"] = macd_crossover_signals(
+                macd_line, signal_line, config.tolerance
+            )
 
             # Apply smoothing using short EMA window to reduce noise
-            smoothing_window = kwargs.get('smoothing_window', 3)
+            smoothing_window = kwargs.get("smoothing_window", 3)
             if smoothing_window > 1:
-                signals["signal"] = signals["signal"].rolling(
-                    window=smoothing_window, center=True, min_periods=1
-                ).mean()
+                signals["signal"] = (
+                    signals["signal"]
+                    .rolling(window=smoothing_window, center=True, min_periods=1)
+                    .mean()
+                )
 
                 # Re-quantize smoothed signals
-                signals["signal"] = np.where(signals["signal"] > 0.1, 1,
-                                           np.where(signals["signal"] < -0.1, -1, 0))
+                signals["signal"] = np.where(
+                    signals["signal"] > 0.1,
+                    1,
+                    np.where(signals["signal"] < -0.1, -1, 0),
+                )
 
             # Drop duplicate consecutive signals to avoid over-trading
             signals["signal"] = signals["signal"].loc[
@@ -149,7 +162,7 @@ class MACDStrategy:
             # Ensure signals align with original data index
             if len(signals) != len(df):
                 # Reindex to match original data
-                signals = signals.reindex(df.index, method='ffill')
+                signals = signals.reindex(df.index, method="ffill")
                 signals = signals.fillna(0)
 
             # Handle any remaining NaN values in signals
@@ -203,4 +216,4 @@ class MACDStrategy:
                 "result": {"status": "error", "message": str(e)},
                 "message": "Operation completed successfully",
                 "timestamp": datetime.now().isoformat(),
-            } 
+            }

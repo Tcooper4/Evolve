@@ -1,22 +1,20 @@
-import asyncio
 import base64
 import ipaddress
-import json
 import logging
 import re
 import secrets
 import string
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import jwt
 from cachetools import TTLCache
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
-from passlib.context import CryptContext
+from cryptography.hazmat.primitives.asymmetric import padding
 from pydantic import BaseModel, Field, validator
 from ratelimit import limits, sleep_and_retry
+
+from utils.launch_utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -88,47 +86,17 @@ class TokenData(BaseModel):
     scopes: List[str] = []
 
 
-class AutomationSecurity:
-    """Security functionality."""
-
-    def __init__(self, config_path: str = "automation/config/security.json"):
-        """Initialize security system."""
-        self.config = self._load_config(config_path)
+class AutomationSecurityService:
+    def __init__(self):
         self.setup_logging()
-        self.setup_crypto()
-        self.setup_cache()
-        self.users: Dict[str, User] = {}
-        self.lock = asyncio.Lock()
+        self.logger = logging.getLogger("automation")
 
-    def _load_config(self, config_path: str) -> SecurityConfig:
-        """Load security configuration."""
-        try:
-            with open(config_path, "r") as f:
-                config_data = json.load(f)
-            return SecurityConfig(**config_data)
-        except Exception as e:
-            logger.error(f"Failed to load security config: {str(e)}")
-            raise
+    def setup_logging(self):
+        return setup_logging(service_name="service")
 
-    from utils.launch_utils import setup_logging
-
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def setup_crypto(self):
-        """Setup cryptographic components."""
-        try:
-            # Setup password hashing
-            self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-            # Generate RSA key pair
-            self.private_key = rsa.generate_private_key(
-                public_exponent=65537, key_size=2048
-            )
-            self.public_key = self.private_key.public_key()
-
-        except Exception as e:
-            logger.error(f"Failed to setup crypto: {str(e)}")
-            raise
+    def setup_crypto(self):
+        """Set up cryptography for automation security service."""
+        # Crypto setup logic here
 
     def setup_cache(self):
         """Setup security caching."""

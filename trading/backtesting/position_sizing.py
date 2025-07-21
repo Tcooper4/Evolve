@@ -14,6 +14,7 @@ import pandas as pd
 # Try to import scipy
 try:
     from scipy.optimize import minimize
+
     SCIPY_AVAILABLE = True
 except ImportError as e:
     print("⚠️ scipy not available. Disabling optimization-based position sizing.")
@@ -539,7 +540,7 @@ class PositionSizingEngine:
         window = 60
 
         for i in range(window, len(returns)):
-            window_returns = returns.iloc[i - window : i]
+            window_returns = returns.iloc[i - window: i]
             win_rate = (window_returns > 0).mean()
             avg_win = window_returns[window_returns > 0].mean()
             avg_loss = abs(window_returns[window_returns < 0].mean())
@@ -651,7 +652,9 @@ class PositionSizingEngine:
     ) -> float:
         if not SCIPY_AVAILABLE:
             logger.warning("scipy not available. Using equal-weighted position sizing.")
-            return self._calculate_equal_weighted_size(asset, price, strategy, signal, data, positions)
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
         """Calculate mean-variance optimal position size."""
         if asset not in data.columns:
             return self._calculate_equal_weighted_size(

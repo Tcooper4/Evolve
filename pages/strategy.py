@@ -1,6 +1,5 @@
 """Strategy page for the trading dashboard."""
 
-
 import streamlit as st
 
 from trading.ui.components import (

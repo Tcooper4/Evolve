@@ -14,21 +14,25 @@ from typing import Any, Dict, List, Optional, Type
 
 import pandas as pd
 
+from .base_strategy import BaseStrategy
+
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class StrategyResult:
     """Result of a strategy execution."""
+
     signals: pd.DataFrame
     performance_metrics: Dict[str, float]
     metadata: Dict[str, Any]
     timestamp: datetime
     strategy_name: str
 
-from .base_strategy import BaseStrategy
 
 class StrategyDiscovery:
     """Handles dynamic discovery of strategy modules."""
+
     def __init__(self, strategies_dir: str = None):
         """Initialize strategy discovery."""
         if strategies_dir is None:
@@ -37,7 +41,9 @@ class StrategyDiscovery:
         self.discovered_strategies: Dict[str, Type[BaseStrategy]] = {}
         self.discovery_log: List[Dict[str, Any]] = []
 
-    def discover_strategies(self, recursive: bool = True, pattern: str = "*_strategy.py") -> Dict[str, Type[BaseStrategy]]:
+    def discover_strategies(
+        self, recursive: bool = True, pattern: str = "*_strategy.py"
+    ) -> Dict[str, Type[BaseStrategy]]:
         """Discover strategy modules using file globbing and introspection."""
         logger.info(f"🔍 Discovering strategies in: {self.strategies_dir}")
         if recursive:
@@ -50,12 +56,14 @@ class StrategyDiscovery:
                 self._discover_strategies_from_file(file_path)
             except Exception as e:
                 logger.error(f"❌ Failed to discover strategies from {file_path}: {e}")
-                self.discovery_log.append({
-                    "file": str(file_path),
-                    "status": "error",
-                    "error": str(e),
-                    "timestamp": datetime.now().isoformat(),
-                })
+                self.discovery_log.append(
+                    {
+                        "file": str(file_path),
+                        "status": "error",
+                        "error": str(e),
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
         logger.info(f"✅ Discovered {len(self.discovered_strategies)} strategy classes")
         return self.discovered_strategies.copy()
 
@@ -70,16 +78,22 @@ class StrategyDiscovery:
             for class_name, strategy_class in strategy_classes.items():
                 if class_name not in self.discovered_strategies:
                     self.discovered_strategies[class_name] = strategy_class
-                    logger.info(f"📦 Discovered strategy: {class_name} from {module_name}")
-                    self.discovery_log.append({
-                        "file": str(file_path),
-                        "module": module_name,
-                        "class": class_name,
-                        "status": "success",
-                        "timestamp": datetime.now().isoformat(),
-                    })
+                    logger.info(
+                        f"📦 Discovered strategy: {class_name} from {module_name}"
+                    )
+                    self.discovery_log.append(
+                        {
+                            "file": str(file_path),
+                            "module": module_name,
+                            "class": class_name,
+                            "status": "success",
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
                 else:
-                    logger.warning(f"⚠️  Strategy {class_name} already discovered, skipping duplicate")
+                    logger.warning(
+                        f"⚠️  Strategy {class_name} already discovered, skipping duplicate"
+                    )
         except ImportError as e:
             logger.error(f"❌ Failed to import module {file_path}: {e}")
             raise
@@ -92,11 +106,17 @@ class StrategyDiscovery:
         strategy_classes = {}
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            if isinstance(attr, type) and issubclass(attr, BaseStrategy) and attr is not BaseStrategy:
+            if (
+                isinstance(attr, type)
+                and issubclass(attr, BaseStrategy)
+                and attr is not BaseStrategy
+            ):
                 strategy_classes[attr_name] = attr
         return strategy_classes
 
-    def discover_strategies_by_pattern(self, patterns: List[str] = None) -> Dict[str, Type[BaseStrategy]]:
+    def discover_strategies_by_pattern(
+        self, patterns: List[str] = None
+    ) -> Dict[str, Type[BaseStrategy]]:
         """Discover strategies by multiple patterns."""
         patterns = patterns or ["*_strategy.py"]
         all_strategies = {}
@@ -118,14 +138,18 @@ class StrategyDiscovery:
         for name, cls in self.discovered_strategies.items():
             try:
                 instance = cls(name)
-                valid = hasattr(instance, "generate_signals") and hasattr(instance, "get_parameter_space")
+                valid = hasattr(instance, "generate_signals") and hasattr(
+                    instance, "get_parameter_space"
+                )
                 results[name] = {"valid": valid, "error": None}
             except Exception as e:
                 results[name] = {"valid": False, "error": str(e)}
         return results
 
+
 class StrategyRegistry:
     """Central registry for trading strategies."""
+
     def __init__(self):
         self.strategies: Dict[str, BaseStrategy] = {}
         self._register_default_strategies()
@@ -175,10 +199,12 @@ class StrategyRegistry:
             performance_metrics=performance_metrics,
             metadata={},
             timestamp=datetime.now(),
-            strategy_name=strategy_name
+            strategy_name=strategy_name,
         )
 
-    def _calculate_performance_metrics(self, data: pd.DataFrame, signals: pd.DataFrame) -> Dict[str, float]:
+    def _calculate_performance_metrics(
+        self, data: pd.DataFrame, signals: pd.DataFrame
+    ) -> Dict[str, float]:
         # Dummy implementation for performance metrics
         if signals.empty or data.empty:
             return {"confidence": 0.0, "signal_count": 0}
@@ -192,7 +218,7 @@ class StrategyRegistry:
             "signal_count": signal_count,
             "buy_signals": buy_signals,
             "sell_signals": sell_signals,
-            "signal_strength": signal_strength
+            "signal_strength": signal_strength,
         }
 
     def get_strategy_parameter_space(self, strategy_name: str) -> Dict[str, Any]:
@@ -212,8 +238,10 @@ class StrategyRegistry:
         self._register_default_strategies()
         self._discover_strategies()
 
+
 # Global registry instance
 _registry: Optional[StrategyRegistry] = None
+
 
 def get_strategy_registry() -> StrategyRegistry:
     global _registry
@@ -221,16 +249,19 @@ def get_strategy_registry() -> StrategyRegistry:
         _registry = StrategyRegistry()
     return _registry
 
+
 def register_strategy(strategy: BaseStrategy):
     registry = get_strategy_registry()
     registry.register_strategy(strategy)
+
 
 def get_strategy(name: str) -> Optional[BaseStrategy]:
     registry = get_strategy_registry()
     return registry.get_strategy(name)
 
+
 def execute_strategy(
     strategy_name: str, data: pd.DataFrame, parameters: Optional[Dict[str, Any]] = None
 ) -> StrategyResult:
     registry = get_strategy_registry()
-    return registry.execute_strategy(strategy_name, data, parameters) 
+    return registry.execute_strategy(strategy_name, data, parameters)

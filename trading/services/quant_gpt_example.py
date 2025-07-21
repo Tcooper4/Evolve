@@ -12,11 +12,12 @@ import sys
 import time
 from pathlib import Path
 
+from services.quant_gpt import QuantGPT
+from services.service_client import ServiceClient
+
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.quant_gpt import QuantGPT
-from services.service_client import ServiceClient
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,9 @@ def example_service_client():
             processing_time = time.time() - start_time
 
             if result:
-                logger.info(f"✅ Service Response (processed in {processing_time:.2f}s)")
+                logger.info(
+                    f"✅ Service Response (processed in {processing_time:.2f}s)"
+                )
                 logger.info(f"Type: {result.get('type', 'unknown')}")
 
                 if result.get("type") == "query_processed":

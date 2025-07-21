@@ -1,4 +1,4 @@
-﻿"""Advanced plotting utilities for time series and performance visualization.
+"""Advanced plotting utilities for time series and performance visualization.
 
 This module provides comprehensive plotting functionality for time series data,
 performance metrics, and model predictions, with support for both Matplotlib
@@ -7,7 +7,7 @@ and Plotly backends.
 
 import logging
 import warnings
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -99,7 +99,7 @@ class TimeSeriesPlotter:
         # Optionally compress overlapping signals
         if compression:
             plot_data = plot_data.copy()
-            if hasattr(plot_data, 'rolling'):
+            if hasattr(plot_data, "rolling"):
                 plot_data = plot_data.rolling(window=3, min_periods=1).mean()
 
         # Check for empty series
@@ -160,14 +160,16 @@ class TimeSeriesPlotter:
             for name, overlay_data in overlays.items():
                 if not overlay_data.empty:
                     # Get strategy-specific style or use default
-                    style = strategy_styles.get(name.lower(), strategy_styles["default"])
+                    style = strategy_styles.get(
+                        name.lower(), strategy_styles["default"]
+                    )
                     overlay_data.plot(
-                        ax=ax, 
-                        label=name, 
-                        alpha=style["alpha"], 
+                        ax=ax,
+                        label=name,
+                        alpha=style["alpha"],
                         linestyle="--",
                         linewidth=style["linewidth"],
-                        color=style["color"]
+                        color=style["color"],
                     )
                 else:
                     logger.warning(f"Overlay '{name}' is empty, skipping")
@@ -190,27 +192,27 @@ class TimeSeriesPlotter:
         # Add vertical padding to ensure overlays are not cut off
         # Calculate the range of all plotted data (main series + overlays + confidence bands)
         all_data = [data]
-        
+
         if show_overlays and overlays:
             for overlay_data in overlays.values():
                 if not overlay_data.empty:
                     all_data.append(overlay_data)
-        
+
         if show_confidence and confidence_bands:
             lower, upper = confidence_bands
             if not lower.empty and not upper.empty:
                 all_data.extend([lower, upper])
-        
+
         # Calculate min and max across all data
         if all_data:
             all_values = pd.concat(all_data, axis=1).values.flatten()
             all_values = all_values[~np.isnan(all_values)]  # Remove NaN values
-            
+
             if len(all_values) > 0:
                 data_min = np.min(all_values)
                 data_max = np.max(all_values)
                 data_range = data_max - data_min
-                
+
                 # Add 5% padding on each side
                 padding = data_range * 0.05
                 ax.set_ylim(data_min - padding, data_max + padding)
@@ -257,7 +259,9 @@ class TimeSeriesPlotter:
             for name, overlay_data in overlays.items():
                 if not overlay_data.empty:
                     # Get strategy-specific style or use default
-                    style = strategy_styles.get(name.lower(), strategy_styles["default"])
+                    style = strategy_styles.get(
+                        name.lower(), strategy_styles["default"]
+                    )
                     fig.add_trace(
                         go.Scatter(
                             x=overlay_data.index,
@@ -265,9 +269,9 @@ class TimeSeriesPlotter:
                             mode="lines",
                             name=name,
                             line=dict(
-                                dash="dash", 
+                                dash="dash",
                                 width=style["linewidth"],
-                                color=style["color"]
+                                color=style["color"],
                             ),
                             opacity=style["alpha"],
                         )
@@ -623,7 +627,7 @@ class TimeSeriesPlotter:
 
         for i, series in enumerate(series_list):
             if not series.empty:
-                label = labels[i] if labels and i < len(labels) else f"Series {i+1}"
+                label = labels[i] if labels and i < len(labels) else f"Series {i + 1}"
                 series.plot(ax=ax, label=label)
 
         # Plot overlays if requested
@@ -662,7 +666,7 @@ class TimeSeriesPlotter:
 
         for i, series in enumerate(series_list):
             if not series.empty:
-                label = labels[i] if labels and i < len(labels) else f"Series {i+1}"
+                label = labels[i] if labels and i < len(labels) else f"Series {i + 1}"
                 fig.add_trace(
                     go.Scatter(
                         x=series.index, y=series.values, mode="lines", name=label
@@ -728,11 +732,11 @@ class TimeSeriesPlotter:
         """
         if self.backend == "matplotlib":
             fig, ax = plt.subplots(figsize=figsize or self.figsize)
-            
+
             # Calculate offset for confidence intervals to avoid overlap with markers
             data_range = data.max() - data.min()
             offset = data_range * confidence_offset
-            
+
             # Plot confidence intervals first (background layer)
             ax.fill_between(
                 confidence_intervals.index,
@@ -740,50 +744,55 @@ class TimeSeriesPlotter:
                 confidence_intervals["upper"] + offset,
                 alpha=confidence_alpha,
                 label="Confidence Interval",
-                color='lightblue',
+                color="lightblue",
                 zorder=1 if z_order_adjustment else 0,
             )
-            
+
             # Plot actual data (middle layer)
-            data.plot(ax=ax, label="Actual", linewidth=2, zorder=2 if z_order_adjustment else 0)
-            
+            data.plot(
+                ax=ax,
+                label="Actual",
+                linewidth=2,
+                zorder=2 if z_order_adjustment else 0,
+            )
+
             # Add signal markers if provided (top layer)
             if signal_markers:
                 for signal_type, signal_data in signal_markers.items():
                     if not signal_data.empty:
-                        if signal_type.lower() == 'buy':
+                        if signal_type.lower() == "buy":
                             ax.scatter(
                                 signal_data.index,
                                 signal_data.values,
-                                color='green',
-                                marker='^',
+                                color="green",
+                                marker="^",
                                 s=100,
-                                label=f'{signal_type.title()} Signals',
+                                label=f"{signal_type.title()} Signals",
                                 zorder=3 if z_order_adjustment else 0,
-                                alpha=0.8
+                                alpha=0.8,
                             )
-                        elif signal_type.lower() == 'sell':
+                        elif signal_type.lower() == "sell":
                             ax.scatter(
                                 signal_data.index,
                                 signal_data.values,
-                                color='red',
-                                marker='v',
+                                color="red",
+                                marker="v",
                                 s=100,
-                                label=f'{signal_type.title()} Signals',
+                                label=f"{signal_type.title()} Signals",
                                 zorder=3 if z_order_adjustment else 0,
-                                alpha=0.8
+                                alpha=0.8,
                             )
                         else:
                             ax.scatter(
                                 signal_data.index,
                                 signal_data.values,
-                                marker='o',
+                                marker="o",
                                 s=80,
-                                label=f'{signal_type.title()} Signals',
+                                label=f"{signal_type.title()} Signals",
                                 zorder=3 if z_order_adjustment else 0,
-                                alpha=0.7
+                                alpha=0.7,
                             )
-            
+
             ax.set_title(title)
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
@@ -839,7 +848,7 @@ class TimeSeriesPlotter:
             if signal_markers:
                 for signal_type, signal_data in signal_markers.items():
                     if not signal_data.empty:
-                        if signal_type.lower() == 'buy':
+                        if signal_type.lower() == "buy":
                             fig.add_trace(
                                 go.Scatter(
                                     x=signal_data.index,
@@ -850,11 +859,11 @@ class TimeSeriesPlotter:
                                         symbol="triangle-up",
                                         size=10,
                                         color="green",
-                                        opacity=0.8
+                                        opacity=0.8,
                                     ),
                                 )
                             )
-                        elif signal_type.lower() == 'sell':
+                        elif signal_type.lower() == "sell":
                             fig.add_trace(
                                 go.Scatter(
                                     x=signal_data.index,
@@ -865,7 +874,7 @@ class TimeSeriesPlotter:
                                         symbol="triangle-down",
                                         size=10,
                                         color="red",
-                                        opacity=0.8
+                                        opacity=0.8,
                                     ),
                                 )
                             )
@@ -876,11 +885,7 @@ class TimeSeriesPlotter:
                                     y=signal_data.values,
                                     mode="markers",
                                     name=f"{signal_type.title()} Signals",
-                                    marker=dict(
-                                        symbol="circle",
-                                        size=8,
-                                        opacity=0.7
-                                    ),
+                                    marker=dict(symbol="circle", size=8, opacity=0.7),
                                 )
                             )
 

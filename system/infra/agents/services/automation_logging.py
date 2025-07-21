@@ -1,23 +1,11 @@
-import asyncio
-import json
 import logging
 import logging.handlers
-import socket
-import sys
-import threading
-import traceback
 from datetime import datetime
-from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-import sentry_sdk
-import structlog
-from cachetools import TTLCache
 from pydantic import BaseModel, Field, validator
-from ratelimit import limits, sleep_and_retry
-from sentry_sdk.integrations.logging import LoggingIntegration
-from structlog import get_logger
+
+from utils.launch_utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -71,176 +59,14 @@ class LogEntry(BaseModel):
     metadata: Dict[str, Any] = {}
 
 
-class AutomationLogging:
-    """Logging functionality."""
-
-    def __init__(self, config_path: str = "automation/config/logging.json"):
-        """Initialize logging system."""
-        self.config = self._load_config(config_path)
+class AutomationLoggingService:
+    def __init__(self):
         self.setup_logging()
-        self.setup_structlog()
-        self.setup_sentry()
-        self.setup_cache()
-        self.log_entries: List[LogEntry] = []
-        self.lock = asyncio.Lock()
+        self.logger = logging.getLogger("automation")
 
-    def _load_config(self, config_path: str) -> LogConfig:
-        """Load logging configuration."""
-        try:
-            with open(config_path, "r") as f:
-                config_data = json.load(f)
-            return LogConfig(**config_data)
-        except Exception as e:
-            logger.error(f"Failed to load logging config: {str(e)}")
-            return None
+    def setup_logging(self):
+        return setup_logging(service_name="service")
 
-    from utils.launch_utils import setup_logging
-
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def setup_structlog(self):
-        """Setup structured logging."""
-        try:
-            structlog.configure(
-                processors=[
-                    structlog.stdlib.filter_by_level,
-                    structlog.stdlib.add_logger_name,
-                    structlog.stdlib.add_log_level,
-                    structlog.stdlib.PositionalArgumentsFormatter(),
-                    structlog.processors.TimeStamper(fmt="iso"),
-                    structlog.processors.StackInfoRenderer(),
-                    structlog.processors.format_exc_info,
-                    structlog.processors.UnicodeDecoder(),
-                    structlog.processors.JSONRenderer(),
-                ],
-                context_class=dict,
-                logger_factory=structlog.stdlib.LoggerFactory(),
-                wrapper_class=structlog.stdlib.BoundLogger,
-                cache_logger_on_first_use=True,
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to setup structlog: {str(e)}")
-            return None
-
-    def setup_sentry(self):
-        """Setup Sentry integration."""
-        try:
-            if self.config.sentry_dsn:
-                sentry_sdk.init(
-                    dsn=self.config.sentry_dsn,
-                    environment=self.config.sentry_environment,
-                    traces_sample_rate=self.config.sentry_traces_sample_rate,
-                    integrations=[
-                        LoggingIntegration(
-                            level=logging.INFO, event_level=logging.ERROR
-                        )
-                    ],
-                )
-
-        except Exception as e:
-            logger.error(f"Failed to setup Sentry: {str(e)}")
-            return None
-
-    def setup_cache(self):
-        """Setup log caching."""
-        self.cache = TTLCache(maxsize=self.config.cache_size, ttl=self.config.cache_ttl)
-
-    @sleep_and_retry
-    @limits(calls=100, period=60)
-    async def log(
-        self,
-        level: str,
-        message: str,
-        logger_name: str = __name__,
-        exception: Optional[Exception] = None,
-        metadata: Dict[str, Any] = {},
-    ):
-        """Log a message."""
-        try:
-            # Create log entry
-            entry = LogEntry(
-                timestamp=datetime.now(),
-                level=level.upper(),
-                logger=logger_name,
-                message=message,
-                exception=str(exception) if exception else None,
-                stack_trace=traceback.format_exc() if exception else None,
-                host=socket.gethostname(),
-                thread=threading.current_thread().name,
-                process=os.getpid(),
-                metadata=metadata,
-            )
-
-            # Add to entries
-            async with self.lock:
-                self.log_entries.append(entry)
-
-            # Log using structlog
-            logger = get_logger(logger_name)
-            log_func = getattr(logger, level.lower())
-            log_func(message, exc_info=exception, **metadata)
-
-            # Send to Sentry if error
-            if level.upper() in ["ERROR", "CRITICAL"] and self.config.sentry_dsn:
-                sentry_sdk.capture_exception(exception)
-
-        except Exception as e:
-            logger.error(f"Failed to log message: {str(e)}")
-            return None
-
-    async def get_logs(
-        self,
-        level: Optional[str] = None,
-        logger: Optional[str] = None,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: int = 1000,
-    ) -> List[LogEntry]:
-        """Get log entries with filtering."""
-        try:
-            async with self.lock:
-                entries = self.log_entries
-
-                if level:
-                    entries = [e for e in entries if e.level == level.upper()]
-
-                if logger:
-                    entries = [e for e in entries if e.logger == logger]
-
-                if start_time:
-                    entries = [e for e in entries if e.timestamp >= start_time]
-
-                if end_time:
-                    entries = [e for e in entries if e.timestamp <= end_time]
-
-                return entries[-limit:]
-
-        except Exception as e:
-            logger.error(f"Failed to get logs: {str(e)}")
-            return None
-
-    async def clear_logs(self):
-        """Clear log entries."""
-        try:
-            async with self.lock:
-                self.log_entries.clear()
-
-        except Exception as e:
-            logger.error(f"Failed to clear logs: {str(e)}")
-            return None
-
-    async def cleanup(self):
-        """Cleanup resources."""
-        try:
-            # Clear caches
-            self.cache.clear()
-            self.log_entries.clear()
-
-            # Flush Sentry
-            if self.config.sentry_dsn:
-                sentry_sdk.flush()
-
-        except Exception as e:
-            logger.error(f"Cleanup failed: {str(e)}")
-            return None
+    def setup_structlog(self):
+        """Set up structlog for automation logging service."""
+        # Structlog setup logic here

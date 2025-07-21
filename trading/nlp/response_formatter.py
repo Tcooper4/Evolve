@@ -386,9 +386,11 @@ class ResponseFormatter:
                 color = (
                     settings["positive_color"]
                     if point["sentiment"] > 0
-                    else settings["negative_color"]
-                    if point["sentiment"] < 0
-                    else settings["neutral_color"]
+                    else (
+                        settings["negative_color"]
+                        if point["sentiment"] < 0
+                        else settings["neutral_color"]
+                    )
                 )
 
                 fig.add_trace(

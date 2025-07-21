@@ -13,10 +13,10 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
+from models.forecast_router import ForecastRouter
+
 # Add the project root to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-
-from models.forecast_router import ForecastRouter
 
 
 class MockModel:

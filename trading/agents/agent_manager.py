@@ -1,4 +1,4 @@
-﻿"""
+"""
 Enhanced Agent Manager with Batch 12 Features
 
 This module manages all pluggable agents in the system, providing dynamic
@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from queue import Queue
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type
 
 from trading.agents.agent_leaderboard import AgentLeaderboard
 
@@ -43,7 +43,7 @@ from trading.agents.updater_agent import UpdaterAgent
 @dataclass
 class RetryConfig:
     """Configuration for retry logic."""
-    
+
     max_retries: int = 3
     base_delay: float = 1.0
     max_delay: float = 60.0
@@ -56,7 +56,7 @@ class RetryConfig:
 @dataclass
 class AgentTask:
     """Agent task with retry configuration."""
-    
+
     agent_name: str
     task_id: str
     kwargs: Dict[str, Any]
@@ -66,7 +66,7 @@ class AgentTask:
     last_attempt: Optional[datetime] = None
     next_retry: Optional[datetime] = None
     error_history: List[Dict[str, Any]] = None
-    
+
     def __post_init__(self):
         if self.error_history is None:
             self.error_history = []
@@ -104,7 +104,7 @@ class AgentRegistryEntry:
     instance: Optional[BaseAgent] = None
     metadata: Optional[Dict[str, Any]] = None
     retry_config: RetryConfig = None
-    
+
     def __post_init__(self):
         if self.retry_config is None:
             self.retry_config = RetryConfig()
@@ -121,7 +121,7 @@ class AgentManagerConfig:
     enable_logging: bool = True
     enable_metrics: bool = True
     default_retry_config: RetryConfig = None
-    
+
     def __post_init__(self):
         if self.default_retry_config is None:
             self.default_retry_config = RetryConfig()
@@ -152,7 +152,7 @@ class EnhancedAgentManager:
         self.completed_tasks: Dict[str, AgentTask] = {}
         self.failed_tasks: Dict[str, AgentTask] = {}
         self.retry_queue: Queue = Queue()
-        
+
         # Error tracking
         self.error_log: List[Dict[str, Any]] = []
         self.agent_error_counts: Dict[str, int] = {}
@@ -169,16 +169,16 @@ class EnhancedAgentManager:
         self.restart_delay = 30  # seconds
         self.health_check_interval = 60  # seconds
         self.agent_timeout_threshold = 300  # seconds
-        
+
         # Callback system
         self.callbacks: Dict[str, List[callable]] = {
-            'agent_started': [],
-            'agent_completed': [],
-            'agent_failed': [],
-            'agent_restarted': [],
-            'agent_timeout': [],
-            'agent_retry': [],
-            'agent_backoff': []
+            "agent_started": [],
+            "agent_completed": [],
+            "agent_failed": [],
+            "agent_restarted": [],
+            "agent_timeout": [],
+            "agent_retry": [],
+            "agent_backoff": [],
         }
 
         # Restart monitoring
@@ -196,43 +196,46 @@ class EnhancedAgentManager:
         self._register_default_agents()
 
         self.logger.info("Enhanced AgentManager initialized")
-        self.status = 'idle'
+        self.status = "idle"
 
-    def _calculate_backoff_delay(self, attempt: int, retry_config: RetryConfig) -> float:
+    def _calculate_backoff_delay(
+        self, attempt: int, retry_config: RetryConfig
+    ) -> float:
         """Calculate backoff delay with jitter.
-        
+
         Args:
             attempt: Current attempt number
             retry_config: Retry configuration
-            
+
         Returns:
             Delay in seconds
         """
         if retry_config.exponential_backoff:
             delay = min(
-                retry_config.base_delay * (retry_config.backoff_factor ** (attempt - 1)),
-                retry_config.max_delay
+                retry_config.base_delay
+                * (retry_config.backoff_factor ** (attempt - 1)),
+                retry_config.max_delay,
             )
         else:
             delay = retry_config.base_delay
-        
+
         # Add jitter if enabled
         if retry_config.jitter:
             jitter = random.uniform(0, delay * 0.1)
             delay += jitter
-        
+
         return delay
 
     def _log_error_with_traceback(
-        self, 
-        agent_name: str, 
-        error: Exception, 
+        self,
+        agent_name: str,
+        error: Exception,
         task_id: str,
         attempt: int,
-        context: Dict[str, Any] = None
+        context: Dict[str, Any] = None,
     ):
         """Log error with full traceback and context.
-        
+
         Args:
             agent_name: Name of the agent
             error: Exception that occurred
@@ -248,44 +251,45 @@ class EnhancedAgentManager:
             "error_type": type(error).__name__,
             "error_message": str(error),
             "traceback": traceback.format_exc(),
-            "context": context or {}
+            "context": context or {},
         }
-        
+
         # Log to error log
         self.error_log.append(error_info)
-        
+
         # Update error counts
-        self.agent_error_counts[agent_name] = self.agent_error_counts.get(agent_name, 0) + 1
+        self.agent_error_counts[agent_name] = (
+            self.agent_error_counts.get(agent_name, 0) + 1
+        )
         self.global_error_count += 1
-        
+
         # Log with appropriate level
         if attempt == 1:
             self.logger.error(
                 f"Agent {agent_name} failed on first attempt: {error}",
-                extra={"error_info": error_info}
+                extra={"error_info": error_info},
             )
         else:
             self.logger.warning(
                 f"Agent {agent_name} failed on attempt {attempt}: {error}",
-                extra={"error_info": error_info}
+                extra={"error_info": error_info},
             )
-        
+
         # Trigger callbacks
-        self._trigger_callbacks('agent_failed', agent_name=agent_name, error=error, task_id=task_id)
+        self._trigger_callbacks(
+            "agent_failed", agent_name=agent_name, error=error, task_id=task_id
+        )
 
     async def execute_agent_with_retry(
-        self, 
-        name: str, 
-        retry_config: Optional[RetryConfig] = None,
-        **kwargs
+        self, name: str, retry_config: Optional[RetryConfig] = None, **kwargs
     ) -> AgentResult:
         """Execute agent with comprehensive retry logic.
-        
+
         Args:
             name: Agent name
             retry_config: Retry configuration
             **kwargs: Agent execution parameters
-            
+
         Returns:
             AgentResult: Result of agent execution
         """
@@ -293,13 +297,16 @@ class EnhancedAgentManager:
             return AgentResult(
                 success=False,
                 error_message=f"Agent '{name}' not found in registry",
-                error_type="AgentNotFound"
+                error_type="AgentNotFound",
             )
-        
+
         # Get retry configuration
         if retry_config is None:
-            retry_config = self.agent_registry[name].retry_config or self.config.default_retry_config
-        
+            retry_config = (
+                self.agent_registry[name].retry_config
+                or self.config.default_retry_config
+            )
+
         # Create task
         task_id = f"{name}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
         task = AgentTask(
@@ -307,11 +314,11 @@ class EnhancedAgentManager:
             task_id=task_id,
             kwargs=kwargs,
             retry_config=retry_config,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
-        
+
         self.pending_tasks[task_id] = task
-        
+
         try:
             return await self._execute_with_retry(task)
         finally:
@@ -321,87 +328,114 @@ class EnhancedAgentManager:
 
     async def _execute_with_retry(self, task: AgentTask) -> AgentResult:
         """Execute task with retry logic.
-        
+
         Args:
             task: Agent task
-            
+
         Returns:
             AgentResult: Final result
         """
         agent_name = task.agent_name
         retry_config = task.retry_config
         start_time = time.time()
-        
+
         for attempt in range(1, retry_config.max_retries + 1):
             task.attempts = attempt
             task.last_attempt = datetime.now()
-            
+
             try:
                 # Execute agent
                 result = await self._execute_single_attempt(agent_name, task.kwargs)
-                
+
                 # Check if successful
                 if result.success:
                     # Record successful execution
                     task.total_duration = time.time() - start_time
                     self.completed_tasks[task.task_id] = task
                     self._record_execution(agent_name, result)
-                    
+
                     self.logger.info(
                         f"Agent {agent_name} completed successfully on attempt {attempt}",
-                        extra={"task_id": task.task_id, "duration": task.total_duration}
+                        extra={
+                            "task_id": task.task_id,
+                            "duration": task.total_duration,
+                        },
                     )
-                    
+
                     # Trigger callbacks
-                    self._trigger_callbacks('agent_completed', agent_name=agent_name, result=result, task_id=task.task_id)
-                    
+                    self._trigger_callbacks(
+                        "agent_completed",
+                        agent_name=agent_name,
+                        result=result,
+                        task_id=task.task_id,
+                    )
+
                     return result
                 else:
                     # Agent returned failure but didn't raise exception
                     raise Exception(f"Agent execution failed: {result.error_message}")
-                    
+
             except Exception as e:
                 # Log error with full traceback
                 self._log_error_with_traceback(
-                    agent_name, e, task.task_id, attempt, 
-                    {"kwargs": task.kwargs, "retry_config": retry_config.__dict__}
+                    agent_name,
+                    e,
+                    task.task_id,
+                    attempt,
+                    {"kwargs": task.kwargs, "retry_config": retry_config.__dict__},
                 )
-                
+
                 # Check if we should retry
                 if not isinstance(e, retry_config.retry_on_exceptions):
-                    self.logger.info(f"Not retrying {agent_name} - exception type not in retry list")
+                    self.logger.info(
+                        f"Not retrying {agent_name} - exception type not in retry list"
+                    )
                     break
-                
+
                 if attempt < retry_config.max_retries:
                     # Calculate backoff delay
                     delay = self._calculate_backoff_delay(attempt, retry_config)
                     task.next_retry = datetime.now() + timedelta(seconds=delay)
-                    
+
                     self.logger.info(
                         f"Retrying {agent_name} in {delay:.2f}s (attempt {attempt}/{retry_config.max_retries})",
-                        extra={"task_id": task.task_id, "delay": delay}
+                        extra={"task_id": task.task_id, "delay": delay},
                     )
-                    
+
                     # Trigger retry callback
-                    self._trigger_callbacks('agent_retry', agent_name=agent_name, attempt=attempt, delay=delay, task_id=task.task_id)
-                    
+                    self._trigger_callbacks(
+                        "agent_retry",
+                        agent_name=agent_name,
+                        attempt=attempt,
+                        delay=delay,
+                        task_id=task.task_id,
+                    )
+
                     # Wait before retry
                     await asyncio.sleep(delay)
                 else:
                     # Max retries reached
                     self.logger.error(
                         f"Agent {agent_name} failed after {retry_config.max_retries} attempts",
-                        extra={"task_id": task.task_id, "total_duration": time.time() - start_time}
+                        extra={
+                            "task_id": task.task_id,
+                            "total_duration": time.time() - start_time,
+                        },
                     )
                     break
-        
+
         # All attempts failed
         task.total_duration = time.time() - start_time
         self.failed_tasks[task.task_id] = task
-        
+
         # Trigger failure callback
-        self._trigger_callbacks('agent_failed', agent_name=agent_name, task_id=task.task_id, final_failure=True)
-        
+        self._trigger_callbacks(
+            "agent_failed",
+            agent_name=agent_name,
+            task_id=task.task_id,
+            final_failure=True,
+        )
+
         return AgentResult(
             success=False,
             error_message=f"Agent '{agent_name}' failed after {retry_config.max_retries} attempts",
@@ -409,60 +443,61 @@ class EnhancedAgentManager:
             metadata={
                 "attempts": task.attempts,
                 "total_duration": task.total_duration,
-                "error_history": task.error_history
-            }
+                "error_history": task.error_history,
+            },
         )
 
-    async def _execute_single_attempt(self, agent_name: str, kwargs: Dict[str, Any]) -> AgentResult:
+    async def _execute_single_attempt(
+        self, agent_name: str, kwargs: Dict[str, Any]
+    ) -> AgentResult:
         """Execute a single attempt of agent execution.
-        
+
         Args:
             agent_name: Name of the agent
             kwargs: Execution parameters
-            
+
         Returns:
             AgentResult: Result of execution
         """
         agent_entry = self.agent_registry[agent_name]
-        
+
         # Check if agent is available
         if not agent_entry.instance:
             return AgentResult(
                 success=False,
                 error_message=f"Agent '{agent_name}' instance not available",
-                error_type="AgentNotAvailable"
+                error_type="AgentNotAvailable",
             )
-        
+
         # Check if agent is enabled
         if not agent_entry.instance.config.enabled:
             return AgentResult(
                 success=False,
                 error_message=f"Agent '{agent_name}' is disabled",
-                error_type="AgentDisabled"
+                error_type="AgentDisabled",
             )
-        
+
         # Execute with timeout
         try:
             if asyncio.iscoroutinefunction(agent_entry.instance.execute):
                 result = await asyncio.wait_for(
                     agent_entry.instance.execute(**kwargs),
-                    timeout=self.config.execution_timeout
+                    timeout=self.config.execution_timeout,
                 )
             else:
                 # Handle synchronous agents
                 loop = asyncio.get_event_loop()
                 result = await loop.run_in_executor(
-                    None,
-                    lambda: agent_entry.instance.execute(**kwargs)
+                    None, lambda: agent_entry.instance.execute(**kwargs)
                 )
-            
+
             return result
-            
+
         except asyncio.TimeoutError:
             return AgentResult(
                 success=False,
                 error_message=f"Agent '{agent_name}' execution timed out after {self.config.execution_timeout}s",
-                error_type="ExecutionTimeout"
+                error_type="ExecutionTimeout",
             )
 
     def start_restart_monitor(self) -> None:
@@ -698,7 +733,9 @@ class EnhancedAgentManager:
                 self.logger.warning(f"Failed to load config from {config_path}: {e}")
                 config_data = {}
         else:
-            self.logger.warning(f"WARNING: {self.config.config_file} not found. Falling back to default registration.")
+            self.logger.warning(
+                f"WARNING: {self.config.config_file} not found. Falling back to default registration."
+            )
             config_data = {}
             self._create_default_config(config_path)
 
@@ -782,20 +819,24 @@ class EnhancedAgentManager:
                 registered_count += 1
             except Exception as e:
                 self.logger.warning(f"Failed to register {agent_name}: {e}")
-        
+
         # If no agents were registered successfully, register fallback agents
         if registered_count == 0:
-            self.logger.warning("No default agents registered successfully. Registering fallback agents.")
+            self.logger.warning(
+                "No default agents registered successfully. Registering fallback agents."
+            )
             self._register_fallback_agents()
         else:
-            self.logger.info(f"Successfully registered {registered_count} default agents")
-    
+            self.logger.info(
+                f"Successfully registered {registered_count} default agents"
+            )
+
     def _register_fallback_agents(self) -> None:
         """Register fallback agents when no other agents are available."""
         try:
             # Try to import and register the mock agent
             from agents.mock_agent import MockAgent
-            
+
             fallback_config = AgentConfig(
                 name="fallback_agent",
                 enabled=True,
@@ -805,20 +846,25 @@ class EnhancedAgentManager:
                 retry_attempts=1,
                 custom_config={
                     "agent_type": "fallback",
-                    "capabilities": ["general_query", "system_status", "help", "fallback_response"]
-                }
+                    "capabilities": [
+                        "general_query",
+                        "system_status",
+                        "help",
+                        "fallback_response",
+                    ],
+                },
             )
-            
+
             self.register_agent("fallback_agent", MockAgent, fallback_config)
             self.logger.info("âœ… Registered fallback agent (MockAgent)")
-            
+
         except ImportError as e:
             self.logger.error(f"Failed to import MockAgent: {e}")
             self._register_minimal_fallback_agent()
         except Exception as e:
             self.logger.error(f"Failed to register fallback agent: {e}")
             self._register_minimal_fallback_agent()
-    
+
     def _register_minimal_fallback_agent(self) -> None:
         """Register a minimal fallback agent when even the mock agent fails."""
         try:
@@ -828,7 +874,7 @@ class EnhancedAgentManager:
                     super().__init__(config)
                     self.name = "minimal_fallback"
                     self.enabled = True
-                
+
                 def execute(self, **kwargs) -> AgentResult:
                     return AgentResult(
                         success=True,
@@ -836,20 +882,20 @@ class EnhancedAgentManager:
                             "message": "System is running with minimal fallback agent",
                             "status": "operational",
                             "agent_type": "minimal_fallback",
-                            "note": "Real agents are not available. Check configuration and agent registration."
+                            "note": "Real agents are not available. Check configuration and agent registration.",
                         },
-                        message="Minimal fallback agent processed request"
+                        message="Minimal fallback agent processed request",
                     )
-                
+
                 def get_status(self) -> AgentStatus:
                     return AgentStatus(
                         agent_name=self.name,
                         is_enabled=self.enabled,
                         is_running=False,
                         health_score=0.5,
-                        last_heartbeat=datetime.now().isoformat()
+                        last_heartbeat=datetime.now().isoformat(),
                     )
-            
+
             fallback_config = AgentConfig(
                 name="minimal_fallback_agent",
                 enabled=True,
@@ -859,16 +905,20 @@ class EnhancedAgentManager:
                 retry_attempts=1,
                 custom_config={
                     "agent_type": "minimal_fallback",
-                    "capabilities": ["basic_response"]
-                }
+                    "capabilities": ["basic_response"],
+                },
             )
-            
-            self.register_agent("minimal_fallback_agent", MinimalFallbackAgent, fallback_config)
+
+            self.register_agent(
+                "minimal_fallback_agent", MinimalFallbackAgent, fallback_config
+            )
             self.logger.info("âœ… Registered minimal fallback agent")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to register minimal fallback agent: {e}")
-            self.logger.error("CRITICAL: No agents available. System may not function properly.")
+            self.logger.error(
+                "CRITICAL: No agents available. System may not function properly."
+            )
 
     def register_agent(
         self,
@@ -908,9 +958,11 @@ class EnhancedAgentManager:
             agent_class=agent_class,
             config=config,
             instance=instance,
-            metadata=agent_class.get_metadata()
-            if hasattr(agent_class, "get_metadata")
-            else None,
+            metadata=(
+                agent_class.get_metadata()
+                if hasattr(agent_class, "get_metadata")
+                else None
+            ),
         )
         self.agent_registry[name] = entry
         self.logger.info(f"Registered agent: {name}")
@@ -1004,21 +1056,21 @@ class EnhancedAgentManager:
                 # Process retry queue
                 while not self.retry_queue.empty():
                     task = self.retry_queue.get_nowait()
-                    
+
                     # Check if it's time to retry
                     if task.next_retry and datetime.now() >= task.next_retry:
                         # Schedule retry
                         asyncio.create_task(self._execute_with_retry(task))
-                
+
                 time.sleep(1)  # Check every second
-                
+
             except Exception as e:
                 self.logger.error(f"Error in retry monitor loop: {e}")
                 time.sleep(5)
 
     def get_error_statistics(self) -> Dict[str, Any]:
         """Get comprehensive error statistics.
-        
+
         Returns:
             Dictionary with error statistics
         """
@@ -1030,45 +1082,48 @@ class EnhancedAgentManager:
             "task_statistics": {
                 "pending": len(self.pending_tasks),
                 "completed": len(self.completed_tasks),
-                "failed": len(self.failed_tasks)
-            }
+                "failed": len(self.failed_tasks),
+            },
         }
-        
+
         # Analyze error types
         for error in self.error_log:
             error_type = error.get("error_type", "Unknown")
-            stats["error_types"][error_type] = stats["error_types"].get(error_type, 0) + 1
-        
+            stats["error_types"][error_type] = (
+                stats["error_types"].get(error_type, 0) + 1
+            )
+
         return stats
 
     def clear_error_log(self, older_than_days: int = 7) -> int:
         """Clear old error logs.
-        
+
         Args:
             older_than_days: Clear errors older than this many days
-            
+
         Returns:
             Number of errors cleared
         """
         cutoff_time = datetime.now() - timedelta(days=older_than_days)
         original_count = len(self.error_log)
-        
+
         self.error_log = [
-            error for error in self.error_log
+            error
+            for error in self.error_log
             if datetime.fromisoformat(error["timestamp"]) > cutoff_time
         ]
-        
+
         cleared_count = original_count - len(self.error_log)
         self.logger.info(f"Cleared {cleared_count} old error logs")
-        
+
         return cleared_count
 
     def get_agent_retry_config(self, agent_name: str) -> Optional[RetryConfig]:
         """Get retry configuration for an agent.
-        
+
         Args:
             agent_name: Name of the agent
-            
+
         Returns:
             RetryConfig or None if agent not found
         """
@@ -1076,13 +1131,15 @@ class EnhancedAgentManager:
             return self.agent_registry[agent_name].retry_config
         return None
 
-    def update_agent_retry_config(self, agent_name: str, retry_config: RetryConfig) -> bool:
+    def update_agent_retry_config(
+        self, agent_name: str, retry_config: RetryConfig
+    ) -> bool:
         """Update retry configuration for an agent.
-        
+
         Args:
             agent_name: Name of the agent
             retry_config: New retry configuration
-            
+
         Returns:
             True if updated successfully
         """
@@ -1231,9 +1288,9 @@ class EnhancedAgentManager:
             "result": {
                 "agent_metrics": self.agent_metrics,
                 "total_executions": len(self.execution_history),
-                "recent_executions": self.execution_history[-10:]
-                if self.execution_history
-                else [],
+                "recent_executions": (
+                    self.execution_history[-10:] if self.execution_history else []
+                ),
             },
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
@@ -1272,8 +1329,8 @@ class EnhancedAgentManager:
 
     def start(self) -> None:
         self.logger.info("AgentManager starting...")
-        self.status = 'running'
-        self._trigger_callbacks('agent_started', manager=self)
+        self.status = "running"
+        self._trigger_callbacks("agent_started", manager=self)
         try:
             if self.config.auto_start:
                 # Enable all agents that should be auto-started
@@ -1282,9 +1339,9 @@ class EnhancedAgentManager:
                         self.enable_agent(name)
             self.logger.info("AgentManager started.")
         except Exception as e:
-            self.status = 'failed'
+            self.status = "failed"
             self.logger.error(f"AgentManager failed to start: {e}")
-            self._trigger_callbacks('agent_failed', manager=self, exception=e)
+            self._trigger_callbacks("agent_failed", manager=self, exception=e)
             raise
 
     def stop(self) -> None:
@@ -1294,11 +1351,11 @@ class EnhancedAgentManager:
             for name in self.agent_registry.keys():
                 self.disable_agent(name)
             self.logger.info("AgentManager stopped.")
-            self._trigger_callbacks('agent_completed', manager=self)
+            self._trigger_callbacks("agent_completed", manager=self)
         except Exception as e:
-            self.status = 'failed'
+            self.status = "failed"
             self.logger.error(f"AgentManager failed to stop: {e}")
-            self._trigger_callbacks('agent_failed', manager=self, exception=e)
+            self._trigger_callbacks("agent_failed", manager=self, exception=e)
             raise
 
     def log_agent_performance(
@@ -1396,6 +1453,7 @@ async def execute_agent(name: str, **kwargs) -> AgentResult:
     """
     manager = get_agent_manager()
     return await manager.execute_agent_with_retry(name, **kwargs)
+
 
 # Backward compatibility aliases
 AgentManager = EnhancedAgentManager

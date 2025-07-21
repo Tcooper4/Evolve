@@ -214,7 +214,7 @@ class ConfigLoader:
         env_vars = {}
         for key, value in os.environ.items():
             if prefix and key.startswith(prefix):
-                env_vars[key[len(prefix) :]] = value
+                env_vars[key[len(prefix):]] = value
             elif not prefix:
                 env_vars[key] = value
         return env_vars

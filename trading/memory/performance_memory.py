@@ -503,11 +503,11 @@ class PerformanceMemory:
                             "percentile": self._calculate_percentile(
                                 current_value, historical_values
                             ),
-                            "severity": "high"
-                            if z_score > 3.0
-                            else "medium"
-                            if z_score > 2.5
-                            else "low",
+                            "severity": (
+                                "high"
+                                if z_score > 3.0
+                                else "medium" if z_score > 2.5 else "low"
+                            ),
                         }
 
             return {

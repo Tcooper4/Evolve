@@ -11,9 +11,6 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-# Add the trading directory to the path
-sys.path.append(str(Path(__file__).parent.parent))
-
 from trading.memory.agent_memory import AgentMemory
 from trading.services.action_executor import ActionExecutor
 from trading.services.cache_manager import CacheManager
@@ -31,6 +28,10 @@ from trading.services.exceptions import (
 from trading.services.query_parser import QueryParser
 from trading.services.rate_limiter import RateLimiter
 from trading.services.service_client import ServiceClient
+
+# Add the trading directory to the path
+sys.path.append(str(Path(__file__).parent.parent))
+
 
 logger = logging.getLogger(__name__)
 
@@ -97,9 +98,11 @@ class QuantGPT:
 
         # Initialize cache manager
         self.cache_manager = CacheManager(
-            redis_client=self.client.redis_client
-            if hasattr(self.client, "redis_client")
-            else None,
+            redis_client=(
+                self.client.redis_client
+                if hasattr(self.client, "redis_client")
+                else None
+            ),
             cache_enabled=config.cache_enabled,
             ttl=config.cache_ttl,
         )

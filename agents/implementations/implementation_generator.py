@@ -381,9 +381,12 @@ class {model_name}:
 
         # Add paper reference comment
         code = (
-            f'"""\nImplementation based on: {paper.title}\nAuthors: {", ".join(paper.authors)}\nArXiv ID: {paper.arxiv_id}\n"""\n\n'
-            + code
-        )
+            f'"""\nImplementation based on: {
+                paper.title}\nAuthors: {
+                ", ".join(
+                    paper.authors)}\nArXiv ID: {
+                    paper.arxiv_id}\n"""\n\n' +
+            code)
 
         return code
 

@@ -10,7 +10,6 @@ This module tests:
 - Edge cases
 """
 
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -243,15 +242,15 @@ class TestMACDStrategy:
             for cross_point in golden_cross_points:
                 if cross_point + 15 < len(golden_cross_data):
                     # Check if trend continues after cross
-                    post_cross_macd = macd_line.iloc[cross_point : cross_point + 15]
-                    post_cross_signal = signal_line.iloc[cross_point : cross_point + 15]
+                    post_cross_macd = macd_line.iloc[cross_point: cross_point + 15]
+                    post_cross_signal = signal_line.iloc[cross_point: cross_point + 15]
 
                     # MACD should stay above signal line after golden cross
                     trend_confirmed = all(post_cross_macd >= post_cross_signal)
 
                     # Check histogram confirmation
                     post_cross_histogram = histogram.iloc[
-                        cross_point : cross_point + 15
+                        cross_point: cross_point + 15
                     ]
                     histogram_positive = all(post_cross_histogram > 0)
 
@@ -262,14 +261,11 @@ class TestMACDStrategy:
                     trend_strength = (
                         "strong"
                         if macd_slope > 0.1
-                        else "medium"
-                        if macd_slope > 0.05
-                        else "weak"
+                        else "medium" if macd_slope > 0.05 else "weak"
                     )
 
                     print(
-                        f"    Cross at index {cross_point}: trend_confirmed={trend_confirmed}, histogram_positive={histogram_positive}, strength={trend_strength}"
-                    )
+                        f"    Cross at index {cross_point}: trend_confirmed={trend_confirmed}, histogram_positive={histogram_positive}, strength={trend_strength}")
 
                     if trend_confirmed and histogram_positive:
                         trend_confirmation_count += 1
@@ -348,7 +344,7 @@ class TestMACDStrategy:
 
         for cross_point in golden_cross_points:
             # Look for buy signals within 5 days of golden cross
-            nearby_signals = signals.iloc[max(0, cross_point - 5) : cross_point + 5]
+            nearby_signals = signals.iloc[max(0, cross_point - 5): cross_point + 5]
             buy_signal_found = any(nearby_signals["signal"] == 1)
 
             if buy_signal_found:
@@ -384,13 +380,13 @@ class TestMACDStrategy:
         for cross_point in golden_cross_points:
             if cross_point + 10 < len(signals):
                 # Calculate signal strength based on MACD line slope
-                post_cross_macd = macd_line.iloc[cross_point : cross_point + 10]
+                post_cross_macd = macd_line.iloc[cross_point: cross_point + 10]
                 macd_slope = np.polyfit(
                     range(len(post_cross_macd)), post_cross_macd, 1
                 )[0]
 
                 # Calculate histogram strength
-                post_cross_histogram = histogram.iloc[cross_point : cross_point + 10]
+                post_cross_histogram = histogram.iloc[cross_point: cross_point + 10]
                 histogram_strength = np.mean(post_cross_histogram)
 
                 # Determine signal strength
@@ -418,10 +414,10 @@ class TestMACDStrategy:
             for cross_point in golden_cross_points:
                 if cross_point + timeframe < len(macd_line):
                     post_cross_macd = macd_line.iloc[
-                        cross_point : cross_point + timeframe
+                        cross_point: cross_point + timeframe
                     ]
                     post_cross_signal = signal_line.iloc[
-                        cross_point : cross_point + timeframe
+                        cross_point: cross_point + timeframe
                     ]
 
                     # Check if MACD stays above signal line
@@ -471,8 +467,8 @@ class TestMACDStrategy:
         false_crosses = 0
         for cross_point in all_crosses:
             if cross_point + 10 < len(choppy_macd):
-                post_cross_macd = choppy_macd.iloc[cross_point : cross_point + 10]
-                post_cross_signal = choppy_signal.iloc[cross_point : cross_point + 10]
+                post_cross_macd = choppy_macd.iloc[cross_point: cross_point + 10]
+                post_cross_signal = choppy_signal.iloc[cross_point: cross_point + 10]
 
                 # Check if trend is sustained
                 trend_sustained = all(post_cross_macd >= post_cross_signal)
@@ -501,3 +497,8 @@ class TestMACDStrategy:
         )
 
         print("✅ Golden cross + trend confirmation test completed")
+
+        print(
+            "MACD strategy test completed. All strategy functions have "
+            "been validated."
+        )

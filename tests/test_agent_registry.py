@@ -13,12 +13,13 @@ from unittest.mock import patch
 
 import pytest
 
+from trading.agents.agent_registry import AgentRegistry
+from trading.agents.base_agent_interface import AgentConfig, BaseAgent
+
 # Add project root to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import agent registry components
-from trading.agents.agent_registry import AgentRegistry
-from trading.agents.base_agent_interface import AgentConfig, BaseAgent
 
 # ForecastAgent not implemented yet - using placeholder
 # from trading.agents.forecast_agent import ForecastAgent

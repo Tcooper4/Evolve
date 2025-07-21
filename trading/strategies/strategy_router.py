@@ -5,7 +5,6 @@ This module provides intelligent strategy routing and selection based on
 user prompts and market conditions with signal management capabilities.
 """
 
-import hashlib
 import logging
 import uuid
 from dataclasses import dataclass
@@ -20,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class StrategyType(Enum):
     """Types of trading strategies."""
+
     MOMENTUM = "momentum"
     MEAN_REVERSION = "mean_reversion"
     BREAKOUT = "breakout"
@@ -34,6 +34,7 @@ class StrategyType(Enum):
 
 class SignalPriority(Enum):
     """Signal priority levels."""
+
     CRITICAL = 1
     HIGH = 2
     MEDIUM = 3
@@ -44,6 +45,7 @@ class SignalPriority(Enum):
 @dataclass
 class StrategyMatch:
     """Strategy match with relevance score."""
+
     strategy_name: str
     strategy_type: StrategyType
     relevance_score: float
@@ -55,6 +57,7 @@ class StrategyMatch:
 @dataclass
 class TradeSignal:
     """Trade signal with priority and deduplication info."""
+
     symbol: str
     signal_type: str  # 'buy', 'sell', 'hold'
     confidence: float
@@ -81,7 +84,9 @@ class StrategyRouter:
         self.priority_rules = self._initialize_priority_rules()
         self.signal_cache: Dict[str, TradeSignal] = {}
         self.signal_history: List[TradeSignal] = []
-        self.deduplication_window = self.config.get("deduplication_window", 300)  # 5 minutes
+        self.deduplication_window = self.config.get(
+            "deduplication_window", 300
+        )  # 5 minutes
         self.max_cache_size = self.config.get("max_cache_size", 1000)
 
     def _initialize_strategies(self) -> Dict[str, Dict[str, Any]]:
@@ -89,46 +94,64 @@ class StrategyRouter:
         return {
             "RSI_Strategy": {
                 "type": StrategyType.MEAN_REVERSION,
-                "keywords": ["rsi", "relative strength index", "oversold", "overbought", "mean reversion"],
+                "keywords": [
+                    "rsi",
+                    "relative strength index",
+                    "oversold",
+                    "overbought",
+                    "mean reversion",
+                ],
                 "priority": 1,
                 "confidence": 0.85,
-                "description": "RSI-based mean reversion strategy"
+                "description": "RSI-based mean reversion strategy",
             },
             "MACD_Strategy": {
                 "type": StrategyType.MOMENTUM,
-                "keywords": ["macd", "moving average convergence divergence", "momentum", "crossover"],
+                "keywords": [
+                    "macd",
+                    "moving average convergence divergence",
+                    "momentum",
+                    "crossover",
+                ],
                 "priority": 1,
                 "confidence": 0.80,
-                "description": "MACD-based momentum strategy"
+                "description": "MACD-based momentum strategy",
             },
             "Bollinger_Bands": {
                 "type": StrategyType.MEAN_REVERSION,
                 "keywords": ["bollinger", "bands", "volatility", "squeeze", "breakout"],
                 "priority": 2,
                 "confidence": 0.75,
-                "description": "Bollinger Bands mean reversion strategy"
+                "description": "Bollinger Bands mean reversion strategy",
             },
             "Moving_Average_Crossover": {
                 "type": StrategyType.TREND_FOLLOWING,
-                "keywords": ["moving average", "ma", "sma", "ema", "crossover", "trend"],
+                "keywords": [
+                    "moving average",
+                    "ma",
+                    "sma",
+                    "ema",
+                    "crossover",
+                    "trend",
+                ],
                 "priority": 2,
                 "confidence": 0.70,
-                "description": "Moving average crossover strategy"
+                "description": "Moving average crossover strategy",
             },
             "Breakout_Strategy": {
                 "type": StrategyType.BREAKOUT,
                 "keywords": ["breakout", "resistance", "support", "break", "level"],
                 "priority": 3,
                 "confidence": 0.65,
-                "description": "Breakout detection strategy"
+                "description": "Breakout detection strategy",
             },
             "Momentum_Strategy": {
                 "type": StrategyType.MOMENTUM,
                 "keywords": ["momentum", "velocity", "acceleration", "speed"],
                 "priority": 3,
                 "confidence": 0.60,
-                "description": "General momentum strategy"
-            }
+                "description": "General momentum strategy",
+            },
         }
 
     def _initialize_priority_rules(self) -> Dict[str, int]:
@@ -138,7 +161,7 @@ class StrategyRouter:
             "keyword_match": 5,
             "type_match": 3,
             "partial_match": 2,
-            "fallback": 1
+            "fallback": 1,
         }
 
     def find_strategy_matches(self, prompt: str) -> List[StrategyMatch]:
@@ -181,7 +204,7 @@ class StrategyRouter:
                     relevance_score=relevance_score,
                     priority=strategy_info["priority"],
                     keywords_matched=keywords_matched,
-                    confidence=strategy_info["confidence"]
+                    confidence=strategy_info["confidence"],
                 )
                 matches.append(match)
 
@@ -208,10 +231,14 @@ class StrategyRouter:
         # Apply priority rules to select best match
         best_match = self._apply_priority_rules(matches, prompt)
 
-        logger.info(f"Selected strategy '{best_match.strategy_name}' for prompt: {prompt}")
+        logger.info(
+            f"Selected strategy '{best_match.strategy_name}' for prompt: {prompt}"
+        )
         return best_match
 
-    def _apply_priority_rules(self, matches: List[StrategyMatch], prompt: str) -> StrategyMatch:
+    def _apply_priority_rules(
+        self, matches: List[StrategyMatch], prompt: str
+    ) -> StrategyMatch:
         """Apply priority rules to select the best strategy match."""
         if len(matches) == 1:
             return matches[0]
@@ -222,7 +249,9 @@ class StrategyRouter:
         # Return the highest priority match with highest relevance
         return sorted_matches[0]
 
-    def get_strategy_suggestions(self, prompt: str, max_suggestions: int = 3) -> List[str]:
+    def get_strategy_suggestions(
+        self, prompt: str, max_suggestions: int = 3
+    ) -> List[str]:
         """
         Get strategy suggestions for a given prompt.
 
@@ -258,10 +287,12 @@ class StrategyRouter:
             "valid": len(matches) > 0,
             "matches_count": len(matches),
             "suggestions": self.get_strategy_suggestions(prompt),
-            "best_match": matches[0] if matches else None
+            "best_match": matches[0] if matches else None,
         }
 
-    def align_data_indices(self, dataframes: List[pd.DataFrame], method: str = "inner") -> List[pd.DataFrame]:
+    def align_data_indices(
+        self, dataframes: List[pd.DataFrame], method: str = "inner"
+    ) -> List[pd.DataFrame]:
         """
         Align multiple dataframes to have the same index.
 
@@ -306,7 +337,7 @@ class StrategyRouter:
         priority: SignalPriority = SignalPriority.MEDIUM,
         strength: float = 0.5,
         metadata: Optional[Dict[str, Any]] = None,
-        expiration_minutes: Optional[int] = None
+        expiration_minutes: Optional[int] = None,
     ) -> TradeSignal:
         """
         Create a new trade signal.
@@ -326,7 +357,9 @@ class StrategyRouter:
         """
         # Check for duplicate signals
         if self._is_duplicate_signal(symbol, signal_type, strategy_name):
-            logger.warning(f"Duplicate signal detected: {symbol} {signal_type} {strategy_name}")
+            logger.warning(
+                f"Duplicate signal detected: {symbol} {signal_type} {strategy_name}"
+            )
             return None
 
         # Generate unique signal ID
@@ -348,24 +381,30 @@ class StrategyRouter:
             signal_id=signal_id,
             metadata=metadata or {},
             strength=strength,
-            expiration=expiration
+            expiration=expiration,
         )
 
         # Cache signal
         self._cache_signal(signal)
 
-        logger.info(f"Created signal: {signal_id} - {symbol} {signal_type} (confidence: {confidence:.2f})")
+        logger.info(
+            f"Created signal: {signal_id} - {symbol} {signal_type} (confidence: {confidence:.2f})"
+        )
         return signal
 
-    def _is_duplicate_signal(self, symbol: str, signal_type: str, strategy_name: str) -> bool:
+    def _is_duplicate_signal(
+        self, symbol: str, signal_type: str, strategy_name: str
+    ) -> bool:
         """Check if a signal is a duplicate within the deduplication window."""
         cutoff_time = datetime.now() - timedelta(seconds=self.deduplication_window)
 
         for signal in self.signal_history:
-            if (signal.symbol == symbol and
-                signal.signal_type == signal_type and
-                signal.strategy_name == strategy_name and
-                signal.timestamp > cutoff_time):
+            if (
+                signal.symbol == symbol
+                and signal.signal_type == signal_type
+                and signal.strategy_name == strategy_name
+                and signal.timestamp > cutoff_time
+            ):
                 return True
 
         return False
@@ -381,8 +420,10 @@ class StrategyRouter:
         # Maintain cache size
         if len(self.signal_cache) > self.max_cache_size:
             # Remove oldest signals
-            oldest_signals = sorted(self.signal_cache.values(), key=lambda x: x.timestamp)
-            for old_signal in oldest_signals[:len(oldest_signals) // 2]:
+            oldest_signals = sorted(
+                self.signal_cache.values(), key=lambda x: x.timestamp
+            )
+            for old_signal in oldest_signals[: len(oldest_signals) // 2]:
                 del self.signal_cache[old_signal.signal_id]
 
     def _cleanup_old_signals(self):
@@ -406,7 +447,7 @@ class StrategyRouter:
         signal_type: Optional[str] = None,
         strategy_name: Optional[str] = None,
         min_confidence: float = 0.0,
-        min_priority: SignalPriority = SignalPriority.INFO
+        min_priority: SignalPriority = SignalPriority.INFO,
     ) -> List[TradeSignal]:
         """
         Get active signals with optional filtering.
@@ -449,7 +490,11 @@ class StrategyRouter:
     def get_signal_summary(self) -> Dict[str, Any]:
         """Get summary of all signals."""
         current_time = datetime.now()
-        active_signals = [s for s in self.signal_cache.values() if not s.expiration or s.expiration > current_time]
+        active_signals = [
+            s
+            for s in self.signal_cache.values()
+            if not s.expiration or s.expiration > current_time
+        ]
 
         summary = {
             "total_signals": len(self.signal_history),
@@ -459,24 +504,32 @@ class StrategyRouter:
             "signals_by_strategy": {},
             "signals_by_priority": {},
             "average_confidence": 0.0,
-            "cache_size": len(self.signal_cache)
+            "cache_size": len(self.signal_cache),
         }
 
         if active_signals:
             # Calculate statistics
-            summary["average_confidence"] = sum(s.confidence for s in active_signals) / len(active_signals)
+            summary["average_confidence"] = sum(
+                s.confidence for s in active_signals
+            ) / len(active_signals)
 
             for signal in active_signals:
                 # Count by signal type
                 signal_type = signal.signal_type
-                summary["signals_by_type"][signal_type] = summary["signals_by_type"].get(signal_type, 0) + 1
+                summary["signals_by_type"][signal_type] = (
+                    summary["signals_by_type"].get(signal_type, 0) + 1
+                )
 
                 # Count by strategy
                 strategy = signal.strategy_name
-                summary["signals_by_strategy"][strategy] = summary["signals_by_strategy"].get(strategy, 0) + 1
+                summary["signals_by_strategy"][strategy] = (
+                    summary["signals_by_strategy"].get(strategy, 0) + 1
+                )
 
                 # Count by priority
                 priority = signal.priority.name
-                summary["signals_by_priority"][priority] = summary["signals_by_priority"].get(priority, 0) + 1
+                summary["signals_by_priority"][priority] = (
+                    summary["signals_by_priority"].get(priority, 0) + 1
+                )
 
-        return summary 
+        return summary

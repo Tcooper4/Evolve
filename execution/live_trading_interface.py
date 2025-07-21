@@ -1,4 +1,4 @@
-﻿"""Live Trading Interface for Evolve Trading Platform.
+"""Live Trading Interface for Evolve Trading Platform.
 
 This module provides live trading capabilities with simulated execution
 and optional real broker integration (Alpaca).
@@ -15,10 +15,15 @@ import numpy as np
 
 # Alpaca imports
 try:
-    from alpaca.trading.client import TradingClient
     from alpaca.data.historical import StockHistoricalDataClient
-    from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest, StopOrderRequest, StopLimitOrderRequest
-    from alpaca.trading.enums import OrderSide, OrderType, TimeInForce
+    from alpaca.trading.client import TradingClient
+    from alpaca.trading.enums import OrderSide, TimeInForce
+    from alpaca.trading.requests import (
+        LimitOrderRequest,
+        MarketOrderRequest,
+        StopLimitOrderRequest,
+        StopOrderRequest,
+    )
 
     ALPACA_AVAILABLE = True
 except ImportError as e:
@@ -522,13 +527,10 @@ class AlpacaTradingInterface:
 
         # Initialize API
         self.trading_client = TradingClient(
-            api_key=self.api_key,
-            secret_key=self.secret_key,
-            paper=paper_trading
+            api_key=self.api_key, secret_key=self.secret_key, paper=paper_trading
         )
         self.data_client = StockHistoricalDataClient(
-            api_key=self.api_key,
-            secret_key=self.secret_key
+            api_key=self.api_key, secret_key=self.secret_key
         )
 
         logger.info(
@@ -540,10 +542,14 @@ class AlpacaTradingInterface:
         try:
             # Convert order side
             side = OrderSide.BUY if order_request.side == "buy" else OrderSide.SELL
-            
+
             # Convert time in force
-            time_in_force = TimeInForce.DAY if order_request.time_in_force == "day" else TimeInForce.GTC
-            
+            time_in_force = (
+                TimeInForce.DAY
+                if order_request.time_in_force == "day"
+                else TimeInForce.GTC
+            )
+
             # Create appropriate order request based on order type
             if order_request.order_type == "market":
                 alpaca_order_request = MarketOrderRequest(
@@ -551,7 +557,7 @@ class AlpacaTradingInterface:
                     qty=order_request.quantity,
                     side=side,
                     time_in_force=time_in_force,
-                    client_order_id=order_request.client_order_id
+                    client_order_id=order_request.client_order_id,
                 )
             elif order_request.order_type == "limit":
                 alpaca_order_request = LimitOrderRequest(
@@ -560,7 +566,7 @@ class AlpacaTradingInterface:
                     side=side,
                     time_in_force=time_in_force,
                     limit_price=order_request.limit_price,
-                    client_order_id=order_request.client_order_id
+                    client_order_id=order_request.client_order_id,
                 )
             elif order_request.order_type == "stop":
                 alpaca_order_request = StopOrderRequest(
@@ -569,7 +575,7 @@ class AlpacaTradingInterface:
                     side=side,
                     time_in_force=time_in_force,
                     stop_price=order_request.stop_price,
-                    client_order_id=order_request.client_order_id
+                    client_order_id=order_request.client_order_id,
                 )
             elif order_request.order_type == "stop_limit":
                 alpaca_order_request = StopLimitOrderRequest(
@@ -579,7 +585,7 @@ class AlpacaTradingInterface:
                     time_in_force=time_in_force,
                     limit_price=order_request.limit_price,
                     stop_price=order_request.stop_price,
-                    client_order_id=order_request.client_order_id
+                    client_order_id=order_request.client_order_id,
                 )
             else:
                 raise ValueError(f"Unsupported order type: {order_request.order_type}")
@@ -596,9 +602,19 @@ class AlpacaTradingInterface:
                 filled_quantity=float(alpaca_order.filled_qty),
                 order_type=alpaca_order.order_type.value,
                 status=alpaca_order.status.value,
-                limit_price=float(alpaca_order.limit_price) if alpaca_order.limit_price else None,
-                stop_price=float(alpaca_order.stop_price) if alpaca_order.stop_price else None,
-                filled_price=float(alpaca_order.filled_avg_price) if alpaca_order.filled_avg_price else None,
+                limit_price=(
+                    float(alpaca_order.limit_price)
+                    if alpaca_order.limit_price
+                    else None
+                ),
+                stop_price=(
+                    float(alpaca_order.stop_price) if alpaca_order.stop_price else None
+                ),
+                filled_price=(
+                    float(alpaca_order.filled_avg_price)
+                    if alpaca_order.filled_avg_price
+                    else None
+                ),
                 created_at=alpaca_order.created_at,
                 filled_at=alpaca_order.filled_at,
                 client_order_id=alpaca_order.client_order_id,
@@ -633,9 +649,19 @@ class AlpacaTradingInterface:
                 filled_quantity=float(alpaca_order.filled_qty),
                 order_type=alpaca_order.order_type.value,
                 status=alpaca_order.status.value,
-                limit_price=float(alpaca_order.limit_price) if alpaca_order.limit_price else None,
-                stop_price=float(alpaca_order.stop_price) if alpaca_order.stop_price else None,
-                filled_price=float(alpaca_order.filled_avg_price) if alpaca_order.filled_avg_price else None,
+                limit_price=(
+                    float(alpaca_order.limit_price)
+                    if alpaca_order.limit_price
+                    else None
+                ),
+                stop_price=(
+                    float(alpaca_order.stop_price) if alpaca_order.stop_price else None
+                ),
+                filled_price=(
+                    float(alpaca_order.filled_avg_price)
+                    if alpaca_order.filled_avg_price
+                    else None
+                ),
                 created_at=alpaca_order.created_at,
                 filled_at=alpaca_order.filled_at,
                 client_order_id=alpaca_order.client_order_id,
@@ -851,10 +877,12 @@ class LiveTradingInterface:
             "total_trades": total_trades,
             "filled_trades": len(filled_orders),
             "total_pnl": total_pnl,
-            "win_rate": len([o for o in filled_orders if o.filled_price > 0])
-            / len(filled_orders)
-            if filled_orders
-            else 0.0,
+            "win_rate": (
+                len([o for o in filled_orders if o.filled_price > 0])
+                / len(filled_orders)
+                if filled_orders
+                else 0.0
+            ),
         }
 
     def reset_daily_tracking(self):

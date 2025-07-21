@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Model management script.
 Provides commands for managing machine learning models, including training, evaluation, deployment, and versioning.
@@ -53,6 +53,7 @@ try:
     import torch.nn as nn
     import torch.optim as optim
     from torch.utils.data import DataLoader, TensorDataset
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ PyTorch not available. Disabling PyTorch model training.")
@@ -69,6 +70,7 @@ try:
     from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
     from sklearn.model_selection import GridSearchCV, train_test_split
     from sklearn.preprocessing import StandardScaler
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ scikit-learn not available. Disabling sklearn-based model training.")
@@ -192,8 +194,10 @@ class ModelManager:
             base_model = self._initialize_model(model_type)
 
             if not SKLEARN_AVAILABLE:
-                raise ImportError("scikit-learn is not available. Cannot perform hyperparameter optimization.")
-            
+                raise ImportError(
+                    "scikit-learn is not available. Cannot perform hyperparameter optimization."
+                )
+
             # Perform grid search
             grid_search = GridSearchCV(
                 base_model, param_grid, cv=5, scoring="f1", n_jobs=-1

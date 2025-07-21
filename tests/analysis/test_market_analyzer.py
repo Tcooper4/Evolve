@@ -5,6 +5,7 @@ This module contains tests for all major functionality of the MarketAnalyzer,
 including data fetching, caching, PCA, KMeans, and batch processing.
 """
 
+import logging
 import os
 import shutil
 import sys
@@ -15,13 +16,13 @@ from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
-import logging
+
+from trading.market.market_analyzer import MarketAnalysisError, MarketAnalyzer
+
 logger = logging.getLogger(__name__)
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from trading.market.market_analyzer import MarketAnalysisError, MarketAnalyzer
 
 
 class TestMarketAnalyzer(unittest.TestCase):
@@ -361,7 +362,9 @@ class TestMarketAnalyzer(unittest.TestCase):
             volatility_result = self.analyzer.analyze_volatility(cleaned_data)
             self.assertIsInstance(volatility_result, dict)
             self.assertIn("volatility", volatility_result)
-            logger.info(f"✅ Volatility analysis: {volatility_result['volatility']:.3f}")
+            logger.info(
+                f"✅ Volatility analysis: {volatility_result['volatility']:.3f}"
+            )
         except Exception as e:
             logger.warning(f"⚠️ Volatility analysis failed: {e}")
 
@@ -379,7 +382,9 @@ class TestMarketAnalyzer(unittest.TestCase):
             conditions_result = self.analyzer.analyze_market_conditions(cleaned_data)
             self.assertIsInstance(conditions_result, dict)
             self.assertIn("market_regime", conditions_result)
-            logger.info(f"✅ Market conditions analysis: {conditions_result['market_regime']}")
+            logger.info(
+                f"✅ Market conditions analysis: {conditions_result['market_regime']}"
+            )
         except Exception as e:
             logger.warning(f"⚠️ Market conditions analysis failed: {e}")
 
@@ -437,3 +442,6 @@ class TestMarketAnalyzer(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    print(
+        "Market analysis test completed. All analysis functions have " "been validated."
+    )

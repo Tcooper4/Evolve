@@ -110,9 +110,7 @@ class SystemResilience:
         )
         logger.info(f"Registered fallback for component: {component}")
 
-    async def execute_with_fallback(
-        self, component: str, *args, **kwargs
-    ) -> Any:
+    async def execute_with_fallback(self, component: str, *args, **kwargs) -> Any:
         """Execute a function with fallback handling."""
         if component not in self.fallback_configs:
             raise ValueError(f"No fallback configuration for component: {component}")
@@ -178,7 +176,7 @@ class SystemResilience:
             status="unknown",
             message="Health check not run",
             timestamp=datetime.now(),
-            metrics={}
+            metrics={},
         )
         logger.info(f"Registered health check for component: {component}")
 
@@ -228,32 +226,31 @@ class SystemResilience:
         try:
             # CPU usage
             cpu_percent = psutil.cpu_percent(interval=1)
-            self.performance_metrics["cpu_usage"].append({
-                "timestamp": datetime.now(),
-                "value": cpu_percent
-            })
+            self.performance_metrics["cpu_usage"].append(
+                {"timestamp": datetime.now(), "value": cpu_percent}
+            )
 
             # Memory usage
             memory = psutil.virtual_memory()
-            self.performance_metrics["memory_usage"].append({
-                "timestamp": datetime.now(),
-                "value": memory.percent
-            })
+            self.performance_metrics["memory_usage"].append(
+                {"timestamp": datetime.now(), "value": memory.percent}
+            )
 
             # Disk usage
-            disk = psutil.disk_usage('/')
-            self.performance_metrics["disk_usage"].append({
-                "timestamp": datetime.now(),
-                "value": disk.percent
-            })
+            disk = psutil.disk_usage("/")
+            self.performance_metrics["disk_usage"].append(
+                {"timestamp": datetime.now(), "value": disk.percent}
+            )
 
             # Network I/O
             network = psutil.net_io_counters()
-            self.performance_metrics["network_io"].append({
-                "timestamp": datetime.now(),
-                "bytes_sent": network.bytes_sent,
-                "bytes_recv": network.bytes_recv
-            })
+            self.performance_metrics["network_io"].append(
+                {
+                    "timestamp": datetime.now(),
+                    "bytes_sent": network.bytes_sent,
+                    "bytes_recv": network.bytes_recv,
+                }
+            )
 
             # Keep only last 1000 entries
             for metric in self.performance_metrics.values():
@@ -297,7 +294,7 @@ class SystemResilience:
             memory_healthy = memory.percent < 85
 
             # Check disk usage
-            disk = psutil.disk_usage('/')
+            disk = psutil.disk_usage("/")
             disk_healthy = disk.percent < 90
 
             # Determine overall status
@@ -317,7 +314,7 @@ class SystemResilience:
                 "disk_percent": disk.percent,
                 "cpu_healthy": cpu_healthy,
                 "memory_healthy": memory_healthy,
-                "disk_healthy": disk_healthy
+                "disk_healthy": disk_healthy,
             }
 
             return HealthStatus(
@@ -325,7 +322,7 @@ class SystemResilience:
                 status=status,
                 message=message,
                 timestamp=datetime.now(),
-                metrics=metrics
+                metrics=metrics,
             )
 
         except Exception as e:
@@ -334,7 +331,7 @@ class SystemResilience:
                 status="error",
                 message=f"Health check failed: {e}",
                 timestamp=datetime.now(),
-                metrics={}
+                metrics={},
             )
 
     def _check_database_health(self) -> HealthStatus:
@@ -343,11 +340,11 @@ class SystemResilience:
             # This would typically check database connectivity and performance
             # For now, we'll simulate a healthy database
             import sqlite3
-            
+
             # Try to connect to a test database
-            conn = sqlite3.connect(':memory:')
+            conn = sqlite3.connect(":memory:")
             cursor = conn.cursor()
-            cursor.execute('SELECT 1')
+            cursor.execute("SELECT 1")
             result = cursor.fetchone()
             conn.close()
 
@@ -365,7 +362,7 @@ class SystemResilience:
                 status=status,
                 message=message,
                 timestamp=datetime.now(),
-                metrics=metrics
+                metrics=metrics,
             )
 
         except Exception as e:
@@ -374,7 +371,7 @@ class SystemResilience:
                 status="error",
                 message=f"Database health check failed: {e}",
                 timestamp=datetime.now(),
-                metrics={}
+                metrics={},
             )
 
     def _check_api_health(self) -> HealthStatus:
@@ -383,7 +380,7 @@ class SystemResilience:
             # Test API endpoints
             test_urls = [
                 "http://localhost:8000/health",
-                "http://localhost:8000/api/v1/status"
+                "http://localhost:8000/api/v1/status",
             ]
 
             healthy_endpoints = 0
@@ -395,7 +392,9 @@ class SystemResilience:
                     if response.status_code == 200:
                         healthy_endpoints += 1
                         total_response_time += response.elapsed.total_seconds() * 1000
-                except:
+                except Exception as e:
+                    # Log the error but continue checking other endpoints
+                    logger.debug(f"API endpoint {url} failed: {e}")
                     pass
 
             if healthy_endpoints > 0:
@@ -413,7 +412,7 @@ class SystemResilience:
             metrics = {
                 "healthy_endpoints": healthy_endpoints,
                 "total_endpoints": len(test_urls),
-                "avg_response_time_ms": total_response_time / max(healthy_endpoints, 1)
+                "avg_response_time_ms": total_response_time / max(healthy_endpoints, 1),
             }
 
             return HealthStatus(
@@ -421,7 +420,7 @@ class SystemResilience:
                 status=status,
                 message=message,
                 timestamp=datetime.now(),
-                metrics=metrics
+                metrics=metrics,
             )
 
         except Exception as e:
@@ -430,7 +429,7 @@ class SystemResilience:
                 status="error",
                 message=f"API health check failed: {e}",
                 timestamp=datetime.now(),
-                metrics={}
+                metrics={},
             )
 
     def _check_models_health(self) -> HealthStatus:
@@ -440,7 +439,7 @@ class SystemResilience:
             model_paths = [
                 "models/lstm_model.pt",
                 "models/xgboost_model.pkl",
-                "models/ensemble_model.pkl"
+                "models/ensemble_model.pkl",
             ]
 
             existing_models = 0
@@ -452,13 +451,15 @@ class SystemResilience:
                     total_size += Path(model_path).stat().st_size
 
             if existing_models > 0:
-                avg_size_mb = total_size / existing_models / (1024 * 1024)
+                total_size / existing_models / (1024 * 1024)
                 if existing_models >= len(model_paths) * 0.8:  # 80% of models available
                     status = "healthy"
                     message = f"Models available ({existing_models}/{len(model_paths)})"
                 else:
                     status = "warning"
-                    message = f"Some models missing ({existing_models}/{len(model_paths)})"
+                    message = (
+                        f"Some models missing ({existing_models}/{len(model_paths)})"
+                    )
             else:
                 status = "error"
                 message = "No models found"
@@ -466,7 +467,9 @@ class SystemResilience:
             metrics = {
                 "existing_models": existing_models,
                 "total_models": len(model_paths),
-                "avg_model_size_mb": total_size / max(existing_models, 1) / (1024 * 1024)
+                "avg_model_size_mb": total_size
+                / max(existing_models, 1)
+                / (1024 * 1024),
             }
 
             return HealthStatus(
@@ -474,7 +477,7 @@ class SystemResilience:
                 status=status,
                 message=message,
                 timestamp=datetime.now(),
-                metrics=metrics
+                metrics=metrics,
             )
 
         except Exception as e:
@@ -483,25 +486,24 @@ class SystemResilience:
                 status="error",
                 message=f"Models health check failed: {e}",
                 timestamp=datetime.now(),
-                metrics={}
+                metrics={},
             )
 
     def _check_agents_health(self) -> HealthStatus:
         """Check agents health."""
         try:
             # Check if agent processes are running
-            agent_processes = [
-                "python",
-                "agent_controller",
-                "task_orchestrator"
-            ]
+            agent_processes = ["python", "agent_controller", "task_orchestrator"]
 
             running_agents = 0
             total_processes = 0
 
-            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            for proc in psutil.process_iter(["pid", "name", "cmdline"]):
                 try:
-                    if any(agent in ' '.join(proc.info['cmdline'] or []) for agent in agent_processes):
+                    if any(
+                        agent in " ".join(proc.info["cmdline"] or [])
+                        for agent in agent_processes
+                    ):
                         total_processes += 1
                         if proc.is_running():
                             running_agents += 1
@@ -511,10 +513,14 @@ class SystemResilience:
             if running_agents > 0:
                 if running_agents >= total_processes * 0.8:  # 80% of agents running
                     status = "healthy"
-                    message = f"Agents running normally ({running_agents}/{total_processes})"
+                    message = (
+                        f"Agents running normally ({running_agents}/{total_processes})"
+                    )
                 else:
                     status = "warning"
-                    message = f"Some agents not running ({running_agents}/{total_processes})"
+                    message = (
+                        f"Some agents not running ({running_agents}/{total_processes})"
+                    )
             else:
                 status = "error"
                 message = "No agents running"
@@ -522,7 +528,7 @@ class SystemResilience:
             metrics = {
                 "running_agents": running_agents,
                 "total_agents": total_processes,
-                "agent_health_ratio": running_agents / max(total_processes, 1)
+                "agent_health_ratio": running_agents / max(total_processes, 1),
             }
 
             return HealthStatus(
@@ -530,7 +536,7 @@ class SystemResilience:
                 status=status,
                 message=message,
                 timestamp=datetime.now(),
-                metrics=metrics
+                metrics=metrics,
             )
 
         except Exception as e:
@@ -539,7 +545,7 @@ class SystemResilience:
                 status="error",
                 message=f"Agents health check failed: {e}",
                 timestamp=datetime.now(),
-                metrics={}
+                metrics={},
             )
 
     def _check_and_recover(self):
@@ -558,6 +564,7 @@ class SystemResilience:
         try:
             # Clear memory caches
             import gc
+
             gc.collect()
             logger.info("System recovery: Memory cache cleared")
         except Exception as e:
@@ -623,7 +630,7 @@ class SystemResilience:
                 component: {
                     "status": status.status,
                     "message": status.message,
-                    "metrics": status.metrics
+                    "metrics": status.metrics,
                 }
                 for component, status in self.health_status.items()
             },
@@ -631,8 +638,8 @@ class SystemResilience:
                 "total_components": total_components,
                 "healthy_components": healthy_components,
                 "warning_components": warning_components,
-                "error_components": error_components
-            }
+                "error_components": error_components,
+            },
         }
 
     def get_performance_report(self) -> Dict[str, Any]:
@@ -642,7 +649,9 @@ class SystemResilience:
 
         # Calculate averages
         recent_cpu = [m["value"] for m in self.performance_metrics["cpu_usage"][-10:]]
-        recent_memory = [m["value"] for m in self.performance_metrics["memory_usage"][-10:]]
+        recent_memory = [
+            m["value"] for m in self.performance_metrics["memory_usage"][-10:]
+        ]
         recent_disk = [m["value"] for m in self.performance_metrics["disk_usage"][-10:]]
 
         return {
@@ -651,20 +660,24 @@ class SystemResilience:
                 "cpu_usage": {
                     "current": recent_cpu[-1] if recent_cpu else 0,
                     "average": sum(recent_cpu) / len(recent_cpu) if recent_cpu else 0,
-                    "max": max(recent_cpu) if recent_cpu else 0
+                    "max": max(recent_cpu) if recent_cpu else 0,
                 },
                 "memory_usage": {
                     "current": recent_memory[-1] if recent_memory else 0,
-                    "average": sum(recent_memory) / len(recent_memory) if recent_memory else 0,
-                    "max": max(recent_memory) if recent_memory else 0
+                    "average": (
+                        sum(recent_memory) / len(recent_memory) if recent_memory else 0
+                    ),
+                    "max": max(recent_memory) if recent_memory else 0,
                 },
                 "disk_usage": {
                     "current": recent_disk[-1] if recent_disk else 0,
-                    "average": sum(recent_disk) / len(recent_disk) if recent_disk else 0,
-                    "max": max(recent_disk) if recent_disk else 0
-                }
+                    "average": (
+                        sum(recent_disk) / len(recent_disk) if recent_disk else 0
+                    ),
+                    "max": max(recent_disk) if recent_disk else 0,
+                },
             },
-            "monitoring_active": self.monitoring_active
+            "monitoring_active": self.monitoring_active,
         }
 
 
@@ -701,4 +714,4 @@ def get_health_status() -> Dict[str, Any]:
 def get_performance_report() -> Dict[str, Any]:
     """Get system performance report."""
     resilience = get_system_resilience()
-    return resilience.get_performance_report() 
+    return resilience.get_performance_report()

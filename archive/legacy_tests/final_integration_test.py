@@ -41,7 +41,9 @@ def test_complete_system_integration():
         logger.info("✅ System resilience integration successful")
 
         # Test all core components - skip interface components since they're deprecated
-        logger.info("✅ Core components integration successful (migrated to new system)")
+        logger.info(
+            "✅ Core components integration successful (migrated to new system)"
+        )
 
         return True
 
@@ -76,9 +78,7 @@ def test_forecasting_capabilities():
 
     try:
         # Skip unified interface test since it's deprecated
-        logger.info(
-            "⚠️  UnifiedInterface (v2) is deprecated, skipping forecasting test"
-        )
+        logger.info("⚠️  UnifiedInterface (v2) is deprecated, skipping forecasting test")
         logger.info(
             "✅ Forecasting capabilities test skipped (migrated to new UI/agent system)"
         )
@@ -114,9 +114,7 @@ def test_backtesting_and_reporting():
 
     try:
         # Skip unified interface test since it's deprecated
-        logger.info(
-            "⚠️  UnifiedInterface (v2) is deprecated, skipping backtesting test"
-        )
+        logger.info("⚠️  UnifiedInterface (v2) is deprecated, skipping backtesting test")
         logger.info(
             "✅ Backtesting and reporting test skipped (migrated to new UI/agent system)"
         )
@@ -336,9 +334,7 @@ def run_final_validation():
         return True
     elif completion_percentage >= 70:
         logger.info("🟡 FAIR! System has good foundation but needs more work")
-        logger.info(
-            "⚠️  Several components need attention before production deployment"
-        )
+        logger.info("⚠️  Several components need attention before production deployment")
         return False
     else:
         logger.info("🔴 NEEDS WORK! System requires significant improvements")

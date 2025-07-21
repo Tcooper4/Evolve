@@ -1,9 +1,7 @@
-﻿"""
+"""
 Tests for ensemble voter functionality including audit reporting.
 """
 
-import json
-import pickle
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -15,18 +13,18 @@ import pytest
 
 from trading.strategies.ensemble_methods import (
     DynamicEnsembleVoter,
-    StrategySignal,
-    SignalType,
     HybridSignal,
     ModelPerformance,
-    combine_weighted_average,
-    combine_voting,
-    combine_ensemble_model,
+    SignalType,
+    StrategySignal,
     calculate_ensemble_position_size,
-    create_fallback_hybrid_signal,
-    update_model_performance,
+    combine_ensemble_model,
     combine_signals_dynamic,
+    combine_voting,
+    combine_weighted_average,
+    create_fallback_hybrid_signal,
     get_ensemble_audit_report,
+    update_model_performance,
 )
 
 
@@ -45,7 +43,7 @@ class TestDynamicEnsembleVoter:
                 position_size=0.5,
                 risk_score=0.3,
                 timestamp=datetime.now(),
-                metadata={"rsi_value": 30}
+                metadata={"rsi_value": 30},
             ),
             StrategySignal(
                 strategy_name="MACD_Strategy",
@@ -55,7 +53,7 @@ class TestDynamicEnsembleVoter:
                 position_size=0.3,
                 risk_score=0.4,
                 timestamp=datetime.now(),
-                metadata={"macd_signal": "bearish"}
+                metadata={"macd_signal": "bearish"},
             ),
         ]
 
@@ -74,9 +72,11 @@ class TestDynamicEnsembleVoter:
         strategy_name = "test_strategy"
         actual_returns = pd.Series([0.01, 0.02, -0.01, 0.03])
         predicted_returns = pd.Series([0.015, 0.018, -0.008, 0.025])
-        
-        self.voter.update_model_performance(strategy_name, actual_returns, predicted_returns)
-        
+
+        self.voter.update_model_performance(
+            strategy_name, actual_returns, predicted_returns
+        )
+
         assert strategy_name in self.voter.model_performance
         perf = self.voter.model_performance[strategy_name]
         assert perf.strategy_name == strategy_name
@@ -92,9 +92,9 @@ class TestDynamicEnsembleVoter:
             timestamps=[datetime.now() - timedelta(days=1), datetime.now()],
             recent_performance=500.0,  # 1/0.002
             weight=1.0,
-            last_updated=datetime.now()
+            last_updated=datetime.now(),
         )
-        
+
         weight = self.voter._calculate_dynamic_weight(perf)
         assert self.voter.min_weight <= weight <= self.voter.max_weight
 
@@ -107,18 +107,18 @@ class TestDynamicEnsembleVoter:
             timestamps=[datetime.now()],
             recent_performance=1000.0,
             weight=0.6,
-            last_updated=datetime.now()
+            last_updated=datetime.now(),
         )
-        
+
         self.voter.model_performance["strategy2"] = ModelPerformance(
             strategy_name="strategy2",
             mse_history=[0.002],
             timestamps=[datetime.now()],
             recent_performance=500.0,
             weight=0.4,
-            last_updated=datetime.now()
+            last_updated=datetime.now(),
         )
-        
+
         weights = self.voter.get_dynamic_weights(["strategy1", "strategy2"])
         assert "strategy1" in weights
         assert "strategy2" in weights
@@ -127,7 +127,7 @@ class TestDynamicEnsembleVoter:
     def test_combine_signals_dynamic(self):
         """Test dynamic signal combination."""
         result = self.voter.combine_signals_dynamic(self.test_signals)
-        
+
         assert isinstance(result, HybridSignal)
         assert result.signal_type in [SignalType.BUY, SignalType.SELL, SignalType.HOLD]
         assert 0 <= result.confidence <= 1
@@ -140,7 +140,7 @@ class TestDynamicEnsembleVoter:
         result = self.voter.combine_signals_dynamic(
             self.test_signals, use_dynamic_weights=False
         )
-        
+
         assert isinstance(result, HybridSignal)
         # Should have equal weights
         weights = result.strategy_weights
@@ -149,9 +149,9 @@ class TestDynamicEnsembleVoter:
     def test_audit_recording(self):
         """Test audit information recording."""
         initial_audit_count = len(self.voter.audit_history)
-        
+
         self.voter.combine_signals_dynamic(self.test_signals)
-        
+
         assert len(self.voter.audit_history) == initial_audit_count + 1
         latest_audit = self.voter.audit_history[-1]
         assert "timestamp" in latest_audit
@@ -164,9 +164,9 @@ class TestDynamicEnsembleVoter:
         # Generate some audit history
         self.voter.combine_signals_dynamic(self.test_signals)
         self.voter.combine_signals_dynamic(self.test_signals)
-        
+
         report = self.voter.get_ensemble_audit_report()
-        
+
         assert "total_decisions" in report
         assert "win_rates" in report
         assert "recent_performance" in report
@@ -182,32 +182,34 @@ class TestDynamicEnsembleVoter:
             timestamps=[datetime.now() - timedelta(days=1), datetime.now()],
             recent_performance=500.0,
             weight=0.5,
-            last_updated=datetime.now()
+            last_updated=datetime.now(),
         )
-        
-        self.voter.audit_history.append({
-            "timestamp": datetime.now().isoformat(),
-            "signals": [],
-            "final_signal": "hold",
-            "final_confidence": 0.5,
-            "weights": {}
-        })
-        
+
+        self.voter.audit_history.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "signals": [],
+                "final_signal": "hold",
+                "final_confidence": 0.5,
+                "weights": {},
+            }
+        )
+
         # Save state
-        with tempfile.NamedTemporaryFile(suffix='.pkl', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".pkl", delete=False) as f:
             state_file = f.name
-            
+
         try:
             self.voter.save_state(state_file)
-            
+
             # Create new voter and load state
             new_voter = DynamicEnsembleVoter()
             new_voter.load_state(state_file)
-            
+
             # Verify data was loaded
             assert "test_strategy" in new_voter.model_performance
             assert len(new_voter.audit_history) == 1
-            
+
         finally:
             Path(state_file).unlink(missing_ok=True)
 
@@ -226,15 +228,15 @@ class TestDynamicEnsembleVoter:
             StrategySignal(
                 strategy_name="invalid",
                 signal_type=SignalType.BUY,
-                confidence=float('nan'),  # Invalid confidence
+                confidence=float("nan"),  # Invalid confidence
                 predicted_return=0.0,
                 position_size=0.0,
                 risk_score=0.0,
                 timestamp=datetime.now(),
-                metadata={}
+                metadata={},
             )
         ]
-        
+
         result = self.voter.combine_signals_dynamic(invalid_signals)
         assert isinstance(result, HybridSignal)
 
@@ -253,7 +255,7 @@ class TestEnsembleMethods:
                 position_size=0.5,
                 risk_score=0.3,
                 timestamp=datetime.now(),
-                metadata={}
+                metadata={},
             ),
             StrategySignal(
                 strategy_name="Strategy2",
@@ -263,7 +265,7 @@ class TestEnsembleMethods:
                 position_size=0.3,
                 risk_score=0.4,
                 timestamp=datetime.now(),
-                metadata={}
+                metadata={},
             ),
         ]
         self.strategy_weights = {"Strategy1": 0.6, "Strategy2": 0.4}
@@ -271,7 +273,7 @@ class TestEnsembleMethods:
     def test_combine_weighted_average(self):
         """Test weighted average combination."""
         result = combine_weighted_average(self.test_signals, self.strategy_weights)
-        
+
         assert isinstance(result, HybridSignal)
         assert result.signal_type in [SignalType.BUY, SignalType.SELL, SignalType.HOLD]
         assert 0 <= result.confidence <= 1
@@ -280,7 +282,7 @@ class TestEnsembleMethods:
     def test_combine_voting(self):
         """Test voting combination."""
         result = combine_voting(self.test_signals, self.strategy_weights)
-        
+
         assert isinstance(result, HybridSignal)
         assert result.signal_type in [SignalType.BUY, SignalType.SELL, SignalType.HOLD]
         assert "vote_counts" in result.metadata
@@ -291,11 +293,11 @@ class TestEnsembleMethods:
         # Mock ensemble model
         mock_model = Mock()
         mock_model.predict.return_value = np.array([0.02])
-        
+
         result = combine_ensemble_model(
             self.test_signals, mock_model, self.strategy_weights
         )
-        
+
         assert isinstance(result, HybridSignal)
         assert "ensemble_prediction" in result.metadata
 
@@ -303,7 +305,7 @@ class TestEnsembleMethods:
         """Test position size calculation."""
         position_size = calculate_ensemble_position_size(0.8, 0.3)
         assert 0 <= position_size <= 1
-        
+
         # Test edge cases
         assert calculate_ensemble_position_size(0.0, 0.0) == 0.0
         assert calculate_ensemble_position_size(1.0, 0.0) == 1.0
@@ -311,7 +313,7 @@ class TestEnsembleMethods:
     def test_create_fallback_hybrid_signal(self):
         """Test fallback signal creation."""
         signal = create_fallback_hybrid_signal()
-        
+
         assert isinstance(signal, HybridSignal)
         assert signal.signal_type == SignalType.HOLD
         assert signal.confidence == 0.5
@@ -324,13 +326,13 @@ class TestEnsembleMethods:
         # Test update_model_performance
         actual_returns = pd.Series([0.01, 0.02, -0.01])
         predicted_returns = pd.Series([0.015, 0.018, -0.008])
-        
+
         update_model_performance("test_strategy", actual_returns, predicted_returns)
-        
+
         # Test combine_signals_dynamic
         result = combine_signals_dynamic(self.test_signals)
         assert isinstance(result, HybridSignal)
-        
+
         # Test get_ensemble_audit_report
         report = get_ensemble_audit_report()
         assert isinstance(report, dict)
@@ -342,23 +344,25 @@ class TestPerformancePersistence:
     def test_performance_data_save_load(self):
         """Test saving and loading performance data."""
         voter = DynamicEnsembleVoter()
-        
+
         # Add test performance data
         actual_returns = pd.Series([0.01, 0.02, -0.01])
         predicted_returns = pd.Series([0.015, 0.018, -0.008])
-        
-        voter.update_model_performance("test_strategy", actual_returns, predicted_returns)
-        
+
+        voter.update_model_performance(
+            "test_strategy", actual_returns, predicted_returns
+        )
+
         # Test save/load with temporary file
-        with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             perf_file = f.name
-            
+
         try:
             # Mock the save method to use our temp file
-            with patch.object(voter, '_save_performance_data') as mock_save:
+            with patch.object(voter, "_save_performance_data") as mock_save:
                 voter._save_performance_data()
                 mock_save.assert_called_once()
-                
+
         finally:
             Path(perf_file).unlink(missing_ok=True)
 
@@ -370,13 +374,13 @@ class TestAuditReporting:
         """Test audit report when no history exists."""
         voter = DynamicEnsembleVoter()
         report = voter.get_ensemble_audit_report()
-        
+
         assert report["message"] == "No audit history available"
 
     def test_audit_report_with_history(self):
         """Test audit report with audit history."""
         voter = DynamicEnsembleVoter()
-        
+
         # Create some audit history
         for i in range(5):
             signals = [
@@ -388,13 +392,13 @@ class TestAuditReporting:
                     position_size=0.5,
                     risk_score=0.3,
                     timestamp=datetime.now(),
-                    metadata={}
+                    metadata={},
                 )
             ]
             voter.combine_signals_dynamic(signals)
-        
+
         report = voter.get_ensemble_audit_report()
-        
+
         assert report["total_decisions"] == 5
         assert "win_rates" in report
         assert "recent_performance" in report
@@ -403,7 +407,7 @@ class TestAuditReporting:
     def test_audit_report_model_wins_calculation(self):
         """Test calculation of model wins in audit report."""
         voter = DynamicEnsembleVoter()
-        
+
         # Create signals with different strategies and confidences
         signals1 = [
             StrategySignal(
@@ -414,10 +418,10 @@ class TestAuditReporting:
                 position_size=0.5,
                 risk_score=0.3,
                 timestamp=datetime.now(),
-                metadata={}
+                metadata={},
             )
         ]
-        
+
         signals2 = [
             StrategySignal(
                 strategy_name="Strategy2",
@@ -427,18 +431,18 @@ class TestAuditReporting:
                 position_size=0.3,
                 risk_score=0.4,
                 timestamp=datetime.now(),
-                metadata={}
+                metadata={},
             )
         ]
-        
+
         # Combine signals multiple times
         for _ in range(3):
             voter.combine_signals_dynamic(signals1)
         for _ in range(2):
             voter.combine_signals_dynamic(signals2)
-        
+
         report = voter.get_ensemble_audit_report()
-        
+
         # Strategy1 should have more wins due to higher confidence
         win_rates = report["win_rates"]
         assert "Strategy1" in win_rates
@@ -461,10 +465,10 @@ class TestErrorHandling:
                 position_size=0.5,
                 risk_score=0.3,
                 timestamp=datetime.now(),
-                metadata={}
+                metadata={},
             )
         ]
-        
+
         # Should result in HOLD signal due to low confidence
         result = voter.combine_signals_dynamic(signals, confidence_threshold=0.5)
         assert result.signal_type == SignalType.HOLD
@@ -481,7 +485,7 @@ class TestErrorHandling:
                 position_size=0.5,
                 risk_score=0.3,
                 timestamp=datetime.now(),
-                metadata={}
+                metadata={},
             ),
             StrategySignal(
                 strategy_name="sell_strategy",
@@ -491,10 +495,10 @@ class TestErrorHandling:
                 position_size=0.5,
                 risk_score=0.3,
                 timestamp=datetime.now(),
-                metadata={}
+                metadata={},
             ),
         ]
-        
+
         result = voter.combine_signals_dynamic(signals)
         # Should result in some signal type (not necessarily HOLD)
         assert result.signal_type in [SignalType.BUY, SignalType.SELL, SignalType.HOLD]
@@ -502,16 +506,16 @@ class TestErrorHandling:
     def test_performance_data_validation(self):
         """Test validation of performance data."""
         voter = DynamicEnsembleVoter()
-        
+
         # Test with empty series
         empty_series = pd.Series([])
         voter.update_model_performance("test", empty_series, empty_series)
-        
+
         # Test with mismatched lengths
         series1 = pd.Series([0.01, 0.02])
         series2 = pd.Series([0.015])
         voter.update_model_performance("test2", series1, series2)
-        
+
         # Should handle gracefully without errors
         assert "test" in voter.model_performance
         assert "test2" in voter.model_performance

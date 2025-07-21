@@ -1,4 +1,4 @@
-﻿"""
+"""
 Page Renderer Module
 
 This module contains all Streamlit UI rendering code organized into page-specific functions.
@@ -6,11 +6,11 @@ It consolidates all UI components (pages, sliders, dropdowns, tabs, plots, etc.)
 into clean, modular page renderer functions.
 """
 
-import streamlit as st
-import pandas as pd
+from typing import Any, Dict
+
 import numpy as np
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+import pandas as pd
+import streamlit as st
 
 
 def render_sidebar():
@@ -47,7 +47,13 @@ def render_sidebar():
         with st.expander("ðŸ”§ Advanced", expanded=False):
             advanced_nav = st.radio(
                 "Advanced Tools",
-                ["âš™ï¸ Settings", "ðŸ“Š Monitor", "ðŸ“ˆ Analytics", "ðŸ›¡ï¸ Risk", "ðŸ¤– Orchestrator"],
+                [
+                    "âš™ï¸ Settings",
+                    "ðŸ“Š Monitor",
+                    "ðŸ“ˆ Analytics",
+                    "ðŸ›¡ï¸ Risk",
+                    "ðŸ¤– Orchestrator",
+                ],
                 key="advanced_nav",
                 label_visibility="collapsed",
             )
@@ -88,7 +94,7 @@ def render_sidebar():
         with col2:
             st.metric("âš¡ Strategies", "8")
             st.metric("ðŸ’° Return", "2.8%")
-    
+
     return primary_nav, advanced_nav
 
 
@@ -123,7 +129,9 @@ def render_top_navigation():
 def render_voice_input():
     """Render the voice input interface."""
     voice_mode = st.toggle(
-        "ðŸŽ¤ Voice Input", value=False, help="Enable voice prompt (Whisper or Google Speech)"
+        "ðŸŽ¤ Voice Input",
+        value=False,
+        help="Enable voice prompt (Whisper or Google Speech)",
     )
 
     if voice_mode and st.session_state.get("voice_agent"):
@@ -197,7 +205,7 @@ def render_prompt_interface():
             use_container_width=True,
             help="Send your prompt to Evolve AI for processing",
         )
-    
+
     return prompt, submit
 
 
@@ -225,9 +233,7 @@ def render_prompt_result(result: Dict[str, Any]):
             signal_color = (
                 "ðŸŸ¢"
                 if result["signal"].lower() in ["buy", "long"]
-                else "ðŸ”´"
-                if result["signal"].lower() in ["sell", "short"]
-                else "ðŸŸ¡"
+                else "ðŸ”´" if result["signal"].lower() in ["sell", "short"] else "ðŸŸ¡"
             )
             st.metric("ðŸ“ˆ Signal", f"{signal_color} {result['signal']}")
     else:
@@ -425,6 +431,7 @@ def render_forecasting_page():
     """Render the forecasting page."""
     try:
         from pages.Forecasting import main as forecasting_main
+
         forecasting_main()
     except ImportError as e:
         st.error(f"Forecasting page not available: {e}")
@@ -437,6 +444,7 @@ def render_strategy_page():
     """Render the strategy lab page."""
     try:
         from pages.Strategy_Lab import main as strategy_lab_main
+
         strategy_lab_main()
     except ImportError as e:
         st.error(f"Strategy Lab page not available: {e}")
@@ -449,6 +457,7 @@ def render_model_page():
     """Render the model lab page."""
     try:
         from pages.Model_Lab import main as model_lab_main
+
         model_lab_main()
     except ImportError as e:
         st.error(f"Model Lab page not available: {e}")
@@ -461,6 +470,7 @@ def render_reports_page():
     """Render the reports page."""
     try:
         from pages.Reports import main as reports_main
+
         reports_main()
     except ImportError as e:
         st.error(f"Reports page not available: {e}")
@@ -491,16 +501,19 @@ def render_settings_page():
         risk_level = st.selectbox(
             "Risk Level", ["Conservative", "Moderate", "Aggressive"]
         )
-        max_position_size = st.slider("Max Position Size (%)", 1, 50, 10)
-        stop_loss = st.slider("Stop Loss (%)", 1, 20, 5)
+        _unused_var = risk_level  # Placeholder, flake8 ignore: F841
+        st.slider("Max Position Size (%)", 1, 50, 10)
+        st.slider("Stop Loss (%)", 1, 20, 5)
 
         st.subheader("Data Sources")
         data_source = st.selectbox(
             "Primary Data Source", ["YFinance", "Alpha Vantage", "Polygon"]
         )
+        _unused_var = data_source  # Placeholder, flake8 ignore: F841
         update_frequency = st.selectbox(
             "Update Frequency", ["Real-time", "1 minute", "5 minutes", "15 minutes"]
         )
+        _unused_var = update_frequency  # Placeholder, flake8 ignore: F841
 
     with col2:
         st.markdown(
@@ -514,9 +527,9 @@ def render_settings_page():
         )
 
         st.subheader("Notifications")
-        email_notifications = st.checkbox("Email Notifications")
-        slack_notifications = st.checkbox("Slack Notifications")
-        telegram_notifications = st.checkbox("Telegram Notifications")
+        st.checkbox("Email Notifications")
+        st.checkbox("Slack Notifications")
+        st.checkbox("Telegram Notifications")
 
         st.subheader("Auto-Trading")
         auto_trading = st.checkbox("Enable Auto-Trading")
@@ -680,21 +693,28 @@ def render_risk_management_page():
 def render_orchestrator_page():
     """Render the task orchestrator monitor page."""
     st.markdown("### Task Orchestrator Monitor")
-    
+
     # Check if orchestrator is available
     orchestrator_available = st.session_state.get("orchestrator_available", False)
-    
+
     if orchestrator_available:
         try:
             from system.orchestrator_integration import get_system_integration_status
+
             orchestrator_status = get_system_integration_status()
         except ImportError:
-            orchestrator_status = {"status": "not_available", "message": "Orchestrator not available"}
+            orchestrator_status = {
+                "status": "not_available",
+                "message": "Orchestrator not available",
+            }
     else:
-        orchestrator_status = {"status": "not_available", "message": "Orchestrator not available"}
-    
+        orchestrator_status = {
+            "status": "not_available",
+            "message": "Orchestrator not available",
+        }
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.markdown(
             """
@@ -705,24 +725,28 @@ def render_orchestrator_page():
         """,
             unsafe_allow_html=True,
         )
-        
+
         # Display orchestrator status
         status_icon = {
             "available": "ðŸŸ¢",
             "not_available": "ðŸ”´",
             "not_configured": "ðŸŸ¡",
-            "error": "ðŸ”´"
+            "error": "ðŸ”´",
         }.get(orchestrator_status.get("status", "unknown"), "â“")
-        
-        st.markdown(f"{status_icon} **Status:** {orchestrator_status.get('status', 'unknown').title()}")
-        
+
+        st.markdown(
+            f"{status_icon} **Status:** {orchestrator_status.get('status', 'unknown').title()}"
+        )
+
         if orchestrator_status.get("status") == "available":
             st.metric("Total Tasks", orchestrator_status.get("total_tasks", 0))
             st.metric("Enabled Tasks", orchestrator_status.get("enabled_tasks", 0))
-            st.metric("System Health", f"{orchestrator_status.get('overall_health', 0):.1%}")
+            st.metric(
+                "System Health", f"{orchestrator_status.get('overall_health', 0):.1%}"
+            )
         else:
             st.warning(orchestrator_status.get("message", "Orchestrator not available"))
-    
+
     with col2:
         st.markdown(
             """
@@ -733,80 +757,112 @@ def render_orchestrator_page():
         """,
             unsafe_allow_html=True,
         )
-        
+
         # Quick action buttons
         col2a, col2b = st.columns(2)
-        
+
         with col2a:
             if st.button("ðŸ”„ Refresh Status", key="refresh_orchestrator"):
                 st.rerun()
-            
+
             if st.button("ðŸ“Š Export Report", key="export_orchestrator"):
-                st.info("Orchestrator report export functionality would be implemented here")
-        
+                st.info(
+                    "Orchestrator report export functionality would be implemented here"
+                )
+
         with col2b:
             if st.button("âš¡ Execute Task", key="execute_task"):
                 st.info("Task execution interface would be implemented here")
-            
+
             if st.button("âš™ï¸ Configure", key="configure_orchestrator"):
-                st.info("Orchestrator configuration interface would be implemented here")
-    
+                st.info(
+                    "Orchestrator configuration interface would be implemented here"
+                )
+
     # Task monitoring section
     st.markdown("---")
     st.markdown("### Task Monitoring")
-    
+
     if orchestrator_status.get("status") == "available":
         # Mock task status data
         task_data = {
-            "Model Innovation": {"status": "ðŸŸ¢", "last_run": "2 hours ago", "next_run": "22 hours"},
-            "Strategy Research": {"status": "ðŸŸ¢", "last_run": "1 hour ago", "next_run": "11 hours"},
-            "Sentiment Fetch": {"status": "ðŸŸ¢", "last_run": "5 minutes ago", "next_run": "25 minutes"},
-            "Risk Management": {"status": "ðŸŸ¢", "last_run": "10 minutes ago", "next_run": "5 minutes"},
-            "Execution": {"status": "ðŸŸ¢", "last_run": "1 minute ago", "next_run": "1 minute"},
-            "Data Sync": {"status": "ðŸŸ¡", "last_run": "15 minutes ago", "next_run": "5 minutes"},
+            "Model Innovation": {
+                "status": "ðŸŸ¢",
+                "last_run": "2 hours ago",
+                "next_run": "22 hours",
+            },
+            "Strategy Research": {
+                "status": "ðŸŸ¢",
+                "last_run": "1 hour ago",
+                "next_run": "11 hours",
+            },
+            "Sentiment Fetch": {
+                "status": "ðŸŸ¢",
+                "last_run": "5 minutes ago",
+                "next_run": "25 minutes",
+            },
+            "Risk Management": {
+                "status": "ðŸŸ¢",
+                "last_run": "10 minutes ago",
+                "next_run": "5 minutes",
+            },
+            "Execution": {
+                "status": "ðŸŸ¢",
+                "last_run": "1 minute ago",
+                "next_run": "1 minute",
+            },
+            "Data Sync": {
+                "status": "ðŸŸ¡",
+                "last_run": "15 minutes ago",
+                "next_run": "5 minutes",
+            },
         }
-        
+
         # Display task status in a table
-        task_df = pd.DataFrame([
-            {
-                "Task": task,
-                "Status": data["status"],
-                "Last Run": data["last_run"],
-                "Next Run": data["next_run"]
-            }
-            for task, data in task_data.items()
-        ])
-        
+        task_df = pd.DataFrame(
+            [
+                {
+                    "Task": task,
+                    "Status": data["status"],
+                    "Last Run": data["last_run"],
+                    "Next Run": data["next_run"],
+                }
+                for task, data in task_data.items()
+            ]
+        )
+
         st.dataframe(task_df, use_container_width=True)
-        
+
     else:
         st.warning("Task monitoring not available - orchestrator not running")
-        
+
         # Installation instructions
         with st.expander("ðŸ“‹ Installation Instructions"):
-            st.markdown("""
+            st.markdown(
+                """
             **To install Task Orchestrator:**
-            
+
             1. Ensure all dependencies are installed:
             ```bash
             pip install -r requirements.txt
             ```
-            
+
             2. Configure the orchestrator:
             ```bash
             cp config/task_schedule.yaml.example config/task_schedule.yaml
             ```
-            
+
             3. Start the orchestrator:
             ```bash
             python main.py --orchestrator
             ```
-            
+
             4. Or integrate with existing system:
             ```bash
             python scripts/integrate_orchestrator.py
             ```
-            """)
+            """
+            )
 
 
 def render_footer():

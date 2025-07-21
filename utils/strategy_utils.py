@@ -34,8 +34,10 @@ def calculate_returns(prices: pd.Series, method: str = "simple") -> pd.Series:
         Returns series
     """
     try:
-        if prices.empty or 'Close' not in prices.index:
-            raise ValueError("Input DataFrame must contain 'Close' prices and not be empty")
+        if prices.empty or "Close" not in prices.index:
+            raise ValueError(
+                "Input DataFrame must contain 'Close' prices and not be empty"
+            )
         if method == "log":
             return np.log(prices / prices.shift(1))
         else:
@@ -57,7 +59,9 @@ def calculate_sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> f
     """
     try:
         if returns.empty:
-            raise ValueError("Input DataFrame must contain 'Close' prices and not be empty")
+            raise ValueError(
+                "Input DataFrame must contain 'Close' prices and not be empty"
+            )
         excess_returns = returns - risk_free_rate
         return (
             excess_returns.mean() / excess_returns.std()
@@ -80,7 +84,9 @@ def calculate_max_drawdown(returns: pd.Series) -> float:
     """
     try:
         if returns.empty:
-            raise ValueError("Input DataFrame must contain 'Close' prices and not be empty")
+            raise ValueError(
+                "Input DataFrame must contain 'Close' prices and not be empty"
+            )
         cumulative = (1 + returns).cumprod()
         running_max = cumulative.expanding().max()
         drawdown = (cumulative - running_max) / running_max
@@ -271,6 +277,7 @@ def macd_crossover_signals(macd_line, signal_line, tolerance=0.001):
         pd.Series of signals: 1 (buy), -1 (sell), 0 (hold)
     """
     import numpy as np
+
     macd_diff = macd_line - signal_line
     signals = np.zeros_like(macd_diff, dtype=int)
     signals[macd_diff > tolerance] = 1
@@ -285,8 +292,10 @@ def validate_signal_schema(df: pd.DataFrame) -> bool:
     Returns True if valid, False otherwise.
     """
     try:
-        if df.empty or 'Close' not in df.columns:
-            raise ValueError("Input DataFrame must contain 'Close' prices and not be empty")
+        if df.empty or "Close" not in df.columns:
+            raise ValueError(
+                "Input DataFrame must contain 'Close' prices and not be empty"
+            )
         required_cols = {"Close", "SignalType"}
         if not required_cols.issubset(set(df.columns)):
             return False
@@ -312,7 +321,9 @@ def calculate_risk_metrics(
     """
     try:
         if returns.empty:
-            raise ValueError("Input DataFrame must contain 'Close' prices and not be empty")
+            raise ValueError(
+                "Input DataFrame must contain 'Close' prices and not be empty"
+            )
         metrics = {
             "total_return": (1 + returns).prod() - 1,
             "annualized_return": returns.mean() * 252,

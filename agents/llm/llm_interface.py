@@ -192,9 +192,9 @@ class LLMInterface:
         return {
             **self.metrics,
             "agent_metrics": self.agent.get_metrics(),
-            "memory_stats": self.memory_manager.get_memory_stats()
-            if self.memory_manager
-            else None,
+            "memory_stats": (
+                self.memory_manager.get_memory_stats() if self.memory_manager else None
+            ),
             "tools": self.tool_registry.list_tools(),
         }
 

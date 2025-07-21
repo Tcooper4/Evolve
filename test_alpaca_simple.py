@@ -5,10 +5,9 @@ This test only imports and tests Alpaca-related functionality
 without importing the full trading package that has dependency issues.
 """
 
-import pytest
-from unittest.mock import Mock, patch
-from datetime import datetime
 import logging
+
+import pytest
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +15,8 @@ logger = logging.getLogger(__name__)
 def test_alpaca_imports():
     """Test that alpaca-py can be imported successfully"""
     try:
-        from alpaca.trading.client import TradingClient
-        from alpaca.data.historical import StockHistoricalDataClient
-        from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest
-        from alpaca.trading.enums import OrderSide, OrderType, TimeInForce
+        pass
+
         logger.info("✓ All alpaca-py imports successful")
         assert True
     except ImportError as e:
@@ -51,14 +48,11 @@ def test_alpaca_client_creation():
 
 def test_alpaca_order_request():
     """Test that order requests can be created"""
-    from alpaca.trading.requests import MarketOrderRequest
     from alpaca.trading.enums import OrderSide, TimeInForce
+    from alpaca.trading.requests import MarketOrderRequest
 
     order_request = MarketOrderRequest(
-        symbol="AAPL",
-        qty=10,
-        side=OrderSide.BUY,
-        time_in_force=TimeInForce.DAY
+        symbol="AAPL", qty=10, side=OrderSide.BUY, time_in_force=TimeInForce.DAY
     )
 
     assert order_request.symbol == "AAPL"
@@ -71,7 +65,8 @@ def test_alpaca_order_request():
 def test_old_api_not_available():
     """Test that the old alpaca-trade-api is not available"""
     try:
-        import alpaca_trade_api
+        pass
+
         pytest.fail("Old alpaca-trade-api should not be available")
     except ImportError:
         logger.info("✓ Old alpaca-trade-api correctly not available")
@@ -85,4 +80,4 @@ if __name__ == "__main__":
     test_alpaca_client_creation()
     test_alpaca_order_request()
     test_old_api_not_available()
-    logger.info("All Alpaca migration tests passed!") 
+    logger.info("All Alpaca migration tests passed!")

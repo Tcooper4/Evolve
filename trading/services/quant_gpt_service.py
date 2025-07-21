@@ -10,12 +10,13 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
-# Add the trading directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
 from trading.memory.agent_memory import AgentMemory
 from trading.services.base_service import BaseService
 from trading.services.quant_gpt import QuantGPT
+
+# Add the trading directory to the path
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
 
 logger = logging.getLogger(__name__)
 

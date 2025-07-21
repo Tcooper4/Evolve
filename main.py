@@ -10,12 +10,11 @@ import asyncio
 import logging
 import sys
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -23,25 +22,27 @@ logger = logging.getLogger(__name__)
 def main():
     """
     Main entry point for the Evolve trading system.
-    
+
     Provides a command-line interface for launching different components
     and checking system health.
     """
     print("🚀 Evolve Trading System")
     print("=" * 50)
-    
+
     if len(sys.argv) < 2:
         print_usage()
         return
-    
+
     command = sys.argv[1].lower()
-    
+
     try:
         if command == "health":
             result = check_system_health()
             print_health_result(result)
         elif command == "orchestrator":
-            config_path = sys.argv[2] if len(sys.argv) > 2 else "config/orchestrator_config.yaml"
+            config_path = (
+                sys.argv[2] if len(sys.argv) > 2 else "config/orchestrator_config.yaml"
+            )
             monitor = "--monitor" in sys.argv
             result = launch_task_orchestrator(config_path, monitor)
             print_result(result)
@@ -68,7 +69,7 @@ def main():
         else:
             print(f"❌ Unknown command: {command}")
             print_usage()
-            
+
     except KeyboardInterrupt:
         print("\n🛑 Operation cancelled by user")
     except Exception as e:
@@ -100,7 +101,7 @@ def print_usage():
 def launch_task_orchestrator(config_path: str, monitor: bool = False) -> Dict[str, Any]:
     """
     Launch the Task Orchestrator.
-    
+
     Args:
         config_path: Path to orchestrator configuration file
         monitor: Enable real-time monitoring
@@ -144,7 +145,7 @@ def launch_task_orchestrator(config_path: str, monitor: bool = False) -> Dict[st
                 logger.info("Task Orchestrator stopped")
             except Exception as e:
                 logger.error(f"Orchestrator error: {e}")
-                if 'orchestrator' in locals():
+                if "orchestrator" in locals():
                     await orchestrator.stop()
 
         # Run the orchestrator
@@ -178,22 +179,23 @@ def check_system_health() -> Dict[str, Any]:
         # Check Task Orchestrator availability
         orchestrator_health = {
             "status": "unknown",
-            "message": "Task Orchestrator not checked"
+            "message": "Task Orchestrator not checked",
         }
 
         try:
             from core.task_orchestrator import TaskOrchestrator
+
             orchestrator = TaskOrchestrator()
             status = orchestrator.get_system_status()
             orchestrator_health = {
-                "status": "healthy" if status['total_tasks'] > 0 else "warning",
+                "status": "healthy" if status["total_tasks"] > 0 else "warning",
                 "message": f"Found {status['total_tasks']} configured tasks",
-                "overall_health": status['performance_metrics']['overall_health']
+                "overall_health": status["performance_metrics"]["overall_health"],
             }
         except Exception as e:
             orchestrator_health = {
                 "status": "error",
-                "message": f"Task Orchestrator error: {e}"
+                "message": f"Task Orchestrator error: {e}",
             }
 
         from interface.unified_interface import UnifiedInterface
@@ -205,20 +207,20 @@ def check_system_health() -> Dict[str, Any]:
         print("\n" + "=" * 60)
         print("🏥 SYSTEM HEALTH CHECK")
         print("=" * 60)
-        
+
         print(f"📊 Overall Health: {health['overall_health']}")
         print(f"⏰ Timestamp: {health['timestamp']}")
         print(f"🔄 System Status: {health['status']}")
-        
+
         print("\n📋 Component Status:")
-        for component, status in health['components'].items():
-            status_icon = "✅" if status['healthy'] else "❌"
+        for component, status in health["components"].items():
+            status_icon = "✅" if status["healthy"] else "❌"
             print(f"  {status_icon} {component}: {status['status']}")
-        
+
         print(f"\n🎯 Task Orchestrator: {orchestrator_health['status']}")
         print(f"   {orchestrator_health['message']}")
-        
-        if 'overall_health' in orchestrator_health:
+
+        if "overall_health" in orchestrator_health:
             print(f"   Health Score: {orchestrator_health['overall_health']}")
 
         return {
@@ -240,28 +242,28 @@ def check_system_health() -> Dict[str, Any]:
 def execute_command(command: str) -> Dict[str, Any]:
     """
     Execute a specific command through the unified interface.
-    
+
     Args:
         command: Command to execute
-        
+
     Returns:
         Dict[str, Any]: Command execution result
     """
     try:
         logger.info(f"Executing command: {command}")
-        
+
         from interface.unified_interface import UnifiedInterface
-        
+
         interface = UnifiedInterface()
         result = interface.execute_command(command)
-        
+
         return {
             "status": "success",
             "command": command,
             "result": result,
             "timestamp": datetime.now().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Error executing command: {e}")
         return {
@@ -275,37 +277,37 @@ def execute_command(command: str) -> Dict[str, Any]:
 def launch_streamlit_interface() -> Dict[str, Any]:
     """
     Launch the Streamlit web interface.
-    
+
     Returns:
         Dict[str, Any]: Launch status
     """
     try:
         logger.info("Launching Streamlit interface...")
-        
-        import subprocess
+
         import os
-        
+        import subprocess
+
         # Check if streamlit is available
         try:
-            import streamlit
+            pass
         except ImportError:
             return {
                 "status": "error",
                 "error": "Streamlit not installed. Run: pip install streamlit",
                 "timestamp": datetime.now().isoformat(),
             }
-        
+
         # Launch streamlit
         app_path = os.path.join(os.path.dirname(__file__), "app.py")
         subprocess.Popen([sys.executable, "-m", "streamlit", "run", app_path])
-        
+
         return {
             "status": "success",
             "message": "Streamlit interface launched",
             "url": "http://localhost:8501",
             "timestamp": datetime.now().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Error launching Streamlit interface: {e}")
         return {
@@ -318,24 +320,24 @@ def launch_streamlit_interface() -> Dict[str, Any]:
 def launch_terminal_interface() -> Dict[str, Any]:
     """
     Launch the terminal-based interface.
-    
+
     Returns:
         Dict[str, Any]: Launch status
     """
     try:
         logger.info("Launching terminal interface...")
-        
+
         from interface.unified_interface import UnifiedInterface
-        
+
         interface = UnifiedInterface()
         interface.start_terminal_interface()
-        
+
         return {
             "status": "success",
             "message": "Terminal interface launched",
             "timestamp": datetime.now().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Error launching terminal interface: {e}")
         return {
@@ -348,40 +350,40 @@ def launch_terminal_interface() -> Dict[str, Any]:
 def launch_api_interface() -> Dict[str, Any]:
     """
     Launch the FastAPI interface.
-    
+
     Returns:
         Dict[str, Any]: Launch status
     """
     try:
         logger.info("Launching API interface...")
-        
-        from fastapi import FastAPI
+
         import uvicorn
-        
+        from fastapi import FastAPI
+
         app = FastAPI(title="Evolve Trading API", version="1.0.0")
-        
+
         @app.get("/")
         async def root():
             return {"message": "Evolve Trading API", "status": "running"}
-        
+
         @app.get("/health")
         async def health_check():
             return check_system_health()
-        
+
         @app.post("/command")
         async def execute_command(command: str):
             return execute_command(command)
-        
+
         # Run the API server
         uvicorn.run(app, host="0.0.0.0", port=8000)
-        
+
         return {
             "status": "success",
             "message": "API interface launched",
             "url": "http://localhost:8000",
             "timestamp": datetime.now().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Error launching API interface: {e}")
         return {
@@ -394,24 +396,24 @@ def launch_api_interface() -> Dict[str, Any]:
 def launch_unified_interface() -> Dict[str, Any]:
     """
     Launch the unified interface with all options.
-    
+
     Returns:
         Dict[str, Any]: Launch status
     """
     try:
         logger.info("Launching unified interface...")
-        
+
         from interface.unified_interface import UnifiedInterface
-        
+
         interface = UnifiedInterface()
         interface.start()
-        
+
         return {
             "status": "success",
             "message": "Unified interface launched",
             "timestamp": datetime.now().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Error launching unified interface: {e}")
         return {
@@ -440,4 +442,4 @@ def print_result(result: Dict[str, Any]):
 
 
 if __name__ == "__main__":
-    main() 
+    main()

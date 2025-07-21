@@ -1,4 +1,4 @@
-﻿"""
+"""
 Forecast Helper Utilities
 
 This module provides shared utilities for forecasting operations, including
@@ -9,6 +9,7 @@ import functools
 import logging
 import time
 from typing import Any, Callable, Dict, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
 
@@ -20,7 +21,7 @@ def safe_forecast(
     retry_delay: float = 1.0,
     log_errors: bool = True,
     return_fallback: bool = True,
-    fallback_value: Optional[Any] = None
+    fallback_value: Optional[Any] = None,
 ):
     """
     Decorator to safely handle forecasting operations with retry logic and error handling.
@@ -35,6 +36,7 @@ def safe_forecast(
     Returns:
         Decorated function that handles exceptions gracefully
     """
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Union[Tuple[np.ndarray, float], Any]:
@@ -52,17 +54,25 @@ def safe_forecast(
 
                         # Basic validation
                         if not isinstance(predictions, (np.ndarray, list, pd.Series)):
-                            raise ValueError(f"Invalid prediction format: {type(predictions)}")
+                            raise ValueError(
+                                f"Invalid prediction format: {type(predictions)}"
+                            )
 
                         if not isinstance(confidence, (int, float, np.number)):
-                            raise ValueError(f"Invalid confidence format: {type(confidence)}")
+                            raise ValueError(
+                                f"Invalid confidence format: {type(confidence)}"
+                            )
 
                         if log_errors:
-                            logger.info(f"Forecast successful in {execution_time:.3f}s (attempt {attempt + 1})")
+                            logger.info(
+                                f"Forecast successful in {execution_time:.3f}s (attempt {attempt + 1})"
+                            )
 
                         return result
                     else:
-                        raise ValueError(f"Invalid result format: expected tuple, got {type(result)}")
+                        raise ValueError(
+                            f"Invalid result format: expected tuple, got {type(result)}"
+                        )
 
                 except Exception as e:
                     last_exception = e
@@ -72,7 +82,7 @@ def safe_forecast(
                         )
 
                     if attempt < max_retries:
-                        time.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
+                        time.sleep(retry_delay * (2**attempt))  # Exponential backoff
                     else:
                         if log_errors:
                             logger.error(
@@ -89,13 +99,14 @@ def safe_forecast(
                 raise last_exception
 
         return wrapper
+
     return decorator
 
 
 def validate_forecast_input(
     data: Union[np.ndarray, pd.DataFrame, pd.Series],
     min_length: int = 10,
-    require_numeric: bool = True
+    require_numeric: bool = True,
 ) -> bool:
     """
     Validate input data for forecasting operations.
@@ -129,8 +140,7 @@ def validate_forecast_input(
 
 
 def calculate_forecast_metrics(
-    actual: np.ndarray,
-    predicted: np.ndarray
+    actual: np.ndarray, predicted: np.ndarray
 ) -> Dict[str, float]:
     """
     Calculate common forecast accuracy metrics.
@@ -151,21 +161,18 @@ def calculate_forecast_metrics(
     mae = np.mean(np.abs(actual - predicted))
 
     # Calculate MAPE (Mean Absolute Percentage Error)
-    mape = np.mean(np.abs((actual - predicted) / np.where(actual != 0, actual, 1))) * 100
+    mape = (
+        np.mean(np.abs((actual - predicted) / np.where(actual != 0, actual, 1))) * 100
+    )
 
-    return {
-        "mse": mse,
-        "rmse": rmse,
-        "mae": mae,
-        "mape": mape
-    }
+    return {"mse": mse, "rmse": rmse, "mae": mae, "mape": mape}
 
 
 def normalize_forecast_output(
     predictions: np.ndarray,
     confidence: float,
     min_confidence: float = 0.0,
-    max_confidence: float = 1.0
+    max_confidence: float = 1.0,
 ) -> Tuple[np.ndarray, float]:
     """
     Normalize forecast output to ensure valid ranges.
@@ -195,7 +202,7 @@ def log_forecast_performance(
     execution_time: float,
     data_length: int,
     confidence: float,
-    metrics: Optional[Dict[str, float]] = None
+    metrics: Optional[Dict[str, float]] = None,
 ) -> None:
     """
     Log forecast performance metrics.

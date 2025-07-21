@@ -15,6 +15,7 @@ import pandas as pd
 # Try to import yfinance
 try:
     import yfinance as yf
+
     YFINANCE_AVAILABLE = True
 except ImportError as e:
     print("⚠️ yfinance not available. Disabling yfinance fallback data source.")
@@ -76,7 +77,9 @@ class FallbackDataFeed:
             # Try yfinance first as fallback
             if YFINANCE_AVAILABLE:
                 try:
-                    data = self._get_yfinance_data(symbol, start_date, end_date, interval)
+                    data = self._get_yfinance_data(
+                        symbol, start_date, end_date, interval
+                    )
                     if data is not None and not data.empty:
                         logger.info(
                             f"Successfully retrieved data from yfinance for {symbol}"

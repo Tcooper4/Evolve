@@ -3,6 +3,7 @@
 
 import sys
 import time
+from datetime import datetime
 from typing import Dict
 
 
@@ -357,7 +358,7 @@ def generate_summary(all_results: Dict[str, Dict[str, str]]):
     print(f"✅ Passed:       {passed_tests}")
     print(f"⚠️  Warnings:     {warnings}")
     print(f"❌ Failures:     {failures}")
-    print(f"Success Rate:    {passed_tests/total_tests*100:.1f}%")
+    print(f"Success Rate:    {passed_tests / total_tests * 100:.1f}%")
 
     if failures == 0:
         print("\n🎉 EXCELLENT! All critical components are working!")

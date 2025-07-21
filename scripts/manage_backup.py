@@ -33,7 +33,6 @@ import json
 import logging
 import logging.config
 import shutil
-import socket
 import sys
 import tarfile
 from datetime import datetime
@@ -44,6 +43,26 @@ import boto3
 import croniter
 import redis
 import yaml
+
+# Azure storage imports
+try:
+    from azure.storage.blob import BlobServiceClient
+
+    AZURE_AVAILABLE = True
+except ImportError:
+    AZURE_AVAILABLE = False
+    BlobServiceClient = None
+
+# Google Cloud Storage imports
+try:
+    from google.cloud import storage
+
+    GCS_AVAILABLE = True
+except ImportError:
+    GCS_AVAILABLE = False
+    storage = None
+
+from utils.launch_utils import setup_logging
 
 
 class BackupManager:
@@ -66,63 +85,39 @@ class BackupManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def create_backup(self, backup_type: str, target: str = "local"):
-        """Create a backup of specified type."""
-        self.logger.info(f"Creating {backup_type} backup to {target}")
+    def create_backup(self, backup_type: str, target: str = "local"):
+        """Create backup of specified type."""
+        self.logger.info(f"Creating {backup_type} backup...")
+
+        # Create backup directory
+        backup_path = (
+            self.backup_dir
+            / f"{backup_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
+        backup_path.mkdir(parents=True, exist_ok=True)
 
         try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_info = {
-                "timestamp": timestamp,
-                "type": backup_type,
-                "target": target,
-                "components": {},
-                "metadata": {},
-            }
-
-            # Create backup based on type
-            if backup_type == "full":
-                backup_info["components"] = await self._create_full_backup()
-            elif backup_type == "incremental":
-                backup_info["components"] = await self._create_incremental_backup()
-            elif backup_type == "differential":
-                backup_info["components"] = await self._create_differential_backup()
+            if backup_type == "data":
+                self._backup_data(backup_path)
+            elif backup_type == "config":
+                self._backup_config(backup_path)
+            elif backup_type == "logs":
+                self._backup_logs(backup_path)
+            elif backup_type == "full":
+                self._backup_full(backup_path)
             else:
-                raise ValueError(f"Unsupported backup type: {backup_type}")
+                self.logger.error(f"Unknown backup type: {backup_type}")
+                return False
 
-            # Add metadata
-            backup_info["metadata"] = {
-                "hostname": socket.gethostname(),
-                "version": self.config["app"]["version"],
-                "size": await self._calculate_backup_size(backup_info["components"]),
-            }
-
-            # Save backup info
-            info_file = self.backup_dir / f"backup_info_{timestamp}.json"
-            with open(info_file, "w") as f:
-                json.dump(backup_info, f, indent=2)
-
-            # Create backup archive
-            archive_file = self.backup_dir / f"backup_{timestamp}.tar.gz"
-            with tarfile.open(archive_file, "w:gz") as tar:
-                tar.add(info_file)
-                for component, paths in backup_info["components"].items():
-                    for path in paths:
-                        tar.add(path)
-
-            # Upload to target if not local
-            if target != "local":
-                await self._upload_backup(archive_file, target)
-
-            self.logger.info(f"Backup created: {archive_file}")
-            return backup_info
+            self.logger.info(f"Backup created successfully: {backup_path}")
+            return True
         except Exception as e:
             self.logger.error(f"Failed to create backup: {e}")
-            raise
+            return False
 
     async def restore_backup(self, backup_file: str, target: str = "local"):
         """Restore from backup."""
@@ -280,9 +275,9 @@ def setup_logging():
                 "config", last_backup
             )
             components["data"] = await self._backup_changed_files("data", last_backup)
-            components[
-                "database"
-            ] = await self._backup_database()  # Always backup database
+            components["database"] = (
+                await self._backup_database()
+            )  # Always backup database
             components["logs"] = await self._backup_changed_files("logs", last_backup)
             components["models"] = await self._backup_changed_files(
                 "models", last_backup
@@ -308,9 +303,9 @@ def setup_logging():
             components["data"] = await self._backup_changed_files(
                 "data", last_full_backup
             )
-            components[
-                "database"
-            ] = await self._backup_database()  # Always backup database
+            components["database"] = (
+                await self._backup_database()
+            )  # Always backup database
             components["logs"] = await self._backup_changed_files(
                 "logs", last_full_backup
             )

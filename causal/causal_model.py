@@ -6,6 +6,7 @@ market relationships and strategy performance drivers.
 
 import logging
 import warnings
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import networkx as nx
@@ -241,9 +242,11 @@ class CausalModel:
                 "original_mean": np.mean(y_pred_original),
                 "intervention_mean": np.mean(y_pred_intervention),
                 "average_effect": avg_effect,
-                "effect_size": abs(avg_effect) / np.std(y_original)
-                if np.std(y_original) > 0
-                else 0,
+                "effect_size": (
+                    abs(avg_effect) / np.std(y_original)
+                    if np.std(y_original) > 0
+                    else 0
+                ),
             }
 
             # Store results
@@ -430,7 +433,7 @@ class CausalModel:
             "success": True,
             "result": {
                 "causal_effects": len(self.causal_effects),
-                "interventions": len(self.intervention_results),
+                "intervention_count": len(self.intervention_results),
                 "graph_nodes": len(self.graph.nodes),
                 "graph_edges": len(self.graph.edges),
                 "effects": self.causal_effects,
@@ -489,12 +492,14 @@ class CausalAnalysisResult:
                 "num_effects": len(self.causal_effects),
                 "num_interventions": len(self.intervention_results),
                 "graph_size": len(self.graph.nodes()),
-                "avg_effect": np.mean(list(self.causal_effects.values()))
-                if self.causal_effects
-                else 0,
-                "max_effect": max(self.causal_effects.values())
-                if self.causal_effects
-                else 0,
+                "avg_effect": (
+                    np.mean(list(self.causal_effects.values()))
+                    if self.causal_effects
+                    else 0
+                ),
+                "max_effect": (
+                    max(self.causal_effects.values()) if self.causal_effects else 0
+                ),
                 "timestamp": self.timestamp.isoformat(),
             },
             "message": "Operation completed successfully",

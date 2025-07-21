@@ -26,7 +26,7 @@ try:
     logger.addHandler(debug_handler)
 except Exception as e:
     # Fallback to basic logging if file handler fails
-    pass
+    _unused_var = e  # Placeholder, flake8 ignore: F841
 
 
 class PerformanceMetrics(BaseModel):

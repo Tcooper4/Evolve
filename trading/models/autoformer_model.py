@@ -1,4 +1,5 @@
-﻿"""AutoformerModel: Autoformer wrapper for time series forecasting."""
+"""AutoformerModel: Autoformer wrapper for time series forecasting."""
+
 import json
 import logging
 import os
@@ -11,6 +12,7 @@ import pandas as pd
 # Try to import PyTorch
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ PyTorch not available. Disabling Autoformer models.")
@@ -23,6 +25,7 @@ from .base_model import BaseModel, ModelRegistry
 # Try to import Autoformer
 try:
     from autoformer_pytorch import Autoformer
+
     AUTOFORMER_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ autoformer-pytorch not available. Disabling Autoformer models.")
@@ -37,11 +40,15 @@ logger = logging.getLogger(__name__)
 class AutoformerModel(BaseModel):
     def __init__(self, config):
         if not TORCH_AVAILABLE:
-            raise ImportError("PyTorch is not available. Cannot create AutoformerModel.")
-        
+            raise ImportError(
+                "PyTorch is not available. Cannot create AutoformerModel."
+            )
+
         if not AUTOFORMER_AVAILABLE:
-            raise ImportError("autoformer-pytorch is not available. Cannot create AutoformerModel.")
-        
+            raise ImportError(
+                "autoformer-pytorch is not available. Cannot create AutoformerModel."
+            )
+
         super().__init__(config)
         self.model = Autoformer(
             num_time_features=len(config.get("feature_columns", [])),
@@ -401,7 +408,7 @@ class AutoformerModel(BaseModel):
             plt.subplot(2, 2, 1)
             plt.plot(data.index, data[self.target_column], label="Actual", color="blue")
             plt.plot(
-                data.index[-len(predictions) :],
+                data.index[-len(predictions):],
                 predictions,
                 label="Predicted",
                 color="red",

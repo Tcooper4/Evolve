@@ -1,14 +1,12 @@
-﻿"""Bayesian Optimization Method.
+"""Bayesian Optimization Method.
 
 This module contains the BayesianOptimization method extracted from strategy_optimizer.py.
 """
 
 import logging
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List
 
-import numpy as np
 import pandas as pd
 
 from .grid_search_optimizer import OptimizationMethod, OptimizationResult
@@ -39,7 +37,7 @@ class BayesianOptimization(OptimizationMethod):
         """
         try:
             from skopt import gp_minimize
-            from skopt.space import Real, Integer, Categorical
+            from skopt.space import Categorical, Integer, Real
             from skopt.utils import use_named_args
         except ImportError:
             raise ImportError("scikit-optimize is required for Bayesian optimization")
@@ -52,7 +50,7 @@ class BayesianOptimization(OptimizationMethod):
         # Convert parameter space to skopt format
         dimensions = []
         param_names = []
-        
+
         for param, space in param_space.items():
             param_names.append(param)
             if isinstance(space, (list, tuple)):
@@ -60,9 +58,13 @@ class BayesianOptimization(OptimizationMethod):
             elif isinstance(space, dict):
                 if "start" in space and "end" in space:
                     if isinstance(space["start"], int):
-                        dimensions.append(Integer(space["start"], space["end"], name=param))
+                        dimensions.append(
+                            Integer(space["start"], space["end"], name=param)
+                        )
                     else:
-                        dimensions.append(Real(space["start"], space["end"], name=param))
+                        dimensions.append(
+                            Real(space["start"], space["end"], name=param)
+                        )
 
         # Define objective function
         @use_named_args(dimensions=dimensions)
@@ -76,7 +78,7 @@ class BayesianOptimization(OptimizationMethod):
         # Run optimization
         n_calls = kwargs.get("n_calls", 50)
         n_initial_points = kwargs.get("n_initial_points", 10)
-        
+
         result = gp_minimize(
             objective_wrapper,
             dimensions,
@@ -90,7 +92,9 @@ class BayesianOptimization(OptimizationMethod):
         # Convert results
         best_params = dict(zip(param_names, result.x))
         best_score = result.fun
-        all_scores = [-score for score in result.func_vals]  # Convert back to minimization
+        all_scores = [
+            -score for score in result.func_vals
+        ]  # Convert back to minimization
         all_params = [dict(zip(param_names, x)) for x in result.x_iters]
 
         # Calculate feature importance
@@ -107,7 +111,9 @@ class BayesianOptimization(OptimizationMethod):
             feature_importance=feature_importance,
         )
 
-    def _calculate_feature_importance(self, result, param_names: List[str]) -> Dict[str, float]:
+    def _calculate_feature_importance(
+        self, result, param_names: List[str]
+    ) -> Dict[str, float]:
         """Calculate feature importance from optimization results.
 
         Args:
@@ -119,9 +125,9 @@ class BayesianOptimization(OptimizationMethod):
         """
         try:
             # Use the GP model to estimate feature importance
-            if hasattr(result, 'models') and result.models:
+            if hasattr(result, "models") and result.models:
                 model = result.models[-1]
-                if hasattr(model, 'kernel_'):
+                if hasattr(model, "kernel_"):
                     # Extract length scales from the kernel
                     length_scales = model.kernel_.length_scale
                     if length_scales is not None:

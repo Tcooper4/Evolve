@@ -190,7 +190,7 @@ class ConfigManager:
         """
         try:
             if callback is None:
-                callback = lambda: self._reload_config(file_path)
+                def callback(): return self._reload_config(file_path)
 
             observer = Observer()
             observer.schedule(

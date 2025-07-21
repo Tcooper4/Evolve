@@ -1,4 +1,4 @@
-﻿"""
+"""
 Enhanced Visualizer Module
 
 Enhanced with Batch 11 features: comprehensive input validation for all DataFrame overlays
@@ -9,13 +9,12 @@ and error handling.
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Union, Tuple
-from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import plotly.express as px
+import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 logger = logging.getLogger(__name__)
@@ -23,12 +22,10 @@ logger = logging.getLogger(__name__)
 
 class VisualizationError(Exception):
     """Custom exception for visualization errors."""
-    pass
 
 
 class DataValidationError(Exception):
     """Custom exception for data validation errors."""
-    pass
 
 
 class EnhancedVisualizer:
@@ -41,14 +38,17 @@ class EnhancedVisualizer:
             config: Configuration dictionary
         """
         self.config = config or {}
-        self.validation_config = self.config.get("validation", {
-            "strict_mode": True,
-            "allow_missing_data": False,
-            "min_data_points": 10,
-            "max_data_points": 10000,
-            "required_columns": ["timestamp", "close"],
-            "numeric_columns": ["open", "high", "low", "close", "volume"]
-        })
+        self.validation_config = self.config.get(
+            "validation",
+            {
+                "strict_mode": True,
+                "allow_missing_data": False,
+                "min_data_points": 10,
+                "max_data_points": 10000,
+                "required_columns": ["timestamp", "close"],
+                "numeric_columns": ["open", "high", "low", "close", "volume"],
+            },
+        )
 
         self.logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class EnhancedVisualizer:
         numeric_columns: Optional[List[str]] = None,
         min_rows: Optional[int] = None,
         max_rows: Optional[int] = None,
-        allow_missing: Optional[bool] = None
+        allow_missing: Optional[bool] = None,
     ) -> bool:
         """Validate DataFrame for visualization.
 
@@ -79,11 +79,19 @@ class EnhancedVisualizer:
         """
         try:
             # Use config defaults if not provided
-            required_columns = required_columns or self.validation_config["required_columns"]
-            numeric_columns = numeric_columns or self.validation_config["numeric_columns"]
+            required_columns = (
+                required_columns or self.validation_config["required_columns"]
+            )
+            numeric_columns = (
+                numeric_columns or self.validation_config["numeric_columns"]
+            )
             min_rows = min_rows or self.validation_config["min_data_points"]
             max_rows = max_rows or self.validation_config["max_data_points"]
-            allow_missing = allow_missing if allow_missing is not None else self.validation_config["allow_missing_data"]
+            allow_missing = (
+                allow_missing
+                if allow_missing is not None
+                else self.validation_config["allow_missing_data"]
+            )
 
             # Check if DataFrame is None or empty
             if df is None:
@@ -99,7 +107,9 @@ class EnhancedVisualizer:
             # Check required columns
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
-                raise DataValidationError(f"Missing required columns: {missing_columns}")
+                raise DataValidationError(
+                    f"Missing required columns: {missing_columns}"
+                )
 
             # Check numeric columns
             non_numeric_columns = []
@@ -109,21 +119,29 @@ class EnhancedVisualizer:
                         non_numeric_columns.append(col)
 
             if non_numeric_columns:
-                raise DataValidationError(f"Non-numeric columns found: {non_numeric_columns}")
+                raise DataValidationError(
+                    f"Non-numeric columns found: {non_numeric_columns}"
+                )
 
             # Check row count
             if len(df) < min_rows:
-                raise DataValidationError(f"DataFrame has {len(df)} rows, minimum required: {min_rows}")
+                raise DataValidationError(
+                    f"DataFrame has {len(df)} rows, minimum required: {min_rows}"
+                )
 
             if len(df) > max_rows:
-                raise DataValidationError(f"DataFrame has {len(df)} rows, maximum allowed: {max_rows}")
+                raise DataValidationError(
+                    f"DataFrame has {len(df)} rows, maximum allowed: {max_rows}"
+                )
 
             # Check for missing data
             if not allow_missing:
                 missing_data = df[required_columns].isnull().sum()
                 columns_with_missing = missing_data[missing_data > 0]
                 if not columns_with_missing.empty:
-                    raise DataValidationError(f"Missing data found in columns: {columns_with_missing.to_dict()}")
+                    raise DataValidationError(
+                        f"Missing data found in columns: {columns_with_missing.to_dict()}"
+                    )
 
             # Check for infinite values
             infinite_columns = []
@@ -133,7 +151,9 @@ class EnhancedVisualizer:
                         infinite_columns.append(col)
 
             if infinite_columns:
-                raise DataValidationError(f"Infinite values found in columns: {infinite_columns}")
+                raise DataValidationError(
+                    f"Infinite values found in columns: {infinite_columns}"
+                )
 
             # Check for duplicate timestamps if timestamp column exists
             if "timestamp" in df.columns:
@@ -141,14 +161,18 @@ class EnhancedVisualizer:
                 if duplicates > 0:
                     self.logger.warning(f"Found {duplicates} duplicate timestamps")
 
-            self.logger.debug(f"DataFrame validation passed: {len(df)} rows, {len(df.columns)} columns")
+            self.logger.debug(
+                f"DataFrame validation passed: {len(df)} rows, {len(df.columns)} columns"
+            )
             return True
 
         except Exception as e:
             if isinstance(e, DataValidationError):
                 raise
             else:
-                raise DataValidationError(f"Unexpected error during validation: {str(e)}")
+                raise DataValidationError(
+                    f"Unexpected error during validation: {str(e)}"
+                )
 
     def validate_price_data(self, df: pd.DataFrame) -> bool:
         """Validate price data specifically.
@@ -167,7 +191,7 @@ class EnhancedVisualizer:
             self.validate_dataframe(
                 df,
                 required_columns=["timestamp", "close"],
-                numeric_columns=["open", "high", "low", "close", "volume"]
+                numeric_columns=["open", "high", "low", "close", "volume"],
             )
 
             # Price-specific validations
@@ -175,19 +199,23 @@ class EnhancedVisualizer:
             available_price_cols = [col for col in price_columns if col in df.columns]
 
             if len(available_price_cols) < 2:
-                raise DataValidationError("At least 2 price columns required (close + one other)")
+                raise DataValidationError(
+                    "At least 2 price columns required (close + one other)"
+                )
 
             # Check price relationships
             for idx, row in df.iterrows():
                 if "high" in df.columns and "low" in df.columns:
                     if row["high"] < row["low"]:
                         raise DataValidationError(
-                            f"High price ({row['high']}) < Low price ({row['low']}) at index {idx}")
+                            f"High price ({row['high']}) < Low price ({row['low']}) at index {idx}"
+                        )
 
                 if "open" in df.columns and "close" in df.columns:
                     if row["open"] <= 0 or row["close"] <= 0:
                         raise DataValidationError(
-                            f"Non-positive price found at index {idx}: open={row['open']}, close={row['close']}")
+                            f"Non-positive price found at index {idx}: open={row['open']}, close={row['close']}"
+                        )
 
             # Check for reasonable price ranges (prices should be > 0 and < 1M)
             for col in available_price_cols:
@@ -219,9 +247,7 @@ class EnhancedVisualizer:
         try:
             # Basic DataFrame validation
             self.validate_dataframe(
-                df,
-                required_columns=["timestamp", "volume"],
-                numeric_columns=["volume"]
+                df, required_columns=["timestamp", "volume"], numeric_columns=["volume"]
             )
 
             # Volume-specific validations
@@ -257,17 +283,19 @@ class EnhancedVisualizer:
         try:
             # Basic DataFrame validation
             self.validate_dataframe(
-                df,
-                required_columns=["timestamp"],
-                numeric_columns=[indicator_name]
+                df, required_columns=["timestamp"], numeric_columns=[indicator_name]
             )
 
             # Indicator-specific validations
             if indicator_name in df.columns:
                 # Check for reasonable ranges based on indicator type
                 if "rsi" in indicator_name.lower():
-                    if (df[indicator_name] < 0).any() or (df[indicator_name] > 100).any():
-                        self.logger.warning(f"RSI values outside [0, 100] range found in {indicator_name}")
+                    if (df[indicator_name] < 0).any() or (
+                        df[indicator_name] > 100
+                    ).any():
+                        self.logger.warning(
+                            f"RSI values outside [0, 100] range found in {indicator_name}"
+                        )
 
                 elif "macd" in indicator_name.lower():
                     # MACD can have any value
@@ -276,7 +304,9 @@ class EnhancedVisualizer:
                 elif "bollinger" in indicator_name.lower():
                     # Bollinger bands should be positive
                     if (df[indicator_name] < 0).any():
-                        self.logger.warning(f"Negative values found in Bollinger indicator {indicator_name}")
+                        self.logger.warning(
+                            f"Negative values found in Bollinger indicator {indicator_name}"
+                        )
 
             return True
 
@@ -291,7 +321,7 @@ class EnhancedVisualizer:
         df: pd.DataFrame,
         title: str = "Price Chart",
         overlay_indicators: Optional[Dict[str, pd.DataFrame]] = None,
-        volume: bool = True
+        volume: bool = True,
     ) -> go.Figure:
         """Create a candlestick chart with optional indicators and volume.
 
@@ -315,11 +345,12 @@ class EnhancedVisualizer:
             # Create subplots
             if volume and "volume" in df.columns:
                 fig = make_subplots(
-                    rows=2, cols=1,
+                    rows=2,
+                    cols=1,
                     shared_xaxes=True,
                     vertical_spacing=0.03,
                     subplot_titles=(title, "Volume"),
-                    row_width=[0.7, 0.3]
+                    row_width=[0.7, 0.3],
                 )
             else:
                 fig = go.Figure()
@@ -331,7 +362,7 @@ class EnhancedVisualizer:
                 high=df["high"],
                 low=df["low"],
                 close=df["close"],
-                name="Price"
+                name="Price",
             )
 
             if volume and "volume" in df.columns:
@@ -345,7 +376,7 @@ class EnhancedVisualizer:
                     x=df["timestamp"],
                     y=df["volume"],
                     name="Volume",
-                    marker_color="rgba(0, 0, 255, 0.3)"
+                    marker_color="rgba(0, 0, 255, 0.3)",
                 )
                 fig.add_trace(volume_trace, row=2, col=1)
 
@@ -354,28 +385,30 @@ class EnhancedVisualizer:
                 for indicator_name, indicator_df in overlay_indicators.items():
                     try:
                         self.validate_indicator_data(indicator_df, indicator_name)
-                        
+
                         indicator_trace = go.Scatter(
                             x=indicator_df["timestamp"],
                             y=indicator_df[indicator_name],
                             name=indicator_name,
-                            mode="lines"
+                            mode="lines",
                         )
-                        
+
                         if volume and "volume" in df.columns:
                             fig.add_trace(indicator_trace, row=1, col=1)
                         else:
                             fig.add_trace(indicator_trace)
-                            
+
                     except Exception as e:
-                        self.logger.warning(f"Failed to add indicator {indicator_name}: {e}")
+                        self.logger.warning(
+                            f"Failed to add indicator {indicator_name}: {e}"
+                        )
 
             # Update layout
             fig.update_layout(
                 title=title,
                 xaxis_title="Date",
                 yaxis_title="Price",
-                template="plotly_white"
+                template="plotly_white",
             )
 
             return fig
@@ -384,14 +417,16 @@ class EnhancedVisualizer:
             if isinstance(e, (DataValidationError, VisualizationError)):
                 raise
             else:
-                raise VisualizationError(f"Failed to create candlestick chart: {str(e)}")
+                raise VisualizationError(
+                    f"Failed to create candlestick chart: {str(e)}"
+                )
 
     def plot_line_chart(
         self,
         df: pd.DataFrame,
         y_column: str,
         title: str = "Line Chart",
-        overlay_data: Optional[Dict[str, pd.DataFrame]] = None
+        overlay_data: Optional[Dict[str, pd.DataFrame]] = None,
     ) -> go.Figure:
         """Create a line chart.
 
@@ -411,9 +446,7 @@ class EnhancedVisualizer:
         try:
             # Validate data
             self.validate_dataframe(
-                df,
-                required_columns=["timestamp", y_column],
-                numeric_columns=[y_column]
+                df, required_columns=["timestamp", y_column], numeric_columns=[y_column]
             )
 
             # Create figure
@@ -421,10 +454,7 @@ class EnhancedVisualizer:
 
             # Add main line
             main_trace = go.Scatter(
-                x=df["timestamp"],
-                y=df[y_column],
-                mode="lines",
-                name=y_column
+                x=df["timestamp"], y=df[y_column], mode="lines", name=y_column
             )
             fig.add_trace(main_trace)
 
@@ -435,26 +465,28 @@ class EnhancedVisualizer:
                         self.validate_dataframe(
                             overlay_df,
                             required_columns=["timestamp", overlay_name],
-                            numeric_columns=[overlay_name]
+                            numeric_columns=[overlay_name],
                         )
-                        
+
                         overlay_trace = go.Scatter(
                             x=overlay_df["timestamp"],
                             y=overlay_df[overlay_name],
                             mode="lines",
-                            name=overlay_name
+                            name=overlay_name,
                         )
                         fig.add_trace(overlay_trace)
-                        
+
                     except Exception as e:
-                        self.logger.warning(f"Failed to add overlay {overlay_name}: {e}")
+                        self.logger.warning(
+                            f"Failed to add overlay {overlay_name}: {e}"
+                        )
 
             # Update layout
             fig.update_layout(
                 title=title,
                 xaxis_title="Date",
                 yaxis_title=y_column,
-                template="plotly_white"
+                template="plotly_white",
             )
 
             return fig
@@ -466,11 +498,7 @@ class EnhancedVisualizer:
                 raise VisualizationError(f"Failed to create line chart: {str(e)}")
 
     def plot_histogram(
-        self,
-        df: pd.DataFrame,
-        column: str,
-        title: str = "Histogram",
-        bins: int = 50
+        self, df: pd.DataFrame, column: str, title: str = "Histogram", bins: int = 50
     ) -> go.Figure:
         """Create a histogram.
 
@@ -490,9 +518,7 @@ class EnhancedVisualizer:
         try:
             # Validate data
             self.validate_dataframe(
-                df,
-                required_columns=[column],
-                numeric_columns=[column]
+                df, required_columns=[column], numeric_columns=[column]
             )
 
             # Create histogram
@@ -503,7 +529,7 @@ class EnhancedVisualizer:
                 title=title,
                 xaxis_title=column,
                 yaxis_title="Frequency",
-                template="plotly_white"
+                template="plotly_white",
             )
 
             return fig
@@ -520,7 +546,7 @@ class EnhancedVisualizer:
         x_column: str,
         y_column: str,
         title: str = "Scatter Plot",
-        color_column: Optional[str] = None
+        color_column: Optional[str] = None,
     ) -> go.Figure:
         """Create a scatter plot.
 
@@ -542,33 +568,22 @@ class EnhancedVisualizer:
             # Validate data
             required_columns = [x_column, y_column]
             numeric_columns = [x_column, y_column]
-            
+
             if color_column:
                 required_columns.append(color_column)
                 numeric_columns.append(color_column)
 
             self.validate_dataframe(
-                df,
-                required_columns=required_columns,
-                numeric_columns=numeric_columns
+                df, required_columns=required_columns, numeric_columns=numeric_columns
             )
 
             # Create scatter plot
             if color_column:
                 fig = px.scatter(
-                    df,
-                    x=x_column,
-                    y=y_column,
-                    color=color_column,
-                    title=title
+                    df, x=x_column, y=y_column, color=color_column, title=title
                 )
             else:
-                fig = px.scatter(
-                    df,
-                    x=x_column,
-                    y=y_column,
-                    title=title
-                )
+                fig = px.scatter(df, x=x_column, y=y_column, title=title)
 
             # Update layout
             fig.update_layout(template="plotly_white")
@@ -582,9 +597,7 @@ class EnhancedVisualizer:
                 raise VisualizationError(f"Failed to create scatter plot: {str(e)}")
 
     def plot_heatmap(
-        self,
-        correlation_matrix: pd.DataFrame,
-        title: str = "Correlation Heatmap"
+        self, correlation_matrix: pd.DataFrame, title: str = "Correlation Heatmap"
     ) -> go.Figure:
         """Create a correlation heatmap.
 
@@ -608,19 +621,18 @@ class EnhancedVisualizer:
                 raise DataValidationError("Correlation matrix must be square")
 
             # Create heatmap
-            fig = go.Figure(data=go.Heatmap(
-                z=correlation_matrix.values,
-                x=correlation_matrix.columns,
-                y=correlation_matrix.index,
-                colorscale="RdBu",
-                zmid=0
-            ))
+            fig = go.Figure(
+                data=go.Heatmap(
+                    z=correlation_matrix.values,
+                    x=correlation_matrix.columns,
+                    y=correlation_matrix.index,
+                    colorscale="RdBu",
+                    zmid=0,
+                )
+            )
 
             # Update layout
-            fig.update_layout(
-                title=title,
-                template="plotly_white"
-            )
+            fig.update_layout(title=title, template="plotly_white")
 
             return fig
 
@@ -630,12 +642,7 @@ class EnhancedVisualizer:
             else:
                 raise VisualizationError(f"Failed to create heatmap: {str(e)}")
 
-    def export_chart(
-        self,
-        fig: go.Figure,
-        filename: str,
-        format: str = "html"
-    ) -> bool:
+    def export_chart(self, fig: go.Figure, filename: str, format: str = "html") -> bool:
         """Export chart to file.
 
         Args:
@@ -682,11 +689,7 @@ def create_visualizer(config: Optional[Dict[str, Any]] = None) -> EnhancedVisual
     return EnhancedVisualizer(config)
 
 
-def validate_and_plot(
-    df: pd.DataFrame,
-    plot_type: str,
-    **kwargs
-) -> go.Figure:
+def validate_and_plot(df: pd.DataFrame, plot_type: str, **kwargs) -> go.Figure:
     """Convenience function to validate data and create a plot.
 
     Args:
@@ -702,7 +705,7 @@ def validate_and_plot(
     """
     try:
         visualizer = EnhancedVisualizer()
-        
+
         if plot_type == "candlestick":
             return visualizer.plot_candlestick_chart(df, **kwargs)
         elif plot_type == "line":
@@ -715,7 +718,7 @@ def validate_and_plot(
             return visualizer.plot_heatmap(df, **kwargs)
         else:
             raise VisualizationError(f"Unsupported plot type: {plot_type}")
-            
+
     except Exception as e:
         if isinstance(e, VisualizationError):
             raise

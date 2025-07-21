@@ -11,10 +11,11 @@ import signal
 import sys
 from pathlib import Path
 
+from services.performance_critic_service import PerformanceCriticService
+
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.performance_critic_service import PerformanceCriticService
 
 # Configure logging
 logging.basicConfig(

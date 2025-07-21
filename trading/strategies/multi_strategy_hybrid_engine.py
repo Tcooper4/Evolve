@@ -21,6 +21,7 @@ try:
     from sklearn.ensemble import VotingRegressor
     from sklearn.linear_model import LinearRegression
     from sklearn.preprocessing import StandardScaler
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("⚠️ scikit-learn not available. Disabling ensemble learning capabilities.")
@@ -86,7 +87,9 @@ class MultiStrategyHybridEngine:
         risk_free_rate: float = 0.02,
     ):
         if not SKLEARN_AVAILABLE:
-            raise ImportError("scikit-learn is not available. Cannot create MultiStrategyHybridEngine.")
+            raise ImportError(
+                "scikit-learn is not available. Cannot create MultiStrategyHybridEngine."
+            )
         """Initialize the hybrid engine.
 
         Args:

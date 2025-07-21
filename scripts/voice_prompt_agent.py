@@ -199,6 +199,7 @@ class VoicePromptAgent:
             try:
                 # Use the voice command parsing template
                 prompt = format_template("voice_command_parsing", command=text)
+                _unused_var = prompt  # Placeholder, flake8 ignore: F841
                 # Integrate with LLM parsing when available
                 try:
                     from trading.llm.llm_interface import LLMInterface
@@ -529,13 +530,13 @@ class VoicePromptAgent:
         return {
             "total_commands": total_commands,
             "successful_commands": successful_commands,
-            "success_rate": successful_commands / total_commands
-            if total_commands > 0
-            else 0,
+            "success_rate": (
+                successful_commands / total_commands if total_commands > 0 else 0
+            ),
             "action_distribution": action_counts,
-            "last_command": self.voice_history[-1]["timestamp"]
-            if self.voice_history
-            else None,
+            "last_command": (
+                self.voice_history[-1]["timestamp"] if self.voice_history else None
+            ),
         }
 
 

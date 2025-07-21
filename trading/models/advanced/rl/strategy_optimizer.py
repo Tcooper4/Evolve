@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import random
 from abc import ABC
 from collections import deque
@@ -13,6 +13,7 @@ try:
     import torch
     import torch.nn as nn
     import torch.optim as optim
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ PyTorch not available. Disabling RL strategy optimizers.")
@@ -35,8 +36,10 @@ class StrategyOptimizer(ABC):
             config (Dict[str, Any]): Configuration dictionary
         """
         if not TORCH_AVAILABLE:
-            raise ImportError("PyTorch is not available. Cannot create StrategyOptimizer.")
-        
+            raise ImportError(
+                "PyTorch is not available. Cannot create StrategyOptimizer."
+            )
+
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.config = config

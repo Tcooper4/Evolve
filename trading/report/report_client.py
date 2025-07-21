@@ -6,6 +6,7 @@ Client for interacting with the report service and generating reports on demand.
 
 import json
 import logging
+import os
 import sys
 import time
 from datetime import datetime
@@ -14,10 +15,11 @@ from typing import Any, Dict, List, Optional
 
 import redis
 
+from .report_generator import ReportGenerator, generate_trade_report
+
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from .report_generator import ReportGenerator, generate_trade_report
 
 logger = logging.getLogger(__name__)
 

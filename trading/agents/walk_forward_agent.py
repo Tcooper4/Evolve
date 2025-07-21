@@ -428,16 +428,16 @@ class WalkForwardAgent(BaseAgent):
                 - np.sum((actual - pred) ** 2) / np.sum((actual - actual.mean()) ** 2),
                 "mean_return": returns.mean(),
                 "volatility": returns.std(),
-                "sharpe_ratio": returns.mean() / returns.std()
-                if returns.std() > 0
-                else 0,
+                "sharpe_ratio": (
+                    returns.mean() / returns.std() if returns.std() > 0 else 0
+                ),
                 "max_drawdown": self._calculate_max_drawdown(returns),
                 "win_rate": (returns > 0).mean(),
-                "profit_factor": abs(
-                    returns[returns > 0].sum() / returns[returns < 0].sum()
-                )
-                if returns[returns < 0].sum() != 0
-                else float("inf"),
+                "profit_factor": (
+                    abs(returns[returns > 0].sum() / returns[returns < 0].sum())
+                    if returns[returns < 0].sum() != 0
+                    else float("inf")
+                ),
             }
 
             return metrics

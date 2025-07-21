@@ -8,13 +8,13 @@ import logging
 import sys
 from pathlib import Path
 
+from trading.data.providers.yfinance_provider import YFinanceProvider
+from trading.models.ensemble_model import EnsembleModel
+
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-
-from trading.data.providers.yfinance_provider import YFinanceProvider
-from trading.models.ensemble_model import EnsembleModel
 
 # Configure logging for the example
 logging.basicConfig(

@@ -5,22 +5,20 @@ Provides isolated, timeout-protected, and memory-limited execution
 for user-defined models and strategies to protect system stability.
 """
 
-import asyncio
 import json
 import logging
 import os
 import random
-import signal
 import subprocess
 import sys
 import tempfile
 import time
 import traceback
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -125,8 +123,7 @@ class SafeExecutor:
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(
-            f"SafeExecutor initialized with timeout={timeout_seconds}s, memory_limit={memory_limit_mb}MB, retries={max_retries}"
-        )
+            f"SafeExecutor initialized with timeout={timeout_seconds}s, memory_limit={memory_limit_mb}MB, retries={max_retries}")
 
     def execute_model(
         self,

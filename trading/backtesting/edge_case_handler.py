@@ -196,9 +196,11 @@ class EdgeCaseHandler:
                 # Create simple price chart
                 chart_data = {
                     "x": data.index.tolist(),
-                    "y": data["close"].tolist()
-                    if "close" in data.columns
-                    else data.iloc[:, 0].tolist(),
+                    "y": (
+                        data["close"].tolist()
+                        if "close" in data.columns
+                        else data.iloc[:, 0].tolist()
+                    ),
                     "type": "scatter",
                     "mode": "lines",
                     "name": "Price",

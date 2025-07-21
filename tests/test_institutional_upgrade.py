@@ -64,9 +64,9 @@ class InstitutionalUpgradeTester:
         total = len(tests)
 
         for test_name, test_func in tests:
-            logger.info(f"\n{'='*60}")
+            logger.info(f"\n{'=' * 60}")
             logger.info(f"Testing: {test_name}")
-            logger.info(f"{'='*60}")
+            logger.info(f"{'=' * 60}")
 
             try:
                 result = test_func()
@@ -96,11 +96,11 @@ class InstitutionalUpgradeTester:
             "failed": total - passed,
             "success_rate": (passed / total) * 100 if total > 0 else 0,
             "test_results": self.test_results,
-            "upgrade_status": "COMPLETE"
-            if passed == total
-            else "PARTIAL"
-            if passed > total // 2
-            else "FAILED",
+            "upgrade_status": (
+                "COMPLETE"
+                if passed == total
+                else "PARTIAL" if passed > total // 2 else "FAILED"
+            ),
         }
 
         # Save report
@@ -796,9 +796,7 @@ class InstitutionalUpgradeTester:
             overall_health = (
                 "healthy"
                 if healthy_components == total_components
-                else "degraded"
-                if healthy_components > 0
-                else "critical"
+                else "degraded" if healthy_components > 0 else "critical"
             )
 
             return {

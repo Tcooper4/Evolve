@@ -1,4 +1,4 @@
-﻿"""
+"""
 Risk Controls Module
 
 This module contains risk control classes and configurations for the execution agent.

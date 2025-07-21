@@ -11,9 +11,6 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-# Add the trading directory to the path
-sys.path.append(str(Path(__file__).parent.parent))
-
 from report.report_client import ReportClient, generate_quick_report
 from report.report_generator import (
     ModelMetrics,
@@ -21,6 +18,9 @@ from report.report_generator import (
     StrategyReasoning,
     TradeMetrics,
 )
+
+# Add the trading directory to the path
+sys.path.append(str(Path(__file__).parent.parent))
 
 
 class TestReportGenerator(unittest.TestCase):

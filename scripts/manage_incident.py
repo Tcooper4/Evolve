@@ -33,7 +33,6 @@ import json
 import logging
 import logging.config
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
@@ -42,6 +41,8 @@ import psutil
 import redis
 import requests
 import yaml
+
+from utils.launch_utils import setup_logging
 
 
 class IncidentManager:
@@ -64,93 +65,40 @@ class IncidentManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="report_service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="report_service")def monitor_incidents(self, duration: int = 300):
+    def monitor_incidents(self, duration: int = 300):
         """Monitor for incidents."""
         self.logger.info(f"Monitoring for incidents for {duration} seconds")
 
         try:
-            incidents = []
-            start_time = time.time()
+            # Monitor system health
+            system_incidents = self._monitor_system_health()
 
-            while time.time() - start_time < duration:
-                # Check system health
-                system_health = await self._check_system_health()
-                if not system_health["healthy"]:
-                    incident = {
-                        "timestamp": datetime.now().isoformat(),
-                        "type": "system_health",
-                        "severity": "high",
-                        "details": system_health["issues"],
-                    }
-                    incidents.append(incident)
-                    await self._handle_incident(incident)
+            # Monitor application errors
+            app_incidents = self._monitor_app_errors()
 
-                # Check application health
-                app_health = await self._check_application_health()
-                if not app_health["healthy"]:
-                    incident = {
-                        "timestamp": datetime.now().isoformat(),
-                        "type": "application_health",
-                        "severity": "high",
-                        "details": app_health["issues"],
-                    }
-                    incidents.append(incident)
-                    await self._handle_incident(incident)
+            # Monitor database issues
+            db_incidents = self._monitor_db_issues()
 
-                # Check database health
-                db_health = await self._check_database_health()
-                if not db_health["healthy"]:
-                    incident = {
-                        "timestamp": datetime.now().isoformat(),
-                        "type": "database_health",
-                        "severity": "critical",
-                        "details": db_health["issues"],
-                    }
-                    incidents.append(incident)
-                    await self._handle_incident(incident)
-
-                # Check network health
-                network_health = await self._check_network_health()
-                if not network_health["healthy"]:
-                    incident = {
-                        "timestamp": datetime.now().isoformat(),
-                        "type": "network_health",
-                        "severity": "high",
-                        "details": network_health["issues"],
-                    }
-                    incidents.append(incident)
-                    await self._handle_incident(incident)
-
-                # Check security
-                security_health = await self._check_security_health()
-                if not security_health["healthy"]:
-                    incident = {
-                        "timestamp": datetime.now().isoformat(),
-                        "type": "security_health",
-                        "severity": "critical",
-                        "details": security_health["issues"],
-                    }
-                    incidents.append(incident)
-                    await self._handle_incident(incident)
-
-                await asyncio.sleep(1)
+            # Combine incidents
+            incidents = {
+                "timestamp": datetime.now().isoformat(),
+                "system": system_incidents,
+                "application": app_incidents,
+                "database": db_incidents,
+            }
 
             # Save incidents
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            incidents_file = self.incidents_dir / f"incidents_{timestamp}.json"
+            self._save_incidents(incidents)
 
-            with open(incidents_file, "w") as f:
-                json.dump(incidents, f, indent=2)
-
-            self.logger.info(f"Incidents saved to {incidents_file}")
-            return incidents
+            self.logger.info("Incident monitoring completed successfully")
+            return True
         except Exception as e:
             self.logger.error(f"Failed to monitor incidents: {e}")
-            raise
+            return False
 
     async def _check_system_health(self) -> Dict[str, Any]:
         """Check system health."""

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Custom Performance Metrics Module
 
 This module provides clean, custom implementations of financial performance metrics
@@ -6,14 +6,15 @@ to replace the empyrical dependency. All functions are designed to be compatible
 with pandas Series and numpy arrays.
 """
 
+from typing import Union
+
 import numpy as np
 import pandas as pd
-from typing import Union, Optional, Tuple
 
 
-def sharpe_ratio(returns: Union[pd.Series, np.ndarray],
-                 risk_free: float = 0.0,
-                 period: int = 252) -> float:
+def sharpe_ratio(
+    returns: Union[pd.Series, np.ndarray], risk_free: float = 0.0, period: int = 252
+) -> float:
     """
     Calculate the Sharpe ratio.
 
@@ -36,9 +37,9 @@ def sharpe_ratio(returns: Union[pd.Series, np.ndarray],
     return (np.mean(excess_returns) / np.std(excess_returns)) * np.sqrt(period)
 
 
-def sortino_ratio(returns: Union[pd.Series, np.ndarray],
-                  risk_free: float = 0.0,
-                  period: int = 252) -> float:
+def sortino_ratio(
+    returns: Union[pd.Series, np.ndarray], risk_free: float = 0.0, period: int = 252
+) -> float:
     """
     Calculate the Sortino ratio.
 
@@ -100,9 +101,9 @@ def cumulative_return(returns: Union[pd.Series, np.ndarray]) -> float:
     return np.prod(1 + returns) - 1
 
 
-def calmar_ratio(returns: Union[pd.Series, np.ndarray],
-                 risk_free: float = 0.0,
-                 period: int = 252) -> float:
+def calmar_ratio(
+    returns: Union[pd.Series, np.ndarray], risk_free: float = 0.0, period: int = 252
+) -> float:
     """
     Calculate the Calmar ratio.
 
@@ -197,18 +198,21 @@ def drawdown_details(returns: Union[pd.Series, np.ndarray]) -> pd.DataFrame:
     if not drawdown_starts:
         return pd.DataFrame()
 
-    df = pd.DataFrame({
-        'start': drawdown_starts,
-        'end': drawdown_ends,
-        'depth': drawdown_depths,
-        'days': [end - start + 1 for start, end in zip(drawdown_starts, drawdown_ends)]
-    })
+    df = pd.DataFrame(
+        {
+            "start": drawdown_starts,
+            "end": drawdown_ends,
+            "depth": drawdown_depths,
+            "days": [
+                end - start + 1 for start, end in zip(drawdown_starts, drawdown_ends)
+            ],
+        }
+    )
 
     return df
 
 
-def omega_ratio(returns: Union[pd.Series, np.ndarray],
-                threshold: float = 0.0) -> float:
+def omega_ratio(returns: Union[pd.Series, np.ndarray], threshold: float = 0.0) -> float:
     """
     Calculate the Omega ratio.
 
@@ -235,8 +239,10 @@ def omega_ratio(returns: Union[pd.Series, np.ndarray],
     return expected_gain / expected_loss if expected_loss != 0 else 0.0
 
 
-def information_ratio(returns: Union[pd.Series, np.ndarray],
-                     benchmark_returns: Union[pd.Series, np.ndarray]) -> float:
+def information_ratio(
+    returns: Union[pd.Series, np.ndarray],
+    benchmark_returns: Union[pd.Series, np.ndarray],
+) -> float:
     """
     Calculate the Information ratio.
 
@@ -261,9 +267,11 @@ def information_ratio(returns: Union[pd.Series, np.ndarray],
     return np.mean(active_returns) / np.std(active_returns)
 
 
-def treynor_ratio(returns: Union[pd.Series, np.ndarray],
-                  benchmark_returns: Union[pd.Series, np.ndarray],
-                  risk_free: float = 0.0) -> float:
+def treynor_ratio(
+    returns: Union[pd.Series, np.ndarray],
+    benchmark_returns: Union[pd.Series, np.ndarray],
+    risk_free: float = 0.0,
+) -> float:
     """
     Calculate the Treynor ratio.
 
@@ -297,9 +305,11 @@ def treynor_ratio(returns: Union[pd.Series, np.ndarray],
     return excess_return / beta
 
 
-def jensen_alpha(returns: Union[pd.Series, np.ndarray],
-                 benchmark_returns: Union[pd.Series, np.ndarray],
-                 risk_free: float = 0.0) -> float:
+def jensen_alpha(
+    returns: Union[pd.Series, np.ndarray],
+    benchmark_returns: Union[pd.Series, np.ndarray],
+    risk_free: float = 0.0,
+) -> float:
     """
     Calculate Jensen's Alpha.
 
@@ -332,8 +342,9 @@ def jensen_alpha(returns: Union[pd.Series, np.ndarray],
     return portfolio_return - (risk_free + beta * (benchmark_return - risk_free))
 
 
-def value_at_risk(returns: Union[pd.Series, np.ndarray],
-                  confidence_level: float = 0.95) -> float:
+def value_at_risk(
+    returns: Union[pd.Series, np.ndarray], confidence_level: float = 0.95
+) -> float:
     """
     Calculate Value at Risk (VaR).
 
@@ -352,8 +363,9 @@ def value_at_risk(returns: Union[pd.Series, np.ndarray],
     return np.percentile(returns, percentile)
 
 
-def conditional_value_at_risk(returns: Union[pd.Series, np.ndarray],
-                             confidence_level: float = 0.95) -> float:
+def conditional_value_at_risk(
+    returns: Union[pd.Series, np.ndarray], confidence_level: float = 0.95
+) -> float:
     """
     Calculate Conditional Value at Risk (CVaR) / Expected Shortfall.
 
@@ -377,8 +389,9 @@ def conditional_value_at_risk(returns: Union[pd.Series, np.ndarray],
     return np.mean(tail_returns)
 
 
-def downside_deviation(returns: Union[pd.Series, np.ndarray],
-                      threshold: float = 0.0) -> float:
+def downside_deviation(
+    returns: Union[pd.Series, np.ndarray], threshold: float = 0.0
+) -> float:
     """
     Calculate downside deviation.
 

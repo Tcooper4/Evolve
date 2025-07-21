@@ -8,6 +8,7 @@ import ast
 import json
 import logging
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -255,9 +256,19 @@ class ReturnStatementFixer:
                     keyword in function_analysis["name"].lower()
                     for keyword in ["init", "setup", "configure"]
                 ):
-                    return_stmt = f"{' ' * (last_indent + 4)}return {{'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}}"
+                    return_stmt = f"{
+                        ' ' *
+                        (
+                            last_indent +
+                            4)}return {
+                        'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()} "
                 else:
-                    return_stmt = f"{' ' * (last_indent + 4)}return {{'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
+                    return_stmt = f"{
+                        ' ' *
+                        (
+                            last_indent +
+                            4)}return {
+                        'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()} "
 
                 function_body.append(return_stmt)
 
@@ -276,21 +287,30 @@ class ReturnStatementFixer:
                     if original_line.strip() == "return":
                         # Simple return - replace with structured return
                         indent = len(original_line) - len(original_line.lstrip())
-                        structured_return = f"{' ' * indent}return {{'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
+                        structured_return = f"{
+                            ' ' *
+                            indent}return {
+                            'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()} "
                         lines[return_line_idx] = structured_return
                     elif "return" in original_line and "None" in original_line:
                         # Return None - replace with structured return
                         indent = len(original_line) - len(original_line.lstrip())
-                        structured_return = f"{' ' * indent}return {{'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
+                        structured_return = f"{
+                            ' ' *
+                            indent}return {
+                            'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()} "
                         lines[return_line_idx] = structured_return
                     else:
                         # Return with value - wrap in structured format
                         indent = len(original_line) - len(original_line.lstrip())
                         value_part = original_line[
-                            original_line.find("return") + 6 :
+                            original_line.find("return") + 6:
                         ].strip()
                         if value_part:
-                            structured_return = f"{' ' * indent}return {{'success': True, 'result': {value_part}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
+                            structured_return = f"{
+                                ' ' *
+                                indent}return {
+                                'success': True, 'result': {value_part}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()} "
                             lines[return_line_idx] = structured_return
 
         return "\n".join(lines)

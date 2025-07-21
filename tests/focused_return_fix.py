@@ -75,11 +75,26 @@ class FocusedReturnFixer:
 
                 # Generate appropriate return based on function name
                 if "init" in function_name.lower() or "setup" in function_name.lower():
-                    return_stmt = f"{' ' * (last_indent + 4)}return {{'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}}"
+                    return_stmt = f"{
+                        ' ' *
+                        (
+                            last_indent +
+                            4)}return {
+                        'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()} "
                 elif "get" in function_name.lower() or "fetch" in function_name.lower():
-                    return_stmt = f"{' ' * (last_indent + 4)}return {{'success': True, 'data': result, 'message': 'Data retrieved successfully', 'timestamp': datetime.now().isoformat()}}"
+                    return_stmt = f"{
+                        ' ' *
+                        (
+                            last_indent +
+                            4)}return {
+                        'success': True, 'data': result, 'message': 'Data retrieved successfully', 'timestamp': datetime.now().isoformat()} "
                 else:
-                    return_stmt = f"{' ' * (last_indent + 4)}return {{'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
+                    return_stmt = f"{
+                        ' ' *
+                        (
+                            last_indent +
+                            4)}return {
+                        'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()} "
 
                 lines.insert(function_end, return_stmt)
 
@@ -90,18 +105,30 @@ class FocusedReturnFixer:
                 indent = len(original_line) - len(original_line.lstrip())
 
                 if original_line.strip() == "return":
-                    structured_return = f"{' ' * indent}return {{'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
+                    structured_return = f"{
+                        ' ' *
+                        indent}return {
+                        'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()} "
                 elif "return" in original_line and "None" in original_line:
-                    structured_return = f"{' ' * indent}return {{'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
+                    structured_return = f"{
+                        ' ' *
+                        indent}return {
+                        'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()} "
                 else:
                     # Extract return value and wrap in structured format
                     value_part = original_line[
-                        original_line.find("return") + 6 :
+                        original_line.find("return") + 6:
                     ].strip()
                     if value_part:
-                        structured_return = f"{' ' * indent}return {{'success': True, 'result': {value_part}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
+                        structured_return = f"{
+                            ' ' *
+                            indent}return {
+                            'success': True, 'result': {value_part}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()} "
                     else:
-                        structured_return = f"{' ' * indent}return {{'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}}"
+                        structured_return = f"{
+                            ' ' *
+                            indent}return {
+                            'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()} "
 
                 lines[function_line] = structured_return
 

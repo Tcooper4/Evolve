@@ -382,9 +382,9 @@ class StrategyLogger:
                 avg_total_return = total_return / valid_records
                 avg_max_drawdown = total_max_drawdown / valid_records
             else:
-                avg_confidence = (
-                    avg_win_rate
-                ) = avg_sharpe_ratio = avg_total_return = avg_max_drawdown = 0.0
+                avg_confidence = avg_win_rate = avg_sharpe_ratio = avg_total_return = (
+                    avg_max_drawdown
+                ) = 0.0
 
             # Get most recent mapping
             latest_mapping = regime_data[-1] if regime_data else None

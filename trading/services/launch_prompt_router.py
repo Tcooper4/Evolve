@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Prompt Router Service Launcher
 
@@ -6,21 +6,22 @@ Launches the PromptRouterService as a standalone process.
 Enhanced with graceful handling of malformed user prompts and example suggestions.
 """
 
+import hashlib
 import logging
 import os
 import re
 import signal
 import sys
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-import hashlib
 import traceback
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from services.prompt_router_service import PromptRouterService
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.prompt_router_service import PromptRouterService
 
 # Configure logging
 logging.basicConfig(
@@ -77,12 +78,12 @@ class PromptValidationHandler:
 
     def _generate_prompt_hash(self, prompt: str) -> str:
         """Generate a hash for the prompt content for error tracking."""
-        return hashlib.md5(prompt.encode('utf-8')).hexdigest()[:8]
+        return hashlib.md5(prompt.encode("utf-8")).hexdigest()[:8]
 
     def validate_prompt(self, prompt: str) -> Dict[str, Any]:
         """Validate user prompt and provide suggestions if malformed with enhanced error logging."""
         prompt_hash = self._generate_prompt_hash(prompt)
-        
+
         try:
             if not prompt or not isinstance(prompt, str):
                 error_msg = f"Prompt validation failed: Prompt is empty or not a string (hash: {prompt_hash})"
@@ -145,7 +146,9 @@ class PromptValidationHandler:
                     "timestamp": datetime.now().isoformat(),
                 }
 
-            logger.info(f"Prompt validation successful (hash: {prompt_hash}, intent: {intent})")
+            logger.info(
+                f"Prompt validation successful (hash: {prompt_hash}, intent: {intent})"
+            )
             return {
                 "valid": True,
                 "intent": intent,
@@ -166,29 +169,31 @@ class PromptValidationHandler:
                 "traceback": traceback.format_exc(),
             }
 
-    def handle_routing_failure(self, prompt: str, error: Exception, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def handle_routing_failure(
+        self, prompt: str, error: Exception, context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Handle prompt routing failures with detailed error logging.
-        
+
         Args:
             prompt: The prompt that failed routing
             error: The error that occurred
             context: Optional context information
-            
+
         Returns:
             Error response with detailed logging
         """
         prompt_hash = self._generate_prompt_hash(prompt)
         error_type = type(error).__name__
-        
+
         # Log detailed error information
         error_msg = f"Prompt routing failed (hash: {prompt_hash}, type: {error_type}): {str(error)}"
         logger.error(error_msg, exc_info=True)
-        
+
         # Log additional context if available
         if context:
             logger.error(f"Routing context for hash {prompt_hash}: {context}")
-        
+
         return {
             "success": False,
             "error": f"Routing failed: {str(error)}",
@@ -199,29 +204,32 @@ class PromptValidationHandler:
             "suggestions": [
                 "Try rephrasing your request",
                 "Check if the requested functionality is available",
-                "Contact support if the issue persists"
-            ]
+                "Contact support if the issue persists",
+            ],
         }
 
-    def handle_gpt_fallback_failure(self, prompt: str, error: Exception, fallback_attempts: int = 0) -> Dict[str, Any]:
+    def handle_gpt_fallback_failure(
+        self, prompt: str, error: Exception, fallback_attempts: int = 0
+    ) -> Dict[str, Any]:
         """
         Handle GPT fallback failures with detailed error logging.
-        
+
         Args:
             prompt: The prompt that failed GPT fallback
             error: The error that occurred
             fallback_attempts: Number of fallback attempts made
-            
+
         Returns:
             Error response with detailed logging
         """
         prompt_hash = self._generate_prompt_hash(prompt)
         error_type = type(error).__name__
-        
+
         # Log detailed error information
-        error_msg = f"GPT fallback failed (hash: {prompt_hash}, attempts: {fallback_attempts}, type: {error_type}): {str(error)}"
+        error_msg = f"GPT fallback failed (hash: {prompt_hash}, attempts: {fallback_attempts}, type: {error_type}): {
+            str(error)}"
         logger.error(error_msg, exc_info=True)
-        
+
         return {
             "success": False,
             "error": f"GPT fallback failed after {fallback_attempts} attempts: {str(error)}",
@@ -233,8 +241,8 @@ class PromptValidationHandler:
             "suggestions": [
                 "The AI service is currently unavailable",
                 "Try again in a few minutes",
-                "Use a simpler request format"
-            ]
+                "Use a simpler request format",
+            ],
         }
 
     def _has_action_words(self, prompt: str) -> bool:

@@ -336,9 +336,11 @@ class SystemUpgradeTester:
                 "total_tests": self.total_tests,
                 "passed_tests": self.passed_tests,
                 "failed_tests": self.failed_tests,
-                "success_rate": (self.passed_tests / self.total_tests * 100)
-                if self.total_tests > 0
-                else 0,
+                "success_rate": (
+                    (self.passed_tests / self.total_tests * 100)
+                    if self.total_tests > 0
+                    else 0
+                ),
             },
             "test_results": self.test_results,
             "upgrade_status": "COMPLETE" if self.failed_tests == 0 else "PARTIAL",

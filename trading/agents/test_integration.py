@@ -10,6 +10,10 @@ import logging
 import sys
 from pathlib import Path
 
+from trading.agents.agent_leaderboard import AgentLeaderboard
+from trading.agents.agent_manager import AgentManager
+from trading.core.agents import AgentConfig, AgentType
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -19,10 +23,6 @@ logger = logging.getLogger(__name__)
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-from trading.agents.agent_leaderboard import AgentLeaderboard
-from trading.agents.agent_manager import AgentManager
-from trading.core.agents import AgentConfig, AgentType
 
 
 async def test_agent_integration():
@@ -87,8 +87,10 @@ async def test_agent_integration():
                 win_rate=data["win_rate"],
             )
             logger.info(
-                f"  ✅ Added {data['agent_name']}: Sharpe={data['sharpe_ratio']:.2f}, Drawdown={data['max_drawdown']:.2%}"
-            )
+                f"  ✅ Added {
+                    data['agent_name']}: Sharpe={
+                    data['sharpe_ratio']:.2f}, Drawdown={
+                    data['max_drawdown']:.2%}")
 
         # Test leaderboard functionality
         logger.info("\n🏆 Testing Leaderboard Functionality:")

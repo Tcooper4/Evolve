@@ -8,12 +8,13 @@ from pathlib import Path
 import psutil
 import pytest
 
+from trading.agents.task_dashboard import TaskDashboard
+from trading.agents.task_memory import Task, TaskMemory, TaskStatus
+
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from trading.agents.task_dashboard import TaskDashboard
-from trading.agents.task_memory import Task, TaskMemory, TaskStatus
 
 # ModelBuilder, AgentRouter, and SelfImprovingAgent are omitted as they are not present in the current codebase
 

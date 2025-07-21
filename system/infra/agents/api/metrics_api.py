@@ -58,9 +58,11 @@ class MetricsAPI:
                 "progress": task.progress,
                 "start_time": task.start_time.isoformat() if task.start_time else None,
                 "end_time": task.end_time.isoformat() if task.end_time else None,
-                "execution_time": (task.end_time - task.start_time).total_seconds()
-                if task.end_time and task.start_time
-                else None,
+                "execution_time": (
+                    (task.end_time - task.start_time).total_seconds()
+                    if task.end_time and task.start_time
+                    else None
+                ),
                 "error_message": task.error_message,
             }
 
@@ -81,15 +83,17 @@ class MetricsAPI:
                     "name": agent.name,
                     "status": agent.status,
                     "active_tasks": len(agent.get_tasks()),
-                    "last_heartbeat": agent.last_heartbeat.isoformat()
-                    if agent.last_heartbeat
-                    else None,
-                    "cpu_usage": agent.cpu_usage
-                    if hasattr(agent, "cpu_usage")
-                    else None,
-                    "memory_usage": agent.memory_usage
-                    if hasattr(agent, "memory_usage")
-                    else None,
+                    "last_heartbeat": (
+                        agent.last_heartbeat.isoformat()
+                        if agent.last_heartbeat
+                        else None
+                    ),
+                    "cpu_usage": (
+                        agent.cpu_usage if hasattr(agent, "cpu_usage") else None
+                    ),
+                    "memory_usage": (
+                        agent.memory_usage if hasattr(agent, "memory_usage") else None
+                    ),
                 }
                 metrics.append(agent_metrics)
 
@@ -111,12 +115,12 @@ class MetricsAPI:
                     "type": model.type,
                     "status": model.status,
                     "accuracy": model.accuracy if hasattr(model, "accuracy") else None,
-                    "last_trained": model.last_trained.isoformat()
-                    if model.last_trained
-                    else None,
-                    "training_time": model.training_time
-                    if hasattr(model, "training_time")
-                    else None,
+                    "last_trained": (
+                        model.last_trained.isoformat() if model.last_trained else None
+                    ),
+                    "training_time": (
+                        model.training_time if hasattr(model, "training_time") else None
+                    ),
                 }
                 metrics.append(model_metrics)
 

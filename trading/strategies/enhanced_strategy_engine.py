@@ -248,7 +248,8 @@ class EnhancedStrategyEngine:
 
         try:
             # Initialize meta-agent for continuous improvement
-            # from trading.meta_agents.agents.performance_checker import PerformanceChecker  # Removed - meta_agents deleted
+            # from trading.meta_agents.agents.performance_checker import
+            # PerformanceChecker  # Removed - meta_agents deleted
             self.meta_agent = PerformanceChecker()
         except ImportError:
             logger.warning("PerformanceChecker not available - using fallback")
@@ -899,9 +900,11 @@ class EnhancedStrategyEngine:
                 "average_sharpe": avg_sharpe,
                 "average_confidence": avg_confidence,
                 "success_rate": success_rate,
-                "last_execution": self.performance_history[-1]["timestamp"]
-                if self.performance_history
-                else None,
+                "last_execution": (
+                    self.performance_history[-1]["timestamp"]
+                    if self.performance_history
+                    else None
+                ),
             }
 
         except Exception as e:

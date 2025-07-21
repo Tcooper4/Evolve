@@ -1,4 +1,4 @@
-﻿"""
+"""
 Agent Logger for Evolve Trading Platform
 
 Comprehensive logging system for all agent actions with:
@@ -184,7 +184,7 @@ class AgentLogger:
                 # Check if table exists and has the correct schema
                 cursor = conn.execute("PRAGMA table_info(agent_logs)")
                 columns = [row[1] for row in cursor.fetchall()]
-                
+
                 if not columns:
                     # Table doesn't exist, create it
                     conn.execute(
@@ -209,7 +209,7 @@ class AgentLogger:
                         )
                     """
                     )
-                elif 'agent_type' not in columns:
+                elif "agent_type" not in columns:
                     # Table exists but missing agent_type column, recreate it
                     logger.info("Database schema outdated, recreating table...")
                     conn.execute("DROP TABLE IF EXISTS agent_logs")
@@ -452,9 +452,11 @@ class AgentLogger:
                         json.dumps(enum_to_value(log_entry.context)),
                         log_entry.session_id,
                         log_entry.user_id,
-                        json.dumps(log_entry.performance_metrics)
-                        if log_entry.performance_metrics
-                        else None,
+                        (
+                            json.dumps(log_entry.performance_metrics)
+                            if log_entry.performance_metrics
+                            else None
+                        ),
                         log_entry.error_details,
                         log_entry.task_id,
                         log_entry.correlation_id,
@@ -569,14 +571,14 @@ class AgentLogger:
                             level=LogLevel(row[5]),
                             message=row[6],
                             data=json.loads(row[7]) if row[7] else {},
-                            context=AgentContext(**json.loads(row[8]))
-                            if row[8]
-                            else None,
+                            context=(
+                                AgentContext(**json.loads(row[8])) if row[8] else None
+                            ),
                             session_id=row[9],
                             user_id=row[10],
-                            performance_metrics=json.loads(row[11])
-                            if row[11]
-                            else None,
+                            performance_metrics=(
+                                json.loads(row[11]) if row[11] else None
+                            ),
                             error_details=row[12],
                             task_id=row[13],
                             correlation_id=row[14],
@@ -829,9 +831,11 @@ class AgentLogger:
                 "task_priority": context.task_priority,
                 "memory_usage": context.memory_usage,
                 "cpu_usage": context.cpu_usage,
-                "last_heartbeat": context.last_heartbeat.isoformat()
-                if context.last_heartbeat
-                else None,
+                "last_heartbeat": (
+                    context.last_heartbeat.isoformat()
+                    if context.last_heartbeat
+                    else None
+                ),
                 "dependencies": context.dependencies,
             }
 

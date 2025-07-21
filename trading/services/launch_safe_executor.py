@@ -11,10 +11,11 @@ import signal
 import sys
 from pathlib import Path
 
+from services.safe_executor_service import SafeExecutorService
+
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.safe_executor_service import SafeExecutorService
 
 # Configure logging
 logging.basicConfig(

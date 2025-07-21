@@ -490,7 +490,9 @@ class ExecutionRiskControlAgent(BaseAgent):
                 if minutes_since_last < self.cooling_period_minutes:
                     return {
                         "passed": False,
-                        "reason": f"Cooling period not met: {self.cooling_period_minutes - minutes_since_last:.0f} minutes remaining",
+                        "reason": f"Cooling period not met: {
+                            self.cooling_period_minutes -
+                            minutes_since_last:.0f} minutes remaining",
                     }
 
             return {"passed": True}
@@ -828,9 +830,9 @@ class ExecutionRiskControlAgent(BaseAgent):
 
             return {
                 "trade_value": trade_value,
-                "portfolio_exposure": trade_value / portfolio_value
-                if portfolio_value > 0
-                else 0,
+                "portfolio_exposure": (
+                    trade_value / portfolio_value if portfolio_value > 0 else 0
+                ),
                 "position_risk": trade_request.risk_score * trade_value,
                 "slippage_cost": abs(price - trade_request.price) * quantity,
                 "commission_cost": self._calculate_commission(quantity, price),
@@ -908,9 +910,9 @@ class ExecutionRiskControlAgent(BaseAgent):
                 "total_trades": total_trades,
                 "executed_trades": executed_trades,
                 "rejected_trades": rejected_trades,
-                "execution_rate": executed_trades / total_trades
-                if total_trades > 0
-                else 0,
+                "execution_rate": (
+                    executed_trades / total_trades if total_trades > 0 else 0
+                ),
                 "total_positions": total_positions,
                 "largest_position": largest_position,
                 "daily_trades": daily_trades,

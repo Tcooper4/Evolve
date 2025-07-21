@@ -211,7 +211,9 @@ class ModelBuilderAgent(BaseAgent):
     def get_requirements(self) -> dict:
         """Return a dictionary of agent requirements."""
         # This could be expanded to return required packages, resources, etc.
-        return {"dependencies": self.dependencies if hasattr(self, "dependencies") else []}
+        return {
+            "dependencies": self.dependencies if hasattr(self, "dependencies") else []
+        }
 
     @handle_exceptions
     def build_model(self, request: ModelBuildRequest) -> ModelBuildResult:
@@ -293,9 +295,9 @@ class ModelBuilderAgent(BaseAgent):
                 model_config={},
                 build_status="failed",
                 error_message=str(e),
-                source=self.author
-                if hasattr(self, "author")
-                else "Evolve Trading System",
+                source=(
+                    self.author if hasattr(self, "author") else "Evolve Trading System"
+                ),
                 version=self.version if hasattr(self, "version") else "1.0.0",
                 framework="unknown",
             )
@@ -459,7 +461,7 @@ class ModelBuilderAgent(BaseAgent):
         }
 
         # Get feature importance
-        dict(zip(X.columns, model.model.feature_importances_))
+        feature_importance = dict(zip(X.columns, model.model.feature_importances_))
 
         # Save model
         model_id = f"xgboost_{request_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -476,6 +478,7 @@ class ModelBuilderAgent(BaseAgent):
             build_timestamp=datetime.now().isoformat(),
             training_metrics=training_metrics,
             model_config=hyperparams,
+            feature_importance=feature_importance,
             framework="XGBoost",
         )
 
@@ -645,9 +648,9 @@ class ModelBuilderAgent(BaseAgent):
             "status": "active",
             "last_update": datetime.now().isoformat(),
             "models_built": len(self.model_registry),
-            "current_model": self.model_registry.get(
-                list(self.model_registry.keys())[-1]
-            )
-            if self.model_registry
-            else None,
+            "current_model": (
+                self.model_registry.get(list(self.model_registry.keys())[-1])
+                if self.model_registry
+                else None
+            ),
         }

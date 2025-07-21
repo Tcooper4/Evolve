@@ -348,7 +348,7 @@ class SystemResilience:
                     warnings.append(
                         SignalWarning(
                             warning_type="signal_imbalance",
-                            message=f"Strategy '{strategy_name}' shows heavy sell bias ({(1-buy_ratio):.1%} sell signals)",
+                            message=f"Strategy '{strategy_name}' shows heavy sell bias ({(1 - buy_ratio):.1%} sell signals)",
                             severity="low",
                             timestamp=datetime.now(),
                             details={
@@ -372,9 +372,11 @@ class SystemResilience:
                         details={
                             "strategy": strategy_name,
                             "inactive_periods": 20,
-                            "last_signal_date": data.index[-20].strftime("%Y-%m-%d")
-                            if hasattr(data.index[-20], "strftime")
-                            else str(data.index[-20]),
+                            "last_signal_date": (
+                                data.index[-20].strftime("%Y-%m-%d")
+                                if hasattr(data.index[-20], "strftime")
+                                else str(data.index[-20])
+                            ),
                         },
                     )
                 )
@@ -542,9 +544,9 @@ class SystemResilience:
                 "signal_warnings": warning_summary,
                 "fallback_history": {
                     "total_fallbacks": len(self.fallback_history),
-                    "recent_fallbacks": self.fallback_history[-10:]
-                    if self.fallback_history
-                    else [],
+                    "recent_fallbacks": (
+                        self.fallback_history[-10:] if self.fallback_history else []
+                    ),
                     "success_rate": len(
                         [f for f in self.fallback_history if f.get("success", False)]
                     )

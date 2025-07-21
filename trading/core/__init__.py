@@ -11,93 +11,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from utils.launch_utils import setup_logging
+
 from .agents import AgentManager, AgentStatus
 from .performance import PerformanceMetrics, PerformanceTracker
 
 # Configure logging
 
 
-from utils.launch_utils import setup_logging
-
-def setup_logging():
+def setup_core_logging():
     """Set up logging for the service."""
-    return setup_logging(service_name="report_service")def load_agent_registry() -> Dict[str, Any]:
-    """Load agent registry from configuration files.
+    return setup_logging(service_name="report_service")
 
-    Returns:
-        Dictionary containing agent registry information
-    """
-    registry = {
-        "agents": {},
-        "last_updated": datetime.now().isoformat(),
-        "version": "1.0.0",
-    }
 
-    try:
-        # Try to load from existing registry file
-        registry_path = Path("data/agent_registry.json")
-        if registry_path.exists():
-            with open(registry_path, "r") as f:
-                registry = json.load(f)
-                logging.info(f"Loaded agent registry from {registry_path}")
-        else:
-            # Create default registry
-            registry["agents"] = {
-                "model_selector": {
-                    "name": "Model Selector Agent",
-                    "description": "Selects optimal models for trading",
-                    "status": "active",
-                    "version": "1.0.0",
-                    "last_used": None,
-                },
-                "model_synthesizer": {
-                    "name": "Model Synthesizer Agent",
-                    "description": "Creates synthetic models from existing ones",
-                    "status": "active",
-                    "version": "1.0.0",
-                    "last_used": None,
-                },
-                "multimodal": {
-                    "name": "Multimodal Agent",
-                    "description": "Processes multiple data types",
-                    "status": "active",
-                    "version": "1.0.0",
-                    "last_used": None,
-                },
-                "nlp": {
-                    "name": "NLP Agent",
-                    "description": "Natural language processing for trading",
-                    "status": "active",
-                    "version": "1.0.0",
-                    "last_used": None,
-                },
-                "optimizer": {
-                    "name": "Optimizer Agent",
-                    "description": "Optimizes trading parameters",
-                    "status": "active",
-                    "version": "1.0.0",
-                    "last_used": None,
-                },
-                "performance_critic": {
-                    "name": "Performance Critic Agent",
-                    "description": "Evaluates and critiques model performance",
-                    "status": "active",
-                    "version": "1.0.0",
-                    "last_used": None,
-                },
-            }
-
-            # Save default registry
-            registry_path.parent.mkdir(exist_ok=True)
-            with open(registry_path, "w") as f:
-                json.dump(registry, f, indent=2)
-            logging.info(f"Created default agent registry at {registry_path}")
-
-    except Exception as e:
-        logging.error(f"Failed to load agent registry: {e}")
-        registry["agents"] = {}
-
-    return registry
+def load_agent_registry() -> Dict[str, Any]:
+    """Load agent registry."""
+    # Agent registry loading logic here
 
 
 def save_agent_registry(registry: Dict[str, Any]) -> bool:
@@ -132,7 +61,7 @@ def initialize_core_system():
     logging.info("Initializing core trading system...")
 
     # Setup logging
-    setup_logging()
+    setup_core_logging()
 
     # Load agent registry
     agent_registry = load_agent_registry()
@@ -208,9 +137,9 @@ def get_system_status() -> Dict[str, Any]:
 
     status = {
         "initialized": _system_initialized,
-        "initialization_time": _initialization_data.get("initialized_at")
-        if _initialization_data
-        else None,
+        "initialization_time": (
+            _initialization_data.get("initialized_at") if _initialization_data else None
+        ),
         "agent_count": len(_agent_registry.get("agents", {})) if _agent_registry else 0,
         "active_agents": 0,
         "inactive_agents": 0,

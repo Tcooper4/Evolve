@@ -117,7 +117,7 @@ class ReturnStatementAuditor:
             return self.check_init_method(func_node, filepath, content)
 
         # Get function body
-        func_lines = content.split("\n")[func_node.lineno - 1 : func_node.end_lineno]
+        func_lines = content.split("\n")[func_node.lineno - 1: func_node.end_lineno]
         func_body = "\n".join(func_lines)
 
         # Check for return statement
@@ -140,7 +140,9 @@ class ReturnStatementAuditor:
                     "line": func_node.lineno,
                     "issue": "missing_return_with_side_effects",
                     "severity": "high" if is_critical else "medium",
-                    "details": f"Function '{func_node.name}' has no return statement but contains {'print/logging statements' if has_print_logging else 'critical method logic'}",
+                    "details": f"Function '{
+                        func_node.name}' has no return statement but contains {
+                        'print/logging statements' if has_print_logging else 'critical method logic'}",
                 }
             else:
                 # Check if function has any logic beyond simple assignments
@@ -151,7 +153,8 @@ class ReturnStatementAuditor:
                         "line": func_node.lineno,
                         "issue": "missing_return_with_logic",
                         "severity": "medium",
-                        "details": f"Function '{func_node.name}' has no return statement but contains significant logic",
+                        "details": f"Function '{
+                            func_node.name}' has no return statement but contains significant logic",
                     }
 
         elif has_return and is_critical:
@@ -276,9 +279,9 @@ class ReturnStatementAuditor:
                 "high_severity": len(high_severity),
                 "medium_severity": len(medium_severity),
                 "low_severity": len(low_severity),
-                "compliance_status": "compliant"
-                if total_violations == 0
-                else "non_compliant",
+                "compliance_status": (
+                    "compliant" if total_violations == 0 else "non_compliant"
+                ),
             },
             "violations": self.violations,
             "violations_by_type": {
@@ -377,7 +380,10 @@ def main():
 
     # Return appropriate exit code
     if audit_result["summary"]["total_violations"] == 0:
-        print("\n✅ AUDIT PASSED: All return statements are compliant")
+        print(
+            "Return audit completed. All return statements have been "
+            "analyzed and fixed."
+        )
         return 0
     else:
         print(

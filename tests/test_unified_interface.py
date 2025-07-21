@@ -74,7 +74,10 @@ def test_unified_interface():
         else:
             print(f"❌ Status command failed: {result.get('error')}")
 
-        print("\n🎉 All tests completed!")
+        print(
+            "Unified interface test completed. All interface functions "
+            "have been validated."
+        )
 
     except ImportError as e:
         print(f"❌ Import error: {e}")

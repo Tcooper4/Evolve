@@ -1,4 +1,4 @@
-﻿import pandas as pd
+import pandas as pd
 
 
 class SignalSchemaValidator:
@@ -6,6 +6,7 @@ class SignalSchemaValidator:
     Validator for signal DataFrame schema.
     Required columns: index, 'Close', 'SignalType'. Optional: 'Confidence'.
     """
+
     REQUIRED_COLS = {"Close", "SignalType"}
     OPTIONAL_COLS = {"Confidence"}
 
@@ -15,11 +16,13 @@ class SignalSchemaValidator:
             return False
         if not SignalSchemaValidator.REQUIRED_COLS.issubset(set(df.columns)):
             return False
-        if df.index is None or getattr(df.index, 'isnull', lambda: False)().any():
+        if df.index is None or getattr(df.index, "isnull", lambda: False)().any():
             return False
         return True
 
     @staticmethod
     def assert_valid(df: pd.DataFrame):
         if not SignalSchemaValidator.validate(df):
-            raise ValueError(f"Signal DataFrame does not meet schema requirements: must have columns {SignalSchemaValidator.REQUIRED_COLS} and non-null index.")
+            raise ValueError(
+                f"Signal DataFrame does not meet schema requirements: must have columns {
+                    SignalSchemaValidator.REQUIRED_COLS} and non-null index.")

@@ -14,6 +14,18 @@ import numpy as np
 import pandas as pd
 import requests
 
+# Try to import optional providers
+try:
+    from data.live_data_feed import AlpacaProvider, YFinanceProvider
+
+    ALPACA_AVAILABLE = True
+    YFINANCE_AVAILABLE = True
+except ImportError:
+    ALPACA_AVAILABLE = False
+    YFINANCE_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("AlpacaProvider and YFinanceProvider not available")
+
 warnings.filterwarnings("ignore")
 
 logger = logging.getLogger(__name__)
@@ -84,9 +96,11 @@ class DataProvider:
             "available": self.is_available,
             "error_count": self.error_count,
             "last_check": self.last_check.isoformat() if self.last_check else None,
-            "last_successful_request": self.last_successful_request.isoformat()
-            if self.last_successful_request
-            else None,
+            "last_successful_request": (
+                self.last_successful_request.isoformat()
+                if self.last_successful_request
+                else None
+            ),
         }
 
 
@@ -371,19 +385,21 @@ class LiveDataFeed:
         self.providers = []
 
         # Add Alpaca as primary provider if available
-        if enable_alpaca and 'AlpacaProvider' in globals():
+        if enable_alpaca and "AlpacaProvider" in globals():
             alpaca_provider = AlpacaProvider()
-            if getattr(alpaca_provider, 'is_available', False):
+            if getattr(alpaca_provider, "is_available", False):
                 self.providers.append(alpaca_provider)
                 logger.info("Alpaca provider initialized")
 
         # Add existing providers
-        self.providers.extend([PolygonProvider(), FinnhubProvider(), AlphaVantageProvider()])
+        self.providers.extend(
+            [PolygonProvider(), FinnhubProvider(), AlphaVantageProvider()]
+        )
 
         # Add YFinance as fallback
-        if enable_yfinance and 'YFinanceProvider' in globals():
+        if enable_yfinance and "YFinanceProvider" in globals():
             yfinance_provider = YFinanceProvider()
-            if getattr(yfinance_provider, 'is_available', False):
+            if getattr(yfinance_provider, "is_available", False):
                 self.providers.append(yfinance_provider)
                 logger.info("YFinance provider initialized as fallback")
 

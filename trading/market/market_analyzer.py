@@ -197,9 +197,11 @@ class MarketAnalyzer:
             "regime": regime,
             "correlation": float(correlation),
             "correlation_trend": correlation_trend,
-            "rolling_correlation": float(rolling_correlation.dropna().iloc[-1])
-            if len(rolling_correlation.dropna()) > 0
-            else None,
+            "rolling_correlation": (
+                float(rolling_correlation.dropna().iloc[-1])
+                if len(rolling_correlation.dropna()) > 0
+                else None
+            ),
         }
 
         log_metrics("correlation_regime", result)

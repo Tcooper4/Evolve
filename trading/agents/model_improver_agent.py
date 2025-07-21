@@ -568,14 +568,21 @@ class ModelImproverAgent(BaseAgent):
                 "models_improved": list(
                     set(imp["model_name"] for imp in recent_improvements)
                 ),
-                "last_improvement": recent_improvements[-1]["timestamp"]
-                if recent_improvements
-                else None,
-                "average_improvement_score": np.mean(
-                    [imp.get("estimated_improvement", 0) for imp in recent_improvements]
-                )
-                if recent_improvements
-                else 0.0,
+                "last_improvement": (
+                    recent_improvements[-1]["timestamp"]
+                    if recent_improvements
+                    else None
+                ),
+                "average_improvement_score": (
+                    np.mean(
+                        [
+                            imp.get("estimated_improvement", 0)
+                            for imp in recent_improvements
+                        ]
+                    )
+                    if recent_improvements
+                    else 0.0
+                ),
             }
 
         except Exception as e:

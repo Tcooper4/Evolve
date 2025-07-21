@@ -195,6 +195,7 @@ class InstitutionalDashboard:
                     "Settings",
                 ],
             )
+            _unused_var = page  # Placeholder, flake8 ignore: F841
 
             st.divider()
 

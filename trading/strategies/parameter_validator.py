@@ -286,9 +286,9 @@ class StrategyParameterValidator:
                             level=ValidationLevel.ERROR,
                             message=f"{param_name} must be an integer",
                             parameter_name=param_name,
-                            suggested_value=int(value)
-                            if isinstance(value, (int, float))
-                            else 1,
+                            suggested_value=(
+                                int(value) if isinstance(value, (int, float)) else 1
+                            ),
                         )
 
             elif constraint.data_type == "float":
@@ -301,9 +301,9 @@ class StrategyParameterValidator:
                             level=ValidationLevel.ERROR,
                             message=f"{param_name} must be a number",
                             parameter_name=param_name,
-                            suggested_value=float(value)
-                            if isinstance(value, (int, float))
-                            else 0.0,
+                            suggested_value=(
+                                float(value) if isinstance(value, (int, float)) else 0.0
+                            ),
                         )
 
             # Check allowed values
@@ -571,15 +571,16 @@ class StrategyParameterValidator:
             return {
                 "total_validations": total_validations,
                 "failed_validations": failed_validations,
-                "success_rate": (total_validations - failed_validations)
-                / total_validations
-                if total_validations > 0
-                else 0.0,
+                "success_rate": (
+                    (total_validations - failed_validations) / total_validations
+                    if total_validations > 0
+                    else 0.0
+                ),
                 "strategy_counts": strategy_counts,
                 "error_counts": error_counts,
-                "last_validation": recent_validations[-1]["timestamp"]
-                if recent_validations
-                else None,
+                "last_validation": (
+                    recent_validations[-1]["timestamp"] if recent_validations else None
+                ),
             }
 
         except Exception as e:

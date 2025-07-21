@@ -947,4 +947,3 @@ class ModelSelectorAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"Error loading state: {e}")
-

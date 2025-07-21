@@ -1,4 +1,4 @@
-﻿"""
+"""
 Time Series Dataset
 
 This module provides the TimeSeriesDataset class for handling time series data
@@ -15,6 +15,7 @@ import pandas as pd
 try:
     import torch
     from torch.utils.data import Dataset
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ PyTorch not available. Disabling deep learning datasets.")
@@ -26,6 +27,7 @@ except ImportError as e:
 # Try to import scikit-learn
 try:
     from sklearn.preprocessing import StandardScaler
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ scikit-learn not available. Disabling data preprocessing.")
@@ -61,11 +63,15 @@ class TimeSeriesDataset(Dataset):
             scaler: Optional scaler for features
         """
         if not TORCH_AVAILABLE:
-            raise ImportError("PyTorch is not available. Cannot create TimeSeriesDataset.")
-        
+            raise ImportError(
+                "PyTorch is not available. Cannot create TimeSeriesDataset."
+            )
+
         if not SKLEARN_AVAILABLE:
-            raise ImportError("scikit-learn is not available. Cannot perform data scaling.")
-        
+            raise ImportError(
+                "scikit-learn is not available. Cannot perform data scaling."
+            )
+
         self.sequence_length = sequence_length
         self.target_col = target_col
         self.feature_cols = feature_cols
@@ -89,7 +95,7 @@ class TimeSeriesDataset(Dataset):
         self.sequence_targets = []
 
         for i in range(len(data) - sequence_length):
-            self.sequences.append(self.features[i : i + sequence_length])
+            self.sequences.append(self.features[i: i + sequence_length])
             self.sequence_targets.append(self.targets[i + sequence_length])
 
     def _validate_data(self, data: pd.DataFrame) -> None:

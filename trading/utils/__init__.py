@@ -21,6 +21,8 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
+from utils.common_helpers import ensure_directory
+
 # Trading utilities
 from .cache_manager import CacheManager, cache_result, clear_cache
 from .config_manager import ConfigLoader, ConfigManager, ConfigValidator
@@ -40,7 +42,6 @@ from .performance_metrics import PerformanceMetrics, RiskMetrics, TradingMetrics
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 # Import from core utils
-from utils.common_helpers import ensure_directory
 
 utils_logger = std_logging.getLogger(__name__)
 

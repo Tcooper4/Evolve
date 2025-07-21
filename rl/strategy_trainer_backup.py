@@ -373,9 +373,11 @@ def evaluate_rl_strategy(
             "mean_return": np.mean(total_returns),
             "std_return": np.std(total_returns),
             "mean_final_value": np.mean(final_values),
-            "sharpe_ratio": np.mean(total_returns) / np.std(total_returns)
-            if np.std(total_returns) > 0
-            else 0,
+            "sharpe_ratio": (
+                np.mean(total_returns) / np.std(total_returns)
+                if np.std(total_returns) > 0
+                else 0
+            ),
         }
 
         logger.info(f"RL strategy evaluation: {metrics}")

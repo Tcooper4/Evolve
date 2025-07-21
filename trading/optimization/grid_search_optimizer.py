@@ -1,4 +1,4 @@
-﻿"""Grid Search Optimization Method.
+"""Grid Search Optimization Method.
 
 This module contains the GridSearch optimization method extracted from strategy_optimizer.py.
 """
@@ -11,8 +11,6 @@ from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-
-from .base_optimizer import BaseOptimizer, OptimizerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -172,13 +170,15 @@ class GridSearch(OptimizationMethod):
         # Generate parameter grid
         param_grid = self._generate_grid(param_space)
         max_points = kwargs.get("max_points", 100)
-        
+
         if len(param_grid) > max_points:
             # Sample randomly if grid is too large
             np.random.seed(42)
             indices = np.random.choice(len(param_grid), max_points, replace=False)
             param_grid = [param_grid[i] for i in indices]
-            self.logger.info(f"Sampled {max_points} points from grid of {len(param_grid)}")
+            self.logger.info(
+                f"Sampled {max_points} points from grid of {len(param_grid)}"
+            )
 
         # Run grid search
         scores = []
@@ -209,7 +209,9 @@ class GridSearch(OptimizationMethod):
         optimization_time = (datetime.now() - start_time).total_seconds()
 
         # Calculate feature importance
-        feature_importance = self._calculate_hyperparameter_importance(param_grid, scores)
+        feature_importance = self._calculate_hyperparameter_importance(
+            param_grid, scores
+        )
 
         return OptimizationResult(
             best_params=best_params or {},
@@ -244,7 +246,7 @@ class GridSearch(OptimizationMethod):
             scores = []
 
             for train_idx, val_idx in tscv.split(data):
-                train_data = data.iloc[train_idx]
+                data.iloc[train_idx]
                 val_data = data.iloc[val_idx]
                 score = objective(params, val_data)
                 scores.append(score)
@@ -280,7 +282,9 @@ class GridSearch(OptimizationMethod):
                 for j, val2 in enumerate(param_values):
                     if i != j:
                         score_diff = abs(scores[i] - scores[j])
-                        param_diff = abs(val1 - val2) if isinstance(val1, (int, float)) else 1
+                        param_diff = (
+                            abs(val1 - val2) if isinstance(val1, (int, float)) else 1
+                        )
                         if param_diff > 0:
                             correlations.append(score_diff / param_diff)
 

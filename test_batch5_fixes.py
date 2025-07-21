@@ -5,14 +5,14 @@ This script tests various fixes and improvements made in Batch 5,
 including fallback logic, strategy routing, and error handling.
 """
 
+import logging
 import os
 import sys
-import logging
-import asyncio
-from typing import Dict, Any
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Add the project root to the path
@@ -27,9 +27,7 @@ def test_prompt_agent_fallback():
         from agents.prompt_agent import PromptAgent, RequestType
 
         agent = PromptAgent(
-            use_regex_first=True,
-            use_local_llm=False,
-            use_openai_fallback=False
+            use_regex_first=True, use_local_llm=False, use_openai_fallback=False
         )
 
         # Test empty prompt fallback
@@ -51,7 +49,7 @@ def test_strategy_router():
     logger.info("Testing strategy router...")
 
     try:
-        from trading.strategies.strategy_router import StrategyRouter, StrategyMatch
+        from trading.strategies.strategy_router import StrategyRouter
 
         router = StrategyRouter()
 
@@ -77,12 +75,17 @@ def test_meta_agent_orchestrator():
     logger.info("Testing meta agent orchestrator...")
 
     try:
-        from trading.agents.meta_agent_orchestrator import MetaAgentOrchestrator, AgentCall
+        from trading.agents.meta_agent_orchestrator import (
+            AgentCall,
+            MetaAgentOrchestrator,
+        )
 
         orchestrator = MetaAgentOrchestrator()
 
         # Test agent registration
-        mock_agent = type('MockAgent', (), {'handle_fallback': lambda: "fallback response"})()
+        mock_agent = type(
+            "MockAgent", (), {"handle_fallback": lambda: "fallback response"}
+        )()
         orchestrator.register_agent("TestAgent", mock_agent)
 
         # Test orchestration with error handling
@@ -92,7 +95,7 @@ def test_meta_agent_orchestrator():
                 method="handle_fallback",
                 args=(),
                 kwargs={},
-                timeout=5.0
+                timeout=5.0,
             )
         ]
 
@@ -114,6 +117,7 @@ def test_backtest_utils():
 
     try:
         import pandas as pd
+
         from trading.backtesting.backtest_utils import BacktestUtils
 
         utils = BacktestUtils()
@@ -121,25 +125,27 @@ def test_backtest_utils():
         # Test with empty data
         empty_df = pd.DataFrame()
         result = utils.validate_backtest_data(empty_df)
-        assert not result['valid']
-        assert "empty" in result['error'].lower()
+        assert not result["valid"]
+        assert "empty" in result["error"].lower()
 
         # Test with missing required columns
-        invalid_df = pd.DataFrame({'price': [100, 101, 102]})
+        invalid_df = pd.DataFrame({"price": [100, 101, 102]})
         result = utils.validate_backtest_data(invalid_df)
-        assert not result['valid']
-        assert "required" in result['error'].lower()
+        assert not result["valid"]
+        assert "required" in result["error"].lower()
 
         # Test with valid data
-        valid_df = pd.DataFrame({
-            'open': [100, 101, 102],
-            'high': [105, 106, 107],
-            'low': [95, 96, 97],
-            'close': [103, 104, 105],
-            'volume': [1000, 1100, 1200]
-        })
+        valid_df = pd.DataFrame(
+            {
+                "open": [100, 101, 102],
+                "high": [105, 106, 107],
+                "low": [95, 96, 97],
+                "close": [103, 104, 105],
+                "volume": [1000, 1100, 1200],
+            }
+        )
         result = utils.validate_backtest_data(valid_df)
-        assert result['valid']
+        assert result["valid"]
 
         logger.info("✅ Backtest utils test passed")
         return True
@@ -161,9 +167,9 @@ def test_prompt_formatter():
         # Test context extraction
         prompt = "Use RSI strategy with period 14 for AAPL stock"
         context = formatter.extract_context(prompt)
-        assert context['strategy'] == 'RSI'
-        assert context['symbol'] == 'AAPL'
-        assert context['parameters']['period'] == 14
+        assert context["strategy"] == "RSI"
+        assert context["symbol"] == "AAPL"
+        assert context["parameters"]["period"] == 14
 
         # Test prompt enhancement
         enhanced = formatter.enhance_prompt(prompt)
@@ -229,7 +235,7 @@ def test_strategy_ranking():
         # Test strategy ranking
         ranked = ranker.rank_strategies(strategies, "AAPL")
         assert len(ranked) == len(strategies)
-        assert ranked[0]['score'] >= ranked[1]['score']  # Should be sorted
+        assert ranked[0]["score"] >= ranked[1]["score"]  # Should be sorted
 
         logger.info("✅ Strategy ranking test passed")
         return True
@@ -254,7 +260,7 @@ def main():
         ("Backtest Utils", test_backtest_utils),
         ("Prompt Formatter", test_prompt_formatter),
         ("Prompt Clarification Agent", test_prompt_clarification_agent),
-        ("Strategy Ranking", test_strategy_ranking)
+        ("Strategy Ranking", test_strategy_ranking),
     ]
 
     for test_name, test_func in tests:
@@ -292,4 +298,4 @@ def main():
 
 if __name__ == "__main__":
     success = main()
-    sys.exit(0 if success else 1) 
+    sys.exit(0 if success else 1)

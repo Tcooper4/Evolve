@@ -143,7 +143,7 @@ def main():
 
     print("\n📊 Summary:")
     print(f"Passed: {passed}/{total}")
-    print(f"Success Rate: {passed/total*100:.1f}%")
+    print(f"Success Rate: {passed / total * 100:.1f}%")
 
     if passed == total:
         print("\n🎉 All core tests passed!")

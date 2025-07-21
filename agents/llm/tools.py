@@ -1,11 +1,13 @@
 """Tool registry for LLM agents with dynamic tool loading and execution."""
 
 import asyncio
+import importlib
 import inspect
 import json
 import logging
 import traceback
 from dataclasses import dataclass, field
+from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -87,9 +89,9 @@ def tool(
             )
             parameters[name] = {
                 "type": str(param_type),
-                "default": param.default
-                if param.default != inspect.Parameter.empty
-                else None,
+                "default": (
+                    param.default if param.default != inspect.Parameter.empty else None
+                ),
             }
             if param.default == inspect.Parameter.empty:
                 required_parameters.append(name)

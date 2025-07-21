@@ -1,4 +1,4 @@
-﻿"""
+"""
 Math Helpers Module
 
 Enhanced with Batch 11 features: Removed wrapper functions over NumPy and provides
@@ -9,7 +9,7 @@ just wrapping it.
 """
 
 import logging
-from typing import Dict, List, Union, Optional, Tuple
+from typing import Dict, List, Union
 
 import numpy as np
 import pandas as pd
@@ -19,9 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_rolling_statistics(
-    data: Union[pd.Series, np.ndarray],
-    window: int = 20,
-    statistics: List[str] = None
+    data: Union[pd.Series, np.ndarray], window: int = 20, statistics: List[str] = None
 ) -> Dict[str, pd.Series]:
     """
     Calculate multiple rolling statistics efficiently.
@@ -64,8 +62,7 @@ def calculate_rolling_statistics(
 
 
 def calculate_percentile_ranks(
-    data: Union[pd.Series, np.ndarray],
-    window: int = 252
+    data: Union[pd.Series, np.ndarray], window: int = 252
 ) -> pd.Series:
     """
     Calculate percentile ranks within a rolling window.
@@ -88,10 +85,7 @@ def calculate_percentile_ranks(
     return data.rolling(window=window).apply(rolling_percentile_rank)
 
 
-def calculate_zscore(
-    data: Union[pd.Series, np.ndarray],
-    window: int = 20
-) -> pd.Series:
+def calculate_zscore(data: Union[pd.Series, np.ndarray], window: int = 20) -> pd.Series:
     """
     Calculate rolling z-score.
 
@@ -112,9 +106,7 @@ def calculate_zscore(
 
 
 def calculate_momentum_score(
-    data: Union[pd.Series, np.ndarray],
-    short_window: int = 10,
-    long_window: int = 50
+    data: Union[pd.Series, np.ndarray], short_window: int = 10, long_window: int = 50
 ) -> pd.Series:
     """
     Calculate momentum score based on short vs long term trends.
@@ -141,9 +133,7 @@ def calculate_momentum_score(
 
 
 def calculate_regime_probability(
-    data: Union[pd.Series, np.ndarray],
-    regimes: List[str] = None,
-    window: int = 60
+    data: Union[pd.Series, np.ndarray], regimes: List[str] = None, window: int = 60
 ) -> Dict[str, pd.Series]:
     """
     Calculate probability of different market regimes.
@@ -173,23 +163,23 @@ def calculate_regime_probability(
         if regime == "bull":
             # High mean, low volatility, positive skew
             prob = (
-                (rolling_mean > 0).astype(float) * 0.4 +
-                (rolling_std < rolling_std.median()).astype(float) * 0.3 +
-                (rolling_skew > 0).astype(float) * 0.3
+                (rolling_mean > 0).astype(float) * 0.4
+                + (rolling_std < rolling_std.median()).astype(float) * 0.3
+                + (rolling_skew > 0).astype(float) * 0.3
             )
         elif regime == "bear":
             # Low mean, high volatility, negative skew
             prob = (
-                (rolling_mean < 0).astype(float) * 0.4 +
-                (rolling_std > rolling_std.median()).astype(float) * 0.3 +
-                (rolling_skew < 0).astype(float) * 0.3
+                (rolling_mean < 0).astype(float) * 0.4
+                + (rolling_std > rolling_std.median()).astype(float) * 0.3
+                + (rolling_skew < 0).astype(float) * 0.3
             )
         elif regime == "sideways":
             # Low mean, low volatility, near-zero skew
             prob = (
-                (abs(rolling_mean) < rolling_std).astype(float) * 0.5 +
-                (rolling_std < rolling_std.median()).astype(float) * 0.3 +
-                (abs(rolling_skew) < 0.5).astype(float) * 0.2
+                (abs(rolling_mean) < rolling_std).astype(float) * 0.5
+                + (rolling_std < rolling_std.median()).astype(float) * 0.3
+                + (abs(rolling_skew) < 0.5).astype(float) * 0.2
             )
 
         probabilities[regime] = prob
@@ -198,8 +188,7 @@ def calculate_regime_probability(
 
 
 def calculate_tail_risk_metrics(
-    data: Union[pd.Series, np.ndarray],
-    confidence_level: float = 0.05
+    data: Union[pd.Series, np.ndarray], confidence_level: float = 0.05
 ) -> Dict[str, float]:
     """
     Calculate comprehensive tail risk metrics.
@@ -223,7 +212,7 @@ def calculate_tail_risk_metrics(
             "cvar": 0.0,
             "tail_dependence": 0.0,
             "expected_shortfall": 0.0,
-            "tail_risk_ratio": 0.0
+            "tail_risk_ratio": 0.0,
         }
 
     # Calculate VaR and CVaR
@@ -247,14 +236,14 @@ def calculate_tail_risk_metrics(
         "cvar": cvar,
         "tail_dependence": tail_dependence,
         "expected_shortfall": expected_shortfall,
-        "tail_risk_ratio": tail_risk_ratio
+        "tail_risk_ratio": tail_risk_ratio,
     }
 
 
 def calculate_correlation_regime(
     data1: Union[pd.Series, np.ndarray],
     data2: Union[pd.Series, np.ndarray],
-    window: int = 60
+    window: int = 60,
 ) -> pd.Series:
     """
     Calculate rolling correlation and classify into regimes.
@@ -294,9 +283,7 @@ def calculate_correlation_regime(
 
 
 def calculate_volatility_regime(
-    data: Union[pd.Series, np.ndarray],
-    window: int = 60,
-    regimes: int = 3
+    data: Union[pd.Series, np.ndarray], window: int = 60, regimes: int = 3
 ) -> pd.Series:
     """
     Calculate volatility regimes using clustering.
@@ -336,10 +323,7 @@ def calculate_volatility_regime(
     return rolling_vol.apply(classify_volatility)
 
 
-def calculate_entropy(
-    data: Union[pd.Series, np.ndarray],
-    bins: int = 20
-) -> float:
+def calculate_entropy(data: Union[pd.Series, np.ndarray], bins: int = 20) -> float:
     """
     Calculate Shannon entropy of a data series.
 
@@ -374,7 +358,7 @@ def calculate_entropy(
 def calculate_information_ratio(
     returns: Union[pd.Series, np.ndarray],
     benchmark_returns: Union[pd.Series, np.ndarray],
-    window: int = 252
+    window: int = 252,
 ) -> pd.Series:
     """
     Calculate rolling information ratio.
@@ -408,7 +392,7 @@ def calculate_treynor_ratio(
     returns: Union[pd.Series, np.ndarray],
     market_returns: Union[pd.Series, np.ndarray],
     risk_free_rate: float = 0.02,
-    window: int = 252
+    window: int = 252,
 ) -> pd.Series:
     """
     Calculate rolling Treynor ratio.
@@ -454,7 +438,7 @@ def calculate_jensen_alpha(
     returns: Union[pd.Series, np.ndarray],
     market_returns: Union[pd.Series, np.ndarray],
     risk_free_rate: float = 0.02,
-    window: int = 252
+    window: int = 252,
 ) -> pd.Series:
     """
     Calculate rolling Jensen's alpha.
@@ -502,7 +486,7 @@ def calculate_jensen_alpha(
 def calculate_sortino_ratio(
     returns: Union[pd.Series, np.ndarray],
     risk_free_rate: float = 0.02,
-    window: int = 252
+    window: int = 252,
 ) -> pd.Series:
     """
     Calculate rolling Sortino ratio.
@@ -528,11 +512,11 @@ def calculate_sortino_ratio(
         # Calculate downside deviation
         downside_returns = x[x < 0]
         if len(downside_returns) == 0:
-            return float('inf') if x.mean() > 0 else 0.0
+            return float("inf") if x.mean() > 0 else 0.0
 
         downside_deviation = downside_returns.std()
         if downside_deviation == 0:
-            return float('inf') if x.mean() > 0 else 0.0
+            return float("inf") if x.mean() > 0 else 0.0
 
         return x.mean() / downside_deviation
 
@@ -542,8 +526,7 @@ def calculate_sortino_ratio(
 
 
 def calculate_calmar_ratio(
-    equity_curve: Union[pd.Series, np.ndarray],
-    window: int = 252
+    equity_curve: Union[pd.Series, np.ndarray], window: int = 252
 ) -> pd.Series:
     """
     Calculate rolling Calmar ratio.
@@ -577,7 +560,7 @@ def calculate_calmar_ratio(
         max_drawdown = abs(drawdown.min())
 
         if max_drawdown == 0:
-            return float('inf') if annual_return > 0 else 0.0
+            return float("inf") if annual_return > 0 else 0.0
 
         return annual_return / max_drawdown
 

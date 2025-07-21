@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 # Try to import optuna
 try:
     import optuna
+
     OPTUNA_AVAILABLE = True
 except ImportError as e:
     print("⚠️ optuna not available. Disabling optuna-based visualization.")
@@ -16,6 +17,7 @@ except ImportError as e:
 try:
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
+
     PLOTLY_AVAILABLE = True
 except ImportError as e:
     print("⚠️ plotly not available. Disabling plotly-based visualization.")
@@ -132,7 +134,9 @@ class OptimizationVisualizer:
         self, study: optuna.Study, title: str = "Parameter Importance"
     ) -> go.Figure:
         if not OPTUNA_AVAILABLE or not PLOTLY_AVAILABLE:
-            raise ImportError("optuna or plotly not available. Cannot create parameter importance plot.")
+            raise ImportError(
+                "optuna or plotly not available. Cannot create parameter importance plot."
+            )
         """Plot parameter importance.
 
         Args:

@@ -108,15 +108,19 @@ class RSIOptimizer(BaseOptimizer):
                             best_score = sharpe
                             best_result = result
                         logger.debug(
-                            f"Tested period={period}, overbought={overbought}, oversold={oversold}, Sharpe={sharpe:.3f}, WinRate={win_rate:.3f}"
-                        )
+                            f"Tested period={period}, overbought={overbought}, oversold={oversold}, Sharpe={
+                                sharpe:.3f}, WinRate={
+                                win_rate:.3f}")
                     except Exception as e:
                         logger.warning(
                             f"Failed for period={period}, overbought={overbought}, oversold={oversold}: {e}"
                         )
         logger.info(
-            f"Best Sharpe: {best_result.sharpe_ratio:.3f} (period={best_result.period}, overbought={best_result.overbought}, oversold={best_result.oversold})"
-        )
+            f"Best Sharpe: {
+                best_result.sharpe_ratio:.3f} (period={
+                best_result.period}, overbought={
+                best_result.overbought}, oversold={
+                    best_result.oversold})")
         return best_result
 
     def optimize_rsi_parameters(

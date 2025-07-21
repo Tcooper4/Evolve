@@ -736,9 +736,11 @@ class LiveMarketRunner:
                 market_regime=self.global_metrics.get("market_regime", "unknown"),
                 global_metrics=self.global_metrics,
                 agent_status={
-                    name: self.agent_manager.get_agent_status(name).status
-                    if self.agent_manager.get_agent_status(name)
-                    else "unknown"
+                    name: (
+                        self.agent_manager.get_agent_status(name).status
+                        if self.agent_manager.get_agent_status(name)
+                        else "unknown"
+                    )
                     for name in self.trigger_configs.keys()
                 },
             )
@@ -760,9 +762,11 @@ class LiveMarketRunner:
             market_regime=self.global_metrics.get("market_regime", "unknown"),
             global_metrics=self.global_metrics,
             agent_status={
-                name: self.agent_manager.get_agent_status(name).status
-                if self.agent_manager.get_agent_status(name)
-                else "unknown"
+                name: (
+                    self.agent_manager.get_agent_status(name).status
+                    if self.agent_manager.get_agent_status(name)
+                    else "unknown"
+                )
                 for name in self.trigger_configs.keys()
             },
         )
@@ -1065,7 +1069,7 @@ class LiveMarketRunner:
 
 
 def create_live_market_runner(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> LiveMarketRunner:
     """Create a LiveMarketRunner with default configuration.
 

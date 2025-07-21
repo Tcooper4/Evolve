@@ -1,20 +1,15 @@
-import asyncio
-import json
 import logging
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import aiohttp
-from cachetools import TTLCache
 from pydantic import BaseModel, Field, validator
 from ratelimit import limits, sleep_and_retry
 from twilio.rest import Client
 
-from trading.automation_core import AutomationCore
-from trading.automation_monitoring import AutomationMonitoring
+from utils.launch_utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -81,43 +76,17 @@ class Notification(BaseModel):
     metadata: Dict[str, Any] = {}
 
 
-class AutomationNotification:
-    """Notification and alert handling functionality."""
-
-    def __init__(
-        self,
-        core: AutomationCore,
-        monitoring: AutomationMonitoring,
-        config_path: str = "automation/config/notification.json",
-    ):
-        """Initialize notification system."""
-        self.core = core
-        self.monitoring = monitoring
-        self.config = self._load_config(config_path)
+class AutomationNotificationService:
+    def __init__(self):
         self.setup_logging()
-        self.setup_cache()
-        self.setup_clients()
-        self.templates: Dict[str, NotificationTemplate] = {}
-        self.notifications: Dict[str, Notification] = {}
-        self.lock = asyncio.Lock()
+        self.logger = logging.getLogger("automation")
 
-    def _load_config(self, config_path: str) -> NotificationConfig:
-        """Load notification configuration."""
-        try:
-            with open(config_path, "r") as f:
-                config_data = json.load(f)
-            return NotificationConfig(**config_data)
-        except Exception as e:
-            logger.error(f"Failed to load notification config: {str(e)}")
-            raise
+    def setup_logging(self):
+        return setup_logging(service_name="service")
 
-    from utils.launch_utils import setup_logging
-
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def setup_cache(self):
-        """Setup notification caching."""
-        self.cache = TTLCache(maxsize=self.config.cache_size, ttl=self.config.cache_ttl)
+    def setup_cache(self):
+        """Set up cache for automation notification service."""
+        # Cache setup logic here
 
     def setup_clients(self):
         """Setup notification clients."""

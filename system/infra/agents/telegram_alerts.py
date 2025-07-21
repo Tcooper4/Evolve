@@ -167,7 +167,9 @@ class TelegramAlerts:
         Returns:
             True if alert sent successfully, False otherwise
         """
-        action_emoji = {"BUY": "🟢", "SELL": "🔴", "HOLD": "🟡"}.get(action.upper(), "📊")
+        action_emoji = {"BUY": "🟢", "SELL": "🔴", "HOLD": "🟡"}.get(
+            action.upper(), "📊"
+        )
 
         message = f"{action_emoji} <b>{action.upper()}</b> {symbol}\n"
         message += f"Price: ${price:.2f}\n"

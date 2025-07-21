@@ -1,4 +1,4 @@
-﻿"""
+"""
 Prompt Formatter
 
 Formats and validates prompts with JSON input handling and fallback mechanisms.
@@ -7,8 +7,8 @@ Formats and validates prompts with JSON input handling and fallback mechanisms.
 import json
 import logging
 import re
-from typing import Dict, Any, Optional, Union, List, Tuple
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FormattedPrompt:
     """Formatted prompt with metadata."""
+
     original_prompt: str
     formatted_prompt: str
     format_type: str
@@ -67,8 +68,10 @@ class PromptFormatter:
 
             # Validate prompt length
             if len(formatted_prompt) > self.max_prompt_length:
-                errors.append(f"Prompt too long ({len(formatted_prompt)} chars, max {self.max_prompt_length})")
-                formatted_prompt = formatted_prompt[:self.max_prompt_length] + "..."
+                errors.append(
+                    f"Prompt too long ({len(formatted_prompt)} chars, max {self.max_prompt_length})"
+                )
+                formatted_prompt = formatted_prompt[: self.max_prompt_length] + "..."
 
             # Validate prompt content
             content_errors = self._validate_prompt_content(formatted_prompt)
@@ -91,15 +94,16 @@ class PromptFormatter:
             metadata={
                 "length": len(formatted_prompt),
                 "format_type": format_type,
-                "has_errors": len(errors) > 0
-            }
+                "has_errors": len(errors) > 0,
+            },
         )
 
     def _looks_like_json(self, text: str) -> bool:
         """Check if text looks like JSON."""
         text = text.strip()
-        return (text.startswith('{') and text.endswith('}')) or \
-               (text.startswith('[') and text.endswith(']'))
+        return (text.startswith("{") and text.endswith("}")) or (
+            text.startswith("[") and text.endswith("]")
+        )
 
     def _format_json_prompt(self, parsed_json: Dict[str, Any]) -> str:
         """Format JSON prompt into structured text."""
@@ -118,7 +122,9 @@ class PromptFormatter:
             # Add context if available
             context_parts = []
             for key, value in parsed_json.items():
-                if key not in ["prompt", "message", "text"] and isinstance(value, (str, int, float)):
+                if key not in ["prompt", "message", "text"] and isinstance(
+                    value, (str, int, float)
+                ):
                     context_parts.append(f"{key}: {value}")
 
             if context_parts:
@@ -131,9 +137,9 @@ class PromptFormatter:
     def _get_default_format(self, prompt: str) -> str:
         """Get default formatted prompt when JSON parsing fails."""
         # Remove JSON-like characters and clean up
-        cleaned = re.sub(r'[{}[\]"]', '', prompt)
-        cleaned = re.sub(r',', ' ', cleaned)
-        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        cleaned = re.sub(r'[{}[\]"]', "", prompt)
+        cleaned = re.sub(r",", " ", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
 
         if not cleaned:
             return "Please provide a valid prompt"
@@ -153,7 +159,7 @@ class PromptFormatter:
             r"\b(delete|remove|drop|truncate)\b",
             r"\b(password|secret|key)\b",
             r"\b(exec|eval|system)\b",
-            r"\b(rm -rf|format|wipe)\b"
+            r"\b(rm -rf|format|wipe)\b",
         ]
 
         for pattern in harmful_patterns:
@@ -177,18 +183,20 @@ class PromptFormatter:
     def _clean_prompt(self, prompt: str) -> str:
         """Clean and normalize the prompt."""
         # Remove extra whitespace
-        cleaned = re.sub(r'\s+', ' ', prompt).strip()
+        cleaned = re.sub(r"\s+", " ", prompt).strip()
 
         # Remove common formatting artifacts
-        cleaned = re.sub(r'^\s*["\']\s*', '', cleaned)  # Remove leading quotes
-        cleaned = re.sub(r'\s*["\']\s*$', '', cleaned)  # Remove trailing quotes
+        cleaned = re.sub(r'^\s*["\']\s*', "", cleaned)  # Remove leading quotes
+        cleaned = re.sub(r'\s*["\']\s*$', "", cleaned)  # Remove trailing quotes
 
         # Normalize line breaks
-        cleaned = re.sub(r'\n+', ' ', cleaned)
+        cleaned = re.sub(r"\n+", " ", cleaned)
 
         return cleaned
 
-    def format_prompt_with_template(self, prompt: str, template: str) -> FormattedPrompt:
+    def format_prompt_with_template(
+        self, prompt: str, template: str
+    ) -> FormattedPrompt:
         """
         Format prompt using a template.
 
@@ -213,10 +221,7 @@ class PromptFormatter:
                 format_type="template",
                 validation_passed=True,
                 errors=[],
-                metadata={
-                    "template_used": True,
-                    "length": len(formatted)
-                }
+                metadata={"template_used": True, "length": len(formatted)},
             )
 
         except Exception as e:
@@ -226,7 +231,7 @@ class PromptFormatter:
                 format_type="template_error",
                 validation_passed=False,
                 errors=[f"Template formatting error: {str(e)}"],
-                metadata={"template_used": False}
+                metadata={"template_used": False},
             )
 
     def validate_json_input(self, json_str: str) -> Tuple[bool, List[str]]:
@@ -246,8 +251,14 @@ class PromptFormatter:
 
             # Check for required fields if it's a prompt object
             if isinstance(parsed, dict):
-                if "prompt" not in parsed and "message" not in parsed and "text" not in parsed:
-                    errors.append("JSON missing required 'prompt', 'message', or 'text' field")
+                if (
+                    "prompt" not in parsed
+                    and "message" not in parsed
+                    and "text" not in parsed
+                ):
+                    errors.append(
+                        "JSON missing required 'prompt', 'message', or 'text' field"
+                    )
 
             return len(errors) == 0, errors
 
@@ -287,5 +298,5 @@ class PromptFormatter:
             "max_prompt_length": self.max_prompt_length,
             "enable_json_validation": self.enable_json_validation,
             "default_format": self.default_format,
-            "supported_formats": ["text", "json", "template", "fallback"]
+            "supported_formats": ["text", "json", "template", "fallback"],
         }

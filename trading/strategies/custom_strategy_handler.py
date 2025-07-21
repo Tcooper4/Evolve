@@ -1,4 +1,4 @@
-﻿"""
+"""
 Custom Strategy Handler
 
 This module provides functionality for users to define and run custom strategies
@@ -402,36 +402,38 @@ class CustomStrategyHandler:
         self, data: pd.DataFrame, period: int, threshold: float
     ) -> pd.Series:
         """Generate Bollinger Bands signals.
-        
+
         Args:
             data: Price data DataFrame with 'close' column
             period: Rolling window period for SMA calculation
             threshold: Standard deviation multiplier (must be > 0)
-            
+
         Returns:
             Series with trading signals (1=buy, -1=sell, 0=hold)
-            
+
         Raises:
             ValueError: If threshold is missing or invalid
         """
         # Validate threshold parameter
         if threshold is None or threshold <= 0:
             raise ValueError("threshold (std_dev) must be provided and greater than 0")
-        
+
         # Validate input data
         if "close" not in data.columns:
             raise ValueError("Data must contain 'close' column")
-        
+
         if data["close"].isna().all():
             logger.warning("Bollinger signals: All NaN values in close column")
             return pd.Series(0, index=data.index)
-        
+
         # Handle NaN values
         if data["close"].isna().any():
-            logger.warning("Bollinger signals: NaN values found in close column, filling with forward fill")
+            logger.warning(
+                "Bollinger signals: NaN values found in close column, filling with forward fill"
+            )
             data = data.copy()
             data["close"] = data["close"].fillna(method="ffill").fillna(method="bfill")
-        
+
         sma = data["close"].rolling(period).mean()
         std = data["close"].rolling(period).std()
         upper_band = sma + (std * threshold)  # Use threshold instead of hardcoded 2

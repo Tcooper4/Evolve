@@ -314,7 +314,7 @@ class DataValidator:
             if (price_changes > self.max_price_change).any():
                 return (
                     False,
-                    f"Extreme price changes detected (>{self.max_price_change*100}%)",
+                    f"Extreme price changes detected (>{self.max_price_change * 100}%)",
                 )
 
         return True, None
@@ -616,9 +616,11 @@ class DataProviderManager:
                     "success_count": provider_status.success_count,
                     "error_count": provider_status.error_count,
                     "last_error": provider_status.last_error,
-                    "last_used": provider_status.last_used.isoformat()
-                    if provider_status.last_used
-                    else None,
+                    "last_used": (
+                        provider_status.last_used.isoformat()
+                        if provider_status.last_used
+                        else None
+                    ),
                 }
             except Exception as e:
                 status[name] = {"enabled": False, "error": str(e)}

@@ -5,11 +5,8 @@ Auto-generates markdown/PDF reports with strategy logic, performance, backtest g
 Provides comprehensive reporting and export capabilities.
 """
 
-import logging
-
-logger = logging.getLogger(__name__)
-
 import json
+import logging
 import os
 import warnings
 from dataclasses import dataclass
@@ -18,6 +15,9 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
+
 
 warnings.filterwarnings("ignore")
 
@@ -1232,9 +1232,9 @@ class ReportExportEngine:
                     ]
                 ),
                 "formats_used": list(set(r["format"] for r in self.report_history)),
-                "latest_report": self.report_history[-1]
-                if self.report_history
-                else None,
+                "latest_report": (
+                    self.report_history[-1] if self.report_history else None
+                ),
             }
 
         except Exception as e:

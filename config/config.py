@@ -463,7 +463,7 @@ def save_env_config(config_vars: Dict[str, str], file_path: Union[str, Path]) ->
 
 
 def create_default_config(
-    config_path: Union[str, Path] = "config/app_config.yaml"
+    config_path: Union[str, Path] = "config/app_config.yaml",
 ) -> bool:
     """
     Create default configuration file.

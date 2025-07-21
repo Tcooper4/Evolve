@@ -6,14 +6,15 @@ trading strategy with signal generation and position calculation.
 """
 
 import logging
-import numpy as np
-import pandas as pd
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Optional, Tuple
 
+import numpy as np
+import pandas as pd
+
 # Import centralized technical indicators
-from utils.technical_indicators import calculate_sma, calculate_ema
+from utils.technical_indicators import calculate_ema, calculate_sma
 
 logger = logging.getLogger(__name__)
 
@@ -127,8 +128,12 @@ class SMAStrategy:
     ) -> Tuple[pd.Series, pd.Series]:
         """Detect bullish and bearish crossover points."""
         # Detect crossovers
-        bullish_cross = (short_sma > long_sma) & (short_sma.shift(1) <= long_sma.shift(1))
-        bearish_cross = (short_sma < long_sma) & (short_sma.shift(1) >= long_sma.shift(1))
+        bullish_cross = (short_sma > long_sma) & (
+            short_sma.shift(1) <= long_sma.shift(1)
+        )
+        bearish_cross = (short_sma < long_sma) & (
+            short_sma.shift(1) >= long_sma.shift(1)
+        )
 
         # Apply confirmation periods if specified
         if self.config.confirmation_periods > 0:
@@ -154,10 +159,10 @@ class SMAStrategy:
         for i in range(1, self.config.confirmation_periods + 1):
             if trend_type == "bullish":
                 # Check if short SMA remains above long SMA
-                confirmed_points &= (short_sma.shift(-i) > long_sma.shift(-i))
+                confirmed_points &= short_sma.shift(-i) > long_sma.shift(-i)
             else:  # bearish
                 # Check if short SMA remains below long SMA
-                confirmed_points &= (short_sma.shift(-i) < long_sma.shift(-i))
+                confirmed_points &= short_sma.shift(-i) < long_sma.shift(-i)
 
         return confirmed_points
 
@@ -183,13 +188,13 @@ class SMAStrategy:
             raise ValueError("DataFrame is empty")
 
         # Additional validation for 'Close' column presence and all-NaN
-        if 'Close' not in df.columns or df['Close'].isna().all():
+        if "Close" not in df.columns or df["Close"].isna().all():
             # Return empty signals DataFrame with correct index and columns
             signals = pd.DataFrame(index=df.index)
-            signals['signal'] = 0
-            signals['short_sma'] = np.nan
-            signals['long_sma'] = np.nan
-            signals['crossover_strength'] = np.nan
+            signals["signal"] = 0
+            signals["short_sma"] = np.nan
+            signals["long_sma"] = np.nan
+            signals["crossover_strength"] = np.nan
             return signals
 
         # Check for required columns (case-insensitive)
@@ -197,13 +202,17 @@ class SMAStrategy:
         df_lower.columns = df_lower.columns.str.lower()
 
         required_columns = ["close", "volume"]
-        missing_columns = [col for col in required_columns if col not in df_lower.columns]
+        missing_columns = [
+            col for col in required_columns if col not in df_lower.columns
+        ]
         if missing_columns:
             raise ValueError(f"Data must contain columns: {missing_columns}")
 
         # Handle NaN values
         if df_lower["close"].isna().any():
-            df_lower["close"] = df_lower["close"].fillna(method='ffill').fillna(method='bfill')
+            df_lower["close"] = (
+                df_lower["close"].fillna(method="ffill").fillna(method="bfill")
+            )
 
         if df_lower["volume"].isna().any():
             df_lower["volume"] = df_lower["volume"].fillna(0)
@@ -212,17 +221,29 @@ class SMAStrategy:
         config = self.config
         if kwargs:
             config = SMAConfig(
-                short_window=kwargs.get('short_window', self.config.short_window),
-                long_window=kwargs.get('long_window', self.config.long_window),
-                min_volume=kwargs.get('min_volume', self.config.min_volume),
-                min_price=kwargs.get('min_price', self.config.min_price),
-                confirmation_periods=kwargs.get('confirmation_periods', self.config.confirmation_periods),
-                enable_smoothing=kwargs.get('enable_smoothing', self.config.enable_smoothing),
-                smoothing_period=kwargs.get('smoothing_period', self.config.smoothing_period),
-                asymmetric_windows=kwargs.get('asymmetric_windows', self.config.asymmetric_windows),
-                short_window_ratio=kwargs.get('short_window_ratio', self.config.short_window_ratio),
-                long_window_ratio=kwargs.get('long_window_ratio', self.config.long_window_ratio),
-                base_window=kwargs.get('base_window', self.config.base_window),
+                short_window=kwargs.get("short_window", self.config.short_window),
+                long_window=kwargs.get("long_window", self.config.long_window),
+                min_volume=kwargs.get("min_volume", self.config.min_volume),
+                min_price=kwargs.get("min_price", self.config.min_price),
+                confirmation_periods=kwargs.get(
+                    "confirmation_periods", self.config.confirmation_periods
+                ),
+                enable_smoothing=kwargs.get(
+                    "enable_smoothing", self.config.enable_smoothing
+                ),
+                smoothing_period=kwargs.get(
+                    "smoothing_period", self.config.smoothing_period
+                ),
+                asymmetric_windows=kwargs.get(
+                    "asymmetric_windows", self.config.asymmetric_windows
+                ),
+                short_window_ratio=kwargs.get(
+                    "short_window_ratio", self.config.short_window_ratio
+                ),
+                long_window_ratio=kwargs.get(
+                    "long_window_ratio", self.config.long_window_ratio
+                ),
+                base_window=kwargs.get("base_window", self.config.base_window),
             )
 
         try:
@@ -230,7 +251,9 @@ class SMAStrategy:
             short_sma, long_sma = self.calculate_sma(df_lower)
 
             # Detect crossover points
-            bullish_cross, bearish_cross = self._detect_crossover_points(short_sma, long_sma)
+            bullish_cross, bearish_cross = self._detect_crossover_points(
+                short_sma, long_sma
+            )
 
             # Calculate crossover strength
             crossover_strength = self._calculate_crossover_strength(short_sma, long_sma)
@@ -313,9 +336,7 @@ class SMAStrategy:
         if "smoothed_signal" in signals.columns:
             smoothed_buy = (signals["smoothed_signal"] == 1).sum()
             smoothed_sell = (signals["smoothed_signal"] == -1).sum()
-            logger.info(
-                f"Smoothed signals: {smoothed_buy} buy, {smoothed_sell} sell"
-            )
+            logger.info(f"Smoothed signals: {smoothed_buy} buy, {smoothed_sell} sell")
 
     def calculate_positions(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate trading positions based on signals."""
@@ -325,7 +346,9 @@ class SMAStrategy:
         positions = pd.DataFrame(index=data.index)
 
         # Use smoothed signals if available, otherwise use regular signals
-        signal_column = "smoothed_signal" if "smoothed_signal" in self.signals.columns else "signal"
+        signal_column = (
+            "smoothed_signal" if "smoothed_signal" in self.signals.columns else "signal"
+        )
         positions["position"] = self.signals[signal_column].cumsum()
 
         # Ensure positions are within bounds
@@ -390,4 +413,4 @@ class SMAStrategy:
             "signal_ratio": buy_signals / max(sell_signals, 1),
             "avg_crossover_strength": self.signals["crossover_strength"].mean(),
             "signal_frequency": total_signals / max(len(self.signals), 1),
-        } 
+        }

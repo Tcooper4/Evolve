@@ -5,6 +5,7 @@ This page provides comprehensive performance tracking and analysis
 for the trading system's models and strategies.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -14,11 +15,6 @@ import plotly.express as px
 import seaborn as sns
 import streamlit as st
 
-# Add project root to path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-# Import shared utilities
 from core.session_utils import (
     initialize_session_state,
     safe_session_get,
@@ -26,9 +22,15 @@ from core.session_utils import (
     update_last_updated,
 )
 from llm.llm_summary import generate_strategy_commentary
+from trading.memory.performance_memory import PerformanceMemory
+
+# Add project root to path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+# Import shared utilities
 
 # Import trading components
-from trading.memory.performance_memory import PerformanceMemory
 
 
 def main():
@@ -52,9 +54,11 @@ def main():
     selected_ticker = st.selectbox(
         "📈 Select Ticker",
         tickers,
-        index=tickers.index(safe_session_get("selected_ticker"))
-        if safe_session_get("selected_ticker") in tickers
-        else 0,
+        index=(
+            tickers.index(safe_session_get("selected_ticker"))
+            if safe_session_get("selected_ticker") in tickers
+            else 0
+        ),
     )
     safe_session_set("selected_ticker", selected_ticker)
     metrics_response = memory.get_metrics(selected_ticker)

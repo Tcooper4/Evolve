@@ -1,4 +1,4 @@
-﻿"""
+"""
 Data transformation utilities for the trading system.
 """
 
@@ -12,6 +12,7 @@ import pandas as pd
 try:
     from sklearn.decomposition import PCA
     from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ scikit-learn not available. Disabling data transformation features.")
@@ -36,8 +37,10 @@ class DataTransformer:
             scaler_type: Type of scaler ('standard', 'minmax', 'robust')
         """
         if not SKLEARN_AVAILABLE:
-            raise ImportError("scikit-learn is not available. Cannot create DataTransformer.")
-        
+            raise ImportError(
+                "scikit-learn is not available. Cannot create DataTransformer."
+            )
+
         self.scaler_type = scaler_type
         self.scaler = self._create_scaler()
         self.pca = None
@@ -240,10 +243,10 @@ def prepare_forecast_data(
         X, y = [], []
 
         for i in range(len(data) - sequence_length - forecast_horizon + 1):
-            X.append(data[target_column].values[i : i + sequence_length])
+            X.append(data[target_column].values[i: i + sequence_length])
             y.append(
                 data[target_column].values[
-                    i + sequence_length : i + sequence_length + forecast_horizon
+                    i + sequence_length: i + sequence_length + forecast_horizon
                 ]
             )
 

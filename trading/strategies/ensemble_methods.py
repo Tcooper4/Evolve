@@ -5,8 +5,8 @@ This module contains methods for combining multiple strategy signals into
 ensemble predictions with dynamic weight tuning and time-decay weighting.
 """
 
-import logging
 import json
+import logging
 import pickle
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -21,6 +21,7 @@ import pandas as pd
 try:
     from sklearn.ensemble import VotingRegressor
     from sklearn.metrics import mean_squared_error
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("⚠️ scikit-learn not available. Disabling ensemble voting capabilities.")
@@ -93,11 +94,19 @@ class DynamicEnsembleVoter:
             config: Configuration dictionary
         """
         self.config = config or {}
-        self.epsilon = self.config.get("epsilon", 1e-6)  # Small value to prevent division by zero
+        self.epsilon = self.config.get(
+            "epsilon", 1e-6
+        )  # Small value to prevent division by zero
         self.decay_factor = self.config.get("decay_factor", 0.95)  # Time decay factor
-        self.lookback_window = self.config.get("lookback_window", 30)  # Days for performance tracking
-        self.min_weight = self.config.get("min_weight", 0.01)  # Minimum weight for any model
-        self.max_weight = self.config.get("max_weight", 0.5)  # Maximum weight for any model
+        self.lookback_window = self.config.get(
+            "lookback_window", 30
+        )  # Days for performance tracking
+        self.min_weight = self.config.get(
+            "min_weight", 0.01
+        )  # Minimum weight for any model
+        self.max_weight = self.config.get(
+            "max_weight", 0.5
+        )  # Maximum weight for any model
 
         # Performance tracking
         self.model_performance: Dict[str, ModelPerformance] = {}
@@ -111,19 +120,26 @@ class DynamicEnsembleVoter:
         try:
             performance_file = Path("data/ensemble_performance.json")
             if performance_file.exists():
-                with open(performance_file, 'r') as f:
+                with open(performance_file, "r") as f:
                     data = json.load(f)
 
                 for strategy_name, perf_data in data.items():
                     self.model_performance[strategy_name] = ModelPerformance(
                         strategy_name=strategy_name,
                         mse_history=perf_data.get("mse_history", []),
-                        timestamps=[datetime.fromisoformat(ts) for ts in perf_data.get("timestamps", [])],
+                        timestamps=[
+                            datetime.fromisoformat(ts)
+                            for ts in perf_data.get("timestamps", [])
+                        ],
                         recent_performance=perf_data.get("recent_performance", 1.0),
                         weight=perf_data.get("weight", 1.0),
-                        last_updated=datetime.fromisoformat(perf_data.get("last_updated", datetime.now().isoformat()))
+                        last_updated=datetime.fromisoformat(
+                            perf_data.get("last_updated", datetime.now().isoformat())
+                        ),
                     )
-                logger.info(f"Loaded performance data for {len(self.model_performance)} models")
+                logger.info(
+                    f"Loaded performance data for {len(self.model_performance)} models"
+                )
         except Exception as e:
             logger.warning(f"Could not load performance data: {e}")
 
@@ -140,13 +156,15 @@ class DynamicEnsembleVoter:
                     "timestamps": [ts.isoformat() for ts in perf.timestamps],
                     "recent_performance": perf.recent_performance,
                     "weight": perf.weight,
-                    "last_updated": perf.last_updated.isoformat()
+                    "last_updated": perf.last_updated.isoformat(),
                 }
 
-            with open(performance_file, 'w') as f:
+            with open(performance_file, "w") as f:
                 json.dump(data, f, indent=2)
 
-            logger.info(f"Saved performance data for {len(self.model_performance)} models")
+            logger.info(
+                f"Saved performance data for {len(self.model_performance)} models"
+            )
         except Exception as e:
             logger.error(f"Could not save performance data: {e}")
 
@@ -155,7 +173,7 @@ class DynamicEnsembleVoter:
         strategy_name: str,
         actual_returns: pd.Series,
         predicted_returns: pd.Series,
-        timestamp: Optional[datetime] = None
+        timestamp: Optional[datetime] = None,
     ):
         """Update model performance with new data.
 
@@ -170,16 +188,18 @@ class DynamicEnsembleVoter:
 
         # Calculate MSE
         if not SKLEARN_AVAILABLE:
-            mse = float('inf')
+            mse = float("inf")
         elif len(actual_returns) > 0 and len(predicted_returns) > 0:
             # Align the series
-            aligned_actual, aligned_pred = actual_returns.align(predicted_returns, join='inner')
+            aligned_actual, aligned_pred = actual_returns.align(
+                predicted_returns, join="inner"
+            )
             if len(aligned_actual) > 0:
                 mse = mean_squared_error(aligned_actual, aligned_pred)
             else:
-                mse = float('inf')
+                mse = float("inf")
         else:
-            mse = float('inf')
+            mse = float("inf")
 
         # Initialize performance tracking if not exists
         if strategy_name not in self.model_performance:
@@ -189,7 +209,7 @@ class DynamicEnsembleVoter:
                 timestamps=[],
                 recent_performance=1.0,
                 weight=1.0,
-                last_updated=timestamp
+                last_updated=timestamp,
             )
 
         # Update performance tracking
@@ -200,7 +220,9 @@ class DynamicEnsembleVoter:
 
         # Keep only recent history
         cutoff_date = timestamp - timedelta(days=self.lookback_window)
-        recent_indices = [i for i, ts in enumerate(perf.timestamps) if ts >= cutoff_date]
+        recent_indices = [
+            i for i, ts in enumerate(perf.timestamps) if ts >= cutoff_date
+        ]
         perf.mse_history = [perf.mse_history[i] for i in recent_indices]
         perf.timestamps = [perf.timestamps[i] for i in recent_indices]
 
@@ -235,7 +257,9 @@ class DynamicEnsembleVoter:
 
         for strategy_name in strategy_names:
             if strategy_name in self.model_performance:
-                weight = self._calculate_dynamic_weight(self.model_performance[strategy_name])
+                weight = self._calculate_dynamic_weight(
+                    self.model_performance[strategy_name]
+                )
             else:
                 weight = 1.0  # Default weight for new strategies
 
@@ -252,7 +276,7 @@ class DynamicEnsembleVoter:
         self,
         signals: List[StrategySignal],
         confidence_threshold: float = 0.6,
-        use_dynamic_weights: bool = True
+        use_dynamic_weights: bool = True,
     ) -> HybridSignal:
         """Combine signals using dynamic weighting."""
         if not signals:
@@ -316,11 +340,19 @@ class DynamicEnsembleVoter:
             strategy_weights=weights,
             individual_signals=signals,
             timestamp=datetime.now(),
-            metadata={"method": "dynamic_ensemble", "confidence_threshold": confidence_threshold}
+            metadata={
+                "method": "dynamic_ensemble",
+                "confidence_threshold": confidence_threshold,
+            },
         )
 
-    def _record_audit(self, signals: List[StrategySignal], weights: Dict[str, float],
-                     final_signal: SignalType, final_confidence: float):
+    def _record_audit(
+        self,
+        signals: List[StrategySignal],
+        weights: Dict[str, float],
+        final_signal: SignalType,
+        final_confidence: float,
+    ):
         """Record audit information for transparency."""
         audit_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -330,7 +362,7 @@ class DynamicEnsembleVoter:
             "final_signal": final_signal.value,
             "final_confidence": final_confidence,
             "individual_confidences": [s.confidence for s in signals],
-            "individual_returns": [s.predicted_return for s in signals]
+            "individual_returns": [s.predicted_return for s in signals],
         }
         self.audit_history.append(audit_entry)
 
@@ -347,12 +379,7 @@ class DynamicEnsembleVoter:
 
         # Calculate statistics
         signal_counts = {}
-        confidence_stats = {
-            "mean": 0.0,
-            "std": 0.0,
-            "min": 1.0,
-            "max": 0.0
-        }
+        confidence_stats = {"mean": 0.0, "std": 0.0, "min": 1.0, "max": 0.0}
 
         for audit in recent_audits:
             signal_type = audit["final_signal"]
@@ -365,7 +392,9 @@ class DynamicEnsembleVoter:
 
         if recent_audits:
             confidence_stats["mean"] /= len(recent_audits)
-            confidence_stats["std"] = np.std([a["final_confidence"] for a in recent_audits])
+            confidence_stats["std"] = np.std(
+                [a["final_confidence"] for a in recent_audits]
+            )
 
         return {
             "total_decisions": len(self.audit_history),
@@ -377,10 +406,10 @@ class DynamicEnsembleVoter:
                 name: {
                     "recent_performance": perf.recent_performance,
                     "current_weight": perf.weight,
-                    "mse_history_length": len(perf.mse_history)
+                    "mse_history_length": len(perf.mse_history),
                 }
                 for name, perf in self.model_performance.items()
-            }
+            },
         }
 
     def save_state(self, filepath: str):
@@ -394,14 +423,14 @@ class DynamicEnsembleVoter:
                         "timestamps": [ts.isoformat() for ts in perf.timestamps],
                         "recent_performance": perf.recent_performance,
                         "weight": perf.weight,
-                        "last_updated": perf.last_updated.isoformat()
+                        "last_updated": perf.last_updated.isoformat(),
                     }
                     for name, perf in self.model_performance.items()
                 },
-                "audit_history": self.audit_history
+                "audit_history": self.audit_history,
             }
 
-            with open(filepath, 'wb') as f:
+            with open(filepath, "wb") as f:
                 pickle.dump(state, f)
 
             logger.info(f"Saved ensemble voter state to {filepath}")
@@ -411,7 +440,7 @@ class DynamicEnsembleVoter:
     def load_state(self, filepath: str):
         """Load ensemble voter state from file."""
         try:
-            with open(filepath, 'rb') as f:
+            with open(filepath, "rb") as f:
                 state = pickle.load(f)
 
             self.config = state.get("config", {})
@@ -423,10 +452,15 @@ class DynamicEnsembleVoter:
                 self.model_performance[name] = ModelPerformance(
                     strategy_name=name,
                     mse_history=perf_data.get("mse_history", []),
-                    timestamps=[datetime.fromisoformat(ts) for ts in perf_data.get("timestamps", [])],
+                    timestamps=[
+                        datetime.fromisoformat(ts)
+                        for ts in perf_data.get("timestamps", [])
+                    ],
                     recent_performance=perf_data.get("recent_performance", 1.0),
                     weight=perf_data.get("weight", 1.0),
-                    last_updated=datetime.fromisoformat(perf_data.get("last_updated", datetime.now().isoformat()))
+                    last_updated=datetime.fromisoformat(
+                        perf_data.get("last_updated", datetime.now().isoformat())
+                    ),
                 )
 
             logger.info(f"Loaded ensemble voter state from {filepath}")
@@ -489,7 +523,10 @@ def combine_weighted_average(
         strategy_weights=strategy_weights,
         individual_signals=signals,
         timestamp=datetime.now(),
-        metadata={"method": "weighted_average", "confidence_threshold": confidence_threshold}
+        metadata={
+            "method": "weighted_average",
+            "confidence_threshold": confidence_threshold,
+        },
     )
 
 
@@ -533,7 +570,7 @@ def combine_voting(
     signal_type_map = {
         "buy": SignalType.BUY,
         "sell": SignalType.SELL,
-        "hold": SignalType.HOLD
+        "hold": SignalType.HOLD,
     }
 
     signal_type = signal_type_map.get(winning_vote, SignalType.HOLD)
@@ -567,7 +604,7 @@ def combine_voting(
         strategy_weights=strategy_weights,
         individual_signals=signals,
         timestamp=datetime.now(),
-        metadata={"method": "voting", "confidence_threshold": confidence_threshold}
+        metadata={"method": "voting", "confidence_threshold": confidence_threshold},
     )
 
 
@@ -593,7 +630,7 @@ def combine_ensemble_model(
                 signal.confidence,
                 signal.predicted_return,
                 signal.position_size,
-                signal.risk_score
+                signal.risk_score,
             ]
             features.append(feature_vector)
 
@@ -645,7 +682,10 @@ def combine_ensemble_model(
             strategy_weights=strategy_weights,
             individual_signals=signals,
             timestamp=datetime.now(),
-            metadata={"method": "ensemble_model", "confidence_threshold": confidence_threshold}
+            metadata={
+                "method": "ensemble_model",
+                "confidence_threshold": confidence_threshold,
+            },
         )
 
     except Exception as e:
@@ -679,5 +719,5 @@ def create_fallback_hybrid_signal() -> HybridSignal:
         strategy_weights={},
         individual_signals=[],
         timestamp=datetime.now(),
-        metadata={"method": "fallback", "reason": "no_signals_available"}
-    ) 
+        metadata={"method": "fallback", "reason": "no_signals_available"},
+    )

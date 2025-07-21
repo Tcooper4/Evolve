@@ -10,7 +10,12 @@ import pandas as pd
 
 # Try to import scikit-learn
 try:
-    from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
+    from sklearn.feature_selection import (
+        SelectKBest,
+        f_regression,
+        mutual_info_regression,
+    )
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("⚠️ scikit-learn not available. Disabling feature selection capabilities.")

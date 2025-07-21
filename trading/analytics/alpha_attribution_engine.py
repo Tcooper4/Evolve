@@ -15,6 +15,7 @@ import pandas as pd
 # Try to import scikit-learn
 try:
     from sklearn.linear_model import LinearRegression
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("⚠️ scikit-learn not available. Disabling linear regression attribution.")
@@ -526,7 +527,9 @@ class AlphaAttributionEngine:
         self, portfolio_returns: pd.Series, factor_data: Dict[str, pd.Series]
     ) -> Dict[str, float]:
         if not SKLEARN_AVAILABLE:
-            self.logger.warning("scikit-learn not available. Cannot perform factor decomposition.")
+            self.logger.warning(
+                "scikit-learn not available. Cannot perform factor decomposition."
+            )
             return {}
         """Decompose returns using factor model."""
         try:
@@ -722,8 +725,8 @@ class AlphaAttributionEngine:
 
             for i in range(window, len(strategy_returns)):
                 # Get rolling window
-                strategy_window = strategy_returns.iloc[i - window : i]
-                benchmark_window = benchmark_returns.iloc[i - window : i]
+                strategy_window = strategy_returns.iloc[i - window: i]
+                benchmark_window = benchmark_returns.iloc[i - window: i]
 
                 # Run regression
                 try:
@@ -893,7 +896,7 @@ class AlphaAttributionEngine:
                         : len(rolling_performance) // 2
                     ].mean()
                     late_perf = rolling_performance.iloc[
-                        len(rolling_performance) // 2 :
+                        len(rolling_performance) // 2:
                     ].mean()
 
                     if early_perf != 0:
@@ -980,13 +983,15 @@ class AlphaAttributionEngine:
                 "avg_excess_return": np.mean(excess_returns),
                 "avg_alpha_decay": np.mean(decay_scores),
                 "avg_confidence": np.mean(confidence_scores),
-                "recent_attribution": {
-                    "period": filtered_results[-1].period,
-                    "excess_return": filtered_results[-1].excess_return,
-                    "decay_score": filtered_results[-1].alpha_decay_score,
-                }
-                if filtered_results
-                else None,
+                "recent_attribution": (
+                    {
+                        "period": filtered_results[-1].period,
+                        "excess_return": filtered_results[-1].excess_return,
+                        "decay_score": filtered_results[-1].alpha_decay_score,
+                    }
+                    if filtered_results
+                    else None
+                ),
             }
 
         except Exception as e:
@@ -1051,4 +1056,3 @@ alpha_attribution_engine = AlphaAttributionEngine()
 def get_alpha_attribution_engine() -> AlphaAttributionEngine:
     """Get the global alpha attribution engine instance."""
     return alpha_attribution_engine
-

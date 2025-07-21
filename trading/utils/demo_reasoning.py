@@ -11,14 +11,14 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from utils.reasoning_display import ReasoningDisplay
+from utils.reasoning_logger import ConfidenceLevel, DecisionType, ReasoningLogger
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
-
-from utils.reasoning_display import ReasoningDisplay
-from utils.reasoning_logger import ConfidenceLevel, DecisionType, ReasoningLogger
 
 
 def create_sample_forecast_decision():
@@ -278,7 +278,7 @@ def demo_real_time_updates():
         }
 
         decision_id = reasoning_logger.log_decision(**decision_data)
-        logger.info(f"🔄 Logged real-time decision {i+1}: {decision_id}")
+        logger.info(f"🔄 Logged real-time decision {i + 1}: {decision_id}")
         time.sleep(0.5)
 
     # Show final statistics

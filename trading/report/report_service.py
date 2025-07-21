@@ -14,11 +14,11 @@ from pathlib import Path
 from typing import Any, Dict
 
 import redis
+from report.report_generator import ReportGenerator
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from report.report_generator import ReportGenerator
 
 logger = logging.getLogger(__name__)
 

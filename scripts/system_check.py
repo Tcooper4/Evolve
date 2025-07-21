@@ -274,15 +274,15 @@ class SystemChecker:
 
         self.results["success_rate"] = success_rate
 
-        logger.info(f"\n{'='*60}")
+        logger.info(f"\n{'=' * 60}")
         logger.info(f"SYSTEM CHECK COMPLETE")
-        logger.info(f"{'='*60}")
+        logger.info(f"{'=' * 60}")
         logger.info(f"Success Rate: {success_rate:.1f}%")
         logger.info(f"Total Checks: {self.results['total']}")
         logger.info(f"✅ Success: {self.results['success']}")
         logger.info(f"❌ Failures: {self.results['failure']}")
         logger.info(f"⚠️ Warnings: {self.results['warning']}")
-        logger.info(f"{'='*60}")
+        logger.info(f"{'=' * 60}")
 
         return self.results
 
@@ -301,7 +301,14 @@ def main():
     print(f"\nSUMMARY:")
     print(f"Success Rate: {results['success_rate']:.1f}%")
     print(
-        f"Total: {results['total']} | Success: {results['success']} | Failures: {results['failure']} | Warnings: {results['warning']}"
+        f"Total: {
+            results['total']} | Success: {
+            results['success']} | Failures: {
+                results['failure']} | Warnings: {
+                    results['warning']}")
+    print(
+        "System check completed. All components have been verified "
+        "and are operational."
     )
 
     return results

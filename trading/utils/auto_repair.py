@@ -1,4 +1,4 @@
-﻿"""
+"""
 Auto-repair utilities for common package and environment issues.
 
 This module provides automatic detection and repair of common issues
@@ -12,13 +12,14 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
 # Try to import version checking utilities
 try:
-    from importlib.metadata import version, PackageNotFoundError
+    from importlib.metadata import PackageNotFoundError, version
+
     VERSION_CHECK_AVAILABLE = True
 except ImportError:
     VERSION_CHECK_AVAILABLE = False
@@ -387,11 +388,13 @@ def check_system_health() -> Dict[str, Any]:
     dll_check = auto_repair.check_dlls()
     transformers_check = auto_repair.check_transformers()
 
-    all_healthy = all([
-        package_check.get("result", True),
-        dll_check.get("result", True),
-        transformers_check.get("result", True),
-    ])
+    all_healthy = all(
+        [
+            package_check.get("result", True),
+            dll_check.get("result", True),
+            transformers_check.get("result", True),
+        ]
+    )
 
     return {
         "success": True,

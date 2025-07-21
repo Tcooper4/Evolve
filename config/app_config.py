@@ -275,8 +275,8 @@ class AppConfig:
             self.models.forecast_horizon = int(forecast_horizon_env)
         except (ValueError, AttributeError) as e:
             logger.warning(
-                f"Invalid FORECAST_HORIZON value '{forecast_horizon_env}', using default {self.models.forecast_horizon}: {e}"
-            )
+                f"Invalid FORECAST_HORIZON value '{forecast_horizon_env}', using default {
+                    self.models.forecast_horizon}: {e}")
 
         confidence_interval_env = os.getenv(
             "CONFIDENCE_INTERVAL", str(self.models.confidence_interval)
@@ -291,8 +291,8 @@ class AppConfig:
             self.models.confidence_interval = float(confidence_interval_env)
         except (ValueError, AttributeError) as e:
             logger.warning(
-                f"Invalid CONFIDENCE_INTERVAL value '{confidence_interval_env}', using default {self.models.confidence_interval}: {e}"
-            )
+                f"Invalid CONFIDENCE_INTERVAL value '{confidence_interval_env}', using default {
+                    self.models.confidence_interval}: {e}")
 
         # Strategy settings
         position_size_env = os.getenv(
@@ -361,8 +361,8 @@ class AppConfig:
             self.nlp.confidence_threshold = float(nlp_confidence_env)
         except (ValueError, AttributeError) as e:
             logger.warning(
-                f"Invalid NLP_CONFIDENCE_THRESHOLD value '{nlp_confidence_env}', using default {self.nlp.confidence_threshold}: {e}"
-            )
+                f"Invalid NLP_CONFIDENCE_THRESHOLD value '{nlp_confidence_env}', using default {
+                    self.nlp.confidence_threshold}: {e}")
 
         nlp_tokens_env = os.getenv("NLP_MAX_TOKENS", str(self.nlp.max_tokens))
         try:

@@ -1,4 +1,4 @@
-﻿"""Graph Neural Network for time series forecasting."""
+"""Graph Neural Network for time series forecasting."""
 
 # Standard library imports
 import logging
@@ -13,6 +13,7 @@ try:
     import torch
     import torch.nn as nn
     import torch.nn.functional as F
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ PyTorch not available. Disabling GNN models.")
@@ -41,7 +42,7 @@ class GNNLayer(nn.Module):
         """
         if not TORCH_AVAILABLE:
             raise ImportError("PyTorch is not available. Cannot create GNNLayer.")
-        
+
         try:
             from torch_geometric.nn import GCNConv
         except ImportError:
@@ -98,7 +99,7 @@ class GNNForecaster(BaseModel):
         """
         if not TORCH_AVAILABLE:
             raise ImportError("PyTorch is not available. Cannot create GNNForecaster.")
-        
+
         try:
             pass
         except ImportError:
@@ -295,12 +296,12 @@ class GNNForecaster(BaseModel):
 
         # Convert to numpy arrays
         X = data[self.config["feature_columns"]].values
-        y = data[self.config["target_column"]].values[self.config["sequence_length"] :]
+        y = data[self.config["target_column"]].values[self.config["sequence_length"]:]
 
         # Create sequences
         X_sequences = []
         for i in range(len(X) - self.config["sequence_length"]):
-            X_sequences.append(X[i : i + self.config["sequence_length"]])
+            X_sequences.append(X[i: i + self.config["sequence_length"]])
         X = np.array(X_sequences)
 
         # Normalize

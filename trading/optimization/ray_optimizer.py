@@ -1,11 +1,11 @@
-﻿"""Ray Tune Optimization Method.
+"""Ray Tune Optimization Method.
 
 This module contains the RayTuneOptimization method extracted from strategy_optimizer.py.
 """
 
 import logging
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict
 
 import pandas as pd
 
@@ -36,7 +36,6 @@ class RayTuneOptimization(OptimizationMethod):
             OptimizationResult object
         """
         try:
-            import ray
             from ray import tune
             from ray.tune.schedulers import ASHAScheduler
             from ray.tune.search.bayesopt import BayesOptSearch

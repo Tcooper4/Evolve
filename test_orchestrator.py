@@ -7,13 +7,13 @@ task execution, dependency management, and performance tracking.
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any
 
-from core.task_orchestrator import TaskOrchestrator, TaskConfig, TaskType, TaskPriority
+from core.task_orchestrator import TaskConfig, TaskOrchestrator, TaskPriority, TaskType
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +32,7 @@ class MockAgent:
             "status": "success",
             "agent": self.name,
             "execution_count": self.execution_count,
-            "parameters": kwargs
+            "parameters": kwargs,
         }
 
 
@@ -45,9 +45,9 @@ async def test_orchestrator():
 
     # Add mock agents
     mock_agents = {
-        'test_task1': MockAgent('TestAgent1'),
-        'test_task2': MockAgent('TestAgent2'),
-        'test_task3': MockAgent('TestAgent3')
+        "test_task1": MockAgent("TestAgent1"),
+        "test_task2": MockAgent("TestAgent2"),
+        "test_task3": MockAgent("TestAgent3"),
     }
 
     orchestrator.agents = mock_agents
@@ -60,28 +60,28 @@ async def test_orchestrator():
 
     # Add test tasks
     test_tasks = {
-        'test_task1': TaskConfig(
-            name='test_task1',
+        "test_task1": TaskConfig(
+            name="test_task1",
             task_type=TaskType.MODEL_INNOVATION,
             enabled=True,
             interval_minutes=1,
-            priority=TaskPriority.HIGH
+            priority=TaskPriority.HIGH,
         ),
-        'test_task2': TaskConfig(
-            name='test_task2',
+        "test_task2": TaskConfig(
+            name="test_task2",
             task_type=TaskType.STRATEGY_RESEARCH,
             enabled=True,
             interval_minutes=2,
             priority=TaskPriority.MEDIUM,
-            dependencies=['test_task1']
+            dependencies=["test_task1"],
         ),
-        'test_task3': TaskConfig(
-            name='test_task3',
+        "test_task3": TaskConfig(
+            name="test_task3",
             task_type=TaskType.SENTIMENT_FETCH,
             enabled=True,
             interval_minutes=1,
-            priority=TaskPriority.LOW
-        )
+            priority=TaskPriority.LOW,
+        ),
     }
 
     orchestrator.tasks = test_tasks
@@ -95,12 +95,12 @@ async def test_orchestrator():
 
     # Test task execution
     logger.info("\nTesting task execution...")
-    result = await orchestrator.execute_task_now('test_task1', {'test_param': 'value'})
+    result = await orchestrator.execute_task_now("test_task1", {"test_param": "value"})
     logger.info(f"Task execution result: {result}")
 
     # Test dependency checking
     logger.info("\nTesting dependency checking...")
-    should_execute = await orchestrator._should_execute_task('test_task2')
+    should_execute = await orchestrator._should_execute_task("test_task2")
     logger.info(f"Should execute test_task2: {should_execute}")
 
     # Test condition checking
@@ -118,12 +118,12 @@ async def test_orchestrator():
 
     # Test task scheduling
     logger.info("\nTesting task scheduling...")
-    next_execution = orchestrator.get_next_execution_time('test_task1')
+    next_execution = orchestrator.get_next_execution_time("test_task1")
     logger.info(f"Next execution for test_task1: {next_execution}")
 
     # Test task status
     logger.info("\nTesting task status...")
-    task_status = orchestrator.get_task_status('test_task1')
+    task_status = orchestrator.get_task_status("test_task1")
     logger.info(f"Task status: {task_status}")
 
     logger.info("✅ TaskOrchestrator tests completed successfully!")
@@ -137,7 +137,7 @@ async def test_error_handling():
 
     # Test with non-existent task
     try:
-        result = await orchestrator.execute_task_now('non_existent_task')
+        await orchestrator.execute_task_now("non_existent_task")
         logger.error("❌ Should have raised an error for non-existent task")
     except Exception as e:
         logger.info(f"✅ Correctly handled non-existent task: {e}")
@@ -145,13 +145,13 @@ async def test_error_handling():
     # Test with invalid dependencies
     try:
         task_config = TaskConfig(
-            name='invalid_task',
+            name="invalid_task",
             task_type=TaskType.MODEL_INNOVATION,
             enabled=True,
-            dependencies=['non_existent_dependency']
+            dependencies=["non_existent_dependency"],
         )
-        orchestrator.tasks['invalid_task'] = task_config
-        should_execute = await orchestrator._should_execute_task('invalid_task')
+        orchestrator.tasks["invalid_task"] = task_config
+        should_execute = await orchestrator._should_execute_task("invalid_task")
         logger.info(f"✅ Dependency validation: {should_execute}")
     except Exception as e:
         logger.info(f"✅ Correctly handled invalid dependencies: {e}")
@@ -168,10 +168,7 @@ async def test_performance_monitoring():
     # Simulate some task executions
     for i in range(5):
         orchestrator.record_task_execution(
-            task_name='test_task',
-            execution_time=1.5,
-            success=True,
-            error_message=None
+            task_name="test_task", execution_time=1.5, success=True, error_message=None
         )
         await asyncio.sleep(0.1)
 
@@ -180,7 +177,7 @@ async def test_performance_monitoring():
     logger.info(f"Performance metrics: {metrics}")
 
     # Test task history
-    history = orchestrator.get_task_execution_history('test_task')
+    history = orchestrator.get_task_execution_history("test_task")
     logger.info(f"Task history length: {len(history)}")
 
     logger.info("✅ Performance monitoring tests completed!")
@@ -206,4 +203,4 @@ async def main():
 
 if __name__ == "__main__":
     success = asyncio.run(main())
-    exit(0 if success else 1) 
+    exit(0 if success else 1)

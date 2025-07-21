@@ -1,4 +1,5 @@
 """CatBoostModel: CatBoostRegressor wrapper for time series forecasting."""
+
 import json
 import logging
 import os

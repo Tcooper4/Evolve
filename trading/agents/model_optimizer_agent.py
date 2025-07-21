@@ -655,9 +655,9 @@ class ModelOptimizerAgent(BaseAgent):
                         "optimization_id": optimization_id,
                         "status": opt.status.value,
                         "start_time": opt.start_timestamp.isoformat(),
-                        "end_time": opt.end_timestamp.isoformat()
-                        if opt.end_timestamp
-                        else None,
+                        "end_time": (
+                            opt.end_timestamp.isoformat() if opt.end_timestamp else None
+                        ),
                         "improvement": opt.improvement,
                         "error_message": opt.error_message,
                     }

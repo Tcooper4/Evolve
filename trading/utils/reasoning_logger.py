@@ -678,9 +678,9 @@ def log_forecast_decision(
             "user_preferences": reasoning.get("user_preferences", {}),
         },
         reasoning=reasoning,
-        confidence_level=ConfidenceLevel.HIGH
-        if confidence > 0.7
-        else ConfidenceLevel.MEDIUM,
+        confidence_level=(
+            ConfidenceLevel.HIGH if confidence > 0.7 else ConfidenceLevel.MEDIUM
+        ),
         metadata={"forecast_value": forecast_value, "confidence_score": confidence},
     )
 

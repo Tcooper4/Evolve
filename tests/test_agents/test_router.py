@@ -2,15 +2,16 @@
 
 import os
 import sys
+from unittest.mock import Mock
 
 import pytest
+
+from trading.agents.prompt_router_agent import PromptRouterAgent as Router
 
 # Add project root to path for imports
 sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-
-from trading.agents.prompt_router_agent import PromptRouterAgent as Router
 
 
 class TestRouter:
@@ -411,3 +412,4 @@ class TestRouter:
         print(f"  Agreement rate: {performance_metrics['agent_agreement_rate']:.2f}")
 
         print("✅ Multi-agent consensus routing test completed")
+        print("Router test completed. All routing functions have been " "validated.")

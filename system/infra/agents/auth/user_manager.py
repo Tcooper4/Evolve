@@ -245,7 +245,7 @@ class UserManager:
 
             # Get users
             users = []
-            for user_id in user_ids[offset : offset + limit]:
+            for user_id in user_ids[offset: offset + limit]:
                 user = await self.get_user(user_id)
                 if not user:
                     continue

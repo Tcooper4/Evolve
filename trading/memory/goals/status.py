@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Goal status tracking and management."""
 
 import json
@@ -154,7 +154,9 @@ class GoalStatusTracker:
 
             # Check if goals are properly initialized
             if not goals_data or goals_data.get("status") == "No Data":
-                logger.warning("No goals data found. Initializing empty goals structure.")
+                logger.warning(
+                    "No goals data found. Initializing empty goals structure."
+                )
                 goals_data = self._initialize_empty_goals()
                 self.save_goals(goals_data)
 
@@ -167,11 +169,11 @@ class GoalStatusTracker:
             if "status" not in goals_data:
                 logger.warning("Goals status missing, setting default status")
                 goals_data["status"] = "not_started"
-            
+
             if "progress" not in goals_data:
                 logger.warning("Goals progress missing, setting default progress")
                 goals_data["progress"] = 0.0
-            
+
             if "metrics" not in goals_data:
                 logger.warning("Goals metrics missing, initializing empty metrics")
                 goals_data["metrics"] = {}
@@ -191,7 +193,9 @@ class GoalStatusTracker:
             # Log warning if no goals are defined
             goal_count = summary["goal_count"]
             if goal_count == 0:
-                logger.warning("No goals are currently defined. Consider setting up goals for better tracking.")
+                logger.warning(
+                    "No goals are currently defined. Consider setting up goals for better tracking."
+                )
 
             # Rate limit logging to prevent spam
             if self._should_log_status(summary["current_status"]):
@@ -225,7 +229,7 @@ class GoalStatusTracker:
             "metrics": {},
             "goals": [],
             "target_date": None,
-            "priority": "medium"
+            "priority": "medium",
         }
 
     def _get_goal_count(self, goals_data: Dict[str, Any]) -> int:
@@ -234,11 +238,11 @@ class GoalStatusTracker:
             # Check if goals are stored as a list
             if "goals" in goals_data and isinstance(goals_data["goals"], list):
                 return len(goals_data["goals"])
-            
+
             # Check if goals are stored as individual entries
             goal_keys = [key for key in goals_data.keys() if key.startswith("goal_")]
             return len(goal_keys)
-            
+
         except Exception as e:
             logger.warning(f"Error counting goals: {e}")
             return 0

@@ -10,17 +10,18 @@ import os
 import sys
 from pathlib import Path
 
+from utils.launch_utils import setup_logging
+
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from report.report_service import ReportService
-
-
-from utils.launch_utils import setup_logging
 
 def setup_logging():
     """Set up logging for the service."""
-    return setup_logging(service_name="report_service")def main():
+    return setup_logging(service_name="report_service")
+
+
+def main():
     """Main launcher function."""
     # Setup logging
     setup_logging()

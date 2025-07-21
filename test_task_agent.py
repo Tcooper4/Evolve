@@ -7,11 +7,11 @@ agent controller integration, and prompt router integration.
 
 import asyncio
 import logging
-from datetime import datetime
-from typing import Dict, Any
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -33,7 +33,7 @@ async def test_task_agent():
             task_type=TaskType.MODEL_BUILD,
             parameters={"symbol": "AAPL", "model_type": "lstm"},
             max_depth=3,
-            performance_threshold=0.7
+            performance_threshold=0.7,
         )
 
         logger.info(f"✅ TaskAgent result: {result.success}")
@@ -46,7 +46,7 @@ async def test_task_agent():
             prompt="Optimize the model parameters until performance improves",
             task_type=TaskType.MODEL_UPDATE,
             parameters={"model_type": "xgboost"},
-            max_depth=2
+            max_depth=2,
         )
 
         logger.info(f"✅ Convenience function result: {result2.success}")
@@ -78,7 +78,7 @@ async def test_agent_controller_integration():
             task_type="model_build",
             parameters={"symbol": "TSLA", "model_type": "ensemble"},
             max_depth=3,
-            performance_threshold=0.6
+            performance_threshold=0.6,
         )
 
         logger.info(f"✅ Agent controller task result: {result.success}")
@@ -114,10 +114,12 @@ async def test_prompt_router_integration():
         logger.info(f"   Task type: {result.get('task_type', 'unknown')}")
 
         # Test task execution through router
-        if result.get('task_type') == 'task':
+        if result.get("task_type") == "task":
             logger.info("Testing task execution through router...")
             task_result = await router.execute_routed_task(result)
-            logger.info(f"✅ Routed task execution: {task_result.get('success', False)}")
+            logger.info(
+                f"✅ Routed task execution: {task_result.get('success', False)}"
+            )
 
         return True
 
@@ -143,7 +145,7 @@ async def test_task_iteration():
             prompt="Create a basic model for ETH price prediction",
             task_type=TaskType.MODEL_BUILD,
             parameters={"symbol": "ETH", "model_type": "linear"},
-            max_depth=1
+            max_depth=1,
         )
 
         logger.info(f"✅ Initial result: {initial_result.success}")
@@ -156,11 +158,13 @@ async def test_task_iteration():
                 task_type=TaskType.MODEL_UPDATE,
                 parameters={"base_model": "previous_result"},
                 max_depth=2,
-                performance_threshold=initial_result.performance_score * 1.2
+                performance_threshold=initial_result.performance_score * 1.2,
             )
 
             logger.info(f"✅ Improvement result: {improvement_result.success}")
-            logger.info(f"   New performance: {improvement_result.performance_score:.3f}")
+            logger.info(
+                f"   New performance: {improvement_result.performance_score:.3f}"
+            )
 
         return True
 
@@ -186,7 +190,7 @@ async def test_error_handling():
             prompt="Test with invalid parameters",
             task_type=TaskType.MODEL_BUILD,
             parameters={"invalid_param": "invalid_value"},
-            max_depth=0  # Invalid depth
+            max_depth=0,  # Invalid depth
         )
 
         logger.info(f"✅ Error handling result: {not result.success}")
@@ -198,7 +202,7 @@ async def test_error_handling():
             prompt="Achieve 200% accuracy",
             task_type=TaskType.MODEL_BUILD,
             parameters={"symbol": "TEST"},
-            performance_threshold=2.0  # Impossible threshold
+            performance_threshold=2.0,  # Impossible threshold
         )
 
         logger.info(f"✅ Impossible threshold handling: {not result2.success}")
@@ -223,7 +227,7 @@ async def main():
         ("Agent Controller Integration", test_agent_controller_integration),
         ("Prompt Router Integration", test_prompt_router_integration),
         ("Task Iteration", test_task_iteration),
-        ("Error Handling", test_error_handling)
+        ("Error Handling", test_error_handling),
     ]
 
     for test_name, test_func in tests:
@@ -261,4 +265,4 @@ async def main():
 
 if __name__ == "__main__":
     success = asyncio.run(main())
-    exit(0 if success else 1) 
+    exit(0 if success else 1)

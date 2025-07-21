@@ -1,18 +1,19 @@
-﻿"""
+"""
 Report Exporter for Trade Reports
 
 Provides functionality to export trade reports in various formats including CSV and PDF.
 """
 
-import csv
 import logging
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
+
 import pandas as pd
 
 try:
     from fpdf import FPDF
+
     FPDF_AVAILABLE = True
 except ImportError:
     FPDF_AVAILABLE = False
@@ -49,7 +50,7 @@ class ReportExporter:
         signals: Union[List[Dict], pd.DataFrame],
         format: str = "CSV",
         filename: Optional[str] = None,
-        include_summary: bool = True
+        include_summary: bool = True,
     ) -> str:
         """
         Export trade report in the specified format.
@@ -82,7 +83,9 @@ class ReportExporter:
                 return self.export_to_csv(df, filepath, include_summary)
             elif format.upper() == "PDF":
                 if not FPDF_AVAILABLE:
-                    raise ImportError("FPDF not available. Install with: pip install fpdf")
+                    raise ImportError(
+                        "FPDF not available. Install with: pip install fpdf"
+                    )
                 return self.export_to_pdf(df, filepath, include_summary)
             else:
                 raise ValueError(f"Unsupported format: {format}. Use 'CSV' or 'PDF'")
@@ -92,10 +95,7 @@ class ReportExporter:
             raise
 
     def export_to_csv(
-        self,
-        df: pd.DataFrame,
-        filepath: str,
-        include_summary: bool = True
+        self, df: pd.DataFrame, filepath: str, include_summary: bool = True
     ) -> str:
         """
         Export trade signals to CSV format.
@@ -114,7 +114,7 @@ class ReportExporter:
 
             # Add summary statistics if requested
             if include_summary:
-                summary_filepath = filepath.replace('.csv', '_summary.csv')
+                summary_filepath = filepath.replace(".csv", "_summary.csv")
                 summary_stats = self._calculate_summary_stats(df)
                 summary_df = pd.DataFrame([summary_stats])
                 summary_df.to_csv(summary_filepath, index=False)
@@ -128,10 +128,7 @@ class ReportExporter:
             raise
 
     def export_to_pdf(
-        self,
-        df: pd.DataFrame,
-        filepath: str,
-        include_summary: bool = True
+        self, df: pd.DataFrame, filepath: str, include_summary: bool = True
     ) -> str:
         """
         Export trade signals to PDF format using FPDF.
@@ -149,8 +146,8 @@ class ReportExporter:
             pdf.add_page()
 
             # Title
-            pdf.set_font('Arial', 'B', 16)
-            pdf.cell(0, 10, 'Trade Report', ln=True, align='C')
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(0, 10, "Trade Report", ln=True, align="C")
             pdf.ln(5)
 
             # Summary statistics
@@ -185,70 +182,78 @@ class ReportExporter:
             stats = {}
 
             # Basic counts
-            stats['total_trades'] = len(df)
-            stats['winning_trades'] = len(df[df.get('pnl', 0) > 0]) if 'pnl' in df.columns else 0
-            stats['losing_trades'] = len(df[df.get('pnl', 0) < 0]) if 'pnl' in df.columns else 0
+            stats["total_trades"] = len(df)
+            stats["winning_trades"] = (
+                len(df[df.get("pnl", 0) > 0]) if "pnl" in df.columns else 0
+            )
+            stats["losing_trades"] = (
+                len(df[df.get("pnl", 0) < 0]) if "pnl" in df.columns else 0
+            )
 
             # Win rate
-            if stats['total_trades'] > 0:
-                stats['win_rate'] = stats['winning_trades'] / stats['total_trades']
+            if stats["total_trades"] > 0:
+                stats["win_rate"] = stats["winning_trades"] / stats["total_trades"]
             else:
-                stats['win_rate'] = 0.0
+                stats["win_rate"] = 0.0
 
             # PnL statistics
-            if 'pnl' in df.columns:
-                pnl_series = df['pnl'].dropna()
+            if "pnl" in df.columns:
+                pnl_series = df["pnl"].dropna()
                 if len(pnl_series) > 0:
-                    stats['total_pnl'] = pnl_series.sum()
-                    stats['avg_pnl'] = pnl_series.mean()
-                    stats['max_profit'] = pnl_series.max()
-                    stats['max_loss'] = pnl_series.min()
-                    stats['pnl_std'] = pnl_series.std()
+                    stats["total_pnl"] = pnl_series.sum()
+                    stats["avg_pnl"] = pnl_series.mean()
+                    stats["max_profit"] = pnl_series.max()
+                    stats["max_loss"] = pnl_series.min()
+                    stats["pnl_std"] = pnl_series.std()
 
                     # Sharpe ratio (simplified)
-                    if stats['pnl_std'] > 0:
-                        stats['sharpe_ratio'] = stats['avg_pnl'] / stats['pnl_std']
+                    if stats["pnl_std"] > 0:
+                        stats["sharpe_ratio"] = stats["avg_pnl"] / stats["pnl_std"]
                     else:
-                        stats['sharpe_ratio'] = 0.0
+                        stats["sharpe_ratio"] = 0.0
 
                     # Max drawdown calculation
                     cumulative = pnl_series.cumsum()
                     running_max = cumulative.expanding().max()
                     drawdown = cumulative - running_max
-                    stats['max_drawdown'] = drawdown.min()
+                    stats["max_drawdown"] = drawdown.min()
                 else:
-                    stats.update({
-                        'total_pnl': 0.0,
-                        'avg_pnl': 0.0,
-                        'max_profit': 0.0,
-                        'max_loss': 0.0,
-                        'pnl_std': 0.0,
-                        'sharpe_ratio': 0.0,
-                        'max_drawdown': 0.0
-                    })
+                    stats.update(
+                        {
+                            "total_pnl": 0.0,
+                            "avg_pnl": 0.0,
+                            "max_profit": 0.0,
+                            "max_loss": 0.0,
+                            "pnl_std": 0.0,
+                            "sharpe_ratio": 0.0,
+                            "max_drawdown": 0.0,
+                        }
+                    )
             else:
-                stats.update({
-                    'total_pnl': 0.0,
-                    'avg_pnl': 0.0,
-                    'max_profit': 0.0,
-                    'max_loss': 0.0,
-                    'pnl_std': 0.0,
-                    'sharpe_ratio': 0.0,
-                    'max_drawdown': 0.0
-                })
+                stats.update(
+                    {
+                        "total_pnl": 0.0,
+                        "avg_pnl": 0.0,
+                        "max_profit": 0.0,
+                        "max_loss": 0.0,
+                        "pnl_std": 0.0,
+                        "sharpe_ratio": 0.0,
+                        "max_drawdown": 0.0,
+                    }
+                )
 
             # Date range
-            if 'timestamp' in df.columns:
+            if "timestamp" in df.columns:
                 try:
-                    df['timestamp'] = pd.to_datetime(df['timestamp'])
-                    stats['start_date'] = df['timestamp'].min().strftime('%Y-%m-%d')
-                    stats['end_date'] = df['timestamp'].max().strftime('%Y-%m-%d')
-                except:
-                    stats['start_date'] = 'N/A'
-                    stats['end_date'] = 'N/A'
+                    df["timestamp"] = pd.to_datetime(df["timestamp"])
+                    stats["start_date"] = df["timestamp"].min().strftime("%Y-%m-%d")
+                    stats["end_date"] = df["timestamp"].max().strftime("%Y-%m-%d")
+                except BaseException:
+                    stats["start_date"] = "N/A"
+                    stats["end_date"] = "N/A"
             else:
-                stats['start_date'] = 'N/A'
-                stats['end_date'] = 'N/A'
+                stats["start_date"] = "N/A"
+                stats["end_date"] = "N/A"
 
             return stats
 
@@ -265,22 +270,22 @@ class ReportExporter:
             stats: Summary statistics dictionary
         """
         try:
-            pdf.set_font('Arial', 'B', 12)
-            pdf.cell(0, 10, 'Summary Statistics', ln=True)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, "Summary Statistics", ln=True)
             pdf.ln(2)
 
-            pdf.set_font('Arial', '', 10)
+            pdf.set_font("Arial", "", 10)
 
             # Performance metrics
             metrics = [
-                ('Total Trades', f"{stats.get('total_trades', 0)}"),
-                ('Win Rate', f"{stats.get('win_rate', 0):.2%}"),
-                ('Total PnL', f"${stats.get('total_pnl', 0):,.2f}"),
-                ('Average PnL', f"${stats.get('avg_pnl', 0):,.2f}"),
-                ('Sharpe Ratio', f"{stats.get('sharpe_ratio', 0):.2f}"),
-                ('Max Drawdown', f"${stats.get('max_drawdown', 0):,.2f}"),
-                ('Max Profit', f"${stats.get('max_profit', 0):,.2f}"),
-                ('Max Loss', f"${stats.get('max_loss', 0):,.2f}"),
+                ("Total Trades", f"{stats.get('total_trades', 0)}"),
+                ("Win Rate", f"{stats.get('win_rate', 0):.2%}"),
+                ("Total PnL", f"${stats.get('total_pnl', 0):,.2f}"),
+                ("Average PnL", f"${stats.get('avg_pnl', 0):,.2f}"),
+                ("Sharpe Ratio", f"{stats.get('sharpe_ratio', 0):.2f}"),
+                ("Max Drawdown", f"${stats.get('max_drawdown', 0):,.2f}"),
+                ("Max Profit", f"${stats.get('max_profit', 0):,.2f}"),
+                ("Max Loss", f"${stats.get('max_loss', 0):,.2f}"),
             ]
 
             for i, (label, value) in enumerate(metrics):
@@ -303,43 +308,56 @@ class ReportExporter:
             df: DataFrame containing trade signals
         """
         try:
-            pdf.set_font('Arial', 'B', 12)
-            pdf.cell(0, 10, 'Trade Signals', ln=True)
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, "Trade Signals", ln=True)
             pdf.ln(2)
 
             # Determine columns to include
-            important_cols = ['timestamp', 'symbol', 'signal', 'price', 'pnl', 'strategy']
+            important_cols = [
+                "timestamp",
+                "symbol",
+                "signal",
+                "price",
+                "pnl",
+                "strategy",
+            ]
             available_cols = [col for col in important_cols if col in df.columns]
 
             # Add any other columns that might be useful
-            other_cols = [col for col in df.columns if col not in important_cols and col not in ['index']]
-            display_cols = available_cols + other_cols[:3]  # Limit to 3 additional columns
+            other_cols = [
+                col
+                for col in df.columns
+                if col not in important_cols and col not in ["index"]
+            ]
+            display_cols = (
+                available_cols + other_cols[:3]
+            )  # Limit to 3 additional columns
 
             # Set up table
             col_widths = [40, 25, 20, 25, 25, 30]  # Default widths
             if len(display_cols) < len(col_widths):
-                col_widths = col_widths[:len(display_cols)]
+                col_widths = col_widths[: len(display_cols)]
             elif len(display_cols) > len(col_widths):
                 col_widths.extend([25] * (len(display_cols) - len(col_widths)))
 
             # Header
-            pdf.set_font('Arial', 'B', 8)
+            pdf.set_font("Arial", "B", 8)
             for i, col in enumerate(display_cols):
                 pdf.cell(col_widths[i], 8, str(col).title(), border=1)
             pdf.ln()
 
             # Data rows (limit to first 20 rows to avoid PDF overflow)
-            pdf.set_font('Arial', '', 7)
+            pdf.set_font("Arial", "", 7)
             for idx, row in df.head(20).iterrows():
                 for i, col in enumerate(display_cols):
-                    value = str(row.get(col, ''))[:20]  # Truncate long values
+                    value = str(row.get(col, ""))[:20]  # Truncate long values
                     pdf.cell(col_widths[i], 6, value, border=1)
                 pdf.ln()
 
             # Add note if truncated
             if len(df) > 20:
                 pdf.ln(5)
-                pdf.set_font('Arial', 'I', 8)
+                pdf.set_font("Arial", "I", 8)
                 pdf.cell(0, 6, f"Note: Showing first 20 of {len(df)} trades", ln=True)
 
         except Exception as e:
@@ -351,7 +369,7 @@ def export_trade_report(
     format: str = "CSV",
     export_dir: str = "reports/exports",
     filename: Optional[str] = None,
-    include_summary: bool = True
+    include_summary: bool = True,
 ) -> str:
     """
     Convenience function to export trade report.

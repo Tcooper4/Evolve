@@ -1,24 +1,18 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Reasoning Service Launcher
 
 Launches the real-time reasoning monitoring service.
 """
 
-import asyncio
-import json
-import logging
-import os
 import sys
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+
+from utils.reasoning_service import ReasoningService
+from utils.service_utils import load_service_config, setup_service_logging
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
-
-from utils.reasoning_service import ReasoningService
-from utils.service_utils import setup_service_logging, load_service_config
 
 
 def main():
@@ -27,17 +21,20 @@ def main():
     logger = setup_service_logging("reasoning_service")
 
     # Get configuration from environment variables
-    config = load_service_config({
-        "redis_host": "REDIS_HOST",
-        "redis_port": "REDIS_PORT",
-        "redis_db": "REDIS_DB",
-        "service_name": "REASONING_SERVICE_NAME"
-    }, defaults={
-        "redis_host": "localhost",
-        "redis_port": 6379,
-        "redis_db": 0,
-        "service_name": "reasoning_service"
-    })
+    config = load_service_config(
+        {
+            "redis_host": "REDIS_HOST",
+            "redis_port": "REDIS_PORT",
+            "redis_db": "REDIS_DB",
+            "service_name": "REASONING_SERVICE_NAME",
+        },
+        defaults={
+            "redis_host": "localhost",
+            "redis_port": 6379,
+            "redis_db": 0,
+            "service_name": "reasoning_service",
+        },
+    )
 
     logger.info("Starting Reasoning Service...")
     logger.info(f"Configuration: {config}")

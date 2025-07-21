@@ -14,9 +14,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from agents.llm.agent import PromptAgent
+
 # Import components to test
 from trading.agents.prompt_router_agent import PromptRouterAgent, RequestType
-from agents.llm.agent import PromptAgent
 from trading.models.forecast_router import ForecastRouter
 from trading.strategies.gatekeeper import StrategyGatekeeper
 
@@ -205,9 +206,10 @@ class TestStrategySignals:
 
     def test_multi_strategy_routing(self):
         """Test multi-strategy routing (e.g., RSI+MACD, MACD+SMA)."""
-        from trading.strategies.rsi_signals import generate_signals as rsi_signals
         from trading.strategies.macd_strategy import MACDStrategy
+        from trading.strategies.rsi_signals import generate_signals as rsi_signals
         from trading.strategies.sma_strategy import SMAStrategy
+
         # RSI + MACD
         macd = MACDStrategy()
         rsi = rsi_signals(self.sample_data, strategy="rsi")
@@ -219,7 +221,9 @@ class TestStrategySignals:
         sma_signals = sma.generate_signals(self.sample_data)
         assert sma_signals["signals"] is not None
         # Combine signals (simple AND/OR logic)
-        combined_buy = (np.array(macd_signals["signals"]["buy_signals"]) & np.array(sma_signals["signals"]["buy_signals"]))
+        combined_buy = np.array(macd_signals["signals"]["buy_signals"]) & np.array(
+            sma_signals["signals"]["buy_signals"]
+        )
         assert isinstance(combined_buy, np.ndarray)
 
     def test_negative_cases(self):
@@ -227,6 +231,7 @@ class TestStrategySignals:
         from trading.strategies.bollinger_strategy import BollingerStrategy
         from trading.strategies.macd_strategy import MACDStrategy
         from trading.strategies.rsi_signals import generate_signals as rsi_signals
+
         # <10 rows
         short_data = self.sample_data.head(3)
         for strat in [BollingerStrategy(), MACDStrategy()]:

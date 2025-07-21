@@ -11,7 +11,6 @@ This page provides administrative functionality including:
 
 import os
 import sys
-from datetime import datetime
 
 import pandas as pd
 import streamlit as st
@@ -120,7 +119,9 @@ def render_admin_dashboard():
         st.markdown("**System Events**")
         system_events = get_system_events()
         for event in system_events:
-            color = {"info": "🔵", "warning": "🟡", "error": "🔴"}.get(event["level"], "⚪")
+            color = {"info": "🔵", "warning": "🟡", "error": "🔴"}.get(
+                event["level"], "⚪"
+            )
             st.markdown(f"{color} {event['message']}")
 
 
@@ -354,7 +355,8 @@ def render_audit_trail():
             )
 
         with col4:
-            date_filter = st.date_input("Filter by Date", value=datetime.now().date())
+            # Date filter placeholder - not implemented yet
+            pass
 
         # Apply filters
         filtered_df = df.copy()
@@ -412,9 +414,12 @@ def render_security_monitoring():
 
     if security_events:
         for event in security_events:
-            color = {"info": "🔵", "warning": "🟡", "error": "🔴", "critical": "🟣"}.get(
-                event["level"], "⚪"
-            )
+            color = {
+                "info": "🔵",
+                "warning": "🟡",
+                "error": "🔴",
+                "critical": "🟣",
+            }.get(event["level"], "⚪")
             st.markdown(
                 f"{color} **{event['time']}** - {event['user']}: {event['description']}"
             )

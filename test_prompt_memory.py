@@ -7,11 +7,11 @@ basic operations, different backends, and agent integration.
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any, List
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +22,7 @@ async def test_prompt_memory_basic():
     logger.info("=" * 60)
 
     try:
-        from memory.prompt_log import get_prompt_memory, log_prompt, get_last_prompt, get_prompt_history
+        from memory.prompt_log import get_last_prompt, get_prompt_history, log_prompt
 
         # Test basic logging
         logger.info("Testing basic prompt logging...")
@@ -32,7 +32,7 @@ async def test_prompt_memory_basic():
             user_id="test_user",
             agent_type="TestAgent",
             execution_time=1.5,
-            success=True
+            success=True,
         )
 
         logger.info(f"✅ Prompt logging result: {success}")
@@ -55,7 +55,7 @@ async def test_prompt_memory_basic():
 
         logger.info(f"✅ Prompt history count: {len(history)}")
         for i, entry in enumerate(history):
-            logger.info(f"   Entry {i+1}: {entry.prompt[:50]}...")
+            logger.info(f"   Entry {i + 1}: {entry.prompt[:50]}...")
 
         return True
 
@@ -75,13 +75,15 @@ async def test_prompt_memory_backends():
 
         # Test JSON backend
         logger.info("Testing JSON backend...")
-        json_memory = PromptMemory(backend="json", file_path="memory/test_prompt_history.json")
+        json_memory = PromptMemory(
+            backend="json", file_path="memory/test_prompt_history.json"
+        )
 
         success = await json_memory.log_prompt(
             prompt="JSON backend test",
             result={"backend": "json", "test": True},
             user_id="json_user",
-            agent_type="TestAgent"
+            agent_type="TestAgent",
         )
 
         logger.info(f"✅ JSON backend logging: {success}")
@@ -105,7 +107,6 @@ async def test_task_agent_integration():
 
     try:
         from agents.task_agent import TaskAgent, TaskType
-        from memory.prompt_log import get_prompt_memory
 
         # Create TaskAgent (should initialize with prompt memory)
         logger.info("Creating TaskAgent...")
@@ -115,13 +116,15 @@ async def test_task_agent_integration():
         logger.info("Executing test task...")
         result = await agent.execute_task(
             task_type=TaskType.MODEL_INNOVATION,
-            parameters={"test": True, "user_id": "integration_test_user"}
+            parameters={"test": True, "user_id": "integration_test_user"},
         )
 
         logger.info(f"✅ Task execution result: {result.success}")
 
         # Check if prompt was logged
         logger.info("Checking if prompt was logged...")
+        from memory.prompt_log import get_last_prompt
+
         last_prompt = await get_last_prompt("integration_test_user")
 
         if last_prompt:
@@ -146,20 +149,23 @@ async def test_prompt_memory_functions():
 
     try:
         from memory.prompt_log import (
-            get_prompt_memory, log_prompt, get_last_prompt, get_prompt_history,
-            get_prompt_statistics, clear_prompt_history, search_prompts
+            clear_prompt_history,
+            get_prompt_history,
+            get_prompt_statistics,
+            log_prompt,
+            search_prompts,
         )
 
         # Test multiple prompt logging
         logger.info("Testing multiple prompt logging...")
         for i in range(3):
             await log_prompt(
-                prompt=f"Test prompt {i+1}",
-                result={"iteration": i+1},
+                prompt=f"Test prompt {i + 1}",
+                result={"iteration": i + 1},
                 user_id="function_test_user",
                 agent_type="TestAgent",
                 execution_time=0.5 + i * 0.1,
-                success=True
+                success=True,
             )
 
         # Test statistics
@@ -200,7 +206,7 @@ async def test_memory_persistence():
     logger.info("=" * 60)
 
     try:
-        from memory.prompt_log import log_prompt, get_last_prompt
+        from memory.prompt_log import log_prompt
 
         # Log a prompt
         logger.info("Logging persistent prompt...")
@@ -209,12 +215,13 @@ async def test_memory_persistence():
             result={"persistence": "test"},
             user_id="persistence_test_user",
             agent_type="TestAgent",
-            success=True
+            success=True,
         )
 
         # Simulate session restart by creating new memory instance
         logger.info("Simulating session restart...")
         from memory.prompt_log import PromptMemory
+
         new_memory = PromptMemory()
 
         # Try to retrieve the prompt
@@ -246,7 +253,7 @@ async def main():
         ("Backend Support", test_prompt_memory_backends),
         ("Task Agent Integration", test_task_agent_integration),
         ("Utility Functions", test_prompt_memory_functions),
-        ("Memory Persistence", test_memory_persistence)
+        ("Memory Persistence", test_memory_persistence),
     ]
 
     for test_name, test_func in tests:
@@ -284,4 +291,4 @@ async def main():
 
 if __name__ == "__main__":
     success = asyncio.run(main())
-    exit(0 if success else 1) 
+    exit(0 if success else 1)

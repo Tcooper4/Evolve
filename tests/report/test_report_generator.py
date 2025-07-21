@@ -8,7 +8,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from trading.report.report_generator import ReportGenerator
+from trading.report.report_generator import ReportConfig, ReportGenerator
 
 
 class TestReportGenerator(unittest.TestCase):
@@ -448,8 +448,10 @@ class TestReportGenerator(unittest.TestCase):
         )
 
         print(
-            f"    ✓ Date consistency: {len(equity_dates)} equity dates, {len(returns_dates)} return dates, {len(trade_dates)} trade dates"
-        )
+            f"    ✓ Date consistency: {
+                len(equity_dates)} equity dates, {
+                len(returns_dates)} return dates, {
+                len(trade_dates)} trade dates")
 
         # Validate performance calculations
         print(f"\n  🧮 Testing performance calculations...")
@@ -468,8 +470,10 @@ class TestReportGenerator(unittest.TestCase):
         self.assertGreater(calculated_max_dd, -1, "Max drawdown should be reasonable")
 
         print(
-            f"    ✓ Performance validation: Sharpe={calculated_sharpe:.3f}, Win Rate={calculated_win_rate:.3f}, Max DD={calculated_max_dd:.3f}"
-        )
+            f"    ✓ Performance validation: Sharpe={
+                calculated_sharpe:.3f}, Win Rate={
+                calculated_win_rate:.3f}, Max DD={
+                calculated_max_dd:.3f}")
 
         print("✅ Report export structure validation completed")
 

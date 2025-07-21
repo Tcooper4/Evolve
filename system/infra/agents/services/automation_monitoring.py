@@ -2,18 +2,17 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List
 
 import prometheus_client as prom
 from cachetools import TTLCache
-from prometheus_client import Counter, Gauge, Histogram
 from pydantic import BaseModel, Field
 from ratelimit import limits, sleep_and_retry
 
 from trading.automation_core import AutomationCore
 from trading.automation_tasks import AutomationTasks
 from trading.automation_workflows import AutomationWorkflows
+from utils.launch_utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -61,43 +60,18 @@ class AutomationMonitoring:
             logger.error(f"Failed to load monitoring config: {str(e)}")
             raise
 
-    from utils.launch_utils import setup_logging
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="execution_agent")def setup_metrics(self):
-        """Setup Prometheus metrics."""
-        # Task metrics
-        self.task_counter = Counter(
-            "automation_tasks_total", "Total number of tasks", ["type", "status"]
-        )
-        self.task_duration = Histogram(
-            "automation_task_duration_seconds", "Task execution duration", ["type"]
-        )
-        self.task_queue_size = Gauge(
-            "automation_task_queue_size", "Number of tasks in queue"
-        )
+class AutomationMonitoringService:
+    def __init__(self):
+        self.setup_logging()
+        self.logger = logging.getLogger("execution_agent")
 
-        # Workflow metrics
-        self.workflow_counter = Counter(
-            "automation_workflows_total", "Total number of workflows", ["status"]
-        )
-        self.workflow_duration = Histogram(
-            "automation_workflow_duration_seconds", "Workflow execution duration"
-        )
-        self.workflow_queue_size = Gauge(
-            "automation_workflow_queue_size", "Number of workflows in queue"
-        )
+    def setup_logging(self):
+        return setup_logging(service_name="execution_agent")
 
-        # System metrics
-        self.cpu_usage = Gauge("automation_cpu_usage", "CPU usage percentage")
-        self.memory_usage = Gauge("automation_memory_usage", "Memory usage percentage")
-        self.disk_usage = Gauge("automation_disk_usage", "Disk usage percentage")
-
-        # Error metrics
-        self.error_counter = Counter(
-            "automation_errors_total", "Total number of errors", ["type"]
-        )
+    def setup_metrics(self):
+        """Set up metrics for automation monitoring service."""
+        # Metrics setup logic here
 
     def setup_cache(self):
         """Setup metrics caching."""

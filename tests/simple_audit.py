@@ -6,6 +6,7 @@ Simple audit script to check for missing return statements in the Evolve codebas
 import os
 import re
 import sys
+from datetime import datetime
 
 
 def find_python_files(root_dir=".", exclude_dirs=None):

@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 import pandas as pd
 import plotly.graph_objects as go
 import redis
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from flask import Flask, jsonify, render_template
@@ -34,6 +34,36 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory="automation/templates")
+
+# Initialize managers
+security_manager = SecurityManager() if SecurityManager else None
+metrics_collector = MetricsCollector() if MetricsCollector else None
+alert_manager = AlertManager() if AlertManager else None
+
+
+# Helper functions
+def get_security_manager():
+    """Get security manager instance."""
+    return security_manager
+
+
+def get_metrics_collector():
+    """Get metrics collector instance."""
+    return metrics_collector
+
+
+def get_alert_manager():
+    """Get alert manager instance."""
+    return alert_manager
+
+
+# AlertRule model
+class AlertRule:
+    """Alert rule model."""
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
 class AgentHealthStatus(str, Enum):

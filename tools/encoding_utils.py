@@ -215,10 +215,10 @@ def sanitize_unicode_content(content: str, remove_control_chars: bool = True) ->
     replacements = {
         "\u2028": "\n",  # Line separator
         "\u2029": "\n",  # Paragraph separator
-        "\uFEFF": "",  # Zero-width no-break space (BOM)
-        "\u200B": "",  # Zero-width space
-        "\u200C": "",  # Zero-width non-joiner
-        "\u200D": "",  # Zero-width joiner
+        "\ufeff": "",  # Zero-width no-break space (BOM)
+        "\u200b": "",  # Zero-width space
+        "\u200c": "",  # Zero-width non-joiner
+        "\u200d": "",  # Zero-width joiner
     }
 
     for old_char, new_char in replacements.items():

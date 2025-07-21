@@ -14,11 +14,12 @@ import pandas as pd
 import redis
 from redis.exceptions import RedisError
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
 from trading.optimization.performance_logger import PerformanceLogger
 from trading.optimization.strategy_selection_agent import StrategySelectionAgent
 from trading.portfolio.llm_utils import DailyCommentary, LLMInterface, TradeRationale
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
 
 # Setup logging
 logger = logging.getLogger(__name__)

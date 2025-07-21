@@ -62,8 +62,11 @@ class TestRSIStrategy(unittest.TestCase):
         # Test parameter optimization
         result = self.optimizer.optimize(n_trials=5)
         logger.info(
-            f"Best params: period={result.period}, overbought={result.overbought}, oversold={result.oversold}, Sharpe={result.sharpe_ratio:.3f}"
-        )
+            f"Best params: period={
+                result.period}, overbought={
+                result.overbought}, oversold={
+                result.oversold}, Sharpe={
+                    result.sharpe_ratio:.3f}")
         self.assertIsInstance(result.period, int)
         self.assertIsInstance(result.overbought, float)
         self.assertIsInstance(result.oversold, float)
@@ -157,8 +160,10 @@ class TestRSIStrategy(unittest.TestCase):
 
             for i, thresholds in enumerate(threshold_combinations):
                 print(
-                    f"\n    🔍 Testing {thresholds['name']} thresholds: {thresholds['buy_threshold']}/{thresholds['sell_threshold']}"
-                )
+                    f"\n    🔍 Testing {
+                        thresholds['name']} thresholds: {
+                        thresholds['buy_threshold']}/{
+                        thresholds['sell_threshold']}")
 
                 # Generate RSI signals with these thresholds
                 result = generate_rsi_signals(
@@ -191,9 +196,7 @@ class TestRSIStrategy(unittest.TestCase):
                         periods_per_year = (
                             24 * 365
                             if timeframe["freq"] == "H"
-                            else 48 * 365
-                            if timeframe["freq"] == "30T"
-                            else 96 * 365
+                            else 48 * 365 if timeframe["freq"] == "30T" else 96 * 365
                         )
                         sharpe_ratio = (
                             strategy_returns.mean()

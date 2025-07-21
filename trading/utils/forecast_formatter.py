@@ -1,13 +1,14 @@
-﻿"""
+"""
 Forecast Formatter
 
 Formats and normalizes forecast data to prevent downstream failures.
 """
 
 import logging
-import pandas as pd
+from typing import Any, Dict, Optional, Union
+
 import numpy as np
-from typing import Dict, Any, Optional, Union
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -57,21 +58,20 @@ class ForecastFormatter:
         # Normalize timezone if requested
         elif self.normalize_timezone and df.index.tz is not None:
             logger.info("Normalizing timezone to UTC")
-            df.index = df.index.tz_convert('UTC')
+            df.index = df.index.tz_convert("UTC")
 
         # Sort index if requested
         if self.sort_index:
             df = df.sort_index()
 
         # Clean up NaN values
-        df.dropna(how='all', inplace=True)
+        df.dropna(how="all", inplace=True)
 
         logger.info(f"Normalized datetime index: {df.index.dtype}")
         return df
 
     def format_forecast_data(
-        self,
-        forecast_data: Union[pd.DataFrame, np.ndarray, Dict[str, Any]]
+        self, forecast_data: Union[pd.DataFrame, np.ndarray, Dict[str, Any]]
     ) -> pd.DataFrame:
         """
         Format forecast data with proper normalization.
@@ -115,7 +115,7 @@ class ForecastFormatter:
         df = self._ensure_numeric_data(df)
 
         # Clean up NaN values
-        df.dropna(how='all', inplace=True)
+        df.dropna(how="all", inplace=True)
 
         return df
 
@@ -133,7 +133,7 @@ class ForecastFormatter:
         for col in df.columns:
             if not pd.api.types.is_numeric_dtype(df[col]):
                 try:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
                     logger.info(f"Converted column {col} to numeric")
                 except Exception as e:
                     logger.warning(f"Could not convert column {col} to numeric: {e}")
@@ -144,7 +144,7 @@ class ForecastFormatter:
         self,
         forecast: pd.DataFrame,
         lower: Union[pd.Series, np.ndarray],
-        upper: Union[pd.Series, np.ndarray]
+        upper: Union[pd.Series, np.ndarray],
     ) -> pd.DataFrame:
         """
         Format confidence intervals with proper normalization.
@@ -173,14 +173,20 @@ class ForecastFormatter:
         upper.index = forecast.index
 
         # Create confidence interval DataFrame
-        ci_df = pd.DataFrame({
-            'forecast': forecast.iloc[:, 0] if len(forecast.columns) > 0 else forecast.iloc[:, 0],
-            'lower': lower,
-            'upper': upper
-        })
+        ci_df = pd.DataFrame(
+            {
+                "forecast": (
+                    forecast.iloc[:, 0]
+                    if len(forecast.columns) > 0
+                    else forecast.iloc[:, 0]
+                ),
+                "lower": lower,
+                "upper": upper,
+            }
+        )
 
         # Clean up NaN values
-        ci_df.dropna(how='all', inplace=True)
+        ci_df.dropna(how="all", inplace=True)
 
         return ci_df
 
@@ -194,11 +200,7 @@ class ForecastFormatter:
         Returns:
             Dictionary with validation results
         """
-        validation_result = {
-            "valid": True,
-            "warnings": [],
-            "errors": []
-        }
+        validation_result = {"valid": True, "warnings": [], "errors": []}
 
         # Check for empty DataFrame
         if df.empty:
@@ -220,7 +222,9 @@ class ForecastFormatter:
                 non_numeric_cols.append(col)
 
         if non_numeric_cols:
-            validation_result["warnings"].append(f"Non-numeric columns: {non_numeric_cols}")
+            validation_result["warnings"].append(
+                f"Non-numeric columns: {non_numeric_cols}"
+            )
 
         # Check for NaN values
         nan_count = df.isnull().sum().sum()

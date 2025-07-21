@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -797,9 +798,11 @@ class MarketAnalysis:
         signals = {
             "macd": "buy" if macd.iloc[-1] > signal.iloc[-1] else "sell",
             "adx": "strong" if adx.iloc[-1] > 25 else "weak",
-            "ichimoku": "buy"
-            if data["close"].iloc[-1] > ichimoku["senkou_span_a"].iloc[-1]
-            else "sell",
+            "ichimoku": (
+                "buy"
+                if data["close"].iloc[-1] > ichimoku["senkou_span_a"].iloc[-1]
+                else "sell"
+            ),
         }
 
         # Combine signals
@@ -838,21 +841,21 @@ class MarketAnalysis:
 
         # Generate signals
         signals = {
-            "rsi": "oversold"
-            if rsi.iloc[-1] < 30
-            else "overbought"
-            if rsi.iloc[-1] > 70
-            else "neutral",
-            "stochastic": "oversold"
-            if k.iloc[-1] < 20
-            else "overbought"
-            if k.iloc[-1] > 80
-            else "neutral",
-            "cci": "oversold"
-            if cci.iloc[-1] < -100
-            else "overbought"
-            if cci.iloc[-1] > 100
-            else "neutral",
+            "rsi": (
+                "oversold"
+                if rsi.iloc[-1] < 30
+                else "overbought" if rsi.iloc[-1] > 70 else "neutral"
+            ),
+            "stochastic": (
+                "oversold"
+                if k.iloc[-1] < 20
+                else "overbought" if k.iloc[-1] > 80 else "neutral"
+            ),
+            "cci": (
+                "oversold"
+                if cci.iloc[-1] < -100
+                else "overbought" if cci.iloc[-1] > 100 else "neutral"
+            ),
         }
 
         # Combine signals
@@ -892,16 +895,24 @@ class MarketAnalysis:
         # Generate signals
         current_price = data["close"].iloc[-1]
         signals = {
-            "bb": "oversold"
-            if current_price < bb["lower_band"].iloc[-1]
-            else "overbought"
-            if current_price > bb["upper_band"].iloc[-1]
-            else "neutral",
-            "kc": "oversold"
-            if current_price < kc["lower_band"].iloc[-1]
-            else "overbought"
-            if current_price > kc["upper_band"].iloc[-1]
-            else "neutral",
+            "bb": (
+                "oversold"
+                if current_price < bb["lower_band"].iloc[-1]
+                else (
+                    "overbought"
+                    if current_price > bb["upper_band"].iloc[-1]
+                    else "neutral"
+                )
+            ),
+            "kc": (
+                "oversold"
+                if current_price < kc["lower_band"].iloc[-1]
+                else (
+                    "overbought"
+                    if current_price > kc["upper_band"].iloc[-1]
+                    else "neutral"
+                )
+            ),
             "atr": "high" if atr.iloc[-1] > atr.mean() else "low",
         }
 
@@ -977,9 +988,11 @@ class MarketAnalysis:
         signals = {
             "pp": "support" if current_price < pp["pp"].iloc[-1] else "resistance",
             "fib": "support" if current_price < fib["0.5"].iloc[-1] else "resistance",
-            "pc": "support"
-            if current_price < pc["middle_channel"].iloc[-1]
-            else "resistance",
+            "pc": (
+                "support"
+                if current_price < pc["middle_channel"].iloc[-1]
+                else "resistance"
+            ),
         }
 
         # Combine signals

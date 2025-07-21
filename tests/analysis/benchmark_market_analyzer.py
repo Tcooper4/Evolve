@@ -447,8 +447,10 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                         }
 
                         logger.info(
-                            f"    {metric_name}: {actual_value:.3f} (baseline: {baseline_value:.3f}, deviation: {deviation:.1%})"
-                        )
+                            f"    {metric_name}: {
+                                actual_value:.3f} (baseline: {
+                                baseline_value:.3f}, deviation: {
+                                deviation:.1%})")
 
                 # Store in results
                 self.results["baseline_comparison"] = self.results.get(

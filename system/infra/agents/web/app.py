@@ -98,6 +98,26 @@ app.config["SECRET_KEY"] = os.getenv("WEB_SECRET_KEY")
 app.config["JWT_SECRET"] = os.getenv("JWT_SECRET")
 
 # Initialize CORS
+
+
+# Authentication helper functions
+def verify_credentials(username: str, password: str) -> bool:
+    """Verify user credentials."""
+    try:
+        return user_manager.verify_user(username, password)
+    except Exception:
+        return False
+
+
+def is_admin(username: str) -> bool:
+    """Check if user is admin."""
+    try:
+        user = user_manager.get_user(username)
+        return user and user.get("role") == "admin"
+    except Exception:
+        return False
+
+
 CORS(
     app,
     resources={

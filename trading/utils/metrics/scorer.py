@@ -1,4 +1,4 @@
-﻿"""
+"""
 Model Scorer
 
 Provides scoring functions for model evaluation and selection.
@@ -6,10 +6,11 @@ Now includes rolling score decay for shorter test windows using exponential weig
 """
 
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Optional, Union, List, Tuple
-from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ class ModelScorer:
         metrics: Optional[List[str]] = None,
         returns: Optional[Union[np.ndarray, pd.Series, List]] = None,
         model_name: Optional[str] = None,
-        timestamp: Optional[datetime] = None
+        timestamp: Optional[datetime] = None,
     ) -> Dict[str, float]:
         """
         Calculate model scores for given metrics with optional rolling decay.
@@ -102,10 +103,7 @@ class ModelScorer:
         return scores
 
     def _apply_rolling_decay(
-        self,
-        model_name: str,
-        current_scores: Dict[str, float],
-        timestamp: datetime
+        self, model_name: str, current_scores: Dict[str, float], timestamp: datetime
     ) -> Dict[str, float]:
         """
         Apply rolling score decay using exponential weighting.
@@ -128,7 +126,9 @@ class ModelScorer:
             # Keep only recent history to prevent memory bloat
             max_history = 100
             if len(self.score_history[model_name]) > max_history:
-                self.score_history[model_name] = self.score_history[model_name][-max_history:]
+                self.score_history[model_name] = self.score_history[model_name][
+                    -max_history:
+                ]
 
             # Check if we have enough history for decay
             if len(self.score_history[model_name]) < self.min_window_size:
@@ -155,7 +155,9 @@ class ModelScorer:
                     # Use current score if no history available
                     decayed_scores[metric] = current_scores[metric]
 
-            logger.debug(f"Applied rolling decay to {model_name}: {len(decayed_scores)} metrics")
+            logger.debug(
+                f"Applied rolling decay to {model_name}: {len(decayed_scores)} metrics"
+            )
             return decayed_scores
 
         except Exception as e:
@@ -163,10 +165,7 @@ class ModelScorer:
             return current_scores
 
     def get_score_trend(
-        self,
-        model_name: str,
-        metric: str,
-        window: int = 20
+        self, model_name: str, metric: str, window: int = 20
     ) -> Dict[str, Any]:
         """
         Get score trend for a specific model and metric.
@@ -205,7 +204,7 @@ class ModelScorer:
             # Calculate rolling mean for smoothing
             if len(metric_values) >= window:
                 rolling_mean = pd.Series(metric_values).rolling(window=window).mean()
-                recent_trend = rolling_mean.iloc[-1] - rolling_mean.iloc[-window//2]
+                recent_trend = rolling_mean.iloc[-1] - rolling_mean.iloc[-window // 2]
             else:
                 recent_trend = slope
 
@@ -217,7 +216,7 @@ class ModelScorer:
                 "recent_trend": recent_trend,
                 "data_points": len(metric_values),
                 "timestamps": timestamps,
-                "values": metric_values
+                "values": metric_values,
             }
 
         except Exception as e:
@@ -286,9 +285,7 @@ class ModelScorer:
         return cumulative_return
 
     def compare_models(
-        self,
-        model_scores: Dict[str, Dict[str, float]],
-        metric: str = "mse"
+        self, model_scores: Dict[str, Dict[str, float]], metric: str = "mse"
     ) -> List[Tuple[str, float]]:
         """
         Compare models by a specific metric.
@@ -317,9 +314,7 @@ class ModelScorer:
         return comparison
 
     def get_best_model(
-        self,
-        model_scores: Dict[str, Dict[str, float]],
-        metric: str = "mse"
+        self, model_scores: Dict[str, Dict[str, float]], metric: str = "mse"
     ) -> Optional[str]:
         """
         Get the best model by a specific metric.
@@ -337,7 +332,7 @@ class ModelScorer:
     def calculate_ensemble_score(
         self,
         individual_scores: List[Dict[str, float]],
-        weights: Optional[List[float]] = None
+        weights: Optional[List[float]] = None,
     ) -> Dict[str, float]:
         """
         Calculate ensemble score from individual model scores.
@@ -381,7 +376,9 @@ class ModelScorer:
 
             if metric_scores:
                 # Calculate weighted average
-                ensemble_scores[metric] = np.average(metric_scores, weights=metric_weights)
+                ensemble_scores[metric] = np.average(
+                    metric_scores, weights=metric_weights
+                )
             else:
                 ensemble_scores[metric] = np.nan
 

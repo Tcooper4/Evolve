@@ -1,4 +1,4 @@
-﻿"""
+"""
 Data Loader Module for Market Data
 
 This module provides comprehensive data loading capabilities for market data,
@@ -22,6 +22,7 @@ import pandas as pd
 # Try to import yfinance
 try:
     import yfinance as yf
+
     YFINANCE_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ yfinance not available. Disabling Yahoo Finance data loading.")
@@ -242,7 +243,7 @@ class DataValidator:
             if (price_changes > self.max_price_change).any():
                 return (
                     False,
-                    f"Extreme price changes detected (>{self.max_price_change*100}%)",
+                    f"Extreme price changes detected (>{self.max_price_change * 100}%)",
                 )
 
         return True, None
@@ -393,7 +394,7 @@ class ParallelProcessor:
 
         # Split requests into chunks
         chunks = [
-            requests[i : i + self.config.chunk_size]
+            requests[i: i + self.config.chunk_size]
             for i in range(0, len(requests), self.config.chunk_size)
         ]
 
@@ -460,7 +461,7 @@ class DataLoader:
                 message="yfinance is not available. Cannot load market data.",
                 ticker=request.ticker,
             )
-        
+
         try:
             # Check cache first
             cache_key = self._get_cache_key(request)
@@ -623,7 +624,7 @@ class DataLoader:
                 message="yfinance is not available. Cannot get latest price.",
                 ticker=ticker,
             )
-        
+
         try:
             ticker_obj = yf.Ticker(ticker)
             info = ticker_obj.info

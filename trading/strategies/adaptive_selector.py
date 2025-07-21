@@ -253,7 +253,7 @@ class TrendAnalyzer:
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
             return rsi.iloc[-1]
-        except:
+        except BaseException:
             return 50.0
 
     def _calculate_momentum(self, price_data: pd.Series, period: int = 10) -> float:
@@ -262,7 +262,7 @@ class TrendAnalyzer:
             return (price_data.iloc[-1] - price_data.iloc[-period]) / price_data.iloc[
                 -period
             ]
-        except:
+        except BaseException:
             return 0.0
 
 
@@ -998,7 +998,7 @@ class AdaptiveSelector:
             # This would use actual volume data
             # For now, return a default score
             return 0.5
-        except:
+        except BaseException:
             return 0.5
 
     def _calculate_momentum_score(self, price_data: pd.Series) -> float:
@@ -1015,7 +1015,7 @@ class AdaptiveSelector:
             # Combine momentum signals
             combined_momentum = (momentum_5 + momentum_10) / 2
             return np.tanh(combined_momentum / 0.01)
-        except:
+        except BaseException:
             return 0.0
 
     def _get_model_performance_data(

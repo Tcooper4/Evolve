@@ -9,11 +9,10 @@ goal evaluation, and performance trend analysis.
 import json
 import logging
 import os
-import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -696,9 +695,11 @@ class PerformanceEvaluator:
                 "text": f"🚨 Performance Alert: {status_report['status']}",
                 "attachments": [
                     {
-                        "color": "danger"
-                        if status_report["status"] == "error"
-                        else "warning",
+                        "color": (
+                            "danger"
+                            if status_report["status"] == "error"
+                            else "warning"
+                        ),
                         "fields": [
                             {
                                 "title": "Message",
@@ -748,9 +749,9 @@ class PerformanceEvaluator:
 
             payload = {
                 "alert_type": "performance_underperformance",
-                "severity": "warning"
-                if status_report["status"] == "warning"
-                else "critical",
+                "severity": (
+                    "warning" if status_report["status"] == "warning" else "critical"
+                ),
                 "message": status_report["message"],
                 "details": status_report,
                 "timestamp": datetime.now().isoformat(),
@@ -986,9 +987,9 @@ class LeaderboardManager:
                 )
 
                 # Calculate confidence based on data quality
-                latest_data[
-                    "confidence"
-                ] = 0.8  # Default confidence for individual entries
+                latest_data["confidence"] = (
+                    0.8  # Default confidence for individual entries
+                )
 
                 # Filter by confidence
                 latest_data = latest_data[latest_data["confidence"] >= min_confidence]
@@ -1026,9 +1027,11 @@ class LeaderboardManager:
                         strategy=row["strategy"],
                         metric_value=float(row[metric_name]),
                         metric_name=metric_name,
-                        timestamp=row["timestamp"].isoformat()
-                        if hasattr(row["timestamp"], "isoformat")
-                        else str(row["timestamp"]),
+                        timestamp=(
+                            row["timestamp"].isoformat()
+                            if hasattr(row["timestamp"], "isoformat")
+                            else str(row["timestamp"])
+                        ),
                         rank=idx + 1,
                         percentile=float(
                             (len(latest_data) - idx) / len(latest_data) * 100
@@ -1062,12 +1065,16 @@ class LeaderboardManager:
                 "total_strategies": df["strategy"].nunique(),
                 "total_entries": len(df),
                 "date_range": {
-                    "start": df["timestamp"].min().isoformat()
-                    if hasattr(df["timestamp"].min(), "isoformat")
-                    else str(df["timestamp"].min()),
-                    "end": df["timestamp"].max().isoformat()
-                    if hasattr(df["timestamp"].max(), "isoformat")
-                    else str(df["timestamp"].max()),
+                    "start": (
+                        df["timestamp"].min().isoformat()
+                        if hasattr(df["timestamp"].min(), "isoformat")
+                        else str(df["timestamp"].min())
+                    ),
+                    "end": (
+                        df["timestamp"].max().isoformat()
+                        if hasattr(df["timestamp"].max(), "isoformat")
+                        else str(df["timestamp"].max())
+                    ),
                 },
                 "available_metrics": [
                     col

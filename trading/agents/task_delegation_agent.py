@@ -277,9 +277,16 @@ class TaskDelegationAgent(BaseAgent):
             # Log delegation
             log_agent_thought(
                 agent_name=self.name,
-                context=f"Delegating task: {task.title}",
+                context=f"Delegating task: {
+                    task.title}",
                 decision=f"Assigned to {assigned_agent}",
-                rationale=f"Agent {assigned_agent} has roles {self.agent_roles.get(assigned_agent, [])} and capabilities {self.agent_capabilities.get(assigned_agent, [])}",
+                rationale=f"Agent {assigned_agent} has roles {
+                    self.agent_roles.get(
+                        assigned_agent,
+                        [])} and capabilities {
+                    self.agent_capabilities.get(
+                        assigned_agent,
+                        [])}",
                 confidence=0.8,
             )
 

@@ -8,28 +8,32 @@ ensemble combination, and performance comparison.
 import asyncio
 import logging
 import time
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
 def generate_sample_data(days: int = 100) -> pd.DataFrame:
     """Generate sample market data."""
-    dates = pd.date_range(start='2023-01-01', periods=days, freq='D')
+    dates = pd.date_range(start="2023-01-01", periods=days, freq="D")
     prices = 100 + np.cumsum(np.random.randn(days) * 0.5)
 
-    data = pd.DataFrame({
-        'open': prices * 0.99,
-        'high': prices * 1.02,
-        'low': prices * 0.98,
-        'close': prices,
-        'volume': np.random.randint(1000000, 10000000, days)
-    }, index=dates)
+    data = pd.DataFrame(
+        {
+            "open": prices * 0.99,
+            "high": prices * 1.02,
+            "low": prices * 0.98,
+            "close": prices,
+            "volume": np.random.randint(1000000, 10000000, days),
+        },
+        index=dates,
+    )
 
     return data
 
@@ -46,12 +50,14 @@ class StrategyExecutor:
         from trading.strategies.strategy_runner import AsyncStrategyRunner
 
         self.data = generate_sample_data(200)
-        self.runner = AsyncStrategyRunner({
-            "max_concurrent_strategies": 3,
-            "strategy_timeout": 10,
-            "enable_ensemble": True,
-            "ensemble_method": "weighted"
-        })
+        self.runner = AsyncStrategyRunner(
+            {
+                "max_concurrent_strategies": 3,
+                "strategy_timeout": 10,
+                "enable_ensemble": True,
+                "ensemble_method": "weighted",
+            }
+        )
 
         logger.info(f"Initialized with {len(self.data)} data points")
 
@@ -59,16 +65,12 @@ class StrategyExecutor:
         """Run RSI strategy asynchronously."""
         logger.info("🚀 Starting RSI strategy...")
 
-        parameters = {
-            "period": 14,
-            "overbought": 70,
-            "oversold": 30
-        }
+        parameters = {"period": 14, "overbought": 70, "oversold": 30}
 
         result = await self.runner.run_rsi_strategy(self.data, parameters)
 
-        if result.get('success'):
-            perf = result.get('performance_metrics', {})
+        if result.get("success"):
+            perf = result.get("performance_metrics", {})
             logger.info(f"✅ RSI completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}")
         else:
             logger.error(f"❌ RSI failed: {result.get('error', 'Unknown error')}")
@@ -79,17 +81,15 @@ class StrategyExecutor:
         """Run MACD strategy asynchronously."""
         logger.info("🚀 Starting MACD strategy...")
 
-        parameters = {
-            "fast_period": 12,
-            "slow_period": 26,
-            "signal_period": 9
-        }
+        parameters = {"fast_period": 12, "slow_period": 26, "signal_period": 9}
 
         result = await self.runner.run_macd_strategy(self.data, parameters)
 
-        if result.get('success'):
-            perf = result.get('performance_metrics', {})
-            logger.info(f"✅ MACD completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}")
+        if result.get("success"):
+            perf = result.get("performance_metrics", {})
+            logger.info(
+                f"✅ MACD completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}"
+            )
         else:
             logger.error(f"❌ MACD failed: {result.get('error', 'Unknown error')}")
 
@@ -99,18 +99,19 @@ class StrategyExecutor:
         """Run Bollinger Bands strategy asynchronously."""
         logger.info("🚀 Starting Bollinger Bands strategy...")
 
-        parameters = {
-            "period": 20,
-            "std_dev": 2
-        }
+        parameters = {"period": 20, "std_dev": 2}
 
         result = await self.runner.run_bollinger_bands_strategy(self.data, parameters)
 
-        if result.get('success'):
-            perf = result.get('performance_metrics', {})
-            logger.info(f"✅ Bollinger Bands completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}")
+        if result.get("success"):
+            perf = result.get("performance_metrics", {})
+            logger.info(
+                f"✅ Bollinger Bands completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}"
+            )
         else:
-            logger.error(f"❌ Bollinger Bands failed: {result.get('error', 'Unknown error')}")
+            logger.error(
+                f"❌ Bollinger Bands failed: {result.get('error', 'Unknown error')}"
+            )
 
         return result
 
@@ -118,16 +119,15 @@ class StrategyExecutor:
         """Run Momentum strategy asynchronously."""
         logger.info("🚀 Starting Momentum strategy...")
 
-        parameters = {
-            "period": 10,
-            "threshold": 0.02
-        }
+        parameters = {"period": 10, "threshold": 0.02}
 
         result = await self.runner.run_momentum_strategy(self.data, parameters)
 
-        if result.get('success'):
-            perf = result.get('performance_metrics', {})
-            logger.info(f"✅ Momentum completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}")
+        if result.get("success"):
+            perf = result.get("performance_metrics", {})
+            logger.info(
+                f"✅ Momentum completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}"
+            )
         else:
             logger.error(f"❌ Momentum failed: {result.get('error', 'Unknown error')}")
 
@@ -137,18 +137,19 @@ class StrategyExecutor:
         """Run Mean Reversion strategy asynchronously."""
         logger.info("🚀 Starting Mean Reversion strategy...")
 
-        parameters = {
-            "period": 20,
-            "std_dev": 2
-        }
+        parameters = {"period": 20, "std_dev": 2}
 
         result = await self.runner.run_mean_reversion_strategy(self.data, parameters)
 
-        if result.get('success'):
-            perf = result.get('performance_metrics', {})
-            logger.info(f"✅ Mean Reversion completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}")
+        if result.get("success"):
+            perf = result.get("performance_metrics", {})
+            logger.info(
+                f"✅ Mean Reversion completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}"
+            )
         else:
-            logger.error(f"❌ Mean Reversion failed: {result.get('error', 'Unknown error')}")
+            logger.error(
+                f"❌ Mean Reversion failed: {result.get('error', 'Unknown error')}"
+            )
 
         return result
 
@@ -168,13 +169,13 @@ async def demo_parallel_execution():
         executor.run_macd(),
         executor.run_bb(),
         executor.run_momentum(),
-        executor.run_mean_reversion()
+        executor.run_mean_reversion(),
     )
     end_time = time.time()
 
     # Analyze results
-    successful_strategies = [r for r in results if r.get('success')]
-    failed_strategies = [r for r in results if not r.get('success')]
+    successful_strategies = [r for r in results if r.get("success")]
+    failed_strategies = [r for r in results if not r.get("success")]
 
     logger.info(f"⏱️  Total execution time: {end_time - start_time:.2f}s")
     logger.info(f"✅ Successful strategies: {len(successful_strategies)}")
@@ -183,7 +184,7 @@ async def demo_parallel_execution():
     # Calculate average performance
     if successful_strategies:
         avg_sharpe = sum(
-            s.get('performance_metrics', {}).get('sharpe_ratio', 0)
+            s.get("performance_metrics", {}).get("sharpe_ratio", 0)
             for s in successful_strategies
         ) / len(successful_strategies)
         logger.info(f"📊 Average Sharpe ratio: {avg_sharpe:.3f}")
@@ -204,7 +205,7 @@ async def demo_ensemble_execution():
     parameters = {
         "RSI_Strategy": {"period": 14, "overbought": 70, "oversold": 30},
         "MACD_Strategy": {"fast_period": 12, "slow_period": 26, "signal_period": 9},
-        "Bollinger_Bands": {"period": 20, "std_dev": 2}
+        "Bollinger_Bands": {"period": 20, "std_dev": 2},
     }
 
     # Run ensemble
@@ -215,12 +216,16 @@ async def demo_ensemble_execution():
         parameters=parameters,
         ensemble_config={
             "method": "weighted",
-            "weights": {"RSI_Strategy": 0.4, "MACD_Strategy": 0.3, "Bollinger_Bands": 0.3}
-        }
+            "weights": {
+                "RSI_Strategy": 0.4,
+                "MACD_Strategy": 0.3,
+                "Bollinger_Bands": 0.3,
+            },
+        },
     )
     end_time = time.time()
 
-    if result.get('success'):
+    if result.get("success"):
         logger.info(f"⏱️  Ensemble execution time: {end_time - start_time:.2f}s")
         logger.info(f"📊 Ensemble result: {result.get('ensemble_result', {})}")
     else:
@@ -250,9 +255,7 @@ async def demo_sequential_vs_parallel():
     logger.info("⚡ Running strategies in parallel...")
     start_time = time.time()
     parallel_results = await asyncio.gather(
-        executor.run_rsi(),
-        executor.run_macd(),
-        executor.run_bb()
+        executor.run_rsi(), executor.run_macd(), executor.run_bb()
     )
     parallel_time = time.time() - start_time
 
@@ -263,7 +266,7 @@ async def demo_sequential_vs_parallel():
 
     return {
         "sequential": {"time": sequential_time, "results": sequential_results},
-        "parallel": {"time": parallel_time, "results": parallel_results}
+        "parallel": {"time": parallel_time, "results": parallel_results},
     }
 
 
@@ -292,4 +295,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

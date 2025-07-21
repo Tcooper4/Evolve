@@ -6,7 +6,7 @@ import pytest
 
 from trading.models.arima_model import ARIMAModel
 from trading.models.ensemble_model import EnsembleModel as HybridModel
-from trading.models.lstm_model import LSTMForecaster
+from trading.models.lstm_model import LSTMForecaster, LSTMModel
 from trading.models.prophet_model import ProphetModel
 
 

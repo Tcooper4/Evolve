@@ -1,4 +1,4 @@
-﻿"""
+"""
 Agent Swarm Orchestrator
 
 Coordinates multiple agents (Strategy, Risk, Execution, Monitoring, etc.) as async jobs/processes.
@@ -8,18 +8,25 @@ Supports Redis or SQLite for coordination. Modular, robust, and non-duplicative.
 import asyncio
 import logging
 import threading
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 from uuid import uuid4
 
+from trading.agents.alpha import (
+    AlphaGenAgent,
+    AlphaRegistry,
+    RiskValidator,
+    SentimentIngestion,
+    SignalTester,
+)
 from trading.agents.base_agent_interface import AgentConfig, AgentResult
-from trading.agents.alpha import AlphaGenAgent, SignalTester, RiskValidator, SentimentIngestion, AlphaRegistry
-from trading.agents.walk_forward_agent import WalkForwardAgent
 from trading.agents.regime_detection_agent import RegimeDetectionAgent
+from trading.agents.walk_forward_agent import WalkForwardAgent
 
 logger = logging.getLogger(__name__)
+
 
 class AgentType(Enum):
     STRATEGY = "strategy"
@@ -34,12 +41,14 @@ class AgentType(Enum):
     WALK_FORWARD = "walk_forward"
     REGIME_DETECTION = "regime_detection"
 
+
 class AgentStatus(Enum):
     IDLE = "idle"
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+
 
 @dataclass
 class SwarmTask:
@@ -55,6 +64,7 @@ class SwarmTask:
     error_message: Optional[str] = None
     dependencies: List[str] = None
 
+
 @dataclass
 class SwarmConfig:
     max_concurrent_agents: int = 5
@@ -65,6 +75,7 @@ class SwarmConfig:
     retry_attempts: int = 3
     enable_logging: bool = True
     enable_monitoring: bool = True
+
 
 class SwarmOrchestrator:
     def __init__(self, config: Optional[SwarmConfig] = None):
@@ -104,7 +115,13 @@ class SwarmOrchestrator:
                 await self._cancel_task(task_id)
         self.logger.info("Swarm orchestrator stopped")
 
-    async def submit_task(self, agent_type: AgentType, agent_config: AgentConfig, input_data: Dict[str, Any], dependencies: Optional[List[str]] = None) -> str:
+    async def submit_task(
+        self,
+        agent_type: AgentType,
+        agent_config: AgentConfig,
+        input_data: Dict[str, Any],
+        dependencies: Optional[List[str]] = None,
+    ) -> str:
         task_id = str(uuid4())
         task = SwarmTask(
             task_id=task_id,
@@ -113,7 +130,7 @@ class SwarmOrchestrator:
             input_data=input_data,
             status=AgentStatus.IDLE,
             created_at=datetime.now(),
-            dependencies=dependencies or []
+            dependencies=dependencies or [],
         )
         with self.lock:
             self.tasks[task_id] = task
@@ -126,7 +143,9 @@ class SwarmOrchestrator:
             if task_id not in self.tasks:
                 return
             task = self.tasks[task_id]
-            if not all(dep in self.completed_tasks for dep in (task.dependencies or [])):
+            if not all(
+                dep in self.completed_tasks for dep in (task.dependencies or [])
+            ):
                 return
             if len(self.running_tasks) >= self.config.max_concurrent_agents:
                 await asyncio.sleep(1)
@@ -160,17 +179,20 @@ class SwarmOrchestrator:
             try:
                 agent = agent_class(task.agent_config)
                 result = await asyncio.wait_for(
-                    agent.execute(**task.input_data),
-                    timeout=self.config.task_timeout
+                    agent.execute(**task.input_data), timeout=self.config.task_timeout
                 )
                 return result
             except asyncio.TimeoutError:
-                self.logger.warning(f"Task {task.task_id} timed out (attempt {attempt + 1})")
+                self.logger.warning(
+                    f"Task {task.task_id} timed out (attempt {attempt + 1})"
+                )
                 if attempt == self.config.retry_attempts - 1:
                     raise
                 await asyncio.sleep(1)
             except Exception as e:
-                self.logger.error(f"Task {task.task_id} failed (attempt {attempt + 1}): {e}")
+                self.logger.error(
+                    f"Task {task.task_id} failed (attempt {attempt + 1}): {e}"
+                )
                 if attempt == self.config.retry_attempts - 1:
                     raise
                 await asyncio.sleep(1)
@@ -192,6 +214,12 @@ class SwarmOrchestrator:
                 "total_tasks": len(self.tasks),
                 "running_tasks": len(self.running_tasks),
                 "completed_tasks": len(self.completed_tasks),
-                "failed_tasks": len([t for t in self.completed_tasks.values() if t.status == AgentStatus.FAILED]),
-                "max_concurrent_agents": self.config.max_concurrent_agents
+                "failed_tasks": len(
+                    [
+                        t
+                        for t in self.completed_tasks.values()
+                        if t.status == AgentStatus.FAILED
+                    ]
+                ),
+                "max_concurrent_agents": self.config.max_concurrent_agents,
             }

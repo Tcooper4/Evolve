@@ -1,4 +1,4 @@
-﻿"""
+"""
 Model Utility Functions
 
 This module contains utility functions for model operations including
@@ -15,6 +15,7 @@ import pandas as pd
 # Try to import PyTorch
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ PyTorch not available. Disabling model utilities.")
@@ -71,7 +72,7 @@ def to_device(
     """
     if not TORCH_AVAILABLE:
         raise ImportError("PyTorch is not available. Cannot move data to device.")
-    
+
     try:
         if isinstance(data, torch.Tensor):
             return data.to(device)
@@ -85,7 +86,7 @@ def to_device(
 
 
 def from_device(
-    data: Union[torch.Tensor, Dict[str, torch.Tensor]]
+    data: Union[torch.Tensor, Dict[str, torch.Tensor]],
 ) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
     """Move data from device to CPU.
 
@@ -97,7 +98,7 @@ def from_device(
     """
     if not TORCH_AVAILABLE:
         raise ImportError("PyTorch is not available. Cannot move data from device.")
-    
+
     try:
         if isinstance(data, torch.Tensor):
             return data.cpu()
@@ -126,7 +127,7 @@ def safe_forward(model: torch.nn.Module, *args, **kwargs) -> torch.Tensor:
     """
     if not TORCH_AVAILABLE:
         raise ImportError("PyTorch is not available. Cannot perform forward pass.")
-    
+
     try:
         if model is None:
             raise ModelError("Model not initialized")
@@ -152,7 +153,7 @@ def compute_loss(
     """
     if not TORCH_AVAILABLE:
         raise ImportError("PyTorch is not available. Cannot compute loss.")
-    
+
     try:
         return criterion(y_pred, y_true)
     except Exception as e:
@@ -172,7 +173,7 @@ def compute_metrics(y_pred: torch.Tensor, y_true: torch.Tensor) -> list:
     """
     if not TORCH_AVAILABLE:
         raise ImportError("PyTorch is not available. Cannot compute metrics.")
-    
+
     try:
         y_pred_np = y_pred.detach().cpu().numpy().flatten()
         y_true_np = y_true.detach().cpu().numpy().flatten()
@@ -216,9 +217,9 @@ def get_model_confidence(val_losses: list) -> Dict[str, float]:
             "confidence": confidence,
             "latest_val_loss": latest_val_loss,
             "best_val_loss": best_val_loss,
-            "loss_ratio": latest_val_loss / best_val_loss
-            if best_val_loss > 0
-            else float("inf"),
+            "loss_ratio": (
+                latest_val_loss / best_val_loss if best_val_loss > 0 else float("inf")
+            ),
         }
     except Exception as e:
         logger.error(f"Confidence calculation failed: {e}")
@@ -268,30 +269,35 @@ def get_model_metadata(
         }
 
 
-def handle_nan_forecast(forecast: np.ndarray, data: pd.Series, method: str = "rolling_mean") -> np.ndarray:
+def handle_nan_forecast(
+    forecast: np.ndarray, data: pd.Series, method: str = "rolling_mean"
+) -> np.ndarray:
     """
     Handle NaN values in forecast by substituting fallback predictions.
-    
+
     Args:
         forecast: Forecast array that may contain NaNs
         data: Original time series data
         method: Fallback method ('rolling_mean', 'static', 'last_value')
-        
+
     Returns:
         Cleaned forecast array without NaNs
     """
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     if not np.isnan(forecast).any():
         return forecast
-    
+
     nan_count = np.isnan(forecast).sum()
     logger.warning(f"Forecast contains {nan_count} NaN values, using {method} fallback")
-    
+
     if method == "rolling_mean":
         # Use rolling mean of recent data
-        fallback = data.rolling(window=min(20, len(data)), min_periods=1).mean().iloc[-1]
+        fallback = (
+            data.rolling(window=min(20, len(data)), min_periods=1).mean().iloc[-1]
+        )
     elif method == "static":
         # Use mean of recent data
         fallback = data.tail(20).mean()
@@ -300,9 +306,9 @@ def handle_nan_forecast(forecast: np.ndarray, data: pd.Series, method: str = "ro
         fallback = data.iloc[-1]
     else:
         fallback = data.mean()
-    
+
     # Replace NaNs with fallback value
     cleaned_forecast = forecast.copy()
     cleaned_forecast[np.isnan(cleaned_forecast)] = fallback
-    
+
     return cleaned_forecast

@@ -51,9 +51,9 @@ class ServiceStatus:
             "pid": self.pid,
             "status": self.status,
             "start_time": self.start_time.isoformat() if self.start_time else None,
-            "last_heartbeat": self.last_heartbeat.isoformat()
-            if self.last_heartbeat
-            else None,
+            "last_heartbeat": (
+                self.last_heartbeat.isoformat() if self.last_heartbeat else None
+            ),
             "restart_count": self.restart_count,
             "error_message": self.error_message,
         }

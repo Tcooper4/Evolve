@@ -14,15 +14,16 @@ from typing import Any, Dict, List
 
 import redis
 
-# Add the trading directory to the path
-sys.path.append(str(Path(__file__).parent.parent))
-
 from utils.reasoning_logger import (
     AgentDecision,
     ConfidenceLevel,
     DecisionType,
     ReasoningLogger,
 )
+
+# Add the trading directory to the path
+sys.path.append(str(Path(__file__).parent.parent))
+
 
 logger = logging.getLogger(__name__)
 
@@ -237,9 +238,11 @@ class ReasoningService:
                     "user_preferences": forecast_data.get("preferences", {}),
                 },
                 reasoning=reasoning,
-                confidence_level=ConfidenceLevel.HIGH
-                if forecast_data.get("confidence", 0) > 0.7
-                else ConfidenceLevel.MEDIUM,
+                confidence_level=(
+                    ConfidenceLevel.HIGH
+                    if forecast_data.get("confidence", 0) > 0.7
+                    else ConfidenceLevel.MEDIUM
+                ),
                 metadata={"forecast_data": forecast_data},
             )
 
@@ -294,9 +297,11 @@ class ReasoningService:
                     "user_preferences": strategy_data.get("preferences", {}),
                 },
                 reasoning=reasoning,
-                confidence_level=ConfidenceLevel.HIGH
-                if strategy_data.get("confidence", 0) > 0.7
-                else ConfidenceLevel.MEDIUM,
+                confidence_level=(
+                    ConfidenceLevel.HIGH
+                    if strategy_data.get("confidence", 0) > 0.7
+                    else ConfidenceLevel.MEDIUM
+                ),
                 metadata={"strategy_data": strategy_data, "trade_data": trade_data},
             )
 
@@ -350,9 +355,11 @@ class ReasoningService:
                     "user_preferences": evaluation_data.get("preferences", {}),
                 },
                 reasoning=reasoning,
-                confidence_level=ConfidenceLevel.HIGH
-                if evaluation_data.get("confidence", 0) > 0.7
-                else ConfidenceLevel.MEDIUM,
+                confidence_level=(
+                    ConfidenceLevel.HIGH
+                    if evaluation_data.get("confidence", 0) > 0.7
+                    else ConfidenceLevel.MEDIUM
+                ),
                 metadata={"evaluation_data": evaluation_data},
             )
 

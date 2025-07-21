@@ -8,23 +8,22 @@ improving performance and reducing computational overhead.
 import os
 import sys
 import time
-from typing import Dict, Any
 
 import numpy as np
 import pandas as pd
 
 # Add utils to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'utils'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
 
 try:
     from model_cache import (
-        get_model_cache,
-        clear_model_cache,
-        get_cache_info,
         cached_lstm_forecast,
         cached_xgboost_forecast,
-        create_cached_forecast_function
+        clear_model_cache,
+        create_cached_forecast_function,
+        get_cache_info,
     )
+
     print("✅ Successfully imported model caching utilities")
 except ImportError as e:
     print(f"❌ Failed to import model caching utilities: {e}")
@@ -35,7 +34,7 @@ def create_sample_trading_data(n_samples=100):
     """Create realistic trading data for testing."""
     np.random.seed(42)
 
-    dates = pd.date_range(start='2024-01-01', periods=n_samples, freq='D')
+    dates = pd.date_range(start="2024-01-01", periods=n_samples, freq="D")
 
     # Create realistic price data with trend and volatility
     base_price = 100.0
@@ -45,17 +44,20 @@ def create_sample_trading_data(n_samples=100):
     returns = np.random.normal(0.001, volatility, n_samples) + trend / 252
     prices = base_price * np.cumprod(1 + returns)
 
-    data = pd.DataFrame({
-        'timestamp': dates,
-        'symbol': 'AAPL',
-        'strategy': 'LSTM_Strategy',
-        'signal': np.random.choice(['BUY', 'SELL', 'HOLD'], n_samples),
-        'entry_price': prices,
-        'exit_price': prices * (1 + np.random.uniform(-0.05, 0.05, n_samples)),
-        'size': np.random.randint(1, 100, n_samples),
-        'pnl': np.random.normal(0, 100, n_samples),
-        'return': np.random.normal(0, 0.05, n_samples)
-    }, index=dates)
+    data = pd.DataFrame(
+        {
+            "timestamp": dates,
+            "symbol": "AAPL",
+            "strategy": "LSTM_Strategy",
+            "signal": np.random.choice(["BUY", "SELL", "HOLD"], n_samples),
+            "entry_price": prices,
+            "exit_price": prices * (1 + np.random.uniform(-0.05, 0.05, n_samples)),
+            "size": np.random.randint(1, 100, n_samples),
+            "pnl": np.random.normal(0, 100, n_samples),
+            "return": np.random.normal(0, 0.05, n_samples),
+        },
+        index=dates,
+    )
 
     return data
 
@@ -72,13 +74,13 @@ def demonstrate_basic_caching():
     print("Example 1: LSTM Forecast Caching")
 
     lstm_config = {
-        'input_size': 4,
-        'hidden_size': 32,
-        'num_layers': 2,
-        'dropout': 0.2,
-        'sequence_length': 10,
-        'feature_columns': ['entry_price', 'size', 'pnl', 'return'],
-        'target_column': 'entry_price'
+        "input_size": 4,
+        "hidden_size": 32,
+        "num_layers": 2,
+        "dropout": 0.2,
+        "sequence_length": 10,
+        "feature_columns": ["entry_price", "size", "pnl", "return"],
+        "target_column": "entry_price",
     }
 
     print("First LSTM forecast (will be slow)...")
@@ -100,7 +102,7 @@ def demonstrate_basic_caching():
         print(f"Second run took: {time2:.2f} seconds")
 
         # Verify results are identical
-        if np.allclose(result1['forecast'], result2['forecast']):
+        if np.allclose(result1["forecast"], result2["forecast"]):
             print("✅ Cached results are identical")
         else:
             print("❌ Cached results differ")
@@ -130,11 +132,11 @@ def demonstrate_xgboost_caching():
     print("Example 2: XGBoost Forecast Caching")
 
     xgb_config = {
-        'n_estimators': 100,
-        'max_depth': 6,
-        'learning_rate': 0.1,
-        'feature_columns': ['entry_price', 'size', 'pnl', 'return'],
-        'target_column': 'entry_price'
+        "n_estimators": 100,
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "feature_columns": ["entry_price", "size", "pnl", "return"],
+        "target_column": "entry_price",
     }
 
     print("First XGBoost forecast...")
@@ -156,7 +158,7 @@ def demonstrate_xgboost_caching():
         print(f"Second run took: {time2:.2f} seconds")
 
         # Verify results are identical
-        if np.allclose(result1['forecast'], result2['forecast']):
+        if np.allclose(result1["forecast"], result2["forecast"]):
             print("✅ Cached results are identical")
         else:
             print("❌ Cached results differ")
@@ -187,11 +189,13 @@ def demonstrate_cache_management():
     # Clear cache
     print("Clearing cache...")
     clear_model_cache()
-    
+
     # Check cache after clearing
     cache_info_after = get_cache_info()
     print(f"Cache size after clearing: {cache_info_after['size']} items")
-    print(f"Cache memory usage after clearing: {cache_info_after['memory_usage']:.2f} MB")
+    print(
+        f"Cache memory usage after clearing: {cache_info_after['memory_usage']:.2f} MB"
+    )
 
     return True
 
@@ -209,24 +213,23 @@ def demonstrate_dynamic_caching():
         """Custom forecast function for demonstration."""
         # Simulate some computation
         time.sleep(0.1)
-        
+
         # Simple moving average forecast
-        prices = data['entry_price'].values
-        forecast = np.mean(prices[-config.get('window', 10):]) * np.ones(horizon)
-        
+        prices = data["entry_price"].values
+        forecast = np.mean(prices[-config.get("window", 10):]) * np.ones(horizon)
+
         return {
-            'forecast': forecast,
-            'confidence': 0.8,
-            'metadata': {'method': 'custom_ma', 'window': config.get('window', 10)}
+            "forecast": forecast,
+            "confidence": 0.8,
+            "metadata": {"method": "custom_ma", "window": config.get("window", 10)},
         }
 
     # Create cached version
     cached_custom_forecast = create_cached_forecast_function(
-        custom_forecast,
-        cache_key_prefix="custom_ma"
+        custom_forecast, cache_key_prefix="custom_ma"
     )
 
-    config = {'window': 15}
+    config = {"window": 15}
 
     print("First custom forecast (will be slow)...")
     start_time = time.time()
@@ -241,7 +244,7 @@ def demonstrate_dynamic_caching():
     print(f"Second run took: {time2:.2f} seconds")
 
     # Verify results are identical
-    if np.allclose(result1['forecast'], result2['forecast']):
+    if np.allclose(result1["forecast"], result2["forecast"]):
         print("✅ Cached results are identical")
     else:
         print("❌ Cached results differ")
@@ -294,4 +297,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

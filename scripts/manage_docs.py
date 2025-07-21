@@ -37,14 +37,17 @@ from pathlib import Path
 
 import yaml
 
+from utils.launch_utils import setup_logging
 
-class DocumentationManager:
+
+class DocsManager:
     def __init__(self, config_path: str = "config/app_config.yaml"):
         """Initialize the documentation manager."""
         self.config = self._load_config(config_path)
         self.setup_logging()
         self.logger = logging.getLogger("trading")
         self.docs_dir = Path("docs")
+        self.docs_dir.mkdir(parents=True, exist_ok=True)
         self.api_dir = self.docs_dir / "api"
         self.examples_dir = self.docs_dir / "examples"
         self.diagrams_dir = self.docs_dir / "diagrams"
@@ -58,33 +61,30 @@ class DocumentationManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def generate_api_docs(self):
+    def generate_api_docs(self):
         """Generate API documentation."""
         self.logger.info("Generating API documentation...")
 
         try:
-            # Create API directory
-            self.api_dir.mkdir(parents=True, exist_ok=True)
-
-            # Generate documentation using pdoc
-            result = subprocess.run(
-                ["pdoc", "--html", "--output-dir", str(self.api_dir), "trading"],
-                capture_output=True,
-                text=True,
+            # Generate OpenAPI schema
+            subprocess.run(
+                [sys.executable, "-m", "scripts.manage_api", "generate-openapi"],
+                check=True,
             )
 
-            if result.returncode == 0:
-                self.logger.info(f"API documentation generated in {self.api_dir}")
-                return True
-            else:
-                self.logger.error("Failed to generate API documentation")
-                print(result.stderr)
-                return False
-        except Exception as e:
+            # Generate documentation
+            subprocess.run(
+                [sys.executable, "-m", "scripts.manage_api", "generate-docs"],
+                check=True,
+            )
+
+            self.logger.info("API documentation generated successfully")
+            return True
+        except subprocess.CalledProcessError as e:
             self.logger.error(f"Failed to generate API documentation: {e}")
             return False
 
@@ -292,7 +292,7 @@ def main():
     )
 
     args = parser.parse_args()
-    manager = DocumentationManager()
+    manager = DocsManager()
 
     commands = {
         "api": manager.generate_api_docs,

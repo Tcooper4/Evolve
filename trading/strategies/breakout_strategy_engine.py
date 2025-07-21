@@ -5,7 +5,7 @@ Breakout Strategy Engine for detecting consolidation ranges and breakout signals
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -135,8 +135,8 @@ class BreakoutStrategyEngine:
                     continue
 
                 # Extract consolidation period
-                consolidation_data = data.iloc[start_idx : end_idx + 1]
-                consolidation_prices = close_prices.iloc[start_idx : end_idx + 1]
+                consolidation_data = data.iloc[start_idx: end_idx + 1]
+                consolidation_prices = close_prices.iloc[start_idx: end_idx + 1]
 
                 # Calculate range bounds
                 upper_bound = consolidation_prices.max()
@@ -155,7 +155,7 @@ class BreakoutStrategyEngine:
                 confidence = self._calculate_consolidation_confidence(
                     consolidation_data,
                     range_percentage,
-                    volatility.iloc[start_idx : end_idx + 1],
+                    volatility.iloc[start_idx: end_idx + 1],
                 )
 
                 # Create consolidation range
@@ -721,15 +721,17 @@ class BreakoutStrategyEngine:
                 "avg_duration": np.mean(durations),
                 "avg_confidence": np.mean(confidences),
                 "avg_range_percentage": np.mean(range_percentages),
-                "latest_range": {
-                    "start_date": ranges[-1].start_date.isoformat(),
-                    "end_date": ranges[-1].end_date.isoformat(),
-                    "upper_bound": ranges[-1].upper_bound,
-                    "lower_bound": ranges[-1].lower_bound,
-                    "confidence": ranges[-1].confidence,
-                }
-                if ranges
-                else None,
+                "latest_range": (
+                    {
+                        "start_date": ranges[-1].start_date.isoformat(),
+                        "end_date": ranges[-1].end_date.isoformat(),
+                        "upper_bound": ranges[-1].upper_bound,
+                        "lower_bound": ranges[-1].lower_bound,
+                        "confidence": ranges[-1].confidence,
+                    }
+                    if ranges
+                    else None
+                ),
             }
 
         except Exception as e:
@@ -763,14 +765,16 @@ class BreakoutStrategyEngine:
                 "bearish_signals": len(bearish_signals),
                 "avg_confidence": np.mean(confidences),
                 "avg_volume_spike": np.mean(volume_spikes),
-                "latest_signal": {
-                    "timestamp": signals[-1].timestamp.isoformat(),
-                    "breakout_type": signals[-1].breakout_type.value,
-                    "confidence": signals[-1].confidence,
-                    "volume_spike": signals[-1].volume_spike,
-                }
-                if signals
-                else None,
+                "latest_signal": (
+                    {
+                        "timestamp": signals[-1].timestamp.isoformat(),
+                        "breakout_type": signals[-1].breakout_type.value,
+                        "confidence": signals[-1].confidence,
+                        "volume_spike": signals[-1].volume_spike,
+                    }
+                    if signals
+                    else None
+                ),
             }
 
         except Exception as e:

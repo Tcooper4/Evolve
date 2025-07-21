@@ -260,7 +260,7 @@ class LeaderboardDashboard:
             st.metric("Deprecated", deprecated_agents)
             st.metric(
                 "Success Rate",
-                f"{active_agents/total_agents:.1%}" if total_agents > 0 else "0%",
+                f"{active_agents / total_agents:.1%}" if total_agents > 0 else "0%",
             )
             st.metric("Avg Win Rate", f"{avg_win_rate:.2%}")
             st.metric("Avg Drawdown", f"{avg_drawdown:.2%}")

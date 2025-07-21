@@ -776,7 +776,7 @@ class StrategyOptimizer:
 
 
 def create_genetic_optimizer(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> GeneticOptimizer:
     """Create a genetic optimizer with default configuration."""
     optimizer_config = OptimizerConfig(optimizer_type="genetic", **(config or {}))
@@ -790,7 +790,7 @@ def create_grid_optimizer(config: Optional[Dict[str, Any]] = None) -> GridOptimi
 
 
 def create_bayesian_optimizer(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> BayesianOptimizer:
     """Create a Bayesian optimizer with default configuration."""
     optimizer_config = OptimizerConfig(optimizer_type="bayesian", **(config or {}))
@@ -798,7 +798,7 @@ def create_bayesian_optimizer(
 
 
 def create_random_search_optimizer(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> RandomSearchOptimizer:
     """Create a random search optimizer with default configuration."""
     optimizer_config = OptimizerConfig(optimizer_type="random_search", **(config or {}))

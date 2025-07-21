@@ -7,7 +7,7 @@ All agents must implement this interface to be compatible with the agent manager
 
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
@@ -107,19 +107,19 @@ class AgentStatus:
             "state": self.state.value,
             "is_running": self.is_running,
             "last_run": self.last_run.isoformat() if self.last_run else None,
-            "last_success": self.last_success.isoformat()
-            if self.last_success
-            else None,
-            "last_failure": self.last_failure.isoformat()
-            if self.last_failure
-            else None,
+            "last_success": (
+                self.last_success.isoformat() if self.last_success else None
+            ),
+            "last_failure": (
+                self.last_failure.isoformat() if self.last_failure else None
+            ),
             "total_runs": self.total_runs,
             "successful_runs": self.successful_runs,
             "failed_runs": self.failed_runs,
             "current_error": self.current_error,
-            "current_run_start": self.current_run_start.isoformat()
-            if self.current_run_start
-            else None,
+            "current_run_start": (
+                self.current_run_start.isoformat() if self.current_run_start else None
+            ),
             "average_execution_time": self.average_execution_time,
             "total_execution_time": self.total_execution_time,
         }
@@ -132,9 +132,9 @@ class AgentStatus:
             data["state"] = AgentState(data["state"])
 
         # Convert datetime strings back to datetime objects
-        for field in ["last_run", "last_success", "last_failure", "current_run_start"]:
-            if data.get(field) and isinstance(data[field], str):
-                data[field] = datetime.fromisoformat(data[field])
+        for field_item in fields:  # Renamed from 'field' to avoid shadowing
+            if data.get(field_item) and isinstance(data[field_item], str):
+                data[field_item] = datetime.fromisoformat(data[field_item])
 
         return cls(**data)
 

@@ -39,6 +39,8 @@ from typing import Any, Dict, Optional
 
 import yaml
 
+from utils.launch_utils import setup_logging
+
 
 class LogManager:
     def __init__(self, config_path: str = "config/app_config.yaml"):
@@ -47,7 +49,9 @@ class LogManager:
         self.setup_logging()
         self.logger = logging.getLogger("trading")
         self.logs_dir = Path("logs")
+        self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.archive_dir = Path("logs/archive")
+        self.archive_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
@@ -58,50 +62,66 @@ class LogManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def rotate_logs(self, days: int = 7):
-        """Rotate log files."""
-        self.logger.info(f"Rotating logs older than {days} days...")
-
-        if not self.logs_dir.exists():
-            self.logger.error("Logs directory not found")
-            return False
-
-        # Create archive directory if it doesn't exist
-        self.archive_dir.mkdir(parents=True, exist_ok=True)
-
-        cutoff_date = datetime.now() - timedelta(days=days)
-        rotated_count = 0
+    def rotate_logs(self, days: int = 7):
+        """Rotate log files older than specified days."""
+        self.logger.info(f"Rotating logs older than {days} days")
 
         try:
-            # Rotate log files
-            for log_file in self.logs_dir.glob("*.log"):
-                if log_file.is_file():
-                    file_date = datetime.fromtimestamp(log_file.stat().st_mtime)
-                    if file_date < cutoff_date:
-                        # Create archive name
-                        archive_name = (
-                            f"{log_file.stem}_{file_date.strftime('%Y%m%d')}.log.gz"
-                        )
-                        archive_path = self.archive_dir / archive_name
+            # Find old log files
+            old_logs = self._find_old_logs(days)
 
-                        # Compress and move file
-                        with open(log_file, "rb") as f_in:
-                            with gzip.open(archive_path, "wb") as f_out:
-                                shutil.copyfileobj(f_in, f_out)
+            # Archive old logs
+            for log_file in old_logs:
+                self._archive_log(log_file)
 
-                        # Remove original file
-                        log_file.unlink()
-                        rotated_count += 1
+            # Clean up old archives
+            self._cleanup_old_archives(days)
 
-            self.logger.info(f"Rotated {rotated_count} log files")
+            self.logger.info("Log rotation completed successfully")
             return True
         except Exception as e:
             self.logger.error(f"Failed to rotate logs: {e}")
             return False
+
+    def _find_old_logs(self, days: int) -> list[Path]:
+        """Find log files older than the specified number of days."""
+        cutoff_date = datetime.now() - timedelta(days=days)
+        old_logs = []
+        for log_file in self.logs_dir.glob("*.log"):
+            if log_file.is_file():
+                file_date = datetime.fromtimestamp(log_file.stat().st_mtime)
+                if file_date < cutoff_date:
+                    old_logs.append(log_file)
+        return old_logs
+
+    def _archive_log(self, log_file: Path):
+        """Archive a single log file."""
+        file_date = datetime.fromtimestamp(log_file.stat().st_mtime)
+        archive_name = f"{log_file.stem}_{file_date.strftime('%Y%m%d')}.log.gz"
+        archive_path = self.archive_dir / archive_name
+
+        with open(log_file, "rb") as f_in:
+            with gzip.open(archive_path, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+        log_file.unlink()
+        self.logger.info(f"Archived {log_file.name} to {archive_path}")
+
+    def _cleanup_old_archives(self, days: int):
+        """Clean up archived log files older than the specified number of days."""
+        cutoff_date = datetime.now() - timedelta(days=days)
+        cleaned_count = 0
+        for archive_file in self.archive_dir.glob("*.log.gz"):
+            if archive_file.is_file():
+                file_date = datetime.fromtimestamp(archive_file.stat().st_mtime)
+                if file_date < cutoff_date:
+                    archive_file.unlink()
+                    cleaned_count += 1
+        self.logger.info(f"Cleaned up {cleaned_count} old archived log files")
 
     def clean_logs(self, days: int = 30):
         """Clean old log files."""
@@ -282,9 +302,11 @@ def main():
         "rotate": lambda: manager.rotate_logs(args.days),
         "clean": lambda: manager.clean_logs(args.days),
         "analyze": lambda: manager.analyze_logs(args.pattern, args.days),
-        "export": lambda: manager.export_logs(args.output_dir, args.days)
-        if args.output_dir
-        else False,
+        "export": lambda: (
+            manager.export_logs(args.output_dir, args.days)
+            if args.output_dir
+            else False
+        ),
     }
 
     if args.command in commands:

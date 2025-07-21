@@ -11,10 +11,11 @@ import signal
 import sys
 from pathlib import Path
 
+from services.research_service import ResearchService
+
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.research_service import ResearchService
 
 # Configure logging
 logging.basicConfig(

@@ -30,14 +30,14 @@ Examples:
 import argparse
 import logging
 import logging.config
-import secrets
-import string
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import yaml
 from cryptography.fernet import Fernet
+
+from utils.launch_utils import setup_logging
 
 
 class SecurityManager:
@@ -58,24 +58,32 @@ class SecurityManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="report_service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="report_service")def generate_key(self, key_type: str, length: int = 32) -> str:
-        """Generate a secure key."""
-        if key_type == "api":
-            # Generate API key
-            alphabet = string.ascii_letters + string.digits
-            return "".join(secrets.choice(alphabet) for _ in range(length))
-        elif key_type == "jwt":
-            # Generate JWT secret
-            return secrets.token_hex(length)
-        elif key_type == "encryption":
-            # Generate encryption key
-            return Fernet.generate_key().decode()
+    def generate_key(self, key_type: str, length: int = 32) -> str:
+        """Generate a cryptographic key of the specified type and length."""
+        self.logger.info(f"Generating {key_type} key of length {length}")
+
+        import base64
+        import secrets
+
+        if key_type == "hex":
+            key = secrets.token_hex(length)
+        elif key_type == "base64":
+            key = base64.b64encode(secrets.token_bytes(length)).decode()
         else:
-            raise ValueError(f"Unknown key type: {key_type}")
+            self.logger.error(f"Unknown key type: {key_type}")
+            return ""
+
+        # Save key to file
+        key_file = self.keys_dir / f"key_{key_type}_{length}.txt"
+        with open(key_file, "w") as f:
+            f.write(key)
+
+        self.logger.info(f"Key saved to {key_file}")
+        return key
 
     def rotate_keys(self, key_type: Optional[str] = None):
         """Rotate security keys."""
@@ -325,12 +333,12 @@ def main():
     commands = {
         "rotate": lambda: manager.rotate_keys(args.key_type),
         "check": lambda: manager.check_security(),
-        "encrypt": lambda: manager.encrypt_file(args.file, args.output)
-        if args.file
-        else False,
-        "decrypt": lambda: manager.decrypt_file(args.file, args.output)
-        if args.file
-        else False,
+        "encrypt": lambda: (
+            manager.encrypt_file(args.file, args.output) if args.file else False
+        ),
+        "decrypt": lambda: (
+            manager.decrypt_file(args.file, args.output) if args.file else False
+        ),
     }
 
     if args.command in commands:

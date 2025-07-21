@@ -631,9 +631,11 @@ class PromptRouterAgent(BaseAgent):
                 ],
                 "confidence_explanation": f"Confidence {decision.confidence:.1%} based on agent capabilities and performance",
             },
-            confidence_level=ConfidenceLevel.HIGH
-            if decision.confidence > 0.8
-            else ConfidenceLevel.MEDIUM,
+            confidence_level=(
+                ConfidenceLevel.HIGH
+                if decision.confidence > 0.8
+                else ConfidenceLevel.MEDIUM
+            ),
             metadata=decision.metadata,
         )
 
@@ -717,8 +719,9 @@ class PromptRouterAgent(BaseAgent):
             agent.last_used = datetime.now()
 
             self.logger.debug(
-                f"Updated {agent_name} performance: success_rate={agent.success_rate:.3f}, avg_response_time={agent.avg_response_time:.2f}s"
-            )
+                f"Updated {agent_name} performance: success_rate={
+                    agent.success_rate:.3f}, avg_response_time={
+                    agent.avg_response_time:.2f}s")
 
     def handle_prompt(self, prompt: str) -> AgentResult:
         """

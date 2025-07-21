@@ -173,20 +173,26 @@ class ServiceManager:
         service = self.services[service_name]
 
         if service["status"] == "running":
-            return {"success": False, "error": f"Service '{service_name}' is already running"}
+            return {
+                "success": False,
+                "error": f"Service '{service_name}' is already running",
+            }
 
         try:
             # Find the script file
             script_path = Path(__file__).parent / service["script"]
             if not script_path.exists():
-                return {"success": False, "error": f"Script '{service['script']}' not found"}
+                return {
+                    "success": False,
+                    "error": f"Script '{service['script']}' not found",
+                }
 
             # Start the service process
             process = subprocess.Popen(
                 ["python", str(script_path)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
             # Update service status
@@ -204,7 +210,7 @@ class ServiceManager:
                 "success": True,
                 "service_name": service_name,
                 "pid": process.pid,
-                "status": "starting"
+                "status": "starting",
             }
 
         except Exception as e:
@@ -230,7 +236,10 @@ class ServiceManager:
         service = self.services[service_name]
 
         if service["status"] == "stopped":
-            return {"success": False, "error": f"Service '{service_name}' is already stopped"}
+            return {
+                "success": False,
+                "error": f"Service '{service_name}' is already stopped",
+            }
 
         try:
             if service["process"]:
@@ -257,11 +266,7 @@ class ServiceManager:
 
             logger.info(f"Stopped service '{service_name}'")
 
-            return {
-                "success": True,
-                "service_name": service_name,
-                "status": "stopped"
-            }
+            return {"success": True, "service_name": service_name, "status": "stopped"}
 
         except Exception as e:
             logger.error(f"Failed to stop service '{service_name}': {e}")
@@ -312,7 +317,7 @@ class ServiceManager:
                 "service_name": service_name,
                 "status": service["status"],
                 "pid": service["pid"],
-                "description": service["description"]
+                "description": service["description"],
             }
 
         # Return all services status
@@ -321,7 +326,7 @@ class ServiceManager:
             statuses[name] = {
                 "status": service["status"],
                 "pid": service["pid"],
-                "description": service["description"]
+                "description": service["description"],
             }
 
         return statuses
@@ -341,11 +346,7 @@ class ServiceManager:
             True if message sent successfully
         """
         try:
-            message = {
-                "type": message_type,
-                "data": data,
-                "timestamp": time.time()
-            }
+            message = {"type": message_type, "data": data, "timestamp": time.time()}
 
             channel = f"service:{service_name}:command"
             self.redis_client.publish(channel, json.dumps(message))
@@ -362,7 +363,7 @@ class ServiceManager:
         return {
             "stats": self.stats,
             "uptime": time.time() - self.stats["start_time"],
-            "monitoring_active": self.monitoring_active
+            "monitoring_active": self.monitoring_active,
         }
 
     def shutdown(self) -> Dict[str, Any]:
@@ -391,7 +392,7 @@ class ServiceManager:
             return {
                 "success": True,
                 "stop_results": stop_results,
-                "message": "ServiceManager shutdown completed"
+                "message": "ServiceManager shutdown completed",
             }
 
         except Exception as e:
@@ -402,7 +403,7 @@ class ServiceManager:
 def main():
     """Main function for running the service manager."""
     manager = ServiceManager()
-    
+
     try:
         # Start monitoring in background
         manager.monitoring_active = True
@@ -420,4 +421,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

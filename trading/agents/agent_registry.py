@@ -508,7 +508,7 @@ class AgentRegistry:
             for i, capability in enumerate(agent_info.capabilities):
                 cap_errors = self._validate_capability(capability)
                 for error in cap_errors:
-                    errors.append(f"Capability {i+1}: {error}")
+                    errors.append(f"Capability {i + 1}: {error}")
 
         # Dependencies validation
         if agent_info.dependencies:

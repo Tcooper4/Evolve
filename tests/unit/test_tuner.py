@@ -21,6 +21,7 @@ class TestModelParameterTuner:
     def tuner(self):
         """Create a parameter tuner instance for testing."""
         with tempfile.TemporaryDirectory() as temp_dir:
+            _unused_var = temp_dir  # Placeholder, flake8 ignore: F841
             with patch("trading.ui.model_parameter_tuner.Path") as mock_path:
                 mock_path.return_value.parent.mkdir.return_value = None
                 mock_path.return_value.exists.return_value = False

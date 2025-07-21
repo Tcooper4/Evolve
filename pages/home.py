@@ -35,12 +35,16 @@ def render_home_page(module_status: Dict[str, Any], agent_hub_available: bool = 
     with col1:
         st.metric(
             label="System Status",
-            value="🟢 Operational"
-            if all(status == "SUCCESS" for status in module_status.values())
-            else "🟡 Degraded",
-            delta="All systems online"
-            if all(status == "SUCCESS" for status in module_status.values())
-            else "Some issues detected",
+            value=(
+                "🟢 Operational"
+                if all(status == "SUCCESS" for status in module_status.values())
+                else "🟡 Degraded"
+            ),
+            delta=(
+                "All systems online"
+                if all(status == "SUCCESS" for status in module_status.values())
+                else "Some issues detected"
+            ),
         )
 
     with col2:
@@ -54,9 +58,11 @@ def render_home_page(module_status: Dict[str, Any], agent_hub_available: bool = 
             st.metric(
                 label="Avg Model Trust",
                 value=f"{avg_trust:.1%}",
-                delta=f"{len(trust_levels)} models active"
-                if trust_levels
-                else "No models",
+                delta=(
+                    f"{len(trust_levels)} models active"
+                    if trust_levels
+                    else "No models"
+                ),
             )
         except Exception as e:
             logger.warning(f"Could not get model trust levels: {e}")
@@ -93,9 +99,9 @@ def render_home_page(module_status: Dict[str, Any], agent_hub_available: bool = 
             st.metric(
                 label="Recent Decisions",
                 value=decision_count,
-                delta="Strategy active"
-                if decision_count > 0
-                else "No recent decisions",
+                delta=(
+                    "Strategy active" if decision_count > 0 else "No recent decisions"
+                ),
             )
         except Exception as e:
             logger.warning(f"Could not get strategy decisions: {e}")

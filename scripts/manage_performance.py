@@ -41,7 +41,6 @@ Examples:
 """
 
 import argparse
-import cProfile
 import glob
 import json
 import logging
@@ -50,12 +49,14 @@ import pstats
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 import line_profiler
 import matplotlib.pyplot as plt
 import memory_profiler
 import yaml
+
+from utils.launch_utils import setup_logging
 
 
 class PerformanceManager:
@@ -113,56 +114,36 @@ class PerformanceManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="report_service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="report_service")def profile_function(self, func: callable, *args, **kwargs):
-        """Profile a function's performance.
-
-        Args:
-            func: Function to profile
-            *args: Positional arguments for the function
-            **kwargs: Keyword arguments for the function
-
-        Returns:
-            Result of the function execution
-
-        Raises:
-            Exception: If profiling fails
-        """
+    def profile_function(self, func: Callable, *args, **kwargs):
+        """Profile a function's performance."""
         self.logger.info(f"Profiling function: {func.__name__}")
 
-        try:
-            # Create profiler
-            profiler = cProfile.Profile()
+        import cProfile
+        import io
+        import pstats
 
-            # Run function with profiler
-            profiler.enable()
-            result = func(*args, **kwargs)
-            profiler.disable()
+        pr = cProfile.Profile()
+        pr.enable()
+        result = func(*args, **kwargs)
+        pr.disable()
 
-            # Save profile results
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            profile_file = self.prof_dir / f"profile_{func.__name__}_{timestamp}.prof"
+        s = io.StringIO()
+        sortby = "cumulative"
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        profile_output = s.getvalue()
 
-            # Save raw profile data
-            profiler.dump_stats(str(profile_file))
+        # Save profile output
+        profile_file = self.prof_dir / f"profile_{func.__name__}.txt"
+        with open(profile_file, "w") as f:
+            f.write(profile_output)
 
-            # Generate and save statistics
-            stats_file = self.prof_dir / f"stats_{func.__name__}_{timestamp}.txt"
-            with open(stats_file, "w") as f:
-                stats = pstats.Stats(profiler, stream=f)
-                stats.sort_stats("cumulative")
-                stats.print_stats()
-
-            self.logger.info(f"Profile results saved to {profile_file}")
-            self.logger.info(f"Statistics saved to {stats_file}")
-
-            return result
-        except Exception as e:
-            self.logger.error(f"Failed to profile function: {e}")
-            raise
+        self.logger.info(f"Profile saved to {profile_file}")
+        return result
 
     def profile_memory(self, func: callable, *args, **kwargs):
         """Profile a function's memory usage.

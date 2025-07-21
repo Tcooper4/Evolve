@@ -296,29 +296,29 @@ def get_system_scorecard() -> Dict[str, Any]:
                 "cpu": {
                     "score": round(cpu_score, 2),
                     "usage": system_info["cpu"]["usage_percent"],
-                    "status": "healthy"
-                    if cpu_score > 70
-                    else "warning"
-                    if cpu_score > 50
-                    else "critical",
+                    "status": (
+                        "healthy"
+                        if cpu_score > 70
+                        else "warning" if cpu_score > 50 else "critical"
+                    ),
                 },
                 "memory": {
                     "score": round(memory_score, 2),
                     "usage": system_info["memory"]["percent"],
-                    "status": "healthy"
-                    if memory_score > 70
-                    else "warning"
-                    if memory_score > 50
-                    else "critical",
+                    "status": (
+                        "healthy"
+                        if memory_score > 70
+                        else "warning" if memory_score > 50 else "critical"
+                    ),
                 },
                 "disk": {
                     "score": round(disk_score, 2),
                     "usage": system_info["disk"]["percent"],
-                    "status": "healthy"
-                    if disk_score > 70
-                    else "warning"
-                    if disk_score > 50
-                    else "critical",
+                    "status": (
+                        "healthy"
+                        if disk_score > 70
+                        else "warning" if disk_score > 50 else "critical"
+                    ),
                 },
             },
             "system_info": {

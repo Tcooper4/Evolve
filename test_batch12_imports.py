@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Test script for Batch 12 imports."""
 
-import sys
-import traceback
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -54,4 +53,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())

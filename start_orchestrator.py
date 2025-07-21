@@ -9,12 +9,10 @@ import asyncio
 import logging
 import sys
 from datetime import datetime
-from typing import Optional
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -32,6 +30,10 @@ async def start_orchestrator_standalone(config_path: str = "config/task_schedule
         await _check_agent_registration()
 
         logger.info("Task Orchestrator started successfully")
+        print(
+            "Orchestrator started successfully. All services are now "
+            "running and coordinated."
+        )
         logger.info("Press Ctrl+C to stop...")
 
         # Keep running
@@ -83,10 +85,14 @@ async def start_integrated_system(config_path: str = "config/task_schedule.yaml"
     return True
 
 
-async def start_with_monitoring(config_path: str = "config/task_schedule.yaml", duration_minutes: int = 60):
+async def start_with_monitoring(
+    config_path: str = "config/task_schedule.yaml", duration_minutes: int = 60
+):
     """Start orchestrator with monitoring for a specified duration"""
     try:
-        logger.info(f"Starting orchestrator with monitoring for {duration_minutes} minutes...")
+        logger.info(
+            f"Starting orchestrator with monitoring for {duration_minutes} minutes..."
+        )
 
         from core.task_orchestrator import start_orchestrator
 
@@ -105,25 +111,27 @@ async def start_with_monitoring(config_path: str = "config/task_schedule.yaml", 
             # Get status every 30 seconds
             status = orchestrator.get_system_status()
 
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"Orchestrator Status - {datetime.now().strftime('%H:%M:%S')}")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
             print(f"Running: {status['orchestrator_running']}")
             print(f"Total Tasks: {status['total_tasks']}")
             print(f"Enabled Tasks: {status['enabled_tasks']}")
             print(f"Running Tasks: {status['running_tasks']}")
-            print(f"Overall Health: {status['performance_metrics']['overall_health']:.2f}")
+            print(
+                f"Overall Health: {status['performance_metrics']['overall_health']:.2f}"
+            )
 
             # Show agent status
             print(f"\nAgent Status:")
-            for agent_name, agent_status in status['agent_status'].items():
-                status_icon = "✅" if agent_status['healthy'] else "❌"
+            for agent_name, agent_status in status["agent_status"].items():
+                status_icon = "✅" if agent_status["healthy"] else "❌"
                 print(f"  {status_icon} {agent_name}: {agent_status['status']}")
 
             # Show task status
             print(f"\nTask Status:")
-            for task_name, task_status in status['task_status'].items():
-                status_icon = "🟢" if task_status['running'] else "🔴"
+            for task_name, task_status in status["task_status"].items():
+                status_icon = "🟢" if task_status["running"] else "🔴"
                 print(f"  {status_icon} {task_name}: {task_status['status']}")
 
             await asyncio.sleep(30)
@@ -145,18 +153,21 @@ async def _check_agent_registration():
         # Import agent registry
         try:
             from agents.agent_registry import AgentRegistry
+
             registry = AgentRegistry()
-            
+
             # Check registered agents
             registered_agents = registry.get_registered_agents()
-            
+
             if registered_agents:
                 logger.info(f"Found {len(registered_agents)} registered agents:")
                 for agent_name, agent_info in registered_agents.items():
-                    logger.info(f"  - {agent_name}: {agent_info.get('status', 'unknown')}")
+                    logger.info(
+                        f"  - {agent_name}: {agent_info.get('status', 'unknown')}"
+                    )
             else:
                 logger.warning("No agents found in registry")
-                
+
         except ImportError:
             logger.warning("Agent registry not available")
         except Exception as e:
@@ -165,15 +176,16 @@ async def _check_agent_registration():
         # Check agent availability
         try:
             from agents.agent_controller import AgentController
+
             controller = AgentController()
-            
+
             available_agents = controller.get_available_agents()
-            
+
             if available_agents:
                 logger.info(f"Found {len(available_agents)} available agents")
             else:
                 logger.warning("No agents available")
-                
+
         except ImportError:
             logger.warning("Agent controller not available")
         except Exception as e:
@@ -186,22 +198,28 @@ async def _check_agent_registration():
 def check_system_requirements():
     """Check if system meets requirements"""
     logger.info("Checking system requirements...")
-    
+
     requirements_met = True
-    
+
     # Check Python version
     if sys.version_info < (3, 8):
         logger.error("Python 3.8 or higher required")
         requirements_met = False
     else:
         logger.info(f"Python version: {sys.version}")
-    
+
     # Check required packages
     required_packages = [
-        'asyncio', 'logging', 'datetime', 'typing',
-        'pandas', 'numpy', 'aiohttp', 'fastapi'
+        "asyncio",
+        "logging",
+        "datetime",
+        "typing",
+        "pandas",
+        "numpy",
+        "aiohttp",
+        "fastapi",
     ]
-    
+
     for package in required_packages:
         try:
             __import__(package)
@@ -209,16 +227,13 @@ def check_system_requirements():
         except ImportError:
             logger.error(f"✗ {package} not available")
             requirements_met = False
-    
+
     # Check configuration files
-    config_files = [
-        "config/task_schedule.yaml",
-        "config/agent_config.json"
-    ]
-    
+    config_files = ["config/task_schedule.yaml", "config/agent_config.json"]
+
     for config_file in config_files:
         try:
-            with open(config_file, 'r') as f:
+            with open(config_file, "r") as f:
                 f.read()
             logger.info(f"✓ {config_file} found")
         except FileNotFoundError:
@@ -226,39 +241,39 @@ def check_system_requirements():
         except Exception as e:
             logger.error(f"✗ Error reading {config_file}: {e}")
             requirements_met = False
-    
+
     return requirements_met
 
 
 def show_system_status():
     """Show current system status"""
     logger.info("Checking system status...")
-    
+
     try:
         from core.task_orchestrator import TaskOrchestrator
-        
+
         orchestrator = TaskOrchestrator()
         status = orchestrator.get_system_status()
-        
-        print(f"\n{'='*60}")
+
+        print(f"\n{'=' * 60}")
         print("SYSTEM STATUS")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Orchestrator Running: {status['orchestrator_running']}")
         print(f"Total Tasks: {status['total_tasks']}")
         print(f"Enabled Tasks: {status['enabled_tasks']}")
         print(f"Running Tasks: {status['running_tasks']}")
         print(f"Overall Health: {status['performance_metrics']['overall_health']:.2f}")
-        
+
         print(f"\nAgent Status:")
-        for agent_name, agent_status in status['agent_status'].items():
-            status_icon = "✅" if agent_status['healthy'] else "❌"
+        for agent_name, agent_status in status["agent_status"].items():
+            status_icon = "✅" if agent_status["healthy"] else "❌"
             print(f"  {status_icon} {agent_name}: {agent_status['status']}")
-        
+
         print(f"\nTask Status:")
-        for task_name, task_status in status['task_status'].items():
-            status_icon = "🟢" if task_status['running'] else "🔴"
+        for task_name, task_status in status["task_status"].items():
+            status_icon = "🟢" if task_status["running"] else "🔴"
             print(f"  {status_icon} {task_name}: {task_status['status']}")
-            
+
     except Exception as e:
         logger.error(f"Error getting system status: {e}")
 
@@ -267,22 +282,28 @@ def main():
     """Main entry point"""
     print("🚀 Task Orchestrator Startup")
     print("=" * 50)
-    
+
     if len(sys.argv) < 2:
         print_usage()
         return
-    
+
     command = sys.argv[1].lower()
-    
+
     try:
         if command == "standalone":
-            config_path = sys.argv[2] if len(sys.argv) > 2 else "config/task_schedule.yaml"
+            config_path = (
+                sys.argv[2] if len(sys.argv) > 2 else "config/task_schedule.yaml"
+            )
             asyncio.run(start_orchestrator_standalone(config_path))
         elif command == "integrated":
-            config_path = sys.argv[2] if len(sys.argv) > 2 else "config/task_schedule.yaml"
+            config_path = (
+                sys.argv[2] if len(sys.argv) > 2 else "config/task_schedule.yaml"
+            )
             asyncio.run(start_integrated_system(config_path))
         elif command == "monitor":
-            config_path = sys.argv[2] if len(sys.argv) > 2 else "config/task_schedule.yaml"
+            config_path = (
+                sys.argv[2] if len(sys.argv) > 2 else "config/task_schedule.yaml"
+            )
             duration = int(sys.argv[3]) if len(sys.argv) > 3 else 60
             asyncio.run(start_with_monitoring(config_path, duration))
         elif command == "check":
@@ -295,7 +316,7 @@ def main():
         else:
             print(f"❌ Unknown command: {command}")
             print_usage()
-            
+
     except KeyboardInterrupt:
         print("\n🛑 Operation cancelled by user")
     except Exception as e:
@@ -320,4 +341,4 @@ def print_usage():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

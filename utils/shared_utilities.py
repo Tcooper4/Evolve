@@ -27,7 +27,7 @@ def setup_logging(
     log_dir: str = "logs",
     log_level: int = logging.INFO,
     enable_file_output: bool = True,
-    enable_rotating_handlers: bool = True
+    enable_rotating_handlers: bool = True,
 ) -> logging.Logger:
     """
     Unified logging setup function.
@@ -41,7 +41,7 @@ def setup_logging(
         log_dir=log_dir,
         log_level=log_level,
         enable_file_output=enable_file_output,
-        enable_rotating_handlers=enable_rotating_handlers
+        enable_rotating_handlers=enable_rotating_handlers,
     )
 
     return logger
@@ -49,36 +49,37 @@ def setup_logging(
 
 def create_sample_data(
     rows: int = 100,
-    start_date: str = '2023-01-01',
+    start_date: str = "2023-01-01",
     base_price: float = 100.0,
     volatility: float = 0.02,
-    trend: float = 0.0
+    trend: float = 0.0,
 ) -> pd.DataFrame:
     """
     Create sample market data for testing.
     """
-    dates = pd.date_range(start=start_date, periods=rows, freq='D')
+    dates = pd.date_range(start=start_date, periods=rows, freq="D")
     np.random.seed(42)  # For reproducible results
 
     # Generate price series with trend and volatility
     returns = np.random.normal(trend, volatility, rows)
     prices = base_price * np.exp(np.cumsum(returns))
 
-    data = pd.DataFrame({
-        'open': prices * 0.99,
-        'high': prices * 1.02,
-        'low': prices * 0.98,
-        'close': prices,
-        'volume': np.random.randint(1000000, 10000000, rows)
-    }, index=dates)
+    data = pd.DataFrame(
+        {
+            "open": prices * 0.99,
+            "high": prices * 1.02,
+            "low": prices * 0.98,
+            "close": prices,
+            "volume": np.random.randint(1000000, 10000000, rows),
+        },
+        index=dates,
+    )
 
     return data
 
 
 def create_sample_forecast_data(
-    rows: int = 100,
-    features: int = 10,
-    target_column: str = 'target'
+    rows: int = 100, features: int = 10, target_column: str = "target"
 ) -> pd.DataFrame:
     """
     Create sample forecasting data with features and target.
@@ -87,7 +88,7 @@ def create_sample_forecast_data(
 
     # Generate feature data
     feature_data = np.random.randn(rows, features)
-    feature_names = [f'feature_{i}' for i in range(features)]
+    feature_names = [f"feature_{i}" for i in range(features)]
 
     # Generate target with some correlation to features
     target = np.sum(feature_data[:, :3], axis=1) + np.random.normal(0, 0.1, rows)
@@ -101,7 +102,7 @@ def create_sample_forecast_data(
 def main_runner(
     main_func: callable,
     service_name: Optional[str] = None,
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
     Common main function pattern for services.
@@ -130,7 +131,7 @@ async def service_launcher(
     service_class: type,
     service_name: str,
     config: Dict[str, Any],
-    shutdown_handler: Optional[callable] = None
+    shutdown_handler: Optional[callable] = None,
 ) -> None:
     """
     Common async service launching pattern.
@@ -152,15 +153,14 @@ async def service_launcher(
     except Exception as e:
         logger.error(f"Error in {service_name}: {e}")
     finally:
-        if service and hasattr(service, 'stop'):
+        if service and hasattr(service, "stop"):
             await service.stop()
         if shutdown_handler:
             await shutdown_handler()
 
 
 def load_config_from_env(
-    config_mapping: Dict[str, str],
-    defaults: Optional[Dict[str, Any]] = None
+    config_mapping: Dict[str, str], defaults: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Load configuration from environment variables.
@@ -173,8 +173,8 @@ def load_config_from_env(
             try:
                 if env_value.isdigit():
                     config[config_key] = int(env_value)
-                elif env_value.lower() in ('true', 'false'):
-                    config[config_key] = env_value.lower() == 'true'
+                elif env_value.lower() in ("true", "false"):
+                    config[config_key] = env_value.lower() == "true"
                 else:
                     config[config_key] = env_value
             except ValueError:
@@ -186,7 +186,7 @@ def load_config_from_env(
 def validate_config(
     config: Dict[str, Any],
     required_keys: List[str],
-    optional_keys: Optional[List[str]] = None
+    optional_keys: Optional[List[str]] = None,
 ) -> bool:
     """
     Validate configuration dictionary.
@@ -221,22 +221,11 @@ def create_directory_structure(base_dir: str, structure: Dict[str, Any]) -> None
 
 DEFAULT_DIRECTORY_STRUCTURE = {
     "logs": {},
-    "data": {
-        "raw": {},
-        "processed": {},
-        "cache": {}
-    },
-    "models": {
-        "trained": {},
-        "checkpoints": {}
-    },
-    "reports": {
-        "html": {},
-        "pdf": {},
-        "csv": {}
-    },
+    "data": {"raw": {}, "processed": {}, "cache": {}},
+    "models": {"trained": {}, "checkpoints": {}},
+    "reports": {"html": {}, "pdf": {}, "csv": {}},
     "config": {},
-    "backups": {}
+    "backups": {},
 }
 
 
@@ -273,8 +262,9 @@ def safe_filename(filename: str) -> str:
     Create a safe filename by removing/replacing invalid characters.
     """
     import re
+
     # Remove or replace invalid characters
-    safe_name = re.sub(r'[<>:"/\\|?*]', '_', filename)
+    safe_name = re.sub(r'[<>:"/\\|?*]', "_", filename)
     # Remove leading/trailing spaces and dots
-    safe_name = safe_name.strip('. ')
+    safe_name = safe_name.strip(". ")
     return safe_name

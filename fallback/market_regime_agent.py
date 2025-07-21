@@ -239,16 +239,16 @@ class FallbackMarketRegimeAgent:
             }
 
             if regime_change_detected:
-                result[
-                    "reason"
-                ] = f"Regime changed from {historical_regime} to {current_regime}"
+                result["reason"] = (
+                    f"Regime changed from {historical_regime} to {current_regime}"
+                )
                 logger.info(
                     f"Regime change detected: {historical_regime} -> {current_regime}"
                 )
             else:
-                result[
-                    "reason"
-                ] = f"No regime change detected, remains {current_regime}"
+                result["reason"] = (
+                    f"No regime change detected, remains {current_regime}"
+                )
 
             return result
 
@@ -284,7 +284,7 @@ class FallbackMarketRegimeAgent:
 
             # Use rolling windows to detect regime changes
             for i in range(window, len(data)):
-                window_data = data.iloc[i - window : i]
+                window_data = data.iloc[i - window: i]
                 regime = self.classify_regime(window_data)
 
                 regime_entry = {

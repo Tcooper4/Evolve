@@ -1,4 +1,5 @@
-﻿"""ProphetModel: Facebook Prophet wrapper for time series forecasting with holidays and macro support."""
+"""ProphetModel: Facebook Prophet wrapper for time series forecasting with holidays and macro support."""
+
 import json
 import logging
 import os
@@ -8,16 +9,13 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
-from .base_model import BaseModel, ModelRegistry
 from utils.time_utils import (
-    parse_datetime,
-    format_datetime_for_prophet,
     calculate_forecast_horizon,
+    parse_datetime,
     validate_date_column,
-    get_holiday_dates,
-    add_time_features,
-    detect_seasonality,
 )
+
+from .base_model import BaseModel, ModelRegistry
 
 # Try to import Prophet, but make it optional
 try:
@@ -51,7 +49,7 @@ if PROPHET_AVAILABLE:
         def __init__(self, config):
             # Initialize availability flag
             self.available = True
-            
+
             try:
                 super().__init__(config)
 
@@ -85,10 +83,12 @@ if PROPHET_AVAILABLE:
                 except Exception as e:
                     logger.error(f"Failed to initialize Prophet model: {e}")
                     self.model = None
-                    print("âš ï¸ Prophet model unavailable due to model initialization failure")
+                    print(
+                        "âš ï¸ Prophet model unavailable due to model initialization failure"
+                    )
                     print(f"   Error: {e}")
                     # Don't set available to False here as we can still register
-                    
+
             except Exception as e:
                 logger.error(f"Failed to initialize ProphetModel: {e}")
                 self.available = False
@@ -117,9 +117,9 @@ if PROPHET_AVAILABLE:
                     "success": False,
                     "error": "ProphetModel unavailable due to initialization failure",
                     "train_loss": [],
-                    "val_loss": []
+                    "val_loss": [],
                 }
-            
+
             try:
                 # Validate Prophet configuration before fitting
                 self._validate_prophet_config()
@@ -185,7 +185,12 @@ if PROPHET_AVAILABLE:
 
             except ValueError as ve:
                 logger.error(f"ValueError fitting Prophet model: {ve}")
-                return {"success": False, "error": str(ve), "type": "ValueError", "timestamp": datetime.now().isoformat()}
+                return {
+                    "success": False,
+                    "error": str(ve),
+                    "type": "ValueError",
+                    "timestamp": datetime.now().isoformat(),
+                }
             except Exception as e:
                 logger.error(f"Error fitting Prophet model: {e}")
                 raise RuntimeError(f"Prophet model fitting failed: {e}")
@@ -384,7 +389,7 @@ if PROPHET_AVAILABLE:
             if not self.available:
                 print("âš ï¸ ProphetModel unavailable due to initialization failure")
                 return np.array([])
-            
+
             try:
                 # Check if input dataframe is empty or has NaNs
                 if data is None or data.empty:
@@ -396,8 +401,8 @@ if PROPHET_AVAILABLE:
                 # Check for required columns
                 if self.config["date_column"] not in data.columns:
                     logger.warning(
-                        f"Prophet predict: Missing required column '{self.config['date_column']}', returning empty result"
-                    )
+                        f"Prophet predict: Missing required column '{
+                            self.config['date_column']}', returning empty result")
                     return np.array([])
 
                 # Validate date column using time utilities
@@ -435,10 +440,10 @@ if PROPHET_AVAILABLE:
                 # Calculate dynamic forecast horizon if not provided
                 if horizon is None:
                     horizon = calculate_forecast_horizon(
-                        data, 
+                        data,
                         self.config["date_column"],
                         target_horizon=self.config.get("default_horizon"),
-                        max_horizon=self.config.get("max_horizon", 365)
+                        max_horizon=self.config.get("max_horizon", 365),
                     )
                     logger.info(f"Using dynamic forecast horizon: {horizon} periods")
 
@@ -458,7 +463,9 @@ if PROPHET_AVAILABLE:
                 logger.error(f"Error in Prophet predict: {e}")
                 return np.array([])
 
-        def forecast(self, data: pd.DataFrame, horizon: Optional[int] = None) -> Dict[str, Any]:
+        def forecast(
+            self, data: pd.DataFrame, horizon: Optional[int] = None
+        ) -> Dict[str, Any]:
             """Generate forecast for future time steps with dynamic horizon.
 
             Args:
@@ -472,18 +479,24 @@ if PROPHET_AVAILABLE:
                 print("âš ï¸ ProphetModel unavailable due to initialization failure")
                 # Return simple fallback forecast
                 fallback_forecast = np.full(horizon or 30, 1000.0)
-                last_date = data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()
-                forecast_dates = pd.date_range(start=last_date, periods=(horizon or 30) + 1, freq='D')[1:]
-                
+                last_date = (
+                    data.index[-1]
+                    if hasattr(data.index, "freq")
+                    else pd.Timestamp.now()
+                )
+                forecast_dates = pd.date_range(
+                    start=last_date, periods=(horizon or 30) + 1, freq="D"
+                )[1:]
+
                 return {
                     "forecast": fallback_forecast,
                     "dates": forecast_dates,
                     "confidence": np.full(horizon or 30, 0.1),
                     "model_type": "Prophet_Unavailable",
                     "horizon": horizon or 30,
-                    "error": "ProphetModel unavailable due to initialization failure"
+                    "error": "ProphetModel unavailable due to initialization failure",
                 }
-            
+
             try:
                 if not self.fitted:
                     raise RuntimeError("Model must be fit before forecasting.")
@@ -491,10 +504,10 @@ if PROPHET_AVAILABLE:
                 # Calculate dynamic forecast horizon if not provided
                 if horizon is None:
                     horizon = calculate_forecast_horizon(
-                        data, 
+                        data,
                         self.config["date_column"],
                         target_horizon=self.config.get("default_horizon"),
-                        max_horizon=self.config.get("max_horizon", 365)
+                        max_horizon=self.config.get("max_horizon", 365),
                     )
                     logger.info(f"Using dynamic forecast horizon: {horizon} periods")
 

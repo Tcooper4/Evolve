@@ -1,4 +1,4 @@
-﻿"""
+"""
 Trade Signals Module
 
 This module contains trade signal classes and execution request/result models.
@@ -58,6 +58,7 @@ class TradeSignal:
         # Convert risk controls
         if "risk_controls" in data and data["risk_controls"]:
             from .risk_controls import RiskControls
+
             data["risk_controls"] = RiskControls.from_dict(data["risk_controls"])
 
         return cls(**data)

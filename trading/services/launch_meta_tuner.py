@@ -11,10 +11,11 @@ import signal
 import sys
 from pathlib import Path
 
+from services.meta_tuner_service import MetaTunerService
+
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.meta_tuner_service import MetaTunerService
 
 # Configure logging
 logging.basicConfig(
