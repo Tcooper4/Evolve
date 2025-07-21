@@ -18,12 +18,13 @@ import plotly.graph_objects as go
 import streamlit as st
 from PIL import Image
 
+from core.session_utils import initialize_session_state, update_last_updated
+
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import shared utilities
-from core.session_utils import initialize_session_state, update_last_updated
 
 # Import FPDF for PDF generation
 try:
@@ -451,7 +452,7 @@ def main():
     with col2:
         agentic_count = df["agentic"].sum()
         st.metric(
-            "Agentic Decisions", f"{agentic_count} ({agentic_count/len(df)*100:.1f}%)"
+            "Agentic Decisions", f"{agentic_count} ({agentic_count / len(df) * 100:.1f}%)"
         )
     with col3:
         avg_sharpe = df["sharpe"].mean()

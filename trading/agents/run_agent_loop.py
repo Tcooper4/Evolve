@@ -11,6 +11,10 @@ import signal
 import sys
 from pathlib import Path
 
+from trading.agents.base_agent_interface import AgentConfig
+from trading.agents.execution_agent import ExecutionAgent
+from trading.portfolio.portfolio_manager import PortfolioManager
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -21,9 +25,6 @@ logger = logging.getLogger(__name__)
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from trading.agents.base_agent_interface import AgentConfig
-from trading.agents.execution_agent import ExecutionAgent
-from trading.portfolio.portfolio_manager import PortfolioManager
 
 # Global variables
 running = True

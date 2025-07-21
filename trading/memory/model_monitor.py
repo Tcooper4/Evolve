@@ -17,6 +17,7 @@ import pandas as pd
 # Try to import scipy
 try:
     from scipy import stats
+
     SCIPY_AVAILABLE = True
 except ImportError as e:
     print("⚠️ scipy not available. Disabling statistical drift detection.")
@@ -27,6 +28,7 @@ except ImportError as e:
 # Try to import scikit-learn
 try:
     from sklearn.ensemble import IsolationForest
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("⚠️ scikit-learn not available. Disabling anomaly detection.")
@@ -318,9 +320,9 @@ class ModelMonitor:
                 # Update drift scores
                 self.parameter_drift_scores[model_name].append(param_record.drift_score)
                 if len(self.parameter_drift_scores[model_name]) > 100:
-                    self.parameter_drift_scores[
-                        model_name
-                    ] = self.parameter_drift_scores[model_name][-100:]
+                    self.parameter_drift_scores[model_name] = (
+                        self.parameter_drift_scores[model_name][-100:]
+                    )
 
                 # Check for drift alerts
                 if param_record.drift_score > self.drift_threshold:
@@ -497,9 +499,7 @@ class ModelMonitor:
             severity = (
                 "high"
                 if drift_score > 0.5
-                else "medium"
-                if drift_score > 0.2
-                else "low"
+                else "medium" if drift_score > 0.2 else "low"
             )
 
             alert = DriftAlert(
@@ -652,9 +652,11 @@ class ModelMonitor:
                     "threshold_percent": threshold_percent,
                     "window_size": window_size,
                     "drops_detected": drops_detected,
-                    "severity": "high"
-                    if any(d["percent_change"] > 50 for d in drops_detected)
-                    else "medium",
+                    "severity": (
+                        "high"
+                        if any(d["percent_change"] > 50 for d in drops_detected)
+                        else "medium"
+                    ),
                 }
 
                 self.performance_alerts.append(alert)
@@ -885,20 +887,20 @@ class ModelMonitor:
             summary = {
                 "model_name": model_name,
                 "total_parameter_records": len(params_history),
-                "current_drift_score": params_history[-1].drift_score
-                if params_history
-                else 0.0,
+                "current_drift_score": (
+                    params_history[-1].drift_score if params_history else 0.0
+                ),
                 "average_drift_score": np.mean(drift_scores) if drift_scores else 0.0,
                 "max_drift_score": np.max(drift_scores) if drift_scores else 0.0,
-                "recent_drift_trend": np.mean(recent_drift_scores)
-                if recent_drift_scores
-                else 0.0,
+                "recent_drift_trend": (
+                    np.mean(recent_drift_scores) if recent_drift_scores else 0.0
+                ),
                 "drift_alerts": len(
                     [a for a in self.drift_alerts if a.model_name == model_name]
                 ),
-                "last_parameter_update": params_history[-1].timestamp.isoformat()
-                if params_history
-                else None,
+                "last_parameter_update": (
+                    params_history[-1].timestamp.isoformat() if params_history else None
+                ),
             }
 
             return summary
@@ -1143,9 +1145,11 @@ class ModelMonitor:
                 "recent_performance": recent_performance,
                 "parameter_drift": parameter_drift,
                 "trust_level": self.trust_levels.get(model_name, 0.5),
-                "last_updated": performance_history[-1]["timestamp"].isoformat()
-                if performance_history
-                else None,
+                "last_updated": (
+                    performance_history[-1]["timestamp"].isoformat()
+                    if performance_history
+                    else None
+                ),
             }
 
         except Exception as e:

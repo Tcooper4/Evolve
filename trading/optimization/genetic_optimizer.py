@@ -1,4 +1,4 @@
-﻿"""Genetic Algorithm Optimization Method.
+"""Genetic Algorithm Optimization Method.
 
 This module contains the GeneticAlgorithm optimization method extracted from strategy_optimizer.py.
 """
@@ -6,7 +6,7 @@ This module contains the GeneticAlgorithm optimization method extracted from str
 import logging
 import random
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -85,7 +85,9 @@ class GeneticAlgorithm(OptimizationMethod):
             selected = self._selection(population, scores, elite_size)
 
             # Crossover
-            offspring = self._crossover(selected, crossover_rate, population_size - elite_size)
+            offspring = self._crossover(
+                selected, crossover_rate, population_size - elite_size
+            )
 
             # Mutation
             offspring = self._mutation(offspring, mutation_rate, param_space)
@@ -130,9 +132,13 @@ class GeneticAlgorithm(OptimizationMethod):
                 elif isinstance(space, dict):
                     if "start" in space and "end" in space:
                         if isinstance(space["start"], int):
-                            individual[param] = random.randint(space["start"], space["end"])
+                            individual[param] = random.randint(
+                                space["start"], space["end"]
+                            )
                         else:
-                            individual[param] = random.uniform(space["start"], space["end"])
+                            individual[param] = random.uniform(
+                                space["start"], space["end"]
+                            )
             population.append(individual)
         return population
 
@@ -159,7 +165,7 @@ class GeneticAlgorithm(OptimizationMethod):
             # Select tournament participants
             tournament_indices = random.sample(range(len(population)), tournament_size)
             tournament_scores = [scores[i] for i in tournament_indices]
-            
+
             # Select winner (minimize score)
             winner_idx = tournament_indices[np.argmin(tournament_scores)]
             selected.append(population[winner_idx])
@@ -184,7 +190,7 @@ class GeneticAlgorithm(OptimizationMethod):
             if random.random() < crossover_rate and len(selected) >= 2:
                 # Select two parents
                 parent1, parent2 = random.sample(selected, 2)
-                
+
                 # Create child by combining parameters
                 child = {}
                 for param in parent1.keys():
@@ -192,12 +198,12 @@ class GeneticAlgorithm(OptimizationMethod):
                         child[param] = parent1[param]
                     else:
                         child[param] = parent2[param]
-                
+
                 offspring.append(child)
             else:
                 # No crossover, copy parent
                 offspring.append(random.choice(selected).copy())
-        
+
         return offspring
 
     def _mutation(
@@ -224,7 +230,11 @@ class GeneticAlgorithm(OptimizationMethod):
                     elif isinstance(space, dict):
                         if "start" in space and "end" in space:
                             if isinstance(space["start"], int):
-                                individual[param] = random.randint(space["start"], space["end"])
+                                individual[param] = random.randint(
+                                    space["start"], space["end"]
+                                )
                             else:
-                                individual[param] = random.uniform(space["start"], space["end"])
+                                individual[param] = random.uniform(
+                                    space["start"], space["end"]
+                                )
         return offspring

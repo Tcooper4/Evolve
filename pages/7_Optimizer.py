@@ -335,9 +335,11 @@ def main():
                     source=data_source,
                     start_date=start_date_input.strftime("%Y-%m-%d"),
                     end_date=end_date_input.strftime("%Y-%m-%d"),
-                    interval=config.get("data.default_interval", "1d")
-                    if CONFIG_AVAILABLE
-                    else "1d",
+                    interval=(
+                        config.get("data.default_interval", "1d")
+                        if CONFIG_AVAILABLE
+                        else "1d"
+                    ),
                 )
                 if not data.empty:
                     # Normalize column names

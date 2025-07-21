@@ -1,4 +1,4 @@
-﻿"""Forecast router for managing and selecting forecasting models.
+"""Forecast router for managing and selecting forecasting models.
 
 This module provides a router for selecting and managing different forecasting models
 based on data characteristics, performance history, and user preferences. It supports
@@ -289,16 +289,18 @@ class ForecastRouter:
             else:
                 logger.warning("Prophet not available, falling back to ARIMA")
                 return "arima"
-        
+
         # Check if model exists in registry
         if model_type not in self.model_registry:
-            logger.warning(f"Model '{model_type}' not found in registry, defaulting to Prophet forecaster")
+            logger.warning(
+                f"Model '{model_type}' not found in registry, defaulting to Prophet forecaster"
+            )
             if PROPHET_AVAILABLE:
                 return "prophet"
             else:
                 logger.warning("Prophet not available, falling back to ARIMA")
                 return "arima"
-        
+
         # Alias matching for xgboost/xgb
         if model_type.lower() in ["xgboost", "xgb"]:
             return "xgboost"

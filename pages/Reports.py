@@ -1,4 +1,4 @@
-﻿"""
+"""
 Reports Page
 
 A clean, production-ready reporting interface with:
@@ -472,7 +472,10 @@ def plot_performance_report(report_data: Dict[str, Any]):
         fig.update_layout(
             height=1000,
             showlegend=True,
-            title_text=f"Performance Report: {report_data['symbol']} ({report_data['start_date'].strftime('%Y-%m-%d')} to {report_data['end_date'].strftime('%Y-%m-%d')})",
+            title_text=f"Performance Report: {
+                report_data['symbol']} ({
+                report_data['start_date'].strftime('%Y-%m-%d')} to {
+                report_data['end_date'].strftime('%Y-%m-%d')})",
             title_x=0.5,
         )
 
@@ -835,42 +838,46 @@ def main():
                     try:
                         # Convert report data to DataFrame format for the exporter
                         from utils.report_exporter import export_trade_report
-                        
+
                         # Create a DataFrame from the report data
                         if "trade_data" in st.session_state.current_report:
-                            trade_df = pd.DataFrame(st.session_state.current_report["trade_data"])
+                            trade_df = pd.DataFrame(
+                                st.session_state.current_report["trade_data"]
+                            )
                         else:
                             # Create a summary DataFrame if no trade data
                             metrics = st.session_state.current_report.get("metrics", {})
-                            trade_df = pd.DataFrame([{
-                                "timestamp": datetime.now(),
-                                "symbol": symbol,
-                                "strategy": "Report Summary",
-                                "signal": "SUMMARY",
-                                "total_return": metrics.get("Total_Return", 0),
-                                "sharpe_ratio": metrics.get("Sharpe_Ratio", 0),
-                                "max_drawdown": metrics.get("Max_Drawdown", 0),
-                                "win_rate": metrics.get("Win_Rate", 0)
-                            }])
-                        
+                            trade_df = pd.DataFrame(
+                                [
+                                    {
+                                        "timestamp": datetime.now(),
+                                        "symbol": symbol,
+                                        "strategy": "Report Summary",
+                                        "signal": "SUMMARY",
+                                        "total_return": metrics.get("Total_Return", 0),
+                                        "sharpe_ratio": metrics.get("Sharpe_Ratio", 0),
+                                        "max_drawdown": metrics.get("Max_Drawdown", 0),
+                                        "win_rate": metrics.get("Win_Rate", 0),
+                                    }
+                                ]
+                            )
+
                         # Export to PDF
                         export_path = export_trade_report(
-                            signals=trade_df,
-                            format="PDF",
-                            include_summary=True
+                            signals=trade_df, format="PDF", include_summary=True
                         )
-                        
+
                         # Create download button for PDF
                         with open(export_path, "rb") as f:
                             pdf_data = f.read()
-                        
+
                         st.download_button(
                             label="Download PDF",
                             data=pdf_data,
                             file_name=f"{symbol}_report_{datetime.now().strftime('%Y%m%d')}.pdf",
                             mime="application/pdf",
                         )
-                        
+
                     except Exception as e:
                         st.error(f"PDF generation failed: {str(e)}")
         else:

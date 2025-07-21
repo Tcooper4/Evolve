@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Enhanced QuantGPT Commentary Agent with advanced analysis and explainability.
 """
@@ -84,11 +84,11 @@ class QuantGPTCommentaryAgent:
         """
         # Initialize availability flag
         self.available = True
-        
+
         try:
             self.config = config or {}
             self.logger = logging.getLogger(__name__)
-            
+
             # Initialize components with error handling
             try:
                 self.llm_interface = LLMInterface()
@@ -97,7 +97,7 @@ class QuantGPTCommentaryAgent:
                 self.llm_interface = None
                 print("âš ï¸ LLM interface unavailable due to initialization failure")
                 print(f"   Error: {e}")
-            
+
             try:
                 self.market_analyzer = MarketAnalyzer()
             except Exception as e:
@@ -105,7 +105,7 @@ class QuantGPTCommentaryAgent:
                 self.market_analyzer = None
                 print("âš ï¸ Market analyzer unavailable due to initialization failure")
                 print(f"   Error: {e}")
-            
+
             try:
                 self.memory = AgentMemory()
             except Exception as e:
@@ -118,7 +118,9 @@ class QuantGPTCommentaryAgent:
             self.max_context_length = self.config.get("max_context_length", 4000)
             self.confidence_threshold = self.config.get("confidence_threshold", 0.7)
             self.overfitting_threshold = self.config.get("overfitting_threshold", 0.8)
-            self.regime_detection_window = self.config.get("regime_detection_window", 60)
+            self.regime_detection_window = self.config.get(
+                "regime_detection_window", 60
+            )
 
             # Storage
             self.commentary_history: List[CommentaryResponse] = []
@@ -127,13 +129,15 @@ class QuantGPTCommentaryAgent:
 
             # Load templates
             self._load_commentary_templates()
-            
+
             self.logger.info("QuantGPTCommentaryAgent initialized successfully")
 
         except Exception as e:
             self.logger.error(f"Failed to initialize QuantGPTCommentaryAgent: {e}")
             self.available = False
-            print("âš ï¸ QuantGPTCommentaryAgent unavailable due to initialization failure")
+            print(
+                "âš ï¸ QuantGPTCommentaryAgent unavailable due to initialization failure"
+            )
             print(f"   Error: {e}")
             # Don't raise exception, just mark as unavailable
 
@@ -150,12 +154,14 @@ class QuantGPTCommentaryAgent:
             Commentary response with analysis and insights
         """
         if not self.available:
-            print("âš ï¸ QuantGPTCommentaryAgent unavailable due to initialization failure")
-            return self._create_error_response(
-                request, 
-                "QuantGPTCommentaryAgent unavailable due to initialization failure"
+            print(
+                "âš ï¸ QuantGPTCommentaryAgent unavailable due to initialization failure"
             )
-        
+            return self._create_error_response(
+                request,
+                "QuantGPTCommentaryAgent unavailable due to initialization failure",
+            )
+
         try:
             self.logger.info(
                 f"Generating {request.request_type.value} commentary for {request.symbol}"
@@ -449,9 +455,9 @@ class QuantGPTCommentaryAgent:
 
             # Identify patterns
             analysis["performance_trend"] = self._identify_performance_trend(returns)
-            analysis[
-                "risk_adjusted_performance"
-            ] = self._assess_risk_adjusted_performance(analysis)
+            analysis["risk_adjusted_performance"] = (
+                self._assess_risk_adjusted_performance(analysis)
+            )
             analysis["consistency"] = self._assess_performance_consistency(returns)
 
             return analysis
@@ -730,9 +736,11 @@ class QuantGPTCommentaryAgent:
             analysis["volatility"] = {
                 "current": returns.tail(20).std(),
                 "historical": returns.std(),
-                "trend": "increasing"
-                if returns.tail(10).std() > returns.tail(50).std()
-                else "decreasing",
+                "trend": (
+                    "increasing"
+                    if returns.tail(10).std() > returns.tail(50).std()
+                    else "decreasing"
+                ),
             }
 
             # Trend analysis

@@ -406,8 +406,9 @@ class RollingRetrainingAgent(BaseAgent):
             new_data = features.tail(self.retraining_config.min_train_size)
             if len(new_data) < self.retraining_config.min_train_size:
                 logger.info(
-                    f"Insufficient new data for retraining. Need {self.retraining_config.min_train_size}, have {len(new_data)}"
-                )
+                    f"Insufficient new data for retraining. Need {
+                        self.retraining_config.min_train_size}, have {
+                        len(new_data)}")
                 return False
 
             # Perform walk-forward validation
@@ -496,7 +497,7 @@ class RollingRetrainingAgent(BaseAgent):
 
                 # Update history
                 self.model_history = self.model_history[
-                    -self.retraining_config.max_models :
+                    -self.retraining_config.max_models:
                 ]
 
         except Exception as e:
@@ -573,12 +574,14 @@ class RollingRetrainingAgent(BaseAgent):
                 "performance_trend": trend,
                 "best_score": best_score,
                 "worst_score": worst_score,
-                "latest_model_version": self.model_history[-1]["version"]
-                if self.model_history
-                else None,
-                "last_retrain_date": self.last_retrain_date.isoformat()
-                if self.last_retrain_date
-                else None,
+                "latest_model_version": (
+                    self.model_history[-1]["version"] if self.model_history else None
+                ),
+                "last_retrain_date": (
+                    self.last_retrain_date.isoformat()
+                    if self.last_retrain_date
+                    else None
+                ),
             }
 
         except Exception as e:
@@ -666,9 +669,11 @@ class RollingRetrainingAgent(BaseAgent):
                     success=True,
                     data={
                         "should_retrain": should_retrain,
-                        "last_retrain_date": self.last_retrain_date.isoformat()
-                        if self.last_retrain_date
-                        else None,
+                        "last_retrain_date": (
+                            self.last_retrain_date.isoformat()
+                            if self.last_retrain_date
+                            else None
+                        ),
                     },
                 )
 
@@ -687,9 +692,11 @@ class RollingRetrainingAgent(BaseAgent):
                 return AgentResult(
                     success=True,
                     data={
-                        "performance_metrics": performance.to_dict()
-                        if hasattr(performance, "to_dict")
-                        else dict(performance),
+                        "performance_metrics": (
+                            performance.to_dict()
+                            if hasattr(performance, "to_dict")
+                            else dict(performance)
+                        ),
                         "model_history_count": len(self.model_history),
                     },
                 )
@@ -740,9 +747,11 @@ class RollingRetrainingAgent(BaseAgent):
                 return AgentResult(
                     success=True,
                     data={
-                        "predictions": predictions.tolist()
-                        if hasattr(predictions, "tolist")
-                        else list(predictions),
+                        "predictions": (
+                            predictions.tolist()
+                            if hasattr(predictions, "tolist")
+                            else list(predictions)
+                        ),
                         "prediction_count": len(predictions),
                     },
                 )

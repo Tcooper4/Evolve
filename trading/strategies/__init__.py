@@ -1,11 +1,11 @@
-﻿"""Trading strategies module."""
+"""Trading strategies module."""
 
+import functools
 import logging
 from datetime import datetime
 from typing import Any, Dict, List
 
 import pandas as pd
-import functools
 
 from trading.strategies.atr_strategy import ATRConfig, ATRStrategy, generate_atr_signals
 from trading.strategies.bollinger_strategy import BollingerConfig, BollingerStrategy
@@ -13,10 +13,10 @@ from trading.strategies.cci_strategy import CCIConfig, CCIStrategy, generate_cci
 from trading.strategies.ensemble import (
     EnsembleConfig,
     WeightedEnsembleStrategy,
-    create_ensemble_strategy,
-    create_rsi_macd_bollinger_ensemble,
     create_balanced_ensemble,
     create_conservative_ensemble,
+    create_ensemble_strategy,
+    create_rsi_macd_bollinger_ensemble,
 )
 from trading.strategies.gatekeeper import (
     GatekeeperDecision,
@@ -80,27 +80,36 @@ def get_signals(strategy_name: str, data: pd.DataFrame, **kwargs) -> Dict[str, A
             return generate_atr_signals(data, **kwargs)
         elif strategy_name.lower() == "ensemble":
             # Handle ensemble strategy
-            strategy_weights = kwargs.get("strategy_weights", {"rsi": 0.4, "macd": 0.4, "bollinger": 0.2})
+            strategy_weights = kwargs.get(
+                "strategy_weights", {"rsi": 0.4, "macd": 0.4, "bollinger": 0.2}
+            )
             combination_method = kwargs.get("combination_method", "weighted_average")
-            
+
             # Create ensemble strategy
-            ensemble = create_ensemble_strategy(strategy_weights, combination_method, **kwargs)
-            
+            ensemble = create_ensemble_strategy(
+                strategy_weights, combination_method, **kwargs
+            )
+
             # Generate individual strategy signals
             strategy_signals = {}
             for strategy_name in strategy_weights.keys():
                 try:
                     individual_signals = get_signals(strategy_name, data, **kwargs)
-                    if isinstance(individual_signals, dict) and "result" in individual_signals:
+                    if (
+                        isinstance(individual_signals, dict)
+                        and "result" in individual_signals
+                    ):
                         strategy_signals[strategy_name] = individual_signals["result"]
                     else:
                         strategy_signals[strategy_name] = individual_signals
                 except Exception as e:
-                    logging.warning(f"Failed to generate signals for {strategy_name}: {e}")
-            
+                    logging.warning(
+                        f"Failed to generate signals for {strategy_name}: {e}"
+                    )
+
             # Combine signals
             combined_signals = ensemble.combine_signals(strategy_signals)
-            
+
             return {
                 "success": True,
                 "result": combined_signals,

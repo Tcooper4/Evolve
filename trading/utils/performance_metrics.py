@@ -32,7 +32,7 @@ class PerformanceMetrics:
         try:
             excess_returns = returns - risk_free_rate / 252  # Daily risk-free rate
             return np.sqrt(252) * excess_returns.mean() / excess_returns.std()
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_sortino_ratio(
@@ -44,7 +44,7 @@ class PerformanceMetrics:
             downside_returns = excess_returns[excess_returns < 0]
             downside_std = np.sqrt(np.mean(downside_returns**2))
             return np.sqrt(252) * excess_returns.mean() / downside_std
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_max_drawdown(
@@ -61,7 +61,7 @@ class PerformanceMetrics:
             trough_idx = drawdown.idxmin()
 
             return max_dd, peak_idx, trough_idx
-        except:
+        except BaseException:
             return 0.0, None, None
 
     def calculate_calmar_ratio(
@@ -72,14 +72,14 @@ class PerformanceMetrics:
             max_dd, _, _ = self.calculate_max_drawdown(cumulative_returns)
             annual_return = returns.mean() * 252
             return annual_return / abs(max_dd) if max_dd != 0 else 0
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_win_rate(self, returns: pd.Series) -> float:
         """Calculate win rate."""
         try:
             return (returns > 0).mean()
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_profit_factor(self, returns: pd.Series) -> float:
@@ -88,7 +88,7 @@ class PerformanceMetrics:
             gross_profit = returns[returns > 0].sum()
             gross_loss = abs(returns[returns < 0].sum())
             return gross_profit / gross_loss if gross_loss != 0 else float("inf")
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_volatility(self, returns: pd.Series, annualize: bool = True) -> float:
@@ -96,7 +96,7 @@ class PerformanceMetrics:
         try:
             vol = returns.std()
             return vol * np.sqrt(252) if annualize else vol
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_beta(self, returns: pd.Series, market_returns: pd.Series) -> float:
@@ -105,7 +105,7 @@ class PerformanceMetrics:
             covariance = np.cov(returns, market_returns)[0, 1]
             market_variance = np.var(market_returns)
             return covariance / market_variance if market_variance != 0 else 0
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_alpha(
@@ -120,7 +120,7 @@ class PerformanceMetrics:
             excess_returns = returns - risk_free_rate / 252
             excess_market_returns = market_returns - risk_free_rate / 252
             return excess_returns.mean() - beta * excess_market_returns.mean()
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_all_metrics(
@@ -175,7 +175,7 @@ class RiskMetrics:
         """Calculate Value at Risk."""
         try:
             return np.percentile(returns, confidence_level * 100)
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_cvar(
@@ -185,7 +185,7 @@ class RiskMetrics:
         try:
             var = self.calculate_var(returns, confidence_level)
             return returns[returns <= var].mean()
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_ulcer_index(self, cumulative_returns: pd.Series) -> float:
@@ -194,7 +194,7 @@ class RiskMetrics:
             rolling_max = cumulative_returns.expanding().max()
             drawdown = (cumulative_returns - rolling_max) / rolling_max
             return np.sqrt(np.mean(drawdown**2))
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_gain_to_pain_ratio(self, returns: pd.Series) -> float:
@@ -203,7 +203,7 @@ class RiskMetrics:
             gains = returns[returns > 0].sum()
             losses = abs(returns[returns < 0].sum())
             return gains / losses if losses != 0 else float("inf")
-        except:
+        except BaseException:
             return 0.0
 
     def calculate_all_risk_metrics(
@@ -282,11 +282,11 @@ class TradingMetrics:
                 "avg_loss": avg_loss,
                 "max_win": max_win,
                 "max_loss": max_loss,
-                "profit_factor": abs(
-                    avg_win * winning_trades / (avg_loss * losing_trades)
-                )
-                if avg_loss != 0
-                else float("inf"),
+                "profit_factor": (
+                    abs(avg_win * winning_trades / (avg_loss * losing_trades))
+                    if avg_loss != 0
+                    else float("inf")
+                ),
                 "avg_duration": avg_duration,
                 "max_duration": max_duration,
                 "min_duration": min_duration,

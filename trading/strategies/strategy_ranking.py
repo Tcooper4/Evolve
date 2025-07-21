@@ -1,15 +1,14 @@
-﻿"""
+"""
 Strategy Ranking
 
 Ranks strategies based on past success, prompt frequency, and confidence metrics.
 """
 
-import logging
 import json
-from typing import Dict, Any, Optional, List, Tuple
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from collections import defaultdict, Counter
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class StrategyRanking:
     """Strategy ranking with metrics."""
+
     strategy_name: str
     rank: int
     score: float
@@ -38,12 +38,15 @@ class StrategyRanker:
         """
         self.config = config or {}
         self.history_file = self.config.get("history_file", "strategy_history.json")
-        self.ranking_weights = self.config.get("ranking_weights", {
-            "success_rate": 0.4,
-            "usage_frequency": 0.2,
-            "confidence_score": 0.2,
-            "recent_performance": 0.2
-        })
+        self.ranking_weights = self.config.get(
+            "ranking_weights",
+            {
+                "success_rate": 0.4,
+                "usage_frequency": 0.2,
+                "confidence_score": 0.2,
+                "recent_performance": 0.2,
+            },
+        )
         self.history_window = self.config.get("history_window_days", 30)
         self.min_usage_count = self.config.get("min_usage_count", 3)
 
@@ -53,21 +56,21 @@ class StrategyRanker:
     def _load_history(self) -> Dict[str, Any]:
         """Load strategy usage history from file."""
         try:
-            with open(self.history_file, 'r') as f:
+            with open(self.history_file, "r") as f:
                 return json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
             logger.info(f"Creating new strategy history file: {self.history_file}")
             return {
                 "strategies": {},
                 "prompts": [],
-                "last_updated": datetime.now().isoformat()
+                "last_updated": datetime.now().isoformat(),
             }
 
     def _save_history(self):
         """Save strategy history to file."""
         self.strategy_history["last_updated"] = datetime.now().isoformat()
         try:
-            with open(self.history_file, 'w') as f:
+            with open(self.history_file, "w") as f:
                 json.dump(self.strategy_history, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save strategy history: {e}")
@@ -78,7 +81,7 @@ class StrategyRanker:
         prompt: str,
         success: bool,
         confidence: float,
-        performance_metrics: Optional[Dict[str, Any]] = None
+        performance_metrics: Optional[Dict[str, Any]] = None,
     ):
         """
         Record strategy usage for ranking.
@@ -93,13 +96,15 @@ class StrategyRanker:
         timestamp = datetime.now().isoformat()
 
         # Record prompt
-        self.strategy_history["prompts"].append({
-            "timestamp": timestamp,
-            "prompt": prompt,
-            "strategy": strategy_name,
-            "success": success,
-            "confidence": confidence
-        })
+        self.strategy_history["prompts"].append(
+            {
+                "timestamp": timestamp,
+                "prompt": prompt,
+                "strategy": strategy_name,
+                "success": success,
+                "confidence": confidence,
+            }
+        )
 
         # Update strategy statistics
         if strategy_name not in self.strategy_history["strategies"]:
@@ -109,7 +114,7 @@ class StrategyRanker:
                 "total_confidence": 0.0,
                 "performance_history": [],
                 "last_used": timestamp,
-                "first_used": timestamp
+                "first_used": timestamp,
             }
 
         strategy_stats = self.strategy_history["strategies"][strategy_name]
@@ -121,10 +126,9 @@ class StrategyRanker:
             strategy_stats["success_count"] += 1
 
         if performance_metrics:
-            strategy_stats["performance_history"].append({
-                "timestamp": timestamp,
-                "metrics": performance_metrics
-            })
+            strategy_stats["performance_history"].append(
+                {"timestamp": timestamp, "metrics": performance_metrics}
+            )
 
         # Keep only recent history
         self._cleanup_old_history()
@@ -157,10 +161,10 @@ class StrategyRanker:
 
             # Calculate overall score
             score = (
-                self.ranking_weights["success_rate"] * success_rate +
-                self.ranking_weights["usage_frequency"] * usage_frequency +
-                self.ranking_weights["confidence_score"] * avg_confidence +
-                self.ranking_weights["recent_performance"] * recent_performance
+                self.ranking_weights["success_rate"] * success_rate
+                + self.ranking_weights["usage_frequency"] * usage_frequency
+                + self.ranking_weights["confidence_score"] * avg_confidence
+                + self.ranking_weights["recent_performance"] * recent_performance
             )
 
             ranking = StrategyRanking(
@@ -174,8 +178,8 @@ class StrategyRanker:
                 metadata={
                     "usage_count": stats["usage_count"],
                     "last_used": stats["last_used"],
-                    "first_used": stats["first_used"]
-                }
+                    "first_used": stats["first_used"],
+                },
             )
 
             rankings.append(ranking)
@@ -187,7 +191,9 @@ class StrategyRanker:
 
         return rankings
 
-    def get_top_strategies(self, n: int = 5, prompt: str = None) -> List[StrategyRanking]:
+    def get_top_strategies(
+        self, n: int = 5, prompt: str = None
+    ) -> List[StrategyRanking]:
         """
         Get top N strategies.
 
@@ -224,7 +230,7 @@ class StrategyRanker:
         if strategy_name not in self.strategy_history["strategies"]:
             return 0.0
 
-        stats = self.strategy_history["strategies"][strategy_name]
+        self.strategy_history["strategies"][strategy_name]
 
         # Calculate frequency based on recent usage
         cutoff_date = datetime.now() - timedelta(days=self.history_window)
@@ -246,7 +252,7 @@ class StrategyRanker:
         if strategy_name not in self.strategy_history["strategies"]:
             return 0.0
 
-        stats = self.strategy_history["strategies"][strategy_name]
+        self.strategy_history["strategies"][strategy_name]
 
         # Calculate performance based on recent history
         cutoff_date = datetime.now() - timedelta(days=self.history_window)
@@ -266,7 +272,9 @@ class StrategyRanker:
 
         return recent_success / recent_total
 
-    def _filter_by_prompt_relevance(self, strategies: List[StrategyRanking], prompt: str) -> List[StrategyRanking]:
+    def _filter_by_prompt_relevance(
+        self, strategies: List[StrategyRanking], prompt: str
+    ) -> List[StrategyRanking]:
         """
         Filter strategies by prompt relevance.
 
@@ -301,12 +309,20 @@ class StrategyRanker:
         """Get keywords associated with a strategy."""
         # Simple keyword mapping
         keyword_map = {
-            "RSI": ["rsi", "relative", "strength", "index", "momentum", "overbought", "oversold"],
+            "RSI": [
+                "rsi",
+                "relative",
+                "strength",
+                "index",
+                "momentum",
+                "overbought",
+                "oversold",
+            ],
             "SMA": ["sma", "simple", "moving", "average", "trend", "crossover"],
             "MACD": ["macd", "moving", "average", "convergence", "divergence", "trend"],
             "Bollinger": ["bollinger", "bands", "volatility", "mean", "reversion"],
             "Momentum": ["momentum", "trend", "acceleration", "velocity"],
-            "MeanReversion": ["mean", "reversion", "bounce", "correction", "reversal"]
+            "MeanReversion": ["mean", "reversion", "bounce", "correction", "reversal"],
         }
 
         return keyword_map.get(strategy_name, [strategy_name.lower()])
@@ -317,7 +333,8 @@ class StrategyRanker:
 
         # Clean up prompts
         self.strategy_history["prompts"] = [
-            prompt for prompt in self.strategy_history["prompts"]
+            prompt
+            for prompt in self.strategy_history["prompts"]
             if datetime.fromisoformat(prompt["timestamp"]) >= cutoff_date
         ]
 
@@ -325,7 +342,8 @@ class StrategyRanker:
         for strategy_name in self.strategy_history["strategies"]:
             strategy_stats = self.strategy_history["strategies"][strategy_name]
             strategy_stats["performance_history"] = [
-                perf for perf in strategy_stats["performance_history"]
+                perf
+                for perf in strategy_stats["performance_history"]
                 if datetime.fromisoformat(perf["timestamp"]) >= cutoff_date
             ]
 
@@ -343,7 +361,9 @@ class StrategyRanker:
         total_success = sum(
             prompt["success"] for prompt in self.strategy_history["prompts"]
         )
-        overall_success_rate = total_success / total_prompts if total_prompts > 0 else 0.0
+        overall_success_rate = (
+            total_success / total_prompts if total_prompts > 0 else 0.0
+        )
 
         # Get most used strategies
         strategy_usage = {}
@@ -358,7 +378,7 @@ class StrategyRanker:
             "overall_success_rate": overall_success_rate,
             "most_used_strategies": most_used,
             "history_window_days": self.history_window,
-            "last_updated": self.strategy_history.get("last_updated", "")
+            "last_updated": self.strategy_history.get("last_updated", ""),
         }
 
     def reset_history(self):
@@ -366,7 +386,7 @@ class StrategyRanker:
         self.strategy_history = {
             "strategies": {},
             "prompts": [],
-            "last_updated": datetime.now().isoformat()
+            "last_updated": datetime.now().isoformat(),
         }
         self._save_history()
         logger.info("Strategy history reset")

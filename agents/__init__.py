@@ -11,16 +11,20 @@ from .model_generator_agent import (
     ModelCandidate,
 )
 from .model_generator_agent import ModelImplementationGenerator as MIGenerator
-from .model_generator_agent import ResearchPaper, run_model_evolution
+from .model_generator_agent import (
+    ResearchPaper,
+    run_model_evolution,
+)
 from .model_innovation_agent import (
-    ModelInnovationAgent,
     InnovationConfig,
-    ModelCandidate as InnovationModelCandidate,
+)
+from .model_innovation_agent import ModelCandidate as InnovationModelCandidate
+from .model_innovation_agent import (
     ModelEvaluation,
+    ModelInnovationAgent,
     create_model_innovation_agent,
 )
 from .prompt_agent import PromptAgent, create_prompt_agent
-from .strategy_research_agent import StrategyResearchAgent
 from .registry import (
     ALL_AGENTS,
     AgentRegistry,
@@ -33,6 +37,7 @@ from .registry import (
     list_agents,
     search_agents,
 )
+from .strategy_research_agent import StrategyResearchAgent
 
 __all__ = [
     # Legacy agents

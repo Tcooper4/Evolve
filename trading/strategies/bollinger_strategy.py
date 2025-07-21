@@ -7,9 +7,8 @@ and signal generation capabilities.
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple, Any
+from typing import Any, Dict, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 
 from .base_strategy import BaseStrategy
@@ -49,7 +48,7 @@ class BollingerStrategy(BaseStrategy):
         Returns:
             Tuple of (upper_band, middle_band, lower_band)
         """
-        close_prices = data['close']
+        close_prices = data["close"]
         middle_band = close_prices.rolling(window=self.config.window).mean()
         std = close_prices.rolling(window=self.config.window).std()
         upper_band = middle_band + (self.config.num_std * std)
@@ -85,7 +84,9 @@ class BollingerStrategy(BaseStrategy):
         df_lower.columns = df_lower.columns.str.lower()
 
         required_columns = ["close", "volume"]
-        missing_columns = [col for col in required_columns if col not in df_lower.columns]
+        missing_columns = [
+            col for col in required_columns if col not in df_lower.columns
+        ]
         if missing_columns:
             logger.error(f"Data must contain columns: {missing_columns}")
             raise ValueError(f"Data must contain columns: {missing_columns}")
@@ -94,12 +95,16 @@ class BollingerStrategy(BaseStrategy):
         df_lower = df_lower.drop_duplicates(subset=df_lower.index)
         df_lower = df_lower.dropna()
         if len(df_lower) < 2:
-            logger.warning("Not enough data after NaN cleaning; skipping signal generation.")
+            logger.warning(
+                "Not enough data after NaN cleaning; skipping signal generation."
+            )
             raise ValueError("Not enough data after NaN cleaning")
 
         # Fallback for constant price series
         if df_lower["close"].std() == 0:
-            logger.warning("Constant price series detected (stddev=0); skipping signal generation.")
+            logger.warning(
+                "Constant price series detected (stddev=0); skipping signal generation."
+            )
             signals = pd.DataFrame(index=df_lower.index)
             signals["signal"] = 0
             signals["upper_band"] = df_lower["close"]
@@ -112,7 +117,9 @@ class BollingerStrategy(BaseStrategy):
 
         # Handle NaN values
         if df_lower["close"].isna().any():
-            df_lower["close"] = df_lower["close"].fillna(method='ffill').fillna(method='bfill')
+            df_lower["close"] = (
+                df_lower["close"].fillna(method="ffill").fillna(method="bfill")
+            )
 
         if df_lower["volume"].isna().any():
             df_lower["volume"] = df_lower["volume"].fillna(0)
@@ -121,11 +128,13 @@ class BollingerStrategy(BaseStrategy):
         config = self.config
         if kwargs:
             config = BollingerConfig(
-                window=kwargs.get('window', self.config.window),
-                num_std=kwargs.get('num_std', self.config.num_std),
-                min_volume=kwargs.get('min_volume', self.config.min_volume),
-                min_price=kwargs.get('min_price', self.config.min_price),
-                squeeze_threshold=kwargs.get('squeeze_threshold', self.config.squeeze_threshold),
+                window=kwargs.get("window", self.config.window),
+                num_std=kwargs.get("num_std", self.config.num_std),
+                min_volume=kwargs.get("min_volume", self.config.min_volume),
+                min_price=kwargs.get("min_price", self.config.min_price),
+                squeeze_threshold=kwargs.get(
+                    "squeeze_threshold", self.config.squeeze_threshold
+                ),
             )
 
         try:
@@ -167,7 +176,9 @@ class BollingerStrategy(BaseStrategy):
             # Store signals
             self.signals = signals
 
-            logger.info(f"Generated {len(signals[signals['signal'] != 0])} Bollinger Bands signals")
+            logger.info(
+                f"Generated {len(signals[signals['signal'] != 0])} Bollinger Bands signals"
+            )
             return signals
 
         except Exception as e:
@@ -200,7 +211,7 @@ class BollingerStrategy(BaseStrategy):
             "num_std": self.config.num_std,
             "min_volume": self.config.min_volume,
             "min_price": self.config.min_price,
-            "squeeze_threshold": self.config.squeeze_threshold
+            "squeeze_threshold": self.config.squeeze_threshold,
         }
 
     def set_parameters(self, params: Dict) -> Dict:
@@ -223,7 +234,17 @@ class BollingerStrategy(BaseStrategy):
         return {
             "window": {"type": "int", "min": 5, "max": 50, "default": 20},
             "num_std": {"type": "float", "min": 1.0, "max": 3.0, "default": 2.0},
-            "min_volume": {"type": "float", "min": 100.0, "max": 10000.0, "default": 1000.0},
+            "min_volume": {
+                "type": "float",
+                "min": 100.0,
+                "max": 10000.0,
+                "default": 1000.0,
+            },
             "min_price": {"type": "float", "min": 0.1, "max": 10.0, "default": 1.0},
-            "squeeze_threshold": {"type": "float", "min": 0.05, "max": 0.3, "default": 0.1}
-        } 
+            "squeeze_threshold": {
+                "type": "float",
+                "min": 0.05,
+                "max": 0.3,
+                "default": 0.1,
+            },
+        }

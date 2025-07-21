@@ -10,6 +10,9 @@ from automation.web.middleware import login_required
 from automation.web.websocket import WebSocketHandler
 from fastapi import APIRouter, HTTPException, Request, WebSocket
 
+# Global notification manager instance
+notification_manager = None
+
 # Initialize logging
 logger = logging.getLogger(__name__)
 
@@ -23,8 +26,9 @@ websocket_handler = None
 def init_routes(
     notification_manager: NotificationManager, ws_handler: WebSocketHandler
 ):
-    global websocket_handler
+    global websocket_handler, notification_manager
     websocket_handler = ws_handler
+    notification_manager = notification_manager
 
     return {
         "success": True,
@@ -95,7 +99,7 @@ async def get_notifications(
 
         # Apply pagination
         total_count = len(notifications)
-        notifications = notifications[offset : offset + limit]
+        notifications = notifications[offset: offset + limit]
 
         return {
             "notifications": notifications,
@@ -150,7 +154,7 @@ async def get_notifications_by_priority(
 
         # Apply pagination
         total_count = len(priority_notifications)
-        priority_notifications = priority_notifications[offset : offset + limit]
+        priority_notifications = priority_notifications[offset: offset + limit]
 
         return {
             "notifications": priority_notifications,

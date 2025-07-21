@@ -1,9 +1,9 @@
-﻿"""ARIMA model for time series forecasting with enhanced auto_arima support."""
+"""ARIMA model for time series forecasting with enhanced auto_arima support."""
 
 import logging
 import warnings
-from typing import Any, Dict, Optional, Literal
 from enum import Enum
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -11,16 +11,23 @@ from statsmodels.graphics.tsaplots import plot_acf
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import adfuller
 
-warnings.filterwarnings("ignore")
+from utils.forecast_helpers import (
+    log_forecast_performance,
+    safe_forecast,
+    validate_forecast_input,
+)
 
 from .base_model import BaseModel
-from utils.forecast_helpers import safe_forecast, validate_forecast_input, log_forecast_performance
+
+warnings.filterwarnings("ignore")
+
 
 logger = logging.getLogger(__name__)
 
 
 class OptimizationCriterion(Enum):
     """Optimization criteria for auto_arima."""
+
     AIC = "aic"
     BIC = "bic"
     MSE = "mse"
@@ -47,19 +54,21 @@ class ARIMAModel(BaseModel):
         self.order = config.get("order", (1, 1, 1)) if config else (1, 1, 1)
         self.seasonal_order = config.get("seasonal_order", None) if config else None
         self.is_fitted = False
-        
+
         # Enhanced auto_arima configuration
         self.use_auto_arima = config.get("use_auto_arima", True) if config else True
         self.seasonal = config.get("seasonal", True) if config else True
         self.optimization_criterion = config.get("optimization_criterion", "aic")
         self.backtest_steps = config.get("backtest_steps", 5) if config else 5
-        
+
         # Auto_arima specific configuration
         self.auto_arima_config = config.get("auto_arima_config", {}) if config else {}
-        
+
         # Validate optimization criterion
         if self.optimization_criterion not in ["aic", "bic", "mse", "rmse"]:
-            logger.warning(f"Invalid optimization criterion: {self.optimization_criterion}. Using AIC.")
+            logger.warning(
+                f"Invalid optimization criterion: {self.optimization_criterion}. Using AIC."
+            )
             self.optimization_criterion = "aic"
 
     def fit(self, data: pd.Series) -> Dict[str, Any]:
@@ -94,64 +103,78 @@ class ARIMAModel(BaseModel):
         """Fit ARIMA model using enhanced pmdarima.auto_arima with multiple optimization criteria."""
         try:
             import pmdarima as pm
-            
-            logger.info(f"Using enhanced pmdarima.auto_arima with {self.optimization_criterion.upper()} optimization...")
-            
+
+            logger.info(
+                f"Using enhanced pmdarima.auto_arima with {self.optimization_criterion.upper()} optimization..."
+            )
+
             # Base auto_arima configuration
             base_config = {
-                'start_p': 0, 'start_q': 0, 'max_p': 5, 'max_q': 5, 'max_d': 2,
-                'seasonal': self.seasonal, 'm': 12 if self.seasonal else 1, 'D': 1 if self.seasonal else 0,
-                'trace': True, 'error_action': 'ignore', 'suppress_warnings': True,
-                'stepwise': True, 'random_state': 42
+                "start_p": 0,
+                "start_q": 0,
+                "max_p": 5,
+                "max_q": 5,
+                "max_d": 2,
+                "seasonal": self.seasonal,
+                "m": 12 if self.seasonal else 1,
+                "D": 1 if self.seasonal else 0,
+                "trace": True,
+                "error_action": "ignore",
+                "suppress_warnings": True,
+                "stepwise": True,
+                "random_state": 42,
             }
-            
+
             # Merge with user config
             config = {**base_config, **self.auto_arima_config}
-            
+
             # Handle different optimization criteria
             if self.optimization_criterion in ["aic", "bic"]:
                 # Use built-in AIC/BIC optimization
-                config['information_criterion'] = self.optimization_criterion
+                config["information_criterion"] = self.optimization_criterion
                 auto_model = pm.auto_arima(data, **config)
-                
+
             elif self.optimization_criterion in ["mse", "rmse"]:
                 # Use backtesting for MSE/RMSE optimization
                 auto_model = self._optimize_with_backtest(data, config)
             else:
                 # Default to AIC
-                config['information_criterion'] = 'aic'
+                config["information_criterion"] = "aic"
                 auto_model = pm.auto_arima(data, **config)
-            
+
             # Extract the best model
             self.fitted_model = auto_model
             self.order = auto_model.order
             self.seasonal_order = auto_model.seasonal_order
             self.is_fitted = True
-            
+
             # Log model selection results
             logger.info(f"Enhanced Auto ARIMA selected order: {self.order}")
             if self.seasonal_order and self.seasonal_order != (0, 0, 0, 0):
-                logger.info(f"Enhanced Auto ARIMA selected seasonal order: {self.seasonal_order}")
-            
+                logger.info(
+                    f"Enhanced Auto ARIMA selected seasonal order: {self.seasonal_order}"
+                )
+
             # Log optimization results
             aic_result = self.get_aic()
             bic_result = self.get_bic()
-            
+
             logger.info(f"Model AIC: {aic_result.get('aic', 'N/A')}")
             logger.info(f"Model BIC: {bic_result.get('bic', 'N/A')}")
-            
+
             return {
                 "success": True,
-                "message": f"Enhanced Auto ARIMA model fitted successfully with {self.optimization_criterion.upper()} optimization",
+                "message": f"Enhanced Auto ARIMA model fitted successfully with {
+                    self.optimization_criterion.upper()} optimization",
                 "timestamp": pd.Timestamp.now().isoformat(),
                 "model": self,
                 "order": self.order,
                 "seasonal_order": self.seasonal_order,
                 "optimization_criterion": self.optimization_criterion,
-                "aic": aic_result.get('aic'),
-                "bic": bic_result.get('bic')
+                "aic": aic_result.get("aic"),
+                "bic": bic_result.get("bic"),
             }
-            
+
         except ImportError:
             logger.warning("pmdarima not available, falling back to manual ARIMA")
             return self._fit_manual_arima(data)
@@ -162,25 +185,27 @@ class ARIMAModel(BaseModel):
     def _optimize_with_backtest(self, data: pd.Series, config: Dict[str, Any]) -> Any:
         """Optimize ARIMA parameters using backtesting for MSE/RMSE."""
         import pmdarima as pm
-        
-        logger.info(f"Optimizing ARIMA parameters using {self.optimization_criterion.upper()} backtesting...")
-        
+
+        logger.info(
+            f"Optimizing ARIMA parameters using {self.optimization_criterion.upper()} backtesting..."
+        )
+
         # Define parameter ranges to test
-        p_range = range(config.get('start_p', 0), config.get('max_p', 3) + 1)
-        d_range = range(0, config.get('max_d', 2) + 1)
-        q_range = range(config.get('start_q', 0), config.get('max_q', 3) + 1)
-        
-        best_score = float('inf')
+        p_range = range(config.get("start_p", 0), config.get("max_p", 3) + 1)
+        d_range = range(0, config.get("max_d", 2) + 1)
+        q_range = range(config.get("start_q", 0), config.get("max_q", 3) + 1)
+
+        best_score = float("inf")
         best_model = None
         best_params = None
-        
+
         # Grid search with backtesting
         for p in p_range:
             for d in d_range:
                 for q in q_range:
                     try:
                         # Create model with current parameters
-                        if self.seasonal and config.get('m', 12) > 1:
+                        if self.seasonal and config.get("m", 12) > 1:
                             # Try seasonal model
                             for P in [0, 1]:
                                 for D in [0, 1]:
@@ -188,69 +213,76 @@ class ARIMAModel(BaseModel):
                                         try:
                                             model = pm.ARIMA(
                                                 order=(p, d, q),
-                                                seasonal_order=(P, D, Q, config.get('m', 12))
+                                                seasonal_order=(
+                                                    P,
+                                                    D,
+                                                    Q,
+                                                    config.get("m", 12),
+                                                ),
                                             )
                                             model.fit(data)
-                                            
+
                                             # Backtest
                                             score = self._backtest_model(model, data)
-                                            
+
                                             if score < best_score:
                                                 best_score = score
                                                 best_model = model
                                                 best_params = (p, d, q, P, D, Q)
-                                                
-                                        except:
+
+                                        except BaseException:
                                             continue
                         else:
                             # Non-seasonal model
                             model = pm.ARIMA(order=(p, d, q))
                             model.fit(data)
-                            
+
                             # Backtest
                             score = self._backtest_model(model, data)
-                            
+
                             if score < best_score:
                                 best_score = score
                                 best_model = model
                                 best_params = (p, d, q)
-                                
-                    except:
+
+                    except BaseException:
                         continue
-        
+
         if best_model is None:
             logger.warning("Backtesting optimization failed, using default auto_arima")
             return pm.auto_arima(data, **config)
-        
-        logger.info(f"Best {self.optimization_criterion.upper()} score: {best_score:.6f}")
+
+        logger.info(
+            f"Best {self.optimization_criterion.upper()} score: {best_score:.6f}"
+        )
         logger.info(f"Best parameters: {best_params}")
-        
+
         return best_model
 
     def _backtest_model(self, model: Any, data: pd.Series) -> float:
         """Perform backtesting to calculate MSE or RMSE."""
         try:
             # Use last backtest_steps for validation
-            train_data = data[:-self.backtest_steps]
+            train_data = data[: -self.backtest_steps]
             test_data = data[-self.backtest_steps:]
-            
+
             # Fit model on training data
             model.fit(train_data)
-            
+
             # Make predictions
             predictions = model.predict(n_periods=self.backtest_steps)
-            
+
             # Calculate error
             if self.optimization_criterion == "mse":
                 error = np.mean((test_data.values - predictions) ** 2)
             else:  # rmse
                 error = np.sqrt(np.mean((test_data.values - predictions) ** 2))
-            
+
             return error
-            
+
         except Exception as e:
             logger.warning(f"Backtesting failed: {e}")
-            return float('inf')
+            return float("inf")
 
     def _fit_auto_arima(self, data: pd.Series) -> Dict[str, Any]:
         """Legacy auto_arima method - now calls enhanced version."""
@@ -263,6 +295,7 @@ class ARIMAModel(BaseModel):
             # Create ARIMA model
             if self.seasonal_order:
                 from statsmodels.tsa.statespace.sarimax import SARIMAX
+
                 try:
                     self.model = SARIMAX(
                         data, order=self.order, seasonal_order=self.seasonal_order
@@ -270,7 +303,9 @@ class ARIMAModel(BaseModel):
                     self.fitted_model = self.model.fit()
                     self.is_fitted = True
                 except Exception as seasonal_exc:
-                    logger.warning(f"Seasonal ARIMA fitting failed: {seasonal_exc}. Falling back to non-seasonal ARIMA.")
+                    logger.warning(
+                        f"Seasonal ARIMA fitting failed: {seasonal_exc}. Falling back to non-seasonal ARIMA."
+                    )
                     self.model = ARIMA(data, order=self.order)
                     self.fitted_model = self.model.fit()
                     self.is_fitted = True
@@ -290,8 +325,8 @@ class ARIMAModel(BaseModel):
                 "model": self,
                 "order": self.order,
                 "seasonal_order": self.seasonal_order,
-                "aic": aic_result.get('aic'),
-                "bic": bic_result.get('bic')
+                "aic": aic_result.get("aic"),
+                "bic": bic_result.get("bic"),
             }
         except Exception as e:
             return {
@@ -319,9 +354,11 @@ class ARIMAModel(BaseModel):
             }
         try:
             # Get forecast with confidence intervals
-            if hasattr(self.fitted_model, 'forecast'):
+            if hasattr(self.fitted_model, "forecast"):
                 # For pmdarima models
-                forecast_result = self.fitted_model.forecast(steps=steps, return_conf_int=True, alpha=1-confidence_level)
+                forecast_result = self.fitted_model.forecast(
+                    steps=steps, return_conf_int=True, alpha=1 - confidence_level
+                )
                 if isinstance(forecast_result, tuple):
                     forecast_values = forecast_result[0]
                     conf_int = forecast_result[1]
@@ -331,14 +368,16 @@ class ARIMAModel(BaseModel):
             else:
                 # For statsmodels ARIMA
                 forecast_values = self.fitted_model.forecast(steps=steps)
-                conf_int = self.fitted_model.get_forecast(steps=steps).conf_int(alpha=1-confidence_level)
-            
+                conf_int = self.fitted_model.get_forecast(steps=steps).conf_int(
+                    alpha=1 - confidence_level
+                )
+
             # Convert to numpy arrays if needed
-            if hasattr(forecast_values, 'values'):
+            if hasattr(forecast_values, "values"):
                 forecast_values = forecast_values.values
-            if conf_int is not None and hasattr(conf_int, 'values'):
+            if conf_int is not None and hasattr(conf_int, "values"):
                 conf_int = conf_int.values
-            
+
             result = {
                 "success": True,
                 "predictions": forecast_values,
@@ -346,21 +385,23 @@ class ARIMAModel(BaseModel):
                 "steps": steps,
                 "confidence_level": confidence_level,
             }
-            
+
             # Add confidence intervals if available
             if conf_int is not None:
                 result["confidence_intervals"] = {
                     "lower": conf_int[:, 0] if conf_int.ndim > 1 else conf_int[0],
-                    "upper": conf_int[:, 1] if conf_int.ndim > 1 else conf_int[1]
+                    "upper": conf_int[:, 1] if conf_int.ndim > 1 else conf_int[1],
                 }
-            
+
             # Log prediction summary
             logger.info(f"ARIMA prediction completed for {steps} steps")
             if conf_int is not None:
-                logger.info(f"Confidence intervals calculated at {confidence_level*100}% level")
-            
+                logger.info(
+                    f"Confidence intervals calculated at {confidence_level * 100}% level"
+                )
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Error in ARIMA prediction: {e}")
             return {
@@ -584,27 +625,28 @@ class ARIMAModel(BaseModel):
             Dictionary containing forecast results
         """
         import time
+
         start_time = time.time()
-        
+
         # Validate input data
         validate_forecast_input(data, min_length=20, require_numeric=True)
-        
+
         if not self.is_fitted:
             # Fit the model if not already fitted
             self.fit(data)
 
         # Generate forecast
         forecast_result = self.fitted_model.forecast(steps=horizon)
-        
+
         execution_time = time.time() - start_time
         confidence = 0.8  # ARIMA confidence
-        
+
         # Log performance
         log_forecast_performance(
             model_name="ARIMA",
             execution_time=execution_time,
             data_length=len(data),
-            confidence=confidence
+            confidence=confidence,
         )
 
         return {
@@ -637,7 +679,7 @@ class ARIMAModel(BaseModel):
             plt.subplot(2, 2, 1)
             plt.plot(data.index, data.values, label="Actual", color="blue")
             plt.plot(
-                data.index[-len(predictions) :],
+                data.index[-len(predictions):],
                 predictions,
                 label="Predicted",
                 color="red",

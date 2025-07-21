@@ -253,7 +253,7 @@ class LongTermPerformanceTracker:
             window_size = min(30, len(returns))
 
             for i in range(window_size, len(returns)):
-                window_returns = returns[i - window_size : i]
+                window_returns = returns[i - window_size: i]
                 window_excess = window_returns - daily_rf_rate
                 if np.std(window_excess) > 0:
                     rolling_sharpe.append(
@@ -394,10 +394,12 @@ class LongTermPerformanceTracker:
                     "timestamp": datetime.now().isoformat(),
                     "metric_name": metric.metric_name,
                     "value": metric.value,
-                    "expected_range": f"{mean_value - 2*std_value:.2f} to {mean_value + 2*std_value:.2f}",
-                    "severity": "high"
-                    if abs(metric.value - mean_value) > 3 * std_value
-                    else "medium",
+                    "expected_range": f"{mean_value - 2 * std_value:.2f} to {mean_value + 2 * std_value:.2f}",
+                    "severity": (
+                        "high"
+                        if abs(metric.value - mean_value) > 3 * std_value
+                        else "medium"
+                    ),
                     "context": metric.context,
                 }
 
@@ -417,9 +419,9 @@ class LongTermPerformanceTracker:
                         "alert_type": "drawdown",
                         "drawdown_pct": current_dd.drawdown_pct,
                         "duration_days": current_dd.duration_days,
-                        "severity": "high"
-                        if current_dd.drawdown_pct > 0.2
-                        else "medium",
+                        "severity": (
+                            "high" if current_dd.drawdown_pct > 0.2 else "medium"
+                        ),
                     }
                     self.alerts.append(alert)
                     logger.warning(f"Drawdown alert: {alert}")
@@ -625,18 +627,22 @@ class LongTermPerformanceTracker:
                     name: {
                         "sharpe_ratio": metrics.sharpe_ratio,
                         "volatility": metrics.volatility,
-                        "rolling_sharpe_avg": np.mean(metrics.rolling_sharpe)
-                        if metrics.rolling_sharpe
-                        else 0.0,
+                        "rolling_sharpe_avg": (
+                            np.mean(metrics.rolling_sharpe)
+                            if metrics.rolling_sharpe
+                            else 0.0
+                        ),
                     }
                     for name, metrics in self.sharpe_metrics.items()
                 },
                 "drawdown_summary": {
                     name: {
                         "current_drawdown": self._get_current_drawdown(name),
-                        "max_drawdown": max([dd.drawdown_pct for dd in drawdowns])
-                        if drawdowns
-                        else 0.0,
+                        "max_drawdown": (
+                            max([dd.drawdown_pct for dd in drawdowns])
+                            if drawdowns
+                            else 0.0
+                        ),
                         "total_drawdowns": len(drawdowns),
                     }
                     for name, drawdowns in self.drawdowns.items()
@@ -735,9 +741,11 @@ class LongTermPerformanceTracker:
                 "forecast_confidence": confidence,
                 "upper_bound": (forecast_values + confidence_interval).tolist(),
                 "lower_bound": (forecast_values - confidence_interval).tolist(),
-                "trend_direction": "increasing"
-                if forecast_values[-1] > forecast_values[0]
-                else "decreasing",
+                "trend_direction": (
+                    "increasing"
+                    if forecast_values[-1] > forecast_values[0]
+                    else "decreasing"
+                ),
             }
 
         except Exception as e:

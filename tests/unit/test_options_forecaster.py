@@ -18,10 +18,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from trading.options.options_forecaster import OptionsForecaster, VolatilitySurface
+
 # Add the trading directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "trading"))
-
-from trading.options.options_forecaster import OptionsForecaster, VolatilitySurface
 
 
 class TestOptionsForecaster:

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Weight Registry for Hybrid Models
 
 This module provides centralized management of hybrid model weights:
@@ -12,10 +12,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
-
-import numpy as np
-import pandas as pd
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +66,11 @@ class WeightRegistry:
         """Load registry from file."""
         if self.registry_file.exists():
             try:
-                with open(self.registry_file, 'r') as f:
+                with open(self.registry_file, "r") as f:
                     registry = json.load(f)
-                    logger.info(f"Loaded weight registry with {len(registry.get('models', {}))} models")
+                    logger.info(
+                        f"Loaded weight registry with {len(registry.get('models', {}))} models"
+                    )
                     return registry
             except Exception as e:
                 logger.error(f"Failed to load weight registry: {e}")
@@ -92,7 +91,7 @@ class WeightRegistry:
         try:
             self.registry["last_updated"] = datetime.now().isoformat()
 
-            with open(self.registry_file, 'w') as f:
+            with open(self.registry_file, "w") as f:
                 json.dump(self.registry, f, indent=2, default=str)
 
             # Create backup if enabled
@@ -108,7 +107,7 @@ class WeightRegistry:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_file = self.backup_dir / f"weight_registry_{timestamp}.json"
 
-            with open(backup_file, 'w') as f:
+            with open(backup_file, "w") as f:
                 json.dump(self.registry, f, indent=2, default=str)
 
             # Keep only recent backups (last 10)
@@ -223,7 +222,9 @@ class WeightRegistry:
                 "old_weights": old_weights,
                 "new_weights": new_weights,
                 "reason": reason,
-                "change_magnitude": self._calculate_weight_change_magnitude(old_weights, new_weights),
+                "change_magnitude": self._calculate_weight_change_magnitude(
+                    old_weights, new_weights
+                ),
             }
 
             model_entry["history"].append(weight_change)
@@ -296,7 +297,9 @@ class WeightRegistry:
 
             # Limit global history size
             if len(self.registry["performance_history"]) > self.max_history:
-                self.registry["performance_history"] = self.registry["performance_history"][-self.max_history:]
+                self.registry["performance_history"] = self.registry[
+                    "performance_history"
+                ][-self.max_history:]
 
             self._save_registry()
 
@@ -404,7 +407,9 @@ class WeightRegistry:
 
             # Limit optimization history
             if len(self.registry["optimization_history"]) > self.max_history:
-                self.registry["optimization_history"] = self.registry["optimization_history"][-self.max_history:]
+                self.registry["optimization_history"] = self.registry[
+                    "optimization_history"
+                ][-self.max_history:]
 
             self._save_registry()
 
@@ -441,12 +446,16 @@ class WeightRegistry:
 
         return weights
 
-    def _optimize_equal_weight(self, model_performances: Dict[str, Dict[str, float]]) -> Dict[str, float]:
+    def _optimize_equal_weight(
+        self, model_performances: Dict[str, Dict[str, float]]
+    ) -> Dict[str, float]:
         """Optimize weights using equal weighting."""
         equal_weight = 1.0 / len(model_performances)
         return {model_name: equal_weight for model_name in model_performances}
 
-    def _optimize_risk_parity(self, model_performances: Dict[str, Dict[str, float]]) -> Dict[str, float]:
+    def _optimize_risk_parity(
+        self, model_performances: Dict[str, Dict[str, float]]
+    ) -> Dict[str, float]:
         """Optimize weights using risk parity approach."""
         weights = {}
         total_risk = 0.0
@@ -510,7 +519,9 @@ class WeightRegistry:
         # Count model types
         for model_entry in models.values():
             model_type = model_entry["type"]
-            summary["model_types"][model_type] = summary["model_types"].get(model_type, 0) + 1
+            summary["model_types"][model_type] = (
+                summary["model_types"].get(model_type, 0) + 1
+            )
 
         return summary
 
@@ -544,7 +555,9 @@ class WeightRegistry:
 
         return export_data
 
-    def import_weights(self, import_data: Dict[str, Any], overwrite: bool = False) -> bool:
+    def import_weights(
+        self, import_data: Dict[str, Any], overwrite: bool = False
+    ) -> bool:
         """
         Import weights from export data.
 
@@ -599,20 +612,23 @@ class WeightRegistry:
 
         # Clean up performance history
         self.registry["performance_history"] = [
-            record for record in self.registry["performance_history"]
+            record
+            for record in self.registry["performance_history"]
             if record["timestamp"] >= cutoff_str
         ]
 
         # Clean up optimization history
         self.registry["optimization_history"] = [
-            record for record in self.registry["optimization_history"]
+            record
+            for record in self.registry["optimization_history"]
             if record["timestamp"] >= cutoff_str
         ]
 
         # Clean up individual model histories
         for model_entry in self.registry["models"].values():
             model_entry["history"] = [
-                record for record in model_entry["history"]
+                record
+                for record in model_entry["history"]
                 if record["timestamp"] >= cutoff_str
             ]
 
@@ -634,13 +650,17 @@ def get_weight_registry() -> WeightRegistry:
 
 
 # Convenience functions
-def update_model_weights(model_name: str, new_weights: Dict[str, float], reason: str = "manual_update") -> bool:
+def update_model_weights(
+    model_name: str, new_weights: Dict[str, float], reason: str = "manual_update"
+) -> bool:
     """Update weights for a model."""
     registry = get_weight_registry()
     return registry.update_weights(model_name, new_weights, reason)
 
 
-def update_model_performance(model_name: str, performance_metrics: Dict[str, float]) -> bool:
+def update_model_performance(
+    model_name: str, performance_metrics: Dict[str, float]
+) -> bool:
     """Update performance for a model."""
     registry = get_weight_registry()
     return registry.update_performance(model_name, performance_metrics)
@@ -652,7 +672,9 @@ def get_model_weights(model_name: str) -> Optional[Dict[str, float]]:
     return registry.get_weights(model_name)
 
 
-def optimize_ensemble_weights(model_names: List[str], method: str = "performance_weighted") -> Dict[str, float]:
+def optimize_ensemble_weights(
+    model_names: List[str], method: str = "performance_weighted"
+) -> Dict[str, float]:
     """Optimize weights for an ensemble of models."""
     registry = get_weight_registry()
     return registry.optimize_weights(model_names, method)

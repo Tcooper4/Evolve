@@ -12,10 +12,10 @@ import argparse
 import sys
 from pathlib import Path
 
+from unified_interface import UnifiedInterface, terminal_ui
+
 # Add the current directory to the path
 sys.path.append(str(Path(__file__).parent))
-
-from unified_interface import UnifiedInterface, terminal_ui
 
 
 def main():

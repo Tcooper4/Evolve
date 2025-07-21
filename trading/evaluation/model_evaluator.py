@@ -1,4 +1,4 @@
-﻿"""
+"""
 Model Evaluator
 
 Evaluates model performance with comprehensive metrics and schema validation
@@ -7,10 +7,10 @@ for strategy evaluation results.
 
 import json
 import logging
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
-from dataclasses import dataclass, asdict
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -18,6 +18,7 @@ import pandas as pd
 # Try to import matplotlib
 try:
     import matplotlib.pyplot as plt
+
     MATPLOTLIB_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ matplotlib not available. Disabling plotting capabilities.")
@@ -28,6 +29,7 @@ except ImportError as e:
 # Try to import seaborn
 try:
     import seaborn as sns
+
     SEABORN_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ seaborn not available. Disabling advanced plotting capabilities.")
@@ -38,6 +40,7 @@ except ImportError as e:
 # Try to import scikit-learn
 try:
     from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ scikit-learn not available. Disabling evaluation metrics.")
@@ -52,6 +55,7 @@ logger = logging.getLogger(__name__)
 
 class ValidationStatus(Enum):
     """Validation status enum."""
+
     VALID = "valid"
     INVALID = "invalid"
     WARNING = "warning"
@@ -60,6 +64,7 @@ class ValidationStatus(Enum):
 @dataclass
 class ValidationResult:
     """Validation result with details."""
+
     status: ValidationStatus
     message: str
     errors: List[str]
@@ -70,22 +75,22 @@ class ValidationResult:
 @dataclass
 class StrategyEvaluationSchema:
     """Schema for strategy evaluation results."""
-    
+
     # Required fields
     strategy_name: str
     evaluation_timestamp: datetime
     metrics: Dict[str, float]
-    
+
     # Optional fields
     parameters: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
     predictions: Optional[np.ndarray] = None
     actual_values: Optional[np.ndarray] = None
     feature_importance: Optional[Dict[str, float]] = None
-    
+
     # Validation rules
     required_metrics: List[str] = None
-    
+
     def __post_init__(self):
         """Set default values after initialization."""
         if self.required_metrics is None:
@@ -94,10 +99,10 @@ class StrategyEvaluationSchema:
 
 class ModelEvaluator:
     """Model evaluator with schema validation."""
-    
+
     def __init__(self, validation_config: Optional[Dict[str, Any]] = None):
         """Initialize the model evaluator.
-        
+
         Args:
             validation_config: Configuration for validation rules
         """
@@ -108,18 +113,18 @@ class ModelEvaluator:
             "strict_mode": True,
             "allow_missing_metrics": False,
             "metric_thresholds": {
-                "mse": {"min": 0.0, "max": float('inf')},
-                "mae": {"min": 0.0, "max": float('inf')},
-                "rmse": {"min": 0.0, "max": float('inf')},
-                "r2": {"min": -float('inf'), "max": 1.0},
+                "mse": {"min": 0.0, "max": float("inf")},
+                "mae": {"min": 0.0, "max": float("inf")},
+                "rmse": {"min": 0.0, "max": float("inf")},
+                "r2": {"min": -float("inf"), "max": 1.0},
                 "directional_accuracy": {"min": 0.0, "max": 1.0},
             },
             "required_fields": ["strategy_name", "evaluation_timestamp", "metrics"],
         }
-        
+
         # Schema registry for different evaluation types
         self.schemas = self._initialize_schemas()
-        
+
     def _initialize_schemas(self) -> Dict[str, StrategyEvaluationSchema]:
         """Initialize validation schemas for different evaluation types."""
         return {
@@ -127,19 +132,27 @@ class ModelEvaluator:
                 strategy_name="",
                 evaluation_timestamp=datetime.now(),
                 metrics={},
-                required_metrics=["mse", "mae", "rmse", "r2"]
+                required_metrics=["mse", "mae", "rmse", "r2"],
             ),
             "trading_strategy": StrategyEvaluationSchema(
                 strategy_name="",
                 evaluation_timestamp=datetime.now(),
                 metrics={},
-                required_metrics=["mse", "mae", "rmse", "r2", "directional_accuracy", "sharpe_ratio", "max_drawdown"]
+                required_metrics=[
+                    "mse",
+                    "mae",
+                    "rmse",
+                    "r2",
+                    "directional_accuracy",
+                    "sharpe_ratio",
+                    "max_drawdown",
+                ],
             ),
             "classification": StrategyEvaluationSchema(
                 strategy_name="",
                 evaluation_timestamp=datetime.now(),
                 metrics={},
-                required_metrics=["accuracy", "precision", "recall", "f1_score"]
+                required_metrics=["accuracy", "precision", "recall", "f1_score"],
             ),
         }
 
@@ -162,7 +175,9 @@ class ModelEvaluator:
             if len(y_true) > 1:
                 direction_true = np.sign(np.diff(y_true))
                 direction_pred = np.sign(np.diff(y_pred))
-                metrics["directional_accuracy"] = np.mean(direction_true == direction_pred)
+                metrics["directional_accuracy"] = np.mean(
+                    direction_true == direction_pred
+                )
             else:
                 metrics["directional_accuracy"] = 0.0
 
@@ -174,7 +189,9 @@ class ModelEvaluator:
             # Validate metrics
             validation_result = self._validate_metrics(metrics, model_name)
             if validation_result.status == ValidationStatus.INVALID:
-                logger.warning(f"Model evaluation validation failed: {validation_result.message}")
+                logger.warning(
+                    f"Model evaluation validation failed: {validation_result.message}"
+                )
 
             return metrics
 
@@ -182,35 +199,41 @@ class ModelEvaluator:
             logger.error(f"Error evaluating model {model_name}: {e}")
             return {}
 
-    def _validate_metrics(self, metrics: Dict[str, float], model_name: str) -> ValidationResult:
+    def _validate_metrics(
+        self, metrics: Dict[str, float], model_name: str
+    ) -> ValidationResult:
         """Validate evaluation metrics against thresholds.
-        
+
         Args:
             metrics: Dictionary of metrics
             model_name: Name of the model
-            
+
         Returns:
             Validation result
         """
         errors = []
         warnings = []
-        
+
         thresholds = self.validation_config["metric_thresholds"]
-        
+
         for metric_name, value in metrics.items():
             if metric_name in thresholds:
                 threshold = thresholds[metric_name]
-                
+
                 # Check min/max bounds
                 if value < threshold["min"]:
-                    errors.append(f"{metric_name} ({value}) below minimum ({threshold['min']})")
+                    errors.append(
+                        f"{metric_name} ({value}) below minimum ({threshold['min']})"
+                    )
                 elif value > threshold["max"]:
-                    errors.append(f"{metric_name} ({value}) above maximum ({threshold['max']})")
-                    
+                    errors.append(
+                        f"{metric_name} ({value}) above maximum ({threshold['max']})"
+                    )
+
                 # Check for NaN or infinite values
                 if np.isnan(value) or np.isinf(value):
                     errors.append(f"{metric_name} has invalid value: {value}")
-                    
+
         # Check for missing required metrics
         if self.validation_config.get("allow_missing_metrics", False):
             for required_metric in self.schemas["default"].required_metrics:
@@ -220,7 +243,7 @@ class ModelEvaluator:
             for required_metric in self.schemas["default"].required_metrics:
                 if required_metric not in metrics:
                     errors.append(f"Missing required metric: {required_metric}")
-                    
+
         # Determine status
         if errors:
             status = ValidationStatus.INVALID
@@ -228,36 +251,34 @@ class ModelEvaluator:
             status = ValidationStatus.WARNING
         else:
             status = ValidationStatus.VALID
-            
+
         message = f"Validation {'failed' if errors else 'passed'} for {model_name}"
         if warnings:
             message += f" with {len(warnings)} warnings"
-            
+
         return ValidationResult(
             status=status,
             message=message,
             errors=errors,
             warnings=warnings,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
     def validate_evaluation_result(
-        self, 
-        result: Dict[str, Any], 
-        schema_type: str = "default"
+        self, result: Dict[str, Any], schema_type: str = "default"
     ) -> ValidationResult:
         """Validate strategy evaluation result against schema.
-        
+
         Args:
             result: Evaluation result dictionary
             schema_type: Type of schema to use for validation
-            
+
         Returns:
             Validation result
         """
         errors = []
         warnings = []
-        
+
         if schema_type not in self.schemas:
             errors.append(f"Unknown schema type: {schema_type}")
             return ValidationResult(
@@ -265,22 +286,25 @@ class ModelEvaluator:
                 message=f"Unknown schema type: {schema_type}",
                 errors=errors,
                 warnings=warnings,
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
-            
+
         schema = self.schemas[schema_type]
         required_fields = self.validation_config["required_fields"]
-        
+
         # Check required fields
         for field in required_fields:
             if field not in result:
                 errors.append(f"Missing required field: {field}")
-                
+
         # Check strategy name
         if "strategy_name" in result:
-            if not isinstance(result["strategy_name"], str) or not result["strategy_name"].strip():
+            if (
+                not isinstance(result["strategy_name"], str)
+                or not result["strategy_name"].strip()
+            ):
                 errors.append("strategy_name must be a non-empty string")
-                
+
         # Check evaluation timestamp
         if "evaluation_timestamp" in result:
             timestamp = result["evaluation_timestamp"]
@@ -288,10 +312,14 @@ class ModelEvaluator:
                 try:
                     datetime.fromisoformat(timestamp)
                 except ValueError:
-                    errors.append("evaluation_timestamp must be a valid ISO format datetime string")
+                    errors.append(
+                        "evaluation_timestamp must be a valid ISO format datetime string"
+                    )
             elif not isinstance(timestamp, datetime):
-                errors.append("evaluation_timestamp must be a datetime object or ISO string")
-                
+                errors.append(
+                    "evaluation_timestamp must be a datetime object or ISO string"
+                )
+
         # Check metrics
         if "metrics" in result:
             metrics = result["metrics"]
@@ -303,28 +331,34 @@ class ModelEvaluator:
                     if not isinstance(metric_name, str):
                         errors.append(f"Metric name must be string: {metric_name}")
                     if not isinstance(metric_value, (int, float, np.number)):
-                        errors.append(f"Metric value must be numeric: {metric_name}={metric_value}")
+                        errors.append(
+                            f"Metric value must be numeric: {metric_name}={metric_value}"
+                        )
                     if np.isnan(metric_value) or np.isinf(metric_value):
-                        errors.append(f"Metric value is invalid: {metric_name}={metric_value}")
-                        
+                        errors.append(
+                            f"Metric value is invalid: {metric_name}={metric_value}"
+                        )
+
                 # Check required metrics
                 for required_metric in schema.required_metrics:
                     if required_metric not in metrics:
                         if self.validation_config.get("allow_missing_metrics", False):
-                            warnings.append(f"Missing recommended metric: {required_metric}")
+                            warnings.append(
+                                f"Missing recommended metric: {required_metric}"
+                            )
                         else:
                             errors.append(f"Missing required metric: {required_metric}")
-                            
+
         # Check parameters
         if "parameters" in result and result["parameters"] is not None:
             if not isinstance(result["parameters"], dict):
                 errors.append("parameters must be a dictionary")
-                
+
         # Check metadata
         if "metadata" in result and result["metadata"] is not None:
             if not isinstance(result["metadata"], dict):
                 errors.append("metadata must be a dictionary")
-                
+
         # Check predictions and actual values
         for field in ["predictions", "actual_values"]:
             if field in result and result[field] is not None:
@@ -332,7 +366,7 @@ class ModelEvaluator:
                     errors.append(f"{field} must be a numpy array or list")
                 elif len(result[field]) == 0:
                     warnings.append(f"{field} is empty")
-                    
+
         # Check feature importance
         if "feature_importance" in result and result["feature_importance"] is not None:
             fi = result["feature_importance"]
@@ -343,8 +377,10 @@ class ModelEvaluator:
                     if not isinstance(feature_name, str):
                         errors.append(f"Feature name must be string: {feature_name}")
                     if not isinstance(importance, (int, float, np.number)):
-                        errors.append(f"Feature importance must be numeric: {feature_name}={importance}")
-                        
+                        errors.append(
+                            f"Feature importance must be numeric: {feature_name}={importance}"
+                        )
+
         # Determine status
         if errors:
             status = ValidationStatus.INVALID
@@ -352,17 +388,19 @@ class ModelEvaluator:
             status = ValidationStatus.WARNING
         else:
             status = ValidationStatus.VALID
-            
-        message = f"Schema validation {'failed' if errors else 'passed'} for {schema_type}"
+
+        message = (
+            f"Schema validation {'failed' if errors else 'passed'} for {schema_type}"
+        )
         if warnings:
             message += f" with {len(warnings)} warnings"
-            
+
         return ValidationResult(
             status=status,
             message=message,
             errors=errors,
             warnings=warnings,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
     def create_evaluation_result(
@@ -374,10 +412,10 @@ class ModelEvaluator:
         predictions: Optional[np.ndarray] = None,
         actual_values: Optional[np.ndarray] = None,
         feature_importance: Optional[Dict[str, float]] = None,
-        schema_type: str = "default"
+        schema_type: str = "default",
     ) -> Dict[str, Any]:
         """Create a validated evaluation result.
-        
+
         Args:
             strategy_name: Name of the strategy
             metrics: Evaluation metrics
@@ -387,7 +425,7 @@ class ModelEvaluator:
             actual_values: Actual values
             feature_importance: Feature importance scores
             schema_type: Schema type for validation
-            
+
         Returns:
             Validated evaluation result dictionary
         """
@@ -398,13 +436,15 @@ class ModelEvaluator:
             "parameters": parameters,
             "metadata": metadata,
             "predictions": predictions.tolist() if predictions is not None else None,
-            "actual_values": actual_values.tolist() if actual_values is not None else None,
+            "actual_values": (
+                actual_values.tolist() if actual_values is not None else None
+            ),
             "feature_importance": feature_importance,
         }
-        
+
         # Validate the result
         validation_result = self.validate_evaluation_result(result, schema_type)
-        
+
         # Add validation info to result
         result["validation"] = {
             "status": validation_result.status.value,
@@ -413,30 +453,31 @@ class ModelEvaluator:
             "warnings": validation_result.warnings,
             "timestamp": validation_result.timestamp.isoformat(),
         }
-        
+
         if validation_result.status == ValidationStatus.INVALID:
-            logger.error(f"Evaluation result validation failed: {validation_result.message}")
+            logger.error(
+                f"Evaluation result validation failed: {validation_result.message}"
+            )
             logger.error(f"Errors: {validation_result.errors}")
         elif validation_result.status == ValidationStatus.WARNING:
-            logger.warning(f"Evaluation result validation warnings: {validation_result.warnings}")
+            logger.warning(
+                f"Evaluation result validation warnings: {validation_result.warnings}"
+            )
         else:
             logger.info(f"Evaluation result validation passed for {strategy_name}")
-            
+
         return result
 
     def export_evaluation_results(
-        self,
-        results: List[Dict[str, Any]],
-        filepath: str,
-        format: str = "json"
+        self, results: List[Dict[str, Any]], filepath: str, format: str = "json"
     ) -> bool:
         """Export evaluation results with validation.
-        
+
         Args:
             results: List of evaluation results
             filepath: Output file path
             format: Export format ('json', 'csv')
-            
+
         Returns:
             True if export successful
         """
@@ -444,22 +485,24 @@ class ModelEvaluator:
             # Validate all results before export
             valid_results = []
             invalid_results = []
-            
+
             for result in results:
                 validation_result = self.validate_evaluation_result(result)
                 if validation_result.status == ValidationStatus.VALID:
                     valid_results.append(result)
                 else:
                     invalid_results.append(result)
-                    logger.warning(f"Invalid result excluded from export: {validation_result.message}")
-                    
+                    logger.warning(
+                        f"Invalid result excluded from export: {validation_result.message}"
+                    )
+
             if not valid_results:
                 logger.error("No valid results to export")
                 return False
-                
+
             # Export based on format
             if format == "json":
-                with open(filepath, 'w') as f:
+                with open(filepath, "w") as f:
                     json.dump(valid_results, f, indent=2)
             elif format == "csv":
                 # Flatten results for CSV
@@ -468,27 +511,33 @@ class ModelEvaluator:
                     base_record = {
                         "strategy_name": result.get("strategy_name", ""),
                         "evaluation_timestamp": result.get("evaluation_timestamp", ""),
-                        "validation_status": result.get("validation", {}).get("status", ""),
+                        "validation_status": result.get("validation", {}).get(
+                            "status", ""
+                        ),
                     }
-                    
+
                     # Add metrics
                     for metric_name, metric_value in result.get("metrics", {}).items():
                         base_record[f"metric_{metric_name}"] = metric_value
-                        
+
                     flat_data.append(base_record)
-                    
+
                 df = pd.DataFrame(flat_data)
                 df.to_csv(filepath, index=False)
             else:
                 logger.error(f"Unsupported export format: {format}")
                 return False
-                
-            logger.info(f"Exported {len(valid_results)} valid evaluation results to {filepath}")
+
+            logger.info(
+                f"Exported {len(valid_results)} valid evaluation results to {filepath}"
+            )
             if invalid_results:
-                logger.warning(f"Excluded {len(invalid_results)} invalid results from export")
-                
+                logger.warning(
+                    f"Excluded {len(invalid_results)} invalid results from export"
+                )
+
             return True
-            
+
         except Exception as e:
             logger.error(f"Error exporting evaluation results: {e}")
             return False
@@ -685,7 +734,7 @@ class ModelEvaluator:
     def _generate_summary(self, model_name: str) -> str:
         """Generate summary of model performance."""
         metrics = self.metrics[model_name]
-        
+
         summary_parts = [
             f"Model: {model_name}",
             f"MSE: {metrics.get('mse', 'N/A'):.6f}",
@@ -693,22 +742,24 @@ class ModelEvaluator:
             f"MAE: {metrics.get('mae', 'N/A'):.6f}",
             f"RÂ²: {metrics.get('r2', 'N/A'):.4f}",
         ]
-        
+
         if "directional_accuracy" in metrics:
-            summary_parts.append(f"Directional Accuracy: {metrics['directional_accuracy']:.4f}")
-            
+            summary_parts.append(
+                f"Directional Accuracy: {metrics['directional_accuracy']:.4f}"
+            )
+
         return " | ".join(summary_parts)
 
     def compare_models(self, model_names: List[str]) -> pd.DataFrame:
         """Compare multiple models."""
         comparison_data = []
-        
+
         for model_name in model_names:
             if model_name in self.metrics:
                 metrics = self.metrics[model_name].copy()
                 metrics["model_name"] = model_name
                 comparison_data.append(metrics)
-                
+
         if comparison_data:
             return pd.DataFrame(comparison_data)
         else:

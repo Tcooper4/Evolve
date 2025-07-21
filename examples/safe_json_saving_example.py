@@ -8,10 +8,10 @@ accidentally overwriting important historical data with empty or invalid data.
 import sys
 from pathlib import Path
 
+from utils.safe_json_saver import safe_json_save, safe_save_historical_data
+
 # Add the project root to the path
 sys.path.append(str(Path(__file__).parent.parent))
-
-from utils.safe_json_saver import safe_json_save, safe_save_historical_data
 
 
 def example_basic_safe_saving():
@@ -134,7 +134,7 @@ def example_custom_validation():
     # Invalid trading data (missing required fields)
     invalid_trading_data = {
         "symbol": "AAPL",
-        "price": 150.25
+        "price": 150.25,
         # Missing volume field
     }
 

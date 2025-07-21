@@ -1,4 +1,4 @@
-﻿"""
+"""
 Cache Utilities for Model Operations
 
 This module provides centralized caching functionality for model operations:
@@ -103,7 +103,7 @@ class ModelCache:
         stats_file = self.config.cache_dir / "cache_stats.json"
         if stats_file.exists():
             try:
-                with open(stats_file, 'r') as f:
+                with open(stats_file, "r") as f:
                     saved_stats = json.load(f)
                     self.config.stats.update(saved_stats)
             except Exception as e:
@@ -116,7 +116,7 @@ class ModelCache:
 
         stats_file = self.config.cache_dir / "cache_stats.json"
         try:
-            with open(stats_file, 'w') as f:
+            with open(stats_file, "w") as f:
                 json.dump(self.config.stats, f, default=str)
         except Exception as e:
             self.logger.warning(f"Failed to save cache stats: {e}")
@@ -133,6 +133,7 @@ class ModelCache:
         Returns:
             Cache key string
         """
+
         # Create a hashable representation of arguments
         def make_hashable(obj):
             if isinstance(obj, (list, tuple)):
@@ -145,7 +146,7 @@ class ModelCache:
             elif isinstance(obj, np.ndarray):
                 # Hash numpy array
                 return f"np_{hashlib.md5(obj.tobytes()).hexdigest()[:16]}"
-            elif hasattr(obj, '__hash__'):
+            elif hasattr(obj, "__hash__"):
                 return obj
             else:
                 return str(obj)

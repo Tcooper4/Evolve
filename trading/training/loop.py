@@ -1,4 +1,4 @@
-﻿"""
+"""
 Training Loop - Batch 17
 Enhanced training loop with gradient clipping for training stability
 """
@@ -9,6 +9,7 @@ try:
     import torch.nn as nn
     import torch.optim as optim
     from torch.utils.data import DataLoader
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ PyTorch not available. Disabling training loop capabilities.")
@@ -19,12 +20,13 @@ except ImportError as e:
     DataLoader = None
     TORCH_AVAILABLE = False
 
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
 import logging
 import time
-import numpy as np
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TrainingConfig:
     """Configuration for training loop."""
+
     max_epochs: int = 100
     batch_size: int = 32
     learning_rate: float = 1e-4
@@ -50,6 +53,7 @@ class TrainingConfig:
 @dataclass
 class TrainingMetrics:
     """Training metrics tracking."""
+
     epoch: int = 0
     train_loss: float = 0.0
     val_loss: float = 0.0
@@ -72,14 +76,16 @@ class TrainingLoop:
     - Model checkpointing
     """
 
-    def __init__(self,
-                 model: nn.Module,
-                 config: TrainingConfig,
-                 train_loader: DataLoader,
-                 val_loader: Optional[DataLoader] = None,
-                 criterion: Optional[nn.Module] = None,
-                 optimizer: Optional[optim.Optimizer] = None,
-                 scheduler: Optional[optim.lr_scheduler._LRScheduler] = None):
+    def __init__(
+        self,
+        model: nn.Module,
+        config: TrainingConfig,
+        train_loader: DataLoader,
+        val_loader: Optional[DataLoader] = None,
+        criterion: Optional[nn.Module] = None,
+        optimizer: Optional[optim.Optimizer] = None,
+        scheduler: Optional[optim.lr_scheduler._LRScheduler] = None,
+    ):
         if not TORCH_AVAILABLE:
             raise ImportError("PyTorch is not available. Cannot create TrainingLoop.")
 
@@ -103,7 +109,7 @@ class TrainingLoop:
         self.optimizer = optimizer or optim.Adam(
             model.parameters(),
             lr=config.learning_rate,
-            weight_decay=config.weight_decay
+            weight_decay=config.weight_decay,
         )
         self.scheduler = scheduler
 
@@ -112,7 +118,7 @@ class TrainingLoop:
 
         # Training state
         self.current_epoch = 0
-        self.best_val_loss = float('inf')
+        self.best_val_loss = float("inf")
         self.patience_counter = 0
         self.training_history: List[TrainingMetrics] = []
 
@@ -121,7 +127,9 @@ class TrainingLoop:
         self.output_dir.mkdir(exist_ok=True)
 
         logger.info(f"Training loop initialized on {config.device}")
-        logger.info(f"Gradient clipping: {config.clip_gradients}, max_norm: {config.max_grad_norm}")
+        logger.info(
+            f"Gradient clipping: {config.clip_gradients}, max_norm: {config.max_grad_norm}"
+        )
 
     def train_epoch(self) -> TrainingMetrics:
         """
@@ -171,15 +179,13 @@ class TrainingLoop:
                         self.scaler.unscale_(self.optimizer)
 
                     grad_norm = torch.nn.utils.clip_grad_norm_(
-                        self.model.parameters(),
-                        max_norm=self.config.max_grad_norm
+                        self.model.parameters(), max_norm=self.config.max_grad_norm
                     )
                     total_grad_norm += grad_norm.item()
                 else:
                     # Calculate gradient norm without clipping
                     grad_norm = torch.nn.utils.clip_grad_norm_(
-                        self.model.parameters(),
-                        max_norm=float('inf')
+                        self.model.parameters(), max_norm=float("inf")
                     )
                     total_grad_norm += grad_norm.item()
 
@@ -194,7 +200,9 @@ class TrainingLoop:
 
             # Update metrics
             batch_size = data.size(0)
-            total_loss += loss.item() * batch_size * self.config.gradient_accumulation_steps
+            total_loss += (
+                loss.item() * batch_size * self.config.gradient_accumulation_steps
+            )
             total_samples += batch_size
             num_batches += 1
 
@@ -218,10 +226,10 @@ class TrainingLoop:
         metrics = TrainingMetrics(
             epoch=self.current_epoch,
             train_loss=avg_loss,
-            learning_rate=self.optimizer.param_groups[0]['lr'],
+            learning_rate=self.optimizer.param_groups[0]["lr"],
             gradient_norm=avg_grad_norm,
             training_time=epoch_time,
-            samples_per_second=samples_per_second
+            samples_per_second=samples_per_second,
         )
 
         logger.info(
@@ -298,7 +306,9 @@ class TrainingLoop:
                     logger.info(f"New best validation loss: {val_loss:.6f}")
                 else:
                     self.patience_counter += 1
-                    logger.info(f"Validation loss did not improve. Patience: {self.patience_counter}")
+                    logger.info(
+                        f"Validation loss did not improve. Patience: {self.patience_counter}"
+                    )
 
                 # Early stopping
                 if self.patience_counter >= self.config.early_stopping_patience:
@@ -325,13 +335,15 @@ class TrainingLoop:
     def save_checkpoint(self, filename: str):
         """Save model checkpoint."""
         checkpoint = {
-            'epoch': self.current_epoch,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict() if self.scheduler else None,
-            'best_val_loss': self.best_val_loss,
-            'config': self.config,
-            'training_history': self.training_history
+            "epoch": self.current_epoch,
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "scheduler_state_dict": (
+                self.scheduler.state_dict() if self.scheduler else None
+            ),
+            "best_val_loss": self.best_val_loss,
+            "config": self.config,
+            "training_history": self.training_history,
         }
 
         checkpoint_path = self.output_dir / filename
@@ -347,15 +359,15 @@ class TrainingLoop:
 
         checkpoint = torch.load(checkpoint_path, map_location=self.config.device)
 
-        self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-        if checkpoint['scheduler_state_dict'] and self.scheduler:
-            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        if checkpoint["scheduler_state_dict"] and self.scheduler:
+            self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
 
-        self.current_epoch = checkpoint['epoch']
-        self.best_val_loss = checkpoint['best_val_loss']
-        self.training_history = checkpoint.get('training_history', [])
+        self.current_epoch = checkpoint["epoch"]
+        self.best_val_loss = checkpoint["best_val_loss"]
+        self.training_history = checkpoint.get("training_history", [])
 
         logger.info(f"Checkpoint loaded: {checkpoint_path}")
 
@@ -369,15 +381,17 @@ class TrainingLoop:
         grad_norms = [m.gradient_norm for m in self.training_history]
 
         summary = {
-            'total_epochs': len(self.training_history),
-            'best_train_loss': min(losses),
-            'final_train_loss': losses[-1],
-            'best_val_loss': min(val_losses) if val_losses else None,
-            'final_val_loss': val_losses[-1] if val_losses else None,
-            'avg_gradient_norm': np.mean(grad_norms),
-            'max_gradient_norm': max(grad_norms),
-            'total_training_time': sum(m.training_time for m in self.training_history),
-            'avg_samples_per_second': np.mean([m.samples_per_second for m in self.training_history])
+            "total_epochs": len(self.training_history),
+            "best_train_loss": min(losses),
+            "final_train_loss": losses[-1],
+            "best_val_loss": min(val_losses) if val_losses else None,
+            "final_val_loss": val_losses[-1] if val_losses else None,
+            "avg_gradient_norm": np.mean(grad_norms),
+            "max_gradient_norm": max(grad_norms),
+            "total_training_time": sum(m.training_time for m in self.training_history),
+            "avg_samples_per_second": np.mean(
+                [m.samples_per_second for m in self.training_history]
+            ),
         }
 
         return summary
@@ -395,40 +409,45 @@ class TrainingLoop:
             fig, axes = plt.subplots(2, 2, figsize=(12, 8))
 
             # Training loss
-            axes[0, 0].plot(epochs, train_losses, label='Train Loss')
+            axes[0, 0].plot(epochs, train_losses, label="Train Loss")
             if val_losses:
                 val_epochs = [m.epoch for m in self.training_history if m.val_loss > 0]
-                axes[0, 0].plot(val_epochs, val_losses, label='Val Loss')
-            axes[0, 0].set_title('Training and Validation Loss')
-            axes[0, 0].set_xlabel('Epoch')
-            axes[0, 0].set_ylabel('Loss')
+                axes[0, 0].plot(val_epochs, val_losses, label="Val Loss")
+            axes[0, 0].set_title("Training and Validation Loss")
+            axes[0, 0].set_xlabel("Epoch")
+            axes[0, 0].set_ylabel("Loss")
             axes[0, 0].legend()
             axes[0, 0].grid(True)
 
             # Gradient norm
-            axes[0, 1].plot(epochs, grad_norms, label='Gradient Norm')
-            axes[0, 1].axhline(y=self.config.max_grad_norm, color='r', linestyle='--', label='Clip Threshold')
-            axes[0, 1].set_title('Gradient Norm')
-            axes[0, 1].set_xlabel('Epoch')
-            axes[0, 1].set_ylabel('Gradient Norm')
+            axes[0, 1].plot(epochs, grad_norms, label="Gradient Norm")
+            axes[0, 1].axhline(
+                y=self.config.max_grad_norm,
+                color="r",
+                linestyle="--",
+                label="Clip Threshold",
+            )
+            axes[0, 1].set_title("Gradient Norm")
+            axes[0, 1].set_xlabel("Epoch")
+            axes[0, 1].set_ylabel("Gradient Norm")
             axes[0, 1].legend()
             axes[0, 1].grid(True)
 
             # Learning rate
             lrs = [m.learning_rate for m in self.training_history]
-            axes[1, 0].plot(epochs, lrs, label='Learning Rate')
-            axes[1, 0].set_title('Learning Rate')
-            axes[1, 0].set_xlabel('Epoch')
-            axes[1, 0].set_ylabel('Learning Rate')
+            axes[1, 0].plot(epochs, lrs, label="Learning Rate")
+            axes[1, 0].set_title("Learning Rate")
+            axes[1, 0].set_xlabel("Epoch")
+            axes[1, 0].set_ylabel("Learning Rate")
             axes[1, 0].legend()
             axes[1, 0].grid(True)
 
             # Samples per second
             samples_per_sec = [m.samples_per_second for m in self.training_history]
-            axes[1, 1].plot(epochs, samples_per_sec, label='Samples/sec')
-            axes[1, 1].set_title('Training Speed')
-            axes[1, 1].set_xlabel('Epoch')
-            axes[1, 1].set_ylabel('Samples/sec')
+            axes[1, 1].plot(epochs, samples_per_sec, label="Samples/sec")
+            axes[1, 1].set_title("Training Speed")
+            axes[1, 1].set_xlabel("Epoch")
+            axes[1, 1].set_ylabel("Samples/sec")
             axes[1, 1].legend()
             axes[1, 1].grid(True)
 
@@ -444,9 +463,11 @@ class TrainingLoop:
             logger.warning("Matplotlib not available, skipping plot generation")
 
 
-def create_training_loop(model: nn.Module,
-                        config: TrainingConfig,
-                        train_loader: DataLoader,
-                        val_loader: Optional[DataLoader] = None) -> TrainingLoop:
+def create_training_loop(
+    model: nn.Module,
+    config: TrainingConfig,
+    train_loader: DataLoader,
+    val_loader: Optional[DataLoader] = None,
+) -> TrainingLoop:
     """Factory function to create a training loop."""
     return TrainingLoop(model, config, train_loader, val_loader)

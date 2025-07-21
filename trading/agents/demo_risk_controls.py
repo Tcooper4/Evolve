@@ -504,7 +504,10 @@ async def main():
         # Run emergency exits demo
         await demo_emergency_exits()
 
-        logger.info(f"\n🎉 All risk controls demos completed successfully!")
+        logger.info(
+            "Risk controls demo completed. All risk management functions "
+            "have been demonstrated."
+        )
 
     except Exception as e:
         logger.error(f"❌ Demo failed: {e}")

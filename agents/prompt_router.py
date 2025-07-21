@@ -16,8 +16,6 @@ from datetime import datetime
 from difflib import SequenceMatcher
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +62,7 @@ class ProcessedPrompt:
 @dataclass
 class SubTask:
     """Individual sub-task from compound prompt."""
+
     task_id: str
     original_prompt: str
     task_type: RequestType
@@ -78,6 +77,7 @@ class SubTask:
 @dataclass
 class CompoundPromptResult:
     """Result of processing a compound prompt."""
+
     original_prompt: str
     sub_tasks: List[SubTask]
     execution_order: List[str]
@@ -125,7 +125,7 @@ class CompoundPromptParser:
             "urgent": ["urgent", "immediately", "asap", "right now", "now"],
             "high": ["important", "critical", "priority", "first", "primary"],
             "medium": ["also", "additionally", "moreover", "furthermore"],
-            "low": ["later", "eventually", "when possible", "if time permits"]
+            "low": ["later", "eventually", "when possible", "if time permits"],
         }
 
     def is_compound_prompt(self, prompt: str) -> bool:
@@ -147,14 +147,25 @@ class CompoundPromptParser:
 
         # Check for multiple action verbs
         action_verbs = [
-            "forecast", "analyze", "optimize", "create", "build", "test",
-            "evaluate", "compare", "select", "recommend", "investigate"
+            "forecast",
+            "analyze",
+            "optimize",
+            "create",
+            "build",
+            "test",
+            "evaluate",
+            "compare",
+            "select",
+            "recommend",
+            "investigate",
         ]
 
         verb_count = sum(1 for verb in action_verbs if verb in normalized_prompt)
         return verb_count > 1
 
-    def parse_compound_prompt(self, prompt: str, processor: 'PromptProcessor') -> List[SubTask]:
+    def parse_compound_prompt(
+        self, prompt: str, processor: "PromptProcessor"
+    ) -> List[SubTask]:
         """
         Parse compound prompt into sub-tasks.
 
@@ -190,7 +201,7 @@ class CompoundPromptParser:
                 task_type=processed.request_type,
                 parameters=processed.extracted_parameters,
                 priority=priority,
-                dependencies=dependencies
+                dependencies=dependencies,
             )
 
             sub_tasks.append(sub_task)
@@ -209,7 +220,7 @@ class CompoundPromptParser:
                     return parts
 
         # If no clear separators, try to split on sentence boundaries
-        sentences = re.split(r'[.!?]+', prompt)
+        sentences = re.split(r"[.!?]+", prompt)
         sentences = [s.strip() for s in sentences if s.strip()]
 
         # If still only one part, try to identify natural breaks
@@ -219,7 +230,7 @@ class CompoundPromptParser:
                 r"\s+and\s+",
                 r"\s+then\s+",
                 r"\s+also\s+",
-                r"\s+additionally\s+"
+                r"\s+additionally\s+",
             ]
 
             for break_pattern in natural_breaks:
@@ -238,17 +249,14 @@ class CompoundPromptParser:
         for priority_level, indicators in self.priority_indicators.items():
             for indicator in indicators:
                 if indicator in normalized_text:
-                    priority_map = {
-                        "urgent": 1,
-                        "high": 2,
-                        "medium": 3,
-                        "low": 4
-                    }
+                    priority_map = {"urgent": 1, "high": 2, "medium": 3, "low": 4}
                     return priority_map.get(priority_level, 3)
 
         return 3  # Default medium priority
 
-    def _find_dependencies(self, task_text: str, all_tasks: List[str], current_index: int) -> List[str]:
+    def _find_dependencies(
+        self, task_text: str, all_tasks: List[str], current_index: int
+    ) -> List[str]:
         """Find dependencies for a sub-task."""
         dependencies = []
 
@@ -265,7 +273,7 @@ class CompoundPromptParser:
                 if re.search(pattern, normalized_text):
                     # Check if other task is referenced
                     # Extract key terms from other task
-                    other_terms = re.findall(r'\b\w+\b', normalized_other)
+                    other_terms = re.findall(r"\b\w+\b", normalized_other)
                     for term in other_terms:
                         if len(term) > 3 and term in normalized_text:
                             dependencies.append(f"task_{i}_{hash(other_task) % 10000}")
@@ -287,9 +295,15 @@ class PromptProcessor:
         self.config = config or {}
 
         # Load patterns from config or use defaults
-        self.classification_patterns = self.config.get("classification_patterns", self._get_default_classification_patterns())
-        self.parameter_patterns = self.config.get("parameter_patterns", self._get_default_parameter_patterns())
-        self.investment_keywords = self.config.get("investment_keywords", self._get_default_investment_keywords())
+        self.classification_patterns = self.config.get(
+            "classification_patterns", self._get_default_classification_patterns()
+        )
+        self.parameter_patterns = self.config.get(
+            "parameter_patterns", self._get_default_parameter_patterns()
+        )
+        self.investment_keywords = self.config.get(
+            "investment_keywords", self._get_default_investment_keywords()
+        )
 
         # Initialize compound prompt parser
         self.compound_parser = CompoundPromptParser()
@@ -406,7 +420,13 @@ class PromptProcessor:
         self.classification_patterns[RequestType.STRATEGY].append(keyword_pattern)
 
         # Add to parameter patterns
-        self.parameter_patterns["strategy"] = r"\b(" + "|".join([self.parameter_patterns.get("strategy", ""), strategy_name.lower()]) + r")\b"
+        self.parameter_patterns["strategy"] = (
+            r"\b("
+            + "|".join(
+                [self.parameter_patterns.get("strategy", ""), strategy_name.lower()]
+            )
+            + r")\b"
+        )
 
         self.logger.info(f"Added keywords for strategy: {strategy_name}")
 
@@ -418,7 +438,8 @@ class PromptProcessor:
         """
         try:
             import json
-            with open(file_path, 'r') as f:
+
+            with open(file_path, "r") as f:
                 config = json.load(f)
             self.update_patterns(config)
             self.logger.info(f"Patterns loaded from file: {file_path}")
@@ -434,7 +455,7 @@ class PromptProcessor:
         return {
             "classification_patterns": self.classification_patterns,
             "parameter_patterns": self.parameter_patterns,
-            "investment_keywords": self.investment_keywords
+            "investment_keywords": self.investment_keywords,
         }
 
     def process_prompt(
@@ -492,7 +513,9 @@ class PromptProcessor:
         )
         return processed_prompt
 
-    def process_compound_prompt(self, prompt: str, context: Optional[PromptContext] = None) -> CompoundPromptResult:
+    def process_compound_prompt(
+        self, prompt: str, context: Optional[PromptContext] = None
+    ) -> CompoundPromptResult:
         """
         Process compound prompt by parsing into sub-tasks and determining execution order.
 
@@ -515,7 +538,7 @@ class PromptProcessor:
                     original_prompt=prompt,
                     task_type=processed.request_type,
                     parameters=processed.extracted_parameters,
-                    priority=3
+                    priority=3,
                 )
 
                 return CompoundPromptResult(
@@ -524,7 +547,7 @@ class PromptProcessor:
                     execution_order=[sub_task.task_id],
                     overall_status="single_task",
                     combined_result={"type": "single_task", "task": sub_task},
-                    processing_time=(datetime.now() - start_time).total_seconds()
+                    processing_time=(datetime.now() - start_time).total_seconds(),
                 )
 
             # Parse compound prompt
@@ -539,7 +562,7 @@ class PromptProcessor:
                 execution_order=execution_order,
                 overall_status="parsed",
                 combined_result={"type": "compound", "task_count": len(sub_tasks)},
-                processing_time=(datetime.now() - start_time).total_seconds()
+                processing_time=(datetime.now() - start_time).total_seconds(),
             )
 
         except Exception as e:
@@ -551,7 +574,7 @@ class PromptProcessor:
                 overall_status="error",
                 combined_result={"error": str(e)},
                 processing_time=(datetime.now() - start_time).total_seconds(),
-                errors=[str(e)]
+                errors=[str(e)],
             )
 
     def _determine_execution_order(self, sub_tasks: List[SubTask]) -> List[str]:
@@ -1060,4 +1083,4 @@ class PromptRouterAgent:
         Returns:
             Dict: Response from prompt handling
         """
-        return self.handle_prompt(prompt) 
+        return self.handle_prompt(prompt)

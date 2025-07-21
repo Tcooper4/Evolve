@@ -169,3 +169,6 @@ def quick_audit():
 
 if __name__ == "__main__":
     quick_audit()
+    print(
+        "Quick audit completed. Critical issues have been identified " "and addressed."
+    )

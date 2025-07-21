@@ -8,14 +8,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from trading.optimization.base_optimizer import OptimizerConfig
 from trading.optimization.performance_logger import (
     PerformanceLogger,
     PerformanceMetrics,
 )
-from trading.optimization.strategy_optimizer import (
-    StrategyOptimizer,
-)
-from trading.optimization.base_optimizer import OptimizerConfig
+from trading.optimization.strategy_optimizer import StrategyOptimizer
 from trading.optimization.strategy_selection_agent import StrategySelectionAgent
 
 # Test data generation
@@ -405,7 +403,7 @@ def test_optimized_params_strictly_better_than_defaults(
     ]
 
     for i, default_params in enumerate(default_param_sets):
-        print(f"\n  📊 Testing default set {i+1}: {default_params}")
+        print(f"\n  📊 Testing default set {i + 1}: {default_params}")
 
         # Set default parameters
         strategy.window = default_params["window"]
@@ -440,10 +438,9 @@ def test_optimized_params_strictly_better_than_defaults(
         )
 
         # Assert primary metric (sharpe_ratio) is strictly better
-        assert optimized_metrics["sharpe_ratio"] > default_metrics["sharpe_ratio"], (
-            f"Optimized Sharpe {optimized_metrics['sharpe_ratio']:.3f} not better than default {default_metrics['sharpe_ratio']:.3f} "
-            f"for params {default_params} -> {optimized_params}"
-        )
+        assert optimized_metrics["sharpe_ratio"] > default_metrics["sharpe_ratio"], (f"Optimized Sharpe {
+            optimized_metrics['sharpe_ratio']:.3f} not better than default {
+            default_metrics['sharpe_ratio']:.3f} " f"for params {default_params} -> {optimized_params}")
 
         # Assert win rate is better or equal (with tolerance for noise)
         assert (
@@ -452,8 +449,9 @@ def test_optimized_params_strictly_better_than_defaults(
 
         # Assert max drawdown is not significantly worse
         assert (
-            optimized_metrics["max_drawdown"] >= default_metrics["max_drawdown"] - 0.1
-        ), f"Optimized max drawdown {optimized_metrics['max_drawdown']:.3f} significantly worse than default {default_metrics['max_drawdown']:.3f}"
+            optimized_metrics["max_drawdown"] >= default_metrics["max_drawdown"] - 0.1), f"Optimized max drawdown {
+            optimized_metrics['max_drawdown']:.3f} significantly worse than default {
+            default_metrics['max_drawdown']:.3f}"
 
         # Calculate improvement percentages
         sharpe_improvement = (
@@ -510,7 +508,7 @@ def test_optimized_params_strictly_better_than_defaults(
         )
         consistency_results.append(improvement)
 
-        print(f"    Run {run+1}: Improvement = {improvement:.3f}")
+        print(f"    Run {run + 1}: Improvement = {improvement:.3f}")
 
     # Verify consistency
     improvement_variance = np.var(consistency_results)
@@ -582,8 +580,9 @@ def test_optimized_params_strictly_better_than_defaults(
 
     # Verify generalization
     assert (
-        optimized_val_metrics["sharpe_ratio"] > default_val_metrics["sharpe_ratio"]
-    ), f"Optimized parameters don't generalize: {optimized_val_metrics['sharpe_ratio']:.3f} vs {default_val_metrics['sharpe_ratio']:.3f}"
+        optimized_val_metrics["sharpe_ratio"] > default_val_metrics["sharpe_ratio"]), f"Optimized parameters don't generalize: {
+        optimized_val_metrics['sharpe_ratio']:.3f} vs {
+            default_val_metrics['sharpe_ratio']:.3f}"
 
     print("✅ Optimized parameters strictly better than defaults test completed")
 

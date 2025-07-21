@@ -1,4 +1,4 @@
-﻿"""
+"""
 Model evaluation utilities for the trading system.
 """
 
@@ -11,6 +11,7 @@ import numpy as np
 try:
     from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
     from sklearn.model_selection import cross_val_score
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ scikit-learn not available. Disabling model evaluation features.")
@@ -35,9 +36,11 @@ class ModelEvaluator:
     ) -> Dict[str, float]:
         """Evaluate regression model performance."""
         if not SKLEARN_AVAILABLE:
-            logger.warning("scikit-learn not available. Cannot evaluate regression model.")
+            logger.warning(
+                "scikit-learn not available. Cannot evaluate regression model."
+            )
             return {}
-        
+
         try:
             # Remove NaN values
             mask = ~(np.isnan(y_true) | np.isnan(y_pred))
@@ -147,9 +150,11 @@ class ModelEvaluator:
     ) -> Dict[str, float]:
         """Perform cross-validation."""
         if not SKLEARN_AVAILABLE:
-            logger.warning("scikit-learn not available. Cannot perform cross-validation.")
+            logger.warning(
+                "scikit-learn not available. Cannot perform cross-validation."
+            )
             return {}
-        
+
         try:
             scores = cross_val_score(model, X, y, cv=cv, scoring=scoring)
 

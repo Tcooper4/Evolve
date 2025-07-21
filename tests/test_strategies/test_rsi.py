@@ -9,12 +9,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from trading.strategies.rsi_signals import generate_rsi_signals
+
 # Add project root to path for imports
 sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-
-from trading.strategies.rsi_signals import generate_rsi_signals
 
 
 class TestRSISignals:
@@ -144,9 +144,10 @@ class TestRSISignals:
             "sell_threshold": 75,
         }
 
-        with patch(
-            "builtins.open", mock_open(read_data=json.dumps(mock_settings))
-        ), patch("pathlib.Path.exists", return_value=True):
+        with (
+            patch("builtins.open", mock_open(read_data=json.dumps(mock_settings))),
+            patch("pathlib.Path.exists", return_value=True),
+        ):
             result = generate_rsi_signals(sample_price_data, ticker="AAPL")
 
             # Should use optimized settings

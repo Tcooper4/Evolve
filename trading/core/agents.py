@@ -1,4 +1,4 @@
-﻿"""
+"""
 Agent Management and Callback System for Trading Performance
 
 This module provides agent management capabilities, status tracking, and callback
@@ -145,9 +145,9 @@ class AgentManager:
             event_type: [] for event_type in EventType
         }
         self.event_history: List[EventData] = []
-        self.agent_status_log: Dict[
-            str, Dict[str, Any]
-        ] = {}  # Track agent status with timestamps
+        self.agent_status_log: Dict[str, Dict[str, Any]] = (
+            {}
+        )  # Track agent status with timestamps
         self._load_agents()
 
     def register_agent(self, agent_config: AgentConfig) -> bool:
@@ -592,7 +592,7 @@ class EventHandlers:
                 logger.warning(f"Performance issue: {issue}")
 
             # Implement automated responses
-            logger.info(f"Implementing automated responses for {agent_name}")
+            logger.info(f"Implementing automated responses for {event_data.agent_id}")
 
             # Action 1: Trigger model retraining if performance is poor
             if performance_data["sharpe_ratio"] < 0.5:
@@ -633,12 +633,12 @@ class EventHandlers:
                     logger.error(f"Failed to switch strategy: {e}")
             if performance_data["sharpe_ratio"] < 0.5:
                 logger.warning(
-                    f"Low Sharpe ratio detected for {agent_name}: {performance_data['sharpe_ratio']}"
+                    f"Low Sharpe ratio detected for {event_data.agent_id}: {performance_data['sharpe_ratio']}"
                 )
                 return "low_performance"
             elif performance_data["max_drawdown"] > 0.2:
                 logger.warning(
-                    f"High drawdown detected for {agent_name}: {performance_data['max_drawdown']}"
+                    f"High drawdown detected for {event_data.agent_id}: {performance_data['max_drawdown']}"
                 )
                 return "high_risk"
             else:
@@ -881,7 +881,9 @@ def handle_underperformance(status_report: Dict[str, Any]) -> None:
                 handler = NotificationHandler()
                 handler.send_alert(
                     level="critical",
-                    message=f"Critical performance degradation: Sharpe={current_sharpe:.3f}, Drawdown={current_drawdown:.3f}",
+                    message=f"Critical performance degradation: Sharpe={
+                        current_sharpe:.3f}, Drawdown={
+                        current_drawdown:.3f}",
                     recipients=["admin"],
                 )
                 logger.info("Alert notifications sent")
@@ -892,8 +894,10 @@ def handle_underperformance(status_report: Dict[str, Any]) -> None:
         logger.info("[Agent Callback] Underperformance detected. Status report:")
         logger.info(status_report)
         logger.info(
-            f"Actions taken: retraining={current_sharpe < 0.5}, strategy_switch={current_drawdown > 0.15}, alerts={current_sharpe < 0.3}"
-        )
+            f"Actions taken: retraining={
+                current_sharpe < 0.5}, strategy_switch={
+                current_drawdown > 0.15}, alerts={
+                current_sharpe < 0.3}")
 
     except Exception as e:
         logger.error(f"Error in legacy handle_underperformance: {e}")
@@ -904,6 +908,6 @@ def handle_underperformance(status_report: Dict[str, Any]) -> None:
 
 # --- Initialize Default Event Handlers ---
 
-# Note: Legacy register_callback system removed. 
+# Note: Legacy register_callback system removed.
 # Use modern event handling patterns instead.
 # If agent lifecycle events need tracking, implement proper hooks or logging systems.

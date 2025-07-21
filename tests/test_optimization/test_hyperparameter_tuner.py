@@ -368,9 +368,10 @@ class TestHyperparameterOptimizer:
         optimizer = HyperparameterOptimizer(backend="optuna")
 
         # Mock matplotlib and optuna visualization
-        with patch("matplotlib.pyplot") as mock_plt, patch(
-            "trading.optimization.optuna_optimizer.optuna"
-        ) as mock_optuna:
+        with (
+            patch("matplotlib.pyplot") as mock_plt,
+            patch("trading.optimization.optuna_optimizer.optuna") as mock_optuna,
+        ):
             mock_optuna.visualization.matplotlib.plot_optimization_history = Mock()
             mock_optuna.visualization.matplotlib.plot_param_importances = Mock()
 

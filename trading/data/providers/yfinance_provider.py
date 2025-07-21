@@ -1,4 +1,4 @@
-﻿"""Yahoo Finance data provider with caching and logging."""
+"""Yahoo Finance data provider with caching and logging."""
 
 import logging
 import pickle
@@ -13,6 +13,7 @@ import requests
 # Try to import yfinance
 try:
     import yfinance as yf
+
     YFINANCE_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ yfinance not available. Disabling Yahoo Finance data provider.")
@@ -28,6 +29,7 @@ try:
         stop_after_attempt,
         wait_exponential,
     )
+
     TENACITY_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ tenacity not available. Disabling retry logic.")
@@ -201,7 +203,7 @@ class YFinanceProvider(BaseDataProvider):
         """
         if not YFINANCE_AVAILABLE:
             raise RuntimeError("yfinance is not available. Cannot fetch data.")
-        
+
         if not self.is_enabled():
             raise RuntimeError("Provider is disabled")
 

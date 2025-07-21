@@ -36,19 +36,24 @@ class RoutingError(TradingError):
 @dataclass
 class ErrorContext:
     """Context information for error handling."""
+
     function_name: str
     context_data: Dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
     errors: List[Dict[str, Any]] = field(default_factory=list)
 
-    def add_error(self, error_type: str, message: str, details: Optional[Dict[str, Any]] = None):
+    def add_error(
+        self, error_type: str, message: str, details: Optional[Dict[str, Any]] = None
+    ):
         """Add an error to the context."""
-        self.errors.append({
-            "type": error_type,
-            "message": message,
-            "details": details,
-            "timestamp": datetime.now().isoformat()
-        })
+        self.errors.append(
+            {
+                "type": error_type,
+                "message": message,
+                "details": details,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert context to dictionary."""
@@ -56,7 +61,7 @@ class ErrorContext:
             "function_name": self.function_name,
             "context_data": self.context_data,
             "timestamp": self.timestamp.isoformat(),
-            "errors": self.errors
+            "errors": self.errors,
         }
 
 
@@ -66,34 +71,37 @@ class ErrorRecoveryStrategy:
     @staticmethod
     def retry(max_attempts: int = 3, delay: float = 1) -> Callable:
         """Create a retry strategy."""
+
         def strategy(error: Exception, context: ErrorContext) -> Dict[str, Any]:
             return {
                 "action": "retry",
                 "max_attempts": max_attempts,
                 "delay": delay,
-                "success": True
+                "success": True,
             }
+
         return strategy
 
     @staticmethod
     def fallback(fallback_function: str = None) -> Callable:
         """Create a fallback strategy."""
+
         def strategy(error: Exception, context: ErrorContext) -> Dict[str, Any]:
             return {
                 "action": "fallback",
                 "fallback_function": fallback_function,
-                "success": True
+                "success": True,
             }
+
         return strategy
 
     @staticmethod
     def log_and_continue() -> Callable:
         """Create a log and continue strategy."""
+
         def strategy(error: Exception, context: ErrorContext) -> Dict[str, Any]:
-            return {
-                "action": "log_and_continue",
-                "success": True
-            }
+            return {"action": "log_and_continue", "success": True}
+
         return strategy
 
 
@@ -104,7 +112,9 @@ class ErrorHandler:
         self.recovery_strategies: Dict[Type[Exception], Callable] = {}
         self.error_counts: Dict[str, int] = {}
 
-    def register_recovery_strategy(self, exception_type: Type[Exception], strategy: Callable):
+    def register_recovery_strategy(
+        self, exception_type: Type[Exception], strategy: Callable
+    ):
         """Register a recovery strategy for an exception type."""
         self.recovery_strategies[exception_type] = strategy
 
@@ -128,7 +138,7 @@ class ErrorHandler:
             "action": "log_and_fail",
             "success": False,
             "error_type": error_type.__name__,
-            "message": str(error)
+            "message": str(error),
         }
 
 
@@ -139,9 +149,10 @@ error_handler = ErrorHandler()
 # Simple error logging decorator
 def log_errors(
     logger: Optional[logging.Logger] = None,
-    error_types: Optional[tuple[Type[Exception], ...]] = (Exception,)
+    error_types: Optional[tuple[Type[Exception], ...]] = (Exception,),
 ) -> Callable:
     """Decorator to log errors in a function."""
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
@@ -152,7 +163,9 @@ def log_errors(
                 log.error(f"Error in {func.__name__}: {e}")
                 log.error(traceback.format_exc())
                 raise
+
         return wrapper
+
     return decorator
 
 
@@ -160,9 +173,10 @@ def retry_on_error(
     max_retries: int = 3,
     delay: float = 1,
     retry_exceptions: tuple[Type[Exception], ...] = (Exception,),
-    backoff_factor: float = 10
+    backoff_factor: float = 10,
 ) -> Callable:
     """Decorator to retry functions on specific exceptions."""
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
@@ -174,20 +188,27 @@ def retry_on_error(
                 except retry_exceptions as e:
                     last_exception = e
                     if attempt < max_retries:
-                        sleep_time = delay * (backoff_factor ** attempt)
-                        logger.warning(f"Attempt {attempt + 1} failed for {func.__name__}: {e}. Retrying in {sleep_time}s...")
+                        sleep_time = delay * (backoff_factor**attempt)
+                        logger.warning(
+                            f"Attempt {attempt + 1} failed for {func.__name__}: {e}. Retrying in {sleep_time}s..."
+                        )
                         time.sleep(sleep_time)
                     else:
-                        logger.error(f"All {max_retries + 1} attempts failed for {func.__name__}: {e}")
+                        logger.error(
+                            f"All {max_retries + 1} attempts failed for {func.__name__}: {e}"
+                        )
                         raise
 
             raise last_exception
+
         return wrapper
+
     return decorator
 
 
 def handle_routing_errors(func: Callable) -> Callable:
     """Decorator to handle routing-specific errors."""
+
     @wraps(func)
     def wrapper(*args, **kwargs) -> Any:
         try:
@@ -198,10 +219,7 @@ def handle_routing_errors(func: Callable) -> Callable:
             # Create error context
             context = ErrorContext(
                 function_name=func.__name__,
-                context_data={
-                    "args": str(args),
-                    "kwargs": str(kwargs)
-                }
+                context_data={"args": str(args), "kwargs": str(kwargs)},
             )
 
             # Handle with error handler
@@ -214,8 +232,8 @@ def handle_routing_errors(func: Callable) -> Callable:
                     "type": type(e).__name__,
                     "message": str(e),
                     "context": context.to_dict(),
-                    "recovery_action": result.get("action")
-                }
+                    "recovery_action": result.get("action"),
+                },
             }
 
     return wrapper
@@ -223,14 +241,12 @@ def handle_routing_errors(func: Callable) -> Callable:
 
 def with_error_context(func: Callable) -> Callable:
     """Decorator to add error context to function calls."""
+
     @wraps(func)
     def wrapper(*args, **kwargs) -> Any:
         context = ErrorContext(
             function_name=func.__name__,
-            context_data={
-                "args_count": len(args),
-                "kwargs_keys": list(kwargs.keys())
-            }
+            context_data={"args_count": len(args), "kwargs_keys": list(kwargs.keys())},
         )
 
         try:
@@ -249,7 +265,7 @@ def safe_execute(
     func: Callable,
     default_return: Any = None,
     error_types: tuple[Type[Exception], ...] = (Exception,),
-    logger: Optional[logging.Logger] = None
+    logger: Optional[logging.Logger] = None,
 ) -> Any:
     """Safely execute a function with error handling."""
     try:
@@ -262,7 +278,7 @@ def safe_execute(
 
 def validate_error_context(context: ErrorContext) -> bool:
     """Validate error context structure."""
-    return hasattr(context, 'function_name') and hasattr(context, 'errors')
+    return hasattr(context, "function_name") and hasattr(context, "errors")
 
 
 def get_error_summary() -> Dict[str, Any]:
@@ -270,5 +286,5 @@ def get_error_summary() -> Dict[str, Any]:
     return {
         "error_counts": error_handler.error_counts,
         "total_errors": sum(error_handler.error_counts.values()),
-        "unique_error_types": len(error_handler.error_counts)
-    } 
+        "unique_error_types": len(error_handler.error_counts),
+    }

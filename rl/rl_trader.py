@@ -1,4 +1,4 @@
-﻿"""Reinforcement Learning Trader for Evolve Trading Platform.
+"""Reinforcement Learning Trader for Evolve Trading Platform.
 
 This module implements a PPO-based RL trader using stable-baselines3
 with a custom Gym-compatible trading environment.
@@ -198,10 +198,10 @@ class TradingEnvironment:
         # Technical indicators
         if self.current_step >= 20:
             # Moving averages
-            ma_5 = self.data.iloc[self.current_step - 5 : self.current_step][
+            ma_5 = self.data.iloc[self.current_step - 5: self.current_step][
                 "Close"
             ].mean()
-            ma_20 = self.data.iloc[self.current_step - 20 : self.current_step][
+            ma_20 = self.data.iloc[self.current_step - 20: self.current_step][
                 "Close"
             ].mean()
             ma_features = [
@@ -258,14 +258,18 @@ class TradingEnvironment:
 
         metrics = {
             "total_return": (self.total_value / self.initial_balance) - 1,
-            "sharpe_ratio": returns_series.mean() / returns_series.std() * np.sqrt(252)
-            if returns_series.std() > 0
-            else 0,
+            "sharpe_ratio": (
+                returns_series.mean() / returns_series.std() * np.sqrt(252)
+                if returns_series.std() > 0
+                else 0
+            ),
             "volatility": returns_series.std() * np.sqrt(252),
             "max_drawdown": self._calculate_max_drawdown(),
-            "win_rate": len([r for r in self.returns if r > 0]) / len(self.returns)
-            if self.returns
-            else 0,
+            "win_rate": (
+                len([r for r in self.returns if r > 0]) / len(self.returns)
+                if self.returns
+                else 0
+            ),
             "num_trades": len(self.trades),
         }
 
@@ -310,8 +314,10 @@ class TrainingCallback(BaseCallback):
                 # Calculate metrics for completed episodes
                 completed_episodes = sum(dones)
                 if completed_episodes > 0:
-                    logger.info(f"Completed {completed_episodes} episodes in this rollout")
-                    
+                    logger.info(
+                        f"Completed {completed_episodes} episodes in this rollout"
+                    )
+
                     # Calculate average reward for completed episodes
                     if "rewards" in self.locals:
                         episode_rewards = self.locals["rewards"]
@@ -495,9 +501,11 @@ class RLTrader:
                 "mean_return": np.mean(total_returns),
                 "std_return": np.std(total_returns),
                 "mean_final_value": np.mean(final_values),
-                "sharpe_ratio": np.mean(total_returns) / np.std(total_returns)
-                if np.std(total_returns) > 0
-                else 0,
+                "sharpe_ratio": (
+                    np.mean(total_returns) / np.std(total_returns)
+                    if np.std(total_returns) > 0
+                    else 0
+                ),
             }
 
             evaluation_metrics.update(avg_metrics)
@@ -571,20 +579,23 @@ class RLTrader:
     def get_system_health(self) -> Dict[str, Any]:
         """Get overall system health."""
         return {
-            "overall_status": "healthy"
-            if (
-                self.model is not None
-                and GYMNASIUM_AVAILABLE
-                and STABLE_BASELINES3_AVAILABLE
-            )
-            else "degraded",
+            "overall_status": (
+                "healthy"
+                if (
+                    self.model is not None
+                    and GYMNASIUM_AVAILABLE
+                    and STABLE_BASELINES3_AVAILABLE
+                )
+                else "degraded"
+            ),
             "model_available": self.model is not None,
             "gymnasium_available": GYMNASIUM_AVAILABLE,
             "stable_baselines3_available": STABLE_BASELINES3_AVAILABLE,
-            "last_training_success": self.last_training_metrics.get("total_return", 0)
-            > 0
-            if self.last_training_metrics
-            else False,
+            "last_training_success": (
+                self.last_training_metrics.get("total_return", 0) > 0
+                if self.last_training_metrics
+                else False
+            ),
         }
 
 

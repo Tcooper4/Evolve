@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Trade Execution Simulator with realistic market impact modeling.
 Enhanced with Batch 9 features: slippage model, random fill success simulation,
@@ -9,7 +9,7 @@ import logging
 import random
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -41,6 +41,7 @@ class OrderStatus(str, Enum):
 
 class FillType(str, Enum):
     """Fill types for Batch 9 enhancement."""
+
     IMMEDIATE = "immediate"
     PARTIAL = "partial"
     DELAYED = "delayed"
@@ -50,6 +51,7 @@ class FillType(str, Enum):
 @dataclass
 class OrderBookLevel:
     """Order book level for Batch 9 enhancement."""
+
     price: float
     quantity: float
     side: str  # 'bid' or 'ask'
@@ -59,6 +61,7 @@ class OrderBookLevel:
 @dataclass
 class OrderBook:
     """Order book snapshot for Batch 9 enhancement."""
+
     symbol: str
     timestamp: datetime
     bids: List[OrderBookLevel]
@@ -142,7 +145,9 @@ class TradeExecutionSimulator:
         self.base_slippage = self.config.get("base_slippage", 0.0001)  # 1 basis point
         self.volume_impact_factor = self.config.get("volume_impact_factor", 0.1)
         self.volatility_impact_factor = self.config.get("volatility_impact_factor", 0.5)
-        self.slippage_model = self.config.get("slippage_model", "linear")  # Batch 9 enhancement
+        self.slippage_model = self.config.get(
+            "slippage_model", "linear"
+        )  # Batch 9 enhancement
 
         # Execution delay configuration
         self.min_execution_delay = self.config.get(
@@ -161,12 +166,12 @@ class TradeExecutionSimulator:
         self.base_fill_rate = self.config.get("base_fill_rate", 0.95)
         self.volume_fill_factor = self.config.get("volume_fill_factor", 0.1)
         self.volatility_fill_factor = self.config.get("volatility_fill_factor", 0.3)
-        
+
         # Market constraint configuration (Batch 9 enhancement)
         self.max_order_size = self.config.get("max_order_size", 1000000)  # $1M
         self.min_order_size = self.config.get("min_order_size", 100)  # $100
         self.max_daily_volume = self.config.get("max_daily_volume", 10000000)  # $10M
-        
+
         # Orderbook configuration (Batch 9 enhancement)
         self.orderbook_levels = self.config.get("orderbook_levels", 10)
         self.spread_multiplier = self.config.get("spread_multiplier", 1.5)
@@ -243,7 +248,10 @@ class TradeExecutionSimulator:
             raise
 
     def execute_order(
-        self, order_id: str, market_data: pd.DataFrame, orderbook_data: Optional[OrderBook] = None
+        self,
+        order_id: str,
+        market_data: pd.DataFrame,
+        orderbook_data: Optional[OrderBook] = None,
     ) -> ExecutionResult:
         """
         Execute an order with realistic market simulation and Batch 9 enhancements.
@@ -264,20 +272,30 @@ class TradeExecutionSimulator:
 
             # Check if order can be executed
             if not self._can_execute_order(order, market_data):
-                return self._create_rejected_result(order, "Market conditions prevent execution")
+                return self._create_rejected_result(
+                    order, "Market conditions prevent execution"
+                )
 
             # Generate or use orderbook (Batch 9 enhancement)
-            orderbook = orderbook_data or self._generate_orderbook(order.symbol, market_data)
+            orderbook = orderbook_data or self._generate_orderbook(
+                order.symbol, market_data
+            )
 
             # Calculate fill success probability (Batch 9 enhancement)
-            fill_probability = self._calculate_fill_probability(order, market_data, orderbook)
+            fill_probability = self._calculate_fill_probability(
+                order, market_data, orderbook
+            )
 
             # Simulate fill success (Batch 9 enhancement)
             if random.random() > fill_probability:
-                return self._create_failed_result(order, "Fill failed due to market conditions")
+                return self._create_failed_result(
+                    order, "Fill failed due to market conditions"
+                )
 
             # Calculate execution parameters
-            execution_price = self._calculate_execution_price(order, market_data, orderbook)
+            execution_price = self._calculate_execution_price(
+                order, market_data, orderbook
+            )
             slippage = self._calculate_slippage(order, market_data, orderbook)
             commission = self._calculate_commission(order, execution_price)
             market_impact = self._calculate_market_impact(order, market_data, orderbook)
@@ -287,7 +305,9 @@ class TradeExecutionSimulator:
             time.sleep(execution_delay)
 
             # Calculate total cost
-            total_cost = self._calculate_total_cost(order, execution_price, commission, slippage)
+            total_cost = self._calculate_total_cost(
+                order, execution_price, commission, slippage
+            )
 
             # Update order status
             order.status = OrderStatus.FILLED
@@ -315,7 +335,7 @@ class TradeExecutionSimulator:
                 total_cost=total_cost,
                 success=True,
                 fill_type=FillType.IMMEDIATE,
-                orderbook_snapshot=orderbook
+                orderbook_snapshot=orderbook,
             )
 
             # Store execution history
@@ -331,8 +351,7 @@ class TradeExecutionSimulator:
         except Exception as e:
             self.logger.error(f"Error executing order {order_id}: {str(e)}")
             return self._create_failed_result(
-                self.orders.get(order_id), 
-                f"Execution error: {str(e)}"
+                self.orders.get(order_id), f"Execution error: {str(e)}"
             )
 
     def _validate_order_parameters(
@@ -465,7 +484,9 @@ class TradeExecutionSimulator:
             self.logger.error(f"Error calculating spread: {str(e)}")
             return self.base_spread
 
-    def _calculate_slippage(self, order: Order, market_data: pd.DataFrame, orderbook: OrderBook) -> float:
+    def _calculate_slippage(
+        self, order: Order, market_data: pd.DataFrame, orderbook: OrderBook
+    ) -> float:
         """Calculate slippage based on order size and market conditions."""
         try:
             # Base slippage
@@ -587,7 +608,9 @@ class TradeExecutionSimulator:
             failure_reason=reason,
         )
 
-    def _create_failed_result(self, order: Optional[Order], reason: str) -> ExecutionResult:
+    def _create_failed_result(
+        self, order: Optional[Order], reason: str
+    ) -> ExecutionResult:
         """Create failed execution result (Batch 9 enhancement)."""
         if order is None:
             return ExecutionResult(
@@ -604,30 +627,36 @@ class TradeExecutionSimulator:
                 total_cost=0.0,
                 success=False,
                 fill_type=FillType.FAILED,
-                failure_reason=reason
+                failure_reason=reason,
             )
-        
+
         return self._create_rejected_result(order, reason)
 
-    def _check_market_constraints(self, symbol: str, quantity: float, price: Optional[float]) -> bool:
+    def _check_market_constraints(
+        self, symbol: str, quantity: float, price: Optional[float]
+    ) -> bool:
         """Check market constraints (Batch 9 enhancement)."""
         # Check order size limits
         order_value = quantity * (price or 100)  # Use $100 as default price
-        
+
         if order_value < self.min_order_size:
-            self.logger.warning(f"Order value {order_value} below minimum {self.min_order_size}")
+            self.logger.warning(
+                f"Order value {order_value} below minimum {self.min_order_size}"
+            )
             return False
-        
+
         if order_value > self.max_order_size:
-            self.logger.warning(f"Order value {order_value} above maximum {self.max_order_size}")
+            self.logger.warning(
+                f"Order value {order_value} above maximum {self.max_order_size}"
+            )
             return False
-        
+
         # Check daily volume limits
         daily_volume = self.daily_volume.get(symbol, 0)
         if daily_volume + order_value > self.max_daily_volume:
             self.logger.warning(f"Daily volume limit exceeded for {symbol}")
             return False
-        
+
         return True
 
     def _generate_orderbook(self, symbol: str, market_data: pd.DataFrame) -> OrderBook:
@@ -638,87 +667,96 @@ class TradeExecutionSimulator:
             spread = 0.01
         else:
             # Use market data to generate realistic orderbook
-            mid_price = market_data.get('close', pd.Series([100.0])).iloc[-1]
-            
+            mid_price = market_data.get("close", pd.Series([100.0])).iloc[-1]
+
             # Calculate historical spread
-            if 'high' in market_data.columns and 'low' in market_data.columns:
-                historical_spread = (market_data['high'] - market_data['low']) / mid_price
+            if "high" in market_data.columns and "low" in market_data.columns:
+                historical_spread = (
+                    market_data["high"] - market_data["low"]
+                ) / mid_price
                 spread = historical_spread.mean() * self.spread_multiplier
             else:
                 spread = 0.002  # Default 0.2% spread
-        
+
         # Generate bid and ask levels
         bids = []
         asks = []
-        
+
         for i in range(self.orderbook_levels):
             # Bid levels (below mid price)
-            bid_price = mid_price * (1 - spread/2 - i * spread/self.orderbook_levels)
-            bid_quantity = 1000 * (self.volume_decay_factor ** i)  # Decreasing volume
-            bids.append(OrderBookLevel(
-                price=bid_price,
-                quantity=bid_quantity,
-                side='bid',
-                timestamp=datetime.now()
-            ))
-            
+            bid_price = mid_price * (
+                1 - spread / 2 - i * spread / self.orderbook_levels
+            )
+            bid_quantity = 1000 * (self.volume_decay_factor**i)  # Decreasing volume
+            bids.append(
+                OrderBookLevel(
+                    price=bid_price,
+                    quantity=bid_quantity,
+                    side="bid",
+                    timestamp=datetime.now(),
+                )
+            )
+
             # Ask levels (above mid price)
-            ask_price = mid_price * (1 + spread/2 + i * spread/self.orderbook_levels)
-            ask_quantity = 1000 * (self.volume_decay_factor ** i)  # Decreasing volume
-            asks.append(OrderBookLevel(
-                price=ask_price,
-                quantity=ask_quantity,
-                side='ask',
-                timestamp=datetime.now()
-            ))
-        
+            ask_price = mid_price * (
+                1 + spread / 2 + i * spread / self.orderbook_levels
+            )
+            ask_quantity = 1000 * (self.volume_decay_factor**i)  # Decreasing volume
+            asks.append(
+                OrderBookLevel(
+                    price=ask_price,
+                    quantity=ask_quantity,
+                    side="ask",
+                    timestamp=datetime.now(),
+                )
+            )
+
         return OrderBook(
             symbol=symbol,
             timestamp=datetime.now(),
             bids=bids,
             asks=asks,
             spread=spread,
-            mid_price=mid_price
+            mid_price=mid_price,
         )
 
     def _calculate_fill_probability(
-        self, 
-        order: Order, 
-        market_data: pd.DataFrame,
-        orderbook: OrderBook
+        self, order: Order, market_data: pd.DataFrame, orderbook: OrderBook
     ) -> float:
         """Calculate probability of successful fill (Batch 9 enhancement)."""
         base_probability = self.base_fill_rate
-        
+
         # Adjust for volume
         if order.quantity > 0:
-            volume_ratio = order.quantity / sum(level.quantity for level in orderbook.bids[:3])
+            volume_ratio = order.quantity / sum(
+                level.quantity for level in orderbook.bids[:3]
+            )
             volume_adjustment = max(0, 1 - volume_ratio * self.volume_fill_factor)
             base_probability *= volume_adjustment
-        
+
         # Adjust for volatility
         volatility = self._get_volatility(order.symbol, market_data)
         volatility_adjustment = max(0, 1 - volatility * self.volatility_fill_factor)
         base_probability *= volatility_adjustment
-        
+
         # Adjust for order type
         if order.order_type == OrderType.MARKET:
             base_probability *= 0.95  # Market orders have slightly lower fill rate
-        
+
         return max(0.1, min(0.99, base_probability))
 
     def _get_volatility(self, symbol: str, market_data: pd.DataFrame) -> float:
         """Get volatility for a symbol (Batch 9 enhancement)."""
         if symbol in self.volatility_cache:
             return self.volatility_cache[symbol]
-        
+
         if market_data.empty:
             volatility = 0.02  # Default 2% volatility
         else:
             # Calculate historical volatility
-            returns = market_data.get('close', pd.Series([100.0])).pct_change().dropna()
+            returns = market_data.get("close", pd.Series([100.0])).pct_change().dropna()
             volatility = returns.std()
-        
+
         self.volatility_cache[symbol] = volatility
         return volatility
 

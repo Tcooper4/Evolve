@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import secrets
@@ -10,10 +9,11 @@ from typing import Any, Dict, Optional
 import toml
 import yaml
 from cachetools import TTLCache
-from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from ratelimit import limits, sleep_and_retry
+
+from utils.launch_utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -53,41 +53,17 @@ class ConfigFile(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.now)
 
 
-class AutomationConfig:
-    """Configuration management functionality."""
-
-    def __init__(self, config_dir: str = "automation/config", env_file: str = ".env"):
-        """Initialize configuration manager."""
-        self.config_dir = Path(config_dir)
-        self.env_file = Path(env_file)
+class AutomationConfigService:
+    def __init__(self):
         self.setup_logging()
-        self.setup_encryption()
-        self.setup_cache()
-        self.config_files: Dict[str, ConfigFile] = {}
-        self.lock = asyncio.Lock()
+        self.logger = logging.getLogger("automation")
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def setup_encryption(self):
-        """Setup encryption for secrets."""
-        try:
-            # Generate or load encryption key
-            key_file = self.config_dir / ".key"
-            if key_file.exists():
-                with open(key_file, "rb") as f:
-                    self.key = f.read()
-            else:
-                self.key = Fernet.generate_key()
-                with open(key_file, "wb") as f:
-                    f.write(self.key)
-
-            self.cipher = Fernet(self.key)
-
-        except Exception as e:
-            logger.error(f"Failed to setup encryption: {str(e)}")
-            raise
+    def setup_encryption(self):
+        """Set up encryption for automation config."""
+        # Encryption logic here
 
     def setup_cache(self):
         """Setup configuration caching."""

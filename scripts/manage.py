@@ -11,14 +11,12 @@ Provides utilities for managing the trading application including:
 """
 
 import argparse
-import json
-import logging
-import os
 import subprocess
 import sys
-import yaml
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
+
+import yaml
 
 from utils.service_utils import setup_service_logging
 
@@ -347,9 +345,7 @@ class ApplicationManager:
         # Backup database
         if Path("trading.db").exists():
             if (
-                self.run_command(
-                    ["cp", "trading.db", f"backups/trading.db.backup"]
-                )
+                self.run_command(["cp", "trading.db", f"backups/trading.db.backup"])
                 != 0
             ):
                 self.logger.error("Failed to backup database")
@@ -357,12 +353,7 @@ class ApplicationManager:
 
         # Backup logs
         if Path("logs").exists():
-            if (
-                self.run_command(
-                    ["tar", "-czf", "backups/logs.tar.gz", "logs/"]
-                )
-                != 0
-            ):
+            if self.run_command(["tar", "-czf", "backups/logs.tar.gz", "logs/"]) != 0:
                 self.logger.error("Failed to backup logs")
                 return False
 
@@ -379,23 +370,13 @@ class ApplicationManager:
 
         # Restore database
         if Path("backups/trading.db.backup").exists():
-            if (
-                self.run_command(
-                    ["cp", "backups/trading.db.backup", "trading.db"]
-                )
-                != 0
-            ):
+            if self.run_command(["cp", "backups/trading.db.backup", "trading.db"]) != 0:
                 self.logger.error("Failed to restore database")
                 return False
 
         # Restore logs
         if Path("backups/logs.tar.gz").exists():
-            if (
-                self.run_command(
-                    ["tar", "-xzf", "backups/logs.tar.gz"]
-                )
-                != 0
-            ):
+            if self.run_command(["tar", "-xzf", "backups/logs.tar.gz"]) != 0:
                 self.logger.error("Failed to restore logs")
                 return False
 

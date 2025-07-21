@@ -1,15 +1,16 @@
-﻿"""Transformer model for time series forecasting."""
+"""Transformer model for time series forecasting."""
 
 # Standard library imports
 import logging
+import os
 from typing import Any, Dict, Optional, Tuple
 
 import matplotlib.pyplot as plt
-import os
 
 # Try to import scikit-learn
 try:
     from sklearn.linear_model import Ridge
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ scikit-learn not available. Disabling Ridge regression fallback.")
@@ -20,6 +21,7 @@ except ImportError as e:
 # Try to import Prophet
 try:
     from trading.models.prophet_model import ProphetModel
+
     PROPHET_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ Prophet model not available. Disabling Prophet fallback.")
@@ -35,6 +37,7 @@ import pandas as pd
 try:
     import torch
     import torch.nn as nn
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ PyTorch not available. Disabling transformer models.")
@@ -54,7 +57,9 @@ class PositionalEncoding(nn.Module):
 
     def __init__(self, d_model: int, max_len: int = 5000):
         if not TORCH_AVAILABLE:
-            raise ImportError("PyTorch is not available. Cannot create PositionalEncoding.")
+            raise ImportError(
+                "PyTorch is not available. Cannot create PositionalEncoding."
+            )
         """Initialize positional encoding.
 
         Args:
@@ -95,7 +100,9 @@ class TransformerForecaster(BaseModel):
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         if not TORCH_AVAILABLE:
-            raise ImportError("PyTorch is not available. Cannot create TransformerForecaster.")
+            raise ImportError(
+                "PyTorch is not available. Cannot create TransformerForecaster."
+            )
         """Initialize transformer forecaster.
 
         Args:
@@ -140,7 +147,7 @@ class TransformerForecaster(BaseModel):
         super().__init__(default_config)
         self._validate_config()
         self._setup_model()
-        
+
         # Initialize fallback model
         self.fallback_model = None
         if self.config["enable_fallback"]:
@@ -150,11 +157,14 @@ class TransformerForecaster(BaseModel):
         """Setup ARIMA fallback model."""
         try:
             from trading.models.arima_model import ARIMAModel
-            self.fallback_model = ARIMAModel({
-                "order": (1, 1, 1),
-                "seasonal_order": (1, 1, 1, 12),
-                "target_column": self.config["target_column"]
-            })
+
+            self.fallback_model = ARIMAModel(
+                {
+                    "order": (1, 1, 1),
+                    "seasonal_order": (1, 1, 1, 12),
+                    "target_column": self.config["target_column"],
+                }
+            )
             logger.info("ARIMA fallback model initialized successfully")
         except Exception as e:
             logger.warning(f"Failed to initialize ARIMA fallback model: {e}")
@@ -162,16 +172,16 @@ class TransformerForecaster(BaseModel):
 
     def _check_series_length(self, data: pd.DataFrame) -> bool:
         """Check if series length is sufficient for transformer model.
-        
+
         Args:
             data: Input data DataFrame
-            
+
         Returns:
             bool: True if series length is sufficient, False otherwise
         """
         min_length = self.config["min_series_length"]
         actual_length = len(data)
-        
+
         if actual_length < min_length:
             logger.warning(
                 f"Series length ({actual_length}) is less than minimum required ({min_length}). "
@@ -245,21 +255,26 @@ class TransformerForecaster(BaseModel):
             dropout=self.config["dropout"],
             batch_first=True,
         )
+
         # Wrap encoder layer with Dropout after each attention block
         class EncoderWithDropout(nn.Module):
             def __init__(self, encoder_layer, num_layers, dropout_rate):
                 super().__init__()
-                self.layers = nn.ModuleList([
-                    nn.Sequential(
-                        encoder_layer,
-                        nn.Dropout(dropout_rate)
-                    ) for _ in range(num_layers)
-                ])
+                self.layers = nn.ModuleList(
+                    [
+                        nn.Sequential(encoder_layer, nn.Dropout(dropout_rate))
+                        for _ in range(num_layers)
+                    ]
+                )
+
             def forward(self, src, mask=None, src_key_padding_mask=None):
                 output = src
                 for layer in self.layers:
-                    output = layer(output, mask=mask, src_key_padding_mask=src_key_padding_mask)
+                    output = layer(
+                        output, mask=mask, src_key_padding_mask=src_key_padding_mask
+                    )
                 return output
+
         self.transformer_encoder = EncoderWithDropout(
             encoder_layer, self.config["num_layers"], self.config["dropout"]
         )
@@ -318,7 +333,7 @@ class TransformerForecaster(BaseModel):
 
     def _safe_model_loading(self) -> bool:
         """Safely load model with fallback mechanisms.
-        
+
         Returns:
             bool: True if model loaded successfully, False otherwise
         """
@@ -327,10 +342,10 @@ class TransformerForecaster(BaseModel):
             self.model = self.build_model()
             logger.info("Transformer model loaded successfully")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to load transformer model: {e}")
-            
+
             # Try fallback to simpler model
             try:
                 logger.info("Attempting to load simplified transformer model")
@@ -341,10 +356,12 @@ class TransformerForecaster(BaseModel):
                 self.model = self.build_model()
                 logger.info("Simplified transformer model loaded successfully")
                 return True
-                
+
             except Exception as fallback_error:
-                logger.error(f"Simplified transformer model also failed: {fallback_error}")
-                
+                logger.error(
+                    f"Simplified transformer model also failed: {fallback_error}"
+                )
+
                 # Try ARIMA fallback
                 if self.fallback_model is not None:
                     logger.info("Using ARIMA fallback model")
@@ -379,12 +396,12 @@ class TransformerForecaster(BaseModel):
 
         # Convert to numpy arrays
         X = data[self.config["feature_columns"]].values
-        y = data[self.config["target_column"]].values[self.config["sequence_length"] :]
+        y = data[self.config["target_column"]].values[self.config["sequence_length"]:]
 
         # Create sequences
         X_sequences = []
         for i in range(len(X) - self.config["sequence_length"]):
-            X_sequences.append(X[i : i + self.config["sequence_length"]])
+            X_sequences.append(X[i: i + self.config["sequence_length"]])
         X = np.array(X_sequences)
 
         # Normalize
@@ -455,10 +472,14 @@ class TransformerForecaster(BaseModel):
             # Check series length
             if not self._check_series_length(data):
                 if self.fallback_model is not None:
-                    logger.info("Using fallback model due to insufficient series length")
+                    logger.info(
+                        "Using fallback model due to insufficient series length"
+                    )
                     return self._use_fallback_forecast(data, horizon)
                 else:
-                    raise ValueError("Series length insufficient and no fallback available")
+                    raise ValueError(
+                        "Series length insufficient and no fallback available"
+                    )
 
             # Check for missing values and handle them
             if data.isnull().any().any():
@@ -543,29 +564,31 @@ class TransformerForecaster(BaseModel):
             else:
                 return self._generate_fallback_forecast(data, horizon)
 
-    def _use_fallback_forecast(self, data: pd.DataFrame, horizon: int) -> Dict[str, Any]:
+    def _use_fallback_forecast(
+        self, data: pd.DataFrame, horizon: int
+    ) -> Dict[str, Any]:
         """Use fallback model for forecasting.
-        
+
         Args:
             data: Input data as pandas DataFrame
             horizon: Number of steps to forecast
-            
+
         Returns:
             Dictionary containing fallback forecast results
         """
         try:
             if self.fallback_model is None:
                 raise Exception("No fallback model available")
-                
+
             logger.info("Using ARIMA fallback model for forecasting")
             fallback_result = self.fallback_model.forecast(data, horizon)
-            
+
             # Add fallback indicator
             fallback_result["fallback_used"] = True
             fallback_result["fallback_model"] = "ARIMA"
-            
+
             return fallback_result
-            
+
         except Exception as e:
             logger.error(f"Fallback forecast also failed: {e}")
             return self._generate_fallback_forecast(data, horizon)
@@ -750,9 +773,9 @@ class TransformerForecaster(BaseModel):
             #     optimizer.step()
             # After training, save checkpoint
             if save_checkpoint:
-                os.makedirs('checkpoints', exist_ok=True)
-                torch.save(self.model.state_dict(), 'checkpoints/transformer_model.pt')
-            self.trained_model_type = 'transformer'
+                os.makedirs("checkpoints", exist_ok=True)
+                torch.save(self.model.state_dict(), "checkpoints/transformer_model.pt")
+            self.trained_model_type = "transformer"
             logger.info("Transformer model trained and checkpoint saved.")
         except (RuntimeError, ValueError, torch.cuda.OutOfMemoryError) as e:
             logger.error(f"Transformer training failed: {e}")
@@ -763,7 +786,7 @@ class TransformerForecaster(BaseModel):
                 y = data[self.config["target_column"]].values
                 ridge.fit(X, y)
                 self.fallback_model = ridge
-                self.trained_model_type = 'ridge'
+                self.trained_model_type = "ridge"
                 logger.info("Fallback to Ridge regression successful.")
             except Exception as ridge_e:
                 logger.error(f"Ridge fallback failed: {ridge_e}")
@@ -772,13 +795,15 @@ class TransformerForecaster(BaseModel):
                     prophet = ProphetForecaster()
                     prophet.fit(data)
                     self.fallback_model = prophet
-                    self.trained_model_type = 'prophet'
+                    self.trained_model_type = "prophet"
                     logger.info("Fallback to Prophet successful.")
                 except Exception as prophet_e:
                     logger.error(f"Prophet fallback failed: {prophet_e}")
                     raise RuntimeError("All model training attempts failed.")
 
-    def load_checkpoint(self, checkpoint_path: str = 'checkpoints/transformer_model.pt') -> bool:
+    def load_checkpoint(
+        self, checkpoint_path: str = "checkpoints/transformer_model.pt"
+    ) -> bool:
         """Load transformer model weights from checkpoint."""
         if not os.path.exists(checkpoint_path):
             logger.warning(f"Checkpoint not found: {checkpoint_path}")

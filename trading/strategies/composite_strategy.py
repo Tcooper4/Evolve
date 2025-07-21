@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class SignalType(Enum):
     """Signal types for conflict resolution."""
+
     BUY = "buy"
     SELL = "sell"
     HOLD = "hold"
@@ -58,7 +59,7 @@ class CompositeStrategy:
         min_confidence_threshold: float = 0.6,
         majority_threshold: float = 0.5,
         enable_override: bool = True,
-        log_conflicts: bool = True
+        log_conflicts: bool = True,
     ):
         """Initialize the composite strategy.
 
@@ -79,7 +80,9 @@ class CompositeStrategy:
         self.conflict_history: List[Dict[str, Any]] = []
         self.performance_tracker: Dict[str, Dict[str, Any]] = {}
 
-        logger.info(f"CompositeStrategy initialized with {len(self.strategy_priority)} priority strategies")
+        logger.info(
+            f"CompositeStrategy initialized with {len(self.strategy_priority)} priority strategies"
+        )
 
     def add_strategy_signal(
         self,
@@ -88,7 +91,7 @@ class CompositeStrategy:
         confidence: float,
         price: float,
         volume: Optional[float] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """Add a signal from an individual strategy.
 
@@ -113,7 +116,9 @@ class CompositeStrategy:
 
             # Validate confidence
             if not 0.0 <= confidence <= 1.0:
-                logger.warning(f"Invalid confidence {confidence} for {strategy_name}, clamping to [0, 1]")
+                logger.warning(
+                    f"Invalid confidence {confidence} for {strategy_name}, clamping to [0, 1]"
+                )
                 confidence = max(0.0, min(1.0, confidence))
 
             signal = StrategySignal(
@@ -123,15 +128,19 @@ class CompositeStrategy:
                 timestamp=datetime.now(),
                 price=price,
                 volume=volume,
-                metadata=metadata or {}
+                metadata=metadata or {},
             )
 
             self.strategy_signals[strategy_name] = signal
-            logger.debug(f"Added signal from {strategy_name}: {signal_type.value} (confidence: {confidence:.2f})")
+            logger.debug(
+                f"Added signal from {strategy_name}: {signal_type.value} (confidence: {confidence:.2f})"
+            )
             return True
 
         except ValueError as e:
-            logger.error(f"Invalid signal type '{signal_type}' for {strategy_name}: {e}")
+            logger.error(
+                f"Invalid signal type '{signal_type}' for {strategy_name}: {e}"
+            )
             return False
         except Exception as e:
             logger.error(f"Error adding signal from {strategy_name}: {e}")
@@ -151,7 +160,7 @@ class CompositeStrategy:
                 participating_strategies=[],
                 conflict_detected=False,
                 resolution_method="no_signals",
-                override_applied=False
+                override_applied=False,
             )
 
         # Count signals by type
@@ -164,26 +173,37 @@ class CompositeStrategy:
         if conflict_detected:
             # Apply conflict resolution
             if self.enable_override and self.strategy_priority:
-                resolution = self._apply_priority_override(signal_counts, signal_confidences)
+                resolution = self._apply_priority_override(
+                    signal_counts, signal_confidences
+                )
             else:
-                resolution = self._apply_majority_voting(signal_counts, signal_confidences)
+                resolution = self._apply_majority_voting(
+                    signal_counts, signal_confidences
+                )
 
             # Log conflict resolution if enabled
             if self.log_conflicts:
-                self._log_conflict_resolution(resolution, signal_counts, signal_confidences)
+                self._log_conflict_resolution(
+                    resolution, signal_counts, signal_confidences
+                )
 
             # Store in conflict history
-            self.conflict_history.append({
-                "timestamp": datetime.now(),
-                "resolution": resolution,
-                "signal_counts": signal_counts,
-                "signal_confidences": signal_confidences
-            })
+            self.conflict_history.append(
+                {
+                    "timestamp": datetime.now(),
+                    "resolution": resolution,
+                    "signal_counts": signal_counts,
+                    "signal_confidences": signal_confidences,
+                }
+            )
 
             return resolution
         else:
             # No conflicts - use highest confidence signal
-            best_signal = max(signal_counts.keys(), key=lambda x: max(signal_confidences.get(x, [0.0])))
+            best_signal = max(
+                signal_counts.keys(),
+                key=lambda x: max(signal_confidences.get(x, [0.0])),
+            )
             best_confidence = max(signal_confidences.get(best_signal, [0.0]))
 
             return ConflictResolution(
@@ -192,7 +212,7 @@ class CompositeStrategy:
                 participating_strategies=list(self.strategy_signals.keys()),
                 conflict_detected=False,
                 resolution_method="highest_confidence",
-                override_applied=False
+                override_applied=False,
             )
 
     def _count_signals(self) -> Dict[SignalType, int]:
@@ -217,8 +237,12 @@ class CompositeStrategy:
             return False
 
         # Check for opposing signals
-        buy_signals = signal_counts.get(SignalType.BUY, 0) + signal_counts.get(SignalType.STRONG_BUY, 0)
-        sell_signals = signal_counts.get(SignalType.SELL, 0) + signal_counts.get(SignalType.STRONG_SELL, 0)
+        buy_signals = signal_counts.get(SignalType.BUY, 0) + signal_counts.get(
+            SignalType.STRONG_BUY, 0
+        )
+        sell_signals = signal_counts.get(SignalType.SELL, 0) + signal_counts.get(
+            SignalType.STRONG_SELL, 0
+        )
 
         # Conflict if both buy and sell signals exist
         if buy_signals > 0 and sell_signals > 0:
@@ -235,16 +259,18 @@ class CompositeStrategy:
     def _apply_majority_voting(
         self,
         signal_counts: Dict[SignalType, int],
-        signal_confidences: Dict[SignalType, List[float]]
+        signal_confidences: Dict[SignalType, List[float]],
     ) -> ConflictResolution:
         """Apply majority voting to resolve conflicts."""
         total_signals = sum(signal_counts.values())
         best_signal = max(signal_counts.keys(), key=lambda x: signal_counts[x])
         best_count = signal_counts[best_signal]
-        best_confidence = max(signal_confidences.get(best_signal, [0.0]))
+        max(signal_confidences.get(best_signal, [0.0]))
 
         # Calculate weighted confidence
-        weighted_confidence = sum(signal_confidences.get(best_signal, [0.0])) / len(signal_confidences.get(best_signal, [1.0]))
+        weighted_confidence = sum(signal_confidences.get(best_signal, [0.0])) / len(
+            signal_confidences.get(best_signal, [1.0])
+        )
 
         return ConflictResolution(
             final_signal=best_signal,
@@ -256,14 +282,14 @@ class CompositeStrategy:
             metadata={
                 "total_signals": total_signals,
                 "winning_count": best_count,
-                "majority_threshold": self.majority_threshold
-            }
+                "majority_threshold": self.majority_threshold,
+            },
         )
 
     def _apply_priority_override(
         self,
         signal_counts: Dict[SignalType, int],
-        signal_confidences: Dict[SignalType, List[float]]
+        signal_confidences: Dict[SignalType, List[float]],
     ) -> ConflictResolution:
         """Apply priority-based override to resolve conflicts."""
         # Find highest priority strategy with a signal
@@ -279,8 +305,8 @@ class CompositeStrategy:
                     override_applied=True,
                     metadata={
                         "override_strategy": strategy_name,
-                        "priority_rank": self.strategy_priority.index(strategy_name)
-                    }
+                        "priority_rank": self.strategy_priority.index(strategy_name),
+                    },
                 )
 
         # Fallback to majority voting if no priority strategy has signals
@@ -290,7 +316,7 @@ class CompositeStrategy:
         self,
         resolution: ConflictResolution,
         signal_counts: Dict[SignalType, int],
-        signal_confidences: Dict[SignalType, List[float]]
+        signal_confidences: Dict[SignalType, List[float]],
     ):
         """Log conflict resolution details."""
         logger.info("Conflict resolution applied:")
@@ -309,13 +335,15 @@ class CompositeStrategy:
             "total_strategies": len(self.strategy_signals),
             "signals_by_type": {},
             "average_confidence": 0.0,
-            "conflict_detected": False
+            "conflict_detected": False,
         }
 
         # Count signals by type
         for signal in self.strategy_signals.values():
             signal_type = signal.signal_type.value
-            summary["signals_by_type"][signal_type] = summary["signals_by_type"].get(signal_type, 0) + 1
+            summary["signals_by_type"][signal_type] = (
+                summary["signals_by_type"].get(signal_type, 0) + 1
+            )
 
         # Calculate average confidence
         confidences = [signal.confidence for signal in self.strategy_signals.values()]
@@ -348,7 +376,7 @@ class CompositeStrategy:
             "min_confidence_threshold": self.min_confidence_threshold,
             "majority_threshold": self.majority_threshold,
             "enable_override": self.enable_override,
-            "log_conflicts": self.log_conflicts
+            "log_conflicts": self.log_conflicts,
         }
 
     def import_config(self, config: Dict[str, Any]) -> bool:
@@ -363,4 +391,4 @@ class CompositeStrategy:
             return True
         except Exception as e:
             logger.error(f"Error importing configuration: {e}")
-            return False 
+            return False

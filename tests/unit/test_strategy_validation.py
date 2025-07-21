@@ -1,17 +1,17 @@
-﻿"""
+"""
 Unit tests for strategy validation and error handling.
 """
 
-import pandas as pd
-import pytest
 from unittest.mock import patch
 
+import pandas as pd
+
 from utils.strategy_utils import (
-    calculate_returns,
-    calculate_sharpe_ratio,
     calculate_max_drawdown,
+    calculate_returns,
+    calculate_risk_metrics,
+    calculate_sharpe_ratio,
     validate_signal_schema,
-    calculate_risk_metrics
 )
 
 
@@ -26,7 +26,7 @@ class TestStrategyValidation:
 
     def test_calculate_returns_missing_close_column(self):
         """Test calculate_returns with missing 'Close' column."""
-        df = pd.DataFrame({'Open': [100, 101, 102], 'High': [105, 106, 107]})
+        df = pd.DataFrame({"Open": [100, 101, 102], "High": [105, 106, 107]})
         result = calculate_returns(df)
         assert result.empty
 
@@ -50,13 +50,13 @@ class TestStrategyValidation:
 
     def test_validate_signal_schema_missing_close_column(self):
         """Test validate_signal_schema with missing 'Close' column."""
-        df = pd.DataFrame({'Open': [100, 101], 'SignalType': ['buy', 'sell']})
+        df = pd.DataFrame({"Open": [100, 101], "SignalType": ["buy", "sell"]})
         result = validate_signal_schema(df)
         assert result is False
 
     def test_validate_signal_schema_missing_signal_type(self):
         """Test validate_signal_schema with missing 'SignalType' column."""
-        df = pd.DataFrame({'Close': [100, 101], 'Open': [99, 100]})
+        df = pd.DataFrame({"Close": [100, 101], "Open": [99, 100]})
         result = validate_signal_schema(df)
         assert result is False
 
@@ -71,9 +71,9 @@ class TestStrategyValidation:
         returns = pd.Series([0.01, -0.005, 0.02, -0.01, 0.015])
         result = calculate_risk_metrics(returns)
         assert isinstance(result, dict)
-        assert 'total_return' in result
-        assert 'sharpe_ratio' in result
-        assert 'max_drawdown' in result
+        assert "total_return" in result
+        assert "sharpe_ratio" in result
+        assert "max_drawdown" in result
 
     def test_calculate_returns_valid_data(self):
         """Test calculate_returns with valid data."""
@@ -96,14 +96,13 @@ class TestStrategyValidation:
 
     def test_validate_signal_schema_valid_data(self):
         """Test validate_signal_schema with valid data."""
-        df = pd.DataFrame({
-            'Close': [100, 101, 102],
-            'SignalType': ['buy', 'sell', 'hold']
-        })
+        df = pd.DataFrame(
+            {"Close": [100, 101, 102], "SignalType": ["buy", "sell", "hold"]}
+        )
         result = validate_signal_schema(df)
         assert result is True
 
-    @patch('utils.strategy_utils.logger')
+    @patch("utils.strategy_utils.logger")
     def test_logger_called_on_error(self, mock_logger):
         """Test that logger.error is called when strategy fails."""
         empty_df = pd.DataFrame()

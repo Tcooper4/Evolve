@@ -4,11 +4,11 @@ from unittest.mock import patch
 
 import pytest
 
-# Add the project root to the Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from trading.agents.task_dashboard import TaskDashboard
 from trading.agents.task_memory import Task, TaskMemory, TaskStatus
+
+# Add the project root to the Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 @pytest.fixture

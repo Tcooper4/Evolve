@@ -12,6 +12,7 @@ import pandas as pd
 try:
     import torch
     import torch.nn as nn
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("⚠️ PyTorch not available. Disabling TCN models.")
@@ -275,12 +276,12 @@ class TCNModel(BaseModel):
 
         # Convert to numpy arrays
         X = data[self.config["feature_columns"]].values
-        y = data[self.config["target_column"]].values[self.config["sequence_length"] :]
+        y = data[self.config["target_column"]].values[self.config["sequence_length"]:]
 
         # Create sequences
         X_sequences = []
         for i in range(len(X) - self.config["sequence_length"]):
-            X_sequences.append(X[i : i + self.config["sequence_length"]])
+            X_sequences.append(X[i: i + self.config["sequence_length"]])
         X = np.array(X_sequences)
 
         # Normalize
@@ -375,7 +376,7 @@ class TCNModel(BaseModel):
 
                 # Log progress
                 if (epoch + 1) % 10 == 0:
-                    logger.info(f"Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}")
+                    logger.info(f"Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}")
 
             return history
 
@@ -480,7 +481,7 @@ class TCNModel(BaseModel):
                 color="blue",
             )
             plt.plot(
-                data.index[self.config["sequence_length"] :],
+                data.index[self.config["sequence_length"]:],
                 predictions,
                 label="Predicted",
                 color="red",

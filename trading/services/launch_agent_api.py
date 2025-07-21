@@ -16,10 +16,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
+from trading.services.agent_api_service import AgentAPIService
+
 # Add the trading directory to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from trading.services.agent_api_service import AgentAPIService
 
 
 class APILoggingMiddleware:
@@ -94,8 +94,9 @@ class APILoggingMiddleware:
 
             # Log error
             self.logger.error(
-                f"❌ API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s | Error: {str(e)}"
-            )
+                f"❌ API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {
+                    execution_time:.3f}s | Error: {
+                    str(e)}")
 
             # Update statistics
             self._update_stats(endpoint, method, execution_time, False)
@@ -144,8 +145,9 @@ class APILoggingMiddleware:
 
             # Log error
             self.logger.error(
-                f"❌ API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s | Error: {str(e)}"
-            )
+                f"❌ API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {
+                    execution_time:.3f}s | Error: {
+                    str(e)}")
 
             # Update statistics
             self._update_stats(endpoint, method, execution_time, False)
@@ -218,13 +220,15 @@ class APILoggingMiddleware:
         for endpoint, stats in self.endpoint_stats.items():
             summary["endpoints"][endpoint] = {
                 "total_calls": stats["total_calls"],
-                "success_rate": stats["successful_calls"] / stats["total_calls"]
-                if stats["total_calls"] > 0
-                else 0,
+                "success_rate": (
+                    stats["successful_calls"] / stats["total_calls"]
+                    if stats["total_calls"] > 0
+                    else 0
+                ),
                 "avg_response_time": stats["avg_time"],
-                "min_response_time": stats["min_time"]
-                if stats["min_time"] != float("inf")
-                else 0,
+                "min_response_time": (
+                    stats["min_time"] if stats["min_time"] != float("inf") else 0
+                ),
                 "max_response_time": stats["max_time"],
                 "last_called": stats["last_called"],
             }

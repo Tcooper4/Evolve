@@ -1,4 +1,4 @@
-﻿"""
+"""
 Logger Debugger Module
 
 This module provides logging utilities and debugging tools for the trading system.
@@ -11,7 +11,7 @@ import logging.config
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import matplotlib.pyplot as plt
 import yaml
@@ -176,6 +176,7 @@ class LoggerDebugger:
                                 )
 
                 import time
+
                 time.sleep(1)  # Wait 1 second between checks
 
             # Save monitoring results
@@ -311,7 +312,9 @@ class LoggerDebugger:
                 "low": "\033[92m",  # Green
             }.get(suggestion["priority"], "\033[0m")
 
-            print(f"\n{priority_color}Priority: {suggestion['priority'].upper()}\033[0m")
+            print(
+                f"\n{priority_color}Priority: {suggestion['priority'].upper()}\033[0m"
+            )
             print(f"Error Type: {suggestion['error_type']}")
             print(f"Count: {suggestion['count']}")
             print(f"Suggestion: {suggestion['suggestion']}")
@@ -340,7 +343,7 @@ class LoggerDebugger:
             plt.subplot(2, 2, 2)
             hours = list(analysis["error_frequency"].keys())
             frequencies = list(analysis["error_frequency"].values())
-            plt.plot(hours, frequencies, marker='o')
+            plt.plot(hours, frequencies, marker="o")
             plt.title("Error Frequency Over Time")
             plt.xlabel("Hour")
             plt.ylabel("Error Count")
@@ -350,7 +353,7 @@ class LoggerDebugger:
             timeline = analysis["error_timeline"]
             if timeline:
                 timestamps = [error["timestamp"] for error in timeline]
-                plt.plot(range(len(timestamps)), timestamps, marker='o')
+                plt.plot(range(len(timestamps)), timestamps, marker="o")
                 plt.title("Error Timeline")
                 plt.xlabel("Error Index")
                 plt.ylabel("Timestamp")
@@ -358,9 +361,11 @@ class LoggerDebugger:
             # Summary statistics
             plt.subplot(2, 2, 4)
             plt.text(0.1, 0.8, f"Total Errors: {analysis['total_errors']}", fontsize=12)
-            plt.text(0.1, 0.6, f"Error Types: {len(analysis['error_types'])}", fontsize=12)
+            plt.text(
+                0.1, 0.6, f"Error Types: {len(analysis['error_types'])}", fontsize=12
+            )
             plt.text(0.1, 0.4, f"Analysis Time: {analysis['timestamp']}", fontsize=10)
-            plt.axis('off')
+            plt.axis("off")
             plt.title("Summary Statistics")
 
             plt.tight_layout()
@@ -368,7 +373,7 @@ class LoggerDebugger:
             # Save plot
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             plot_file = self.reports_dir / f"error_analysis_{timestamp}.png"
-            plt.savefig(plot_file, dpi=300, bbox_inches='tight')
+            plt.savefig(plot_file, dpi=300, bbox_inches="tight")
             plt.close()
 
             self.logger.info(f"Error plots saved to {plot_file}")
@@ -409,11 +414,15 @@ class LoggerDebugger:
         log_dir = Path("logs")
         if log_dir.exists():
             for log_file in log_dir.glob("*.log"):
-                status["log_files"].append({
-                    "name": log_file.name,
-                    "size": log_file.stat().st_size,
-                    "modified": datetime.fromtimestamp(log_file.stat().st_mtime).isoformat(),
-                })
+                status["log_files"].append(
+                    {
+                        "name": log_file.name,
+                        "size": log_file.stat().st_size,
+                        "modified": datetime.fromtimestamp(
+                            log_file.stat().st_mtime
+                        ).isoformat(),
+                    }
+                )
 
         return status
 

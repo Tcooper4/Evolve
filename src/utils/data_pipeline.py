@@ -1,6 +1,7 @@
 """
 Data pipeline module for orchestrating data loading, validation, preprocessing, and analysis.
 """
+
 import logging
 import time
 from datetime import datetime
@@ -412,17 +413,19 @@ class DataPipeline:
             Dictionary with pipeline statistics
         """
         stats = {
-            "pipeline_start_time": self.pipeline_start_time.isoformat()
-            if self.pipeline_start_time
-            else None,
-            "pipeline_end_time": self.pipeline_end_time.isoformat()
-            if self.pipeline_end_time
-            else None,
+            "pipeline_start_time": (
+                self.pipeline_start_time.isoformat()
+                if self.pipeline_start_time
+                else None
+            ),
+            "pipeline_end_time": (
+                self.pipeline_end_time.isoformat() if self.pipeline_end_time else None
+            ),
             "pipeline_duration": None,
             "data_shape": self.data.shape if self.data is not None else None,
-            "processed_data_shape": self.processed_data.shape
-            if self.processed_data is not None
-            else None,
+            "processed_data_shape": (
+                self.processed_data.shape if self.processed_data is not None else None
+            ),
             "success": self.processed_data is not None,
         }
 

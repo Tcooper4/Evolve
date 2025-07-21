@@ -760,7 +760,7 @@ class StrategyGatekeeper:
 
 
 def create_strategy_gatekeeper(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> StrategyGatekeeper:
     """Factory function to create a strategy gatekeeper.
 

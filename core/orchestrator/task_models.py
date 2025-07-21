@@ -1,4 +1,4 @@
-﻿"""
+"""
 Task Models Module
 
 This module contains task-related data classes and models for the task orchestrator.
@@ -6,13 +6,13 @@ Extracted from the original task_orchestrator.py for modularity.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
 
 class TaskStatus(Enum):
     """Task execution status"""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -23,6 +23,7 @@ class TaskStatus(Enum):
 
 class TaskPriority(Enum):
     """Task priority levels"""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -31,6 +32,7 @@ class TaskPriority(Enum):
 
 class TaskType(Enum):
     """Task types"""
+
     MODEL_INNOVATION = "model_innovation"
     STRATEGY_RESEARCH = "strategy_research"
     SENTIMENT_FETCH = "sentiment_fetch"
@@ -46,6 +48,7 @@ class TaskType(Enum):
 @dataclass
 class TaskConfig:
     """Task configuration"""
+
     name: str
     task_type: TaskType
     enabled: bool = True
@@ -69,6 +72,7 @@ class TaskConfig:
 @dataclass
 class TaskExecution:
     """Task execution record"""
+
     task_id: str
     task_name: str
     task_type: TaskType
@@ -85,6 +89,7 @@ class TaskExecution:
 @dataclass
 class AgentStatus:
     """Agent status information"""
+
     agent_name: str
     is_running: bool = False
     last_execution: Optional[str] = None

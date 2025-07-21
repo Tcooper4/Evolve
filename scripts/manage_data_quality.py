@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Data quality management script.
 Provides commands for assessing and improving data quality, including profiling, fixing, and reporting issues.
@@ -39,10 +39,12 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 import pandera as pa
-from pandera import Column, DataFrameSchema, Check
 import yaml
+from pandera import Check, Column, DataFrameSchema
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
+
+from utils.launch_utils import setup_logging
 
 
 class DataQualityManager:
@@ -63,46 +65,39 @@ class DataQualityManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="report_service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="report_service")def validate_data(self, data_path: str, schema_path: Optional[str] = None):
-        """Validate data against schema and quality rules."""
-        self.logger.info(f"Validating data: {data_path}")
+    def validate_data(self, data_path: str, schema_path: Optional[str] = None):
+        """Validate data quality."""
+        self.logger.info(f"Validating data quality for {data_path}")
 
         try:
             # Load data
-            data = self._load_data(data_path)
+            data_file = Path(data_path)
+            if not data_file.exists():
+                self.logger.error(f"Data file not found: {data_file}")
+                return False
 
-            # Validate schema if provided
-            if schema_path:
-                schema = self._load_schema(schema_path)
-                schema_validation = self._validate_schema(data, schema)
-            else:
-                schema_validation = {"success": True, "results": []}
+            # Validate data structure
+            if not self._validate_data_structure(data_file):
+                return False
 
-            # Validate data quality
-            quality_validation = self._validate_quality(data)
+            # Validate data types
+            if not self._validate_data_types(data_file):
+                return False
 
-            # Combine results
-            validation_results = {
-                "timestamp": datetime.now().isoformat(),
-                "data_path": data_path,
-                "schema_validation": schema_validation,
-                "quality_validation": quality_validation,
-            }
+            # Validate data ranges
+            if not self._validate_data_ranges(data_file):
+                return False
 
-            # Save results
-            self._save_validation_results(validation_results)
+            # Validate data completeness
+            if not self._validate_data_completeness(data_file):
+                return False
 
-            # Print results
-            self._print_validation_results(validation_results)
-
-            return (
-                validation_results["schema_validation"]["success"]
-                and validation_results["quality_validation"]["success"]
-            )
+            self.logger.info("Data validation completed successfully")
+            return True
         except Exception as e:
             self.logger.error(f"Failed to validate data: {e}")
             return False
@@ -191,20 +186,18 @@ def setup_logging():
         try:
             # Build pandera schema from configuration
             pandera_schema = self._build_pandera_schema(schema)
-            
+
             # Validate data
             try:
-                validated_data = pandera_schema.validate(data)
-                results.append({
-                    "type": "success",
-                    "message": "Schema validation passed"
-                })
+                pandera_schema.validate(data)
+                results.append(
+                    {"type": "success", "message": "Schema validation passed"}
+                )
             except pa.errors.SchemaError as e:
                 success = False
-                results.append({
-                    "type": "error",
-                    "message": f"Schema validation failed: {str(e)}"
-                })
+                results.append(
+                    {"type": "error", "message": f"Schema validation failed: {str(e)}"}
+                )
 
             return {"success": success, "results": results}
         except Exception as e:
@@ -214,7 +207,7 @@ def setup_logging():
     def _build_pandera_schema(self, schema: Dict[str, Any]) -> DataFrameSchema:
         """Build pandera DataFrameSchema from configuration."""
         columns = {}
-        
+
         # Process column definitions
         for column, type_info in schema["columns"].items():
             if type_info["type"] == "numeric":
@@ -225,7 +218,7 @@ def setup_logging():
             else:
                 column_schema = Column(pa.String, nullable=True)
             columns[column] = column_schema
-        
+
         # Add constraints as checks
         for constraint in schema.get("constraints", []):
             column = constraint["column"]
@@ -234,17 +227,12 @@ def setup_logging():
                     # Set unique=True in the Column
                     current_col = columns[column]
                     columns[column] = Column(
-                        current_col.dtype,
-                        nullable=current_col.nullable,
-                        unique=True
+                        current_col.dtype, nullable=current_col.nullable, unique=True
                     )
                 elif constraint["type"] == "not_null":
                     # Make column non-nullable
                     current_col = columns[column]
-                    columns[column] = Column(
-                        current_col.dtype, 
-                        nullable=False
-                    )
+                    columns[column] = Column(current_col.dtype, nullable=False)
                 elif constraint["type"] == "range":
                     # Add range checks
                     min_val = constraint.get("min")
@@ -255,14 +243,14 @@ def setup_logging():
                         checks.append(Check.greater_than_or_equal_to(min_val))
                     if max_val is not None:
                         checks.append(Check.less_than_or_equal_to(max_val))
-                    
+
                     if checks:
                         columns[column] = Column(
                             current_col.dtype,
                             nullable=current_col.nullable,
-                            checks=checks
+                            checks=checks,
                         )
-        
+
         return DataFrameSchema(columns)
 
     def _validate_quality(self, data: pd.DataFrame) -> Dict[str, Any]:
@@ -273,20 +261,18 @@ def setup_logging():
         try:
             # Create quality validation schema
             quality_schema = self._build_quality_schema(data)
-            
+
             # Validate data quality
             try:
-                validated_data = quality_schema.validate(data)
-                results.append({
-                    "type": "success",
-                    "message": "Quality validation passed"
-                })
+                quality_schema.validate(data)
+                results.append(
+                    {"type": "success", "message": "Quality validation passed"}
+                )
             except pa.errors.SchemaError as e:
                 success = False
-                results.append({
-                    "type": "error",
-                    "message": f"Quality validation failed: {str(e)}"
-                })
+                results.append(
+                    {"type": "error", "message": f"Quality validation failed: {str(e)}"}
+                )
 
             # Additional quality checks
             for column in data.columns:

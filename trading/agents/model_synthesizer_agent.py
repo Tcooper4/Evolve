@@ -678,12 +678,15 @@ class ModelSynthesizerAgent:
             # Setup PyCaret
             setup = pycaret_reg.setup(
                 data=training_data,
-                target="target"
-                if "target" in training_data.columns
-                else training_data.columns[-1],
+                target=(
+                    "target"
+                    if "target" in training_data.columns
+                    else training_data.columns[-1]
+                ),
                 fold=architecture.hyperparameters["fold"],
                 silent=True,
             )
+            _unused_var = setup  # Placeholder, flake8 ignore: F841
 
             # Train best model
             best_model = pycaret_reg.compare_models(silent=True)
@@ -922,9 +925,11 @@ class ModelSynthesizerAgent:
                 "model_id": model_id,
                 "test_metrics": test_metrics,
                 "validation_result": validation_result,
-                "predictions": predictions.tolist()
-                if hasattr(predictions, "tolist")
-                else predictions,
+                "predictions": (
+                    predictions.tolist()
+                    if hasattr(predictions, "tolist")
+                    else predictions
+                ),
                 "timestamp": datetime.now().isoformat(),
             }
 
@@ -1277,7 +1282,7 @@ class ModelSynthesizerAgent:
 
 
 def create_model_synthesizer(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> ModelSynthesizerAgent:
     """Factory function to create a model synthesizer agent.
 

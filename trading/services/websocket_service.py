@@ -188,9 +188,12 @@ class WebSocketService:
                             "agent_id": agent_id,
                             "status": agent.status,
                             "capabilities": agent.capabilities,
-                            "last_execution": agent.last_execution.isoformat()
-                            if hasattr(agent, "last_execution") and agent.last_execution
-                            else None,
+                            "last_execution": (
+                                agent.last_execution.isoformat()
+                                if hasattr(agent, "last_execution")
+                                and agent.last_execution
+                                else None
+                            ),
                         },
                         "timestamp": datetime.now().isoformat(),
                     },
@@ -214,9 +217,11 @@ class WebSocketService:
                         "agent_id": agent_id,
                         "status": agent.status,
                         "capabilities": agent.capabilities,
-                        "last_execution": agent.last_execution.isoformat()
-                        if hasattr(agent, "last_execution") and agent.last_execution
-                        else None,
+                        "last_execution": (
+                            agent.last_execution.isoformat()
+                            if hasattr(agent, "last_execution") and agent.last_execution
+                            else None
+                        ),
                     }
                 )
 

@@ -247,16 +247,16 @@ def get_commentary_agent():
 
 # Prompt Templates - Import directly as it's lightweight
 try:
-    from .prompt_templates import (
-        PROMPT_TEMPLATES,
-        get_template as get_prompt_template,
-        list_templates as list_prompt_templates,
-    )
+    from .prompt_templates import PROMPT_TEMPLATES
+    from .prompt_templates import get_template as get_prompt_template
+    from .prompt_templates import list_templates as list_prompt_templates
 except ImportError as e:
     logger.warning(f"Could not import prompt templates: {e}")
     PROMPT_TEMPLATES = {}
-    get_prompt_template = lambda x: None
-    list_prompt_templates = lambda: []
+    def get_prompt_template(x):
+        return None
+    def list_prompt_templates():
+        return []
 
 # Wildcard imports for core agents to improve usability during testing
 

@@ -78,6 +78,7 @@ try:
     import mlflow.spark
     import mlflow.statsmodels
     import mlflow.xgboost
+
     MLFLOW_AVAILABLE = True
 except ImportError as e:
     print("⚠️ MLflow not available. Disabling MLflow-based model management.")
@@ -90,6 +91,7 @@ try:
     import torch
     import torch.nn as nn
     import torch.optim as optim
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("⚠️ PyTorch not available. Disabling PyTorch model training.")
@@ -103,6 +105,7 @@ except ImportError as e:
 try:
     from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
     from sklearn.model_selection import GridSearchCV, train_test_split
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("⚠️ scikit-learn not available. Disabling sklearn-based model training.")
@@ -118,6 +121,7 @@ except ImportError as e:
 # Try to import Optuna
 try:
     import optuna
+
     OPTUNA_AVAILABLE = True
 except ImportError as e:
     print("⚠️ Optuna not available. Disabling hyperparameter optimization.")
@@ -129,6 +133,7 @@ except ImportError as e:
 try:
     import ray
     import ray.serve
+
     RAY_AVAILABLE = True
 except ImportError as e:
     print("⚠️ Ray not available. Disabling Ray-based deployment.")
@@ -139,6 +144,7 @@ except ImportError as e:
 # Try to import deployment libraries
 try:
     import bentoml
+
     BENTOML_AVAILABLE = True
 except ImportError as e:
     print("⚠️ BentoML not available. Disabling BentoML deployment.")
@@ -148,6 +154,7 @@ except ImportError as e:
 
 try:
     import kserve
+
     KSERVE_AVAILABLE = True
 except ImportError as e:
     print("⚠️ KServe not available. Disabling KServe deployment.")
@@ -157,6 +164,7 @@ except ImportError as e:
 
 try:
     import seldon_core
+
     SELDON_AVAILABLE = True
 except ImportError as e:
     print("⚠️ Seldon Core not available. Disabling Seldon deployment.")
@@ -166,6 +174,7 @@ except ImportError as e:
 
 try:
     import torchserve
+
     TORCHSERVE_AVAILABLE = True
 except ImportError as e:
     print("⚠️ TorchServe not available. Disabling TorchServe deployment.")
@@ -175,6 +184,7 @@ except ImportError as e:
 
 try:
     import triton
+
     TRITON_AVAILABLE = True
 except ImportError as e:
     print("⚠️ Triton not available. Disabling Triton deployment.")
@@ -574,7 +584,9 @@ class MLManager:
 
     def _initialize_sklearn_model(self, params: Optional[Dict[str, Any]] = None) -> Any:
         if not SKLEARN_AVAILABLE:
-            raise ImportError("scikit-learn is not available. Cannot create sklearn model.")
+            raise ImportError(
+                "scikit-learn is not available. Cannot create sklearn model."
+            )
         """Initialize a scikit-learn model."""
         try:
             from sklearn.ensemble import RandomForestClassifier

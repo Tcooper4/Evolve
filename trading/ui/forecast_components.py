@@ -6,6 +6,7 @@ with support for agentic interactions and monitoring.
 
 import json
 import logging
+import os
 from datetime import datetime
 from typing import Any, Dict, Optional
 

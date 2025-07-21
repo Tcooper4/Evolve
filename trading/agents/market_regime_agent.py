@@ -542,12 +542,12 @@ class MarketRegimeAgent(BaseAgent):
                 "volatility_regime": "high" if metrics.volatility > 0.25 else "low",
                 "trend_direction": "up" if metrics.trend_strength > 0 else "down",
                 "momentum_status": "positive" if metrics.momentum > 0 else "negative",
-                "volume_status": "above_average"
-                if metrics.volume_trend > 0
-                else "below_average",
-                "market_correlation": "high"
-                if abs(metrics.correlation) > 0.7
-                else "low",
+                "volume_status": (
+                    "above_average" if metrics.volume_trend > 0 else "below_average"
+                ),
+                "market_correlation": (
+                    "high" if abs(metrics.correlation) > 0.7 else "low"
+                ),
             }
 
             # Create analysis result

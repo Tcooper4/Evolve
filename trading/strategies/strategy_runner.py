@@ -58,14 +58,16 @@ class AsyncStrategyRunner:
         # Semaphore for limiting concurrent executions
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
 
-        logger.info(f"AsyncStrategyRunner initialized with max_concurrent={self.max_concurrent}")
+        logger.info(
+            f"AsyncStrategyRunner initialized with max_concurrent={self.max_concurrent}"
+        )
 
     async def run_strategies_parallel(
         self,
         strategies: List[Union[str, BaseStrategy]],
         data: pd.DataFrame,
         parameters: Optional[Dict[str, Dict[str, Any]]] = None,
-        ensemble_config: Optional[Dict[str, Any]] = None
+        ensemble_config: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Run multiple strategies in parallel and optionally combine results.
@@ -90,9 +92,13 @@ class AsyncStrategyRunner:
                 if isinstance(strategy, str):
                     # Strategy name - get from registry
                     strategy_name = strategy
-                    strategy_instance = self.strategy_registry.get_strategy(strategy_name)
+                    strategy_instance = self.strategy_registry.get_strategy(
+                        strategy_name
+                    )
                     if not strategy_instance:
-                        logger.warning(f"Strategy '{strategy_name}' not found in registry")
+                        logger.warning(
+                            f"Strategy '{strategy_name}' not found in registry"
+                        )
                         continue
                 else:
                     # Strategy instance
@@ -100,7 +106,9 @@ class AsyncStrategyRunner:
                     strategy_name = strategy_instance.__class__.__name__
 
                 # Get parameters for this strategy
-                strategy_params = parameters.get(strategy_name, {}) if parameters else {}
+                strategy_params = (
+                    parameters.get(strategy_name, {}) if parameters else {}
+                )
 
                 # Create async task
                 task = self._run_single_strategy_async(
@@ -121,7 +129,11 @@ class AsyncStrategyRunner:
             failed_strategies = []
 
             for i, result in enumerate(results):
-                strategy_name = strategies[i] if isinstance(strategies[i], str) else strategies[i].__class__.__name__
+                strategy_name = (
+                    strategies[i]
+                    if isinstance(strategies[i], str)
+                    else strategies[i].__class__.__name__
+                )
 
                 if isinstance(result, Exception):
                     logger.error(f"Strategy '{strategy_name}' failed: {result}")
@@ -130,7 +142,7 @@ class AsyncStrategyRunner:
                         "success": False,
                         "error": str(result),
                         "signals": pd.DataFrame(),
-                        "performance": {}
+                        "performance": {},
                     }
                 else:
                     logger.info(f"Strategy '{strategy_name}' completed successfully")
@@ -140,7 +152,9 @@ class AsyncStrategyRunner:
             # Create ensemble result if enabled
             ensemble_result = None
             if self.enable_ensemble and successful_results:
-                ensemble_result = await self._create_ensemble_result(successful_results, ensemble_config)
+                ensemble_result = await self._create_ensemble_result(
+                    successful_results, ensemble_config
+                )
 
             # Calculate execution time
             execution_time = time.time() - start_time
@@ -148,18 +162,24 @@ class AsyncStrategyRunner:
             # Log performance
             if self.log_performance:
                 self._log_execution_performance(
-                    execution_time, len(successful_results), len(strategies), failed_strategies
+                    execution_time,
+                    len(successful_results),
+                    len(strategies),
+                    failed_strategies,
                 )
 
             # Store execution history
             execution_record = {
                 "timestamp": time.time(),
-                "strategies": [s if isinstance(s, str) else s.__class__.__name__ for s in strategies],
+                "strategies": [
+                    s if isinstance(s, str) else s.__class__.__name__
+                    for s in strategies
+                ],
                 "execution_time": execution_time,
                 "success_count": len(successful_results),
                 "total_count": len(strategies),
                 "failed_strategies": failed_strategies,
-                "ensemble_enabled": self.enable_ensemble
+                "ensemble_enabled": self.enable_ensemble,
             }
             self.execution_history.append(execution_record)
 
@@ -170,7 +190,7 @@ class AsyncStrategyRunner:
                 "ensemble_result": ensemble_result,
                 "successful_count": len(successful_results),
                 "failed_count": len(failed_strategies),
-                "failed_strategies": failed_strategies
+                "failed_strategies": failed_strategies,
             }
 
         except Exception as e:
@@ -180,7 +200,7 @@ class AsyncStrategyRunner:
                 "error": str(e),
                 "execution_time": time.time() - start_time,
                 "strategy_results": {},
-                "ensemble_result": None
+                "ensemble_result": None,
             }
 
     async def _run_single_strategy_async(
@@ -188,17 +208,19 @@ class AsyncStrategyRunner:
         strategy: BaseStrategy,
         data: pd.DataFrame,
         parameters: Dict[str, Any],
-        strategy_name: str
+        strategy_name: str,
     ) -> Dict[str, Any]:
         """Run a single strategy asynchronously with timeout and error handling."""
         async with self.semaphore:
             try:
-                logger.debug(f"Starting strategy '{strategy_name}' with timeout {self.strategy_timeout}s")
+                logger.debug(
+                    f"Starting strategy '{strategy_name}' with timeout {self.strategy_timeout}s"
+                )
 
                 # Execute strategy with timeout
                 result = await asyncio.wait_for(
                     self._execute_strategy_core(strategy, data),
-                    timeout=self.strategy_timeout
+                    timeout=self.strategy_timeout,
                 )
 
                 # Add strategy metadata
@@ -212,25 +234,29 @@ class AsyncStrategyRunner:
                         "execution_count": 0,
                         "success_count": 0,
                         "total_execution_time": 0.0,
-                        "average_execution_time": 0.0
+                        "average_execution_time": 0.0,
                     }
 
                 perf = self.strategy_performance[strategy_name]
                 perf["execution_count"] += 1
                 perf["success_count"] += 1
                 perf["total_execution_time"] += result.get("execution_time", 0.0)
-                perf["average_execution_time"] = perf["total_execution_time"] / perf["success_count"]
+                perf["average_execution_time"] = (
+                    perf["total_execution_time"] / perf["success_count"]
+                )
 
                 return result
 
             except asyncio.TimeoutError:
-                logger.error(f"Strategy '{strategy_name}' timed out after {self.strategy_timeout}s")
+                logger.error(
+                    f"Strategy '{strategy_name}' timed out after {self.strategy_timeout}s"
+                )
                 return {
                     "strategy_name": strategy_name,
                     "success": False,
                     "error": f"Strategy timed out after {self.strategy_timeout}s",
                     "signals": pd.DataFrame(),
-                    "performance": {}
+                    "performance": {},
                 }
             except Exception as e:
                 logger.error(f"Strategy '{strategy_name}' failed: {e}")
@@ -239,7 +265,7 @@ class AsyncStrategyRunner:
                     "success": False,
                     "error": str(e),
                     "signals": pd.DataFrame(),
-                    "performance": {}
+                    "performance": {},
                 }
 
     async def _execute_strategy_core(
@@ -258,7 +284,7 @@ class AsyncStrategyRunner:
             return {
                 "signals": signals,
                 "performance": performance,
-                "execution_time": execution_time
+                "execution_time": execution_time,
             }
 
         except Exception as e:
@@ -268,7 +294,7 @@ class AsyncStrategyRunner:
     async def _create_ensemble_result(
         self,
         strategy_results: List[Dict[str, Any]],
-        ensemble_config: Optional[Dict[str, Any]] = None
+        ensemble_config: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Create ensemble result by combining multiple strategy results."""
         if not strategy_results:
@@ -310,14 +336,16 @@ class AsyncStrategyRunner:
                 "signals": combined_signals,
                 "performance": ensemble_performance,
                 "strategy_count": len(strategy_results),
-                "ensemble_method": self.ensemble_method
+                "ensemble_method": self.ensemble_method,
             }
 
         except Exception as e:
             logger.error(f"Ensemble combination failed: {e}")
             return None
 
-    def _combine_signals_weighted(self, signals_list: List[pd.DataFrame], weights: List[float]) -> pd.DataFrame:
+    def _combine_signals_weighted(
+        self, signals_list: List[pd.DataFrame], weights: List[float]
+    ) -> pd.DataFrame:
         """Combine signals using weighted average."""
         if len(signals_list) == 1:
             return signals_list[0]
@@ -349,7 +377,9 @@ class AsyncStrategyRunner:
 
         return combined
 
-    def _combine_signals_average(self, signals_list: List[pd.DataFrame]) -> pd.DataFrame:
+    def _combine_signals_average(
+        self, signals_list: List[pd.DataFrame]
+    ) -> pd.DataFrame:
         """Combine signals using simple average."""
         if len(signals_list) == 1:
             return signals_list[0]
@@ -384,7 +414,7 @@ class AsyncStrategyRunner:
                 "signal_count": signal_count,
                 "buy_signals": buy_signals,
                 "sell_signals": sell_signals,
-                "signal_strength": signal_strength
+                "signal_strength": signal_strength,
             }
 
         except Exception as e:
@@ -396,53 +426,75 @@ class AsyncStrategyRunner:
         execution_time: float,
         success_count: int,
         total_count: int,
-        failed_strategies: List[str]
+        failed_strategies: List[str],
     ) -> None:
         """Log execution performance metrics."""
         success_rate = (success_count / total_count) * 100 if total_count > 0 else 0
 
         logger.info(f"Strategy execution completed:")
         logger.info(f"  - Total time: {execution_time:.2f}s")
-        logger.info(f"  - Success rate: {success_rate:.1f}% ({success_count}/{total_count})")
+        logger.info(
+            f"  - Success rate: {success_rate:.1f}% ({success_count}/{total_count})"
+        )
         logger.info(f"  - Failed strategies: {failed_strategies}")
 
         if failed_strategies:
             logger.warning(f"Failed strategies: {', '.join(failed_strategies)}")
 
-    async def run_rsi_strategy(self, data: pd.DataFrame, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    async def run_rsi_strategy(
+        self, data: pd.DataFrame, parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Run RSI strategy with given parameters."""
         strategy = self.strategy_registry.get_strategy("RSI_Strategy")
         if not strategy:
             raise ValueError("RSI_Strategy not found in registry")
-        return await self._run_single_strategy_async(strategy, data, parameters, "RSI_Strategy")
+        return await self._run_single_strategy_async(
+            strategy, data, parameters, "RSI_Strategy"
+        )
 
-    async def run_macd_strategy(self, data: pd.DataFrame, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    async def run_macd_strategy(
+        self, data: pd.DataFrame, parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Run MACD strategy with given parameters."""
         strategy = self.strategy_registry.get_strategy("MACD_Strategy")
         if not strategy:
             raise ValueError("MACD_Strategy not found in registry")
-        return await self._run_single_strategy_async(strategy, data, parameters, "MACD_Strategy")
+        return await self._run_single_strategy_async(
+            strategy, data, parameters, "MACD_Strategy"
+        )
 
-    async def run_bollinger_bands_strategy(self, data: pd.DataFrame, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    async def run_bollinger_bands_strategy(
+        self, data: pd.DataFrame, parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Run Bollinger Bands strategy with given parameters."""
         strategy = self.strategy_registry.get_strategy("Bollinger_Bands")
         if not strategy:
             raise ValueError("Bollinger_Bands strategy not found in registry")
-        return await self._run_single_strategy_async(strategy, data, parameters, "Bollinger_Bands")
+        return await self._run_single_strategy_async(
+            strategy, data, parameters, "Bollinger_Bands"
+        )
 
-    async def run_momentum_strategy(self, data: pd.DataFrame, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    async def run_momentum_strategy(
+        self, data: pd.DataFrame, parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Run momentum strategy with given parameters."""
         strategy = self.strategy_registry.get_strategy("Momentum_Strategy")
         if not strategy:
             raise ValueError("Momentum_Strategy not found in registry")
-        return await self._run_single_strategy_async(strategy, data, parameters, "Momentum_Strategy")
+        return await self._run_single_strategy_async(
+            strategy, data, parameters, "Momentum_Strategy"
+        )
 
-    async def run_mean_reversion_strategy(self, data: pd.DataFrame, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    async def run_mean_reversion_strategy(
+        self, data: pd.DataFrame, parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Run mean reversion strategy with given parameters."""
         strategy = self.strategy_registry.get_strategy("Mean_Reversion_Strategy")
         if not strategy:
             raise ValueError("Mean_Reversion_Strategy not found in registry")
-        return await self._run_single_strategy_async(strategy, data, parameters, "Mean_Reversion_Strategy")
+        return await self._run_single_strategy_async(
+            strategy, data, parameters, "Mean_Reversion_Strategy"
+        )
 
     def get_execution_history(self) -> List[Dict[str, Any]]:
         """Get execution history."""
@@ -486,10 +538,14 @@ async def run_bollinger_bands() -> Dict[str, Any]:
 async def run_strategies_parallel_example(
     data: pd.DataFrame,
     strategy_names: List[str] = None,
-    parameters: Dict[str, Dict[str, Any]] = None
+    parameters: Dict[str, Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Example: Run multiple strategies in parallel."""
     runner = AsyncStrategyRunner()
-    strategy_names = strategy_names or ["RSI_Strategy", "MACD_Strategy", "Bollinger_Bands"]
+    strategy_names = strategy_names or [
+        "RSI_Strategy",
+        "MACD_Strategy",
+        "Bollinger_Bands",
+    ]
     parameters = parameters or {}
-    return await runner.run_strategies_parallel(strategy_names, data, parameters) 
+    return await runner.run_strategies_parallel(strategy_names, data, parameters)

@@ -33,7 +33,8 @@ import json
 import logging
 import logging.config
 import sys
-from datetime import datetime
+import time
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -44,6 +45,8 @@ import yaml
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from jinja2 import Environment, FileSystemLoader
+
+from utils.launch_utils import setup_logging
 
 
 class APIManager:
@@ -68,11 +71,11 @@ class APIManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def generate_openapi(self, app: FastAPI, version: str = "1.0.0"):
+    def generate_openapi(self, app: FastAPI, version: str = "1.0.0"):
         """Generate OpenAPI specification."""
         self.logger.info(f"Generating OpenAPI specification for version {version}")
 

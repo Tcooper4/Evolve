@@ -18,13 +18,12 @@ Key Features:
 - Clean interfaces for integration
 """
 
-import asyncio
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
-from agents.task_agent import TaskAgent, TaskType, execute_task
+from agents.task_agent import TaskAgent, TaskType
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +38,7 @@ class AgentWorkflowResult:
         data: Dict[str, Any],
         error_message: Optional[str] = None,
         execution_time: float = 0.0,
-        agent_results: Optional[Dict[str, Any]] = None
+        agent_results: Optional[Dict[str, Any]] = None,
     ):
         self.success = success
         self.workflow_type = workflow_type
@@ -94,7 +93,7 @@ class BuilderWorkflow:
                     workflow_type=self.workflow_name,
                     data={},
                     error_message=validation_result["error"],
-                    execution_time=(datetime.now() - start_time).total_seconds()
+                    execution_time=(datetime.now() - start_time).total_seconds(),
                 )
 
             # Execute the builder workflow
@@ -108,7 +107,7 @@ class BuilderWorkflow:
                 data=result.get("data", {}),
                 error_message=result.get("error_message"),
                 execution_time=execution_time,
-                agent_results=result.get("agent_results", {})
+                agent_results=result.get("agent_results", {}),
             )
 
         except Exception as e:
@@ -120,7 +119,7 @@ class BuilderWorkflow:
                 workflow_type=self.workflow_name,
                 data={},
                 error_message=f"Builder workflow failed: {str(e)}",
-                execution_time=execution_time
+                execution_time=execution_time,
             )
 
     def _validate_builder_inputs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
@@ -129,17 +128,14 @@ class BuilderWorkflow:
 
         for field in required_fields:
             if field not in kwargs:
-                return {
-                    "valid": False,
-                    "error": f"Missing required field: {field}"
-                }
+                return {"valid": False, "error": f"Missing required field: {field}"}
 
         # Validate model type
         valid_model_types = ["lstm", "xgboost", "ensemble", "transformer"]
         if kwargs["model_type"].lower() not in valid_model_types:
             return {
                 "valid": False,
-                "error": f"Invalid model type: {kwargs['model_type']}. Valid types: {valid_model_types}"
+                "error": f"Invalid model type: {kwargs['model_type']}. Valid types: {valid_model_types}",
             }
 
         return {"valid": True}
@@ -172,16 +168,13 @@ class BuilderWorkflow:
                     "data_preparation": data_result,
                     "model_building": model_result,
                     "model_validation": validation_result,
-                    "model_registration": registration_result
-                }
+                    "model_registration": registration_result,
+                },
             }
 
         except Exception as e:
             self.logger.error(f"Error in builder workflow execution: {e}")
-            return {
-                "success": False,
-                "error_message": str(e)
-            }
+            return {"success": False, "error_message": str(e)}
 
     async def _prepare_data(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare data for model building."""
@@ -193,7 +186,7 @@ class BuilderWorkflow:
                 "data_path": kwargs["data_path"],
                 "target_column": kwargs["target_column"],
                 "validation_split": kwargs.get("validation_split", 0.2),
-                "preprocessing_steps": kwargs.get("preprocessing_steps", [])
+                "preprocessing_steps": kwargs.get("preprocessing_steps", []),
             }
 
             result = await execute_agent("data_preparation_agent", request=data_request)
@@ -201,7 +194,7 @@ class BuilderWorkflow:
             return {
                 "success": result.success,
                 "data": result.data if result.success else {},
-                "error_message": result.error_message if not result.success else None
+                "error_message": result.error_message if not result.success else None,
             }
 
         except ImportError:
@@ -211,16 +204,18 @@ class BuilderWorkflow:
                 "success": True,
                 "data": {
                     "train_data": kwargs["data_path"],
-                    "validation_split": kwargs.get("validation_split", 0.2)
-                }
+                    "validation_split": kwargs.get("validation_split", 0.2),
+                },
             }
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Data preparation failed: {str(e)}"
+                "error_message": f"Data preparation failed: {str(e)}",
             }
 
-    async def _build_model(self, kwargs: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _build_model(
+        self, kwargs: Dict[str, Any], data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Build the model using the model builder agent."""
         try:
             from trading.agents.agent_manager import execute_agent
@@ -231,7 +226,7 @@ class BuilderWorkflow:
                 data_path=data.get("train_data", kwargs["data_path"]),
                 target_column=kwargs["target_column"],
                 hyperparameters=kwargs.get("hyperparameters", {}),
-                request_id=f"builder_{uuid.uuid4().hex[:8]}"
+                request_id=f"builder_{uuid.uuid4().hex[:8]}",
             )
 
             result = await execute_agent("model_builder", request=build_request)
@@ -239,13 +234,13 @@ class BuilderWorkflow:
             return {
                 "success": result.success,
                 "data": result.data if result.success else {},
-                "error_message": result.error_message if not result.success else None
+                "error_message": result.error_message if not result.success else None,
             }
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Model building failed: {str(e)}"
+                "error_message": f"Model building failed: {str(e)}",
             }
 
     async def _validate_model(self, model_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -256,19 +251,16 @@ class BuilderWorkflow:
             if not model_path:
                 return {
                     "success": False,
-                    "error_message": "No model path provided for validation"
+                    "error_message": "No model path provided for validation",
                 }
 
             # Add validation logic here if needed
-            return {
-                "success": True,
-                "data": model_data
-            }
+            return {"success": True, "data": model_data}
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Model validation failed: {str(e)}"
+                "error_message": f"Model validation failed: {str(e)}",
             }
 
     async def _register_model(self, model_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -282,19 +274,18 @@ class BuilderWorkflow:
                 "model_type": model_data.get("model_type"),
                 "model_path": model_data.get("model_path"),
                 "training_metrics": model_data.get("training_metrics", {}),
-                "build_timestamp": model_data.get("build_timestamp", datetime.now().isoformat()),
-                "status": "active"
+                "build_timestamp": model_data.get(
+                    "build_timestamp", datetime.now().isoformat()
+                ),
+                "status": "active",
             }
 
-            return {
-                "success": True,
-                "data": registration_data
-            }
+            return {"success": True, "data": registration_data}
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Model registration failed: {str(e)}"
+                "error_message": f"Model registration failed: {str(e)}",
             }
 
 
@@ -342,7 +333,7 @@ class EvaluatorWorkflow:
                     workflow_type=self.workflow_name,
                     data={},
                     error_message=validation_result["error"],
-                    execution_time=(datetime.now() - start_time).total_seconds()
+                    execution_time=(datetime.now() - start_time).total_seconds(),
                 )
 
             # Execute the evaluator workflow
@@ -356,7 +347,7 @@ class EvaluatorWorkflow:
                 data=result.get("data", {}),
                 error_message=result.get("error_message"),
                 execution_time=execution_time,
-                agent_results=result.get("agent_results", {})
+                agent_results=result.get("agent_results", {}),
             )
 
         except Exception as e:
@@ -368,7 +359,7 @@ class EvaluatorWorkflow:
                 workflow_type=self.workflow_name,
                 data={},
                 error_message=f"Evaluator workflow failed: {str(e)}",
-                execution_time=execution_time
+                execution_time=execution_time,
             )
 
     def _validate_evaluator_inputs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
@@ -377,14 +368,13 @@ class EvaluatorWorkflow:
 
         for field in required_fields:
             if field not in kwargs:
-                return {
-                    "valid": False,
-                    "error": f"Missing required field: {field}"
-                }
+                return {"valid": False, "error": f"Missing required field: {field}"}
 
         return {"valid": True}
 
-    async def _execute_evaluator_workflow(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_evaluator_workflow(
+        self, kwargs: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Execute the evaluator workflow steps."""
         try:
             # Step 1: Load model
@@ -398,7 +388,9 @@ class EvaluatorWorkflow:
                 return data_result
 
             # Step 3: Evaluate model
-            evaluation_result = await self._evaluate_model(load_result["data"], data_result["data"])
+            evaluation_result = await self._evaluate_model(
+                load_result["data"], data_result["data"]
+            )
             if not evaluation_result["success"]:
                 return evaluation_result
 
@@ -412,7 +404,7 @@ class EvaluatorWorkflow:
             combined_data = {
                 **evaluation_result["data"],
                 "risk_metrics": risk_result.get("data", {}),
-                "benchmark_comparison": benchmark_result.get("data", {})
+                "benchmark_comparison": benchmark_result.get("data", {}),
             }
 
             return {
@@ -423,16 +415,13 @@ class EvaluatorWorkflow:
                     "test_data_preparation": data_result,
                     "model_evaluation": evaluation_result,
                     "risk_calculation": risk_result,
-                    "benchmark_comparison": benchmark_result
-                }
+                    "benchmark_comparison": benchmark_result,
+                },
             }
 
         except Exception as e:
             self.logger.error(f"Error in evaluator workflow execution: {e}")
-            return {
-                "success": False,
-                "error_message": str(e)
-            }
+            return {"success": False, "error_message": str(e)}
 
     async def _load_model(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Load the model for evaluation."""
@@ -446,14 +435,14 @@ class EvaluatorWorkflow:
                 "data": {
                     "model_id": model_id,
                     "model_path": model_path,
-                    "loaded_at": datetime.now().isoformat()
-                }
+                    "loaded_at": datetime.now().isoformat(),
+                },
             }
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Model loading failed: {str(e)}"
+                "error_message": f"Model loading failed: {str(e)}",
             }
 
     async def _prepare_test_data(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
@@ -464,27 +453,23 @@ class EvaluatorWorkflow:
             if not test_data_path:
                 return {
                     "success": True,
-                    "data": {
-                        "test_data_ready": True,
-                        "data_source": "default"
-                    }
+                    "data": {"test_data_ready": True, "data_source": "default"},
                 }
 
             return {
                 "success": True,
-                "data": {
-                    "test_data_path": test_data_path,
-                    "test_data_ready": True
-                }
+                "data": {"test_data_path": test_data_path, "test_data_ready": True},
             }
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Test data preparation failed: {str(e)}"
+                "error_message": f"Test data preparation failed: {str(e)}",
             }
 
-    async def _evaluate_model(self, model_data: Dict[str, Any], test_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _evaluate_model(
+        self, model_data: Dict[str, Any], test_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Evaluate the model using the performance critic agent."""
         try:
             from trading.agents.agent_manager import execute_agent
@@ -495,7 +480,7 @@ class EvaluatorWorkflow:
                 model_path=model_data["model_path"],
                 model_type=model_data.get("model_type", "unknown"),
                 test_data_path=test_data.get("test_data_path"),
-                request_id=f"eval_{model_data['model_id']}_{datetime.now().isoformat()}"
+                request_id=f"eval_{model_data['model_id']}_{datetime.now().isoformat()}",
             )
 
             result = await execute_agent("performance_critic", request=eval_request)
@@ -503,16 +488,18 @@ class EvaluatorWorkflow:
             return {
                 "success": result.success,
                 "data": result.data if result.success else {},
-                "error_message": result.error_message if not result.success else None
+                "error_message": result.error_message if not result.success else None,
             }
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Model evaluation failed: {str(e)}"
+                "error_message": f"Model evaluation failed: {str(e)}",
             }
 
-    async def _calculate_risk_metrics(self, evaluation_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _calculate_risk_metrics(
+        self, evaluation_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Calculate risk metrics for the model."""
         try:
             # Basic risk calculation
@@ -527,17 +514,19 @@ class EvaluatorWorkflow:
                     "risk_score": risk_score,
                     "volatility": evaluation_data.get("volatility", 0.0),
                     "var_95": evaluation_data.get("var_95", 0.0),
-                    "max_drawdown": max_drawdown
-                }
+                    "max_drawdown": max_drawdown,
+                },
             }
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Risk calculation failed: {str(e)}"
+                "error_message": f"Risk calculation failed: {str(e)}",
             }
 
-    async def _compare_benchmarks(self, evaluation_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _compare_benchmarks(
+        self, evaluation_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Compare model performance with benchmarks."""
         try:
             # Basic benchmark comparison
@@ -551,14 +540,14 @@ class EvaluatorWorkflow:
                 "data": {
                     "benchmark_sharpe": benchmark_sharpe,
                     "outperformance": outperformance,
-                    "outperforms_benchmark": outperformance > 0
-                }
+                    "outperforms_benchmark": outperformance > 0,
+                },
             }
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Benchmark comparison failed: {str(e)}"
+                "error_message": f"Benchmark comparison failed: {str(e)}",
             }
 
 
@@ -606,7 +595,7 @@ class UpdaterWorkflow:
                     workflow_type=self.workflow_name,
                     data={},
                     error_message=validation_result["error"],
-                    execution_time=(datetime.now() - start_time).total_seconds()
+                    execution_time=(datetime.now() - start_time).total_seconds(),
                 )
 
             # Execute the updater workflow
@@ -620,7 +609,7 @@ class UpdaterWorkflow:
                 data=result.get("data", {}),
                 error_message=result.get("error_message"),
                 execution_time=execution_time,
-                agent_results=result.get("agent_results", {})
+                agent_results=result.get("agent_results", {}),
             )
 
         except Exception as e:
@@ -632,7 +621,7 @@ class UpdaterWorkflow:
                 workflow_type=self.workflow_name,
                 data={},
                 error_message=f"Updater workflow failed: {str(e)}",
-                execution_time=execution_time
+                execution_time=execution_time,
             )
 
     def _validate_updater_inputs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
@@ -641,10 +630,7 @@ class UpdaterWorkflow:
 
         for field in required_fields:
             if field not in kwargs:
-                return {
-                    "valid": False,
-                    "error": f"Missing required field: {field}"
-                }
+                return {"valid": False, "error": f"Missing required field: {field}"}
 
         # Validate update type if provided
         update_type = kwargs.get("update_type", "auto")
@@ -652,7 +638,7 @@ class UpdaterWorkflow:
         if update_type not in valid_update_types:
             return {
                 "valid": False,
-                "error": f"Invalid update type: {update_type}. Valid types: {valid_update_types}"
+                "error": f"Invalid update type: {update_type}. Valid types: {valid_update_types}",
             }
 
         return {"valid": True}
@@ -666,7 +652,9 @@ class UpdaterWorkflow:
                 return analysis_result
 
             # Step 2: Determine update strategy
-            strategy_result = await self._determine_update_strategy(analysis_result["data"], kwargs)
+            strategy_result = await self._determine_update_strategy(
+                analysis_result["data"], kwargs
+            )
             if not strategy_result["success"]:
                 return strategy_result
 
@@ -689,16 +677,13 @@ class UpdaterWorkflow:
                     "strategy_determination": strategy_result,
                     "update_execution": update_result,
                     "update_validation": validation_result,
-                    "registry_update": registry_result
-                }
+                    "registry_update": registry_result,
+                },
             }
 
         except Exception as e:
             self.logger.error(f"Error in updater workflow execution: {e}")
-            return {
-                "success": False,
-                "error_message": str(e)
-            }
+            return {"success": False, "error_message": str(e)}
 
     async def _analyze_performance(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze current model performance."""
@@ -721,17 +706,19 @@ class UpdaterWorkflow:
                     "sharpe_ratio": sharpe_ratio,
                     "max_drawdown": max_drawdown,
                     "win_rate": win_rate,
-                    "needs_update": performance_score < 0.3
-                }
+                    "needs_update": performance_score < 0.3,
+                },
             }
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Performance analysis failed: {str(e)}"
+                "error_message": f"Performance analysis failed: {str(e)}",
             }
 
-    async def _determine_update_strategy(self, analysis_data: Dict[str, Any], kwargs: Dict[str, Any]) -> Dict[str, Any]:
+    async def _determine_update_strategy(
+        self, analysis_data: Dict[str, Any], kwargs: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Determine the appropriate update strategy."""
         try:
             update_type = kwargs.get("update_type", "auto")
@@ -752,31 +739,32 @@ class UpdaterWorkflow:
                 "data": {
                     "update_type": update_type,
                     "priority": "high" if performance_score < 0.3 else "normal",
-                    "target_improvement": max(0.1, 0.5 - performance_score)
-                }
+                    "target_improvement": max(0.1, 0.5 - performance_score),
+                },
             }
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Strategy determination failed: {str(e)}"
+                "error_message": f"Strategy determination failed: {str(e)}",
             }
 
     async def _execute_update(self, strategy_data: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the model update using the updater agent."""
         try:
             from trading.agents.agent_manager import execute_agent
-            from trading.agents.updater_agent import UpdateRequest
 
             # Create a mock evaluation result since we don't have the actual one
             from trading.agents.performance_critic_agent import ModelEvaluationResult
+            from trading.agents.updater_agent import UpdateRequest
+
             mock_evaluation = ModelEvaluationResult(
                 request_id=f"mock_eval_{uuid.uuid4().hex[:8]}",
                 model_id=strategy_data.get("model_id"),
                 evaluation_timestamp=datetime.now().isoformat(),
                 performance_metrics={},
                 risk_metrics={},
-                trading_metrics={}
+                trading_metrics={},
             )
 
             update_request = UpdateRequest(
@@ -784,7 +772,7 @@ class UpdaterWorkflow:
                 evaluation_result=mock_evaluation,
                 update_type=strategy_data["update_type"],
                 priority=strategy_data.get("priority", "normal"),
-                request_id=f"updater_{uuid.uuid4().hex[:8]}"
+                request_id=f"updater_{uuid.uuid4().hex[:8]}",
             )
 
             result = await execute_agent("updater", request=update_request)
@@ -792,13 +780,13 @@ class UpdaterWorkflow:
             return {
                 "success": result.success,
                 "data": result.data if result.success else {},
-                "error_message": result.error_message if not result.success else None
+                "error_message": result.error_message if not result.success else None,
             }
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Update execution failed: {str(e)}"
+                "error_message": f"Update execution failed: {str(e)}",
             }
 
     async def _validate_update(self, update_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -809,40 +797,36 @@ class UpdaterWorkflow:
 
             return {
                 "success": update_status == "success",
-                "data": {
-                    **update_data,
-                    "validated_at": datetime.now().isoformat()
-                }
+                "data": {**update_data, "validated_at": datetime.now().isoformat()},
             }
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Update validation failed: {str(e)}"
+                "error_message": f"Update validation failed: {str(e)}",
             }
 
     async def _update_registry(self, validation_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update the model registry with the new model."""
         try:
             # Update registry entry
-            model_id = validation_data.get("new_model_id", validation_data.get("model_id"))
+            model_id = validation_data.get(
+                "new_model_id", validation_data.get("model_id")
+            )
 
             registry_data = {
                 "model_id": model_id,
                 "update_timestamp": datetime.now().isoformat(),
                 "update_status": "completed",
-                "previous_model_id": validation_data.get("original_model_id")
+                "previous_model_id": validation_data.get("original_model_id"),
             }
 
-            return {
-                "success": True,
-                "data": registry_data
-            }
+            return {"success": True, "data": registry_data}
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Registry update failed: {str(e)}"
+                "error_message": f"Registry update failed: {str(e)}",
             }
 
 
@@ -888,7 +872,7 @@ class TaskWorkflow:
                     workflow_type=self.workflow_name,
                     data={},
                     error_message=validation_result["error"],
-                    execution_time=(datetime.now() - start_time).total_seconds()
+                    execution_time=(datetime.now() - start_time).total_seconds(),
                 )
 
             # Execute the task
@@ -902,7 +886,7 @@ class TaskWorkflow:
                 data=result.get("data", {}),
                 error_message=result.get("error_message"),
                 execution_time=execution_time,
-                agent_results=result.get("agent_results", {})
+                agent_results=result.get("agent_results", {}),
             )
 
         except Exception as e:
@@ -914,7 +898,7 @@ class TaskWorkflow:
                 workflow_type=self.workflow_name,
                 data={},
                 error_message=f"Task workflow failed: {str(e)}",
-                execution_time=execution_time
+                execution_time=execution_time,
             )
 
     def _validate_task_inputs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
@@ -923,10 +907,7 @@ class TaskWorkflow:
 
         for field in required_fields:
             if field not in kwargs:
-                return {
-                    "valid": False,
-                    "error": f"Missing required field: {field}"
-                }
+                return {"valid": False, "error": f"Missing required field: {field}"}
 
         # Validate task type if provided
         task_type_str = kwargs.get("task_type", "general")
@@ -934,7 +915,7 @@ class TaskWorkflow:
         if task_type_str not in valid_task_types:
             return {
                 "valid": False,
-                "error": f"Invalid task type: {task_type_str}. Valid types: {valid_task_types}"
+                "error": f"Invalid task type: {task_type_str}. Valid types: {valid_task_types}",
             }
 
         return {"valid": True}
@@ -958,7 +939,7 @@ class TaskWorkflow:
                 task_type=task_type,
                 parameters=parameters,
                 max_depth=max_depth,
-                performance_threshold=performance_threshold
+                performance_threshold=performance_threshold,
             )
 
             return {
@@ -968,15 +949,15 @@ class TaskWorkflow:
                     "performance_score": result.performance_score,
                     "message": result.message,
                     "action_count": len(result.data.get("performance_history", [])),
-                    "depth_reached": result.data.get("depth_reached", 0)
+                    "depth_reached": result.data.get("depth_reached", 0),
                 },
-                "error_message": result.error_details if not result.success else None
+                "error_message": result.error_details if not result.success else None,
             }
 
         except Exception as e:
             return {
                 "success": False,
-                "error_message": f"Task execution failed: {str(e)}"
+                "error_message": f"Task execution failed: {str(e)}",
             }
 
 
@@ -1003,7 +984,7 @@ class AgentController:
             "builder": self.builder,
             "evaluator": self.evaluator,
             "updater": self.updater,
-            "task": self.task_executor
+            "task": self.task_executor,
         }
 
         # Agent registration tracking
@@ -1012,13 +993,15 @@ class AgentController:
             "total_agents": 0,
             "successful_registrations": 0,
             "failed_registrations": 0,
-            "fallback_agent_created": False
+            "fallback_agent_created": False,
         }
 
         # Initialize agent registration
         self._initialize_agent_registration()
 
-        self.logger.info("AgentController initialized with all workflows including TaskAgent")
+        self.logger.info(
+            "AgentController initialized with all workflows including TaskAgent"
+        )
 
     def _initialize_agent_registration(self):
         """Initialize agent registration and check for available agents."""
@@ -1027,6 +1010,7 @@ class AgentController:
         try:
             # Try to get agent registry
             from trading.agents.agent_registry import get_registry
+
             registry = get_registry()
 
             # Get list of registered agents
@@ -1034,8 +1018,12 @@ class AgentController:
             self.agent_registration_status["total_agents"] = len(registered_agents)
 
             if registered_agents:
-                self.logger.info(f"Found {len(registered_agents)} registered agents: {registered_agents}")
-                self.agent_registration_status["successful_registrations"] = len(registered_agents)
+                self.logger.info(
+                    f"Found {len(registered_agents)} registered agents: {registered_agents}"
+                )
+                self.agent_registration_status["successful_registrations"] = len(
+                    registered_agents
+                )
 
                 # Store agent information
                 for agent_name in registered_agents:
@@ -1045,8 +1033,14 @@ class AgentController:
                             "name": agent_name,
                             "class_name": agent_info.class_name,
                             "module_path": agent_info.module_path,
-                            "capabilities": [cap.name for cap in agent_info.capabilities],
-                            "category": agent_info.category.value if agent_info.category else "unknown"
+                            "capabilities": [
+                                cap.name for cap in agent_info.capabilities
+                            ],
+                            "category": (
+                                agent_info.category.value
+                                if agent_info.category
+                                else "unknown"
+                            ),
                         }
 
                 self.logger.info("✅ Agent registration successful")
@@ -1068,20 +1062,23 @@ class AgentController:
         try:
             from agents.mock_agent import create_mock_agent
 
-            fallback_agent = create_mock_agent("FallbackAgent", [
-                "general_query",
-                "system_status",
-                "help",
-                "fallback_response"
-            ])
+            fallback_agent = create_mock_agent(
+                "FallbackAgent",
+                ["general_query", "system_status", "help", "fallback_response"],
+            )
 
             self.registered_agents["fallback_agent"] = {
                 "name": "fallback_agent",
                 "class_name": "MockAgent",
                 "module_path": "agents.mock_agent",
-                "capabilities": ["general_query", "system_status", "help", "fallback_response"],
+                "capabilities": [
+                    "general_query",
+                    "system_status",
+                    "help",
+                    "fallback_response",
+                ],
                 "category": "fallback",
-                "instance": fallback_agent
+                "instance": fallback_agent,
             }
 
             self.agent_registration_status["fallback_agent_created"] = True
@@ -1089,7 +1086,9 @@ class AgentController:
             self.agent_registration_status["successful_registrations"] = 1
 
             self.logger.warning("⚠️ Created fallback agent - no real agents available")
-            self.logger.info("System will continue running with mock agent for UI testing")
+            self.logger.info(
+                "System will continue running with mock agent for UI testing"
+            )
 
         except Exception as e:
             self.logger.error(f"❌ Failed to create fallback agent: {e}")
@@ -1100,7 +1099,7 @@ class AgentController:
         return {
             **self.agent_registration_status,
             "registered_agent_names": list(self.registered_agents.keys()),
-            "agent_details": self.registered_agents
+            "agent_details": self.registered_agents,
         }
 
     def get_available_agents(self) -> List[str]:
@@ -1112,9 +1111,7 @@ class AgentController:
         return not self.agent_registration_status["fallback_agent_created"]
 
     async def execute_workflow(
-        self,
-        workflow_type: str,
-        **kwargs
+        self, workflow_type: str, **kwargs
     ) -> AgentWorkflowResult:
         """
         Execute a specific agent workflow.
@@ -1131,18 +1128,14 @@ class AgentController:
                 success=False,
                 workflow_type=workflow_type,
                 data={},
-                error_message=f"Unknown workflow type: {workflow_type}"
+                error_message=f"Unknown workflow type: {workflow_type}",
             )
 
         workflow = self.workflows[workflow_type]
         return await workflow(**kwargs)
 
     async def execute_full_pipeline(
-        self,
-        model_type: str,
-        data_path: str,
-        target_column: str,
-        **kwargs
+        self, model_type: str, data_path: str, target_column: str, **kwargs
     ) -> Dict[str, AgentWorkflowResult]:
         """
         Execute the full agent pipeline: build -> evaluate -> update.
@@ -1167,7 +1160,7 @@ class AgentController:
                 model_type=model_type,
                 data_path=data_path,
                 target_column=target_column,
-                **kwargs
+                **kwargs,
             )
             results["build"] = build_result
 
@@ -1182,7 +1175,7 @@ class AgentController:
                 model_id=model_data["model_id"],
                 model_path=model_data["model_path"],
                 model_type=model_type,
-                **kwargs
+                **kwargs,
             )
             results["evaluate"] = eval_result
 
@@ -1202,7 +1195,7 @@ class AgentController:
                     model_id=model_data["model_id"],
                     evaluation_result=evaluation_data,
                     update_type="auto",
-                    **kwargs
+                    **kwargs,
                 )
                 results["update"] = update_result
             else:
@@ -1211,7 +1204,7 @@ class AgentController:
                     success=True,
                     workflow_type="model_updater",
                     data={"message": "No update needed - performance is satisfactory"},
-                    execution_time=0.0
+                    execution_time=0.0,
                 )
 
             self.logger.info("Full agent pipeline completed successfully")
@@ -1222,7 +1215,7 @@ class AgentController:
                 success=False,
                 workflow_type="full_pipeline",
                 data={},
-                error_message=f"Pipeline execution failed: {str(e)}"
+                error_message=f"Pipeline execution failed: {str(e)}",
             )
 
         return results
@@ -1240,14 +1233,10 @@ class AgentController:
         if workflow_type not in self.workflows:
             return {
                 "available": False,
-                "error": f"Unknown workflow type: {workflow_type}"
+                "error": f"Unknown workflow type: {workflow_type}",
             }
 
-        return {
-            "available": True,
-            "workflow_type": workflow_type,
-            "status": "ready"
-        }
+        return {"available": True, "workflow_type": workflow_type, "status": "ready"}
 
     def list_available_workflows(self) -> List[str]:
         """
@@ -1296,10 +1285,7 @@ async def execute_updater_workflow(**kwargs) -> AgentWorkflowResult:
 
 
 async def execute_full_pipeline(
-    model_type: str,
-    data_path: str,
-    target_column: str,
-    **kwargs
+    model_type: str, data_path: str, target_column: str, **kwargs
 ) -> Dict[str, AgentWorkflowResult]:
     """Execute the full agent pipeline."""
     controller = get_agent_controller()
@@ -1307,5 +1293,5 @@ async def execute_full_pipeline(
         model_type=model_type,
         data_path=data_path,
         target_column=target_column,
-        **kwargs
-    ) 
+        **kwargs,
+    )

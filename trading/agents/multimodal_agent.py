@@ -20,6 +20,7 @@ from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 # Try to import plotly
 try:
     import plotly.graph_objs as go
+
     PLOTLY_AVAILABLE = True
 except ImportError as e:
     print("⚠️ plotly not available. Disabling interactive plotting.")
@@ -30,6 +31,7 @@ except ImportError as e:
 # Try to import OpenAI
 try:
     import openai
+
     OPENAI_AVAILABLE = True
 except ImportError as e:
     print("⚠️ OpenAI not available. Disabling GPT-4V image analysis.")
@@ -41,6 +43,7 @@ except ImportError as e:
 try:
     from PIL import Image
     from transformers import BlipForConditionalGeneration, BlipProcessor
+
     PIL_AVAILABLE = True
     TRANSFORMERS_AVAILABLE = True
 except ImportError as e:
@@ -56,6 +59,7 @@ except ImportError as e:
 try:
     import librosa
     import speech_recognition as sr
+
     LIBROSA_AVAILABLE = True
     SPEECH_RECOGNITION_AVAILABLE = True
 except ImportError as e:
@@ -70,6 +74,7 @@ except ImportError as e:
 try:
     import docx
     import pandas as pd
+
     DOCX_AVAILABLE = True
     PANDAS_AVAILABLE = True
 except ImportError as e:
@@ -432,7 +437,9 @@ class DocumentHandler:
             try:
                 json.loads(document_bytes.decode("utf-8"))
                 return ".json"
-            except:
+            except Exception as e:
+                # Not a valid JSON file, continue checking other formats
+                logger.debug(f"JSON detection failed: {e}")
                 pass
 
             # Check for CSV
@@ -440,7 +447,9 @@ class DocumentHandler:
                 content = document_bytes.decode("utf-8")
                 if "," in content and "\n" in content:
                     return ".csv"
-            except:
+            except Exception as e:
+                # Not a valid CSV file, continue checking other formats
+                logger.debug(f"CSV detection failed: {e}")
                 pass
 
             # Default to text

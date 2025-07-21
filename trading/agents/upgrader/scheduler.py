@@ -126,9 +126,9 @@ class UpgradeScheduler:
                 "running": self.running,
                 "check_interval": self.check_interval,
                 "last_check": self.last_check.isoformat() if self.last_check else None,
-                "next_check": schedule.next_run().isoformat()
-                if schedule.jobs
-                else None,
+                "next_check": (
+                    schedule.next_run().isoformat() if schedule.jobs else None
+                ),
             },
             "message": "Scheduler status retrieved",
             "timestamp": datetime.now().isoformat(),

@@ -5,26 +5,20 @@ time series forecasting with interpretable attention mechanisms.
 """
 
 import logging
-import os
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from pytorch_lightning.utilities.types import STEP_OUTPUT
-from sklearn.preprocessing import StandardScaler
 
 # PyTorch Lightning imports
 try:
     import pytorch_lightning as pl
     from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-    from pytorch_lightning.loggers import TensorBoardLogger
 
     LIGHTNING_AVAILABLE = True
 except ImportError as e:
@@ -107,23 +101,27 @@ class TimeSeriesDataset(Dataset):
             len(self.data) - self.sequence_length - self.prediction_horizon + 1
         ):
             # Input sequence
-            seq_data = self.data.iloc[i : i + self.sequence_length]
+            seq_data = self.data.iloc[i: i + self.sequence_length]
             # Target sequence
             target_data = self.data.iloc[
                 i
-                + self.sequence_length : i
+                + self.sequence_length: i
                 + self.sequence_length
                 + self.prediction_horizon
             ]
             # Extract features
             sequence = {
                 "target": torch.FloatTensor(seq_data[self.target_column].values),
-                "static": torch.FloatTensor(seq_data[self.static_features].values)
-                if self.static_features
-                else torch.zeros(1),
-                "time": torch.FloatTensor(seq_data[self.time_features].values)
-                if self.time_features
-                else torch.zeros(1),
+                "static": (
+                    torch.FloatTensor(seq_data[self.static_features].values)
+                    if self.static_features
+                    else torch.zeros(1)
+                ),
+                "time": (
+                    torch.FloatTensor(seq_data[self.time_features].values)
+                    if self.time_features
+                    else torch.zeros(1)
+                ),
                 "features": torch.FloatTensor(
                     seq_data.drop(
                         columns=[self.target_column]
@@ -541,8 +539,8 @@ class TFTForecaster:
         val_size = int(len(data) * 0.15)
 
         train_data = data.iloc[:train_size]
-        val_data = data.iloc[train_size : train_size + val_size]
-        test_data = data.iloc[train_size + val_size :]
+        val_data = data.iloc[train_size: train_size + val_size]
+        test_data = data.iloc[train_size + val_size:]
 
         # Create datasets
         train_dataset = TimeSeriesDataset(

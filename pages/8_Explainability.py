@@ -13,11 +13,11 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
-# Add the project root to the path
-sys.path.append(str(Path(__file__).parent.parent))
-
 from trading.data.preprocessing import DataPreprocessor
 from trading.feature_engineering.feature_engineer import FeatureEngineering
+
+# Add the project root to the path
+sys.path.append(str(Path(__file__).parent.parent))
 
 
 def main():

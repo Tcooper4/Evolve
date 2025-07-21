@@ -16,12 +16,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List
 
-# Add project root to path
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
-
-# from trading.meta_agents.agents.model_builder import ModelBuilder  # Removed - meta_agents deleted
 from config.settings import Settings
 from trading.agents.task_memory import Task, TaskMemory, TaskStatus
 from trading.scheduler import UpgradeScheduler
@@ -31,6 +25,13 @@ from trading.utils import (
     get_pipeline_components,
     validate_upgrade_result,
 )
+
+# Add project root to path
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+
+# from trading.meta_agents.agents.model_builder import ModelBuilder  # Removed - meta_agents deleted
 
 logger = logging.getLogger("UpgraderAgent")
 
@@ -50,7 +51,7 @@ class UpgraderAgent:
         """
         self.settings = Settings(config_path)
         self.task_memory = TaskMemory()
-        self.model_builder = ModelBuilder()
+        # self.model_builder = ModelBuilder()  # ModelBuilder not available
         self.scheduler = UpgradeScheduler(
             check_interval=self.settings.get("upgrade_interval", 24)
         )
@@ -418,9 +419,11 @@ class UpgraderAgent:
         return {
             "success": True,
             "result": {
-                "last_upgrade_check": self.last_upgrade_check.isoformat()
-                if self.last_upgrade_check
-                else None,
+                "last_upgrade_check": (
+                    self.last_upgrade_check.isoformat()
+                    if self.last_upgrade_check
+                    else None
+                ),
                 "failed_upgrades": list(self.failed_upgrades),
                 "upgrade_history_count": len(self.upgrade_history),
                 "max_retries": self.max_retries,

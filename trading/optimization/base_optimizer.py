@@ -557,9 +557,11 @@ class BaseOptimizer(ABC):
                         "strategy_type": self.strategy_type,
                         "timestamp": datetime.now().isoformat(),
                         "total_results": len(self.results),
-                        "best_sharpe": self.best_result.metrics.get("sharpe_ratio", 0)
-                        if self.best_result
-                        else 0,
+                        "best_sharpe": (
+                            self.best_result.metrics.get("sharpe_ratio", 0)
+                            if self.best_result
+                            else 0
+                        ),
                     },
                     "results": [],
                 }

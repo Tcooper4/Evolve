@@ -7,7 +7,6 @@ with the prompt router system.
 
 import asyncio
 import logging
-from typing import Dict, Any
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +19,7 @@ async def test_agent_controller():
 
     try:
         # Import the agent controller
-        from agents.agent_controller import get_agent_controller, AgentController
+        from agents.agent_controller import get_agent_controller
 
         # Get the controller instance
         controller = get_agent_controller()
@@ -41,7 +40,7 @@ async def test_agent_controller():
             "builder",
             model_type="lstm",
             data_path="data/sample_data.csv",
-            target_column="close"
+            target_column="close",
         )
         logger.info(f"✅ Builder workflow result: {builder_result.success}")
         if not builder_result.success:
@@ -50,9 +49,7 @@ async def test_agent_controller():
         # Test evaluator workflow
         logger.info("Testing evaluator workflow...")
         evaluator_result = await controller.execute_workflow(
-            "evaluator",
-            model_id="test_model",
-            model_path="models/test_model.pkl"
+            "evaluator", model_id="test_model", model_path="models/test_model.pkl"
         )
         logger.info(f"✅ Evaluator workflow result: {evaluator_result.success}")
         if not evaluator_result.success:
@@ -61,9 +58,7 @@ async def test_agent_controller():
         # Test updater workflow
         logger.info("Testing updater workflow...")
         updater_result = await controller.execute_workflow(
-            "updater",
-            model_id="test_model",
-            update_type="auto"
+            "updater", model_id="test_model", update_type="auto"
         )
         logger.info(f"✅ Updater workflow result: {updater_result.success}")
         if not updater_result.success:
@@ -91,21 +86,21 @@ async def test_prompt_router_integration():
         logger.info("Testing builder workflow prompt...")
         result = await route_prompt("Build a new LSTM model for forecasting")
         logger.info(f"✅ Builder prompt result: {result.get('success', False)}")
-        if result.get('workflow_type'):
+        if result.get("workflow_type"):
             logger.info(f"   Workflow type: {result['workflow_type']}")
 
         # Test an evaluator workflow prompt
         logger.info("Testing evaluator workflow prompt...")
         result = await route_prompt("Evaluate the performance of my model")
         logger.info(f"✅ Evaluator prompt result: {result.get('success', False)}")
-        if result.get('workflow_type'):
+        if result.get("workflow_type"):
             logger.info(f"   Workflow type: {result['workflow_type']}")
 
         # Test an updater workflow prompt
         logger.info("Testing updater workflow prompt...")
         result = await route_prompt("Update and optimize my model")
         logger.info(f"✅ Updater prompt result: {result.get('success', False)}")
-        if result.get('workflow_type'):
+        if result.get("workflow_type"):
             logger.info(f"   Workflow type: {result['workflow_type']}")
 
         logger.info("✅ Prompt Router integration tests completed successfully!")
@@ -130,18 +125,18 @@ async def test_workflow_execution():
 
         # Test different model types
         model_types = ["lstm", "xgboost", "random_forest"]
-        
+
         for model_type in model_types:
             logger.info(f"Testing {model_type} model workflow...")
-            
+
             result = await controller.execute_workflow(
                 "builder",
                 model_type=model_type,
                 data_path="data/sample_data.csv",
                 target_column="close",
-                test_mode=True
+                test_mode=True,
             )
-            
+
             logger.info(f"✅ {model_type} workflow result: {result.success}")
             if not result.success:
                 logger.info(f"   Error: {result.error_message}")
@@ -166,8 +161,7 @@ async def test_error_handling():
         # Test with invalid workflow type
         logger.info("Testing invalid workflow type...")
         result = await controller.execute_workflow(
-            "invalid_workflow",
-            model_type="lstm"
+            "invalid_workflow", model_type="lstm"
         )
         logger.info(f"✅ Invalid workflow handled: {not result.success}")
 
@@ -179,9 +173,7 @@ async def test_error_handling():
         # Test with invalid data path
         logger.info("Testing invalid data path...")
         result = await controller.execute_workflow(
-            "builder",
-            model_type="lstm",
-            data_path="invalid/path.csv"
+            "builder", model_type="lstm", data_path="invalid/path.csv"
         )
         logger.info(f"✅ Invalid data path handled: {not result.success}")
 
@@ -205,7 +197,7 @@ async def main():
         ("Agent Controller", test_agent_controller),
         ("Prompt Router Integration", test_prompt_router_integration),
         ("Workflow Execution", test_workflow_execution),
-        ("Error Handling", test_error_handling)
+        ("Error Handling", test_error_handling),
     ]
 
     for test_name, test_func in tests:
@@ -242,4 +234,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

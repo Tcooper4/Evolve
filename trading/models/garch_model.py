@@ -442,9 +442,11 @@ class GARCHModel(BaseModel):
                 "config": self.config,
                 "model_type": "GARCH",
                 "save_timestamp": datetime.now().isoformat(),
-                "conditional_volatility": self.conditional_volatility.tolist()
-                if self.conditional_volatility is not None
-                else None,
+                "conditional_volatility": (
+                    self.conditional_volatility.tolist()
+                    if self.conditional_volatility is not None
+                    else None
+                ),
             }
 
             metadata_path = filepath.replace(".pkl", "_metadata.json")

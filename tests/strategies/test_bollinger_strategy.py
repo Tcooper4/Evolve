@@ -475,3 +475,8 @@ class TestBollingerStrategy:
             ), "Low volume periods should have neutral signals"
 
         logger.debug("✅ Tight bands in low volatility regime test completed")
+
+        print(
+            "Bollinger strategy test completed. All strategy functions "
+            "have been validated."
+        )

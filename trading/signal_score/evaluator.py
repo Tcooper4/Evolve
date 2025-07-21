@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class SignalType(Enum):
     """Types of trading signals."""
+
     BUY = "buy"
     SELL = "sell"
     HOLD = "hold"
@@ -28,6 +29,7 @@ class SignalType(Enum):
 
 class StrategyType(Enum):
     """Supported strategy types."""
+
     RSI = "RSI"
     SMA = "SMA"
     MACD = "MACD"
@@ -38,6 +40,7 @@ class StrategyType(Enum):
 @dataclass
 class SignalScore:
     """Signal score with metadata."""
+
     signal_type: SignalType
     score: float
     confidence: float
@@ -50,6 +53,7 @@ class SignalScore:
 @dataclass
 class EvaluationResult:
     """Result of signal evaluation."""
+
     signal_scores: List[SignalScore]
     composite_score: float
     recommended_action: SignalType
@@ -69,11 +73,13 @@ class SignalScoreEvaluator:
     - Confidence-weighted aggregation
     """
 
-    def __init__(self,
-                 enable_nan_protection: bool = True,
-                 default_confidence_threshold: float = 0.3,
-                 max_score: float = 1.0,
-                 min_score: float = -1.0):
+    def __init__(
+        self,
+        enable_nan_protection: bool = True,
+        default_confidence_threshold: float = 0.3,
+        max_score: float = 1.0,
+        min_score: float = -1.0,
+    ):
         """
         Initialize signal score evaluator.
 
@@ -99,13 +105,15 @@ class SignalScoreEvaluator:
 
         # Statistics
         self.stats = {
-            'total_evaluations': 0,
-            'nan_detected_count': 0,
-            'strategy_usage': {},
-            'avg_composite_score': 0.0
+            "total_evaluations": 0,
+            "nan_detected_count": 0,
+            "strategy_usage": {},
+            "avg_composite_score": 0.0,
         }
 
-        logger.info(f"SignalScoreEvaluator initialized with NaN protection: {enable_nan_protection}")
+        logger.info(
+            f"SignalScoreEvaluator initialized with NaN protection: {enable_nan_protection}"
+        )
 
     def _initialize_strategy_evaluators(self) -> Dict[str, Callable]:
         """Initialize built-in strategy evaluators."""
@@ -113,13 +121,15 @@ class SignalScoreEvaluator:
             StrategyType.RSI.value: self._evaluate_rsi_signal,
             StrategyType.SMA.value: self._evaluate_sma_signal,
             StrategyType.MACD.value: self._evaluate_macd_signal,
-            StrategyType.BB.value: self._evaluate_bollinger_signal
+            StrategyType.BB.value: self._evaluate_bollinger_signal,
         }
 
-    def evaluate_signal(self,
-                       signal_data: Dict[str, Any],
-                       strategy_type: str,
-                       parameters: Optional[Dict[str, Any]] = None) -> SignalScore:
+    def evaluate_signal(
+        self,
+        signal_data: Dict[str, Any],
+        strategy_type: str,
+        parameters: Optional[Dict[str, Any]] = None,
+    ) -> SignalScore:
         """
         Evaluate a single signal.
 
@@ -156,7 +166,7 @@ class SignalScoreEvaluator:
                 confidence=confidence,
                 strategy=strategy_type,
                 timestamp=datetime.now(),
-                parameters=parameters or {}
+                parameters=parameters or {},
             )
 
             # Update statistics
@@ -168,13 +178,13 @@ class SignalScoreEvaluator:
             logger.error(f"Error evaluating {strategy_type} signal: {e}")
             return self._create_error_score(strategy_type, str(e))
 
-    def _evaluate_rsi_signal(self,
-                           signal_data: Dict[str, Any],
-                           parameters: Dict[str, Any]) -> Tuple[float, float, SignalType]:
+    def _evaluate_rsi_signal(
+        self, signal_data: Dict[str, Any], parameters: Dict[str, Any]
+    ) -> Tuple[float, float, SignalType]:
         """Evaluate RSI signal."""
-        rsi_value = signal_data.get('rsi', 50.0)
-        oversold_threshold = parameters.get('oversold', 30.0)
-        overbought_threshold = parameters.get('overbought', 70.0)
+        rsi_value = signal_data.get("rsi", 50.0)
+        oversold_threshold = parameters.get("oversold", 30.0)
+        overbought_threshold = parameters.get("overbought", 70.0)
 
         # Apply NaN protection
         if self.enable_nan_protection:
@@ -186,7 +196,12 @@ class SignalScoreEvaluator:
             signal_type = SignalType.STRONG_BUY
             confidence = 0.9
         elif rsi_value >= overbought_threshold:
-            score = 0.8 + (rsi_value - overbought_threshold) / (100 - overbought_threshold) * 0.2
+            score = (
+                0.8
+                + (rsi_value - overbought_threshold)
+                / (100 - overbought_threshold)
+                * 0.2
+            )
             signal_type = SignalType.STRONG_SELL
             confidence = 0.9
         else:
@@ -206,13 +221,13 @@ class SignalScoreEvaluator:
 
         return score, confidence, signal_type
 
-    def _evaluate_sma_signal(self,
-                           signal_data: Dict[str, Any],
-                           parameters: Dict[str, Any]) -> Tuple[float, float, SignalType]:
+    def _evaluate_sma_signal(
+        self, signal_data: Dict[str, Any], parameters: Dict[str, Any]
+    ) -> Tuple[float, float, SignalType]:
         """Evaluate SMA signal."""
-        current_price = signal_data.get('current_price', 100.0)
-        sma_short = signal_data.get('sma_short', 100.0)
-        sma_long = signal_data.get('sma_long', 100.0)
+        current_price = signal_data.get("current_price", 100.0)
+        sma_short = signal_data.get("sma_short", 100.0)
+        sma_long = signal_data.get("sma_long", 100.0)
 
         # Apply NaN protection
         if self.enable_nan_protection:
@@ -253,13 +268,13 @@ class SignalScoreEvaluator:
 
         return score, confidence, signal_type
 
-    def _evaluate_macd_signal(self,
-                            signal_data: Dict[str, Any],
-                            parameters: Dict[str, Any]) -> Tuple[float, float, SignalType]:
+    def _evaluate_macd_signal(
+        self, signal_data: Dict[str, Any], parameters: Dict[str, Any]
+    ) -> Tuple[float, float, SignalType]:
         """Evaluate MACD signal."""
-        macd_line = signal_data.get('macd', 0.0)
-        signal_line = signal_data.get('signal', 0.0)
-        histogram = signal_data.get('histogram', 0.0)
+        macd_line = signal_data.get("macd", 0.0)
+        signal_line = signal_data.get("signal", 0.0)
+        histogram = signal_data.get("histogram", 0.0)
 
         # Apply NaN protection
         if self.enable_nan_protection:
@@ -296,14 +311,14 @@ class SignalScoreEvaluator:
 
         return score, confidence, signal_type
 
-    def _evaluate_bollinger_signal(self,
-                                 signal_data: Dict[str, Any],
-                                 parameters: Dict[str, Any]) -> Tuple[float, float, SignalType]:
+    def _evaluate_bollinger_signal(
+        self, signal_data: Dict[str, Any], parameters: Dict[str, Any]
+    ) -> Tuple[float, float, SignalType]:
         """Evaluate Bollinger Bands signal."""
-        current_price = signal_data.get('current_price', 100.0)
-        upper_band = signal_data.get('upper_band', 110.0)
-        lower_band = signal_data.get('lower_band', 90.0)
-        middle_band = signal_data.get('middle_band', 100.0)
+        current_price = signal_data.get("current_price", 100.0)
+        upper_band = signal_data.get("upper_band", 110.0)
+        lower_band = signal_data.get("lower_band", 90.0)
+        middle_band = signal_data.get("middle_band", 100.0)
 
         # Apply NaN protection
         if self.enable_nan_protection:
@@ -344,16 +359,18 @@ class SignalScoreEvaluator:
 
         return score, confidence, signal_type
 
-    def _apply_nan_protection(self, value: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+    def _apply_nan_protection(
+        self, value: Union[float, np.ndarray]
+    ) -> Union[float, np.ndarray]:
         """Apply NaN protection to values."""
         if isinstance(value, np.ndarray):
             if np.any(np.isnan(value)):
-                self.stats['nan_detected_count'] += 1
+                self.stats["nan_detected_count"] += 1
                 return np.nan_to_num(value, nan=0.0, posinf=1.0, neginf=-1.0)
             return value
         else:
             if np.isnan(value):
-                self.stats['nan_detected_count'] += 1
+                self.stats["nan_detected_count"] += 1
                 return 0.0
             return value
 
@@ -365,10 +382,12 @@ class SignalScoreEvaluator:
             confidence=0.0,
             strategy=strategy_type,
             timestamp=datetime.now(),
-            parameters={}
+            parameters={},
         )
 
-    def _create_error_score(self, strategy_type: str, error_message: str) -> SignalScore:
+    def _create_error_score(
+        self, strategy_type: str, error_message: str
+    ) -> SignalScore:
         """Create an error score when evaluation fails."""
         return SignalScore(
             signal_type=SignalType.HOLD,
@@ -376,11 +395,12 @@ class SignalScoreEvaluator:
             confidence=0.0,
             strategy=strategy_type,
             timestamp=datetime.now(),
-            parameters={'error': error_message}
+            parameters={"error": error_message},
         )
 
-    def evaluate_multiple_signals(self,
-                                signals: List[Dict[str, Any]]) -> EvaluationResult:
+    def evaluate_multiple_signals(
+        self, signals: List[Dict[str, Any]]
+    ) -> EvaluationResult:
         """
         Evaluate multiple signals and return composite result.
 
@@ -396,9 +416,9 @@ class SignalScoreEvaluator:
 
         for signal in signals:
             try:
-                strategy_type = signal.get('strategy_type', 'unknown')
-                signal_data = signal.get('signal_data', {})
-                parameters = signal.get('parameters', {})
+                strategy_type = signal.get("strategy_type", "unknown")
+                signal_data = signal.get("signal_data", {})
+                parameters = signal.get("parameters", {})
 
                 score = self.evaluate_signal(signal_data, strategy_type, parameters)
                 signal_scores.append(score)
@@ -408,7 +428,9 @@ class SignalScoreEvaluator:
                 logger.error(f"Error in multiple signal evaluation: {e}")
 
         # Calculate composite score
-        composite_score, confidence, recommended_action = self._calculate_composite_score(signal_scores)
+        composite_score, confidence, recommended_action = (
+            self._calculate_composite_score(signal_scores)
+        )
 
         # Create result
         result = EvaluationResult(
@@ -417,24 +439,29 @@ class SignalScoreEvaluator:
             recommended_action=recommended_action,
             confidence=confidence,
             evaluation_time=(datetime.now() - start_time).total_seconds(),
-            warnings=warnings
+            warnings=warnings,
         )
 
         # Update history and statistics
         self.evaluation_history.append(result)
-        self.stats['total_evaluations'] += 1
+        self.stats["total_evaluations"] += 1
         self._update_average_score(composite_score)
 
         return result
 
-    def _calculate_composite_score(self,
-                                 signal_scores: List[SignalScore]) -> Tuple[float, float, SignalType]:
+    def _calculate_composite_score(
+        self, signal_scores: List[SignalScore]
+    ) -> Tuple[float, float, SignalType]:
         """Calculate composite score from multiple signal scores."""
         if not signal_scores:
             return 0.0, 0.0, SignalType.HOLD
 
         # Filter by confidence threshold
-        valid_scores = [s for s in signal_scores if s.confidence >= self.default_confidence_threshold]
+        valid_scores = [
+            s
+            for s in signal_scores
+            if s.confidence >= self.default_confidence_threshold
+        ]
 
         if not valid_scores:
             return 0.0, 0.0, SignalType.HOLD
@@ -444,7 +471,9 @@ class SignalScoreEvaluator:
         if total_weight == 0:
             return 0.0, 0.0, SignalType.HOLD
 
-        weighted_score = sum(s.score * s.confidence for s in valid_scores) / total_weight
+        weighted_score = (
+            sum(s.score * s.confidence for s in valid_scores) / total_weight
+        )
         avg_confidence = total_weight / len(valid_scores)
 
         # Determine recommended action
@@ -461,9 +490,9 @@ class SignalScoreEvaluator:
 
         return weighted_score, avg_confidence, recommended_action
 
-    def register_custom_strategy(self,
-                               strategy_name: str,
-                               evaluator_function: Callable) -> bool:
+    def register_custom_strategy(
+        self, strategy_name: str, evaluator_function: Callable
+    ) -> bool:
         """
         Register a custom strategy evaluator.
 
@@ -484,23 +513,27 @@ class SignalScoreEvaluator:
 
     def _update_strategy_usage(self, strategy_type: str):
         """Update strategy usage statistics."""
-        self.stats['strategy_usage'][strategy_type] = self.stats['strategy_usage'].get(strategy_type, 0) + 1
+        self.stats["strategy_usage"][strategy_type] = (
+            self.stats["strategy_usage"].get(strategy_type, 0) + 1
+        )
 
     def _update_average_score(self, new_score: float):
         """Update average composite score."""
-        current_avg = self.stats['avg_composite_score']
-        total_evaluations = self.stats['total_evaluations']
-        self.stats['avg_composite_score'] = (current_avg * (total_evaluations - 1) + new_score) / total_evaluations
+        current_avg = self.stats["avg_composite_score"]
+        total_evaluations = self.stats["total_evaluations"]
+        self.stats["avg_composite_score"] = (
+            current_avg * (total_evaluations - 1) + new_score
+        ) / total_evaluations
 
     def get_evaluation_statistics(self) -> Dict[str, Any]:
         """Get evaluation statistics."""
         return {
-            'total_evaluations': self.stats['total_evaluations'],
-            'nan_detected_count': self.stats['nan_detected_count'],
-            'strategy_usage': self.stats['strategy_usage'],
-            'avg_composite_score': self.stats['avg_composite_score'],
-            'custom_strategies_count': len(self.custom_strategies),
-            'evaluation_history_length': len(self.evaluation_history)
+            "total_evaluations": self.stats["total_evaluations"],
+            "nan_detected_count": self.stats["nan_detected_count"],
+            "strategy_usage": self.stats["strategy_usage"],
+            "avg_composite_score": self.stats["avg_composite_score"],
+            "custom_strategies_count": len(self.custom_strategies),
+            "evaluation_history_length": len(self.evaluation_history),
         }
 
     def enable_nan_protection(self, enable: bool = True):
@@ -509,6 +542,8 @@ class SignalScoreEvaluator:
         logger.info(f"NaN protection {'enabled' if enable else 'disabled'}")
 
 
-def create_signal_score_evaluator(enable_nan_protection: bool = True) -> SignalScoreEvaluator:
+def create_signal_score_evaluator(
+    enable_nan_protection: bool = True,
+) -> SignalScoreEvaluator:
     """Factory function to create a signal score evaluator."""
-    return SignalScoreEvaluator(enable_nan_protection=enable_nan_protection) 
+    return SignalScoreEvaluator(enable_nan_protection=enable_nan_protection)

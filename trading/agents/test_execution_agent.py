@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Test Execution Agent
 
@@ -10,6 +10,10 @@ import logging
 import sys
 from pathlib import Path
 
+from trading.agents.execution import create_execution_agent
+from trading.agents.execution.trade_signals import TradeSignal
+from trading.portfolio.portfolio_manager import TradeDirection
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -19,11 +23,6 @@ logger = logging.getLogger(__name__)
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-from trading.agents.base_agent_interface import AgentConfig
-from trading.agents.execution import ExecutionAgent, create_execution_agent
-from trading.portfolio.portfolio_manager import TradeDirection
-from trading.agents.execution.trade_signals import TradeSignal
 
 
 async def test_execution_agent():
@@ -109,12 +108,13 @@ async def test_execution_agent():
 
         # Test modular components
         logger.info("\nðŸ”§ Testing modular components...")
-        
+
         # Test risk controls
         from trading.agents.execution.risk_controls import create_default_risk_controls
+
         risk_controls = create_default_risk_controls()
         logger.info(f"  Risk controls created: {risk_controls.max_position_size}")
-        
+
         # Test position manager
         position_manager = agent.position_manager
         risk_summary = position_manager.get_risk_summary()
@@ -125,6 +125,7 @@ async def test_execution_agent():
     except Exception as e:
         logger.error(f"Test failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 

@@ -1,4 +1,4 @@
-﻿"""Particle Swarm Optimization Method.
+"""Particle Swarm Optimization Method.
 
 This module contains the ParticleSwarmOptimization method extracted from strategy_optimizer.py.
 """
@@ -6,7 +6,7 @@ This module contains the ParticleSwarmOptimization method extracted from strateg
 import logging
 import random
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -95,9 +95,15 @@ class ParticleSwarmOptimization(OptimizationMethod):
                 for param in param_space.keys():
                     # Update velocity
                     r1, r2 = random.random(), random.random()
-                    cognitive_velocity = c1 * r1 * (best_positions[i][param] - particles[i][param])
-                    social_velocity = c2 * r2 * (global_best_position[param] - particles[i][param])
-                    velocities[i][param] = w * velocities[i][param] + cognitive_velocity + social_velocity
+                    cognitive_velocity = (
+                        c1 * r1 * (best_positions[i][param] - particles[i][param])
+                    )
+                    social_velocity = (
+                        c2 * r2 * (global_best_position[param] - particles[i][param])
+                    )
+                    velocities[i][param] = (
+                        w * velocities[i][param] + cognitive_velocity + social_velocity
+                    )
 
                     # Update position
                     particles[i][param] += velocities[i][param]
@@ -114,7 +120,9 @@ class ParticleSwarmOptimization(OptimizationMethod):
 
             # Log progress
             if iteration % 10 == 0:
-                self.logger.info(f"Iteration {iteration}: Best score = {global_best_score}")
+                self.logger.info(
+                    f"Iteration {iteration}: Best score = {global_best_score}"
+                )
 
         optimization_time = (datetime.now() - start_time).total_seconds()
 
@@ -156,7 +164,9 @@ class ParticleSwarmOptimization(OptimizationMethod):
                         particle[param] = random.uniform(space["start"], space["end"])
                         # Initialize velocity as a fraction of the parameter range
                         param_range = space["end"] - space["start"]
-                        velocity[param] = random.uniform(-0.1 * param_range, 0.1 * param_range)
+                        velocity[param] = random.uniform(
+                            -0.1 * param_range, 0.1 * param_range
+                        )
 
             particles.append(particle)
             velocities.append(velocity)

@@ -89,9 +89,9 @@ class AgentExecutionError(QuantGPTException):
             "execution_steps_count": len(self.execution_steps),
             "recovery_suggestions_count": len(self.recovery_suggestions),
             "timestamp": self.timestamp.isoformat(),
-            "execution_context_keys": list(self.execution_context.keys())
-            if self.execution_context
-            else [],
+            "execution_context_keys": (
+                list(self.execution_context.keys()) if self.execution_context else []
+            ),
         }
 
     def to_dict(self) -> Dict[str, Any]:

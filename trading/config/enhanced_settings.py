@@ -83,7 +83,7 @@ class ConfigurationValidator:
                                 for item in value.split(",")
                                 if item.strip()
                             ]
-                except (ValueError, TypeError) as e:
+                except (ValueError, TypeError):
                     self.validation_errors.append(
                         f"Invalid type for '{schema.name}': expected {schema.type.__name__}, got {type(value).__name__}"
                     )
@@ -129,7 +129,7 @@ class ConfigurationValidator:
 
             return True
 
-        except Exception as e:
+        except Exception as e:  # Capture exception for error message
             self.validation_errors.append(
                 f"Validation error for '{schema.name}': {str(e)}"
             )
@@ -659,11 +659,15 @@ class EnhancedSettings:
             if not self.jwt_secret_key:
                 raise ValueError("JWT_SECRET_KEY is required in production")
             if len(self.jwt_secret_key) < 32:
-                raise ValueError("JWT_SECRET_KEY must be at least 32 characters in production")
+                raise ValueError(
+                    "JWT_SECRET_KEY must be at least 32 characters in production"
+                )
             if not self.web_secret_key:
                 raise ValueError("WEB_SECRET_KEY is required in production")
             if len(self.web_secret_key) < 32:
-                raise ValueError("WEB_SECRET_KEY must be at least 32 characters in production")
+                raise ValueError(
+                    "WEB_SECRET_KEY must be at least 32 characters in production"
+                )
 
         self.log_dir.mkdir(parents=True, exist_ok=True)
         return True

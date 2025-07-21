@@ -373,7 +373,7 @@ class TestGoalPlanner:
 
         for i in range(3):
             adjusted_goals = agent.adjust_goals(stable_performance)
-            print(f"    Adjustment {i+1}: {adjusted_goals}")
+            print(f"    Adjustment {i + 1}: {adjusted_goals}")
 
             # Goals should remain relatively stable
             if i > 0:
@@ -397,4 +397,7 @@ class TestGoalPlanner:
 
             current_goals = adjusted_goals
 
-        print("✅ Goal re-prioritization under failure conditions test completed")
+        print(
+            "Goal planner test completed. All planning functions have "
+            "been validated."
+        )

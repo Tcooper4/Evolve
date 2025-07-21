@@ -3,6 +3,8 @@
 
 import asyncio
 import json
+
+# Add project root to path
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -10,10 +12,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import aiohttp
-
-# Add project root to path
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root))
 
 from core.agents.goal_planner import evaluate_goals
 from core.agents.self_improving_agent import SelfImprovingAgent
@@ -24,12 +22,16 @@ from trading.config.settings import (
     TICKER_CONFIG_PATH,
     TICKER_SOURCE,
 )
-
-# Project imports
-# from core.agents.router import AgentRouter  # Moved to archive
 from trading.llm.llm_interface import LLMInterface
 from trading.memory.performance_logger import log_performance
 from trading.utils.logging import setup_logging
+
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
+
+
+# Project imports
+# from core.agents.router import AgentRouter  # Moved to archive
 
 # Configure logging
 logger = setup_logging("daily_scheduler", SCHEDULER_LOG_PATH)
@@ -105,7 +107,9 @@ async def load_tickers() -> List[str]:
         return []
 
 
-async def run_ticker_analysis(ticker: str, router: AgentRouter) -> TickerResult:
+async def run_ticker_analysis(
+    ticker: str, router
+) -> TickerResult:  # router is None since AgentRouter moved to archive
     """Run forecast and strategy analysis for a ticker.
 
     Args:
@@ -196,8 +200,8 @@ async def run_daily_schedule(tickers: Optional[List[str]] = None) -> Dict[str, A
         logger.info("Starting daily schedule")
 
         # Initialize components
-        llm = LLMInterface()
-        router = AgentRouter(llm)
+        llm_interface = LLMInterface()  # Initialize LLM interface
+        router = None  # AgentRouter moved to archive, using None as placeholder
 
         # Get tickers to analyze
         if not tickers:
@@ -215,7 +219,7 @@ async def run_daily_schedule(tickers: Optional[List[str]] = None) -> Dict[str, A
         # Process in batches to limit concurrency
         results = []
         for i in range(0, len(tasks), MAX_CONCURRENT_TICKERS):
-            batch = tasks[i : i + MAX_CONCURRENT_TICKERS]
+            batch = tasks[i: i + MAX_CONCURRENT_TICKERS]
             batch_results = await asyncio.gather(*batch)
             results.extend(batch_results)
 

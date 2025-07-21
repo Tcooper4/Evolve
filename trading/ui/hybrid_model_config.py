@@ -1,14 +1,15 @@
-﻿"""
+"""
 Hybrid Model Configuration UI Component
 
 This module provides a Streamlit sidebar component for configuring the hybrid model's
 risk-aware weighting parameters and ensemble methods.
 """
 
-import streamlit as st
-import numpy as np
-from typing import Dict, Any, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
+import numpy as np
+import streamlit as st
 
 from trading.forecasting.hybrid_model import HybridModel
 
@@ -16,6 +17,7 @@ from trading.forecasting.hybrid_model import HybridModel
 @dataclass
 class HybridModelConfigUI:
     """UI configuration for hybrid model parameters."""
+
     show_advanced: bool = False
     show_performance_summary: bool = True
     show_weighting_info: bool = True
@@ -23,8 +25,7 @@ class HybridModelConfigUI:
 
 
 def render_hybrid_model_config_sidebar(
-    hybrid_model: HybridModel,
-    config_ui: Optional[HybridModelConfigUI] = None
+    hybrid_model: HybridModel, config_ui: Optional[HybridModelConfigUI] = None
 ) -> Dict[str, Any]:
     """
     Render hybrid model configuration in Streamlit sidebar.
@@ -50,8 +51,10 @@ def render_hybrid_model_config_sidebar(
     method = st.sidebar.selectbox(
         "Select Ensemble Method:",
         options=list(weighting_info["available_methods"].keys()),
-        index=list(weighting_info["available_methods"].keys()).index(current_config["method"]),
-        help="Choose how to weight the ensemble models"
+        index=list(weighting_info["available_methods"].keys()).index(
+            current_config["method"]
+        ),
+        help="Choose how to weight the ensemble models",
     )
 
     # Weighting Metric Selection (for risk-aware method)
@@ -61,14 +64,18 @@ def render_hybrid_model_config_sidebar(
         metric = st.sidebar.selectbox(
             "Select Weighting Metric:",
             options=list(weighting_info["available_metrics"].keys()),
-            index=list(weighting_info["available_metrics"].keys()).index(current_config["weighting_metric"]),
-            help="Choose the primary metric for risk-aware weighting"
+            index=list(weighting_info["available_metrics"].keys()).index(
+                current_config["weighting_metric"]
+            ),
+            help="Choose the primary metric for risk-aware weighting",
         )
 
         # Show metric description
         if config_ui.show_weighting_info:
             metric_info = weighting_info["available_metrics"][metric]
-            st.sidebar.info(f"**{metric.title()} Weighting**: {metric_info['description']}")
+            st.sidebar.info(
+                f"**{metric.title()} Weighting**: {metric_info['description']}"
+            )
 
         # Metric-specific parameters
         if metric == "sharpe":
@@ -78,7 +85,7 @@ def render_hybrid_model_config_sidebar(
                 max_value=2.0,
                 value=current_config["sharpe_floor"],
                 step=0.1,
-                help="Minimum Sharpe ratio to avoid negative weights"
+                help="Minimum Sharpe ratio to avoid negative weights",
             )
             current_config["sharpe_floor"] = sharpe_floor
 
@@ -89,7 +96,7 @@ def render_hybrid_model_config_sidebar(
                 max_value=0.0,
                 value=current_config["drawdown_ceiling"],
                 step=0.05,
-                help="Maximum drawdown threshold (negative values)"
+                help="Maximum drawdown threshold (negative values)",
             )
             current_config["drawdown_ceiling"] = drawdown_ceiling
 
@@ -100,7 +107,7 @@ def render_hybrid_model_config_sidebar(
                 max_value=10000.0,
                 value=current_config["mse_ceiling"],
                 step=100.0,
-                help="Maximum MSE threshold"
+                help="Maximum MSE threshold",
             )
             current_config["mse_ceiling"] = mse_ceiling
 
@@ -114,7 +121,7 @@ def render_hybrid_model_config_sidebar(
             max_value=1.0,
             value=current_config["min_performance_threshold"],
             step=0.05,
-            help="Minimum performance to avoid zero weights"
+            help="Minimum performance to avoid zero weights",
         )
         current_config["min_performance_threshold"] = min_performance_threshold
 
@@ -124,7 +131,7 @@ def render_hybrid_model_config_sidebar(
             max_value=1.0,
             value=current_config["recency_weight"],
             step=0.1,
-            help="Weight for recent vs historical performance"
+            help="Weight for recent vs historical performance",
         )
         current_config["recency_weight"] = recency_weight
 
@@ -134,7 +141,7 @@ def render_hybrid_model_config_sidebar(
             max_value=0.1,
             value=current_config["risk_free_rate"],
             step=0.001,
-            help="Risk-free rate for Sharpe calculations"
+            help="Risk-free rate for Sharpe calculations",
         )
         current_config["risk_free_rate"] = risk_free_rate
 
@@ -160,16 +167,12 @@ def render_hybrid_model_config_sidebar(
 
                 with col1:
                     st.metric(
-                        f"{model_name} Weight",
-                        f"{model_info['current_weight']:.2%}"
+                        f"{model_name} Weight", f"{model_info['current_weight']:.2%}"
                     )
 
                 with col2:
                     avg_sharpe = model_info["avg_metrics"].get("sharpe_ratio", 0)
-                    st.metric(
-                        "Avg Sharpe",
-                        f"{avg_sharpe:.2f}"
-                    )
+                    st.metric("Avg Sharpe", f"{avg_sharpe:.2f}")
 
     # Validation
     if config_ui.show_validation:
@@ -226,26 +229,21 @@ def render_weighting_metric_comparison(hybrid_model: HybridModel):
 def _display_weights(weights: Dict[str, float]):
     """Display model weights in a formatted way."""
     for model_name, weight in weights.items():
-        st.metric(
-            model_name,
-            f"{weight:.2%}"
-        )
+        st.metric(model_name, f"{weight:.2%}")
 
 
 def _create_weighting_comparison_chart(metric_results: Dict[str, Dict[str, float]]):
     """Create a comparison chart of different weighting methods."""
-    import plotly.express as px
     import pandas as pd
+    import plotly.express as px
 
     # Prepare data for plotting
     data = []
     for metric, weights in metric_results.items():
         for model_name, weight in weights.items():
-            data.append({
-                "Metric": metric.title(),
-                "Model": model_name,
-                "Weight": weight
-            })
+            data.append(
+                {"Metric": metric.title(), "Model": model_name, "Weight": weight}
+            )
 
     df = pd.DataFrame(data)
 
@@ -256,7 +254,7 @@ def _create_weighting_comparison_chart(metric_results: Dict[str, Dict[str, float
         y="Weight",
         color="Metric",
         title="Model Weights by Weighting Metric",
-        barmode="group"
+        barmode="group",
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -279,19 +277,22 @@ def render_model_performance_dashboard(hybrid_model: HybridModel):
     for model_name, model_info in summary.items():
         if model_info["status"] == "active":
             avg_metrics = model_info["avg_metrics"]
-            performance_data.append({
-                "Model": model_name,
-                "Weight": f"{model_info['current_weight']:.2%}",
-                "Sharpe": f"{avg_metrics.get('sharpe_ratio', 0):.3f}",
-                "Win Rate": f"{avg_metrics.get('win_rate', 0):.2%}",
-                "Max DD": f"{avg_metrics.get('max_drawdown', 0):.2%}",
-                "MSE": f"{avg_metrics.get('mse', 0):.2f}",
-                "Total Return": f"{avg_metrics.get('total_return', 0):.2%}",
-                "Performance Count": model_info["performance_count"]
-            })
+            performance_data.append(
+                {
+                    "Model": model_name,
+                    "Weight": f"{model_info['current_weight']:.2%}",
+                    "Sharpe": f"{avg_metrics.get('sharpe_ratio', 0):.3f}",
+                    "Win Rate": f"{avg_metrics.get('win_rate', 0):.2%}",
+                    "Max DD": f"{avg_metrics.get('max_drawdown', 0):.2%}",
+                    "MSE": f"{avg_metrics.get('mse', 0):.2f}",
+                    "Total Return": f"{avg_metrics.get('total_return', 0):.2%}",
+                    "Performance Count": model_info["performance_count"],
+                }
+            )
 
     if performance_data:
         import pandas as pd
+
         df = pd.DataFrame(performance_data)
         st.dataframe(df, use_container_width=True)
 
@@ -303,8 +304,8 @@ def render_model_performance_dashboard(hybrid_model: HybridModel):
 
 def _create_performance_visualization(summary: Dict[str, Any]):
     """Create performance visualization charts."""
-    import plotly.express as px
     import pandas as pd
+    import plotly.express as px
 
     # Prepare data for visualization
     viz_data = []
@@ -312,13 +313,17 @@ def _create_performance_visualization(summary: Dict[str, Any]):
     for model_name, model_info in summary.items():
         if model_info["status"] == "active":
             avg_metrics = model_info["avg_metrics"]
-            viz_data.append({
-                "Model": model_name,
-                "Sharpe Ratio": avg_metrics.get("sharpe_ratio", 0),
-                "Win Rate": avg_metrics.get("win_rate", 0),
-                "Max Drawdown": abs(avg_metrics.get("max_drawdown", 0)),  # Use absolute value for visualization
-                "Weight": model_info["current_weight"]
-            })
+            viz_data.append(
+                {
+                    "Model": model_name,
+                    "Sharpe Ratio": avg_metrics.get("sharpe_ratio", 0),
+                    "Win Rate": avg_metrics.get("win_rate", 0),
+                    "Max Drawdown": abs(
+                        avg_metrics.get("max_drawdown", 0)
+                    ),  # Use absolute value for visualization
+                    "Weight": model_info["current_weight"],
+                }
+            )
 
     if not viz_data:
         return
@@ -332,18 +337,13 @@ def _create_performance_visualization(summary: Dict[str, Any]):
         theta=["Sharpe Ratio", "Win Rate", "Max Drawdown"],
         color="Model",
         line_close=True,
-        title="Model Performance Comparison"
+        title="Model Performance Comparison",
     )
 
     st.plotly_chart(fig, use_container_width=True)
 
     # Create weight distribution chart
-    fig2 = px.pie(
-        df,
-        values="Weight",
-        names="Model",
-        title="Current Model Weights"
-    )
+    fig2 = px.pie(df, values="Weight", names="Model", title="Current Model Weights")
 
     st.plotly_chart(fig2, use_container_width=True)
 
@@ -406,7 +406,7 @@ def get_hybrid_model_recommendations(hybrid_model: HybridModel) -> Dict[str, Any
     recommendations = {
         "best_weighting_metric": None,
         "model_improvements": [],
-        "configuration_suggestions": []
+        "configuration_suggestions": [],
     }
 
     # Analyze model performance
@@ -414,13 +414,15 @@ def get_hybrid_model_recommendations(hybrid_model: HybridModel) -> Dict[str, Any
     for model_name, model_info in summary.items():
         if model_info["status"] == "active":
             avg_metrics = model_info["avg_metrics"]
-            model_performances.append({
-                "name": model_name,
-                "sharpe": avg_metrics.get("sharpe_ratio", 0),
-                "win_rate": avg_metrics.get("win_rate", 0),
-                "drawdown": avg_metrics.get("max_drawdown", 0),
-                "mse": avg_metrics.get("mse", 0)
-            })
+            model_performances.append(
+                {
+                    "name": model_name,
+                    "sharpe": avg_metrics.get("sharpe_ratio", 0),
+                    "win_rate": avg_metrics.get("win_rate", 0),
+                    "drawdown": avg_metrics.get("max_drawdown", 0),
+                    "mse": avg_metrics.get("mse", 0),
+                }
+            )
 
     if not model_performances:
         return recommendations
@@ -433,7 +435,7 @@ def get_hybrid_model_recommendations(hybrid_model: HybridModel) -> Dict[str, Any
     variances = {
         "sharpe": sharpe_variance,
         "drawdown": drawdown_variance,
-        "mse": mse_variance
+        "mse": mse_variance,
     }
 
     best_metric = max(variances, key=variances.get)
@@ -472,7 +474,9 @@ def render_recommendations(hybrid_model: HybridModel):
     recommendations = get_hybrid_model_recommendations(hybrid_model)
 
     if recommendations["best_weighting_metric"]:
-        st.info(f"**Recommended Weighting Metric**: {recommendations['best_weighting_metric'].title()}")
+        st.info(
+            f"**Recommended Weighting Metric**: {recommendations['best_weighting_metric'].title()}"
+        )
 
     if recommendations["model_improvements"]:
         st.subheader("ðŸ”§ Model Improvements")
@@ -496,7 +500,7 @@ def get_hybrid_config_from_session() -> Dict[str, Any]:
             "risk_free_rate": 0.02,
             "sharpe_floor": 0.0,
             "drawdown_ceiling": -0.5,
-            "mse_ceiling": 1000.0
+            "mse_ceiling": 1000.0,
         }
 
     return st.session_state.hybrid_config

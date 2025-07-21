@@ -8,19 +8,21 @@ variables to ensure robust error handling and fallback behavior.
 import logging
 import os
 import sys
+from typing import SecurityError
 
 import pytest
 
-# Add project root to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Import template formatter
 from trading.agents.prompt_templates import (
     PROMPT_TEMPLATES,
     TEMPLATE_CATEGORIES,
     format_template,
     get_template,
 )
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import template formatter
 
 logger = logging.getLogger(__name__)
 

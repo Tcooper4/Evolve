@@ -1,11 +1,8 @@
 import asyncio
-import json
 import logging
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 import redis
-from cachetools import TTLCache
 from pydantic import BaseModel, Field
 from ratelimit import limits, sleep_and_retry
 
@@ -17,6 +14,7 @@ from system.infra.agents.core.models.task import (
 )
 from system.infra.agents.core.orchestrator import Orchestrator
 from system.infra.agents.core.task_manager import TaskManager
+from utils.launch_utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -35,36 +33,17 @@ class AutomationConfig(BaseModel):
     timeout: int = Field(default=300)
 
 
-class AutomationCore:
-    """Core automation service functionality."""
-
-    def __init__(self, config_path: str = "automation/config/config.json"):
-        """Initialize automation core."""
-        self.config = self._load_config(config_path)
+class AutomationCoreService:
+    def __init__(self):
         self.setup_logging()
-        self.setup_cache()
-        self.setup_redis()
-        self.setup_task_manager()
-        self.setup_orchestrator()
-        self.lock = asyncio.Lock()
+        self.logger = logging.getLogger("automation")
 
-    def _load_config(self, config_path: str) -> AutomationConfig:
-        """Load configuration from file."""
-        try:
-            with open(config_path, "r") as f:
-                config_data = json.load(f)
-            return AutomationConfig(**config_data.get("automation", {}))
-        except Exception as e:
-            logger.error(f"Failed to load config: {str(e)}")
-            raise
+    def setup_logging(self):
+        return setup_logging(service_name="service")
 
-    from utils.launch_utils import setup_logging
-
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def setup_cache(self):
-        """Setup caching system."""
-        self.cache = TTLCache(maxsize=self.config.cache_size, ttl=self.config.cache_ttl)
+    def setup_cache(self):
+        """Set up cache for automation core service."""
+        # Cache setup logic here
 
     def setup_redis(self):
         """Setup Redis connection."""

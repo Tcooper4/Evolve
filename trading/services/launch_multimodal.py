@@ -11,10 +11,11 @@ import signal
 import sys
 from pathlib import Path
 
+from services.multimodal_service import MultimodalService
+
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.multimodal_service import MultimodalService
 
 # Configure logging
 logging.basicConfig(

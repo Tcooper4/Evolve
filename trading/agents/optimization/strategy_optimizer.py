@@ -1,4 +1,4 @@
-﻿"""
+"""
 Strategy Optimizer Module
 
 This module contains strategy optimization functionality for the optimizer agent.
@@ -6,10 +6,10 @@ Extracted from the original optimizer_agent.py for modularity.
 """
 
 import itertools
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from .parameter_validator import OptimizationParameter
 
@@ -164,8 +164,8 @@ class StrategyOptimizer:
         self.config = config
         self.available_strategies = {
             "bollinger": "BollingerStrategy",
-            "macd": "MACDStrategy", 
-            "rsi": "RSIStrategy"
+            "macd": "MACDStrategy",
+            "rsi": "RSIStrategy",
         }
 
     async def optimize_strategy_combinations(
@@ -173,16 +173,16 @@ class StrategyOptimizer:
     ) -> List[Dict[str, Any]]:
         """Optimize strategy combinations."""
         results = []
-        
+
         # Generate strategy combinations
         combinations = self._generate_strategy_combinations(config.strategy_configs)
-        
+
         # Test each combination
         for combination in combinations:
             result = await self._test_strategy_combination(combination, config)
             if result:
                 results.append(result)
-        
+
         return results
 
     async def optimize_thresholds(
@@ -190,16 +190,18 @@ class StrategyOptimizer:
     ) -> List[Dict[str, Any]]:
         """Optimize strategy thresholds."""
         results = []
-        
+
         # Generate parameter combinations
-        combinations = self._generate_parameter_combinations(config.parameters_to_optimize)
-        
+        combinations = self._generate_parameter_combinations(
+            config.parameters_to_optimize
+        )
+
         # Test each combination
         for combination in combinations:
             result = await self._test_parameter_combination(combination, config)
             if result:
                 results.append(result)
-        
+
         return results
 
     async def optimize_indicators(
@@ -207,28 +209,32 @@ class StrategyOptimizer:
     ) -> List[Dict[str, Any]]:
         """Optimize indicator parameters."""
         results = []
-        
+
         # Generate indicator combinations
-        combinations = self._generate_parameter_combinations(config.parameters_to_optimize)
-        
+        combinations = self._generate_parameter_combinations(
+            config.parameters_to_optimize
+        )
+
         # Test each combination
         for combination in combinations:
             result = await self._test_indicator_combination(combination, config)
             if result:
                 results.append(result)
-        
+
         return results
 
-    async def optimize_hybrid(
-        self, config: OptimizationConfig
-    ) -> List[Dict[str, Any]]:
+    async def optimize_hybrid(self, config: OptimizationConfig) -> List[Dict[str, Any]]:
         """Optimize hybrid strategy combinations."""
         results = []
-        
+
         # Generate hybrid combinations
-        strategy_combinations = self._generate_strategy_combinations(config.strategy_configs)
-        parameter_combinations = self._generate_parameter_combinations(config.parameters_to_optimize)
-        
+        strategy_combinations = self._generate_strategy_combinations(
+            config.strategy_configs
+        )
+        parameter_combinations = self._generate_parameter_combinations(
+            config.parameters_to_optimize
+        )
+
         # Combine strategies and parameters
         for strategy_combo in strategy_combinations:
             for param_combo in parameter_combinations:
@@ -236,7 +242,7 @@ class StrategyOptimizer:
                 result = await self._test_hybrid_combination(hybrid_combo, config)
                 if result:
                     results.append(result)
-        
+
         return results
 
     def _generate_strategy_combinations(
@@ -244,11 +250,11 @@ class StrategyOptimizer:
     ) -> List[List[StrategyConfig]]:
         """Generate strategy combinations."""
         enabled_strategies = [config for config in strategy_configs if config.enabled]
-        
+
         combinations = []
         for r in range(1, len(enabled_strategies) + 1):
             combinations.extend(list(itertools.combinations(enabled_strategies, r)))
-        
+
         return [list(combo) for combo in combinations]
 
     def _generate_parameter_combinations(
@@ -256,27 +262,27 @@ class StrategyOptimizer:
     ) -> List[Dict[str, Any]]:
         """Generate parameter combinations."""
         from .parameter_validator import ParameterValidator
-        
+
         validator = ParameterValidator()
         validated_params = validator.validate_optimization_parameters(parameters)
-        
+
         # Generate parameter ranges
         param_ranges = {}
         for param in validated_params:
             param_ranges[param.name] = validator.generate_parameter_range(param)
-        
+
         # Generate combinations
         combinations = []
         param_names = list(param_ranges.keys())
         param_values = list(param_ranges.values())
-        
+
         for combo in itertools.product(*param_values):
             combination = dict(zip(param_names, combo))
-            
+
             # Validate combination
             if validator.validate_parameter_combination(combination, validated_params):
                 combinations.append(combination)
-        
+
         return combinations
 
     async def _test_strategy_combination(
@@ -286,8 +292,9 @@ class StrategyOptimizer:
         try:
             # Create backtest integration
             from .backtest_integration import BacktestIntegration
+
             backtest = BacktestIntegration()
-            
+
             # Run backtest for each symbol and time period
             results = []
             for symbol in config.symbols:
@@ -296,30 +303,32 @@ class StrategyOptimizer:
                         strategies=combination,
                         symbol=symbol,
                         time_period=time_period,
-                        config=config
+                        config=config,
                     )
                     if result:
                         results.append(result)
-            
+
             if not results:
                 return None
-            
+
             # Aggregate results
             aggregated_metrics = self._aggregate_metrics(results)
-            
+
             # Calculate optimization score
             optimization_score = self._calculate_optimization_score(
                 aggregated_metrics, config.target_metric
             )
-            
+
             return {
-                "parameter_combination": {config.strategy_name: config.parameters for config in combination},
+                "parameter_combination": {
+                    config.strategy_name: config.parameters for config in combination
+                },
                 "performance_metrics": aggregated_metrics,
                 "backtest_results": results,
                 "optimization_score": optimization_score,
-                "timestamp": datetime.utcnow()
+                "timestamp": datetime.utcnow(),
             }
-            
+
         except Exception as e:
             print(f"Error testing strategy combination: {e}")
             return None
@@ -331,8 +340,9 @@ class StrategyOptimizer:
         try:
             # Create backtest integration
             from .backtest_integration import BacktestIntegration
+
             backtest = BacktestIntegration()
-            
+
             # Apply parameters to strategies
             strategies_with_params = []
             for strategy_config in config.strategy_configs:
@@ -340,10 +350,10 @@ class StrategyOptimizer:
                     strategy_name=strategy_config.strategy_name,
                     enabled=strategy_config.enabled,
                     weight=strategy_config.weight,
-                    parameters={**strategy_config.parameters, **combination}
+                    parameters={**strategy_config.parameters, **combination},
                 )
                 strategies_with_params.append(strategy_with_params)
-            
+
             # Run backtest
             results = []
             for symbol in config.symbols:
@@ -352,30 +362,30 @@ class StrategyOptimizer:
                         strategies=strategies_with_params,
                         symbol=symbol,
                         time_period=time_period,
-                        config=config
+                        config=config,
                     )
                     if result:
                         results.append(result)
-            
+
             if not results:
                 return None
-            
+
             # Aggregate results
             aggregated_metrics = self._aggregate_metrics(results)
-            
+
             # Calculate optimization score
             optimization_score = self._calculate_optimization_score(
                 aggregated_metrics, config.target_metric
             )
-            
+
             return {
                 "parameter_combination": combination,
                 "performance_metrics": aggregated_metrics,
                 "backtest_results": results,
                 "optimization_score": optimization_score,
-                "timestamp": datetime.utcnow()
+                "timestamp": datetime.utcnow(),
             }
-            
+
         except Exception as e:
             print(f"Error testing parameter combination: {e}")
             return None
@@ -394,12 +404,17 @@ class StrategyOptimizer:
         try:
             # Create backtest integration
             from .backtest_integration import BacktestIntegration
+
             backtest = BacktestIntegration()
-            
+
             # Extract strategy and parameter parts
-            strategy_params = {k: v for k, v in combination.items() if k.startswith("strategy_")}
-            indicator_params = {k: v for k, v in combination.items() if not k.startswith("strategy_")}
-            
+            strategy_params = {
+                k: v for k, v in combination.items() if k.startswith("strategy_")
+            }
+            indicator_params = {
+                k: v for k, v in combination.items() if not k.startswith("strategy_")
+            }
+
             # Apply parameters to strategies
             strategies_with_params = []
             for strategy_config in config.strategy_configs:
@@ -407,10 +422,10 @@ class StrategyOptimizer:
                     strategy_name=strategy_config.strategy_name,
                     enabled=strategy_config.enabled,
                     weight=strategy_config.weight,
-                    parameters={**strategy_config.parameters, **indicator_params}
+                    parameters={**strategy_config.parameters, **indicator_params},
                 )
                 strategies_with_params.append(strategy_with_params)
-            
+
             # Run backtest
             results = []
             for symbol in config.symbols:
@@ -419,30 +434,30 @@ class StrategyOptimizer:
                         strategies=strategies_with_params,
                         symbol=symbol,
                         time_period=time_period,
-                        config=config
+                        config=config,
                     )
                     if result:
                         results.append(result)
-            
+
             if not results:
                 return None
-            
+
             # Aggregate results
             aggregated_metrics = self._aggregate_metrics(results)
-            
+
             # Calculate optimization score
             optimization_score = self._calculate_optimization_score(
                 aggregated_metrics, config.target_metric
             )
-            
+
             return {
                 "parameter_combination": combination,
                 "performance_metrics": aggregated_metrics,
                 "backtest_results": results,
                 "optimization_score": optimization_score,
-                "timestamp": datetime.utcnow()
+                "timestamp": datetime.utcnow(),
             }
-            
+
         except Exception as e:
             print(f"Error testing hybrid combination: {e}")
             return None
@@ -451,7 +466,7 @@ class StrategyOptimizer:
         """Aggregate metrics from multiple backtest results."""
         if not results:
             return {}
-        
+
         # Calculate averages
         metrics = {}
         for key in results[0].keys():
@@ -459,7 +474,7 @@ class StrategyOptimizer:
                 values = [result[key] for result in results if key in result]
                 if values:
                     metrics[key] = sum(values) / len(values)
-        
+
         return metrics
 
     def _calculate_optimization_score(
@@ -484,13 +499,13 @@ class StrategyOptimizer:
             return_metric = metrics.get("total_return", 0.0)
             drawdown = metrics.get("max_drawdown", 0.0)
             win_rate = metrics.get("win_rate", 0.0)
-            
+
             # Normalize and weight
             composite = (
-                sharpe * 0.3 +
-                return_metric * 0.3 +
-                (1 - drawdown) * 0.2 +
-                win_rate * 0.2
+                sharpe * 0.3
+                + return_metric * 0.3
+                + (1 - drawdown) * 0.2
+                + win_rate * 0.2
             )
             return composite
         else:

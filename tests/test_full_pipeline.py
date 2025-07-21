@@ -17,11 +17,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from agents.llm.agent import get_prompt_agent
+from trading.backtesting.backtester import Backtester
+from trading.data.providers.fallback_provider import get_fallback_provider
+from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer
+from trading.ui.components import create_system_metrics_panel
+
 # Add project root to sys.path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from agents.llm.agent import get_prompt_agent
 
 # Fix import path for forecast_router
 try:
@@ -35,10 +40,6 @@ except ImportError:
 
         ForecastRouter = Mock()
         print("Warning: ForecastRouter not available, using mock")
-from trading.backtesting.backtester import Backtester
-from trading.data.providers.fallback_provider import get_fallback_provider
-from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer
-from trading.ui.components import create_system_metrics_panel
 
 
 @pytest.fixture

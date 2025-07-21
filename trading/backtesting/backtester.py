@@ -1,4 +1,4 @@
-﻿"""
+"""
 Backtesting engine for trading strategies.
 
 This module provides a comprehensive backtesting framework with support for:
@@ -21,10 +21,10 @@ import numpy as np
 # Third-party imports
 import pandas as pd
 
+from trading.backtesting.cost_model import CostModel, get_retail_cost_config
 from trading.backtesting.performance_analysis import PerformanceAnalyzer
 from trading.backtesting.position_sizing import PositionSizing, PositionSizingEngine
 from trading.backtesting.risk_metrics import RiskMetricsEngine
-from trading.backtesting.cost_model import CostModel, CostConfig, get_retail_cost_config
 
 # Local imports
 from trading.backtesting.trade_models import Trade, TradeType
@@ -97,13 +97,13 @@ class Backtester:
         self.asset_values: Dict[str, float] = {}
         self.strategy_results: Dict[str, Any] = {}
         self.risk_metrics: Dict[str, float] = {}
-        
+
         # Enhanced features
         self.enable_leverage = enable_leverage
         self.enable_fractional_sizing = enable_fractional_sizing
         self.slippage_model = slippage_model
         self.transaction_cost_model = transaction_cost_model
-        
+
         # Simulated broker ledger
         self.cash_account = initial_cash
         self.equity_account = initial_cash
@@ -121,10 +121,16 @@ class Backtester:
         self.risk_metrics_engine = RiskMetricsEngine(
             risk_free_rate=risk_free_rate, period=TRADING_DAYS_PER_YEAR
         )
-        self.performance_analyzer = PerformanceAnalyzer(cost_model.config if cost_model else None)
+        self.performance_analyzer = PerformanceAnalyzer(
+            cost_model.config if cost_model else None
+        )
         self.visualizer = BacktestVisualizer()
 
-        self.cost_model = cost_model if cost_model is not None else CostModel(get_retail_cost_config(), data)
+        self.cost_model = (
+            cost_model
+            if cost_model is not None
+            else CostModel(get_retail_cost_config(), data)
+        )
 
         # Setup logging
         self._setup_logging()
@@ -154,12 +160,12 @@ class Backtester:
             data=self.data,
             positions=self.positions,
         )
-        
+
         # Apply leverage if enabled
         if self.enable_leverage and self.leverage_used < self.max_leverage:
             leverage_multiplier = min(2.0, self.max_leverage - self.leverage_used)
             base_size *= leverage_multiplier
-        
+
         # Apply fractional sizing if enabled
         if self.enable_fractional_sizing:
             # Allow fractional positions (e.g., 0.5 shares)
@@ -167,7 +173,7 @@ class Backtester:
         else:
             # Round to whole shares
             return int(base_size)
-    
+
     def execute_trade(
         self,
         timestamp: datetime,
@@ -188,7 +194,7 @@ class Backtester:
             trade_type=trade_type.name.lower(),
             asset=asset,
             timestamp=timestamp,
-            volume=None  # Optionally pass volume if available
+            volume=None,  # Optionally pass volume if available
         )
         # Unpack costs
         fees = cost_breakdown["fees"]
@@ -239,7 +245,7 @@ class Backtester:
 
     def _update_account_ledger(self, trade: Trade) -> None:
         """Update the simulated broker ledger with trade information.
-        
+
         Args:
             trade: Trade object containing trade details
         """
@@ -247,7 +253,7 @@ class Backtester:
             # Calculate trade impact
             trade_value = trade.price * trade.quantity
             total_cost = trade.calculate_total_cost()
-            
+
             if trade.type == TradeType.BUY:
                 # Debit cash account
                 self.cash_account -= total_cost
@@ -255,8 +261,10 @@ class Backtester:
                 self.equity_account += trade_value
                 # Update leverage
                 if self.enable_leverage:
-                    self.leverage_used = min(self.max_leverage, 
-                                           (self.equity_account - self.cash_account) / self.cash_account)
+                    self.leverage_used = min(
+                        self.max_leverage,
+                        (self.equity_account - self.cash_account) / self.cash_account,
+                    )
             else:  # SELL
                 # Credit cash account
                 self.cash_account += total_cost
@@ -264,36 +272,37 @@ class Backtester:
                 self.equity_account -= trade_value
                 # Update leverage
                 if self.enable_leverage:
-                    self.leverage_used = max(0, 
-                                           (self.equity_account - self.cash_account) / self.cash_account)
-            
+                    self.leverage_used = max(
+                        0, (self.equity_account - self.cash_account) / self.cash_account
+                    )
+
             # Record account state
             account_state = {
-                'timestamp': trade.timestamp,
-                'cash_account': self.cash_account,
-                'equity_account': self.equity_account,
-                'leverage_used': self.leverage_used,
-                'margin_used': self.margin_used,
-                'total_value': self.cash_account + self.equity_account
+                "timestamp": trade.timestamp,
+                "cash_account": self.cash_account,
+                "equity_account": self.equity_account,
+                "leverage_used": self.leverage_used,
+                "margin_used": self.margin_used,
+                "total_value": self.cash_account + self.equity_account,
             }
             self.account_history.append(account_state)
-            
+
         except Exception as e:
-            logger.error(f"Error updating account ledger: {e}")
-    
+            self.logger.error(f"Error updating account ledger: {e}")
+
     def get_account_summary(self) -> Dict[str, Any]:
         """Get current account summary.
-        
+
         Returns:
             Dictionary with account information
         """
         return {
-            'cash_account': self.cash_account,
-            'equity_account': self.equity_account,
-            'leverage_used': self.leverage_used,
-            'margin_used': self.margin_used,
-            'total_value': self.cash_account + self.equity_account,
-            'account_history': self.account_history
+            "cash_account": self.cash_account,
+            "equity_account": self.equity_account,
+            "leverage_used": self.leverage_used,
+            "margin_used": self.margin_used,
+            "total_value": self.cash_account + self.equity_account,
+            "account_history": self.account_history,
         }
 
     def _calculate_risk_metrics(
@@ -332,12 +341,20 @@ class Backtester:
                 current_positions[trade.asset] = (
                     current_positions.get(trade.asset, 0) + trade.quantity
                 )
-                current_cash -= trade.total_cost if hasattr(trade, 'total_cost') else trade.calculate_total_cost()
+                current_cash -= (
+                    trade.total_cost
+                    if hasattr(trade, "total_cost")
+                    else trade.calculate_total_cost()
+                )
             elif trade.type == TradeType.SELL:
                 current_positions[trade.asset] = (
                     current_positions.get(trade.asset, 0) - trade.quantity
                 )
-                current_cash += trade.total_cost if hasattr(trade, 'total_cost') else trade.calculate_total_cost()
+                current_cash += (
+                    trade.total_cost
+                    if hasattr(trade, "total_cost")
+                    else trade.calculate_total_cost()
+                )
 
             # Calculate portfolio value
             portfolio_value = current_cash
@@ -356,33 +373,35 @@ class Backtester:
         equity_curve["returns"] = equity_curve["equity_curve"].pct_change()
         return equity_curve
 
-    def process_signals_dataframe(self, signals_df: pd.DataFrame, fill_method: str = "ffill") -> pd.DataFrame:
+    def process_signals_dataframe(
+        self, signals_df: pd.DataFrame, fill_method: str = "ffill"
+    ) -> pd.DataFrame:
         """
         Process signals DataFrame to handle NaN values and ensure data quality.
-        
+
         Args:
             signals_df: DataFrame containing trading signals
             fill_method: Method to fill NaN values ("ffill", "bfill", "drop", "zero")
-            
+
         Returns:
             Processed DataFrame with NaN values handled
         """
         if signals_df is None or signals_df.empty:
             self.logger.warning("Signals DataFrame is empty or None")
             return pd.DataFrame()
-        
+
         try:
             # Check for NaN values
             nan_count = signals_df.isna().sum().sum()
             if nan_count > 0:
                 self.logger.info(f"Found {nan_count} NaN values in signals DataFrame")
-                
+
                 # Handle NaN values based on method
                 if fill_method == "ffill":
-                    signals_df = signals_df.fillna(method='ffill')
+                    signals_df = signals_df.fillna(method="ffill")
                     self.logger.info("Filled NaN values using forward fill")
                 elif fill_method == "bfill":
-                    signals_df = signals_df.fillna(method='bfill')
+                    signals_df = signals_df.fillna(method="bfill")
                     self.logger.info("Filled NaN values using backward fill")
                 elif fill_method == "drop":
                     signals_df = signals_df.dropna()
@@ -391,24 +410,32 @@ class Backtester:
                     signals_df = signals_df.fillna(0)
                     self.logger.info("Filled NaN values with zero")
                 else:
-                    self.logger.warning(f"Unknown fill method: {fill_method}, using forward fill")
-                    signals_df = signals_df.fillna(method='ffill')
-            
+                    self.logger.warning(
+                        f"Unknown fill method: {fill_method}, using forward fill"
+                    )
+                    signals_df = signals_df.fillna(method="ffill")
+
             # Check for infinite values
-            inf_count = np.isinf(signals_df.select_dtypes(include=[np.number])).sum().sum()
+            inf_count = (
+                np.isinf(signals_df.select_dtypes(include=[np.number])).sum().sum()
+            )
             if inf_count > 0:
-                self.logger.warning(f"Found {inf_count} infinite values in signals DataFrame")
+                self.logger.warning(
+                    f"Found {inf_count} infinite values in signals DataFrame"
+                )
                 signals_df = signals_df.replace([np.inf, -np.inf], np.nan)
-                signals_df = signals_df.fillna(method='ffill')
-            
+                signals_df = signals_df.fillna(method="ffill")
+
             # Validate final DataFrame
             if signals_df.isna().any().any():
                 self.logger.error("NaN values still present after processing")
                 return pd.DataFrame()
-            
-            self.logger.info(f"Successfully processed signals DataFrame: {signals_df.shape}")
+
+            self.logger.info(
+                f"Successfully processed signals DataFrame: {signals_df.shape}"
+            )
             return signals_df
-            
+
         except Exception as e:
             self.logger.error(f"Error processing signals DataFrame: {e}")
             return pd.DataFrame()
@@ -510,7 +537,7 @@ class Backtester:
         window_size: int = 252,
         step_size: int = 21,
         test_size: int = 21,
-        interval: str = '1d',
+        interval: str = "1d",
         metrics: Optional[List[str]] = None,
         output_csv: Optional[str] = None,
         output_heatmap: Optional[str] = None,
@@ -535,15 +562,15 @@ class Backtester:
         Returns:
             DataFrame of window-by-window metrics
         """
+        import matplotlib.pyplot as plt
         import numpy as np
         import pandas as pd
-        import matplotlib.pyplot as plt
         import seaborn as sns
 
         # Get full data for symbol
         data = self.data if symbol not in self.data.columns else self.data[[symbol]]
-        if 'timestamp' in data.columns:
-            data = data.set_index('timestamp')
+        if "timestamp" in data.columns:
+            data = data.set_index("timestamp")
         n = len(data)
         results = []
         window_starts = range(0, n - window_size - test_size + 1, step_size)
@@ -555,8 +582,14 @@ class Backtester:
             if len(test_data) < test_size:
                 continue
             # Fit model on train_data
-            X_train, y_train = train_data.drop('Close', axis=1, errors='ignore'), train_data['Close']
-            X_test, y_test = test_data.drop('Close', axis=1, errors='ignore'), test_data['Close']
+            X_train, y_train = (
+                train_data.drop("Close", axis=1, errors="ignore"),
+                train_data["Close"],
+            )
+            X_test, y_test = (
+                test_data.drop("Close", axis=1, errors="ignore"),
+                test_data["Close"],
+            )
             try:
                 model.fit(X_train, y_train)
                 preds = model.predict(X_test)
@@ -567,16 +600,20 @@ class Backtester:
             # (Assume strategy can use preds as signals)
             # You may need to adapt this for your strategy/model interface
             test_df = test_data.copy()
-            test_df['pred'] = preds
+            test_df["pred"] = preds
             # Simulate simple returns as example
-            test_df['returns'] = test_df['Close'].pct_change().shift(-1) * np.sign(test_df['pred'].diff())
+            test_df["returns"] = test_df["Close"].pct_change().shift(-1) * np.sign(
+                test_df["pred"].diff()
+            )
             perf = {
-                'window_start': test_data.index[0],
-                'window_end': test_data.index[-1],
-                'mean_return': test_df['returns'].mean(),
-                'sharpe': test_df['returns'].mean() / (test_df['returns'].std() + 1e-9),
-                'drawdown': (test_df['returns'].cumsum().cummax() - test_df['returns'].cumsum()).max(),
-                'win_rate': (test_df['returns'] > 0).mean(),
+                "window_start": test_data.index[0],
+                "window_end": test_data.index[-1],
+                "mean_return": test_df["returns"].mean(),
+                "sharpe": test_df["returns"].mean() / (test_df["returns"].std() + 1e-9),
+                "drawdown": (
+                    test_df["returns"].cumsum().cummax() - test_df["returns"].cumsum()
+                ).max(),
+                "win_rate": (test_df["returns"] > 0).mean(),
             }
             results.append(perf)
         results_df = pd.DataFrame(results)
@@ -585,11 +622,11 @@ class Backtester:
         if output_heatmap and not results_df.empty:
             # Create a heatmap of mean_return by window
             plt.figure(figsize=(12, 4))
-            data_for_heatmap = results_df[['mean_return']].T
-            sns.heatmap(data_for_heatmap, annot=True, fmt='.4f', cmap='coolwarm')
-            plt.title('Rolling Window Mean Return')
-            plt.xlabel('Window')
-            plt.ylabel('Metric')
+            data_for_heatmap = results_df[["mean_return"]].T
+            sns.heatmap(data_for_heatmap, annot=True, fmt=".4f", cmap="coolwarm")
+            plt.title("Rolling Window Mean Return")
+            plt.xlabel("Window")
+            plt.ylabel("Metric")
             plt.tight_layout()
             plt.savefig(output_heatmap)
             plt.close()
@@ -612,8 +649,8 @@ def run_backtest(
         Tuple of (equity_curve, trade_log, metrics)
     """
     # This is a placeholder - actual implementation would depend on strategy definitions
-    logger.warning(
-        "run_backtest function is a placeholder - use Backtester class directly"
+    print(
+        "Warning: run_backtest function is a placeholder - use Backtester class directly"
     )
 
     # Return empty results

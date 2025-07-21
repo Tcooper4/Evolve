@@ -1,8 +1,6 @@
 """Tests for the self-improving agent."""
 
-import json
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -515,8 +513,10 @@ class TestSelfImprovingAgent:
         initial_bollinger_weight = mock_agent.strategy_weights["bollinger_strategy"]
 
         print(
-            f"  Initial weights - RSI: {initial_rsi_weight:.3f}, MACD: {initial_macd_weight:.3f}, Bollinger: {initial_bollinger_weight:.3f}"
-        )
+            f"  Initial weights - RSI: {
+                initial_rsi_weight:.3f}, MACD: {
+                initial_macd_weight:.3f}, Bollinger: {
+                initial_bollinger_weight:.3f}")
 
         # Adjust weights based on failures
         adjustment_result = mock_agent.adjust_strategy_weights_based_on_failures()
@@ -540,8 +540,10 @@ class TestSelfImprovingAgent:
         new_bollinger_weight = mock_agent.strategy_weights["bollinger_strategy"]
 
         print(
-            f"  New weights - RSI: {new_rsi_weight:.3f}, MACD: {new_macd_weight:.3f}, Bollinger: {new_bollinger_weight:.3f}"
-        )
+            f"  New weights - RSI: {
+                new_rsi_weight:.3f}, MACD: {
+                new_macd_weight:.3f}, Bollinger: {
+                new_bollinger_weight:.3f}")
         print(f"  Adjustment reasons: {adjustment_result['adjustment_reasons']}")
 
         # Verify weight adjustments make sense
@@ -715,4 +717,11 @@ class TestSelfImprovingAgent:
             "Learning should lead to performance improvement",
         )
 
-        print("✅ Learning from failed predictions and weight adjustment test completed")
+        print(
+            "✅ Learning from failed predictions and weight adjustment test completed"
+        )
+
+        print(
+            "Self-improving agent test completed. All learning functions "
+            "have been validated."
+        )

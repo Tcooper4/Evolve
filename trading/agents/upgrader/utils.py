@@ -122,8 +122,8 @@ def detect_drift(model_id: str) -> bool:
             has_drifted = degradation_ratio > 1.2  # 20% degradation threshold
 
             logger.info(
-                f"Drift detection for model {model_id}: degradation_ratio={degradation_ratio:.3f}, drifted={has_drifted}"
-            )
+                f"Drift detection for model {model_id}: degradation_ratio={
+                    degradation_ratio:.3f}, drifted={has_drifted}")
             return has_drifted
 
         return False

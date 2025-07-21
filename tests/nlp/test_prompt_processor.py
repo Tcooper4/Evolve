@@ -98,7 +98,9 @@ class TestPromptProcessor(unittest.TestCase):
             was_truncated_below, "Prompt below max_tokens should not be truncated"
         )
         self.assertEqual(len(truncated_below.split()), max_tokens - 1)
-        print(f"✅ No truncation for prompt below token limit ({max_tokens - 1} tokens)")
+        print(
+            f"✅ No truncation for prompt below token limit ({max_tokens - 1} tokens)"
+        )
 
         # Test edge case: prompt just above max_tokens
         above_prompt = "word " * (max_tokens + 1)

@@ -11,9 +11,6 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-# Add the trading directory to the path
-sys.path.append(str(Path(__file__).parent.parent))
-
 from trading.utils.reasoning_display import ReasoningDisplay
 from trading.utils.reasoning_logger import (
     AgentDecision,
@@ -25,6 +22,9 @@ from trading.utils.reasoning_logger import (
     log_forecast_decision,
     log_strategy_decision,
 )
+
+# Add the trading directory to the path
+sys.path.append(str(Path(__file__).parent.parent))
 
 
 class TestReasoningLogger(unittest.TestCase):

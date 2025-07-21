@@ -777,7 +777,7 @@ class MonitoringConfig:
                 "Alert email or webhook must be provided when alerting is enabled"
             )
 
-        if self.alert_email and not "@" in self.alert_email:
+        if self.alert_email and "@" not in self.alert_email:
             raise ValueError(f"Invalid alert email: {self.alert_email}")
 
         if self.alert_webhook and not self.alert_webhook.startswith(

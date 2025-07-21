@@ -198,9 +198,11 @@ class ResearchAgent(BaseAgent):
                     "description": item["description"],
                     "stars": item["stargazers_count"],
                     "language": item["language"],
-                    "tag": "model"
-                    if "model" in item["description"].lower()
-                    else "strategy",
+                    "tag": (
+                        "model"
+                        if "model" in item["description"].lower()
+                        else "strategy"
+                    ),
                 }
                 for item in items
             ]

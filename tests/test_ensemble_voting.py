@@ -378,6 +378,8 @@ class TestEnsembleVoting:
 
         # Verify weight updates
         assert len(models) == 3
+        # Define weights for this test
+        weights = {"lstm": 0.3, "transformer": 0.3, "xgboost": 0.4}
         assert abs(sum(weights.values()) - 1.0) < 1e-6  # Use the weights fixture
 
         logger.info("Ensemble performance tracking test passed")

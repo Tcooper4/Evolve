@@ -5,6 +5,7 @@ This Streamlit page provides interactive forecasting and trading capabilities
 with agentic strategy selection and manual override options.
 """
 
+import logging
 import sys
 import warnings
 from datetime import datetime
@@ -24,7 +25,6 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Configure logging
-import logging
 
 # Import trading components
 
@@ -118,9 +118,11 @@ def display_market_analysis(analysis: Dict):
         with col1:
             st.metric(
                 "Latest Price",
-                f"${analysis.get('latest_price', 0):.2f}"
-                if analysis.get("latest_price")
-                else "N/A",
+                (
+                    f"${analysis.get('latest_price', 0):.2f}"
+                    if analysis.get("latest_price")
+                    else "N/A"
+                ),
             )
 
         with col2:
@@ -129,11 +131,7 @@ def display_market_analysis(analysis: Dict):
                 st.metric(
                     "Price Change",
                     f"{price_change:.2%}",
-                    delta="↗️"
-                    if price_change > 0
-                    else "↘️"
-                    if price_change < 0
-                    else "→",
+                    delta="↗️" if price_change > 0 else "↘️" if price_change < 0 else "→",
                 )
             else:
                 st.metric("Price Change", "N/A")
@@ -425,6 +423,8 @@ def main():
             options=["low", "medium", "high"],
             help="Risk tolerance level for position sizing",
         )
+
+        _unused_var = risk_tolerance  # Placeholder, flake8 ignore: F841
 
         # Generate forecast button
         if st.button("🚀 Generate Forecast", type="primary", use_container_width=True):

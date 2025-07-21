@@ -266,9 +266,11 @@ class ModelParameterTuner:
                         value = st.selectbox(
                             config.display_name,
                             options=config.options,
-                            index=config.options.index(config.default_value)
-                            if config.default_value in config.options
-                            else 0,
+                            index=(
+                                config.options.index(config.default_value)
+                                if config.default_value in config.options
+                                else 0
+                            ),
                             help=config.description,
                         )
                     else:

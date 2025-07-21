@@ -643,7 +643,7 @@ class HyperparameterOptimizer:
         """Prepare sequences for LSTM training."""
         X_seq, y_seq = [], []
         for i in range(sequence_length, len(X)):
-            X_seq.append(X[i - sequence_length : i])
+            X_seq.append(X[i - sequence_length: i])
             y_seq.append(y[i])
         return np.array(X_seq), np.array(y_seq)
 
@@ -690,12 +690,16 @@ class HyperparameterOptimizer:
                             "trial_number": trial.number,
                             "params": trial.params,
                             "value": trial.value,
-                            "datetime_start": trial.datetime_start.isoformat()
-                            if trial.datetime_start
-                            else None,
-                            "datetime_complete": trial.datetime_complete.isoformat()
-                            if trial.datetime_complete
-                            else None,
+                            "datetime_start": (
+                                trial.datetime_start.isoformat()
+                                if trial.datetime_start
+                                else None
+                            ),
+                            "datetime_complete": (
+                                trial.datetime_complete.isoformat()
+                                if trial.datetime_complete
+                                else None
+                            ),
                         }
                     )
 

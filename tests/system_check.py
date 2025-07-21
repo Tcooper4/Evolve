@@ -14,7 +14,7 @@ def test_import(module_name, description=""):
     try:
         importlib.import_module(module_name)
         return True, f"✅ {module_name} - {description}"
-    except Exception as e:
+    except Exception:
         return None
 
 

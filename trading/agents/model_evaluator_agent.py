@@ -243,11 +243,11 @@ class ModelEvaluatorAgent(BaseAgent):
                 predictions=np.array(performance_data.get("predictions", [])),
                 actual_values=np.array(performance_data.get("actual_values", [])),
                 timestamps=performance_data.get("timestamps", []),
-                confidence_scores=np.array(
-                    performance_data.get("confidence_scores", [])
-                )
-                if performance_data.get("confidence_scores")
-                else None,
+                confidence_scores=(
+                    np.array(performance_data.get("confidence_scores", []))
+                    if performance_data.get("confidence_scores")
+                    else None
+                ),
             )
 
             # Validate data
@@ -301,9 +301,11 @@ class ModelEvaluatorAgent(BaseAgent):
             self.logger.error(f"Error evaluating model {model_id}: {str(e)}")
 
             return EvaluationResult(
-                evaluation_id=evaluation_id
-                if "evaluation_id" in locals()
-                else f"eval_{model_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                evaluation_id=(
+                    evaluation_id
+                    if "evaluation_id" in locals()
+                    else f"eval_{model_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                ),
                 model_id=model_id,
                 model_type=performance_data.get("model_type", "unknown"),
                 evaluation_timestamp=datetime.now(),
@@ -521,12 +523,12 @@ class ModelEvaluatorAgent(BaseAgent):
             return {
                 "data_points": len(performance.predictions),
                 "evaluation_period": {
-                    "start": performance.timestamps[0]
-                    if performance.timestamps
-                    else None,
-                    "end": performance.timestamps[-1]
-                    if performance.timestamps
-                    else None,
+                    "start": (
+                        performance.timestamps[0] if performance.timestamps else None
+                    ),
+                    "end": (
+                        performance.timestamps[-1] if performance.timestamps else None
+                    ),
                 },
                 "prediction_range": {
                     "min": float(np.min(performance.predictions)),

@@ -188,9 +188,9 @@ class BaseService(ABC):
         return {
             "success": True,
             "service": self.service_name,
-            "thread_joined": self.thread and not self.thread.is_alive()
-            if self.thread
-            else True,
+            "thread_joined": (
+                self.thread and not self.thread.is_alive() if self.thread else True
+            ),
             "timestamp": datetime.now().isoformat(),
         }
 

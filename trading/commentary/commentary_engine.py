@@ -323,13 +323,18 @@ class CommentaryEngine:
             context.update(
                 {
                     "volatility": returns.std() * np.sqrt(252),
-                    "trend": "up"
-                    if market_data["close"].iloc[-1] > market_data["close"].iloc[-20]
-                    else "down",
-                    "volume_trend": market_data["volume"].iloc[-5:].mean()
-                    / market_data["volume"].iloc[-20:].mean()
-                    if "volume" in market_data.columns
-                    else 1.0,
+                    "trend": (
+                        "up"
+                        if market_data["close"].iloc[-1]
+                        > market_data["close"].iloc[-20]
+                        else "down"
+                    ),
+                    "volume_trend": (
+                        market_data["volume"].iloc[-5:].mean()
+                        / market_data["volume"].iloc[-20:].mean()
+                        if "volume" in market_data.columns
+                        else 1.0
+                    ),
                 }
             )
 
@@ -503,9 +508,11 @@ class CommentaryEngine:
                 "recommendations": response.recommendations,
                 "risk_warnings": response.risk_warnings,
             },
-            confidence_level=ConfidenceLevel.HIGH
-            if response.confidence_score > 0.8
-            else ConfidenceLevel.MEDIUM,
+            confidence_level=(
+                ConfidenceLevel.HIGH
+                if response.confidence_score > 0.8
+                else ConfidenceLevel.MEDIUM
+            ),
             metadata=response.metadata,
         )
 
@@ -561,7 +568,7 @@ class CommentaryEngine:
 
 
 def create_commentary_engine(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> CommentaryEngine:
     """Create a configured commentary engine."""
     return CommentaryEngine(config)

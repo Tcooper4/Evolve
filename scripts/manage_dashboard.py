@@ -33,20 +33,12 @@ import logging
 import logging.config
 import subprocess
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
-import dash_bootstrap_components as dbc
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-import psutil
 import yaml
-from dash import Dash, dcc, html
-from dash.dependencies import Input, Output
 
-import docker
-from kubernetes import client, config
+from utils.launch_utils import setup_logging
 
 
 class DashboardManager:
@@ -69,262 +61,30 @@ class DashboardManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def create_dashboard(self, dashboard_type: str = "system"):
-        """Create a monitoring dashboard."""
-        self.logger.info(f"Creating {dashboard_type} dashboard")
+    def create_dashboard(self, dashboard_type: str = "system"):
+        """Create dashboard of specified type."""
+        self.logger.info(f"Creating {dashboard_type} dashboard...")
 
         try:
-            # Create dashboard
-            app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+            if dashboard_type == "system":
+                self._create_system_dashboard()
+            elif dashboard_type == "trading":
+                self._create_trading_dashboard()
+            elif dashboard_type == "analytics":
+                self._create_analytics_dashboard()
+            else:
+                self.logger.error(f"Unknown dashboard type: {dashboard_type}")
+                return False
 
-            # Define layout
-            app.layout = dbc.Container(
-                [
-                    dbc.Row(
-                        [
-                            dbc.Col(
-                                [
-                                    html.H1(
-                                        "System Monitoring Dashboard",
-                                        className="text-center mb-4",
-                                    ),
-                                    html.Div(id="last-update"),
-                                ]
-                            )
-                        ]
-                    ),
-                    dbc.Row(
-                        [
-                            dbc.Col(
-                                [
-                                    dcc.Graph(id="cpu-graph"),
-                                    dcc.Graph(id="memory-graph"),
-                                    dcc.Graph(id="disk-graph"),
-                                    dcc.Graph(id="network-graph"),
-                                ],
-                                width=6,
-                            ),
-                            dbc.Col(
-                                [
-                                    dcc.Graph(id="process-graph"),
-                                    dcc.Graph(id="container-graph"),
-                                    dcc.Graph(id="kubernetes-graph"),
-                                ],
-                                width=6,
-                            ),
-                        ]
-                    ),
-                    dcc.Interval(
-                        id="interval-component", interval=5 * 1000, n_intervals=0
-                    ),  # Update every 5 seconds
-                ]
-            )
-
-            # Define callbacks
-            @app.callback(
-                [
-                    Output("cpu-graph", "figure"),
-                    Output("memory-graph", "figure"),
-                    Output("disk-graph", "figure"),
-                    Output("network-graph", "figure"),
-                    Output("process-graph", "figure"),
-                    Output("container-graph", "figure"),
-                    Output("kubernetes-graph", "figure"),
-                    Output("last-update", "children"),
-                ],
-                [Input("interval-component", "n_intervals")],
-            )
-            def update_graphs(n):
-                # CPU usage
-                cpu_fig = go.Figure()
-                cpu_fig.add_trace(
-                    go.Scatter(
-                        x=pd.date_range(
-                            start=datetime.now() - timedelta(minutes=5),
-                            periods=60,
-                            freq="5S",
-                        ),
-                        y=[psutil.cpu_percent() for _ in range(60)],
-                        name="CPU Usage",
-                    )
-                )
-                cpu_fig.update_layout(
-                    title="CPU Usage", xaxis_title="Time", yaxis_title="Usage (%)"
-                )
-
-                # Memory usage
-                memory_fig = go.Figure()
-                memory_fig.add_trace(
-                    go.Scatter(
-                        x=pd.date_range(
-                            start=datetime.now() - timedelta(minutes=5),
-                            periods=60,
-                            freq="5S",
-                        ),
-                        y=[psutil.virtual_memory().percent for _ in range(60)],
-                        name="Memory Usage",
-                    )
-                )
-                memory_fig.update_layout(
-                    title="Memory Usage", xaxis_title="Time", yaxis_title="Usage (%)"
-                )
-
-                # Disk usage
-                disk_fig = go.Figure()
-                disk_fig.add_trace(
-                    go.Scatter(
-                        x=pd.date_range(
-                            start=datetime.now() - timedelta(minutes=5),
-                            periods=60,
-                            freq="5S",
-                        ),
-                        y=[psutil.disk_usage("/").percent for _ in range(60)],
-                        name="Disk Usage",
-                    )
-                )
-                disk_fig.update_layout(
-                    title="Disk Usage", xaxis_title="Time", yaxis_title="Usage (%)"
-                )
-
-                # Network I/O
-                network_fig = go.Figure()
-                network_fig.add_trace(
-                    go.Scatter(
-                        x=pd.date_range(
-                            start=datetime.now() - timedelta(minutes=5),
-                            periods=60,
-                            freq="5S",
-                        ),
-                        y=[psutil.net_io_counters().bytes_sent for _ in range(60)],
-                        name="Bytes Sent",
-                    )
-                )
-                network_fig.add_trace(
-                    go.Scatter(
-                        x=pd.date_range(
-                            start=datetime.now() - timedelta(minutes=5),
-                            periods=60,
-                            freq="5S",
-                        ),
-                        y=[psutil.net_io_counters().bytes_recv for _ in range(60)],
-                        name="Bytes Received",
-                    )
-                )
-                network_fig.update_layout(
-                    title="Network I/O", xaxis_title="Time", yaxis_title="Bytes"
-                )
-
-                # Process metrics
-                process_df = pd.DataFrame(
-                    [
-                        {
-                            "timestamp": datetime.now(),
-                            "pid": proc.pid,
-                            "name": proc.name(),
-                            "cpu_percent": proc.cpu_percent(),
-                            "memory_percent": proc.memory_percent(),
-                        }
-                        for proc in psutil.process_iter(
-                            ["pid", "name", "cpu_percent", "memory_percent"]
-                        )
-                    ]
-                )
-                process_fig = px.scatter(
-                    process_df,
-                    x="timestamp",
-                    y="cpu_percent",
-                    color="name",
-                    title="Process CPU Usage",
-                )
-
-                # Container metrics
-                try:
-                    docker_client = docker.from_env()
-                    container_df = pd.DataFrame(
-                        [
-                            {
-                                "timestamp": datetime.now(),
-                                "name": container.name,
-                                "cpu_usage": container.stats(stream=False)["cpu_stats"][
-                                    "cpu_usage"
-                                ]["total_usage"],
-                                "memory_usage": container.stats(stream=False)[
-                                    "memory_stats"
-                                ]["usage"],
-                            }
-                            for container in docker_client.containers.list()
-                        ]
-                    )
-                    container_fig = px.scatter(
-                        container_df,
-                        x="timestamp",
-                        y="cpu_usage",
-                        color="name",
-                        title="Container CPU Usage",
-                    )
-                except Exception as e:
-                    self.logger.warning(f"Failed to collect container metrics: {e}")
-                    container_fig = go.Figure()
-
-                # Kubernetes metrics
-                try:
-                    config.load_kube_config()
-                    v1 = client.CoreV1Api()
-                    k8s_df = pd.DataFrame(
-                        [
-                            {
-                                "timestamp": datetime.now(),
-                                "name": pod.metadata.name,
-                                "namespace": pod.metadata.namespace,
-                                "status": pod.status.phase,
-                                "containers": len(pod.status.container_statuses),
-                                "ready_containers": sum(
-                                    1 for c in pod.status.container_statuses if c.ready
-                                ),
-                            }
-                            for pod in v1.list_pod_for_all_namespaces().items
-                        ]
-                    )
-                    k8s_fig = px.scatter(
-                        k8s_df,
-                        x="timestamp",
-                        y="ready_containers",
-                        color="name",
-                        title="Kubernetes Pod Status",
-                    )
-                except Exception as e:
-                    self.logger.warning(f"Failed to collect Kubernetes metrics: {e}")
-                    k8s_fig = go.Figure()
-
-                last_update = (
-                    f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                )
-
-                return (
-                    cpu_fig,
-                    memory_fig,
-                    disk_fig,
-                    network_fig,
-                    process_fig,
-                    container_fig,
-                    k8s_fig,
-                    last_update,
-                )
-
-            # Save dashboard
-            dashboard_file = self.dashboard_dir / f"dashboard_{dashboard_type}.py"
-            with open(dashboard_file, "w") as f:
-                f.write(app.to_string())
-
-            self.logger.info(f"Dashboard saved to {dashboard_file}")
-            return dashboard_file
+            self.logger.info(f"Dashboard created successfully: {dashboard_type}")
+            return True
         except Exception as e:
             self.logger.error(f"Failed to create dashboard: {e}")
-            raise
+            return False
 
     def run_dashboard(self, dashboard_file: str):
         """Run the monitoring dashboard."""

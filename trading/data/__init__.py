@@ -229,9 +229,11 @@ class DataProviderManager:
                 provider_status = {
                     "name": name,
                     "class": provider.__class__.__name__,
-                    "available": provider.is_available()
-                    if hasattr(provider, "is_available")
-                    else True,
+                    "available": (
+                        provider.is_available()
+                        if hasattr(provider, "is_available")
+                        else True
+                    ),
                     "config": self.get_provider_config(name),
                 }
                 status["provider_details"][name] = provider_status

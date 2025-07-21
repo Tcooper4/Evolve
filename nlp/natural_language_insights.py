@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 # Try to import transformers
 try:
     from transformers import pipeline
+
     TRANSFORMERS_AVAILABLE = True
 except ImportError as e:
     print("⚠️ transformers not available. Disabling advanced NLP features.")
@@ -29,6 +30,7 @@ try:
     from nltk.corpus import stopwords
     from nltk.stem import WordNetLemmatizer
     from nltk.tokenize import sent_tokenize, word_tokenize
+
     NLTK_AVAILABLE = True
 except ImportError as e:
     print("⚠️ NLTK not available. Disabling NLTK-based features.")
@@ -43,6 +45,7 @@ except ImportError as e:
 # Try to import spaCy
 try:
     import spacy
+
     SPACY_AVAILABLE = True
 except ImportError as e:
     print("⚠️ spaCy not available. Disabling spaCy-based features.")

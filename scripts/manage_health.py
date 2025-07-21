@@ -34,7 +34,6 @@ import logging
 import logging.config
 import subprocess
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 
@@ -42,13 +41,11 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import psutil
 import yaml
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 
-import docker
-from kubernetes import client, config
+from utils.launch_utils import setup_logging
 
 
 class HealthManager:
@@ -57,10 +54,8 @@ class HealthManager:
         self.config = self._load_config(config_path)
         self.setup_logging()
         self.logger = logging.getLogger("trading")
-        self.metrics_dir = Path("metrics")
-        self.metrics_dir.mkdir(parents=True, exist_ok=True)
-        self.dashboard_dir = Path("dashboard")
-        self.dashboard_dir.mkdir(parents=True, exist_ok=True)
+        self.health_dir = Path("health")
+        self.health_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
@@ -71,106 +66,40 @@ class HealthManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="report_service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="report_service")def collect_metrics(self, duration: int = 300):
-        """Collect system metrics."""
-        self.logger.info(f"Collecting metrics for {duration} seconds")
+    def collect_metrics(self, duration: int = 300):
+        """Collect system health metrics."""
+        self.logger.info(f"Collecting health metrics for {duration} seconds")
 
         try:
+            # Collect system metrics
+            system_metrics = self._collect_system_metrics()
+
+            # Collect application metrics
+            app_metrics = self._collect_app_metrics()
+
+            # Collect database metrics
+            db_metrics = self._collect_db_metrics()
+
+            # Combine metrics
             metrics = {
-                "timestamp": [],
-                "cpu_percent": [],
-                "memory_percent": [],
-                "disk_usage": [],
-                "network_io": [],
-                "process_metrics": [],
-                "container_metrics": [],
-                "kubernetes_metrics": [],
+                "timestamp": datetime.now().isoformat(),
+                "system": system_metrics,
+                "application": app_metrics,
+                "database": db_metrics,
             }
 
-            start_time = time.time()
-            while time.time() - start_time < duration:
-                # Collect system metrics
-                metrics["timestamp"].append(datetime.now().isoformat())
-                metrics["cpu_percent"].append(psutil.cpu_percent())
-                metrics["memory_percent"].append(psutil.virtual_memory().percent)
-                metrics["disk_usage"].append(psutil.disk_usage("/").percent)
-                metrics["network_io"].append(psutil.net_io_counters()._asdict())
-
-                # Collect process metrics
-                process_metrics = []
-                for proc in psutil.process_iter(
-                    ["pid", "name", "cpu_percent", "memory_percent"]
-                ):
-                    try:
-                        process_metrics.append(proc.info)
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        pass
-                metrics["process_metrics"].append(process_metrics)
-
-                # Collect container metrics
-                try:
-                    docker_client = docker.from_env()
-                    container_metrics = []
-                    for container in docker_client.containers.list():
-                        stats = container.stats(stream=False)
-                        container_metrics.append(
-                            {
-                                "id": container.id,
-                                "name": container.name,
-                                "cpu_usage": stats["cpu_stats"]["cpu_usage"][
-                                    "total_usage"
-                                ],
-                                "memory_usage": stats["memory_stats"]["usage"],
-                                "network_io": stats["networks"],
-                            }
-                        )
-                    metrics["container_metrics"].append(container_metrics)
-                except Exception as e:
-                    self.logger.warning(f"Failed to collect container metrics: {e}")
-
-                # Collect Kubernetes metrics
-                try:
-                    config.load_kube_config()
-                    v1 = client.CoreV1Api()
-                    k8s_metrics = []
-                    for pod in v1.list_pod_for_all_namespaces().items:
-                        k8s_metrics.append(
-                            {
-                                "name": pod.metadata.name,
-                                "namespace": pod.metadata.namespace,
-                                "status": pod.status.phase,
-                                "containers": [
-                                    {
-                                        "name": container.name,
-                                        "ready": container.ready,
-                                        "restart_count": container.restart_count,
-                                    }
-                                    for container in pod.status.container_statuses
-                                ],
-                            }
-                        )
-                    metrics["kubernetes_metrics"].append(k8s_metrics)
-                except Exception as e:
-                    self.logger.warning(f"Failed to collect Kubernetes metrics: {e}")
-
-                await asyncio.sleep(1)
-
             # Save metrics
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            metrics_file = self.metrics_dir / f"metrics_{timestamp}.json"
+            self._save_metrics(metrics)
 
-            with open(metrics_file, "w") as f:
-                json.dump(metrics, f, indent=2)
-
-            self.logger.info(f"Metrics saved to {metrics_file}")
-            return metrics
+            self.logger.info("Health metrics collected successfully")
+            return True
         except Exception as e:
-            self.logger.error(f"Failed to collect metrics: {e}")
-            raise
+            self.logger.error(f"Failed to collect health metrics: {e}")
+            return False
 
     def generate_dashboard(self, metrics_file: str):
         """Generate health dashboard."""

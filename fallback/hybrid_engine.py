@@ -154,9 +154,11 @@ class FallbackHybridEngine:
                 "signals": signals.tolist(),
                 "rsi_values": rsi.tolist(),
                 "total_return": strategy_returns.sum(),
-                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std()
-                if strategy_returns.std() > 0
-                else 0,
+                "sharpe_ratio": (
+                    strategy_returns.mean() / strategy_returns.std()
+                    if strategy_returns.std() > 0
+                    else 0
+                ),
                 "win_rate": (strategy_returns > 0).mean(),
                 "max_drawdown": self._calculate_max_drawdown(strategy_returns),
                 "signal_count": len(signals[signals != 0]),
@@ -212,9 +214,11 @@ class FallbackHybridEngine:
                 "signal_line": signal_line.tolist(),
                 "histogram": histogram.tolist(),
                 "total_return": strategy_returns.sum(),
-                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std()
-                if strategy_returns.std() > 0
-                else 0,
+                "sharpe_ratio": (
+                    strategy_returns.mean() / strategy_returns.std()
+                    if strategy_returns.std() > 0
+                    else 0
+                ),
                 "win_rate": (strategy_returns > 0).mean(),
                 "max_drawdown": self._calculate_max_drawdown(strategy_returns),
                 "signal_count": len(signals[signals != 0]),
@@ -264,9 +268,11 @@ class FallbackHybridEngine:
                 "lower_band": lower_band.tolist(),
                 "sma": sma.tolist(),
                 "total_return": strategy_returns.sum(),
-                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std()
-                if strategy_returns.std() > 0
-                else 0,
+                "sharpe_ratio": (
+                    strategy_returns.mean() / strategy_returns.std()
+                    if strategy_returns.std() > 0
+                    else 0
+                ),
                 "win_rate": (strategy_returns > 0).mean(),
                 "max_drawdown": self._calculate_max_drawdown(strategy_returns),
                 "signal_count": len(signals[signals != 0]),
@@ -317,9 +323,11 @@ class FallbackHybridEngine:
                 "sma_fast": sma_fast.tolist(),
                 "sma_slow": sma_slow.tolist(),
                 "total_return": strategy_returns.sum(),
-                "sharpe_ratio": strategy_returns.mean() / strategy_returns.std()
-                if strategy_returns.std() > 0
-                else 0,
+                "sharpe_ratio": (
+                    strategy_returns.mean() / strategy_returns.std()
+                    if strategy_returns.std() > 0
+                    else 0
+                ),
                 "win_rate": (strategy_returns > 0).mean(),
                 "max_drawdown": self._calculate_max_drawdown(strategy_returns),
                 "signal_count": len(signals[signals != 0]),

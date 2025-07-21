@@ -1,4 +1,4 @@
-﻿"""Performance logging utilities with persistent score tracking."""
+"""Performance logging utilities with persistent score tracking."""
 
 import json
 import logging
@@ -34,10 +34,10 @@ performance_data = []
 
 class ModelScoreTracker:
     """Model score tracker with persistent storage."""
-    
+
     def __init__(self, storage_path: str = "data/model_scores"):
         """Initialize the model score tracker.
-        
+
         Args:
             storage_path: Path to store score data
         """
@@ -47,20 +47,20 @@ class ModelScoreTracker:
         self.history_file = self.storage_path / "score_history.pkl"
         self.model_scores: Dict[str, Dict[str, Any]] = {}
         self.score_history: List[Dict[str, Any]] = []
-        
+
         # Load existing data
         self.load()
-        
+
     def update_score(
-        self, 
-        model_name: str, 
-        metric_name: str, 
-        score: float, 
+        self,
+        model_name: str,
+        metric_name: str,
+        score: float,
         timestamp: Optional[datetime] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         """Update a model's score for a specific metric.
-        
+
         Args:
             model_name: Name of the model
             metric_name: Name of the metric
@@ -70,15 +70,15 @@ class ModelScoreTracker:
         """
         if timestamp is None:
             timestamp = datetime.now()
-            
+
         # Initialize model if not exists
         if model_name not in self.model_scores:
             self.model_scores[model_name] = {
                 "metrics": {},
                 "last_updated": timestamp.isoformat(),
-                "total_updates": 0
+                "total_updates": 0,
             }
-            
+
         # Update score
         if metric_name not in self.model_scores[model_name]["metrics"]:
             self.model_scores[model_name]["metrics"][metric_name] = {
@@ -87,177 +87,183 @@ class ModelScoreTracker:
                 "worst_score": score,
                 "avg_score": score,
                 "score_history": [],
-                "last_updated": timestamp.isoformat()
+                "last_updated": timestamp.isoformat(),
             }
         else:
             metric_data = self.model_scores[model_name]["metrics"][metric_name]
             metric_data["current_score"] = score
             metric_data["best_score"] = max(metric_data["best_score"], score)
             metric_data["worst_score"] = min(metric_data["worst_score"], score)
-            metric_data["score_history"].append({
-                "score": score,
-                "timestamp": timestamp.isoformat(),
-                "metadata": metadata or {}
-            })
-            
+            metric_data["score_history"].append(
+                {
+                    "score": score,
+                    "timestamp": timestamp.isoformat(),
+                    "metadata": metadata or {},
+                }
+            )
+
             # Calculate running average
             scores = [h["score"] for h in metric_data["score_history"]]
             metric_data["avg_score"] = np.mean(scores)
             metric_data["last_updated"] = timestamp.isoformat()
-            
+
         # Update model metadata
         self.model_scores[model_name]["last_updated"] = timestamp.isoformat()
         self.model_scores[model_name]["total_updates"] += 1
-        
+
         # Record in history
         history_entry = {
             "timestamp": timestamp.isoformat(),
             "model_name": model_name,
             "metric_name": metric_name,
             "score": score,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
         }
         self.score_history.append(history_entry)
-        
+
         # Keep only recent history (last 1000 entries)
         if len(self.score_history) > 1000:
             self.score_history = self.score_history[-1000:]
-            
+
         logger.debug(f"Updated score for {model_name}.{metric_name}: {score}")
-        
+
     def get_score(self, model_name: str, metric_name: str) -> Optional[float]:
         """Get current score for a model and metric.
-        
+
         Args:
             model_name: Name of the model
             metric_name: Name of the metric
-            
+
         Returns:
             Current score or None if not found
         """
-        if (model_name in self.model_scores and 
-            metric_name in self.model_scores[model_name]["metrics"]):
-            return self.model_scores[model_name]["metrics"][metric_name]["current_score"]
+        if (
+            model_name in self.model_scores
+            and metric_name in self.model_scores[model_name]["metrics"]
+        ):
+            return self.model_scores[model_name]["metrics"][metric_name][
+                "current_score"
+            ]
         return None
-        
+
     def get_model_scores(self, model_name: str) -> Dict[str, Any]:
         """Get all scores for a model.
-        
+
         Args:
             model_name: Name of the model
-            
+
         Returns:
             Dictionary with all metric scores
         """
         return self.model_scores.get(model_name, {})
-        
+
     def get_best_model(self, metric_name: str) -> Optional[str]:
         """Get the best performing model for a metric.
-        
+
         Args:
             metric_name: Name of the metric
-            
+
         Returns:
             Name of the best model or None
         """
         best_model = None
-        best_score = float('-inf')
-        
+        best_score = float("-inf")
+
         for model_name, model_data in self.model_scores.items():
             if metric_name in model_data["metrics"]:
                 score = model_data["metrics"][metric_name]["current_score"]
                 if score > best_score:
                     best_score = score
                     best_model = model_name
-                    
+
         return best_model
-        
+
     def get_score_summary(self) -> Dict[str, Any]:
         """Get summary of all model scores.
-        
+
         Returns:
             Dictionary with score summary
         """
         summary = {
             "total_models": len(self.model_scores),
             "total_history_entries": len(self.score_history),
-            "models": {}
+            "models": {},
         }
-        
+
         for model_name, model_data in self.model_scores.items():
             summary["models"][model_name] = {
                 "metrics_count": len(model_data["metrics"]),
                 "total_updates": model_data["total_updates"],
                 "last_updated": model_data["last_updated"],
-                "metrics": {}
+                "metrics": {},
             }
-            
+
             for metric_name, metric_data in model_data["metrics"].items():
                 summary["models"][model_name]["metrics"][metric_name] = {
                     "current_score": metric_data["current_score"],
                     "best_score": metric_data["best_score"],
                     "worst_score": metric_data["worst_score"],
                     "avg_score": metric_data["avg_score"],
-                    "history_count": len(metric_data["score_history"])
+                    "history_count": len(metric_data["score_history"]),
                 }
-                
+
         return summary
-        
+
     def save(self, filepath: Optional[str] = None):
         """Save model scores to file.
-        
+
         Args:
             filepath: Optional custom filepath
         """
         try:
             if filepath is None:
                 filepath = self.scores_file
-                
+
             # Save current scores
-            with open(filepath, 'w') as f:
+            with open(filepath, "w") as f:
                 json.dump(self.model_scores, f, indent=2)
-                
+
             # Save history
-            with open(self.history_file, 'wb') as f:
+            with open(self.history_file, "wb") as f:
                 pickle.dump(self.score_history, f)
-                
+
             logger.info(f"Saved model scores to {filepath}")
             logger.info(f"Saved score history to {self.history_file}")
-            
+
         except Exception as e:
             logger.error(f"Could not save model scores: {e}")
-            
+
     def load(self, filepath: Optional[str] = None):
         """Load model scores from file.
-        
+
         Args:
             filepath: Optional custom filepath
         """
         try:
             if filepath is None:
                 filepath = self.scores_file
-                
+
             # Load current scores
             if Path(filepath).exists():
-                with open(filepath, 'r') as f:
+                with open(filepath, "r") as f:
                     self.model_scores = json.load(f)
-                    
+
             # Load history
             if self.history_file.exists():
-                with open(self.history_file, 'rb') as f:
+                with open(self.history_file, "rb") as f:
                     self.score_history = pickle.load(f)
-                    
+
             logger.info(f"Loaded model scores from {filepath}")
             logger.info(f"Loaded {len(self.score_history)} history entries")
-            
+
         except Exception as e:
             logger.warning(f"Could not load model scores: {e}")
             self.model_scores = {}
             self.score_history = []
-            
+
     def export_scores(self, filepath: str, format: str = "csv"):
         """Export scores to file.
-        
+
         Args:
             filepath: Output filepath
             format: Export format ('csv', 'json', 'excel')
@@ -268,43 +274,47 @@ class ModelScoreTracker:
                 export_data = []
                 for model_name, model_data in self.model_scores.items():
                     for metric_name, metric_data in model_data["metrics"].items():
-                        export_data.append({
-                            "model_name": model_name,
-                            "metric_name": metric_name,
-                            "current_score": metric_data["current_score"],
-                            "best_score": metric_data["best_score"],
-                            "worst_score": metric_data["worst_score"],
-                            "avg_score": metric_data["avg_score"],
-                            "last_updated": metric_data["last_updated"]
-                        })
-                        
+                        export_data.append(
+                            {
+                                "model_name": model_name,
+                                "metric_name": metric_name,
+                                "current_score": metric_data["current_score"],
+                                "best_score": metric_data["best_score"],
+                                "worst_score": metric_data["worst_score"],
+                                "avg_score": metric_data["avg_score"],
+                                "last_updated": metric_data["last_updated"],
+                            }
+                        )
+
                 df = pd.DataFrame(export_data)
                 df.to_csv(filepath, index=False)
-                
+
             elif format == "json":
-                with open(filepath, 'w') as f:
+                with open(filepath, "w") as f:
                     json.dump(self.model_scores, f, indent=2)
-                    
+
             elif format == "excel":
                 # Create DataFrame for export
                 export_data = []
                 for model_name, model_data in self.model_scores.items():
                     for metric_name, metric_data in model_data["metrics"].items():
-                        export_data.append({
-                            "model_name": model_name,
-                            "metric_name": metric_name,
-                            "current_score": metric_data["current_score"],
-                            "best_score": metric_data["best_score"],
-                            "worst_score": metric_data["worst_score"],
-                            "avg_score": metric_data["avg_score"],
-                            "last_updated": metric_data["last_updated"]
-                        })
-                        
+                        export_data.append(
+                            {
+                                "model_name": model_name,
+                                "metric_name": metric_name,
+                                "current_score": metric_data["current_score"],
+                                "best_score": metric_data["best_score"],
+                                "worst_score": metric_data["worst_score"],
+                                "avg_score": metric_data["avg_score"],
+                                "last_updated": metric_data["last_updated"],
+                            }
+                        )
+
                 df = pd.DataFrame(export_data)
                 df.to_excel(filepath, index=False)
-                
+
             logger.info(f"Exported scores to {filepath}")
-            
+
         except Exception as e:
             logger.error(f"Could not export scores: {e}")
 
@@ -334,10 +344,12 @@ def log_strategy_performance(
 
     # Store in memory for trending
     performance_data.append(log_data)
-    
+
     # Update score tracker
     for metric_name, score in performance_metrics.items():
-        _score_tracker.update_score(strategy_name, metric_name, score, metadata=metadata)
+        _score_tracker.update_score(
+            strategy_name, metric_name, score, metadata=metadata
+        )
 
     logger.info(f"Strategy Performance: {json.dumps(log_data)}")
 
@@ -369,7 +381,7 @@ def log_performance(
 
     # Store in memory for trending
     performance_data.append(log_data)
-    
+
     # Update score tracker
     for metric_name, score in metrics.items():
         _score_tracker.update_score(model, metric_name, score, metadata=metadata)
@@ -519,8 +531,7 @@ def create_streamlit_performance_dashboard():
         st.sidebar.header("Filters")
         days_back = st.sidebar.slider("Days Back", 1, 365, 30)
         metric_filter = st.sidebar.selectbox(
-            "Metric",
-            ["sharpe_ratio", "total_return", "max_drawdown", "win_rate"]
+            "Metric", ["sharpe_ratio", "total_return", "max_drawdown", "win_rate"]
         )
 
         # Get performance data
@@ -534,13 +545,15 @@ def create_streamlit_performance_dashboard():
         df_data = []
         for record in data:
             if metric_filter in record["metrics"]:
-                df_data.append({
-                    "Timestamp": datetime.fromisoformat(record["timestamp"]),
-                    "Strategy": record.get("strategy", "Unknown"),
-                    "Ticker": record.get("ticker", "Unknown"),
-                    "Model": record.get("model", "Unknown"),
-                    "Metric": record["metrics"][metric_filter]
-                })
+                df_data.append(
+                    {
+                        "Timestamp": datetime.fromisoformat(record["timestamp"]),
+                        "Strategy": record.get("strategy", "Unknown"),
+                        "Ticker": record.get("ticker", "Unknown"),
+                        "Model": record.get("model", "Unknown"),
+                        "Metric": record["metrics"][metric_filter],
+                    }
+                )
 
         if not df_data:
             st.warning(f"No data for metric: {metric_filter}")

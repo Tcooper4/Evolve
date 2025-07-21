@@ -1,4 +1,4 @@
-﻿"""
+"""
 Model Caching Utility
 
 Provides joblib-based caching for long-running model operations like
@@ -9,7 +9,7 @@ import hashlib
 import logging
 import os
 from datetime import datetime
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, Optional
 
 import joblib
 import numpy as np
@@ -57,10 +57,10 @@ class ModelCache:
         """
         # Convert args and kwargs to a hashable format
         key_data = {
-            'func_name': func_name,
-            'args': self._hash_data(args),
-            'kwargs': self._hash_data(kwargs),
-            'timestamp': datetime.now().strftime('%Y%m%d_%H%M')
+            "func_name": func_name,
+            "args": self._hash_data(args),
+            "kwargs": self._hash_data(kwargs),
+            "timestamp": datetime.now().strftime("%Y%m%d_%H%M"),
         }
 
         # Create hash
@@ -85,15 +85,21 @@ class ModelCache:
             return hashlib.md5(data.tobytes()).hexdigest()
         elif isinstance(data, (list, tuple)):
             # Hash list/tuple by converting elements
-            return hashlib.md5(str([self._hash_data(item) for item in data]).encode()).hexdigest()
+            return hashlib.md5(
+                str([self._hash_data(item) for item in data]).encode()
+            ).hexdigest()
         elif isinstance(data, dict):
             # Hash dictionary by converting items
-            return hashlib.md5(str({k: self._hash_data(v) for k, v in data.items()}).encode()).hexdigest()
+            return hashlib.md5(
+                str({k: self._hash_data(v) for k, v in data.items()}).encode()
+            ).hexdigest()
         else:
             # Hash other types as string
             return hashlib.md5(str(data).encode()).hexdigest()
 
-    def cache_function(self, func: Callable, cache_key: Optional[str] = None) -> Callable:
+    def cache_function(
+        self, func: Callable, cache_key: Optional[str] = None
+    ) -> Callable:
         """
         Cache a function using joblib.
 
@@ -132,24 +138,27 @@ class ModelCache:
                 if os.path.isfile(os.path.join(self.cache_dir, f))
             )
 
-            cache_files = len([
-                f for f in os.listdir(self.cache_dir)
-                if os.path.isfile(os.path.join(self.cache_dir, f))
-            ])
+            cache_files = len(
+                [
+                    f
+                    for f in os.listdir(self.cache_dir)
+                    if os.path.isfile(os.path.join(self.cache_dir, f))
+                ]
+            )
 
             return {
-                'cache_dir': self.cache_dir,
-                'cache_size_bytes': cache_size,
-                'cache_size_mb': cache_size / (1024 * 1024),
-                'cache_files': cache_files,
-                'cache_available': True
+                "cache_dir": self.cache_dir,
+                "cache_size_bytes": cache_size,
+                "cache_size_mb": cache_size / (1024 * 1024),
+                "cache_files": cache_files,
+                "cache_available": True,
             }
         except Exception as e:
             logger.error(f"Error getting cache info: {e}")
             return {
-                'cache_dir': self.cache_dir,
-                'cache_available': False,
-                'error': str(e)
+                "cache_dir": self.cache_dir,
+                "cache_available": False,
+                "error": str(e),
             }
 
 
@@ -198,10 +207,7 @@ def get_cache_info() -> Dict[str, Any]:
 # Convenience functions for common model operations
 @cache_model_operation
 def cached_lstm_forecast(
-    data: pd.DataFrame,
-    model_config: Dict[str, Any],
-    horizon: int = 30,
-    **kwargs
+    data: pd.DataFrame, model_config: Dict[str, Any], horizon: int = 30, **kwargs
 ) -> Dict[str, Any]:
     """
     Cached LSTM forecast operation.
@@ -224,10 +230,7 @@ def cached_lstm_forecast(
 
 @cache_model_operation
 def cached_xgboost_forecast(
-    data: pd.DataFrame,
-    model_config: Dict[str, Any],
-    horizon: int = 30,
-    **kwargs
+    data: pd.DataFrame, model_config: Dict[str, Any], horizon: int = 30, **kwargs
 ) -> Dict[str, Any]:
     """
     Cached XGBoost forecast operation.
@@ -250,10 +253,7 @@ def cached_xgboost_forecast(
 
 @cache_model_operation
 def cached_ensemble_forecast(
-    data: pd.DataFrame,
-    model_config: Dict[str, Any],
-    horizon: int = 30,
-    **kwargs
+    data: pd.DataFrame, model_config: Dict[str, Any], horizon: int = 30, **kwargs
 ) -> Dict[str, Any]:
     """
     Cached ensemble forecast operation.
@@ -276,10 +276,7 @@ def cached_ensemble_forecast(
 
 @cache_model_operation
 def cached_tcn_forecast(
-    data: pd.DataFrame,
-    model_config: Dict[str, Any],
-    horizon: int = 30,
-    **kwargs
+    data: pd.DataFrame, model_config: Dict[str, Any], horizon: int = 30, **kwargs
 ) -> Dict[str, Any]:
     """
     Cached TCN forecast operation.
@@ -311,10 +308,10 @@ def create_cached_forecast_function(model_type: str) -> Callable:
         Callable: Cached forecast function
     """
     model_functions = {
-        'lstm': cached_lstm_forecast,
-        'xgboost': cached_xgboost_forecast,
-        'ensemble': cached_ensemble_forecast,
-        'tcn': cached_tcn_forecast,
+        "lstm": cached_lstm_forecast,
+        "xgboost": cached_xgboost_forecast,
+        "ensemble": cached_ensemble_forecast,
+        "tcn": cached_tcn_forecast,
     }
 
     if model_type.lower() not in model_functions:

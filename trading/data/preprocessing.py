@@ -241,9 +241,11 @@ class DataPreprocessor:
                 "date_range": {
                     "start": data.index.min().isoformat() if not data.empty else None,
                     "end": data.index.max().isoformat() if not data.empty else None,
-                    "duration_days": (data.index.max() - data.index.min()).days
-                    if len(data) > 1
-                    else 0,
+                    "duration_days": (
+                        (data.index.max() - data.index.min()).days
+                        if len(data) > 1
+                        else 0
+                    ),
                 },
                 "outliers_detected": 0,
                 "infinite_values": np.isinf(data.select_dtypes(include=[np.number]))

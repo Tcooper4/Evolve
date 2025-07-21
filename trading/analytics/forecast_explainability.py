@@ -18,6 +18,9 @@ import pandas as pd
 
 warnings.filterwarnings("ignore")
 
+# Setup logger first
+logger = logging.getLogger(__name__)
+
 # Optional imports for advanced explainability
 try:
     import shap
@@ -34,8 +37,6 @@ try:
 except ImportError:
     PLOTTING_AVAILABLE = False
     logger.warning("Matplotlib/Seaborn not available, plots will be skipped")
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -409,9 +410,9 @@ class IntelligentForecastExplainability:
                         feature_name=feature_name,
                         importance_score=float(abs(coefficients[i])),
                         importance_rank=0,
-                        contribution_type="positive"
-                        if coefficients[i] > 0
-                        else "negative",
+                        contribution_type=(
+                            "positive" if coefficients[i] > 0 else "negative"
+                        ),
                         metadata={
                             "method": "model_builtin",
                             "coefficient": float(coefficients[i]),

@@ -12,14 +12,15 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# Add the trading directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
 from trading.agents.agent_manager import AgentManager
 from trading.agents.agent_registry import AgentRegistry
 from trading.agents.base_agent_interface import AgentConfig
 from trading.services.agent_api_service import AgentAPIService
 from trading.services.service_manager import ServiceManager
+
+# Add the trading directory to the path
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,32 +29,21 @@ class ServiceIntegrationTest:
     """Test suite for service integration."""
 
     def __init__(self):
-        """Initialize the test suite."""
+        """Initialize the service integration test."""
         self.setup_logging()
-        self.test_results = []
-
-        # Initialize components
-        self.agent_api_service = None
-        self.service_manager = ServiceManager()
-        self.agent_manager = AgentManager()
+        self.logger = logging.getLogger("agent_api")
         self.agent_registry = AgentRegistry()
-
-        logger.info("Service Integration Test initialized")
+        self.agent_manager = AgentManager()
+        self.service_manager = ServiceManager()
 
     from utils.launch_utils import setup_logging
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="agent_api")def log_test_result(self, test_name: str, success: bool, details: str = ""):
-        """Log test result."""
-        result = {
-            "test_name": test_name,
-            "success": success,
-            "details": details,
-            "timestamp": datetime.now().isoformat(),
-        }
-        self.test_results.append(result)
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="agent_api")
 
+    def log_test_result(self, test_name: str, success: bool, details: str = ""):
+        """Log test result."""
         if success:
             logger.info(f"✅ {test_name}: PASSED - {details}")
         else:
@@ -275,7 +265,7 @@ def setup_logging():
         logger.info(f"Total Tests: {total_tests}")
         logger.info(f"Passed: {passed_tests}")
         logger.info(f"Failed: {failed_tests}")
-        logger.info(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
+        logger.info(f"Success Rate: {(passed_tests / total_tests) * 100:.1f}%")
         logger.info("=" * 60)
 
         if failed_tests > 0:
@@ -293,9 +283,9 @@ def setup_logging():
                         "total_tests": total_tests,
                         "passed_tests": passed_tests,
                         "failed_tests": failed_tests,
-                        "success_rate": (passed_tests / total_tests) * 100
-                        if total_tests > 0
-                        else 0,
+                        "success_rate": (
+                            (passed_tests / total_tests) * 100 if total_tests > 0 else 0
+                        ),
                     },
                     "results": self.test_results,
                     "timestamp": datetime.now().isoformat(),

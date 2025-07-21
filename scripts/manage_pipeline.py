@@ -41,13 +41,14 @@ import logging
 import logging.config
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import pandas as pd
 import yaml
+
+from utils.launch_utils import setup_logging
 
 
 class PipelineManager:
@@ -80,9 +81,8 @@ class PipelineManager:
         self.config = self._load_config(config_path)
         self.setup_logging()
         self.logger = logging.getLogger("trading")
-        self.pipeline_dir = Path("pipeline")
+        self.pipeline_dir = Path("pipelines")
         self.pipeline_dir.mkdir(parents=True, exist_ok=True)
-        self.executor = ThreadPoolExecutor(max_workers=4)
 
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration.
@@ -103,47 +103,24 @@ class PipelineManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="report_service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="report_service")def run_pipeline(self, pipeline_type: str, data_path: Optional[str] = None):
-        """Run data processing pipeline.
-
-        Args:
-            pipeline_type: Type of pipeline to run (e.g., "market_data", "model_training", "prediction")
-            data_path: Optional path to input data file
-
-        Returns:
-            True if pipeline completed successfully, False otherwise
-
-        Raises:
-            Exception: If pipeline execution fails
-        """
-        self.logger.info(f"Running {pipeline_type} pipeline...")
+    def run_pipeline(self, pipeline_type: str, data_path: Optional[str] = None):
+        """Run a data pipeline of the specified type."""
+        self.logger.info(f"Running pipeline: {pipeline_type}")
 
         try:
             # Load pipeline configuration
-            pipeline_config = self.config.get("pipeline", {}).get(pipeline_type, {})
-            if not pipeline_config:
-                self.logger.error(f"Pipeline configuration not found: {pipeline_type}")
-                return False
+            pipeline_config = self._load_pipeline_config(pipeline_type)
 
-            # Initialize pipeline
-            pipeline = await self._initialize_pipeline(pipeline_type, pipeline_config)
+            # Run pipeline steps
+            for step in pipeline_config["steps"]:
+                self._run_pipeline_step(step, data_path)
 
-            # Process data
-            if data_path:
-                success = await self._process_data(pipeline, data_path)
-            else:
-                success = await self._process_stream(pipeline)
-
-            if success:
-                self.logger.info(f"{pipeline_type} pipeline completed successfully")
-                return True
-            else:
-                self.logger.error(f"{pipeline_type} pipeline failed")
-                return False
+            self.logger.info("Pipeline completed successfully")
+            return True
         except Exception as e:
             self.logger.error(f"Failed to run pipeline: {e}")
             return False

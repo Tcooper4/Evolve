@@ -1,4 +1,4 @@
-﻿"""
+"""
 Agent Memory Manager for Evolve Trading Platform
 
 This module provides institutional-level agent memory management:
@@ -178,7 +178,12 @@ class AtomicCounter:
 class ThreadSafeCache:
     """Thread-safe cache with TTL, size limits, and LRU eviction."""
 
-    def __init__(self, max_size: int = 1000, default_ttl: int = 3600, eviction_policy: str = "lru"):
+    def __init__(
+        self,
+        max_size: int = 1000,
+        default_ttl: int = 3600,
+        eviction_policy: str = "lru",
+    ):
         self.max_size = max_size
         self.default_ttl = default_ttl
         self.eviction_policy = eviction_policy
@@ -188,7 +193,7 @@ class ThreadSafeCache:
         self.lock = threading.RLock()
         self.access_counter = AtomicCounter()
         self.eviction_counter = AtomicCounter()
-        
+
         # Memory usage tracking
         self.memory_usage = AtomicCounter()
         self.max_memory_mb = 100  # Default 100MB limit
@@ -207,7 +212,7 @@ class ThreadSafeCache:
                 if key in self.access_order:
                     self.access_order.remove(key)
                 self.access_order.append(key)  # Move to end (most recently used)
-                
+
                 self.access_counter.increment()
                 return self.cache[key]
             return None
@@ -217,12 +222,14 @@ class ThreadSafeCache:
         with self.lock:
             # Estimate memory usage of the value
             value_size = self._estimate_memory_usage(value)
-            
+
             # Check if adding this item would exceed memory limit
             if self.memory_usage.get() + value_size > self.max_memory_mb * 1024 * 1024:
-                logger.warning(f"Memory limit reached ({self.max_memory_mb}MB), evicting items")
+                logger.warning(
+                    f"Memory limit reached ({self.max_memory_mb}MB), evicting items"
+                )
                 self._evict_until_space_available(value_size)
-            
+
             # Evict if cache is full (count-based)
             if len(self.cache) >= self.max_size and key not in self.cache:
                 self._evict_oldest()
@@ -230,15 +237,15 @@ class ThreadSafeCache:
             # Add to cache
             self.cache[key] = value
             self.access_times[key] = time.time()
-            
+
             # Update LRU order
             if key in self.access_order:
                 self.access_order.remove(key)
             self.access_order.append(key)
-            
+
             # Update memory usage
             self.memory_usage.increment(value_size)
-            
+
             return True
 
     def _evict_oldest(self):
@@ -249,13 +256,15 @@ class ThreadSafeCache:
         oldest_key = self.access_order[0]  # Least recently used
         self._remove_item(oldest_key)
         self.eviction_counter.increment()
-        
+
         logger.debug(f"Evicted oldest item: {oldest_key}")
 
     def _evict_until_space_available(self, required_space: int):
         """Evict items until enough space is available."""
-        while (self.memory_usage.get() + required_space > self.max_memory_mb * 1024 * 1024 
-               and self.access_order):
+        while (
+            self.memory_usage.get() + required_space > self.max_memory_mb * 1024 * 1024
+            and self.access_order
+        ):
             self._evict_oldest()
 
     def _remove_item(self, key: str):
@@ -264,7 +273,7 @@ class ThreadSafeCache:
             # Update memory usage
             value_size = self._estimate_memory_usage(self.cache[key])
             self.memory_usage.decrement(value_size)
-            
+
             # Remove from all tracking structures
             del self.cache[key]
             del self.access_times[key]
@@ -275,16 +284,19 @@ class ThreadSafeCache:
         """Estimate memory usage of a value in bytes."""
         try:
             import sys
+
             return sys.getsizeof(value)
-        except:
+        except BaseException:
             # Fallback estimation
             if isinstance(value, str):
-                return len(value.encode('utf-8'))
+                return len(value.encode("utf-8"))
             elif isinstance(value, (list, tuple)):
                 return sum(self._estimate_memory_usage(item) for item in value)
             elif isinstance(value, dict):
-                return sum(self._estimate_memory_usage(k) + self._estimate_memory_usage(v) 
-                          for k, v in value.items())
+                return sum(
+                    self._estimate_memory_usage(k) + self._estimate_memory_usage(v)
+                    for k, v in value.items()
+                )
             else:
                 return 1024  # Default 1KB estimate
 
@@ -308,7 +320,9 @@ class ThreadSafeCache:
                 "eviction_count": self.eviction_counter.get(),
                 "memory_usage_mb": round(memory_usage_mb, 2),
                 "max_memory_mb": self.max_memory_mb,
-                "memory_utilization": round(memory_usage_mb / self.max_memory_mb * 100, 2),
+                "memory_utilization": round(
+                    memory_usage_mb / self.max_memory_mb * 100, 2
+                ),
                 "utilization": len(self.cache) / self.max_size * 100,
             }
 
@@ -805,9 +819,11 @@ class AgentMemoryManager:
                             and item.get(
                                 "agent_type"
                                 if data_type == "interaction"
-                                else "strategy_name"
-                                if data_type == "strategy"
-                                else "model_name"
+                                else (
+                                    "strategy_name"
+                                    if data_type == "strategy"
+                                    else "model_name"
+                                )
                             )
                             != filter_value
                         ):
@@ -850,7 +866,9 @@ class AgentMemoryManager:
                             file_data = json.load(f)
 
                         # Validate JSON structure
-                        if not self._validate_memory_data(file_data, data_type, file_path):
+                        if not self._validate_memory_data(
+                            file_data, data_type, file_path
+                        ):
                             logger.warning(f"Skipping corrupted file {file_path}")
                             continue
 
@@ -1517,7 +1535,9 @@ class AgentMemoryManager:
         """Validate memory data structure and content."""
         try:
             if not isinstance(data, list):
-                logger.error(f"Invalid data structure in {file_path}: expected list, got {type(data)}")
+                logger.error(
+                    f"Invalid data structure in {file_path}: expected list, got {type(data)}"
+                )
                 return False
 
             if len(data) == 0:
@@ -1526,7 +1546,7 @@ class AgentMemoryManager:
             # Validate first item structure
             first_item = data[0]
             required_fields = self._get_required_fields(data_type)
-            
+
             for field in required_fields:
                 if field not in first_item:
                     logger.error(f"Missing required field '{field}' in {file_path}")
@@ -1549,11 +1569,22 @@ class AgentMemoryManager:
     def _get_required_fields(self, data_type: str) -> List[str]:
         """Get required fields for a data type."""
         base_fields = ["timestamp"]
-        
+
         if data_type == "interaction":
-            return base_fields + ["agent_type", "prompt", "response", "confidence", "success"]
+            return base_fields + [
+                "agent_type",
+                "prompt",
+                "response",
+                "confidence",
+                "success",
+            ]
         elif data_type == "strategy":
-            return base_fields + ["strategy_name", "performance", "confidence", "success"]
+            return base_fields + [
+                "strategy_name",
+                "performance",
+                "confidence",
+                "success",
+            ]
         elif data_type == "model":
             return base_fields + ["model_name", "performance", "confidence", "success"]
         else:
@@ -1565,13 +1596,15 @@ class AgentMemoryManager:
             # Create backup directory
             backup_dir = Path(file_path).parent / "corrupted_backups"
             backup_dir.mkdir(exist_ok=True)
-            
+
             # Move corrupted file to backup
-            backup_path = backup_dir / f"{Path(file_path).name}.corrupted_{int(time.time())}"
+            backup_path = (
+                backup_dir / f"{Path(file_path).name}.corrupted_{int(time.time())}"
+            )
             Path(file_path).rename(backup_path)
-            
+
             logger.info(f"Moved corrupted file {file_path} to backup {backup_path}")
-            
+
         except Exception as e:
             logger.error(f"Failed to handle corrupted file {file_path}: {e}")
 

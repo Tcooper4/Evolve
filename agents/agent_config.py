@@ -233,7 +233,9 @@ class AgentConfig:
                 logger.info(f"Agent configuration loaded from {file_path}")
                 return config
             else:
-                logger.warning(f"WARNING: {file_path} not found. Falling back to default configuration.")
+                logger.warning(
+                    f"WARNING: {file_path} not found. Falling back to default configuration."
+                )
                 logger.info(f"Configuration file {file_path} not found, using defaults")
                 return cls()
 

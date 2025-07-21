@@ -163,9 +163,7 @@ class TradeLogger:
         price = trade_data.get("price", 0)
         timestamp = trade_data.get("timestamp", "Unknown")
 
-        message = (
-            f"🔔 Trade Alert: {action} {quantity} {symbol} @ ${price:.2f} at {timestamp}"
-        )
+        message = f"🔔 Trade Alert: {action} {quantity} {symbol} @ ${price:.2f} at {timestamp}"
 
         # Send to all notifiers
         notifications_sent = 0

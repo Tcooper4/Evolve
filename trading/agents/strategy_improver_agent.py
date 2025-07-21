@@ -30,7 +30,9 @@ class StrategyImprovementRequest:
     """Request for strategy improvement."""
 
     strategy_name: str
-    improvement_type: str  # 'parameter_optimization', 'logic_update', 'threshold_adjustment'
+    improvement_type: (
+        str  # 'parameter_optimization', 'logic_update', 'threshold_adjustment'
+    )
     performance_thresholds: Optional[Dict[str, float]] = None
     optimization_method: str = "bayesian"
     max_iterations: int = 30
@@ -612,14 +614,21 @@ class StrategyImproverAgent(BaseAgent):
                 "strategies_improved": list(
                     set(imp["strategy_name"] for imp in recent_improvements)
                 ),
-                "last_improvement": recent_improvements[-1]["timestamp"]
-                if recent_improvements
-                else None,
-                "average_improvement_score": np.mean(
-                    [imp.get("estimated_improvement", 0) for imp in recent_improvements]
-                )
-                if recent_improvements
-                else 0.0,
+                "last_improvement": (
+                    recent_improvements[-1]["timestamp"]
+                    if recent_improvements
+                    else None
+                ),
+                "average_improvement_score": (
+                    np.mean(
+                        [
+                            imp.get("estimated_improvement", 0)
+                            for imp in recent_improvements
+                        ]
+                    )
+                    if recent_improvements
+                    else 0.0
+                ),
             }
 
         except Exception as e:

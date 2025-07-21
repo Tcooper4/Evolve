@@ -116,9 +116,9 @@ class ManagementRegistry:
             "healthy": healthy_count,
             "warning": warning_count,
             "error": error_count,
-            "health_percentage": (healthy_count / total_managers * 100)
-            if total_managers > 0
-            else 0,
+            "health_percentage": (
+                (healthy_count / total_managers * 100) if total_managers > 0 else 0
+            ),
             "timestamp": datetime.now().isoformat(),
         }
 

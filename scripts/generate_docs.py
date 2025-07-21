@@ -23,7 +23,6 @@ Examples:
 """
 
 import logging
-import logging.config
 import subprocess
 import sys
 from pathlib import Path
@@ -31,13 +30,17 @@ from typing import List, Optional
 
 import yaml
 
+from utils.launch_utils import setup_logging
 
-class DocumentationGenerator:
+
+class DocsGenerator:
     def __init__(self, config_path: str = "config/app_config.yaml"):
-        """Initialize the documentation generator."""
+        """Initialize the docs generator."""
         self.config = self._load_config(config_path)
         self.setup_logging()
         self.logger = logging.getLogger("trading")
+        self.docs_dir = Path("docs")
+        self.docs_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
@@ -48,20 +51,20 @@ class DocumentationGenerator:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def run_command(self, command: List[str], cwd: Optional[str] = None) -> int:
-        """Run a shell command and return its exit code."""
+    def run_command(self, command: List[str], cwd: Optional[str] = None) -> int:
+        """Run a shell command for documentation generation."""
+        self.logger.info(f"Running command: {' '.join(command)}")
+
         try:
-            process = subprocess.run(
-                command, cwd=cwd, check=True, capture_output=True, text=True
-            )
-            return process.returncode
+            result = subprocess.run(command, cwd=cwd, check=True)
+            self.logger.info("Command executed successfully")
+            return result.returncode
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Command failed: {e}")
-            self.logger.error(f"Output: {e.output}")
             return e.returncode
 
     def generate_api_docs(self):
@@ -184,6 +187,8 @@ def setup_logging():
 
 def main():
     """Main function."""
+    import argparse
+
     parser = argparse.ArgumentParser(description="Documentation Generator")
     parser.add_argument(
         "command",
@@ -192,7 +197,7 @@ def main():
     )
 
     args = parser.parse_args()
-    generator = DocumentationGenerator()
+    generator = DocsGenerator()
 
     commands = {
         "api": generator.generate_api_docs,

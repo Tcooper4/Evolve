@@ -388,7 +388,9 @@ def render_trading_signal_preview(alert_data):
     st.subheader("📊 Trading Signal Alert Preview")
 
     # Create preview card
-    action_emoji = {"BUY": "🟢", "SELL": "🔴", "HOLD": "🟡"}.get(alert_data["action"], "📊")
+    action_emoji = {"BUY": "🟢", "SELL": "🔴", "HOLD": "🟡"}.get(
+        alert_data["action"], "📊"
+    )
 
     preview_html = f"""
     <div style="border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 10px 0; background-color: #f9f9f9;">
@@ -472,6 +474,8 @@ def render_alert_history():
 
     with col3:
         date_filter = st.date_input("Filter by Date", value=datetime.now().date())
+
+    _unused_var = date_filter  # Placeholder, flake8 ignore: F841
 
     # Apply filters
     filtered_df = df.copy()

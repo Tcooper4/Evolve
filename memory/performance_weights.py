@@ -181,10 +181,10 @@ def get_latest_weights():
         dict: Latest weights by model name.
     """
     try:
-        with open(CURRENT_WEIGHT_PATH, 'r') as f:
+        with open(CURRENT_WEIGHT_PATH, "r") as f:
             weights = json.load(f)
             return weights
     except (FileNotFoundError, json.JSONDecodeError):
         logger.warning("Weight file not found or corrupted — using default weights.")
-        weights = {'LSTM': 0.25, 'XGB': 0.25, 'ARIMA': 0.25, 'Prophet': 0.25}
+        weights = {"LSTM": 0.25, "XGB": 0.25, "ARIMA": 0.25, "Prophet": 0.25}
         return weights

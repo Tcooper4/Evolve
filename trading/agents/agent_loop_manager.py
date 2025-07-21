@@ -29,6 +29,7 @@ from trading.agents.base_agent_interface import AgentConfig
 from trading.agents.model_builder_agent import ModelBuilderAgent, ModelBuildRequest
 from trading.agents.performance_critic_agent import (
     ModelEvaluationRequest,
+    ModelEvaluationResult,
     PerformanceCriticAgent,
 )
 from trading.agents.updater_agent import UpdaterAgent
@@ -701,9 +702,9 @@ async def main():
     try:
         await manager.start_loop()
     except KeyboardInterrupt:
-        logger.info("\nShutting down...")
+        print("\nShutting down...")
     except Exception as e:
-        logger.error(f"Error: {e}")
+        print(f"Error: {e}")
         sys.exit(1)
 
 

@@ -1,17 +1,13 @@
 import asyncio
-import json
 import logging
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from cachetools import TTLCache
 from pydantic import BaseModel, Field
 from ratelimit import limits, sleep_and_retry
 
 from system.infra.agents.core.models.task import TaskPriority, TaskStatus, TaskType
-from trading.automation_core import AutomationCore
-from trading.automation_tasks import AutomationTasks
+from utils.launch_utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -50,44 +46,17 @@ class Workflow(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
-class AutomationWorkflows:
-    """Workflow management functionality."""
-
-    def __init__(
-        self,
-        core: AutomationCore,
-        tasks: AutomationTasks,
-        config_path: str = "automation/config/workflows.json",
-    ):
-        """Initialize workflow management."""
-        self.core = core
-        self.tasks = tasks
-        self.config = self._load_config(config_path)
+class AutomationWorkflowsService:
+    def __init__(self):
         self.setup_logging()
-        self.setup_cache()
-        self.workflows: Dict[str, Workflow] = {}
-        self.running_workflows: Dict[str, asyncio.Task] = {}
-        self.workflow_results: Dict[str, Dict[str, Any]] = {}
-        self.workflow_errors: Dict[str, str] = {}
-        self.lock = asyncio.Lock()
+        self.logger = logging.getLogger("automation")
 
-    def _load_config(self, config_path: str) -> WorkflowConfig:
-        """Load workflow configuration."""
-        try:
-            with open(config_path, "r") as f:
-                config_data = json.load(f)
-            return WorkflowConfig(**config_data)
-        except Exception as e:
-            logger.error(f"Failed to load workflow config: {str(e)}")
-            raise
+    def setup_logging(self):
+        return setup_logging(service_name="service")
 
-    from utils.launch_utils import setup_logging
-
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def setup_cache(self):
-        """Setup workflow result caching."""
-        self.cache = TTLCache(maxsize=1000, ttl=3600)
+    def setup_cache(self):
+        """Set up cache for automation workflows service."""
+        # Cache setup logic here
 
     @sleep_and_retry
     @limits(calls=100, period=60)

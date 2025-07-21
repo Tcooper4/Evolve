@@ -1,4 +1,4 @@
-﻿"""Risk & Tail Exposure Engine for Evolve Trading Platform.
+"""Risk & Tail Exposure Engine for Evolve Trading Platform.
 
 This module provides comprehensive risk analysis including VaR, CVaR,
 drawdown analysis, and regime-based risk metrics.
@@ -16,14 +16,14 @@ import seaborn as sns
 
 # Import our custom performance metrics
 from utils.performance_metrics import (
+    avg_drawdown,
+    calmar_ratio,
+    conditional_value_at_risk,
+    drawdown_details,
+    max_drawdown,
     sharpe_ratio,
     sortino_ratio,
-    max_drawdown,
-    calmar_ratio,
-    avg_drawdown,
-    drawdown_details,
     value_at_risk,
-    conditional_value_at_risk
 )
 
 logger = logging.getLogger(__name__)
@@ -198,15 +198,21 @@ class TailRiskEngine:
 
     def _calculate_sharpe_ratio(self, returns: pd.Series) -> float:
         """Calculate Sharpe ratio."""
-        return sharpe_ratio(returns, risk_free=self.risk_free_rate, period=self.annualization_factor)
+        return sharpe_ratio(
+            returns, risk_free=self.risk_free_rate, period=self.annualization_factor
+        )
 
     def _calculate_sortino_ratio(self, returns: pd.Series) -> float:
         """Calculate Sortino ratio."""
-        return sortino_ratio(returns, risk_free=self.risk_free_rate, period=self.annualization_factor)
+        return sortino_ratio(
+            returns, risk_free=self.risk_free_rate, period=self.annualization_factor
+        )
 
     def _calculate_calmar_ratio(self, returns: pd.Series) -> float:
         """Calculate Calmar ratio."""
-        return calmar_ratio(returns, risk_free=self.risk_free_rate, period=self.annualization_factor)
+        return calmar_ratio(
+            returns, risk_free=self.risk_free_rate, period=self.annualization_factor
+        )
 
     def _calculate_var(self, returns: pd.Series) -> Tuple[float, float]:
         """Calculate Value at Risk."""
@@ -226,11 +232,11 @@ class TailRiskEngine:
         """Calculate drawdown metrics."""
         max_dd = abs(max_drawdown(returns))
         avg_dd = abs(avg_drawdown(returns))
-        
+
         # Get drawdown details for duration
         dd_details = drawdown_details(returns)
-        dd_duration = dd_details['days'].max() if not dd_details.empty else 0
-        
+        dd_duration = dd_details["days"].max() if not dd_details.empty else 0
+
         return max_dd, avg_dd, dd_duration
 
     def _calculate_tail_dependence(self, returns: pd.Series) -> float:
@@ -602,10 +608,10 @@ def calculate_portfolio_risk(
             "volatility": risk_metrics.volatility,
             "sharpe_ratio": risk_metrics.sharpe_ratio,
             "var": getattr(
-                risk_metrics, f"var_{int(confidence_level*100)}", risk_metrics.var_95
+                risk_metrics, f"var_{int(confidence_level * 100)}", risk_metrics.var_95
             ),
             "cvar": getattr(
-                risk_metrics, f"cvar_{int(confidence_level*100)}", risk_metrics.cvar_95
+                risk_metrics, f"cvar_{int(confidence_level * 100)}", risk_metrics.cvar_95
             ),
             "max_drawdown": risk_metrics.max_drawdown,
             "tail_risk_ratio": risk_metrics.tail_risk_ratio,

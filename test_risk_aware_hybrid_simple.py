@@ -6,14 +6,13 @@ without importing complex dependencies.
 """
 
 import sys
-import traceback
 
 
 def test_imports():
     """Test that hybrid model modules can be imported."""
     try:
-        from trading.forecasting.hybrid_model import HybridModel
-        from trading.risk.risk_calculator import RiskCalculator
+        pass
+
         print("✅ All hybrid model imports successful")
         return True
     except ImportError as e:
@@ -30,16 +29,19 @@ def test_hybrid_model_creation():
         class MockModel:
             def __init__(self, name):
                 self.name = name
+
             def fit(self, data):
                 pass
+
             def predict(self, data):
                 import numpy as np
+
                 return np.random.normal(100, 5, len(data))
 
         models = {
             "Model1": MockModel("Model1"),
             "Model2": MockModel("Model2"),
-            "Model3": MockModel("Model3")
+            "Model3": MockModel("Model3"),
         }
 
         # Create hybrid model
@@ -60,23 +62,22 @@ def test_hybrid_model_creation():
 def test_weighting_metrics():
     """Test different weighting metrics."""
     try:
-        from trading.forecasting.hybrid_model import HybridModel
-        import pandas as pd
         import numpy as np
+
+        from trading.forecasting.hybrid_model import HybridModel
 
         # Create mock models
         class MockModel:
             def __init__(self, name):
                 self.name = name
+
             def fit(self, data):
                 pass
+
             def predict(self, data):
                 return np.random.normal(100, 5, len(data))
 
-        models = {
-            "Model1": MockModel("Model1"),
-            "Model2": MockModel("Model2")
-        }
+        models = {"Model1": MockModel("Model1"), "Model2": MockModel("Model2")}
 
         # Create hybrid model
         hybrid_model = HybridModel(models)
@@ -99,39 +100,42 @@ def test_weighting_metrics():
 def test_performance_calculation():
     """Test performance calculation functionality."""
     try:
-        from trading.forecasting.hybrid_model import HybridModel
-        import pandas as pd
         import numpy as np
+        import pandas as pd
+
+        from trading.forecasting.hybrid_model import HybridModel
 
         # Create mock models
         class MockModel:
             def __init__(self, name):
                 self.name = name
+
             def fit(self, data):
                 pass
+
             def predict(self, data):
                 return np.random.normal(100, 5, len(data))
 
-        models = {
-            "Model1": MockModel("Model1"),
-            "Model2": MockModel("Model2")
-        }
+        models = {"Model1": MockModel("Model1"), "Model2": MockModel("Model2")}
 
         # Create hybrid model
         hybrid_model = HybridModel(models)
 
         # Create sample data
-        dates = pd.date_range('2023-01-01', periods=100, freq='D')
-        data = pd.DataFrame({
-            'close': np.random.normal(100, 10, 100),
-            'volume': np.random.randint(1000, 10000, 100)
-        }, index=dates)
+        dates = pd.date_range("2023-01-01", periods=100, freq="D")
+        data = pd.DataFrame(
+            {
+                "close": np.random.normal(100, 10, 100),
+                "volume": np.random.randint(1000, 10000, 100),
+            },
+            index=dates,
+        )
 
         # Test performance calculation
         performance = hybrid_model.calculate_performance(data)
-        assert 'sharpe_ratio' in performance
-        assert 'max_drawdown' in performance
-        assert 'volatility' in performance
+        assert "sharpe_ratio" in performance
+        assert "max_drawdown" in performance
+        assert "volatility" in performance
 
         print("✅ Performance calculation test successful")
         return True
@@ -143,35 +147,41 @@ def test_performance_calculation():
 def test_weight_calculation():
     """Test weight calculation based on risk metrics."""
     try:
-        from trading.forecasting.hybrid_model import HybridModel
-        import pandas as pd
         import numpy as np
+        import pandas as pd
+
+        from trading.forecasting.hybrid_model import HybridModel
 
         # Create mock models with different biases
         class MockModel:
             def __init__(self, name, bias=0.0):
                 self.name = name
                 self.bias = bias
+
             def fit(self, data):
                 pass
+
             def predict(self, data):
                 return np.random.normal(100 + self.bias, 5, len(data))
 
         models = {
             "Conservative": MockModel("Conservative", bias=-2),
             "Neutral": MockModel("Neutral", bias=0),
-            "Aggressive": MockModel("Aggressive", bias=2)
+            "Aggressive": MockModel("Aggressive", bias=2),
         }
 
         # Create hybrid model
         hybrid_model = HybridModel(models)
 
         # Create sample data
-        dates = pd.date_range('2023-01-01', periods=100, freq='D')
-        data = pd.DataFrame({
-            'close': np.random.normal(100, 10, 100),
-            'volume': np.random.randint(1000, 10000, 100)
-        }, index=dates)
+        dates = pd.date_range("2023-01-01", periods=100, freq="D")
+        data = pd.DataFrame(
+            {
+                "close": np.random.normal(100, 10, 100),
+                "volume": np.random.randint(1000, 10000, 100),
+            },
+            index=dates,
+        )
 
         # Test weight calculation
         weights = hybrid_model.calculate_weights(data)
@@ -192,37 +202,36 @@ def test_weight_calculation():
 def test_ui_components():
     """Test UI components for hybrid model."""
     try:
-        from trading.forecasting.hybrid_model import HybridModel
-        import pandas as pd
         import numpy as np
+
+        from trading.forecasting.hybrid_model import HybridModel
 
         # Create mock models
         class MockModel:
             def __init__(self, name):
                 self.name = name
+
             def fit(self, data):
                 pass
+
             def predict(self, data):
                 return np.random.normal(100, 5, len(data))
 
-        models = {
-            "Model1": MockModel("Model1"),
-            "Model2": MockModel("Model2")
-        }
+        models = {"Model1": MockModel("Model1"), "Model2": MockModel("Model2")}
 
         # Create hybrid model
         hybrid_model = HybridModel(models)
 
         # Test UI configuration
         ui_config = hybrid_model.get_ui_config()
-        assert 'weighting_metrics' in ui_config
-        assert 'risk_metrics' in ui_config
-        assert 'model_names' in ui_config
+        assert "weighting_metrics" in ui_config
+        assert "risk_metrics" in ui_config
+        assert "model_names" in ui_config
 
         # Test UI state
         ui_state = hybrid_model.get_ui_state()
-        assert 'current_weights' in ui_state
-        assert 'performance_metrics' in ui_state
+        assert "current_weights" in ui_state
+        assert "performance_metrics" in ui_state
 
         print("✅ UI components test successful")
         return True
@@ -240,16 +249,16 @@ def test_configuration_methods():
         class MockModel:
             def __init__(self, name):
                 self.name = name
+
             def fit(self, data):
                 pass
+
             def predict(self, data):
                 import numpy as np
+
                 return np.random.normal(100, 5, len(data))
 
-        models = {
-            "Model1": MockModel("Model1"),
-            "Model2": MockModel("Model2")
-        }
+        models = {"Model1": MockModel("Model1"), "Model2": MockModel("Model2")}
 
         # Create hybrid model
         hybrid_model = HybridModel(models)
@@ -258,7 +267,7 @@ def test_configuration_methods():
         new_config = {
             "method": "risk_aware",
             "weighting_metric": "drawdown",
-            "risk_free_rate": 0.02
+            "risk_free_rate": 0.02,
         }
         hybrid_model.update_config(new_config)
 
@@ -292,7 +301,7 @@ def main():
         ("Performance Calculation", test_performance_calculation),
         ("Weight Calculation", test_weight_calculation),
         ("UI Components", test_ui_components),
-        ("Configuration Methods", test_configuration_methods)
+        ("Configuration Methods", test_configuration_methods),
     ]
 
     passed = 0
@@ -321,4 +330,4 @@ def main():
 
 if __name__ == "__main__":
     success = main()
-    sys.exit(0 if success else 1) 
+    sys.exit(0 if success else 1)

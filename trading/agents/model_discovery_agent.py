@@ -22,6 +22,7 @@ warnings.filterwarnings("ignore")
 # Try to import arxiv
 try:
     import arxiv
+
     ARXIV_AVAILABLE = True
 except ImportError as e:
     print("⚠️ arxiv not available. Disabling Arxiv model discovery.")
@@ -32,6 +33,7 @@ except ImportError as e:
 # Try to import huggingface_hub
 try:
     from huggingface_hub import HfApi
+
     HUGGINGFACE_AVAILABLE = True
 except ImportError as e:
     print("⚠️ huggingface_hub not available. Disabling HuggingFace model discovery.")
@@ -42,6 +44,7 @@ except ImportError as e:
 # Try to import PyTorch for model creation
 try:
     import torch.nn as nn
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("⚠️ PyTorch not available. Disabling PyTorch model creation.")
@@ -156,9 +159,9 @@ class ArxivModelDiscoverer:
                     source="arxiv",
                     model_id=f"arxiv_{result.entry_id.split('/')[-1]}",
                     title=title,
-                    description=abstract[:500] + "..."
-                    if len(abstract) > 500
-                    else abstract,
+                    description=(
+                        abstract[:500] + "..." if len(abstract) > 500 else abstract
+                    ),
                     url=result.entry_id,
                     framework=framework,
                     model_type=model_type,
@@ -359,9 +362,11 @@ class GitHubModelDiscoverer:
                     source="github",
                     model_id=f"github_{repo['id']}",
                     title=title,
-                    description=description[:500] + "..."
-                    if len(description) > 500
-                    else description,
+                    description=(
+                        description[:500] + "..."
+                        if len(description) > 500
+                        else description
+                    ),
                     url=repo["html_url"],
                     framework=framework,
                     model_type=model_type,
@@ -845,8 +850,9 @@ class ModelDiscoveryAgent:
             )
 
             logger.info(
-                f"Benchmark completed. Approved: {self.discovery_stats['total_approved']}, Rejected: {self.discovery_stats['total_rejected']}"
-            )
+                f"Benchmark completed. Approved: {
+                    self.discovery_stats['total_approved']}, Rejected: {
+                    self.discovery_stats['total_rejected']}")
 
             return benchmark_results
 
@@ -968,7 +974,7 @@ class ModelDiscoveryAgent:
 
 
 def get_model_discovery_agent(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> ModelDiscoveryAgent:
     """Get the model discovery agent instance."""
     return ModelDiscoveryAgent(config)

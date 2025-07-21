@@ -1,10 +1,7 @@
-import asyncio
-import json
 import logging
 import socket
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 import aiohttp
@@ -14,10 +11,11 @@ import pymongo
 import redis
 from cachetools import TTLCache
 from elasticsearch import Elasticsearch
-from prometheus_client import Gauge, start_http_server
 from pydantic import BaseModel, Field
 from ratelimit import limits, sleep_and_retry
 from sqlalchemy import create_engine
+
+from utils.launch_utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -47,54 +45,17 @@ class HealthStatus(BaseModel):
     details: Dict[str, Any] = {}
 
 
-class AutomationHealth:
-    """Health monitoring functionality."""
-
-    def __init__(self, config_path: str = "automation/config/health.json"):
-        """Initialize health monitoring."""
-        self.config = self._load_config(config_path)
+class AutomationHealthService:
+    def __init__(self):
         self.setup_logging()
-        self.setup_metrics()
-        self.setup_cache()
-        self.status: Dict[str, HealthStatus] = {}
-        self.lock = asyncio.Lock()
+        self.logger = logging.getLogger("automation")
 
-    def _load_config(self, config_path: str) -> HealthConfig:
-        """Load health configuration."""
-        try:
-            with open(config_path, "r") as f:
-                config_data = json.load(f)
-            return HealthConfig(**config_data)
-        except Exception as e:
-            logger.error(f"Failed to load health config: {str(e)}")
-            raise
+    def setup_logging(self):
+        return setup_logging(service_name="service")
 
-    from utils.launch_utils import setup_logging
-
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def setup_metrics(self):
-        """Setup health metrics."""
-        try:
-            # System metrics
-            self.cpu_usage = Gauge("system_cpu_usage", "CPU usage percentage")
-            self.memory_usage = Gauge("system_memory_usage", "Memory usage percentage")
-            self.disk_usage = Gauge("system_disk_usage", "Disk usage percentage")
-
-            # Service metrics
-            self.service_status = Gauge(
-                "service_status", "Service status (1=healthy, 0=unhealthy)", ["service"]
-            )
-            self.service_latency = Gauge(
-                "service_latency_seconds", "Service response latency", ["service"]
-            )
-
-            # Start metrics server
-            start_http_server(self.config.metrics_port)
-
-        except Exception as e:
-            logger.error(f"Failed to setup metrics: {str(e)}")
-            raise
+    def setup_metrics(self):
+        """Set up health metrics for automation service."""
+        # Metrics setup logic here
 
     def setup_cache(self):
         """Setup health caching."""
@@ -127,9 +88,9 @@ def setup_logging():
             status = HealthStatus(
                 service="system",
                 status="healthy" if is_healthy else "unhealthy",
-                message="System is healthy"
-                if is_healthy
-                else "System resources critical",
+                message=(
+                    "System is healthy" if is_healthy else "System resources critical"
+                ),
                 timestamp=datetime.now(),
                 metrics={
                     "cpu_usage": cpu_percent,

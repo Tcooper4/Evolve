@@ -1,7 +1,8 @@
-﻿"""Portfolio dashboard for interactive visualization and management."""
+"""Portfolio dashboard for interactive visualization and management."""
 
 import logging
 import os
+import sys
 from typing import List
 
 import numpy as np
@@ -9,15 +10,15 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from trading.portfolio.portfolio_manager import PortfolioManager, Position
+
 # Setup logger
 logger = logging.getLogger(__name__)
 
 # Add parent directory to path
-import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from trading.portfolio.portfolio_manager import PortfolioManager, Position
 
 # Page config
 st.set_page_config(page_title="Portfolio Dashboard", page_icon="ðŸ“ˆ", layout="wide")
@@ -275,9 +276,9 @@ def plot_strategy_performance(positions: List[Position]) -> go.Figure:
                 {
                     "strategy": p.strategy,
                     "pnl": p.pnl,
-                    "return": p.pnl / (p.entry_price * p.size)
-                    if p.pnl is not None
-                    else 0,
+                    "return": (
+                        p.pnl / (p.entry_price * p.size) if p.pnl is not None else 0
+                    ),
                 }
                 for p in positions
                 if p.exit_time is not None
@@ -496,7 +497,7 @@ st.sidebar.subheader("Export Options")
 export_mode = st.sidebar.selectbox(
     "Export Format",
     options=["CSV", "PDF"],
-    help="Choose the format for your trade report export"
+    help="Choose the format for your trade report export",
 )
 
 if st.sidebar.button("Export Trade Report"):
@@ -513,25 +514,23 @@ if st.sidebar.button("Export Trade Report"):
                     "exit_price": p.exit_price,
                     "size": p.size,
                     "pnl": p.pnl,
-                    "return": p.pnl / (p.entry_price * p.size)
-                    if p.pnl is not None
-                    else None,
+                    "return": (
+                        p.pnl / (p.entry_price * p.size) if p.pnl is not None else None
+                    ),
                 }
                 for p in portfolio.state.closed_positions
             ]
         )
-        
+
         # Import and use the report exporter
         from utils.report_exporter import export_trade_report
-        
+
         # Export based on selected format
         export_path = export_trade_report(
-            signals=report_df,
-            format=export_mode,
-            include_summary=True
+            signals=report_df, format=export_mode, include_summary=True
         )
-        
+
         st.sidebar.success(f"Exported trade report to {export_mode}: {export_path}")
-        
+
     except Exception as e:
         st.sidebar.error(f"Export failed: {str(e)}")

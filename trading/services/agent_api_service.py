@@ -173,9 +173,11 @@ class AgentAPIService:
                         "agent_type": agent.agent_type,
                         "status": agent.status,
                         "capabilities": agent.capabilities,
-                        "created_at": agent.created_at.isoformat()
-                        if hasattr(agent, "created_at")
-                        else None,
+                        "created_at": (
+                            agent.created_at.isoformat()
+                            if hasattr(agent, "created_at")
+                            else None
+                        ),
                     }
                     for agent_id, agent in agents.items()
                 ]
@@ -195,12 +197,16 @@ class AgentAPIService:
                     agent_id=agent_id,
                     status=agent.status,
                     capabilities=agent.capabilities,
-                    last_execution=agent.last_execution.isoformat()
-                    if hasattr(agent, "last_execution") and agent.last_execution
-                    else None,
-                    performance_metrics=agent.get_performance_metrics()
-                    if hasattr(agent, "get_performance_metrics")
-                    else None,
+                    last_execution=(
+                        agent.last_execution.isoformat()
+                        if hasattr(agent, "last_execution") and agent.last_execution
+                        else None
+                    ),
+                    performance_metrics=(
+                        agent.get_performance_metrics()
+                        if hasattr(agent, "get_performance_metrics")
+                        else None
+                    ),
                     timestamp=datetime.now().isoformat(),
                 )
             except HTTPException:
@@ -367,9 +373,11 @@ class AgentAPIService:
                 status_data = {
                     "total_agents": len(agents),
                     "active_agents": len(active_agents),
-                    "system_status": "healthy"
-                    if len(agents) < self.config.get("max_agents", 100)
-                    else "at_capacity",
+                    "system_status": (
+                        "healthy"
+                        if len(agents) < self.config.get("max_agents", 100)
+                        else "at_capacity"
+                    ),
                     "websocket_stats": self.websocket_service.get_connection_stats(),
                     "timestamp": datetime.now().isoformat(),
                 }

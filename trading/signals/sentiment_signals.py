@@ -17,6 +17,7 @@ import numpy as np
 # Import sentiment analysis libraries with fallback handling
 try:
     from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
     VADER_AVAILABLE = True
 except ImportError as e:
     print("⚠️ vaderSentiment not available. Disabling VADER sentiment analysis.")
@@ -228,8 +229,9 @@ class SentimentSignals:
             self._cache_sentiment("reddit", ticker, sentiment_results)
 
             logger.info(
-                f"Reddit sentiment analysis completed for {ticker}: {len(all_posts)} posts, {len(all_comments)} comments"
-            )
+                f"Reddit sentiment analysis completed for {ticker}: {
+                    len(all_posts)} posts, {
+                    len(all_comments)} comments")
             return sentiment_results
 
         except Exception as e:
@@ -346,9 +348,9 @@ class SentimentSignals:
             # Calculate aggregate scores
             results = {
                 "total_texts": len(texts),
-                "analyzed_texts": len(vader_scores)
-                if vader_scores
-                else len(textblob_scores),
+                "analyzed_texts": (
+                    len(vader_scores) if vader_scores else len(textblob_scores)
+                ),
             }
 
             # Vader results

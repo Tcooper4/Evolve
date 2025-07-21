@@ -8,9 +8,9 @@ it works correctly when config files are missing.
 
 import asyncio
 import logging
+import shutil
 import sys
 import tempfile
-import shutil
 from pathlib import Path
 
 # Add project root to path
@@ -18,8 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,10 @@ def test_agent_manager_fallback():
     logger.info("Testing agent manager fallback...")
 
     try:
-        from trading.agents.agent_manager import EnhancedAgentManager, AgentManagerConfig
+        from trading.agents.agent_manager import (
+            AgentManagerConfig,
+            EnhancedAgentManager,
+        )
 
         # Create a temporary config path that doesn't exist
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -65,9 +67,13 @@ def test_agent_manager_fallback():
             agents = manager.list_agents()
 
             if agents:
-                logger.info(f"✅ Agent manager fallback works - registered {len(agents)} agents")
+                logger.info(
+                    f"✅ Agent manager fallback works - registered {len(agents)} agents"
+                )
                 for agent in agents:
-                    logger.info(f"  - {agent.get('name', 'Unknown')}: {agent.get('status', 'Unknown')}")
+                    logger.info(
+                        f"  - {agent.get('name', 'Unknown')}: {agent.get('status', 'Unknown')}"
+                    )
                 return True
             else:
                 logger.error("❌ Agent manager fallback failed - no agents registered")
@@ -103,7 +109,9 @@ def test_missing_config_file():
         agents = manager.list_agents()
 
         if agents:
-            logger.info(f"✅ Missing config file handled correctly - {len(agents)} agents registered")
+            logger.info(
+                f"✅ Missing config file handled correctly - {len(agents)} agents registered"
+            )
             return True
         else:
             logger.error("❌ Missing config file not handled correctly")
@@ -139,21 +147,22 @@ def test_fallback_agent_execution():
         # Find a fallback agent
         fallback_agent_name = None
         for agent in agents:
-            agent_name = agent.get('name', '')
-            if 'fallback' in agent_name.lower() or 'mock' in agent_name.lower():
+            agent_name = agent.get("name", "")
+            if "fallback" in agent_name.lower() or "mock" in agent_name.lower():
                 fallback_agent_name = agent_name
                 break
 
         if not fallback_agent_name:
             # Use the first available agent
-            fallback_agent_name = agents[0].get('name', '')
+            fallback_agent_name = agents[0].get("name", "")
 
         if fallback_agent_name:
             # Execute the agent
-            result = asyncio.run(manager.execute_agent_with_retry(
-                fallback_agent_name,
-                test_request="Hello, this is a test"
-            ))
+            result = asyncio.run(
+                manager.execute_agent_with_retry(
+                    fallback_agent_name, test_request="Hello, this is a test"
+                )
+            )
 
             if isinstance(result, AgentResult) and result.success:
                 logger.info(f"✅ Fallback agent execution successful: {result.message}")
@@ -220,4 +229,3 @@ def main():
 if __name__ == "__main__":
     success = main()
     sys.exit(0 if success else 1)
-

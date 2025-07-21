@@ -6,11 +6,11 @@ from unittest.mock import patch
 
 import pytest
 
-# Add project root to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from trading.agents.intent_detector import IntentDetector
 from trading.agents.prompt_router_agent import PromptRouterAgent as AgentRouter
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class TestRouter:

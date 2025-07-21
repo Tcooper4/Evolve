@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 QuantGPT Demonstration
 
@@ -16,11 +16,12 @@ import time
 from pathlib import Path
 from typing import Any, Dict
 
+from services.exceptions import AgentExecutionError, QueryParsingError
+from services.quant_gpt import QuantGPT
+
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.exceptions import AgentExecutionError, QueryParsingError
-from services.quant_gpt import QuantGPT
 
 logger = logging.getLogger(__name__)
 
@@ -255,7 +256,9 @@ def demo_quant_gpt() -> dict:
                             logger.info(f"ðŸ“Š Signal: {signal['signal']}")
                             logger.info(f"ðŸ’ª Strength: {signal['strength']}")
                             logger.info(f"ðŸŽ¯ Confidence: {signal['confidence']:.1%}")
-                            logger.info(f"ðŸ§  Model Score: {signal['model_score']:.2f}")
+                            logger.info(
+                                f"ðŸ§  Model Score: {signal['model_score']:.2f}"
+                            )
                             logger.info(f"ðŸ’­ Reasoning: {signal['reasoning']}")
 
                     elif action == "market_analysis":
@@ -293,13 +296,17 @@ def demo_quant_gpt() -> dict:
 
             except QueryParsingError as e:
                 logger.error(f"âŒ Query parsing error: {e}")
-                logger.error("ðŸ’¡ Please rephrase your query with more specific details.")
+                logger.error(
+                    "ðŸ’¡ Please rephrase your query with more specific details."
+                )
             except AgentExecutionError as e:
                 logger.error(f"âŒ Agent execution error: {e}")
                 logger.error(f"ðŸ’¡ Context: {e.get_context_summary()}")
             except Exception as e:
                 logger.error(f"âŒ Exception: {e}")
-                logger.error("ðŸ’¡ This might be due to missing dependencies or services.")
+                logger.error(
+                    "ðŸ’¡ This might be due to missing dependencies or services."
+                )
 
             logger.info("\n" + "=" * 60)
 
@@ -387,7 +394,7 @@ def test_llm_response_parsing():
     print(f"Test result: {result}")
 
 def test_query_processing():
-    """Test query processing without full system initialization."""
+    # Test query processing without full system initialization.
     logger.info("Testing query processing...")
     try:
         # Test basic query parsing
@@ -396,19 +403,19 @@ def test_query_processing():
             "Generate a trading signal for TSLA",
             "Analyze the market for SPY"
         ]
-        
+
         for query in test_queries:
             logger.info(f"Testing query: {query}")
             # Basic validation - just check if query is not empty
             if query and len(query.strip()) > 0:
-                logger.info("âœ… Query validation passed")
+                logger.info("✅ Query validation passed")
             else:
-                logger.warning("âš ï¸ Query validation failed")
-                
-        logger.info("âœ… Query processing tests completed")
+                logger.warning("⚠️ Query validation failed")
+
+        logger.info("✅ Query processing tests completed")
         return True
     except Exception as e:
-        logger.error(f"âŒ Query processing test failed: {e}")
+        logger.error(f"❌ Query processing test failed: {e}")
         return False
 
 if __name__ == "__main__":

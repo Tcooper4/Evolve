@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit tests for XGBoost forecaster model.
 
 Tests XGBoost model functionality with synthetic time series data,
@@ -406,139 +406,167 @@ class TestXGBoostForecaster:
     def test_forecast_shape_validation(self, xgboost_model, synthetic_dataframe):
         """Test that forecast output shape matches expected dimensions."""
         xgboost_model.fit(synthetic_dataframe)
-        
+
         # Test different horizons
         test_horizons = [1, 5, 10, 30]
         for horizon in test_horizons:
             result = xgboost_model.forecast(synthetic_dataframe, horizon=horizon)
-            
+
             # Validate forecast shape
             assert "forecast" in result
             forecast_array = np.array(result["forecast"])
-            assert len(forecast_array) == horizon, f"Expected {horizon} predictions, got {len(forecast_array)}"
-            
+            assert (
+                len(forecast_array) == horizon
+            ), f"Expected {horizon} predictions, got {len(forecast_array)}"
+
             # Validate forecast is 1D array
-            assert forecast_array.ndim == 1, f"Expected 1D array, got {forecast_array.ndim}D"
-            
+            assert (
+                forecast_array.ndim == 1
+            ), f"Expected 1D array, got {forecast_array.ndim}D"
+
             # Validate no NaN values
             assert not np.isnan(forecast_array).any(), "Forecast contains NaN values"
-            
+
             # Validate finite values
-            assert np.all(np.isfinite(forecast_array)), "Forecast contains infinite values"
+            assert np.all(
+                np.isfinite(forecast_array)
+            ), "Forecast contains infinite values"
 
     def test_confidence_score_validation(self, xgboost_model, synthetic_dataframe):
         """Test that confidence scores are valid and within expected range."""
         xgboost_model.fit(synthetic_dataframe)
-        
+
         result = xgboost_model.forecast(synthetic_dataframe, horizon=10)
-        
+
         # Validate confidence score exists
         assert "confidence" in result, "Confidence score missing from forecast result"
-        
+
         confidence = result["confidence"]
-        
+
         # Validate confidence is numeric
-        assert isinstance(confidence, (int, float, np.number)), f"Confidence must be numeric, got {type(confidence)}"
-        
+        assert isinstance(
+            confidence, (int, float, np.number)
+        ), f"Confidence must be numeric, got {type(confidence)}"
+
         # Validate confidence is within valid range [0, 1]
-        assert 0.0 <= confidence <= 1.0, f"Confidence {confidence} outside valid range [0, 1]"
-        
+        assert (
+            0.0 <= confidence <= 1.0
+        ), f"Confidence {confidence} outside valid range [0, 1]"
+
         # Validate confidence is finite
         assert np.isfinite(confidence), "Confidence score is not finite"
 
     def test_forecast_metadata_validation(self, xgboost_model, synthetic_dataframe):
         """Test that forecast result contains all required metadata."""
         xgboost_model.fit(synthetic_dataframe)
-        
+
         result = xgboost_model.forecast(synthetic_dataframe, horizon=10)
-        
+
         # Required fields
         required_fields = ["forecast", "confidence", "model", "horizon"]
         for field in required_fields:
-            assert field in result, f"Required field '{field}' missing from forecast result"
-        
+            assert (
+                field in result
+            ), f"Required field '{field}' missing from forecast result"
+
         # Validate field types
-        assert isinstance(result["forecast"], (list, np.ndarray)), "Forecast must be array-like"
-        assert isinstance(result["confidence"], (int, float, np.number)), "Confidence must be numeric"
+        assert isinstance(
+            result["forecast"], (list, np.ndarray)
+        ), "Forecast must be array-like"
+        assert isinstance(
+            result["confidence"], (int, float, np.number)
+        ), "Confidence must be numeric"
         assert isinstance(result["model"], str), "Model name must be string"
         assert isinstance(result["horizon"], int), "Horizon must be integer"
-        
+
         # Validate model name
-        assert result["model"] == "XGBoost", f"Expected model name 'XGBoost', got '{result['model']}'"
-        
+        assert (
+            result["model"] == "XGBoost"
+        ), f"Expected model name 'XGBoost', got '{result['model']}'"
+
         # Validate horizon matches input
         assert result["horizon"] == 10, f"Expected horizon 10, got {result['horizon']}"
-        
+
         # Check for optional fields
         if "feature_importance" in result:
-            assert isinstance(result["feature_importance"], dict), "Feature importance must be dictionary"
-        
+            assert isinstance(
+                result["feature_importance"], dict
+            ), "Feature importance must be dictionary"
+
         if "metadata" in result:
             assert isinstance(result["metadata"], dict), "Metadata must be dictionary"
 
     def test_feature_importance_validation(self, xgboost_model, synthetic_dataframe):
         """Test that feature importance is properly included in forecast results."""
         xgboost_model.fit(synthetic_dataframe)
-        
+
         result = xgboost_model.forecast(synthetic_dataframe, horizon=10)
-        
+
         # Check if feature importance is included
         if "feature_importance" in result:
             importance = result["feature_importance"]
-            
+
             # Validate feature importance structure
             assert isinstance(importance, dict), "Feature importance must be dictionary"
-            
+
             # Validate importance scores are numeric and non-negative
             for feature, score in importance.items():
-                assert isinstance(score, (int, float, np.number)), f"Importance score for {feature} must be numeric"
-                assert score >= 0, f"Importance score for {feature} must be non-negative"
-                assert np.isfinite(score), f"Importance score for {feature} must be finite"
+                assert isinstance(
+                    score, (int, float, np.number)
+                ), f"Importance score for {feature} must be numeric"
+                assert (
+                    score >= 0
+                ), f"Importance score for {feature} must be non-negative"
+                assert np.isfinite(
+                    score
+                ), f"Importance score for {feature} must be finite"
 
     def test_forecast_consistency_across_runs(self, xgboost_model, synthetic_dataframe):
         """Test that forecasts are consistent across multiple runs."""
         xgboost_model.fit(synthetic_dataframe)
-        
+
         # Run forecast multiple times
         results = []
         for _ in range(3):
             result = xgboost_model.forecast(synthetic_dataframe, horizon=5)
             results.append(result)
-        
+
         # All results should have same structure
         for result in results:
             assert "forecast" in result
             assert "confidence" in result
             assert len(result["forecast"]) == 5
-        
+
         # For deterministic models, forecasts should be identical
         # XGBoost should be deterministic with fixed random_state
         forecast_lengths = [len(r["forecast"]) for r in results]
         assert len(set(forecast_lengths)) == 1, "Forecast lengths should be consistent"
-        
+
         confidence_scores = [r["confidence"] for r in results]
-        assert all(0 <= c <= 1 for c in confidence_scores), "All confidence scores should be valid"
+        assert all(
+            0 <= c <= 1 for c in confidence_scores
+        ), "All confidence scores should be valid"
 
     def test_forecast_with_different_data_lengths(self, xgboost_model):
         """Test forecast behavior with different input data lengths."""
         # Create datasets of different lengths
         lengths = [50, 100, 200]
-        
+
         for length in lengths:
             dates = pd.date_range(start="2023-01-01", periods=length, freq="D")
             close = np.linspace(100, 150, length) + np.random.normal(0, 2, length)
             volume = np.random.uniform(1000000, 5000000, length)
             data = pd.DataFrame({"Close": close, "Volume": volume}, index=dates)
-            
+
             try:
                 xgboost_model.fit(data)
                 result = xgboost_model.forecast(data, horizon=10)
-                
+
                 # Validate successful forecast
                 assert "forecast" in result
                 assert len(result["forecast"]) == 10
                 assert "confidence" in result
-                
+
             except Exception as e:
                 # If it fails, should be due to insufficient data
                 assert "insufficient" in str(e).lower() or "minimum" in str(e).lower()
@@ -546,7 +574,7 @@ class TestXGBoostForecaster:
     def test_forecast_edge_cases(self, xgboost_model, synthetic_dataframe):
         """Test forecast behavior with edge cases."""
         xgboost_model.fit(synthetic_dataframe)
-        
+
         # Test horizon = 0
         try:
             result = xgboost_model.forecast(synthetic_dataframe, horizon=0)
@@ -554,7 +582,7 @@ class TestXGBoostForecaster:
         except ValueError:
             # Some models might not support horizon=0
             pass
-        
+
         # Test very large horizon
         try:
             result = xgboost_model.forecast(synthetic_dataframe, horizon=1000)
@@ -567,46 +595,53 @@ class TestXGBoostForecaster:
     def test_forecast_performance_metrics(self, xgboost_model, synthetic_dataframe):
         """Test that forecast includes performance metrics when available."""
         xgboost_model.fit(synthetic_dataframe)
-        
+
         result = xgboost_model.forecast(synthetic_dataframe, horizon=10)
-        
+
         # Basic validation
         assert "forecast" in result
         assert "confidence" in result
-        
+
         # Check for optional performance metrics
         optional_metrics = ["rmse", "mae", "mape", "r2_score"]
         for metric in optional_metrics:
             if metric in result:
-                assert isinstance(result[metric], (int, float, np.number)), f"{metric} must be numeric"
+                assert isinstance(
+                    result[metric], (int, float, np.number)
+                ), f"{metric} must be numeric"
                 assert np.isfinite(result[metric]), f"{metric} must be finite"
 
     def test_forecast_error_handling(self, xgboost_model):
         """Test forecast error handling with invalid inputs."""
         # Test with unfitted model
         dates = pd.date_range(start="2023-01-01", periods=50, freq="D")
-        data = pd.DataFrame({
-            "Close": np.random.randn(50),
-            "Volume": np.random.uniform(1000000, 5000000, 50)
-        }, index=dates)
-        
+        data = pd.DataFrame(
+            {
+                "Close": np.random.randn(50),
+                "Volume": np.random.uniform(1000000, 5000000, 50),
+            },
+            index=dates,
+        )
+
         try:
             result = xgboost_model.forecast(data, horizon=10)
             # If it succeeds, it should auto-fit
             assert "forecast" in result
         except Exception as e:
             # Should provide clear error message
-            assert any(keyword in str(e).lower() for keyword in ["fit", "train", "model"])
+            assert any(
+                keyword in str(e).lower() for keyword in ["fit", "train", "model"]
+            )
 
     def test_forecast_data_validation(self, xgboost_model, synthetic_dataframe):
         """Test forecast data validation and preprocessing."""
         xgboost_model.fit(synthetic_dataframe)
-        
+
         # Test with different DataFrame structures
         result = xgboost_model.forecast(synthetic_dataframe, horizon=10)
         assert "forecast" in result
         assert len(result["forecast"]) == 10
-        
+
         # Test with subset of columns
         subset_data = synthetic_dataframe[["Close"]]
         try:

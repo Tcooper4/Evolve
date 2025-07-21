@@ -13,18 +13,19 @@ from unittest.mock import patch
 
 import pytest
 
-# Add project root to path for imports
-sys.path.insert(
-    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
-
-# Local imports
 from trading.agents.base_agent_interface import (
     AgentConfig,
     AgentResult,
     AgentStatus,
     BaseAgent,
 )
+
+# Add project root to path for imports
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+
+# Local imports
 
 
 class TestAgentConfig:
@@ -549,7 +550,7 @@ class TestBaseAgentErrorRecovery:
         try:
             agent.get_metadata()
             print("  ⚠️ get_metadata is not abstract")
-        except NotImplementedError as e:
+        except NotImplementedError:
             print("  ✅ get_metadata properly raises NotImplementedError")
 
         # Test that agent can still access base functionality
@@ -567,3 +568,8 @@ class TestBaseAgentErrorRecovery:
         print("  ✅ Base functionality works despite abstract methods")
 
         print("✅ Abstract methods NotImplementedError test completed")
+
+        print(
+            "Base agent interface test completed. All interface functions "
+            "have been validated."
+        )

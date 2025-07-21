@@ -164,9 +164,11 @@ class PromptFeedbackMemory:
             "total_interactions": len(self.interactions),
             "successful_interactions": len(successful_interactions),
             "unsuccessful_interactions": len(unsuccessful_interactions),
-            "success_rate": len(successful_interactions) / len(self.interactions)
-            if self.interactions
-            else 0,
+            "success_rate": (
+                len(successful_interactions) / len(self.interactions)
+                if self.interactions
+                else 0
+            ),
             "patterns_learned": len(self.patterns),
             "feedback_by_category": self._get_feedback_by_category(),
         }
@@ -311,9 +313,11 @@ class PromptFeedbackMemory:
         return {
             "total_interactions": len(self.interactions),
             "total_patterns": len(self.patterns),
-            "average_feedback": np.mean(self.feedback_stats["overall"])
-            if self.feedback_stats["overall"]
-            else 0,
+            "average_feedback": (
+                np.mean(self.feedback_stats["overall"])
+                if self.feedback_stats["overall"]
+                else 0
+            ),
             "feedback_by_category": self._get_feedback_by_category(),
             "recent_interactions": len(
                 [

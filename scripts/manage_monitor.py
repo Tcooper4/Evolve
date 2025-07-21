@@ -40,27 +40,19 @@ from typing import Dict, List
 import psutil
 import requests
 import yaml
-from prometheus_client import Counter, Gauge, Histogram, start_http_server
+from prometheus_client import start_http_server
+
+from utils.launch_utils import setup_logging
 
 
-class MonitoringManager:
+class MonitorManager:
     def __init__(self, config_path: str = "config/app_config.yaml"):
-        """Initialize the monitoring manager."""
+        """Initialize the monitor manager."""
         self.config = self._load_config(config_path)
         self.setup_logging()
         self.logger = logging.getLogger("trading")
-        self.metrics_dir = Path("metrics")
-        self.metrics_dir.mkdir(parents=True, exist_ok=True)
-
-        # Initialize Prometheus metrics
-        self.cpu_usage = Gauge("cpu_usage", "CPU usage percentage")
-        self.memory_usage = Gauge("memory_usage", "Memory usage percentage")
-        self.disk_usage = Gauge("disk_usage", "Disk usage percentage")
-        self.request_count = Counter("request_count", "Total number of requests")
-        self.request_latency = Histogram(
-            "request_latency", "Request latency in seconds"
-        )
-        self.error_count = Counter("error_count", "Total number of errors")
+        self.monitor_dir = Path("monitor")
+        self.monitor_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
@@ -71,13 +63,27 @@ class MonitoringManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def start_monitoring(self, port: int = 9090):
-        """Start monitoring server."""
-        self.logger.info(f"Starting monitoring server on port {port}...")
+    def start_monitoring(self, port: int = 9090):
+        """Start monitoring service on the specified port."""
+        self.logger.info(f"Starting monitoring service on port {port}")
+
+        try:
+            # Start monitoring server
+            self._start_monitoring_server(port)
+
+            self.logger.info("Monitoring service started successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to start monitoring service: {e}")
+            return False
+
+    def _start_monitoring_server(self, port: int):
+        """Start Prometheus server and monitoring loop."""
+        self.logger.info(f"Starting Prometheus server on port {port}...")
 
         try:
             # Start Prometheus server
@@ -88,7 +94,7 @@ def setup_logging():
                 self.collect_metrics()
                 time.sleep(15)  # Collect metrics every 15 seconds
         except Exception as e:
-            self.logger.error(f"Failed to start monitoring: {e}")
+            self.logger.error(f"Failed to start monitoring server: {e}")
             return False
 
     def collect_metrics(self):
@@ -147,7 +153,7 @@ def setup_logging():
 
             # Save to file
             metrics_file = (
-                self.metrics_dir / f"metrics_{datetime.now().strftime('%Y%m%d')}.json"
+                self.monitor_dir / f"metrics_{datetime.now().strftime('%Y%m%d')}.json"
             )
             with open(metrics_file, "a") as f:
                 f.write(json.dumps(metrics) + "\n")
@@ -163,7 +169,7 @@ def setup_logging():
             metrics = []
             cutoff_date = datetime.now() - timedelta(days=days)
 
-            for metrics_file in self.metrics_dir.glob("metrics_*.json"):
+            for metrics_file in self.monitor_dir.glob("metrics_*.json"):
                 with open(metrics_file) as f:
                     for line in f:
                         metric = json.loads(line)
@@ -236,7 +242,7 @@ def setup_logging():
             cutoff_date = datetime.now() - timedelta(days=days)
             cleaned_count = 0
 
-            for metrics_file in self.metrics_dir.glob("metrics_*.json"):
+            for metrics_file in self.monitor_dir.glob("metrics_*.json"):
                 if metrics_file.stat().st_mtime < cutoff_date.timestamp():
                     metrics_file.unlink()
                     cleaned_count += 1
@@ -262,7 +268,7 @@ def main():
     )
 
     args = parser.parse_args()
-    manager = MonitoringManager()
+    manager = MonitorManager()
 
     commands = {
         "start": lambda: manager.start_monitoring(args.port),

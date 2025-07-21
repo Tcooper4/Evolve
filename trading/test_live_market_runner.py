@@ -278,7 +278,9 @@ async def test_live_trade_execution():
                     if i % 3 != 0:  # 2/3 success rate
                         successful_trades += 1
                         trade["execution_status"] = "success"
-                        logger.info(f"   ✅ {action} {quantity} {symbol} @ ${price:.2f}")
+                        logger.info(
+                            f"   ✅ {action} {quantity} {symbol} @ ${price:.2f}"
+                        )
                     else:
                         trade["execution_status"] = "failed"
                         logger.info(
@@ -339,9 +341,9 @@ async def test_live_trade_execution():
         "total_trades": len(executed_trades),
         "successful_trades": successful_trades,
         "failed_trades": len(executed_trades) - successful_trades,
-        "success_rate": successful_trades / len(executed_trades)
-        if executed_trades
-        else 0,
+        "success_rate": (
+            successful_trades / len(executed_trades) if executed_trades else 0
+        ),
         "symbols_traded": list(set(trade["symbol"] for trade in executed_trades)),
     }
 

@@ -14,23 +14,18 @@ import pandas as pd
 
 # Import our custom performance metrics
 from utils.performance_metrics import (
-    sharpe_ratio,
-    sortino_ratio,
-    max_drawdown,
     calmar_ratio,
-    avg_drawdown,
-    drawdown_details,
-    value_at_risk,
     conditional_value_at_risk,
-    omega_ratio,
-    information_ratio,
-    treynor_ratio,
-    jensen_alpha,
     downside_deviation,
     gain_loss_ratio,
+    max_drawdown,
+    omega_ratio,
     profit_factor,
     recovery_factor,
-    risk_reward_ratio
+    risk_reward_ratio,
+    sharpe_ratio,
+    sortino_ratio,
+    value_at_risk,
 )
 
 logger = logging.getLogger(__name__)
@@ -120,7 +115,9 @@ class RiskMetricsEngine:
             metrics["min_return"] = returns.min()
             metrics["max_return"] = returns.max()
             metrics["value_at_risk"] = value_at_risk(returns, confidence_level=0.95)
-            metrics["conditional_var"] = conditional_value_at_risk(returns, confidence_level=0.95)
+            metrics["conditional_var"] = conditional_value_at_risk(
+                returns, confidence_level=0.95
+            )
             metrics["gain_loss_ratio"] = gain_loss_ratio(returns)
             metrics["profit_factor"] = profit_factor(returns)
             metrics["recovery_factor"] = recovery_factor(returns)

@@ -5,7 +5,7 @@ Portfolio Simulation Module with advanced optimization techniques.
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -13,13 +13,9 @@ import cvxpy as cp
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from scipy.stats import norm
 
 from trading.risk.risk_analyzer import RiskAnalyzer
-from trading.utils.performance_metrics import (
-    calculate_max_drawdown,
-    calculate_sharpe_ratio,
-)
+from trading.utils.performance_metrics import calculate_max_drawdown
 
 
 class OptimizationMethod(str, Enum):

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Strategy Composer
 
 Enhanced with Batch 11 features: toggles to enable/disable individual sub-strategies
@@ -8,17 +8,17 @@ at runtime via config or flags.
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Union
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
 
 class StrategyToggle(Enum):
     """Strategy toggle states."""
+
     ENABLED = "enabled"
     DISABLED = "disabled"
     CONDITIONAL = "conditional"
@@ -58,7 +58,9 @@ class StrategyComposer:
 
         # Setup logging
         self.logger = logging.getLogger(__name__)
-        self.logger.info(f"StrategyComposer initialized with {len(self.sub_strategies)} sub-strategies")
+        self.logger.info(
+            f"StrategyComposer initialized with {len(self.sub_strategies)} sub-strategies"
+        )
 
     def _load_sub_strategies(self):
         """Load sub-strategies from configuration."""
@@ -72,7 +74,7 @@ class StrategyComposer:
                 priority=strategy_config.get("priority", 1),
                 conditions=strategy_config.get("conditions", {}),
                 parameters=strategy_config.get("parameters", {}),
-                performance_threshold=strategy_config.get("performance_threshold", 0.0)
+                performance_threshold=strategy_config.get("performance_threshold", 0.0),
             )
             self.sub_strategies[strategy_name] = sub_config
 
@@ -84,7 +86,7 @@ class StrategyComposer:
         priority: int = 1,
         conditions: Optional[Dict[str, Any]] = None,
         parameters: Optional[Dict[str, Any]] = None,
-        performance_threshold: float = 0.0
+        performance_threshold: float = 0.0,
     ) -> bool:
         """Add a new sub-strategy with toggle capability.
 
@@ -108,7 +110,7 @@ class StrategyComposer:
                 priority=priority,
                 conditions=conditions or {},
                 parameters=parameters or {},
-                performance_threshold=performance_threshold
+                performance_threshold=performance_threshold,
             )
 
             self.sub_strategies[name] = sub_config
@@ -120,10 +122,7 @@ class StrategyComposer:
             return False
 
     def toggle_sub_strategy(
-        self,
-        name: str,
-        enabled: bool,
-        reason: Optional[str] = None
+        self, name: str, enabled: bool, reason: Optional[str] = None
     ) -> bool:
         """Toggle a sub-strategy on/off at runtime.
 
@@ -152,11 +151,13 @@ class StrategyComposer:
                 "strategy": name,
                 "old_state": old_state,
                 "new_state": enabled,
-                "reason": reason or "manual toggle"
+                "reason": reason or "manual toggle",
             }
             self.strategy_history.append(toggle_record)
 
-            self.logger.info(f"Toggled {name}: {old_state} -> {enabled} (reason: {reason})")
+            self.logger.info(
+                f"Toggled {name}: {old_state} -> {enabled} (reason: {reason})"
+            )
             return True
 
         except Exception as e:
@@ -164,10 +165,7 @@ class StrategyComposer:
             return False
 
     def set_conditional_toggle(
-        self,
-        name: str,
-        conditions: Dict[str, Any],
-        reason: Optional[str] = None
+        self, name: str, conditions: Dict[str, Any], reason: Optional[str] = None
     ) -> bool:
         """Set conditional toggle for a sub-strategy.
 
@@ -193,7 +191,7 @@ class StrategyComposer:
                 "strategy": name,
                 "toggle_type": "conditional",
                 "conditions": conditions,
-                "reason": reason or "conditional toggle"
+                "reason": reason or "conditional toggle",
             }
             self.strategy_history.append(toggle_record)
 
@@ -218,14 +216,18 @@ class StrategyComposer:
         for name, config in self.sub_strategies.items():
             if config.toggle_state == StrategyToggle.CONDITIONAL:
                 try:
-                    enabled = self._evaluate_strategy_conditions(config.conditions, market_data)
+                    enabled = self._evaluate_strategy_conditions(
+                        config.conditions, market_data
+                    )
                     results[name] = enabled
 
                     # Update strategy state if conditions changed
                     if enabled != config.enabled:
                         old_state = config.enabled
                         config.enabled = enabled
-                        self.logger.info(f"Conditional toggle for {name}: {old_state} -> {enabled}")
+                        self.logger.info(
+                            f"Conditional toggle for {name}: {old_state} -> {enabled}"
+                        )
 
                 except Exception as e:
                     self.logger.error(f"Error evaluating conditions for {name}: {e}")
@@ -234,9 +236,7 @@ class StrategyComposer:
         return results
 
     def _evaluate_strategy_conditions(
-        self,
-        conditions: Dict[str, Any],
-        market_data: Dict[str, Any]
+        self, conditions: Dict[str, Any], market_data: Dict[str, Any]
     ) -> bool:
         """Evaluate conditions for a single strategy.
 
@@ -296,7 +296,7 @@ class StrategyComposer:
     def compose_signals(
         self,
         individual_signals: Dict[str, pd.DataFrame],
-        market_data: Optional[Dict[str, Any]] = None
+        market_data: Optional[Dict[str, Any]] = None,
     ) -> pd.DataFrame:
         """Compose signals from individual strategies.
 
@@ -336,18 +336,16 @@ class StrategyComposer:
                     else:
                         composed_signal += weighted_signal
 
-            self.logger.info(f"Composed signals from {len(active_strategies)} strategies")
+            self.logger.info(
+                f"Composed signals from {len(active_strategies)} strategies"
+            )
             return composed_signal
 
         except Exception as e:
             self.logger.error(f"Error composing signals: {e}")
             return pd.DataFrame()
 
-    def update_performance(
-        self,
-        strategy_name: str,
-        performance: float
-    ):
+    def update_performance(self, strategy_name: str, performance: float):
         """Update performance for a strategy.
 
         Args:
@@ -362,7 +360,9 @@ class StrategyComposer:
                 # Check if performance is below threshold
                 config = self.sub_strategies[strategy_name]
                 if performance < config.performance_threshold:
-                    self.logger.warning(f"Strategy {strategy_name} performance {performance} below threshold {config.performance_threshold}")
+                    self.logger.warning(
+                        f"Strategy {strategy_name} performance {performance} below threshold {
+                            config.performance_threshold}")
 
         except Exception as e:
             self.logger.error(f"Error updating performance for {strategy_name}: {e}")
@@ -376,7 +376,7 @@ class StrategyComposer:
         status = {
             "total_strategies": len(self.sub_strategies),
             "active_strategies": len(self.get_active_strategies()),
-            "strategies": {}
+            "strategies": {},
         }
 
         for name, config in self.sub_strategies.items():
@@ -386,7 +386,7 @@ class StrategyComposer:
                 "priority": config.priority,
                 "toggle_state": config.toggle_state.value,
                 "performance": config.last_performance,
-                "performance_threshold": config.performance_threshold
+                "performance_threshold": config.performance_threshold,
             }
 
         return status
@@ -397,9 +397,7 @@ class StrategyComposer:
         Returns:
             Configuration dictionary
         """
-        config = {
-            "sub_strategies": {}
-        }
+        config = {"sub_strategies": {}}
 
         for name, sub_config in self.sub_strategies.items():
             config["sub_strategies"][name] = {
@@ -409,7 +407,7 @@ class StrategyComposer:
                 "conditions": sub_config.conditions,
                 "parameters": sub_config.parameters,
                 "performance_threshold": sub_config.performance_threshold,
-                "toggle_state": sub_config.toggle_state.value
+                "toggle_state": sub_config.toggle_state.value,
             }
 
         return config
@@ -430,15 +428,31 @@ class StrategyComposer:
                 if strategy_name in self.sub_strategies:
                     # Update existing strategy
                     sub_config = self.sub_strategies[strategy_name]
-                    sub_config.enabled = strategy_config.get("enabled", sub_config.enabled)
+                    sub_config.enabled = strategy_config.get(
+                        "enabled", sub_config.enabled
+                    )
                     sub_config.weight = strategy_config.get("weight", sub_config.weight)
-                    sub_config.priority = strategy_config.get("priority", sub_config.priority)
-                    sub_config.conditions = strategy_config.get("conditions", sub_config.conditions)
-                    sub_config.parameters = strategy_config.get("parameters", sub_config.parameters)
-                    sub_config.performance_threshold = strategy_config.get("performance_threshold", sub_config.performance_threshold)
-                    sub_config.toggle_state = StrategyToggle(strategy_config.get("toggle_state", sub_config.toggle_state.value))
+                    sub_config.priority = strategy_config.get(
+                        "priority", sub_config.priority
+                    )
+                    sub_config.conditions = strategy_config.get(
+                        "conditions", sub_config.conditions
+                    )
+                    sub_config.parameters = strategy_config.get(
+                        "parameters", sub_config.parameters
+                    )
+                    sub_config.performance_threshold = strategy_config.get(
+                        "performance_threshold", sub_config.performance_threshold
+                    )
+                    sub_config.toggle_state = StrategyToggle(
+                        strategy_config.get(
+                            "toggle_state", sub_config.toggle_state.value
+                        )
+                    )
 
-            self.logger.info(f"Imported configuration for {len(sub_strategies_config)} strategies")
+            self.logger.info(
+                f"Imported configuration for {len(sub_strategies_config)} strategies"
+            )
             return True
 
         except Exception as e:

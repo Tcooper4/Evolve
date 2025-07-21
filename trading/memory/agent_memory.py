@@ -1,4 +1,4 @@
-﻿"""
+"""
 AgentMemory: Persistent memory for agent decisions, outcomes, and history.
 Enhanced with expiration logic and memory overflow prevention.
 """
@@ -330,35 +330,36 @@ class AgentMemory:
             try:
                 # Ensure directory exists
                 self.path.parent.mkdir(parents=True, exist_ok=True)
-                
+
                 # Create backup if file exists
                 if self.path.exists():
                     backup_path = self.path.with_suffix(".backup")
                     try:
                         import shutil
+
                         shutil.copy2(self.path, backup_path)
                         logger.debug(f"Created backup: {backup_path}")
                     except Exception as e:
                         logger.warning(f"Failed to create backup: {e}")
-                
+
                 # Save with atomic write
                 temp_path = self.path.with_suffix(".tmp")
                 try:
                     with open(temp_path, "w") as f:
                         json.dump(data, f, indent=2)
-                    
+
                     # Atomic move
                     temp_path.replace(self.path)
                     logger.debug(f"Successfully saved memory to: {self.path}")
-                    
+
                 except Exception as e:
                     # Clean up temp file
                     try:
                         temp_path.unlink()
-                    except:
+                    except BaseException:
                         pass
                     raise e
-                    
+
             except PermissionError as e:
                 logger.error(f"Permission error saving memory to {self.path}: {e}")
                 raise
@@ -627,7 +628,7 @@ class AgentMemory:
 
             # Calculate trend
             first_half = values[: len(values) // 2]
-            second_half = values[len(values) // 2 :]
+            second_half = values[len(values) // 2:]
 
             if not first_half or not second_half:
                 return {
@@ -678,9 +679,11 @@ class AgentMemory:
                 "trend": trend,
                 "first_half_avg": first_avg,
                 "second_half_avg": second_avg,
-                "improvement_pct": ((second_avg - first_avg) / abs(first_avg)) * 100
-                if first_avg != 0
-                else 0,
+                "improvement_pct": (
+                    ((second_avg - first_avg) / abs(first_avg)) * 100
+                    if first_avg != 0
+                    else 0
+                ),
                 "values": values,
                 "timestamp": datetime.now().isoformat(),
             }
@@ -771,9 +774,11 @@ class AgentMemory:
                     for entries in data.values()
                     if isinstance(entries, list)
                 ),
-                "file_size_mb": self.path.stat().st_size / (1024 * 1024)
-                if self.path.exists()
-                else 0,
+                "file_size_mb": (
+                    self.path.stat().st_size / (1024 * 1024)
+                    if self.path.exists()
+                    else 0
+                ),
             }
 
             return {

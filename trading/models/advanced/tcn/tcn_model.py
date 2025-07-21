@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -8,6 +8,7 @@ try:
     import torch
     import torch.nn as nn
     import torch.nn.functional as F
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("⚠️ PyTorch not available. Disabling advanced TCN models.")
@@ -103,7 +104,9 @@ class TemporalConvNet(nn.Module):
         dropout: float = 0.2,
     ):
         if not TORCH_AVAILABLE:
-            raise ImportError("PyTorch is not available. Cannot create TemporalConvNet.")
+            raise ImportError(
+                "PyTorch is not available. Cannot create TemporalConvNet."
+            )
         """Initialize TCN.
 
         Args:
@@ -285,8 +288,8 @@ class TCNModel(BaseModel):
         for epoch in range(epochs):
             epoch_loss = 0
             for i in range(0, len(X), batch_size):
-                batch_X = X[i : i + batch_size]
-                batch_y = y[i : i + batch_size]
+                batch_X = X[i: i + batch_size]
+                batch_y = y[i: i + batch_size]
 
                 # Forward pass
                 self.optimizer.zero_grad()
@@ -335,7 +338,7 @@ class TCNModel(BaseModel):
         """
         try:
             # Make initial prediction
-            predictions = self.predict(data)
+            self.predict(data)
 
             # Generate multi-step forecast
             forecast_values = []

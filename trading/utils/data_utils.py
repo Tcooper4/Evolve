@@ -1,4 +1,4 @@
-﻿"""Data utilities for validation and preprocessing.
+"""Data utilities for validation and preprocessing.
 
 This module provides utilities for validating and preprocessing financial data,
 including data quality checks, feature engineering, and data transformation.
@@ -14,6 +14,7 @@ import pandas as pd
 try:
     from sklearn.impute import SimpleImputer
     from sklearn.preprocessing import StandardScaler
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ scikit-learn not available. Disabling data preprocessing features.")
@@ -110,8 +111,10 @@ class DataPreprocessor:
             remove_outliers: Whether to remove outliers
         """
         if not SKLEARN_AVAILABLE:
-            raise ImportError("scikit-learn is not available. Cannot create DataPreprocessor.")
-        
+            raise ImportError(
+                "scikit-learn is not available. Cannot create DataPreprocessor."
+            )
+
         self.scale_features = scale_features
         self.handle_missing = handle_missing
         self.remove_outliers = remove_outliers
@@ -230,11 +233,13 @@ def resample_data(
     df = df.copy()
     if not isinstance(df.index, pd.DatetimeIndex):
         try:
-            df.index = pd.to_datetime(df.index, errors='coerce')
+            df.index = pd.to_datetime(df.index, errors="coerce")
         except Exception as e:
             logging.error(f"Failed to convert index to DatetimeIndex: {e}")
             raise
-    assert isinstance(df.index, pd.DatetimeIndex), "Index must be a DatetimeIndex for resampling."
+    assert isinstance(
+        df.index, pd.DatetimeIndex
+    ), "Index must be a DatetimeIndex for resampling."
     if agg_dict is None:
         agg_dict = {
             "open": "first",

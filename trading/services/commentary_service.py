@@ -298,7 +298,7 @@ class CommentaryService:
 
 
 def create_commentary_service(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> CommentaryService:
     """Create a configured commentary service."""
     return CommentaryService(config)

@@ -92,7 +92,6 @@ class RequirementsCleaner:
             "additional": [
                 "pydantic",
                 "finta",
-
                 "scipy",
                 "xgboost",
                 "arch",

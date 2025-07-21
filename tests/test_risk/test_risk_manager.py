@@ -437,11 +437,11 @@ class TestRiskManager:
         def mock_generate_risk_summary():
             return {
                 "overall_risk_score": risk_score,
-                "risk_level": "High"
-                if risk_score > 70
-                else "Medium"
-                if risk_score > 30
-                else "Low",
+                "risk_level": (
+                    "High"
+                    if risk_score > 70
+                    else "Medium" if risk_score > 30 else "Low"
+                ),
                 "key_metrics": {},
                 "risk_breakdown": {},
                 "recommendations": [],

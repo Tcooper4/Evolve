@@ -1,4 +1,4 @@
-﻿"""
+"""
 External Signal Integration
 
 This module provides comprehensive integration with external data sources for enhanced
@@ -12,8 +12,8 @@ import time
 import warnings
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
 from functools import wraps
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -23,14 +23,14 @@ warnings.filterwarnings("ignore")
 
 # External API imports
 try:
-    import snscrape.modules.twitter as sntwitter
+    pass
 
     TWITTER_AVAILABLE = True
 except ImportError:
     TWITTER_AVAILABLE = False
 
 try:
-    import praw
+    pass
 
     REDDIT_AVAILABLE = True
 except ImportError:
@@ -39,16 +39,17 @@ except ImportError:
 # Configure logging
 logger = logging.getLogger(__name__)
 
+
 def async_strategy_wrapper(timeout: int = 30, fallback_value: Any = None):
     """Decorator to wrap async strategy calls with timeout and fallback handling."""
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             try:
                 # Use asyncio.shield to protect against interruption
                 result = await asyncio.wait_for(
-                    asyncio.shield(func(*args, **kwargs)),
-                    timeout=timeout
+                    asyncio.shield(func(*args, **kwargs)), timeout=timeout
                 )
                 return result
             except asyncio.TimeoutError:
@@ -57,8 +58,11 @@ def async_strategy_wrapper(timeout: int = 30, fallback_value: Any = None):
             except Exception as e:
                 logger.error(f"Strategy {func.__name__} failed: {e}")
                 return fallback_value
+
         return wrapper
+
     return decorator
+
 
 @dataclass
 class SignalData:
@@ -73,6 +77,7 @@ class SignalData:
     metadata: Dict[str, Any]
     raw_data: Optional[Dict[str, Any]] = None
 
+
 class SignalValidator:
     """Validates signal data for consistency and quality."""
 
@@ -80,102 +85,120 @@ class SignalValidator:
     def validate_signal_data(data: Dict[str, Any]) -> tuple[bool, Optional[str]]:
         """Validate basic signal data structure."""
         required_fields = ["source", "symbol", "timestamp", "signal_type", "value"]
-        
+
         for field in required_fields:
             if field not in data:
                 return False, f"Missing required field: {field}"
-        
+
         # Validate timestamp
         if not isinstance(data["timestamp"], (datetime, str)):
             return False, "Invalid timestamp format"
-        
+
         # Validate value is numeric
         if not isinstance(data["value"], (int, float)):
             return False, "Value must be numeric"
-        
+
         # Validate confidence is between 0 and 1
         confidence = data.get("confidence", 1.0)
         if not (0 <= confidence <= 1):
             return False, "Confidence must be between 0 and 1"
-        
+
         return True, None
 
     @staticmethod
     def validate_sentiment_data(data: Dict[str, Any]) -> tuple[bool, Optional[str]]:
         """Validate sentiment data structure."""
         required_fields = [
-            "symbol", "timestamp", "sentiment_score", 
-            "sentiment_label", "volume", "source", "confidence"
+            "symbol",
+            "timestamp",
+            "sentiment_score",
+            "sentiment_label",
+            "volume",
+            "source",
+            "confidence",
         ]
-        
+
         for field in required_fields:
             if field not in data:
                 return False, f"Missing required field: {field}"
-        
+
         # Validate sentiment score is between -1 and 1
         score = data["sentiment_score"]
         if not (-1 <= score <= 1):
             return False, f"Sentiment score must be between -1 and 1, got {score}"
-        
+
         # Validate sentiment label
         valid_labels = ["positive", "negative", "neutral"]
         if data["sentiment_label"] not in valid_labels:
             return False, f"Invalid sentiment label: {data['sentiment_label']}"
-        
+
         # Validate volume is positive
         if data["volume"] < 0:
             return False, "Volume must be non-negative"
-        
+
         # Validate confidence is between 0 and 1
         if not (0 <= data["confidence"] <= 1):
             return False, "Confidence must be between 0 and 1"
-        
+
         return True, None
 
     @staticmethod
     def validate_options_flow_data(data: Dict[str, Any]) -> tuple[bool, Optional[str]]:
         """Validate options flow data structure."""
         required_fields = [
-            "symbol", "date", "strike", "option_type", 
-            "volume", "premium", "expiration"
+            "symbol",
+            "date",
+            "strike",
+            "option_type",
+            "volume",
+            "premium",
+            "expiration",
         ]
-        
+
         for field in required_fields:
             if field not in data:
                 return False, f"Missing required field: {field}"
-        
+
         # Validate option type
         if data["option_type"] not in ["call", "put"]:
             return False, f"Invalid option type: {data['option_type']}"
-        
+
         # Validate numeric fields
         numeric_fields = ["strike", "volume", "premium"]
         for field in numeric_fields:
             if not isinstance(data[field], (int, float)) or data[field] < 0:
                 return False, f"{field} must be a positive number"
-        
+
         return True, None
 
     @staticmethod
     def validate_macro_indicator_data(
-        data: Dict[str, Any]
+        data: Dict[str, Any],
     ) -> tuple[bool, Optional[str]]:
         """Validate macro indicator data structure."""
-        required_fields = ["name", "value", "unit", "frequency", "last_updated", "source"]
-        
+        required_fields = [
+            "name",
+            "value",
+            "unit",
+            "frequency",
+            "last_updated",
+            "source",
+        ]
+
         for field in required_fields:
             if field not in data:
                 return False, f"Missing required field: {field}"
-        
+
         # Validate value is numeric
         if not isinstance(data["value"], (int, float)):
             return False, "Value must be numeric"
-        
+
         # Validate last_updated is a valid date
         if not isinstance(data["last_updated"], (datetime, str)):
             return False, "Invalid last_updated format"
-        
+
         return True, None
+
 
 @dataclass
 class SentimentData:
@@ -188,6 +211,7 @@ class SentimentData:
     volume: int
     source: str
     confidence: float
+
 
 class NewsSentimentCollector:
     """Collects and analyzes news sentiment for stocks."""
@@ -210,7 +234,7 @@ class NewsSentimentCollector:
         try:
             # Try multiple news sources with fallback
             sentiment_data = []
-            
+
             # Try NewsAPI first
             if "newsapi" in self.api_keys:
                 try:
@@ -218,7 +242,7 @@ class NewsSentimentCollector:
                     sentiment_data.extend(newsapi_data)
                 except Exception as e:
                     logger.warning(f"NewsAPI failed for {symbol}: {e}")
-            
+
             # Try GNews as fallback
             if "gnews" in self.api_keys:
                 try:
@@ -226,15 +250,15 @@ class NewsSentimentCollector:
                     sentiment_data.extend(gnews_data)
                 except Exception as e:
                     logger.warning(f"GNews failed for {symbol}: {e}")
-            
+
             # If no API data, return empty list (fallback)
             if not sentiment_data:
                 logger.info(f"No news sentiment data available for {symbol}")
                 return []
-            
+
             # Aggregate and return results
             return await self._aggregate_sentiment(sentiment_data)
-            
+
         except Exception as e:
             logger.error(f"Error getting news sentiment for {symbol}: {e}")
             return []
@@ -245,10 +269,10 @@ class NewsSentimentCollector:
     ) -> List[SentimentData]:
         """Get sentiment from NewsAPI."""
         await self._rate_limit("newsapi")
-        
+
         api_key = self.api_keys["newsapi"]
         url = "https://newsapi.org/v2/everything"
-        
+
         params = {
             "q": f'"{symbol}" stock',
             "from": (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d"),
@@ -257,26 +281,26 @@ class NewsSentimentCollector:
             "language": "en",
             "pageSize": 100,
         }
-        
+
         response = await asyncio.to_thread(
             self.session.get, url, params=params, timeout=10
         )
         response.raise_for_status()
-        
+
         data = response.json()
         articles = data.get("articles", [])
-        
+
         sentiment_data = []
         for article in articles:
             try:
                 title = article.get("title", "")
                 description = article.get("description", "")
                 content = f"{title} {description}"
-                
+
                 if content.strip():
                     sentiment_score = await self._analyze_text_sentiment(content)
                     sentiment_label = self._get_sentiment_label(sentiment_score)
-                    
+
                     sentiment_data.append(
                         SentimentData(
                             symbol=symbol,
@@ -293,17 +317,19 @@ class NewsSentimentCollector:
             except Exception as e:
                 logger.warning(f"Error processing news article: {e}")
                 continue
-        
+
         return sentiment_data
 
     @async_strategy_wrapper(timeout=20, fallback_value=[])
-    async def _get_gnews_sentiment(self, symbol: str, days_back: int) -> List[SentimentData]:
+    async def _get_gnews_sentiment(
+        self, symbol: str, days_back: int
+    ) -> List[SentimentData]:
         """Get sentiment from GNews API."""
         await self._rate_limit("gnews")
-        
+
         api_key = self.api_keys["gnews"]
         url = "https://gnews.io/api/v4/search"
-        
+
         params = {
             "q": f'"{symbol}" stock',
             "from": (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d"),
@@ -312,26 +338,26 @@ class NewsSentimentCollector:
             "lang": "en",
             "max": 100,
         }
-        
+
         response = await asyncio.to_thread(
             self.session.get, url, params=params, timeout=10
         )
         response.raise_for_status()
-        
+
         data = response.json()
         articles = data.get("articles", [])
-        
+
         sentiment_data = []
         for article in articles:
             try:
                 title = article.get("title", "")
                 description = article.get("description", "")
                 content = f"{title} {description}"
-                
+
                 if content.strip():
                     sentiment_score = await self._analyze_text_sentiment(content)
                     sentiment_label = self._get_sentiment_label(sentiment_score)
-                    
+
                     sentiment_data.append(
                         SentimentData(
                             symbol=symbol,
@@ -348,7 +374,7 @@ class NewsSentimentCollector:
             except Exception as e:
                 logger.warning(f"Error processing GNews article: {e}")
                 continue
-        
+
         return sentiment_data
 
     @async_strategy_wrapper(timeout=10, fallback_value=0.0)
@@ -357,28 +383,51 @@ class NewsSentimentCollector:
         try:
             # Simple keyword-based sentiment analysis
             positive_words = {
-                "bullish", "positive", "growth", "profit", "gain", "rise", "up",
-                "strong", "buy", "outperform", "beat", "exceed", "surge", "rally"
+                "bullish",
+                "positive",
+                "growth",
+                "profit",
+                "gain",
+                "rise",
+                "up",
+                "strong",
+                "buy",
+                "outperform",
+                "beat",
+                "exceed",
+                "surge",
+                "rally",
             }
             negative_words = {
-                "bearish", "negative", "decline", "loss", "fall", "down", "weak",
-                "sell", "underperform", "miss", "drop", "crash", "plunge"
+                "bearish",
+                "negative",
+                "decline",
+                "loss",
+                "fall",
+                "down",
+                "weak",
+                "sell",
+                "underperform",
+                "miss",
+                "drop",
+                "crash",
+                "plunge",
             }
-            
+
             words = set(text.lower().split())
-            
+
             positive_count = len(words.intersection(positive_words))
             negative_count = len(words.intersection(negative_words))
-            
+
             if positive_count == 0 and negative_count == 0:
                 return 0.0
-            
+
             # Calculate sentiment score between -1 and 1
             total = positive_count + negative_count
             sentiment_score = (positive_count - negative_count) / total
-            
+
             return max(-1.0, min(1.0, sentiment_score))
-            
+
         except Exception as e:
             logger.warning(f"Error analyzing text sentiment: {e}")
             return 0.0
@@ -399,7 +448,7 @@ class NewsSentimentCollector:
         """Aggregate sentiment data by time periods."""
         if not sentiment_data:
             return []
-        
+
         # Group by hour and aggregate
         hourly_data = {}
         for data in sentiment_data:
@@ -407,17 +456,18 @@ class NewsSentimentCollector:
             if hour_key not in hourly_data:
                 hourly_data[hour_key] = []
             hourly_data[hour_key].append(data)
-        
+
         aggregated = []
         for hour, data_list in hourly_data.items():
             if data_list:
                 # Calculate weighted average sentiment
                 total_volume = sum(d.volume for d in data_list)
                 if total_volume > 0:
-                    weighted_score = sum(
-                        d.sentiment_score * d.volume for d in data_list
-                    ) / total_volume
-                    
+                    weighted_score = (
+                        sum(d.sentiment_score * d.volume for d in data_list)
+                        / total_volume
+                    )
+
                     aggregated.append(
                         SentimentData(
                             symbol=data_list[0].symbol,
@@ -429,7 +479,7 @@ class NewsSentimentCollector:
                             confidence=0.9,
                         )
                     )
-        
+
         return aggregated
 
     async def _rate_limit(self, source: str):
@@ -440,6 +490,7 @@ class NewsSentimentCollector:
             if elapsed < limit["min_interval"]:
                 await asyncio.sleep(limit["min_interval"] - elapsed)
             limit["last_call"] = time.time()
+
 
 class TwitterSentimentCollector:
     """Collects Twitter sentiment for stocks."""
@@ -458,22 +509,22 @@ class TwitterSentimentCollector:
             # For now, return simulated data since Twitter API requires authentication
             # In production, this would use the Twitter API v2
             logger.info(f"Simulating Twitter sentiment for {symbol}")
-            
+
             # Simulate some tweets
             simulated_tweets = [
                 f"${symbol} looking bullish today! #stocks",
                 f"Not sure about ${symbol} performance #trading",
                 f"${symbol} earnings beat expectations #investing",
                 f"${symbol} chart showing weakness #technicalanalysis",
-                f"Bullish on ${symbol} for next quarter #stockmarket"
+                f"Bullish on ${symbol} for next quarter #stockmarket",
             ]
-            
+
             sentiment_data = []
             for i, tweet in enumerate(simulated_tweets):
                 try:
                     sentiment_score = await self._analyze_tweet_sentiment(tweet)
                     sentiment_label = self._get_sentiment_label(sentiment_score)
-                    
+
                     sentiment_data.append(
                         SentimentData(
                             symbol=symbol,
@@ -488,9 +539,9 @@ class TwitterSentimentCollector:
                 except Exception as e:
                     logger.warning(f"Error processing simulated tweet: {e}")
                     continue
-            
+
             return await self._aggregate_sentiment(sentiment_data)
-            
+
         except Exception as e:
             logger.error(f"Error getting Twitter sentiment for {symbol}: {e}")
             return []
@@ -501,29 +552,59 @@ class TwitterSentimentCollector:
         try:
             # Simple keyword-based analysis for tweets
             positive_words = {
-                "bullish", "positive", "growth", "profit", "gain", "rise", "up",
-                "strong", "buy", "outperform", "beat", "exceed", "surge", "rally",
-                "moon", "rocket", "ðŸš€", "ðŸ“ˆ", "ðŸ’Ž"
+                "bullish",
+                "positive",
+                "growth",
+                "profit",
+                "gain",
+                "rise",
+                "up",
+                "strong",
+                "buy",
+                "outperform",
+                "beat",
+                "exceed",
+                "surge",
+                "rally",
+                "moon",
+                "rocket",
+                "ðŸš€",
+                "ðŸ“ˆ",
+                "ðŸ’Ž",
             }
             negative_words = {
-                "bearish", "negative", "decline", "loss", "fall", "down", "weak",
-                "sell", "underperform", "miss", "drop", "crash", "plunge",
-                "dump", "ðŸ’©", "ðŸ“‰", "ðŸ”¥"
+                "bearish",
+                "negative",
+                "decline",
+                "loss",
+                "fall",
+                "down",
+                "weak",
+                "sell",
+                "underperform",
+                "miss",
+                "drop",
+                "crash",
+                "plunge",
+                "dump",
+                "ðŸ’©",
+                "ðŸ“‰",
+                "ðŸ”¥",
             }
-            
+
             words = set(text.lower().split())
-            
+
             positive_count = len(words.intersection(positive_words))
             negative_count = len(words.intersection(negative_words))
-            
+
             if positive_count == 0 and negative_count == 0:
                 return 0.0
-            
+
             total = positive_count + negative_count
             sentiment_score = (positive_count - negative_count) / total
-            
+
             return max(-1.0, min(1.0, sentiment_score))
-            
+
         except Exception as e:
             logger.warning(f"Error analyzing tweet sentiment: {e}")
             return 0.0
@@ -544,7 +625,7 @@ class TwitterSentimentCollector:
         """Aggregate sentiment data by time periods."""
         if not sentiment_data:
             return []
-        
+
         # Group by hour and aggregate
         hourly_data = {}
         for data in sentiment_data:
@@ -552,16 +633,17 @@ class TwitterSentimentCollector:
             if hour_key not in hourly_data:
                 hourly_data[hour_key] = []
             hourly_data[hour_key].append(data)
-        
+
         aggregated = []
         for hour, data_list in hourly_data.items():
             if data_list:
                 total_volume = sum(d.volume for d in data_list)
                 if total_volume > 0:
-                    weighted_score = sum(
-                        d.sentiment_score * d.volume for d in data_list
-                    ) / total_volume
-                    
+                    weighted_score = (
+                        sum(d.sentiment_score * d.volume for d in data_list)
+                        / total_volume
+                    )
+
                     aggregated.append(
                         SentimentData(
                             symbol=data_list[0].symbol,
@@ -573,8 +655,9 @@ class TwitterSentimentCollector:
                             confidence=0.8,
                         )
                     )
-        
+
         return aggregated
+
 
 class RedditSentimentCollector:
     """Collects Reddit sentiment for stocks."""
@@ -597,26 +680,26 @@ class RedditSentimentCollector:
             # For now, return simulated data since Reddit API requires authentication
             # In production, this would use the Reddit API
             logger.info(f"Simulating Reddit sentiment for {symbol}")
-            
+
             # Simulate some Reddit posts
             simulated_posts = [
                 f"DD: Why I'm bullish on ${symbol} - Strong fundamentals and growth potential",
                 f"${symbol} earnings discussion thread",
                 f"Technical analysis: ${symbol} showing bearish signals",
                 f"${symbol} vs competitors - which is the better investment?",
-                f"Market sentiment on ${symbol} seems mixed"
+                f"Market sentiment on ${symbol} seems mixed",
             ]
-            
+
             sentiment_data = []
             for i, post in enumerate(simulated_posts):
                 try:
                     sentiment_score = await self._analyze_text_sentiment(post)
                     sentiment_label = self._get_sentiment_label(sentiment_score)
-                    
+
                     sentiment_data.append(
                         SentimentData(
                             symbol=symbol,
-                            timestamp=datetime.now() - timedelta(hours=i*2),
+                            timestamp=datetime.now() - timedelta(hours=i * 2),
                             sentiment_score=sentiment_score,
                             sentiment_label=sentiment_label,
                             volume=1,
@@ -627,9 +710,9 @@ class RedditSentimentCollector:
                 except Exception as e:
                     logger.warning(f"Error processing simulated Reddit post: {e}")
                     continue
-            
+
             return await self._aggregate_sentiment(sentiment_data)
-            
+
         except Exception as e:
             logger.error(f"Error getting Reddit sentiment for {symbol}: {e}")
             return []
@@ -640,29 +723,60 @@ class RedditSentimentCollector:
         try:
             # Enhanced keyword analysis for Reddit posts
             positive_words = {
-                "bullish", "positive", "growth", "profit", "gain", "rise", "up",
-                "strong", "buy", "outperform", "beat", "exceed", "surge", "rally",
-                "fundamentals", "potential", "opportunity", "undervalued", "moon"
+                "bullish",
+                "positive",
+                "growth",
+                "profit",
+                "gain",
+                "rise",
+                "up",
+                "strong",
+                "buy",
+                "outperform",
+                "beat",
+                "exceed",
+                "surge",
+                "rally",
+                "fundamentals",
+                "potential",
+                "opportunity",
+                "undervalued",
+                "moon",
             }
             negative_words = {
-                "bearish", "negative", "decline", "loss", "fall", "down", "weak",
-                "sell", "underperform", "miss", "drop", "crash", "plunge",
-                "overvalued", "bubble", "dump", "avoid", "risky"
+                "bearish",
+                "negative",
+                "decline",
+                "loss",
+                "fall",
+                "down",
+                "weak",
+                "sell",
+                "underperform",
+                "miss",
+                "drop",
+                "crash",
+                "plunge",
+                "overvalued",
+                "bubble",
+                "dump",
+                "avoid",
+                "risky",
             }
-            
+
             words = set(text.lower().split())
-            
+
             positive_count = len(words.intersection(positive_words))
             negative_count = len(words.intersection(negative_words))
-            
+
             if positive_count == 0 and negative_count == 0:
                 return 0.0
-            
+
             total = positive_count + negative_count
             sentiment_score = (positive_count - negative_count) / total
-            
+
             return max(-1.0, min(1.0, sentiment_score))
-            
+
         except Exception as e:
             logger.warning(f"Error analyzing Reddit text sentiment: {e}")
             return 0.0
@@ -683,7 +797,7 @@ class RedditSentimentCollector:
         """Aggregate sentiment data by time periods."""
         if not sentiment_data:
             return []
-        
+
         # Group by hour and aggregate
         hourly_data = {}
         for data in sentiment_data:
@@ -691,16 +805,17 @@ class RedditSentimentCollector:
             if hour_key not in hourly_data:
                 hourly_data[hour_key] = []
             hourly_data[hour_key].append(data)
-        
+
         aggregated = []
         for hour, data_list in hourly_data.items():
             if data_list:
                 total_volume = sum(d.volume for d in data_list)
                 if total_volume > 0:
-                    weighted_score = sum(
-                        d.sentiment_score * d.volume for d in data_list
-                    ) / total_volume
-                    
+                    weighted_score = (
+                        sum(d.sentiment_score * d.volume for d in data_list)
+                        / total_volume
+                    )
+
                     aggregated.append(
                         SentimentData(
                             symbol=data_list[0].symbol,
@@ -712,8 +827,9 @@ class RedditSentimentCollector:
                             confidence=0.7,
                         )
                     )
-        
+
         return aggregated
+
 
 class MacroIndicatorCollector:
     """Collects macroeconomic indicators."""
@@ -729,7 +845,7 @@ class MacroIndicatorCollector:
         """Get macroeconomic indicators."""
         try:
             indicators = {}
-            
+
             # Try to get FRED data if API key is available
             if self.api_key:
                 try:
@@ -739,34 +855,38 @@ class MacroIndicatorCollector:
                         ("UNRATE", "Unemployment Rate"),
                         ("CPIAUCSL", "CPI"),
                         ("FEDFUNDS", "Federal Funds Rate"),
-                        ("DGS10", "10-Year Treasury Rate")
+                        ("DGS10", "10-Year Treasury Rate"),
                     ]
-                    
+
                     for series_id, name in fred_series:
                         try:
                             series = await self._get_fred_series(series_id, days_back)
                             if series is not None and not series.empty:
                                 indicators[name] = series
                         except Exception as e:
-                            logger.warning(f"Failed to get FRED series {series_id}: {e}")
+                            logger.warning(
+                                f"Failed to get FRED series {series_id}: {e}"
+                            )
                             continue
-                            
+
                 except Exception as e:
                     logger.warning(f"FRED API failed: {e}")
-            
+
             # If no FRED data, return empty dict (fallback)
             if not indicators:
                 logger.info("No macro indicators available")
                 return {}
-            
+
             return indicators
-            
+
         except Exception as e:
             logger.error(f"Error getting macro indicators: {e}")
             return {}
 
     @async_strategy_wrapper(timeout=20, fallback_value=None)
-    async def _get_fred_series(self, series_id: str, days_back: int) -> Optional[pd.Series]:
+    async def _get_fred_series(
+        self, series_id: str, days_back: int
+    ) -> Optional[pd.Series]:
         """Get a series from FRED API."""
         try:
             url = f"https://api.stlouisfed.org/fred/series/observations"
@@ -774,21 +894,23 @@ class MacroIndicatorCollector:
                 "series_id": series_id,
                 "api_key": self.api_key,
                 "file_type": "json",
-                "observation_start": (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d"),
-                "sort_order": "desc"
+                "observation_start": (
+                    datetime.now() - timedelta(days=days_back)
+                ).strftime("%Y-%m-%d"),
+                "sort_order": "desc",
             }
-            
+
             response = await asyncio.to_thread(
                 self.session.get, url, params=params, timeout=15
             )
             response.raise_for_status()
-            
+
             data = response.json()
             observations = data.get("observations", [])
-            
+
             if not observations:
                 return None
-            
+
             # Convert to pandas Series
             dates = []
             values = []
@@ -800,16 +922,17 @@ class MacroIndicatorCollector:
                     values.append(value)
                 except (ValueError, KeyError):
                     continue
-            
+
             if dates and values:
                 series = pd.Series(values, index=dates)
                 return series.sort_index()
-            
+
             return None
-            
+
         except Exception as e:
             logger.warning(f"Error getting FRED series {series_id}: {e}")
             return None
+
 
 class OptionsFlowCollector:
     """Collects options flow data."""
@@ -819,7 +942,9 @@ class OptionsFlowCollector:
         self.api_keys = api_keys or {}
 
     @async_strategy_wrapper(timeout=35, fallback_value=[])
-    async def get_options_flow(self, symbol: str, days_back: int = 7) -> List[Dict[str, Any]]:
+    async def get_options_flow(
+        self, symbol: str, days_back: int = 7
+    ) -> List[Dict[str, Any]]:
         """Get options flow data for a symbol."""
         try:
             # Try to get real options data if API keys are available
@@ -828,11 +953,11 @@ class OptionsFlowCollector:
                     return await self._get_tradier_options_flow(symbol, days_back)
                 except Exception as e:
                     logger.warning(f"Tradier options flow failed: {e}")
-            
+
             # Fallback to simulated data
             logger.info(f"Using simulated options flow for {symbol}")
             return await self._generate_simulated_options_flow(symbol, days_back)
-            
+
         except Exception as e:
             logger.error(f"Error getting options flow for {symbol}: {e}")
             return []
@@ -854,34 +979,37 @@ class OptionsFlowCollector:
         """Generate simulated options flow data."""
         try:
             options_data = []
-            
+
             # Generate simulated options data for the past week
             for i in range(days_back):
                 date = datetime.now() - timedelta(days=i)
-                
+
                 # Simulate some options activity
                 for _ in range(np.random.randint(1, 5)):  # 1-4 options per day
                     strike = round(np.random.uniform(50, 200), 2)
                     option_type = np.random.choice(["call", "put"])
                     volume = np.random.randint(10, 1000)
                     premium = round(np.random.uniform(0.1, 10.0), 2)
-                    
-                    options_data.append({
-                        "symbol": symbol,
-                        "date": date,
-                        "strike": strike,
-                        "option_type": option_type,
-                        "volume": volume,
-                        "premium": premium,
-                        "expiration": date + timedelta(days=30),
-                        "source": "simulated"
-                    })
-            
+
+                    options_data.append(
+                        {
+                            "symbol": symbol,
+                            "date": date,
+                            "strike": strike,
+                            "option_type": option_type,
+                            "volume": volume,
+                            "premium": premium,
+                            "expiration": date + timedelta(days=30),
+                            "source": "simulated",
+                        }
+                    )
+
             return options_data
-            
+
         except Exception as e:
             logger.error(f"Error generating simulated options flow: {e}")
             return []
+
 
 class ExternalSignalsManager:
     """Manages all external signal collection and integration."""
@@ -917,40 +1045,50 @@ class ExternalSignalsManager:
                 cache_time, cached_data = self.signal_cache[cache_key]
                 if datetime.now() - cache_time < self.cache_duration:
                     return cached_data
-            
+
             # Collect all signals concurrently with timeout protection
             tasks = [
                 self.news_collector.get_news_sentiment(symbol, days_back),
                 self.twitter_collector.get_twitter_sentiment(symbol),
                 self.reddit_collector.get_reddit_sentiment(symbol),
                 self.macro_collector.get_macro_indicators(days_back),
-                self.options_collector.get_options_flow(symbol, days_back)
+                self.options_collector.get_options_flow(symbol, days_back),
             ]
-            
+
             # Execute all tasks concurrently with individual timeouts
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+
             # Process results and handle exceptions
             signals = {
-                "news_sentiment": results[0] if not isinstance(results[0], Exception) else [],
-                "twitter_sentiment": results[1] if not isinstance(results[1], Exception) else [],
-                "reddit_sentiment": results[2] if not isinstance(results[2], Exception) else [],
-                "macro_indicators": results[3] if not isinstance(results[3], Exception) else {},
-                "options_flow": results[4] if not isinstance(results[4], Exception) else []
+                "news_sentiment": (
+                    results[0] if not isinstance(results[0], Exception) else []
+                ),
+                "twitter_sentiment": (
+                    results[1] if not isinstance(results[1], Exception) else []
+                ),
+                "reddit_sentiment": (
+                    results[2] if not isinstance(results[2], Exception) else []
+                ),
+                "macro_indicators": (
+                    results[3] if not isinstance(results[3], Exception) else {}
+                ),
+                "options_flow": (
+                    results[4] if not isinstance(results[4], Exception) else []
+                ),
             }
-            
+
             # Log any exceptions that occurred
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     logger.warning(f"Signal collection {i} failed: {result}")
-            
+
             # Final validation and filtering
             signals = await self._validate_and_filter_signals(signals, symbol)
-            
+
             # Cache the results
             self.signal_cache[cache_key] = (datetime.now(), signals)
             return signals
-            
+
         except Exception as e:
             logger.error(f"Error getting all signals for {symbol}: {e}")
             return {}
@@ -975,7 +1113,7 @@ class ExternalSignalsManager:
                             f"Manager: Invalid {key} record for {symbol}: {err} | Data: {record}"
                         )
                 signals[key] = valid
-            
+
             # Validate macro indicators
             macro_valid = {}
             for name, series in signals.get("macro_indicators", {}).items():
@@ -996,7 +1134,7 @@ class ExternalSignalsManager:
                             f"Manager: Invalid macro indicator meta for {name}: {err} | Meta: {meta}"
                         )
             signals["macro_indicators"] = macro_valid
-            
+
             # Validate options flow
             options_valid = []
             for record in signals.get("options_flow", []):
@@ -1008,15 +1146,17 @@ class ExternalSignalsManager:
                         f"Manager: Invalid options flow record for {symbol}: {err} | Data: {record}"
                     )
             signals["options_flow"] = options_valid
-            
+
             return signals
-            
+
         except Exception as e:
             logger.error(f"Error validating signals for {symbol}: {e}")
             return signals
 
     @async_strategy_wrapper(timeout=45, fallback_value=pd.DataFrame())
-    async def get_signal_features(self, symbol: str, days_back: int = 7) -> pd.DataFrame:
+    async def get_signal_features(
+        self, symbol: str, days_back: int = 7
+    ) -> pd.DataFrame:
         """Get signal features as a DataFrame for model input."""
         try:
             signals = await self.get_all_signals(symbol, days_back)
@@ -1078,9 +1218,9 @@ class ExternalSignalsManager:
                         "volume": option["volume"],
                         "premium": option["premium"],
                         "sentiment_score": sentiment_score,
-                        "sentiment_label": "positive"
-                        if sentiment_score > 0
-                        else "negative",
+                        "sentiment_label": (
+                            "positive" if sentiment_score > 0 else "negative"
+                        ),
                         "confidence": 0.7,
                     }
                 )
@@ -1105,9 +1245,9 @@ class ExternalSignalsManager:
         """Get aggregated sentiment scores across all sources."""
         try:
             signals = await self.get_all_signals(symbol, days_back)
-            
+
             aggregated = {}
-            
+
             # Aggregate sentiment by source
             for source in ["news_sentiment", "twitter_sentiment", "reddit_sentiment"]:
                 sentiment_data = signals.get(source, [])
@@ -1115,30 +1255,32 @@ class ExternalSignalsManager:
                     # Calculate weighted average sentiment
                     total_volume = sum(d.volume for d in sentiment_data)
                     if total_volume > 0:
-                        weighted_score = sum(
-                            d.sentiment_score * d.volume for d in sentiment_data
-                        ) / total_volume
+                        weighted_score = (
+                            sum(d.sentiment_score * d.volume for d in sentiment_data)
+                            / total_volume
+                        )
                         aggregated[source] = weighted_score
                     else:
                         aggregated[source] = 0.0
                 else:
                     aggregated[source] = 0.0
-            
+
             # Calculate overall sentiment
             if aggregated:
                 overall_score = sum(aggregated.values()) / len(aggregated)
                 aggregated["overall"] = overall_score
             else:
                 aggregated["overall"] = 0.0
-            
+
             return aggregated
-            
+
         except Exception as e:
             logger.error(f"Error getting aggregated sentiment for {symbol}: {e}")
             return {"overall": 0.0}
 
+
 def get_external_signals_manager(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> ExternalSignalsManager:
     """Factory function to create ExternalSignalsManager instance."""
     return ExternalSignalsManager(config)

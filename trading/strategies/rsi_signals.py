@@ -11,10 +11,10 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
+from .rsi_utils import generate_rsi_signals_core, validate_rsi_parameters
+
 warnings.filterwarnings("ignore")
 
-
-from .rsi_utils import generate_rsi_signals_core, validate_rsi_parameters
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -3,6 +3,7 @@ Terminal-based NLP sandbox for PromptProcessor and LLMProcessor.
 Usage: python sandbox_nlp.py
 Enhanced with proper error handling and experimental logic isolation.
 """
+
 import json
 import logging
 import os
@@ -245,7 +246,7 @@ class NLPSandbox:
 
         results = []
         for i, prompt in enumerate(prompts):
-            logger.info(f"Processing prompt {i+1}/{len(prompts)}: {prompt[:50]}...")
+            logger.info(f"Processing prompt {i + 1}/{len(prompts)}: {prompt[:50]}...")
             result = self.process_prompt(prompt)
             results.append(result)
 

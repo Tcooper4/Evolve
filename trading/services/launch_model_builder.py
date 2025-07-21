@@ -16,11 +16,11 @@ from pathlib import Path
 
 import psutil
 import redis
+from services.model_builder_service import ModelBuilderService
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.model_builder_service import ModelBuilderService
 
 LLM_IDENTITY = os.environ.get("LLM_IDENTITY", "LLM-v1.0")
 
@@ -77,8 +77,11 @@ def system_health_check(
         return False
     # Log system info
     logger.info(
-        f"System: {platform.system()} {platform.release()} | Host: {socket.gethostname()} | Python: {platform.python_version()}"
-    )
+        f"System: {
+            platform.system()} {
+            platform.release()} | Host: {
+                socket.gethostname()} | Python: {
+                    platform.python_version()}")
     logger.info(
         f"Memory: {mem.available / (1024 ** 3):.2f} GB available | Disk: {disk.free / (1024 ** 3):.2f} GB free"
     )

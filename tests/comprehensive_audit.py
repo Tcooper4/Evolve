@@ -12,6 +12,7 @@ import json
 import os
 import re
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -155,7 +156,7 @@ class ReturnStatementAuditor:
                     return False
 
         # Check if function has side effects (print, logging, file operations, etc.)
-        function_lines = content.split("\n")[node.lineno - 1 : node.end_lineno]
+        function_lines = content.split("\n")[node.lineno - 1: node.end_lineno]
         function_text = "\n".join(function_lines)
 
         # Patterns that suggest side effects
@@ -184,7 +185,7 @@ class ReturnStatementAuditor:
 
     def get_violation_reason(self, node: ast.FunctionDef, content: str) -> str:
         """Get reason for violation."""
-        function_lines = content.split("\n")[node.lineno - 1 : node.end_lineno]
+        function_lines = content.split("\n")[node.lineno - 1: node.end_lineno]
         function_text = "\n".join(function_lines)
 
         if re.search(r"\bprint\s*\(", function_text):
@@ -275,9 +276,9 @@ class ReturnStatementAuditor:
                 "functions_with_returns": self.functions_with_returns,
                 "functions_without_returns": self.functions_without_returns,
                 "compliance_rate": compliance_rate,
-                "file_compliance_rate": (compliant_files / total_files * 100)
-                if total_files > 0
-                else 0,
+                "file_compliance_rate": (
+                    (compliant_files / total_files * 100) if total_files > 0 else 0
+                ),
             },
             "priority_summary": priority_summary,
             "detailed_results": results,
@@ -339,8 +340,10 @@ class ReturnStatementAuditor:
             f"   Files: {summary['compliant_files']}/{summary['total_files']} compliant ({summary['file_compliance_rate']:.1f}%)"
         )
         print(
-            f"   Functions: {summary['functions_with_returns']}/{summary['total_functions']} with returns ({summary['compliance_rate']:.1f}%)"
-        )
+            f"   Functions: {
+                summary['functions_with_returns']}/{
+                summary['total_functions']} with returns ({
+                summary['compliance_rate']:.1f}%)")
 
         print(f"\n🎯 VIOLATIONS BY PRIORITY:")
         for priority, data in priority_summary.items():

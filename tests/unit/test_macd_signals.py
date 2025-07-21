@@ -143,12 +143,15 @@ class TestMACDSignals:
         """Create all-null price data."""
         dates = pd.date_range(start="2023-01-01", periods=20, freq="D")
         close_prices = [np.nan] * 20
-        df = pd.DataFrame({
-            "Close": close_prices,
-            "High": [np.nan] * 20,
-            "Low": [np.nan] * 20,
-            "Volume": [np.nan] * 20,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Close": close_prices,
+                "High": [np.nan] * 20,
+                "Low": [np.nan] * 20,
+                "Volume": [np.nan] * 20,
+            },
+            index=dates,
+        )
         return df
 
     @pytest.fixture
@@ -156,12 +159,15 @@ class TestMACDSignals:
         """Create timezone-aware price data."""
         dates = pd.date_range(start="2023-01-01", periods=30, freq="D", tz="UTC")
         close_prices = np.linspace(100, 110, 30)
-        df = pd.DataFrame({
-            "Close": close_prices,
-            "High": close_prices + 1,
-            "Low": close_prices - 1,
-            "Volume": [1000000] * 30,
-        }, index=dates)
+        df = pd.DataFrame(
+            {
+                "Close": close_prices,
+                "High": close_prices + 1,
+                "Low": close_prices - 1,
+                "Volume": [1000000] * 30,
+            },
+            index=dates,
+        )
         return df
 
     def test_macd_signal_generation(self, macd_strategy, synthetic_price_data):

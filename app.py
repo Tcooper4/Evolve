@@ -15,8 +15,6 @@ import os
 import warnings
 from datetime import datetime
 
-import numpy as np
-import pandas as pd
 import streamlit as st
 
 # Configure logging first
@@ -72,7 +70,26 @@ st.set_page_config(
 
 # Import core components with error handling
 try:
-    from agents.llm.agent import PromptAgent
+    from ui.page_renderer import (
+        render_agent_logs,
+        render_conversation_history,
+        render_footer,
+        render_forecasting_page,
+        render_home_page,
+        render_model_page,
+        render_orchestrator_page,
+        render_performance_analytics_page,
+        render_prompt_interface,
+        render_prompt_result,
+        render_reports_page,
+        render_risk_management_page,
+        render_settings_page,
+        render_sidebar,
+        render_strategy_page,
+        render_system_monitor_page,
+        render_top_navigation,
+        render_voice_input,
+    )
 
     CORE_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -81,8 +98,8 @@ except ImportError as e:
 
 # Add Task Orchestrator integration after the existing imports
 try:
-    from core.orchestrator.task_orchestrator import TaskOrchestrator
-    from system.orchestrator_integration import get_system_integration_status
+    pass
+
     ORCHESTRATOR_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"Task Orchestrator not available: {e}")
@@ -90,7 +107,8 @@ except ImportError as e:
 
 # Add Agent Controller integration
 try:
-    from agents.agent_controller import get_agent_controller
+    pass
+
     AGENT_CONTROLLER_AVAILABLE = True
     logger.info("✅ Agent Controller initialized successfully")
 except ImportError as e:
@@ -363,8 +381,9 @@ prompt, submit = render_prompt_interface()
 if submit and prompt:
     with st.spinner("Processing your request..."):
         try:
-            from routing.prompt_router import route_prompt
             import asyncio
+
+            from routing.prompt_router import route_prompt
 
             # Run the async route_prompt function
             result = asyncio.run(route_prompt(prompt, llm_type="default"))
@@ -381,7 +400,9 @@ if submit and prompt:
             navigation_info = result.get("navigation_info", {})
             if navigation_info.get("main_nav"):
                 st.session_state.main_nav = navigation_info["main_nav"]
-            st.success("✅ Request processed successfully! Evolve AI has analyzed your query.")
+            st.success(
+                "✅ Request processed successfully! Evolve AI has analyzed your query."
+            )
         except ImportError as e:
             st.error(f"❌ System configuration error: {str(e)}")
             st.info("Please ensure all required modules are properly installed.")
@@ -420,4 +441,3 @@ elif advanced_nav == "🤖 Orchestrator":
 
 # --- Footer ---
 render_footer()
-

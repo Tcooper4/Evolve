@@ -1,4 +1,4 @@
-﻿"""Enhanced ensemble model with weighted voting and strategy-aware routing."""
+"""Enhanced ensemble model with weighted voting and strategy-aware routing."""
 
 import json
 import logging
@@ -9,8 +9,11 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
+from utils.model_cache import cache_model_operation
+
 from .base_model import BaseModel, ModelRegistry
-from utils.model_cache import cache_model_operation, get_model_cache
+
+logger = logging.getLogger(__name__)
 
 # @ModelRegistry.register('Ensemble')
 
@@ -51,10 +54,14 @@ class EnsembleModel(BaseModel):
                 raise ValueError(f"Missing required config key: {key}")
 
         if self.config["voting_method"] not in ["mse", "sharpe", "regime", "custom"]:
-            raise ValueError("voting_method must be 'mse', 'sharpe', 'regime', or 'custom'")
+            raise ValueError(
+                "voting_method must be 'mse', 'sharpe', 'regime', or 'custom'"
+            )
 
         if self.ensemble_method not in ["weighted_average", "vote_based"]:
-            raise ValueError("ensemble_method must be 'weighted_average' or 'vote_based'")
+            raise ValueError(
+                "ensemble_method must be 'weighted_average' or 'vote_based'"
+            )
 
         if not isinstance(self.config["models"], list):
             raise ValueError("models must be a list of model configurations")
@@ -146,7 +153,7 @@ class EnsembleModel(BaseModel):
                 )
 
             except Exception as e:
-                logging.error(f"Error updating weights for {model_name}: {e}")
+                logger.error(f"Error updating weights for {model_name}: {e}")
                 # Use default score for failed models
                 model_scores[model_name] = 0.0
                 model_confidences[model_name] = 0.0
@@ -276,7 +283,7 @@ class EnsembleModel(BaseModel):
                 trend_weights[model_name] = trend_alignment
 
             except Exception as e:
-                logging.warning(f"Error calculating trend weight for {model_name}: {e}")
+                logger.warning(f"Error calculating trend weight for {model_name}: {e}")
                 trend_weights[model_name] = 0.5
 
         return trend_weights
@@ -371,7 +378,7 @@ class EnsembleModel(BaseModel):
                     else 1.0
                 )
             except Exception as e:
-                logging.error(f"Error calculating confidence for {model_name}: {e}")
+                logger.error(f"Error calculating confidence for {model_name}: {e}")
                 raise RuntimeError(
                     f"Failed to calculate confidence for {model_name}: {e}"
                 )
@@ -423,28 +430,30 @@ class EnsembleModel(BaseModel):
             # Get predictions from all models
             model_predictions = {}
             model_confidences = {}
-            
+
             for model_name, model in self.models.items():
                 try:
                     pred = model.predict(data)
                     model_predictions[model_name] = pred
-                    
+
                     # Get confidence if available
                     confidence = (
                         model.calculate_confidence(pred)
                         if hasattr(model, "calculate_confidence")
                         else 1.0
                     )
-                    
+
                     # Apply fallback logic
                     if confidence < self.config.get("fallback_threshold", 0.5):
-                        logger.warning(f"Low confidence for {model_name}, using fallback")
+                        logger.warning(
+                            f"Low confidence for {model_name}, using fallback"
+                        )
                         continue
-                    
+
                     model_confidences[model_name] = confidence
-                        
+
                 except Exception as e:
-                    logging.error(f"Error getting prediction from {model_name}: {e}")
+                    logger.error(f"Error getting prediction from {model_name}: {e}")
                     continue
 
             if not model_predictions:
@@ -452,76 +461,92 @@ class EnsembleModel(BaseModel):
 
             # Calculate ensemble prediction based on method
             if self.ensemble_method == "weighted_average":
-                return self._weighted_average_predict(model_predictions, model_confidences)
+                return self._weighted_average_predict(
+                    model_predictions, model_confidences
+                )
             else:
-                return self._vote_based_predict(model_predictions, model_confidences, data)
+                return self._vote_based_predict(
+                    model_predictions, model_confidences, data
+                )
 
         except Exception as e:
-            logging.error(f"Error in ensemble prediction: {e}")
+            logger.error(f"Error in ensemble prediction: {e}")
             raise
 
-    def _weighted_average_predict(self, model_predictions: Dict[str, np.ndarray], 
-                                model_confidences: Dict[str, float]) -> np.ndarray:
+    def _weighted_average_predict(
+        self,
+        model_predictions: Dict[str, np.ndarray],
+        model_confidences: Dict[str, float],
+    ) -> np.ndarray:
         """Generate weighted average ensemble predictions.
-        
+
         Args:
             model_predictions: Dictionary of model predictions
             model_confidences: Dictionary of model confidence scores
-            
+
         Returns:
             Weighted average predictions
         """
         try:
             # Get current weights
             current_weights = self.weights.copy()
-            
+
             # Adjust weights by confidence
             adjusted_weights = {}
             total_weight = 0
-            
+
             for model_name in model_predictions.keys():
-                base_weight = current_weights.get(model_name, 1.0 / len(model_predictions))
+                base_weight = current_weights.get(
+                    model_name, 1.0 / len(model_predictions)
+                )
                 confidence = model_confidences.get(model_name, 1.0)
                 adjusted_weight = base_weight * confidence
                 adjusted_weights[model_name] = adjusted_weight
                 total_weight += adjusted_weight
-            
+
             # Normalize weights
             if total_weight > 0:
-                adjusted_weights = {k: v / total_weight for k, v in adjusted_weights.items()}
-            
+                adjusted_weights = {
+                    k: v / total_weight for k, v in adjusted_weights.items()
+                }
+
             # Calculate weighted average
             weighted_pred = np.zeros_like(list(model_predictions.values())[0])
-            
+
             for model_name, pred in model_predictions.items():
                 weight = adjusted_weights.get(model_name, 0)
                 weighted_pred += weight * pred
-            
-            logging.info(f"Weighted average ensemble prediction completed using {len(model_predictions)} models")
+
+            logger.info(
+                f"Weighted average ensemble prediction completed using {len(model_predictions)} models"
+            )
             return weighted_pred
-            
+
         except Exception as e:
-            logging.error(f"Error in weighted average prediction: {e}")
+            logger.error(f"Error in weighted average prediction: {e}")
             # Fallback to simple average
             return np.mean(list(model_predictions.values()), axis=0)
 
-    def _vote_based_predict(self, model_predictions: Dict[str, np.ndarray], 
-                          model_confidences: Dict[str, float], 
-                          data: pd.DataFrame) -> np.ndarray:
+    def _vote_based_predict(
+        self,
+        model_predictions: Dict[str, np.ndarray],
+        model_confidences: Dict[str, float],
+        data: pd.DataFrame,
+    ) -> np.ndarray:
         """Generate vote-based ensemble predictions.
-        
+
         Args:
             model_predictions: Dictionary of model predictions
             model_confidences: Dictionary of model confidence scores
             data: Input data for context
-            
+
         Returns:
             Vote-based predictions
         """
         try:
             # Convert predictions to directional signals
             directional_signals = {}
-            
+
             for model_name, pred in model_predictions.items():
                 # Calculate direction (positive = bullish, negative = bearish)
                 if len(pred) > 1:
@@ -529,16 +554,16 @@ class EnsembleModel(BaseModel):
                     direction = 1 if pred[0] > 0 else -1
                 else:
                     direction = 1 if pred[0] > 0 else -1
-                
+
                 # Weight by confidence
                 confidence = model_confidences.get(model_name, 1.0)
                 weighted_direction = direction * confidence
-                
+
                 directional_signals[model_name] = weighted_direction
-            
+
             # Calculate weighted vote
             total_vote = sum(directional_signals.values())
-            
+
             # Determine final direction
             if total_vote > 0:
                 final_direction = 1  # Bullish
@@ -546,21 +571,27 @@ class EnsembleModel(BaseModel):
                 final_direction = -1  # Bearish
             else:
                 final_direction = 0  # Neutral
-            
+
             # Generate final prediction based on direction and magnitude
-            avg_magnitude = np.mean([np.abs(pred[0]) for pred in model_predictions.values()])
+            avg_magnitude = np.mean(
+                [np.abs(pred[0]) for pred in model_predictions.values()]
+            )
             final_prediction = final_direction * avg_magnitude
-            
+
             # Repeat for multi-step predictions if needed
             if len(list(model_predictions.values())[0]) > 1:
-                final_prediction = np.full(len(list(model_predictions.values())[0]), final_prediction)
-            
-            logging.info(f"Vote-based ensemble prediction completed. Direction: {final_direction}, "
-                        f"Confidence: {abs(total_vote) / len(model_predictions):.2f}")
+                final_prediction = np.full(
+                    len(list(model_predictions.values())[0]), final_prediction
+                )
+
+            logger.info(
+                f"Vote-based ensemble prediction completed. Direction: {final_direction}, "
+                f"Confidence: {abs(total_vote) / len(model_predictions):.2f}"
+            )
             return final_prediction
-            
+
         except Exception as e:
-            logging.error(f"Error in vote-based prediction: {e}")
+            logger.error(f"Error in vote-based prediction: {e}")
             # Fallback to simple average
             return np.mean(list(model_predictions.values()), axis=0)
 
@@ -656,7 +687,7 @@ class EnsembleModel(BaseModel):
                 try:
                     shap_values[model_name] = model.shap_interpret(data)
                 except Exception as e:
-                    logging.error(f"Error getting SHAP values for {model_name}: {e}")
+                    logger.error(f"Error getting SHAP values for {model_name}: {e}")
                     raise RuntimeError(
                         f"Failed to get SHAP values for {model_name}: {e}"
                     )
@@ -713,14 +744,13 @@ class EnsembleModel(BaseModel):
             }
 
         except Exception as e:
-            logging.warning(f"Error in ensemble model forecast: {e}. Returning fallback DataFrame.")
-            
+            logger.warning(
+                f"Error in ensemble model forecast: {e}. Returning fallback DataFrame."
+            )
+
             # Return fallback DataFrame with required columns
-            fallback_df = pd.DataFrame({
-                'Forecast': [],
-                'Confidence': []
-            })
-            
+            fallback_df = pd.DataFrame({"Forecast": [], "Confidence": []})
+
             return {
                 "forecast": np.array([]),
                 "confidence": 0.0,
@@ -729,7 +759,7 @@ class EnsembleModel(BaseModel):
                 "weights": {},
                 "strategy_patterns": {},
                 "fallback_dataframe": fallback_df,
-                "error": str(e)
+                "error": str(e),
             }
 
     def plot_results(self, data: pd.DataFrame, predictions: np.ndarray = None) -> None:
@@ -751,7 +781,7 @@ class EnsembleModel(BaseModel):
             plt.subplot(2, 2, 1)
             plt.plot(data.index, data["close"], label="Actual", color="blue")
             plt.plot(
-                data.index[-len(predictions) :],
+                data.index[-len(predictions):],
                 predictions,
                 label="Predicted",
                 color="red",
@@ -801,5 +831,5 @@ class EnsembleModel(BaseModel):
             plt.show()
 
         except Exception as e:
-            logging.error(f"Error plotting ensemble results: {e}")
+            logger.error(f"Error plotting ensemble results: {e}")
             logger.error(f"Could not plot results: {e}")

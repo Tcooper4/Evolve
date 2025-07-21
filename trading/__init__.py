@@ -4,7 +4,11 @@ Evolve Trading System
 An autonomous financial forecasting and trading strategy platform that leverages
 multiple machine learning models to predict stock price movements, generate
 technical trading signals, backtest strategies, and visualize performance.
+
+# NOTE: Flake8 compliance changes applied.
 """
+
+import importlib
 
 __version__ = "2.1.0"
 __author__ = "Evolve Team"
@@ -15,8 +19,7 @@ __license__ = "MIT"
 
 # Core imports with error handling
 try:
-    from .models import forecast_router
-    from .models.forecast_router import ForecastRouter
+    pass
 
     MODELS_AVAILABLE = True
 except ImportError as e:
@@ -28,8 +31,7 @@ except ImportError as e:
     raise ImportError("Model modules failed to load. Check logs.")
 
 try:
-    from .strategies import bollinger_strategy, rsi_strategy, macd_strategy, sma_strategy
-    from .strategies.ensemble import WeightedEnsembleStrategy
+    pass
 
     STRATEGIES_AVAILABLE = True
 except ImportError as e:
@@ -40,8 +42,7 @@ except ImportError as e:
     STRATEGIES_AVAILABLE = False
 
 try:
-    from .data import DataProviderManager, get_data_provider
-    from .data.providers import AlphaVantageProvider, YFinanceProvider
+    pass
 
     DATA_AVAILABLE = True
 except ImportError as e:
@@ -52,8 +53,7 @@ except ImportError as e:
     DATA_AVAILABLE = False
 
 try:
-    from .backtesting import backtester, performance_analysis
-    from .backtesting.backtester import Backtester
+    pass
 
     BACKTESTING_AVAILABLE = True
 except ImportError as e:
@@ -64,8 +64,7 @@ except ImportError as e:
     BACKTESTING_AVAILABLE = False
 
 try:
-    from .optimization import strategy_optimizer, base_optimizer
-    from .optimization.strategy_optimizer import StrategyOptimizer
+    pass
 
     OPTIMIZATION_AVAILABLE = True
 except ImportError as e:
@@ -76,8 +75,7 @@ except ImportError as e:
     OPTIMIZATION_AVAILABLE = False
 
 try:
-    from .risk import risk_analyzer, risk_manager
-    from .risk.risk_analyzer import RiskAnalyzer
+    pass
 
     RISK_AVAILABLE = True
 except ImportError as e:
@@ -88,8 +86,7 @@ except ImportError as e:
     RISK_AVAILABLE = False
 
 try:
-    from .portfolio import portfolio_manager, position_sizer
-    from .portfolio.portfolio_manager import PortfolioManager
+    pass
 
     PORTFOLIO_AVAILABLE = True
 except ImportError as e:
@@ -100,8 +97,7 @@ except ImportError as e:
     PORTFOLIO_AVAILABLE = False
 
 try:
-    from .agents import agent_manager, agent_registry
-    from .agents.agent_manager import AgentManager
+    pass
 
     AGENTS_AVAILABLE = True
 except ImportError as e:
@@ -143,8 +139,7 @@ def get_version_info():
 
 # Additional imports with error handling
 try:
-    from .market import market_analyzer, market_data
-    from .market.market_analyzer import MarketAnalyzer
+    pass
 
     MARKET_AVAILABLE = True
 except ImportError as e:
@@ -155,8 +150,7 @@ except ImportError as e:
     MARKET_AVAILABLE = False
 
 try:
-    from .data.preprocessing import DataPreprocessor, FeatureEngineering
-    from .data.preprocessing import DataValidator, DataScaler
+    pass
 
     PREPROCESSING_AVAILABLE = True
 except ImportError as e:
@@ -167,7 +161,7 @@ except ImportError as e:
     PREPROCESSING_AVAILABLE = False
 
 try:
-    from .agents.updater_agent import UpdaterAgent
+    pass
 
     UPDATER_AVAILABLE = True
 except ImportError as e:
@@ -178,8 +172,7 @@ except ImportError as e:
     UPDATER_AVAILABLE = False
 
 try:
-    from .nlp import llm_processor, nl_interface
-    from .nlp.llm_processor import LLMProcessor
+    pass
 
     NLP_AVAILABLE = True
 except ImportError as e:

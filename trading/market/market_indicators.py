@@ -13,9 +13,12 @@ from typing import Any, Dict, Optional, Union
 import numpy as np
 import pandas as pd
 
+from trading.logs.logger import log_metrics
+
 # Try to import PyTorch
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("⚠️ PyTorch not available. Disabling GPU acceleration for market indicators.")
@@ -61,7 +64,6 @@ except Exception as e:
     ta = None
     PANDAS_TA_AVAILABLE = False
 
-from trading.logs.logger import log_metrics
 
 # Safe numba import with fallback
 try:

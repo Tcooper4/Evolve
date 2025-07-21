@@ -433,7 +433,7 @@ class TradingRules:
                 elif isinstance(value, list) and key == "rules":
                     # Process list of rules
                     for i, rule in enumerate(value):
-                        rule_name = f"{prefix}rule_{i+1}"
+                        rule_name = f"{prefix}rule_{i + 1}"
                         self.add_rule(
                             rule_name=rule_name,
                             rule_description=rule,

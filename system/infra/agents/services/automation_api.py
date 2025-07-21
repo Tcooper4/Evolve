@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Dict, List, Optional
 
 import uvicorn
@@ -13,7 +12,6 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from pydantic import BaseModel, Field, validator
 
 from system.infra.agents.core.models.task import Task, TaskStatus, TaskType
@@ -23,6 +21,10 @@ from trading.automation_notification import AutomationNotification
 from trading.automation_scheduler import AutomationScheduler
 from trading.automation_tasks import AutomationTasks
 from trading.automation_workflows import AutomationWorkflows
+from utils.launch_utils import setup_logging
+
+# OAuth2 scheme for authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 logger = logging.getLogger(__name__)
 
@@ -120,12 +122,18 @@ class AutomationAPI:
 
     from utils.launch_utils import setup_logging
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def setup_security(self):
-        """Setup security components."""
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        self.oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+class AutomationAPIService:
+    def __init__(self):
+        self.setup_logging()
+        self.logger = logging.getLogger("automation")
+
+    def setup_logging(self):
+        return setup_logging(service_name="service")
+
+    def setup_security(self):
+        """Set up security for automation API service."""
+        # Security setup logic here
 
     def setup_app(self):
         """Setup FastAPI application."""

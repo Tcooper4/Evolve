@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 # Try to import aiohttp
 try:
     import aiohttp
+
     AIOHTTP_AVAILABLE = True
 except ImportError as e:
     print("⚠️ aiohttp not available. Disabling async web scraping.")
@@ -23,6 +24,7 @@ except ImportError as e:
 # Try to import BeautifulSoup
 try:
     from bs4 import BeautifulSoup
+
     BEAUTIFULSOUP_AVAILABLE = True
 except ImportError as e:
     print("⚠️ beautifulsoup4 not available. Disabling HTML parsing.")
@@ -288,10 +290,10 @@ class MetaResearchAgent(BaseAgent):
             # For now, return mock data
             for i in range(min(max_papers, 10)):
                 paper = ResearchPaper(
-                    title=f"Financial Forecasting Model {i+1}",
-                    authors=[f"Author {i+1}"],
-                    abstract=f"Abstract for financial forecasting paper {i+1}",
-                    url=f"https://papers.ssrn.com/paper_{i+1}",
+                    title=f"Financial Forecasting Model {i + 1}",
+                    authors=[f"Author {i + 1}"],
+                    abstract=f"Abstract for financial forecasting paper {i + 1}",
+                    url=f"https://papers.ssrn.com/paper_{i + 1}",
                     source="SSRN",
                     publication_date=datetime.now() - timedelta(days=i * 7),
                     keywords=keywords[:3],

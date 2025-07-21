@@ -12,7 +12,9 @@ import streamlit as st
 warnings.filterwarnings("ignore")
 
 # Page config
-st.set_page_config(page_title="Strategy Health Dashboard", page_icon="🏥", layout="wide")
+st.set_page_config(
+    page_title="Strategy Health Dashboard", page_icon="🏥", layout="wide"
+)
 
 
 def main():
@@ -1112,9 +1114,10 @@ def get_health_alerts(strategies):
                 {
                     "strategy": strategy,
                     "severity": "High" if health["score"] < 75 else "Medium",
-                    "message": f"Health score of {health['score']:.1f} requires attention. {health['issues'][0] if health['issues'] else 'Performance optimization needed.'}",
-                }
-            )
+                    "message": f"Health score of {
+                        health['score']:.1f} requires attention. {
+                        health['issues'][0] if health['issues'] else 'Performance optimization needed.'}",
+                })
 
         # Add specific alerts based on strategy type
         if "RSI" in strategy and health["score"] < 85:

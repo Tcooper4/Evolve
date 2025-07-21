@@ -16,27 +16,27 @@ Features:
 import logging
 import os
 import pickle
-from datetime import datetime, timedelta
+from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from dataclasses import dataclass, field
 
 # AutoML imports
 try:
-    import flaml
     from flaml import AutoML
+
     FLAML_AVAILABLE = True
 except ImportError:
     FLAML_AVAILABLE = False
     logging.warning("FLAML not available, falling back to basic model search")
 
 try:
-    import optuna
     from optuna import create_study
     from optuna.samplers import TPESampler
+
     OPTUNA_AVAILABLE = True
 except ImportError:
     OPTUNA_AVAILABLE = False
@@ -44,13 +44,11 @@ except ImportError:
 
 # ML imports
 try:
-    from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-    from sklearn.linear_model import LinearRegression, Ridge, Lasso
-    from sklearn.svm import SVR
-    from sklearn.neural_network import MLPRegressor
-    from sklearn.preprocessing import StandardScaler
+    from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+    from sklearn.linear_model import Lasso, LinearRegression, Ridge
+    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
     from sklearn.model_selection import TimeSeriesSplit
-    from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
@@ -62,6 +60,7 @@ try:
     import torch.nn as nn
     import torch.optim as optim
     from torch.utils.data import DataLoader, TensorDataset
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -69,7 +68,7 @@ except ImportError:
 
 # Trading imports
 from utils.cache_utils import cache_model_operation
-from utils.weight_registry import get_weight_registry, update_model_weights, optimize_ensemble_weights
+from utils.weight_registry import get_weight_registry, optimize_ensemble_weights
 
 logger = logging.getLogger(__name__)
 
@@ -193,13 +192,17 @@ class ModelInnovationAgent:
 
         for dep, available in dependencies.items():
             status = "✅" if available else "❌"
-            self.logger.info(f"{status} {dep}: {'Available' if available else 'Not available'}")
+            self.logger.info(
+                f"{status} {dep}: {'Available' if available else 'Not available'}"
+            )
 
         if not any([FLAML_AVAILABLE, OPTUNA_AVAILABLE]):
             raise RuntimeError("No AutoML library available (FLAML or Optuna required)")
 
     @cache_model_operation(model_type="innovation")
-    def discover_models(self, data: pd.DataFrame, target_col: str = "target") -> List[ModelCandidate]:
+    def discover_models(
+        self, data: pd.DataFrame, target_col: str = "target"
+    ) -> List[ModelCandidate]:
         """
         Discover new model candidates using AutoML.
 
@@ -233,12 +236,14 @@ class ModelInnovationAgent:
             candidates.extend(manual_candidates)
 
         # Limit number of candidates
-        candidates = candidates[:self.config.max_models_per_search]
+        candidates = candidates[: self.config.max_models_per_search]
 
         self.logger.info(f"Discovered {len(candidates)} model candidates")
         return candidates
 
-    def _discover_with_flaml(self, X: pd.DataFrame, y: pd.Series) -> List[ModelCandidate]:
+    def _discover_with_flaml(
+        self, X: pd.DataFrame, y: pd.Series
+    ) -> List[ModelCandidate]:
         """Discover models using FLAML AutoML."""
         candidates = []
 
@@ -250,41 +255,48 @@ class ModelInnovationAgent:
             search_space = {}
 
             if self.config.enable_linear_models:
-                search_space.update({
-                    "linear": {
-                        "alpha": [0.001, 0.01, 0.1, 1.0, 10.0],
-                        "fit_intercept": [True, False],
+                search_space.update(
+                    {
+                        "linear": {
+                            "alpha": [0.001, 0.01, 0.1, 1.0, 10.0],
+                            "fit_intercept": [True, False],
+                        }
                     }
-                })
+                )
 
             if self.config.enable_tree_models:
-                search_space.update({
-                    "rf": {
-                        "n_estimators": [50, 100, 200],
-                        "max_depth": [3, 5, 7, 10, None],
-                        "min_samples_split": [2, 5, 10],
-                    },
-                    "xgboost": {
-                        "n_estimators": [50, 100, 200],
-                        "max_depth": [3, 5, 7],
-                        "learning_rate": [0.01, 0.1, 0.2],
+                search_space.update(
+                    {
+                        "rf": {
+                            "n_estimators": [50, 100, 200],
+                            "max_depth": [3, 5, 7, 10, None],
+                            "min_samples_split": [2, 5, 10],
+                        },
+                        "xgboost": {
+                            "n_estimators": [50, 100, 200],
+                            "max_depth": [3, 5, 7],
+                            "learning_rate": [0.01, 0.1, 0.2],
+                        },
                     }
-                })
+                )
 
             if self.config.enable_neural_models and TORCH_AVAILABLE:
-                search_space.update({
-                    "neural": {
-                        "hidden_size": [32, 64, 128],
-                        "num_layers": [1, 2, 3],
-                        "dropout": [0.1, 0.2, 0.3],
+                search_space.update(
+                    {
+                        "neural": {
+                            "hidden_size": [32, 64, 128],
+                            "num_layers": [1, 2, 3],
+                            "dropout": [0.1, 0.2, 0.3],
+                        }
                     }
-                })
+                )
 
             # Run AutoML
             start_time = datetime.now()
 
             automl.fit(
-                X, y,
+                X,
+                y,
                 task=self.config.automl_task,
                 metric=self.config.automl_metric,
                 time_budget=self.config.automl_time_budget,
@@ -300,8 +312,11 @@ class ModelInnovationAgent:
             best_config = automl.best_config
 
             candidate = ModelCandidate(
-                name=f"flaml_{best_config.get('estimator', 'unknown')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                model_type=self._classify_model_type(best_config.get('estimator', '')),
+                name=(
+                    f"flaml_{best_config.get('estimator', 'unknown')}_"
+                    f"{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                ),
+                model_type=self._classify_model_type(best_config.get("estimator", "")),
                 model=best_model,
                 hyperparameters=best_config,
                 training_time=training_time,
@@ -309,44 +324,51 @@ class ModelInnovationAgent:
                     "automl_library": "flaml",
                     "best_score": automl.best_loss,
                     "search_time": training_time,
-                }
+                },
             )
 
             candidates.append(candidate)
-            self.logger.info(f"FLAML discovered: {candidate.name} (score: {automl.best_loss:.4f})")
+            self.logger.info(
+                f"FLAML discovered: {candidate.name} (score: {automl.best_loss:.4f})"
+            )
 
         except Exception as e:
             self.logger.error(f"FLAML discovery failed: {e}")
 
         return candidates
 
-    def _discover_with_optuna(self, X: pd.DataFrame, y: pd.Series) -> List[ModelCandidate]:
+    def _discover_with_optuna(
+        self, X: pd.DataFrame, y: pd.Series
+    ) -> List[ModelCandidate]:
         """Discover models using Optuna hyperparameter optimization."""
         candidates = []
 
         try:
             # Create study
             study = create_study(
-                direction="minimize",
-                sampler=TPESampler(seed=self.config.random_state)
+                direction="minimize", sampler=TPESampler(seed=self.config.random_state)
             )
 
             # Define objective function
             def objective(trial):
                 # Sample model type
-                model_type = trial.suggest_categorical("model_type", ["linear", "tree", "neural"])
+                model_type = trial.suggest_categorical(
+                    "model_type", ["linear", "tree", "neural"]
+                )
 
                 if model_type == "linear":
                     model = Ridge(
                         alpha=trial.suggest_float("alpha", 0.001, 10.0, log=True),
-                        fit_intercept=trial.suggest_categorical("fit_intercept", [True, False])
+                        fit_intercept=trial.suggest_categorical(
+                            "fit_intercept", [True, False]
+                        ),
                     )
                 elif model_type == "tree":
                     model = RandomForestRegressor(
                         n_estimators=trial.suggest_int("n_estimators", 50, 200),
                         max_depth=trial.suggest_int("max_depth", 3, 10),
                         min_samples_split=trial.suggest_int("min_samples_split", 2, 10),
-                        random_state=self.config.random_state
+                        random_state=self.config.random_state,
                     )
                 elif model_type == "neural" and TORCH_AVAILABLE:
                     # Create neural network
@@ -355,7 +377,15 @@ class ModelInnovationAgent:
                     num_layers = trial.suggest_int("num_layers", 1, 3)
                     dropout = trial.suggest_float("dropout", 0.1, 0.3)
 
-                    model = self._create_neural_network(input_size, hidden_size, num_layers, dropout)
+                    model = self._create_neural_network(
+                        input_size, hidden_size, num_layers, dropout
+                    )
+                elif model_type == "neural" and not TORCH_AVAILABLE:
+                    # Fallback to linear model if PyTorch is not available
+                    model = Ridge(alpha=1.0)
+                else:
+                    # This should not happen given the categorical choices, but provide fallback
+                    model = Ridge(alpha=1.0)
 
                 # Cross-validation
                 tscv = TimeSeriesSplit(n_splits=self.config.cv_folds)
@@ -366,7 +396,9 @@ class ModelInnovationAgent:
                     y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
 
                     if model_type == "neural":
-                        score = self._train_neural_network(model, X_train, y_train, X_val, y_val)
+                        score = self._train_neural_network(
+                            model, X_train, y_train, X_val, y_val
+                        )
                     else:
                         model.fit(X_train, y_train)
                         y_pred = model.predict(X_val)
@@ -378,7 +410,9 @@ class ModelInnovationAgent:
 
             # Optimize
             start_time = datetime.now()
-            study.optimize(objective, n_trials=50, timeout=self.config.automl_time_budget)
+            study.optimize(
+                objective, n_trials=50, timeout=self.config.automl_time_budget
+            )
             training_time = (datetime.now() - start_time).total_seconds()
 
             # Create candidate from best trial
@@ -388,15 +422,19 @@ class ModelInnovationAgent:
             # Recreate best model
             model_type = best_params["model_type"]
             if model_type == "linear":
-                best_model = Ridge(**{k: v for k, v in best_params.items() if k != "model_type"})
+                best_model = Ridge(
+                    **{k: v for k, v in best_params.items() if k != "model_type"}
+                )
             elif model_type == "tree":
-                best_model = RandomForestRegressor(**{k: v for k, v in best_params.items() if k != "model_type"})
+                best_model = RandomForestRegressor(
+                    **{k: v for k, v in best_params.items() if k != "model_type"}
+                )
             elif model_type == "neural":
                 best_model = self._create_neural_network(
                     X.shape[1],
                     best_params["hidden_size"],
                     best_params["num_layers"],
-                    best_params["dropout"]
+                    best_params["dropout"],
                 )
 
             candidate = ModelCandidate(
@@ -409,18 +447,22 @@ class ModelInnovationAgent:
                     "automl_library": "optuna",
                     "best_score": best_trial.value,
                     "n_trials": len(study.trials),
-                }
+                },
             )
 
             candidates.append(candidate)
-            self.logger.info(f"Optuna discovered: {candidate.name} (score: {best_trial.value:.4f})")
+            self.logger.info(
+                f"Optuna discovered: {candidate.name} (score: {best_trial.value:.4f})"
+            )
 
         except Exception as e:
             self.logger.error(f"Optuna discovery failed: {e}")
 
         return candidates
 
-    def _discover_manual_models(self, X: pd.DataFrame, y: pd.Series) -> List[ModelCandidate]:
+    def _discover_manual_models(
+        self, X: pd.DataFrame, y: pd.Series
+    ) -> List[ModelCandidate]:
         """Discover models using manual search as fallback."""
         candidates = []
 
@@ -442,20 +484,33 @@ class ModelInnovationAgent:
                     training_time = (datetime.now() - start_time).total_seconds()
 
                     candidate = ModelCandidate(
-                        name=f"manual_{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                        name=(
+                            f"manual_{name}_"
+                            f"{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                        ),
                         model_type="linear",
                         model=model,
                         hyperparameters={"model": name},
                         training_time=training_time,
-                        metadata={"search_method": "manual"}
+                        metadata={"search_method": "manual"},
                     )
                     candidates.append(candidate)
 
             # Tree models
             if self.config.enable_tree_models:
                 tree_models = [
-                    ("rf", RandomForestRegressor(n_estimators=100, random_state=self.config.random_state)),
-                    ("gbm", GradientBoostingRegressor(n_estimators=100, random_state=self.config.random_state)),
+                    (
+                        "rf",
+                        RandomForestRegressor(
+                            n_estimators=100, random_state=self.config.random_state
+                        ),
+                    ),
+                    (
+                        "gbm",
+                        GradientBoostingRegressor(
+                            n_estimators=100, random_state=self.config.random_state
+                        ),
+                    ),
                 ]
 
                 for name, model in tree_models:
@@ -464,12 +519,15 @@ class ModelInnovationAgent:
                     training_time = (datetime.now() - start_time).total_seconds()
 
                     candidate = ModelCandidate(
-                        name=f"manual_{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                        name=(
+                            f"manual_{name}_"
+                            f"{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                        ),
                         model_type="tree",
                         model=model,
                         hyperparameters={"model": name},
                         training_time=training_time,
-                        metadata={"search_method": "manual"}
+                        metadata={"search_method": "manual"},
                     )
                     candidates.append(candidate)
 
@@ -480,8 +538,11 @@ class ModelInnovationAgent:
 
         return candidates
 
-    def _create_neural_network(self, input_size: int, hidden_size: int, num_layers: int, dropout: float) -> nn.Module:
+    def _create_neural_network(
+        self, input_size: int, hidden_size: int, num_layers: int, dropout: float
+    ) -> nn.Module:
         """Create a neural network model."""
+
         class ForecastingNN(nn.Module):
             def __init__(self, input_size, hidden_size, num_layers, dropout):
                 super().__init__()
@@ -508,8 +569,14 @@ class ModelInnovationAgent:
 
         return ForecastingNN(input_size, hidden_size, num_layers, dropout)
 
-    def _train_neural_network(self, model: nn.Module, X_train: pd.DataFrame, y_train: pd.Series,
-                             X_val: pd.DataFrame, y_val: pd.Series) -> float:
+    def _train_neural_network(
+        self,
+        model: nn.Module,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        X_val: pd.DataFrame,
+        y_val: pd.Series,
+    ) -> float:
         """Train neural network and return validation score."""
         # Convert to tensors
         X_train_tensor = torch.FloatTensor(X_train.values)
@@ -558,15 +625,17 @@ class ModelInnovationAgent:
         else:
             return "unknown"
 
-    def _prepare_data(self, data: pd.DataFrame, target_col: str) -> Tuple[pd.DataFrame, pd.Series]:
+    def _prepare_data(
+        self, data: pd.DataFrame, target_col: str
+    ) -> Tuple[pd.DataFrame, pd.Series]:
         """Prepare data for model training."""
         # Remove target column
         X = data.drop(columns=[target_col])
         y = data[target_col]
 
         # Handle missing values
-        X = X.fillna(method='ffill').fillna(method='bfill')
-        y = y.fillna(method='ffill').fillna(method='bfill')
+        X = X.fillna(method="ffill").fillna(method="bfill")
+        y = y.fillna(method="ffill").fillna(method="bfill")
 
         # Remove any remaining NaN
         mask = ~(X.isna().any(axis=1) | y.isna())
@@ -575,8 +644,9 @@ class ModelInnovationAgent:
 
         return X, y
 
-    def evaluate_candidate(self, candidate: ModelCandidate, data: pd.DataFrame,
-                          target_col: str = "target") -> ModelEvaluation:
+    def evaluate_candidate(
+        self, candidate: ModelCandidate, data: pd.DataFrame, target_col: str = "target"
+    ) -> ModelEvaluation:
         """
         Evaluate a model candidate against existing ensemble.
 
@@ -603,7 +673,9 @@ class ModelInnovationAgent:
 
         if candidate.model_type == "neural" and TORCH_AVAILABLE:
             # Train neural network
-            self._train_neural_network(candidate.model, X_train, y_train, X_test, y_test)
+            self._train_neural_network(
+                candidate.model, X_train, y_train, X_test, y_test
+            )
             training_time = (datetime.now() - start_time).total_seconds()
 
             # Predict
@@ -611,6 +683,9 @@ class ModelInnovationAgent:
             with torch.no_grad():
                 X_test_tensor = torch.FloatTensor(X_test.values)
                 y_pred = candidate.model(X_test_tensor).squeeze().numpy()
+            
+            # For neural networks, inference time is negligible (already computed)
+            inference_time = 0.0
         else:
             # Train sklearn model
             candidate.model.fit(X_train, y_train)
@@ -654,7 +729,7 @@ class ModelInnovationAgent:
             volatility=volatility,
             training_time=training_time,
             inference_time=inference_time,
-            model_size_mb=model_size_mb
+            model_size_mb=model_size_mb,
         )
 
         self.logger.info(f"Evaluation complete: {candidate.name}")
@@ -667,7 +742,7 @@ class ModelInnovationAgent:
         try:
             # Save model to temporary file
             temp_path = f"{self.config.cache_dir}/temp_model.pkl"
-            with open(temp_path, 'wb') as f:
+            with open(temp_path, "wb") as f:
                 pickle.dump(model, f)
 
             # Get file size
@@ -678,7 +753,9 @@ class ModelInnovationAgent:
             os.remove(temp_path)
 
             return size_mb
-        except Exception:
+        except Exception as e:
+            # Log the error for debugging but return 0.0 to avoid breaking the pipeline
+            self.logger.debug(f"Error calculating model size: {e}")
             return 0.0
 
     def compare_with_ensemble(self, evaluation: ModelEvaluation) -> Dict[str, Any]:
@@ -697,15 +774,33 @@ class ModelInnovationAgent:
         if not current_models:
             return {
                 "improvement": True,
-                "improvement_percentage": float('inf'),
-                "reason": "No existing models to compare against"
+                "improvement_percentage": float("inf"),
+                "reason": "No existing models to compare against",
             }
 
         # Calculate ensemble metrics
         ensemble_metrics = {
-            "mse": np.mean([m["performance"]["mse"] for m in current_models.values() if "mse" in m["performance"]]),
-            "sharpe": np.mean([m["performance"]["sharpe_ratio"] for m in current_models.values() if "sharpe_ratio" in m["performance"]]),
-            "r2": np.mean([m["performance"]["r2_score"] for m in current_models.values() if "r2_score" in m["performance"]]),
+            "mse": np.mean(
+                [
+                    m["performance"]["mse"]
+                    for m in current_models.values()
+                    if "mse" in m["performance"]
+                ]
+            ),
+            "sharpe": np.mean(
+                [
+                    m["performance"]["sharpe_ratio"]
+                    for m in current_models.values()
+                    if "sharpe_ratio" in m["performance"]
+                ]
+            ),
+            "r2": np.mean(
+                [
+                    m["performance"]["r2_score"]
+                    for m in current_models.values()
+                    if "r2_score" in m["performance"]
+                ]
+            ),
         }
 
         # Check for improvement
@@ -713,25 +808,37 @@ class ModelInnovationAgent:
 
         # MSE improvement (lower is better)
         if evaluation.mse < ensemble_metrics["mse"]:
-            mse_improvement = (ensemble_metrics["mse"] - evaluation.mse) / ensemble_metrics["mse"]
+            mse_improvement = (
+                ensemble_metrics["mse"] - evaluation.mse
+            ) / ensemble_metrics["mse"]
             improvements.append(f"MSE improved by {mse_improvement:.2%}")
 
         # Sharpe ratio improvement (higher is better)
         if evaluation.sharpe_ratio > ensemble_metrics["sharpe"]:
-            sharpe_improvement = (evaluation.sharpe_ratio - ensemble_metrics["sharpe"]) / abs(ensemble_metrics["sharpe"])
+            sharpe_improvement = (
+                evaluation.sharpe_ratio - ensemble_metrics["sharpe"]
+            ) / abs(ensemble_metrics["sharpe"])
             improvements.append(f"Sharpe ratio improved by {sharpe_improvement:.2%}")
 
         # R² improvement (higher is better)
         if evaluation.r2_score > ensemble_metrics["r2"]:
-            r2_improvement = (evaluation.r2_score - ensemble_metrics["r2"]) / abs(ensemble_metrics["r2"])
+            r2_improvement = (evaluation.r2_score - ensemble_metrics["r2"]) / abs(
+                ensemble_metrics["r2"]
+            )
             improvements.append(f"R² improved by {r2_improvement:.2%}")
 
         # Overall improvement
-        has_improvement = len(improvements) > 0 and any([
-            evaluation.mse < ensemble_metrics["mse"] * (1 - self.config.min_improvement_threshold),
-            evaluation.sharpe_ratio > ensemble_metrics["sharpe"] * (1 + self.config.min_improvement_threshold),
-            evaluation.r2_score > ensemble_metrics["r2"] * (1 + self.config.min_improvement_threshold),
-        ])
+        has_improvement = len(improvements) > 0 and any(
+            [
+                evaluation.mse
+                < ensemble_metrics["mse"] * (1 - self.config.min_improvement_threshold),
+                evaluation.sharpe_ratio
+                > ensemble_metrics["sharpe"]
+                * (1 + self.config.min_improvement_threshold),
+                evaluation.r2_score
+                > ensemble_metrics["r2"] * (1 + self.config.min_improvement_threshold),
+            ]
+        )
 
         return {
             "improvement": has_improvement,
@@ -741,10 +848,12 @@ class ModelInnovationAgent:
                 "mse": evaluation.mse,
                 "sharpe_ratio": evaluation.sharpe_ratio,
                 "r2_score": evaluation.r2_score,
-            }
+            },
         }
 
-    def integrate_model(self, candidate: ModelCandidate, evaluation: ModelEvaluation) -> bool:
+    def integrate_model(
+        self, candidate: ModelCandidate, evaluation: ModelEvaluation
+    ) -> bool:
         """
         Integrate a successful model into the ensemble.
 
@@ -760,7 +869,7 @@ class ModelInnovationAgent:
 
             # Save model
             model_path = f"{self.config.models_dir}/{candidate.name}.pkl"
-            with open(model_path, 'wb') as f:
+            with open(model_path, "wb") as f:
                 pickle.dump(candidate.model, f)
 
             # Register model in weight registry
@@ -771,11 +880,13 @@ class ModelInnovationAgent:
                 model_type=candidate.model_type,
                 initial_weights=initial_weights,
                 metadata={
-                    "discovery_method": candidate.metadata.get("automl_library", "manual"),
+                    "discovery_method": candidate.metadata.get(
+                        "automl_library", "manual"
+                    ),
                     "hyperparameters": candidate.hyperparameters,
                     "training_time": candidate.training_time,
                     "model_path": model_path,
-                }
+                },
             )
 
             if not success:
@@ -798,8 +909,7 @@ class ModelInnovationAgent:
             # Optimize ensemble weights
             current_models = list(self.weight_registry.registry["models"].keys())
             optimized_weights = optimize_ensemble_weights(
-                model_names=current_models,
-                method="performance_weighted"
+                model_names=current_models, method="performance_weighted"
             )
 
             # Update weights for all models
@@ -807,7 +917,7 @@ class ModelInnovationAgent:
                 self.weight_registry.update_weights(
                     model_name=model_name,
                     new_weights={"base_weight": weight},
-                    reason="ensemble_optimization"
+                    reason="ensemble_optimization",
                 )
 
             # Record innovation
@@ -832,7 +942,9 @@ class ModelInnovationAgent:
             self.logger.error(f"Failed to integrate model {candidate.name}: {e}")
             return False
 
-    def run_innovation_cycle(self, data: pd.DataFrame, target_col: str = "target") -> Dict[str, Any]:
+    def run_innovation_cycle(
+        self, data: pd.DataFrame, target_col: str = "target"
+    ) -> Dict[str, Any]:
         """
         Run a complete model innovation cycle.
 
@@ -879,11 +991,17 @@ class ModelInnovationAgent:
                         # Step 4: Integrate if better
                         if self.integrate_model(candidate, evaluation):
                             results["models_integrated"] += 1
-                            self.logger.info(f"Integrated improved model: {candidate.name}")
+                            self.logger.info(
+                                f"Integrated improved model: {candidate.name}"
+                            )
                         else:
-                            results["errors"].append(f"Failed to integrate {candidate.name}")
+                            results["errors"].append(
+                                f"Failed to integrate {candidate.name}"
+                            )
                     else:
-                        self.logger.info(f"Model {candidate.name} did not improve ensemble")
+                        self.logger.info(
+                            f"Model {candidate.name} did not improve ensemble"
+                        )
 
                     # Store evaluation
                     self.evaluations.append(evaluation)
@@ -897,15 +1015,14 @@ class ModelInnovationAgent:
             current_models = list(self.weight_registry.registry["models"].keys())
             if len(current_models) > 1:
                 optimized_weights = optimize_ensemble_weights(
-                    model_names=current_models,
-                    method="performance_weighted"
+                    model_names=current_models, method="performance_weighted"
                 )
 
                 for model_name, weight in optimized_weights.items():
                     self.weight_registry.update_weights(
                         model_name=model_name,
                         new_weights={"base_weight": weight},
-                        reason="post_innovation_optimization"
+                        reason="post_innovation_optimization",
                     )
 
             cycle_time = (datetime.now() - start_time).total_seconds()
@@ -913,7 +1030,10 @@ class ModelInnovationAgent:
             results["cycle_end"] = datetime.now().isoformat()
 
             self.logger.info(f"Innovation cycle completed in {cycle_time:.2f} seconds")
-            self.logger.info(f"Results: {results['models_integrated']} models integrated, {results['improvements_found']} improvements found")
+            self.logger.info(
+                f"Results: {results['models_integrated']} models integrated, "
+                f"{results['improvements_found']} improvements found"
+            )
 
         except Exception as e:
             error_msg = f"Innovation cycle failed: {e}"
@@ -926,9 +1046,15 @@ class ModelInnovationAgent:
         """Get statistics about model innovation activities."""
         return {
             "total_cycles": len(self.innovation_history),
-            "total_models_integrated": sum(1 for record in self.innovation_history if record.get("integration_success", False)),
+            "total_models_integrated": sum(
+                1
+                for record in self.innovation_history
+                if record.get("integration_success", False)
+            ),
             "total_evaluations": len(self.evaluations),
-            "recent_innovations": self.innovation_history[-10:] if self.innovation_history else [],
+            "recent_innovations": (
+                self.innovation_history[-10:] if self.innovation_history else []
+            ),
             "model_type_distribution": self._get_model_type_distribution(),
             "performance_improvements": self._get_performance_improvements(),
         }
@@ -946,17 +1072,21 @@ class ModelInnovationAgent:
         improvements = []
         for record in self.innovation_history:
             if record.get("integration_success", False):
-                improvements.append({
-                    "timestamp": record["timestamp"],
-                    "model_name": record["model_name"],
-                    "model_type": record["model_type"],
-                    "metrics": record["improvement_metrics"],
-                })
+                improvements.append(
+                    {
+                        "timestamp": record["timestamp"],
+                        "model_name": record["model_name"],
+                        "model_type": record["model_type"],
+                        "metrics": record["improvement_metrics"],
+                    }
+                )
         return improvements
 
 
 # Convenience function to create innovation agent
-def create_model_innovation_agent(config: Optional[InnovationConfig] = None) -> ModelInnovationAgent:
+def create_model_innovation_agent(
+    config: Optional[InnovationConfig] = None,
+) -> ModelInnovationAgent:
     """
     Create a configured model innovation agent.
 
@@ -975,12 +1105,14 @@ if __name__ == "__main__":
     agent = create_model_innovation_agent()
 
     # Example data (replace with actual data)
-    sample_data = pd.DataFrame({
-        "feature1": np.random.randn(1000),
-        "feature2": np.random.randn(1000),
-        "feature3": np.random.randn(1000),
-        "target": np.random.randn(1000),
-    })
+    sample_data = pd.DataFrame(
+        {
+            "feature1": np.random.randn(1000),
+            "feature2": np.random.randn(1000),
+            "feature3": np.random.randn(1000),
+            "target": np.random.randn(1000),
+        }
+    )
 
     # Run innovation cycle
     results = agent.run_innovation_cycle(sample_data, target_col="target")
@@ -988,4 +1120,4 @@ if __name__ == "__main__":
 
     # Get statistics
     stats = agent.get_innovation_statistics()
-    print(f"Innovation statistics: {stats}") 
+    print(f"Innovation statistics: {stats}")

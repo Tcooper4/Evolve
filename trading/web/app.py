@@ -50,9 +50,9 @@ def add_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers[
-        "Strict-Transport-Security"
-    ] = "max-age=31536000; includeSubDomains"
+    response.headers["Strict-Transport-Security"] = (
+        "max-age=31536000; includeSubDomains"
+    )
     response.headers["Content-Security-Policy"] = "default-src 'self'"
     return response
 
@@ -475,9 +475,11 @@ def run_backtest(current_user: str) -> Any:
                     "sharpe_ratio": results.get("sharpe_ratio"),
                     "total_return": results.get("total_return"),
                     "max_drawdown": results.get("max_drawdown"),
-                    "equity_curve": results.get("equity_curve").to_dict()
-                    if results.get("equity_curve") is not None
-                    else None,
+                    "equity_curve": (
+                        results.get("equity_curve").to_dict()
+                        if results.get("equity_curve") is not None
+                        else None
+                    ),
                     "trades": results.get("trades"),
                     "metrics": results.get("metrics"),
                 },

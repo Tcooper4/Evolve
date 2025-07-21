@@ -1,5 +1,19 @@
+import logging
 import os
 import sys
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from trading.strategies.bollinger_strategy import BollingerConfig, BollingerStrategy
+from trading.strategies.macd_strategy import MACDStrategy
+from trading.strategies.parameter_validator import (
+    StrategyParameterValidator as ParameterValidator,
+)
+from trading.strategies.rsi_signals import generate_rsi_signals
+from trading.strategies.sma_strategy import SMAStrategy
+from trading.strategies.strategy_manager import StrategyManager
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,21 +26,8 @@ properly and produce reasonable results. Includes advanced testing scenarios
 for hybrid strategies, parameter optimization, and performance validation.
 """
 
-import logging
-
-import numpy as np
-import pandas as pd
-import pytest
 
 # Import available strategies
-from trading.strategies.bollinger_strategy import BollingerConfig, BollingerStrategy
-from trading.strategies.macd_strategy import MACDStrategy
-from trading.strategies.parameter_validator import (
-    StrategyParameterValidator as ParameterValidator,
-)
-from trading.strategies.rsi_signals import generate_rsi_signals
-from trading.strategies.sma_strategy import SMAStrategy
-from trading.strategies.strategy_manager import StrategyManager
 
 logger = logging.getLogger(__name__)
 
@@ -669,15 +670,17 @@ class TestStrategyCombinations:
                         "total_return": returns.sum(),
                         "avg_return": returns.mean(),
                         "return_std": returns.std(),
-                        "sharpe_ratio": returns.mean() / returns.std()
-                        if returns.std() > 0
-                        else 0,
+                        "sharpe_ratio": (
+                            returns.mean() / returns.std() if returns.std() > 0 else 0
+                        ),
                         "max_drawdown": (
                             returns.cumsum() - returns.cumsum().expanding().max()
                         ).min(),
-                        "win_rate": len(returns[returns > 0]) / len(returns)
-                        if len(returns) > 0
-                        else 0,
+                        "win_rate": (
+                            len(returns[returns > 0]) / len(returns)
+                            if len(returns) > 0
+                            else 0
+                        ),
                     }
                 )
 

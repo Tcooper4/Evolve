@@ -44,6 +44,8 @@ from typing import Optional
 import redis
 import yaml
 
+from utils.launch_utils import setup_logging
+
 
 class DatabaseManager:
     def __init__(self, config_path: str = "config/app_config.yaml"):
@@ -51,16 +53,15 @@ class DatabaseManager:
         self.config = self._load_config(config_path)
         self.setup_logging()
         self.logger = logging.getLogger("trading")
-        self.db_dir = Path("data/db")
-        self.backup_dir = self.db_dir / "backups"
+        self.backup_dir = Path("backups/database")
+        self.backup_dir.mkdir(parents=True, exist_ok=True)
 
-        # Initialize Redis connection
+        # Initialize Redis client
         self.redis_client = redis.Redis(
             host=self.config["database"]["host"],
             port=self.config["database"]["port"],
             db=self.config["database"]["db"],
-            password=self.config["database"]["password"],
-            ssl=self.config["database"]["ssl"],
+            decode_responses=True,
         )
 
     def _load_config(self, config_path: str) -> dict:
@@ -72,11 +73,11 @@ class DatabaseManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def backup_database(self, backup_name: Optional[str] = None):
+    def backup_database(self, backup_name: Optional[str] = None):
         """Backup database."""
         self.logger.info("Backing up database...")
 
@@ -253,9 +254,9 @@ def main():
 
     commands = {
         "backup": lambda: manager.backup_database(args.backup_name),
-        "restore": lambda: manager.restore_database(args.backup_name)
-        if args.backup_name
-        else False,
+        "restore": lambda: (
+            manager.restore_database(args.backup_name) if args.backup_name else False
+        ),
         "clear": manager.clear_database,
         "info": manager.get_database_info,
         "optimize": manager.optimize_database,

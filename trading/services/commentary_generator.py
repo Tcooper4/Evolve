@@ -1,4 +1,4 @@
-﻿"""
+"""
 Commentary Generator Module
 
 Handles generation of GPT-powered and fallback commentary for trading analysis results.
@@ -7,7 +7,6 @@ Handles generation of GPT-powered and fallback commentary for trading analysis r
 import json
 import logging
 from typing import Any, Dict, Optional
-import ast
 
 import openai
 
@@ -42,50 +41,57 @@ class CommentaryGenerator:
     def truncate_response(self, response: str, max_tokens: Optional[int] = None) -> str:
         """
         Truncate response to specified token limit.
-        
+
         Args:
             response: Response text to truncate
             max_tokens: Maximum tokens (uses instance default if None)
-            
+
         Returns:
             Truncated response
         """
         if max_tokens is None:
             max_tokens = self.max_tokens
-        
+
         try:
             # Try to use tokenizer if available
             import tiktoken
+
             tokenizer = tiktoken.get_encoding("cl100k_base")  # GPT-3.5/4 tokenizer
             tokens = tokenizer.encode(response)
-            
+
             if len(tokens) <= max_tokens:
                 return response
-            
+
             # Truncate to max_tokens
             truncated_tokens = tokens[:max_tokens]
             truncated_response = tokenizer.decode(truncated_tokens)
-            
-            logger.info(f"Response truncated from {len(tokens)} to {len(truncated_tokens)} tokens")
+
+            logger.info(
+                f"Response truncated from {len(tokens)} to {len(truncated_tokens)} tokens"
+            )
             return truncated_response
-            
+
         except ImportError:
             # Fallback to character-based estimation (rough approximation)
             # Assume ~4 characters per token on average
             estimated_tokens = len(response) // 4
-            
+
             if estimated_tokens <= max_tokens:
                 return response
-            
+
             # Truncate to estimated token limit
             max_chars = max_tokens * 4
             truncated_response = response[:max_chars]
-            
-            logger.info(f"Response truncated from ~{estimated_tokens} to ~{max_tokens} tokens (estimated)")
+
+            logger.info(
+                f"Response truncated from ~{estimated_tokens} to ~{max_tokens} tokens (estimated)"
+            )
             return truncated_response
-        
+
         except Exception as e:
-            logger.warning(f"Error in token counting, using character-based truncation: {e}")
+            logger.warning(
+                f"Error in token counting, using character-based truncation: {e}"
+            )
             # Fallback to simple character truncation
             max_chars = max_tokens * 4
             return response[:max_chars]
@@ -174,14 +180,22 @@ class CommentaryGenerator:
         if intent == "model_recommendation":
             best_model = result.get("best_model")
             if best_model:
-                return f"Based on our analysis, the {best_model['model_type'].upper()} model shows the best performance for {symbol} with an overall score of {best_model['evaluation'].get('overall_score', 0):.2f}. This model has been evaluated across multiple metrics including Sharpe ratio, maximum drawdown, and win rate."
+                return f"Based on our analysis, the {
+                    best_model['model_type'].upper()} model shows the best performance for {symbol} with an overall score of {
+                    best_model['evaluation'].get(
+                        'overall_score',
+                        0):.2f}. This model has been evaluated across multiple metrics including Sharpe ratio, maximum drawdown, and win rate."
             else:
                 return f"Analysis completed for {symbol}, but no suitable model was found. Consider adjusting parameters or timeframes."
 
         elif intent == "trading_signal":
             signal = result.get("signal", {})
             if signal:
-                return f"Trading signal for {symbol}: {signal['signal']} ({signal['strength']} confidence). {signal['reasoning']} Model performance score: {signal['model_score']:.2f}"
+                return f"Trading signal for {symbol}: {
+                    signal['signal']} ({
+                    signal['strength']} confidence). {
+                    signal['reasoning']} Model performance score: {
+                    signal['model_score']:.2f}"
             else:
                 return f"Unable to generate trading signal for {symbol}. Please check model availability and data quality."
 

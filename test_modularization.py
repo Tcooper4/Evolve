@@ -22,7 +22,7 @@ def test_file_structure():
         "trading/optimization/pso_optimizer.py",
         "trading/optimization/ray_optimizer.py",
         "trading/optimization/strategy_optimizer.py",
-        "trading/optimization/__init__.py"
+        "trading/optimization/__init__.py",
     ]
 
     missing_files = []
@@ -45,7 +45,9 @@ def test_file_sizes():
     logger.info("\n📏 Testing file sizes...")
 
     # Check that strategy_optimizer.py is now much smaller
-    strategy_optimizer_size = Path("trading/optimization/strategy_optimizer.py").stat().st_size
+    strategy_optimizer_size = (
+        Path("trading/optimization/strategy_optimizer.py").stat().st_size
+    )
     logger.info(f"Strategy optimizer size: {strategy_optimizer_size:,} bytes")
 
     if strategy_optimizer_size < 10000:  # Should be much smaller now
@@ -73,7 +75,7 @@ def test_import_structure():
         "BayesianOptimization",
         "GeneticAlgorithm",
         "ParticleSwarmOptimization",
-        "RayTuneOptimization"
+        "RayTuneOptimization",
     ]
 
     missing_exports = []
@@ -102,7 +104,7 @@ def test_code_quality():
         "trading/optimization/genetic_optimizer.py",
         "trading/optimization/pso_optimizer.py",
         "trading/optimization/ray_optimizer.py",
-        "trading/optimization/strategy_optimizer.py"
+        "trading/optimization/strategy_optimizer.py",
     ]
 
     issues = []
@@ -139,18 +141,24 @@ def test_dependencies():
         "trading/optimization/bayesian_optimizer.py",
         "trading/optimization/genetic_optimizer.py",
         "trading/optimization/pso_optimizer.py",
-        "trading/optimization/ray_optimizer.py"
+        "trading/optimization/ray_optimizer.py",
     ]
 
     dependency_issues = []
     for file_path in files_to_check:
         content = Path(file_path).read_text()
-        
+
         # Check for excessive imports
-        import_lines = [line for line in content.split('\n') if line.strip().startswith('import') or line.strip().startswith('from')]
-        
+        import_lines = [
+            line
+            for line in content.split("\n")
+            if line.strip().startswith("import") or line.strip().startswith("from")
+        ]
+
         if len(import_lines) > 10:  # Too many imports
-            dependency_issues.append(f"{file_path}: Too many imports ({len(import_lines)})")
+            dependency_issues.append(
+                f"{file_path}: Too many imports ({len(import_lines)})"
+            )
 
     if dependency_issues:
         logger.warning(f"⚠️ Dependency issues: {dependency_issues}")
@@ -173,7 +181,7 @@ def main():
         ("File Sizes", test_file_sizes),
         ("Import Structure", test_import_structure),
         ("Code Quality", test_code_quality),
-        ("Dependencies", test_dependencies)
+        ("Dependencies", test_dependencies),
     ]
 
     for test_name, test_func in tests:
@@ -211,4 +219,4 @@ def main():
 
 if __name__ == "__main__":
     success = main()
-    exit(0 if success else 1) 
+    exit(0 if success else 1)

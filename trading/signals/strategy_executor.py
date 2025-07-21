@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class TaskStatus(Enum):
     """Task execution status."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -29,6 +30,7 @@ class TaskStatus(Enum):
 @dataclass
 class TaskResult:
     """Result of task execution."""
+
     task_id: str
     strategy_name: str
     status: TaskStatus
@@ -43,15 +45,16 @@ class TaskResult:
         """Convert to dictionary."""
         result = asdict(self)
         if self.start_time:
-            result['start_time'] = self.start_time.isoformat()
+            result["start_time"] = self.start_time.isoformat()
         if self.end_time:
-            result['end_time'] = self.end_time.isoformat()
+            result["end_time"] = self.end_time.isoformat()
         return result
 
 
 @dataclass
 class StrategyTask:
     """Strategy execution task."""
+
     task_id: str
     strategy_name: str
     strategy_func: Callable
@@ -80,11 +83,13 @@ class StrategyExecutor:
     - Priority-based task scheduling
     """
 
-    def __init__(self,
-                 max_queue_size: int = 100,
-                 max_concurrent_tasks: int = 10,
-                 default_timeout: float = 30.0,
-                 enable_metrics: bool = True):
+    def __init__(
+        self,
+        max_queue_size: int = 100,
+        max_concurrent_tasks: int = 10,
+        default_timeout: float = 30.0,
+        enable_metrics: bool = True,
+    ):
         """Initialize the strategy executor."""
         self.max_queue_size = max_queue_size
         self.max_concurrent_tasks = max_concurrent_tasks
@@ -100,14 +105,14 @@ class StrategyExecutor:
 
         # Performance metrics
         self.metrics = {
-            'total_tasks': 0,
-            'completed_tasks': 0,
-            'failed_tasks': 0,
-            'dropped_tasks': 0,
-            'timeout_tasks': 0,
-            'average_execution_time': 0.0,
-            'queue_overflow_count': 0,
-            'start_time': datetime.now()
+            "total_tasks": 0,
+            "completed_tasks": 0,
+            "failed_tasks": 0,
+            "dropped_tasks": 0,
+            "timeout_tasks": 0,
+            "average_execution_time": 0.0,
+            "queue_overflow_count": 0,
+            "start_time": datetime.now(),
         }
 
         # Control flags
@@ -115,7 +120,9 @@ class StrategyExecutor:
         self._task_counter = 0
         self._lock = asyncio.Lock()
 
-        logger.info(f"StrategyExecutor initialized: max_queue={max_queue_size}, max_concurrent={max_concurrent_tasks}")
+        logger.info(
+            f"StrategyExecutor initialized: max_queue={max_queue_size}, max_concurrent={max_concurrent_tasks}"
+        )
 
     async def start(self):
         """Start the strategy executor."""
@@ -163,13 +170,15 @@ class StrategyExecutor:
 
         logger.info("✅ StrategyExecutor stopped gracefully")
 
-    async def submit_task(self,
-                         strategy_name: str,
-                         strategy_func: Callable,
-                         *args,
-                         priority: int = 1,
-                         timeout: Optional[float] = None,
-                         **kwargs) -> Optional[str]:
+    async def submit_task(
+        self,
+        strategy_name: str,
+        strategy_func: Callable,
+        *args,
+        priority: int = 1,
+        timeout: Optional[float] = None,
+        **kwargs,
+    ) -> Optional[str]:
         """Submit a strategy task for execution."""
         if not self.running:
             logger.error("StrategyExecutor not running")
@@ -191,17 +200,14 @@ class StrategyExecutor:
             args=args,
             kwargs=kwargs,
             priority=priority,
-            timeout=timeout or self.default_timeout
+            timeout=timeout or self.default_timeout,
         )
 
         try:
             # Add to queue with timeout
-            await asyncio.wait_for(
-                self.task_queue.put(task),
-                timeout=5.0
-            )
+            await asyncio.wait_for(self.task_queue.put(task), timeout=5.0)
 
-            self.metrics['total_tasks'] += 1
+            self.metrics["total_tasks"] += 1
             logger.debug(f"Task submitted: {task_id} ({strategy_name})")
             return task_id
 
@@ -220,12 +226,12 @@ class StrategyExecutor:
             status=TaskStatus.DROPPED,
             error_message="Queue overflow - task dropped",
             start_time=datetime.now(),
-            end_time=datetime.now()
+            end_time=datetime.now(),
         )
 
         self.dropped_tasks.append(dropped_result)
-        self.metrics['dropped_tasks'] += 1
-        self.metrics['queue_overflow_count'] += 1
+        self.metrics["dropped_tasks"] += 1
+        self.metrics["queue_overflow_count"] += 1
 
         logger.warning(f"Queue overflow - dropped task {task_id} ({strategy_name})")
         logger.warning(f"Queue size: {self.task_queue.qsize()}/{self.max_queue_size}")
@@ -237,10 +243,7 @@ class StrategyExecutor:
         while self.running:
             try:
                 # Get task from queue
-                task = await asyncio.wait_for(
-                    self.task_queue.get(),
-                    timeout=1.0
-                )
+                task = await asyncio.wait_for(self.task_queue.get(), timeout=1.0)
 
                 # Execute task
                 await self._execute_task(task, worker_name)
@@ -265,19 +268,20 @@ class StrategyExecutor:
             strategy_name=task.strategy_name,
             status=TaskStatus.RUNNING,
             start_time=start_time,
-            timeout=task.timeout
+            timeout=task.timeout,
         )
 
         # Add to running tasks
         self.running_tasks[task.task_id] = asyncio.current_task()
 
         try:
-            logger.debug(f"Executing task {task.task_id} ({task.strategy_name}) on {worker_name}")
+            logger.debug(
+                f"Executing task {task.task_id} ({task.strategy_name}) on {worker_name}"
+            )
 
             # Execute strategy with timeout
             result = await asyncio.wait_for(
-                self._call_strategy(task),
-                timeout=task.timeout
+                self._call_strategy(task), timeout=task.timeout
             )
 
             # Task completed successfully
@@ -290,7 +294,7 @@ class StrategyExecutor:
             task_result.execution_time = execution_time
 
             self.completed_tasks.append(task_result)
-            self.metrics['completed_tasks'] += 1
+            self.metrics["completed_tasks"] += 1
 
             logger.debug(f"Task {task.task_id} completed in {execution_time:.2f}s")
 
@@ -305,7 +309,7 @@ class StrategyExecutor:
             task_result.execution_time = execution_time
 
             self.failed_tasks.append(task_result)
-            self.metrics['timeout_tasks'] += 1
+            self.metrics["timeout_tasks"] += 1
 
             logger.warning(f"Task {task.task_id} timed out after {execution_time:.2f}s")
 
@@ -320,7 +324,7 @@ class StrategyExecutor:
             task_result.execution_time = execution_time
 
             self.failed_tasks.append(task_result)
-            self.metrics['failed_tasks'] += 1
+            self.metrics["failed_tasks"] += 1
 
             logger.error(f"Task {task.task_id} failed: {e}")
 
@@ -337,10 +341,7 @@ class StrategyExecutor:
             # Sync function - run in thread pool
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(
-                None,
-                task.strategy_func,
-                *task.args,
-                **task.kwargs
+                None, task.strategy_func, *task.args, **task.kwargs
             )
 
     async def _metrics_collector(self):
@@ -354,7 +355,9 @@ class StrategyExecutor:
                 # Calculate average execution time
                 if self.completed_tasks:
                     total_time = sum(t.execution_time for t in self.completed_tasks)
-                    self.metrics['average_execution_time'] = total_time / len(self.completed_tasks)
+                    self.metrics["average_execution_time"] = total_time / len(
+                        self.completed_tasks
+                    )
 
                 logger.debug(f"Metrics updated: {self.metrics}")
 
@@ -368,9 +371,7 @@ class StrategyExecutor:
         # Check running tasks
         if task_id in self.running_tasks:
             return TaskResult(
-                task_id=task_id,
-                strategy_name="unknown",
-                status=TaskStatus.RUNNING
+                task_id=task_id, strategy_name="unknown", status=TaskStatus.RUNNING
             )
 
         # Check completed tasks
@@ -393,9 +394,9 @@ class StrategyExecutor:
     def get_metrics(self) -> Dict[str, Any]:
         """Get current metrics."""
         metrics = self.metrics.copy()
-        metrics['queue_size'] = self.task_queue.qsize()
-        metrics['running_tasks'] = len(self.running_tasks)
-        metrics['uptime'] = (datetime.now() - metrics['start_time']).total_seconds()
+        metrics["queue_size"] = self.task_queue.qsize()
+        metrics["running_tasks"] = len(self.running_tasks)
+        metrics["uptime"] = (datetime.now() - metrics["start_time"]).total_seconds()
         return metrics
 
     def get_failed_tasks_summary(self) -> Dict[str, Any]:
@@ -405,7 +406,9 @@ class StrategyExecutor:
 
         error_counts = {}
         for task in self.failed_tasks:
-            error_type = task.error_message.split(':')[0] if task.error_message else "Unknown"
+            error_type = (
+                task.error_message.split(":")[0] if task.error_message else "Unknown"
+            )
             error_counts[error_type] = error_counts.get(error_type, 0) + 1
 
         return {
@@ -416,10 +419,10 @@ class StrategyExecutor:
                     "task_id": task.task_id,
                     "strategy": task.strategy_name,
                     "error": task.error_message,
-                    "time": task.end_time.isoformat() if task.end_time else None
+                    "time": task.end_time.isoformat() if task.end_time else None,
                 }
                 for task in self.failed_tasks[-10:]  # Last 10 failures
-            ]
+            ],
         }
 
     def clear_completed_tasks(self, max_age_hours: int = 24):
@@ -428,17 +431,20 @@ class StrategyExecutor:
 
         # Filter out old tasks
         self.completed_tasks = [
-            task for task in self.completed_tasks
+            task
+            for task in self.completed_tasks
             if task.end_time and task.end_time.timestamp() > cutoff_time
         ]
 
         self.failed_tasks = [
-            task for task in self.failed_tasks
+            task
+            for task in self.failed_tasks
             if task.end_time and task.end_time.timestamp() > cutoff_time
         ]
 
         self.dropped_tasks = [
-            task for task in self.dropped_tasks
+            task
+            for task in self.dropped_tasks
             if task.end_time and task.end_time.timestamp() > cutoff_time
         ]
 
@@ -456,31 +462,31 @@ def process_strategy_signals(strategy_results):
         Processed signals dictionary
     """
     signals = {
-        'buy_signals': [],
-        'sell_signals': [],
-        'hold_signals': [],
-        'confidence_scores': [],
-        'risk_levels': []
+        "buy_signals": [],
+        "sell_signals": [],
+        "hold_signals": [],
+        "confidence_scores": [],
+        "risk_levels": [],
     }
 
     for result in strategy_results:
         if result.status == TaskStatus.COMPLETED:
             # Process successful strategy result
-            if hasattr(result.result, 'signal_type'):
+            if hasattr(result.result, "signal_type"):
                 signal_type = result.result.signal_type
-                if signal_type in ['buy', 'strong_buy']:
-                    signals['buy_signals'].append(result.result)
-                elif signal_type in ['sell', 'strong_sell']:
-                    signals['sell_signals'].append(result.result)
+                if signal_type in ["buy", "strong_buy"]:
+                    signals["buy_signals"].append(result.result)
+                elif signal_type in ["sell", "strong_sell"]:
+                    signals["sell_signals"].append(result.result)
                 else:
-                    signals['hold_signals'].append(result.result)
+                    signals["hold_signals"].append(result.result)
 
             # Extract confidence and risk information
-            if hasattr(result.result, 'confidence'):
-                signals['confidence_scores'].append(result.result.confidence)
+            if hasattr(result.result, "confidence"):
+                signals["confidence_scores"].append(result.result.confidence)
 
-            if hasattr(result.result, 'risk_level'):
-                signals['risk_levels'].append(result.result.risk_level)
+            if hasattr(result.result, "risk_level"):
+                signals["risk_levels"].append(result.result.risk_level)
 
     return signals
 
@@ -497,16 +503,16 @@ def get_strategy_executor() -> StrategyExecutor:
     return _executor
 
 
-async def submit_strategy_task(strategy_name: str,
-                              strategy_func: Callable,
-                              *args,
-                              **kwargs) -> Optional[str]:
+async def submit_strategy_task(
+    strategy_name: str, strategy_func: Callable, *args, **kwargs
+) -> Optional[str]:
     """Submit a strategy task using the global executor."""
     executor = get_strategy_executor()
     return await executor.submit_task(strategy_name, strategy_func, *args, **kwargs)
 
 
 if __name__ == "__main__":
+
     async def demo():
         """Demo the strategy executor."""
         executor = StrategyExecutor(max_concurrent_tasks=2)
@@ -527,7 +533,7 @@ if __name__ == "__main__":
             return {"signal": "hold"}
 
         # Start executor
-        executor_task = asyncio.create_task(executor.start())
+        asyncio.create_task(executor.start())
 
         # Wait a moment for executor to start
         await asyncio.sleep(1)
@@ -549,4 +555,4 @@ if __name__ == "__main__":
         await executor.stop()
 
     # Run demo
-    asyncio.run(demo()) 
+    asyncio.run(demo())

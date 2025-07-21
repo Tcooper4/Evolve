@@ -628,9 +628,11 @@ class CommentaryAgent(BaseAgent):
                 "recommendations": response.recommendations,
                 "risk_warnings": response.risk_warnings,
             },
-            confidence_level=ConfidenceLevel.HIGH
-            if response.confidence_score > 0.8
-            else ConfidenceLevel.MEDIUM,
+            confidence_level=(
+                ConfidenceLevel.HIGH
+                if response.confidence_score > 0.8
+                else ConfidenceLevel.MEDIUM
+            ),
             metadata=response.metadata,
         )
 

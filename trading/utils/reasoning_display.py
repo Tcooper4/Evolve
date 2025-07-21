@@ -11,18 +11,18 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-# Configure logging
-logger = logging.getLogger(__name__)
-
-# Add the trading directory to the path
-sys.path.append(str(Path(__file__).parent.parent))
-
 from trading.utils.reasoning_logger import (
     AgentDecision,
     ConfidenceLevel,
     DecisionType,
     ReasoningLogger,
 )
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Add the trading directory to the path
+sys.path.append(str(Path(__file__).parent.parent))
 
 
 class ReasoningDisplay:
@@ -58,7 +58,9 @@ class ReasoningDisplay:
 
         # Basic info
         logger.info(f"📅 Time: {decision.timestamp}")
-        logger.info(f"🎯 Type: {decision.decision_type.value.replace('_', ' ').title()}")
+        logger.info(
+            f"🎯 Type: {decision.decision_type.value.replace('_', ' ').title()}"
+        )
         logger.info(f"📈 Symbol: {decision.context.symbol}")
         logger.info(f"⏱️  Timeframe: {decision.context.timeframe}")
         logger.info(f"🎯 Action: {decision.action_taken}")
@@ -269,9 +271,11 @@ class ReasoningDisplay:
                     "Agent": decision.agent_name,
                     "Type": decision.decision_type.value.replace("_", " ").title(),
                     "Symbol": decision.context.symbol,
-                    "Action": decision.action_taken[:50] + "..."
-                    if len(decision.action_taken) > 50
-                    else decision.action_taken,
+                    "Action": (
+                        decision.action_taken[:50] + "..."
+                        if len(decision.action_taken) > 50
+                        else decision.action_taken
+                    ),
                     "Confidence": decision.confidence_level.value.replace(
                         "_", " "
                     ).title(),
@@ -384,9 +388,9 @@ class ReasoningDisplay:
         return {
             "agent": selected_agent if selected_agent != "All Agents" else None,
             "type": selected_type if selected_type != "All Types" else None,
-            "confidence": selected_confidence
-            if selected_confidence != "All Levels"
-            else None,
+            "confidence": (
+                selected_confidence if selected_confidence != "All Levels" else None
+            ),
             "limit": limit,
         }
 

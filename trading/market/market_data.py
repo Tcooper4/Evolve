@@ -1,4 +1,4 @@
-﻿"""
+"""
 Market Data Provider with advanced caching and fallback mechanisms.
 
 This module provides robust market data fetching with configurable fallback sources,
@@ -18,6 +18,7 @@ import pandas as pd
 # Try to import yfinance
 try:
     import yfinance as yf
+
     YFINANCE_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ yfinance not available. Disabling Yahoo Finance data fetching.")
@@ -28,6 +29,7 @@ except ImportError as e:
 # Try to import alpha_vantage
 try:
     from alpha_vantage.timeseries import TimeSeries
+
     ALPHA_VANTAGE_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ alpha_vantage not available. Disabling Alpha Vantage data fetching.")
@@ -165,7 +167,7 @@ class MarketData:
 
         if not YFINANCE_AVAILABLE:
             raise ImportError("yfinance is not available. Cannot fetch market data.")
-        
+
         while attempt < self.config["max_retries"]:
             try:
                 # Try primary source (yfinance)

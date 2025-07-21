@@ -12,6 +12,7 @@ import pandas as pd
 # Try to import OpenAI
 try:
     import openai
+
     OPENAI_AVAILABLE = True
 except ImportError as e:
     print("⚠️ OpenAI not available. Disabling LLM-based risk analysis.")

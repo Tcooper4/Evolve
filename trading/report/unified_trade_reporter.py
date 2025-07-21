@@ -22,13 +22,15 @@ import matplotlib
 import numpy as np
 import pandas as pd
 
-matplotlib.use("Agg")  # Use non-interactive backend
-
 from trading.backtesting.performance_analysis import PerformanceAnalyzer
 from trading.backtesting.risk_metrics import RiskMetricsEngine
 
-# Local imports
 from .report_generator import ReportGenerator
+
+matplotlib.use("Agg")  # Use non-interactive backend
+
+
+# Local imports
 
 logger = logging.getLogger(__name__)
 
@@ -1002,7 +1004,9 @@ class UnifiedTradeReporter:
             charts_html = ""
             charts = report_data.get("charts", {})
             for chart_name, chart_path in charts.items():
-                charts_html += f'<div class="chart"><h3>{chart_name.replace("_", " ").title()}</h3><img src="{chart_path}" style="max-width: 100%;"></div>'
+                charts_html += f'<div class="chart"><h3>{
+                    chart_name.replace(
+                        "_", " ").title()}</h3><img src="{chart_path}" style="max-width: 100%;"></div>'
 
             return html_template.format(
                 symbol=symbol,

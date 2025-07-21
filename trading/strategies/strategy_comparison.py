@@ -1035,9 +1035,9 @@ class StrategyStacker:
                     [len(stack["strategies"]) for stack in recent_stacks]
                 ),
                 "best_performing_method": self._get_best_method(recent_stacks),
-                "last_stack_timestamp": recent_stacks[-1]["timestamp"]
-                if recent_stacks
-                else None,
+                "last_stack_timestamp": (
+                    recent_stacks[-1]["timestamp"] if recent_stacks else None
+                ),
             }
 
             return summary

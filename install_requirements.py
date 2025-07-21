@@ -6,8 +6,6 @@ in logical batches to handle dependency conflicts gracefully.
 """
 
 import subprocess
-import sys
-import os
 
 
 def run_command(cmd):
@@ -42,13 +40,13 @@ def main():
             "aiosmtplib==4.0.1",
             "alpaca-py==0.20.0",
             "alpha_vantage==3.0.0",
-            "requests>=2.25.0"
+            "requests>=2.25.0",
         ],
         "Data Science Core": [
             "numpy==1.25.2",
             "pandas==2.0.3",
             "scipy==1.11.3",
-            "scikit-learn==1.3.2"
+            "scikit-learn==1.3.2",
         ],
         "Web Framework": [
             "Flask==3.1.1",
@@ -56,14 +54,14 @@ def main():
             "flask-limiter==3.12",
             "flask-socketio==5.5.1",
             "fastapi==0.116.1",
-            "uvicorn==0.35.0"
+            "uvicorn==0.35.0",
         ],
         "Data Visualization": [
             "matplotlib==3.10.3",
             "plotly==6.2.0",
             "seaborn==0.13.2",
             "dash==3.1.1",
-            "dash-bootstrap-components==2.0.3"
+            "dash-bootstrap-components==2.0.3",
         ],
         "Machine Learning": [
             "torch==2.1.2",
@@ -71,7 +69,7 @@ def main():
             "lightgbm==4.6.0",
             "xgboost==3.0.2",
             "catboost==1.2.8",
-            "transformers==4.53.2"
+            "transformers==4.53.2",
         ],
         "Utilities": [
             "python-dotenv==1.1.1",
@@ -79,15 +77,15 @@ def main():
             "pytz==2024.1",
             "python-dateutil==2.9.0.post0",
             "filelock==3.18.0",
-            "schedule==1.2.2"
+            "schedule==1.2.2",
         ],
         "Optional/Advanced": [
             "streamlit==1.46.1",
             "mlflow==3.1.1",
             "optuna==4.4.0",
             "ray==2.47.1",
-            "prophet==1.1.7"
-        ]
+            "prophet==1.1.7",
+        ],
     }
 
     print("Starting batch installation of requirements...")
@@ -104,4 +102,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

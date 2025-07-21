@@ -19,6 +19,7 @@ from typing import Any, Dict, Optional
 # Try to import OpenAI
 try:
     import openai
+
     OPENAI_AVAILABLE = True
 except ImportError as e:
     print("⚠️ OpenAI not available. Disabling OpenAI-based parsing.")
@@ -30,6 +31,7 @@ except ImportError as e:
 try:
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+
     TORCH_AVAILABLE = True
     TRANSFORMERS_AVAILABLE = True
     HUGGINGFACE_AVAILABLE = True

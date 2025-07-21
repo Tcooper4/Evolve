@@ -301,12 +301,14 @@ class AgentLeaderboard:
                 volatility=volatility,
                 beta=extra_metrics.get("beta", 0.0) if extra_metrics else 0.0,
                 alpha=extra_metrics.get("alpha", 0.0) if extra_metrics else 0.0,
-                information_ratio=extra_metrics.get("information_ratio", 0.0)
-                if extra_metrics
-                else 0.0,
-                treynor_ratio=extra_metrics.get("treynor_ratio", 0.0)
-                if extra_metrics
-                else 0.0,
+                information_ratio=(
+                    extra_metrics.get("information_ratio", 0.0)
+                    if extra_metrics
+                    else 0.0
+                ),
+                treynor_ratio=(
+                    extra_metrics.get("treynor_ratio", 0.0) if extra_metrics else 0.0
+                ),
                 status=AgentStatus.ACTIVE,
                 extra_metrics=extra_metrics or {},
                 metadata=metadata or {},
@@ -366,14 +368,16 @@ class AgentLeaderboard:
             if perf.sharpe_ratio < self.deprecation_thresholds["sharpe_ratio"]:
                 deprecated = True
                 reasons.append(
-                    f"Sharpe ratio {perf.sharpe_ratio:.2f} below threshold {self.deprecation_thresholds['sharpe_ratio']}"
-                )
+                    f"Sharpe ratio {
+                        perf.sharpe_ratio:.2f} below threshold {
+                        self.deprecation_thresholds['sharpe_ratio']}")
 
             if perf.max_drawdown > self.deprecation_thresholds["max_drawdown"]:
                 deprecated = True
                 reasons.append(
-                    f"Max drawdown {perf.max_drawdown:.2%} above threshold {self.deprecation_thresholds['max_drawdown']:.2%}"
-                )
+                    f"Max drawdown {
+                        perf.max_drawdown:.2%} above threshold {
+                        self.deprecation_thresholds['max_drawdown']:.2%}")
 
             if perf.win_rate < self.deprecation_thresholds["win_rate"]:
                 deprecated = True
@@ -384,16 +388,20 @@ class AgentLeaderboard:
             if perf.calmar_ratio < self.deprecation_thresholds.get("calmar_ratio", 0.0):
                 deprecated = True
                 reasons.append(
-                    f"Calmar ratio {perf.calmar_ratio:.2f} below threshold {self.deprecation_thresholds.get('calmar_ratio', 0.0)}"
-                )
+                    f"Calmar ratio {
+                        perf.calmar_ratio:.2f} below threshold {
+                        self.deprecation_thresholds.get(
+                            'calmar_ratio', 0.0)}")
 
             if perf.sortino_ratio < self.deprecation_thresholds.get(
                 "sortino_ratio", 0.0
             ):
                 deprecated = True
                 reasons.append(
-                    f"Sortino ratio {perf.sortino_ratio:.2f} below threshold {self.deprecation_thresholds.get('sortino_ratio', 0.0)}"
-                )
+                    f"Sortino ratio {
+                        perf.sortino_ratio:.2f} below threshold {
+                        self.deprecation_thresholds.get(
+                            'sortino_ratio', 0.0)}")
 
             # Update status
             if deprecated:
@@ -714,9 +722,11 @@ class AgentLeaderboard:
                     "treynor_ratio": performance.treynor_ratio,
                     "status": performance.status.value,
                     "last_updated": performance.last_updated.isoformat(),
-                    "ranking": self.ranking.index(agent_name) + 1
-                    if agent_name in self.ranking
-                    else None,
+                    "ranking": (
+                        self.ranking.index(agent_name) + 1
+                        if agent_name in self.ranking
+                        else None
+                    ),
                 }
 
                 # Add extra metrics
@@ -830,9 +840,11 @@ class AgentLeaderboard:
                         "win_rate": performance.win_rate,
                         "total_return": performance.total_return,
                         "status": performance.status.value,
-                        "ranking": self.ranking.index(agent_name) + 1
-                        if agent_name in self.ranking
-                        else None,
+                        "ranking": (
+                            self.ranking.index(agent_name) + 1
+                            if agent_name in self.ranking
+                            else None
+                        ),
                     }
 
                 export_data["stats"] = self.stats

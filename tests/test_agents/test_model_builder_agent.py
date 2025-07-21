@@ -8,7 +8,6 @@ model building, validation, and error handling.
 import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 import pandas as pd
@@ -535,9 +534,11 @@ class TestModelBuilderAgentIntegration:
                 model_type=model_type,
                 data_path=sample_data,
                 target_column="close",
-                hyperparameters={"epochs": 5, "batch_size": 16}
-                if model_type == "lstm"
-                else {"n_estimators": 10},
+                hyperparameters=(
+                    {"epochs": 5, "batch_size": 16}
+                    if model_type == "lstm"
+                    else {"n_estimators": 10}
+                ),
             )
 
             result = model_builder_agent.build_model(request)
@@ -793,4 +794,7 @@ class TestModelBuilderAgentIntegration:
             f"    ✅ End-to-end model generation successful: {final_result.data['model_id']}"
         )
 
-        print("✅ Dynamic model generation from text prompt test completed")
+        print(
+            "Model builder agent test completed. All model building "
+            "functions have been validated."
+        )

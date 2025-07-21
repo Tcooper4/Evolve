@@ -1,4 +1,4 @@
-﻿"""
+"""
 Backtest Optimizer with Walk-Forward Analysis and Regime Detection
 
 Advanced backtesting framework with walk-forward optimization, regime detection,
@@ -21,6 +21,7 @@ import pandas as pd
 # Try to import matplotlib
 try:
     import matplotlib.pyplot as plt
+
     MATPLOTLIB_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ matplotlib not available. Disabling plotting capabilities.")
@@ -32,9 +33,12 @@ except ImportError as e:
 try:
     from sklearn.cluster import KMeans
     from sklearn.preprocessing import StandardScaler
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ scikit-learn not available. Disabling clustering and scaling capabilities.")
+    print(
+        "âš ï¸ scikit-learn not available. Disabling clustering and scaling capabilities."
+    )
     print(f"   Missing: {e}")
     KMeans = None
     StandardScaler = None
@@ -165,9 +169,9 @@ class StrategyValidator:
             "clustering_score": clustering_score,
             "mean_return": mean_return,
             "std_return": std_return,
-            "total_return": cumulative_returns.iloc[-1] - 1
-            if len(cumulative_returns) > 0
-            else 0,
+            "total_return": (
+                cumulative_returns.iloc[-1] - 1 if len(cumulative_returns) > 0 else 0
+            ),
         }
 
     def _calculate_return_consistency(self, returns: pd.Series) -> float:
@@ -255,8 +259,10 @@ class RegimeDetector:
             lookback_window: Rolling window for feature calculation
         """
         if not SKLEARN_AVAILABLE:
-            raise ImportError("scikit-learn is not available. Cannot create RegimeDetector.")
-            
+            raise ImportError(
+                "scikit-learn is not available. Cannot create RegimeDetector."
+            )
+
         self.n_regimes = n_regimes
         self.lookback_window = lookback_window
         self.scaler = StandardScaler()
@@ -548,7 +554,7 @@ class WalkForwardOptimizer:
 
         for i, (train_start, train_end, val_start, val_end) in enumerate(windows):
             self.logger.info(
-                f"Processing window {i+1}/{len(windows)}: {train_start.date()} to {val_end.date()}"
+                f"Processing window {i + 1}/{len(windows)}: {train_start.date()} to {val_end.date()}"
             )
 
             # Get training and validation data
@@ -556,7 +562,7 @@ class WalkForwardOptimizer:
             val_data = data.loc[val_start:val_end]
 
             if len(train_data) < self.training_window * 0.8:
-                self.logger.warning(f"Window {i+1}: Insufficient training data")
+                self.logger.warning(f"Window {i + 1}: Insufficient training data")
                 continue
 
             # Optimize strategy
@@ -672,13 +678,12 @@ class WalkForwardOptimizer:
         if not configurations:
             return
 
-        self.logger.info(
-            f"\n=== Top {min(self.top_n_configs, len(configurations))} Configurations (Window {window_num}/{total_windows}) ==="
-        )
+        self.logger.info(f"\n=== Top {min(self.top_n_configs,
+                                          len(configurations))} Configurations (Window {window_num}/{total_windows}) ===")
 
         for i, config in enumerate(configurations[: self.top_n_configs]):
             self.logger.info(
-                f"Rank {i+1}: Sharpe={config.sharpe_ratio:.3f}, "
+                f"Rank {i + 1}: Sharpe={config.sharpe_ratio:.3f}, "
                 f"Consistency={config.return_consistency:.3f}, "
                 f"Valid={config.validation_passed}, "
                 f"Params={config.params}"
@@ -725,7 +730,7 @@ class WalkForwardOptimizer:
         )
         for i, score in enumerate(aggregate_scores[: self.top_n_configs]):
             self.logger.info(
-                f"Rank {i+1}: Avg Sharpe={score['avg_sharpe']:.3f}, "
+                f"Rank {i + 1}: Avg Sharpe={score['avg_sharpe']:.3f}, "
                 f"Avg Consistency={score['avg_consistency']:.3f}, "
                 f"Success Rate={score['success_rate']:.2f}, "
                 f"Occurrences={score['occurrences']}, "
@@ -822,9 +827,9 @@ class WalkForwardOptimizer:
         analysis = {
             "total_windows": len(self.results),
             "successful_windows": sum(validation_passed),
-            "success_rate": sum(validation_passed) / len(self.results)
-            if self.results
-            else 0,
+            "success_rate": (
+                sum(validation_passed) / len(self.results) if self.results else 0
+            ),
             "avg_sharpe_ratio": np.mean(sharpe_ratios),
             "std_sharpe_ratio": np.std(sharpe_ratios),
             "avg_consistency_score": np.mean(consistency_scores),
@@ -1030,12 +1035,12 @@ class BacktestOptimizer:
                 "passed_tests": sum(
                     1 for r in walk_forward_results if r.validation_passed
                 ),
-                "success_rate": sum(
-                    1 for r in walk_forward_results if r.validation_passed
-                )
-                / len(walk_forward_results)
-                if walk_forward_results
-                else 0,
+                "success_rate": (
+                    sum(1 for r in walk_forward_results if r.validation_passed)
+                    / len(walk_forward_results)
+                    if walk_forward_results
+                    else 0
+                ),
             },
             "timestamp": datetime.now().isoformat(),
         }
@@ -1086,7 +1091,7 @@ class BacktestOptimizer:
 
 
 def get_backtest_optimizer(
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
 ) -> BacktestOptimizer:
     """Get backtest optimizer instance.
 

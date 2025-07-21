@@ -36,6 +36,8 @@ from pathlib import Path
 
 import yaml
 
+from utils.launch_utils import setup_logging
+
 
 class DependencyManager:
     def __init__(self, config_path: str = "config/app_config.yaml"):
@@ -55,11 +57,11 @@ class DependencyManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def install_dependencies(self, dev: bool = False):
+    def install_dependencies(self, dev: bool = False):
         """Install dependencies from requirements file."""
         self.logger.info("Installing dependencies...")
 

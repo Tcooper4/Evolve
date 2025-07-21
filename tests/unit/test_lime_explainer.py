@@ -17,6 +17,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from trading.models.forecast_explainability import ForecastExplainability
+
 # Add the trading directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "trading"))
 
@@ -55,8 +57,6 @@ class MockExplanation:
 sys.modules["lime"] = Mock()
 sys.modules["lime.lime_tabular"] = Mock()
 sys.modules["lime.lime_tabular"].LimeTabularExplainer = MockLimeTabularExplainer
-
-from trading.models.forecast_explainability import ForecastExplainability
 
 
 class TestLIMEExplainer:

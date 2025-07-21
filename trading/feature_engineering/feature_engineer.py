@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 from typing import Callable, Dict, Optional, Union
 
 import numpy as np
@@ -32,11 +32,19 @@ except Exception as e:
 try:
     from sklearn.decomposition import PCA
     from sklearn.ensemble import RandomForestRegressor
-    from sklearn.feature_selection import RFE, SelectKBest, VarianceThreshold, f_regression
+    from sklearn.feature_selection import (
+        RFE,
+        SelectKBest,
+        VarianceThreshold,
+        f_regression,
+    )
     from sklearn.preprocessing import StandardScaler
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ scikit-learn not available. Disabling feature engineering capabilities.")
+    print(
+        "âš ï¸ scikit-learn not available. Disabling feature engineering capabilities."
+    )
     print(f"   Missing: {e}")
     PCA = None
     RandomForestRegressor = None
@@ -61,8 +69,10 @@ class FeatureEngineer(FeatureEngineering):
             config: Configuration dictionary for feature engineering
         """
         if not SKLEARN_AVAILABLE:
-            raise ImportError("scikit-learn is not available. Cannot create FeatureEngineer.")
-            
+            raise ImportError(
+                "scikit-learn is not available. Cannot create FeatureEngineer."
+            )
+
         self.config = config or {}
         self.scaler = StandardScaler()
         self.pca = PCA(n_components=0.95)  # Keep 95% of variance
@@ -304,11 +314,11 @@ class FeatureEngineer(FeatureEngineering):
                 )  # Placeholder
 
             return importance_df.sort_values(
-                "importance"
-                if "importance" in importance_df.columns
-                else "ranking"
-                if "ranking" in importance_df.columns
-                else "score",
+                (
+                    "importance"
+                    if "importance" in importance_df.columns
+                    else "ranking" if "ranking" in importance_df.columns else "score"
+                ),
                 ascending=False,
             )
 
@@ -650,7 +660,7 @@ class FeatureEngineer(FeatureEngineering):
         reduced_features = pd.DataFrame(
             self.pca.transform(features),
             index=features.index,
-            columns=[f"pc_{i+1}" for i in range(self.pca.n_components_)],
+            columns=[f"pc_{i + 1}" for i in range(self.pca.n_components_)],
         )
 
         return reduced_features

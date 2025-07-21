@@ -219,15 +219,19 @@ class MemoryManager:
         """Get statistics about stored memories."""
         return {
             "total_memories": len(self.memories),
-            "oldest_memory": min(m.timestamp for m in self.memories).isoformat()
-            if self.memories
-            else None,
-            "newest_memory": max(m.timestamp for m in self.memories).isoformat()
-            if self.memories
-            else None,
-            "average_importance": np.mean([m.importance for m in self.memories])
-            if self.memories
-            else 0.0,
+            "oldest_memory": (
+                min(m.timestamp for m in self.memories).isoformat()
+                if self.memories
+                else None
+            ),
+            "newest_memory": (
+                max(m.timestamp for m in self.memories).isoformat()
+                if self.memories
+                else None
+            ),
+            "average_importance": (
+                np.mean([m.importance for m in self.memories]) if self.memories else 0.0
+            ),
         }
 
     def clear_memories(self) -> None:

@@ -15,10 +15,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from services.updater_service import UpdaterService
+
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.updater_service import UpdaterService
 
 # Configure logging
 logging.basicConfig(
@@ -134,7 +135,7 @@ class ModelRetrainingLogger:
             f"Timestamp: {timestamp}\n"
             f"Context: {context}\n"
             f"Traceback:\n{traceback_str}\n"
-            f"{'='*80}\n"
+            f"{'=' * 80}\n"
         )
 
         self.retraining_logger.error(log_entry)
@@ -189,10 +190,11 @@ class ModelRetrainingLogger:
             "total_attempts": self.success_count + self.failure_count,
             "successful_attempts": self.success_count,
             "failed_attempts": self.failure_count,
-            "success_rate": self.success_count
-            / (self.success_count + self.failure_count)
-            if (self.success_count + self.failure_count) > 0
-            else 0,
+            "success_rate": (
+                self.success_count / (self.success_count + self.failure_count)
+                if (self.success_count + self.failure_count) > 0
+                else 0
+            ),
             "failure_log_file": self.log_file,
         }
 

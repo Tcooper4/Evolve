@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Test script to verify LSTM model works without TensorFlow."""
 
+import logging
+
 import numpy as np
 import pandas as pd
-import torch
+
 from trading.models.lstm_model import LSTMForecaster
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -16,24 +17,27 @@ def test_lstm_model():
 
     # Create sample data
     np.random.seed(42)
-    dates = pd.date_range('2023-01-01', periods=100, freq='D')
-    data = pd.DataFrame({
-        'price': np.random.randn(100).cumsum() + 100,
-        'volume': np.random.randint(1000, 10000, 100),
-        'rsi': np.random.uniform(0, 100, 100),
-        'macd': np.random.randn(100),
-        'sma': np.random.randn(100).cumsum() + 100
-    }, index=dates)
+    dates = pd.date_range("2023-01-01", periods=100, freq="D")
+    data = pd.DataFrame(
+        {
+            "price": np.random.randn(100).cumsum() + 100,
+            "volume": np.random.randint(1000, 10000, 100),
+            "rsi": np.random.uniform(0, 100, 100),
+            "macd": np.random.randn(100),
+            "sma": np.random.randn(100).cumsum() + 100,
+        },
+        index=dates,
+    )
 
     # Model configuration
     config = {
-        'input_size': 5,
-        'hidden_size': 64,
-        'num_layers': 2,
-        'dropout': 0.2,
-        'sequence_length': 10,
-        'feature_columns': ['price', 'volume', 'rsi', 'macd', 'sma'],
-        'target_column': 'price'
+        "input_size": 5,
+        "hidden_size": 64,
+        "num_layers": 2,
+        "dropout": 0.2,
+        "sequence_length": 10,
+        "feature_columns": ["price", "volume", "rsi", "macd", "sma"],
+        "target_column": "price",
     }
 
     try:
@@ -44,8 +48,8 @@ def test_lstm_model():
 
         # Test data preparation
         logger.info("2. Testing data preparation...")
-        X = data[config['feature_columns']]
-        y = data[config['target_column']]
+        X = data[config["feature_columns"]]
+        y = data[config["target_column"]]
         logger.info("   ✓ Data prepared successfully")
 
         # Test model training (just a few epochs)
@@ -67,7 +71,9 @@ def test_lstm_model():
         new_model.load("test_lstm_model.pt")
         logger.info("   ✓ Model save/load completed")
 
-        logger.info("\n🎉 All tests passed! LSTM model works correctly without TensorFlow.")
+        logger.info(
+            "\n🎉 All tests passed! LSTM model works correctly without TensorFlow."
+        )
         logger.info("✅ Using PyTorch backend successfully")
 
     except Exception as e:
@@ -76,4 +82,4 @@ def test_lstm_model():
 
 
 if __name__ == "__main__":
-    test_lstm_model() 
+    test_lstm_model()

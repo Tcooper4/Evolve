@@ -23,6 +23,7 @@ warnings.filterwarnings("ignore")
 
 # Import all strategic intelligence modules
 try:
+    from reporting.report_format import ReportFormat
     from trading.agents.execution_risk_control_agent import ExecutionRiskControlAgent
     from trading.agents.market_regime_agent import MarketRegimeAgent
     from trading.agents.rolling_retraining_agent import (
@@ -40,8 +41,6 @@ try:
     from trading.strategies.multi_strategy_hybrid_engine import (
         MultiStrategyHybridEngine,
     )
-
-    MODULES_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"Some modules not available: {e}")
     MODULES_AVAILABLE = False
@@ -228,10 +227,10 @@ class InstitutionalGradeSystem:
 
             # Forecast Explainability
             if self.config["modules"]["forecast_explainability"]["enabled"]:
-                self.modules[
-                    "forecast_explainability"
-                ] = IntelligentForecastExplainability(
-                    confidence_levels=[0.68, 0.80, 0.95], max_features=10
+                self.modules["forecast_explainability"] = (
+                    IntelligentForecastExplainability(
+                        confidence_levels=[0.68, 0.80, 0.95], max_features=10
+                    )
                 )
 
             # Real-Time Signal Center
@@ -721,9 +720,11 @@ class InstitutionalGradeSystem:
         try:
             return {
                 "status": self.status.value,
-                "uptime": (datetime.now() - self.start_time).total_seconds()
-                if self.start_time
-                else 0,
+                "uptime": (
+                    (datetime.now() - self.start_time).total_seconds()
+                    if self.start_time
+                    else 0
+                ),
                 "modules": len(self.modules),
                 "system_metrics": self._get_system_metrics_dict(),
                 "config": {

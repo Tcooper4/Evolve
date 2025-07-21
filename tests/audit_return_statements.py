@@ -314,8 +314,7 @@ class ReturnStatementAuditor:
                             "issue": "Pipeline function return value not used",
                             "return_values": info["return_values"],
                             "recommendation": "Consider using return values for pipeline continuation or remove unnecessary returns",
-                        }
-                    )
+                        })
 
                 # Check if pipeline function returns meaningful data
                 meaningful_returns = self._check_meaningful_pipeline_returns(
@@ -517,10 +516,10 @@ class ReturnStatementAuditor:
                 "pipeline_functions": pipeline_functions_count,
                 "unused_return_values": unused_returns_count,
                 "coverage_percentage": (
-                    len(self.passing_functions) / total_functions * 100
-                )
-                if total_functions > 0
-                else 0,
+                    (len(self.passing_functions) / total_functions * 100)
+                    if total_functions > 0
+                    else 0
+                ),
             },
             "issues": self.issues,
             "unused_returns": self.unused_returns,
@@ -562,8 +561,8 @@ class ReturnStatementAuditor:
 
         if pipeline_functions_without_meaningful_returns:
             recommendations.append(
-                f"Found {len(pipeline_functions_without_meaningful_returns)} pipeline functions without meaningful returns"
-            )
+                f"Found {
+                    len(pipeline_functions_without_meaningful_returns)} pipeline functions without meaningful returns")
             recommendations.append(
                 "Pipeline functions should return meaningful data for downstream processing"
             )
@@ -604,7 +603,9 @@ def main():
     report = auditor.audit_codebase()
     logger.info("=== Return Statement Audit Report ===")
     logger.info(f"Timestamp: {report['timestamp']}")
-    logger.info(f"Total functions audited: {report['summary']['total_functions_audited']}")
+    logger.info(
+        f"Total functions audited: {report['summary']['total_functions_audited']}"
+    )
     logger.info(f"Passing functions: {report['summary']['passing_functions']}")
     logger.info(f"Functions with issues: {report['summary']['functions_with_issues']}")
     logger.info(f"Pipeline functions: {report['summary']['pipeline_functions']}")
@@ -614,12 +615,16 @@ def main():
     if report["issues"]:
         logger.info("\n=== Issues Found ===")
         for issue in report["issues"]:
-            logger.info(f"- {issue['file']}:{issue['line']} - {issue['function']} - {issue['type']}")
+            logger.info(
+                f"- {issue['file']}:{issue['line']} - {issue['function']} - {issue['type']}"
+            )
 
     if report["unused_returns"]:
         logger.info("\n=== Unused Return Values ===")
         for unused in report["unused_returns"]:
-            logger.info(f"- {unused['file']}:{unused['line']} - {unused['function_call']} (from {unused['tracked_function']})")
+            logger.info(
+                f"- {unused['file']}:{unused['line']} - {unused['function_call']} (from {unused['tracked_function']})"
+            )
 
     if report["pipeline_analysis"]["recommendations"]:
         logger.info("\n=== Pipeline Recommendations ===")

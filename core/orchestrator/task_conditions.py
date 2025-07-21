@@ -1,4 +1,4 @@
-﻿"""
+"""
 Task Conditions Module
 
 This module contains task condition checking functionality for the task orchestrator.
@@ -7,7 +7,7 @@ Extracted from the original task_orchestrator.py for modularity.
 
 import logging
 from datetime import datetime, time
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
 class TaskConditions:
@@ -48,18 +48,18 @@ class TaskConditions:
         try:
             now = datetime.utcnow()
             current_time = now.time()
-            
+
             # US Market Hours (9:30 AM - 4:00 PM ET, Monday-Friday)
             market_start = time(9, 30)  # 9:30 AM
-            market_end = time(16, 0)    # 4:00 PM
-            
+            market_end = time(16, 0)  # 4:00 PM
+
             # Check if it's a weekday
             if now.weekday() >= 5:  # Saturday = 5, Sunday = 6
                 return False
-            
+
             # Check if it's within market hours
             return market_start <= current_time <= market_end
-            
+
         except Exception as e:
             self.logger.error(f"Failed to check market hours: {e}")
             return True  # Default to True to avoid blocking
@@ -70,7 +70,7 @@ class TaskConditions:
             # This would typically query system health metrics
             # For now, return a default health score
             return 0.9
-            
+
         except Exception as e:
             self.logger.error(f"Failed to get system health: {e}")
             return 0.5
@@ -81,7 +81,7 @@ class TaskConditions:
             # This would typically query market data
             # For now, return True to avoid blocking
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Failed to check market volatility: {e}")
             return True
@@ -92,7 +92,7 @@ class TaskConditions:
             # This would typically query news APIs
             # For now, return False (no significant news)
             return False
-            
+
         except Exception as e:
             self.logger.error(f"Failed to check news events: {e}")
             return False
@@ -103,7 +103,7 @@ class TaskConditions:
             # This would typically query portfolio data
             # For now, return True to avoid blocking
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Failed to check position count: {e}")
             return True
@@ -114,7 +114,7 @@ class TaskConditions:
             # This would typically query order management system
             # For now, return False (no pending orders)
             return False
-            
+
         except Exception as e:
             self.logger.error(f"Failed to check pending orders: {e}")
             return False
@@ -125,7 +125,7 @@ class TaskConditions:
             # This would typically query trade history
             # For now, return False (no new trades)
             return False
-            
+
         except Exception as e:
             self.logger.error(f"Failed to check new trades: {e}")
             return False
@@ -136,7 +136,7 @@ class TaskConditions:
             # This would typically query trading activity metrics
             # For now, return True to allow trading
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Failed to check trading activity: {e}")
             return True
@@ -151,16 +151,16 @@ class TaskConditions:
             "position_count": "Check position count conditions",
             "pending_orders": "Check if there are pending orders",
             "new_trades": "Check if there are new trades",
-            "trading_activity": "Check if there's recent trading activity"
+            "trading_activity": "Check if there's recent trading activity",
         }
 
     def validate_condition(self, condition: str, value: Any) -> bool:
         """Validate a condition and its value."""
         available_conditions = self.get_available_conditions()
-        
+
         if condition not in available_conditions:
             return False
-        
+
         # Validate value based on condition type
         if condition == "system_health":
             return isinstance(value, (int, float)) and 0 <= value <= 1

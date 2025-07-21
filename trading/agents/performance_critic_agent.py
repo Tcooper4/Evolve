@@ -231,7 +231,9 @@ class PerformanceCriticAgent(BaseAgent):
             # Compare latest result to baseline and log delta
             latest_score = performance_metrics.get("sharpe_ratio", 0.0)
             performance_delta = latest_score - self.baseline_score
-            self.logger.info(f"Performance delta from baseline: {performance_delta:.4f}")
+            self.logger.info(
+                f"Performance delta from baseline: {performance_delta:.4f}"
+            )
 
             # Update baseline if this is better
             if latest_score > self.baseline_score:

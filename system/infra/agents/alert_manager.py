@@ -1,4 +1,4 @@
-﻿import datetime
+import datetime
 import json
 import logging
 import os
@@ -7,7 +7,7 @@ from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 
@@ -99,18 +99,20 @@ class AlertManager:
         """Set up logging for the alert manager."""
         log_config = self.config.get("logging", {})
         log_level = getattr(logging, log_config.get("level", "INFO"))
-        log_format = log_config.get("format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        
+        log_format = log_config.get(
+            "format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+
         # Configure logging
         logging.basicConfig(
             level=log_level,
             format=log_format,
             handlers=[
                 logging.StreamHandler(),
-                logging.FileHandler(log_config.get("file", "alerts.log"))
-            ]
+                logging.FileHandler(log_config.get("file", "alerts.log")),
+            ],
         )
-        
+
         self.logger = logging.getLogger("AlertManager")
 
     def _validate_email_config(self) -> bool:

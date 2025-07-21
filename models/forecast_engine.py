@@ -412,10 +412,11 @@ class ForecastEngine:
             "forecast_min": np.min(forecast_values),
             "forecast_max": np.max(forecast_values),
             "forecast_range": np.max(forecast_values) - np.min(forecast_values),
-            "forecast_trend": (forecast_values[-1] - forecast_values[0])
-            / forecast_values[0]
-            if forecast_values[0] != 0
-            else 0,
+            "forecast_trend": (
+                (forecast_values[-1] - forecast_values[0]) / forecast_values[0]
+                if forecast_values[0] != 0
+                else 0
+            ),
         }
 
         # Standardized evaluation metrics

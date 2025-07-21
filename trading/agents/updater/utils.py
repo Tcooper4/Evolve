@@ -80,8 +80,9 @@ def detect_model_drift(model_id: str, recent_data: pd.DataFrame) -> Tuple[bool, 
 
         if len(historical_predictions) < 50 or len(recent_data) < 10:
             logger.warning(
-                f"Insufficient data for drift detection: historical={len(historical_predictions)}, recent={len(recent_data)}"
-            )
+                f"Insufficient data for drift detection: historical={
+                    len(historical_predictions)}, recent={
+                    len(recent_data)}")
             return False, 0.0
 
         # Calculate drift metrics
@@ -196,7 +197,7 @@ def validate_update_result(result: Dict) -> bool:
 
 
 def calculate_reweighting_factors(
-    performance_metrics: Dict[str, float]
+    performance_metrics: Dict[str, float],
 ) -> Dict[str, float]:
     """
     Calculate reweighting factors based on model performance metrics.

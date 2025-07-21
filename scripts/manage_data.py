@@ -45,6 +45,8 @@ from typing import Optional
 import pandas as pd
 import yaml
 
+from utils.launch_utils import setup_logging
+
 
 class DataManager:
     def __init__(self, config_path: str = "config/app_config.yaml"):
@@ -53,7 +55,7 @@ class DataManager:
         self.setup_logging()
         self.logger = logging.getLogger("trading")
         self.data_dir = Path("data")
-        self.backup_dir = Path("data/backups")
+        self.data_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
@@ -64,32 +66,31 @@ class DataManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="service")def backup_data(self, backup_name: Optional[str] = None):
-        """Backup data directory."""
-        self.logger.info("Backing up data...")
-
-        if not self.data_dir.exists():
-            self.logger.error("Data directory not found")
-            return False
-
-        # Create backup directory if it doesn't exist
-        self.backup_dir.mkdir(parents=True, exist_ok=True)
-
-        # Generate backup name if not provided
-        if not backup_name:
-            backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-
-        backup_path = self.backup_dir / backup_name
+    def backup_data(self, backup_name: Optional[str] = None):
+        """Backup data to a specified location."""
+        self.logger.info(f"Backing up data to {backup_name}")
 
         try:
-            # Create backup
-            shutil.make_archive(str(backup_path), "zip", self.data_dir, ".")
+            # Create backup directory
+            backup_dir = self.data_dir / "backups"
+            backup_dir.mkdir(parents=True, exist_ok=True)
 
-            self.logger.info(f"Data backed up to {backup_path}.zip")
+            # Generate backup name if not provided
+            if not backup_name:
+                backup_name = f"data_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+            backup_path = backup_dir / f"{backup_name}.zip"
+
+            # Archive data directory
+            shutil.make_archive(
+                str(backup_path).replace(".zip", ""), "zip", str(self.data_dir)
+            )
+
+            self.logger.info(f"Data backup created: {backup_path}")
             return True
         except Exception as e:
             self.logger.error(f"Failed to backup data: {e}")
@@ -277,9 +278,9 @@ def main():
 
     commands = {
         "backup": lambda: manager.backup_data(args.backup_name),
-        "restore": lambda: manager.restore_data(args.backup_name)
-        if args.backup_name
-        else False,
+        "restore": lambda: (
+            manager.restore_data(args.backup_name) if args.backup_name else False
+        ),
         "clean": lambda: manager.clean_data(args.days),
         "validate": manager.validate_data,
         "optimize": manager.optimize_data,

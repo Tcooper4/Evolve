@@ -1,12 +1,13 @@
-﻿"""
+"""
 Signal Merger
 
 Merges signal DataFrames with index validation to ensure compatibility.
 """
 
 import logging
+from typing import Any, Dict, List, Optional
+
 import pandas as pd
-from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +26,7 @@ class SignalMerger:
         self.validate_indexes = self.config.get("validate_indexes", True)
 
     def merge_signals(
-        self,
-        df1: pd.DataFrame,
-        df2: pd.DataFrame,
-        validate: bool = True
+        self, df1: pd.DataFrame, df2: pd.DataFrame, validate: bool = True
     ) -> pd.DataFrame:
         """
         Merge two signal DataFrames with index validation and UTC localization.
@@ -43,11 +41,13 @@ class SignalMerger:
             if isinstance(df.index, pd.DatetimeIndex):
                 if df.index.tz is None:
                     try:
-                        df.index = df.index.tz_localize('UTC', nonexistent='shift_forward')
+                        df.index = df.index.tz_localize(
+                            "UTC", nonexistent="shift_forward"
+                        )
                     except Exception:
-                        df.index = df.index.tz_localize('UTC', errors='coerce')
+                        df.index = df.index.tz_localize("UTC", errors="coerce")
                 else:
-                    df.index = df.index.tz_convert('UTC')
+                    df.index = df.index.tz_convert("UTC")
         # Validate indexes if requested
         if validate and self.validate_indexes:
             if not df1.index.equals(df2.index):
@@ -58,22 +58,18 @@ class SignalMerger:
         # Perform merge
         try:
             merged_df = pd.merge(
-                df1,
-                df2,
-                left_index=True,
-                right_index=True,
-                how=self.merge_method
+                df1, df2, left_index=True, right_index=True, how=self.merge_method
             )
-            logger.info(f"Successfully merged signals: {df1.shape} + {df2.shape} -> {merged_df.shape}")
+            logger.info(
+                f"Successfully merged signals: {df1.shape} + {df2.shape} -> {merged_df.shape}"
+            )
             return merged_df
         except Exception as e:
             logger.error(f"Error merging signals: {e}")
             raise
 
     def merge_multiple_signals(
-        self,
-        dataframes: List[pd.DataFrame],
-        validate: bool = True
+        self, dataframes: List[pd.DataFrame], validate: bool = True
     ) -> pd.DataFrame:
         """
         Merge multiple signal DataFrames with UTC localization.
@@ -88,33 +84,37 @@ class SignalMerger:
             if isinstance(df.index, pd.DatetimeIndex):
                 if df.index.tz is None:
                     try:
-                        df.index = df.index.tz_localize('UTC', nonexistent='shift_forward')
+                        df.index = df.index.tz_localize(
+                            "UTC", nonexistent="shift_forward"
+                        )
                     except Exception:
-                        df.index = df.index.tz_localize('UTC', errors='coerce')
+                        df.index = df.index.tz_localize("UTC", errors="coerce")
                 else:
-                    df.index = df.index.tz_convert('UTC')
+                    df.index = df.index.tz_convert("UTC")
         # Validate all indexes match if requested
         if validate and self.validate_indexes:
             reference_index = dataframes[0].index
             for i, df in enumerate(dataframes[1:], 1):
                 if not df.index.equals(reference_index):
-                    logger.error(f"Index mismatch between DataFrame 0 and DataFrame {i}")
+                    logger.error(
+                        f"Index mismatch between DataFrame 0 and DataFrame {i}"
+                    )
                     raise ValueError(f"All DataFrames must have matching indexes")
         # Merge all DataFrames
         try:
             merged_df = dataframes[0]
             for df in dataframes[1:]:
                 merged_df = self.merge_signals(merged_df, df, validate=False)
-            logger.info(f"Successfully merged {len(dataframes)} DataFrames: {merged_df.shape}")
+            logger.info(
+                f"Successfully merged {len(dataframes)} DataFrames: {merged_df.shape}"
+            )
             return merged_df
         except Exception as e:
             logger.error(f"Error merging multiple signals: {e}")
             raise
 
     def validate_merge_compatibility(
-        self,
-        df1: pd.DataFrame,
-        df2: pd.DataFrame
+        self, df1: pd.DataFrame, df2: pd.DataFrame
     ) -> Dict[str, Any]:
         """
         Validate compatibility for merging two DataFrames.
@@ -130,7 +130,7 @@ class SignalMerger:
             "compatible": True,
             "indexes_match": False,
             "common_columns": [],
-            "warnings": []
+            "warnings": [],
         }
 
         # Check index compatibility
@@ -149,11 +149,7 @@ class SignalMerger:
 
         return validation_result
 
-    def get_merge_summary(
-        self,
-        df1: pd.DataFrame,
-        df2: pd.DataFrame
-    ) -> Dict[str, Any]:
+    def get_merge_summary(self, df1: pd.DataFrame, df2: pd.DataFrame) -> Dict[str, Any]:
         """
         Get summary of merge operation.
 
@@ -170,7 +166,7 @@ class SignalMerger:
             "df1_columns": list(df1.columns) if df1 is not None else [],
             "df2_columns": list(df2.columns) if df2 is not None else [],
             "common_columns": [],
-            "index_overlap": 0
+            "index_overlap": 0,
         }
 
         if df1 is not None and df2 is not None:

@@ -15,8 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -49,8 +48,10 @@ async def test_agent_controller_fallback():
         logger.info(f"  Available agents: {available_agents}")
 
         # Print agent details
-        for agent_name, agent_details in status['agent_details'].items():
-            logger.info(f"  {agent_name}: {agent_details['class_name']} ({agent_details['category']})")
+        for agent_name, agent_details in status["agent_details"].items():
+            logger.info(
+                f"  {agent_name}: {agent_details['class_name']} ({agent_details['category']})"
+            )
             logger.info(f"    Capabilities: {', '.join(agent_details['capabilities'])}")
 
         return status
@@ -77,7 +78,7 @@ async def test_mock_agent():
             "Forecast the price of AAPL",
             "Generate a trading strategy",
             "Analyze the market trends",
-            "Hello, how are you?"
+            "Hello, how are you?",
         ]
 
         results = []
@@ -115,7 +116,7 @@ async def test_prompt_router_fallback():
             "Forecast the price of AAPL",
             "Generate a trading strategy",
             "Analyze the market trends",
-            "Hello, how are you?"
+            "Hello, how are you?",
         ]
 
         results = []
@@ -169,7 +170,7 @@ async def test_startup_fallback():
         return {
             "initialization": init_result,
             "health_check": health_result,
-            "fallback_activation": fallback_result
+            "fallback_activation": fallback_result,
         }
 
     except Exception as e:
@@ -208,7 +209,7 @@ async def test_error_recovery():
         return {
             "error_detection": error_result,
             "recovery_strategies": recovery_result,
-            "system_restoration": restoration_result
+            "system_restoration": restoration_result,
         }
 
     except Exception as e:
@@ -229,7 +230,7 @@ async def main():
         ("Mock Agent", test_mock_agent),
         ("Prompt Router Fallback", test_prompt_router_fallback),
         ("Startup Fallback", test_startup_fallback),
-        ("Error Recovery", test_error_recovery)
+        ("Error Recovery", test_error_recovery),
     ]
 
     for test_name, test_func in tests:
@@ -237,12 +238,12 @@ async def main():
         try:
             result = await test_func()
             test_results.append((test_name, result is not None))
-            
+
             if result:
                 logger.info(f"✅ {test_name} test completed successfully")
             else:
                 logger.error(f"❌ {test_name} test failed")
-                
+
         except Exception as e:
             logger.error(f"❌ {test_name} test failed with exception: {e}")
             test_results.append((test_name, False))
@@ -273,4 +274,4 @@ async def main():
 
 if __name__ == "__main__":
     success = asyncio.run(main())
-    exit(0 if success else 1) 
+    exit(0 if success else 1)

@@ -6,7 +6,6 @@ Provides intelligent routing to appropriate trading models and strategies.
 """
 
 import json
-import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,12 +15,15 @@ from typing import Any, Dict, List, Optional
 # Try to import spaCy
 try:
     import spacy
+
     SPACY_AVAILABLE = True
     # Load English model
     try:
         nlp = spacy.load("en_core_web_sm")
     except OSError:
-        print("⚠️ spaCy English model not found. Install with: python -m spacy download en_core_web_sm")
+        print(
+            "⚠️ spaCy English model not found. Install with: python -m spacy download en_core_web_sm"
+        )
         SPACY_AVAILABLE = False
 except ImportError as e:
     print("⚠️ spaCy not available. Disabling spaCy-based NLP features.")
@@ -32,6 +34,7 @@ except ImportError as e:
 # Try to import transformers
 try:
     from transformers import AutoTokenizer, pipeline
+
     TRANSFORMERS_AVAILABLE = True
 except ImportError as e:
     print("⚠️ transformers not available. Disabling transformer-based NLP features.")
@@ -43,6 +46,7 @@ except ImportError as e:
 # Try to import TextBlob
 try:
     from textblob import TextBlob
+
     TEXTBLOB_AVAILABLE = True
 except ImportError as e:
     print("⚠️ TextBlob not available. Disabling TextBlob-based features.")

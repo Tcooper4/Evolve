@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test script for prompt parser, hybrid model, and backtest improvements.
 
 This script tests the improvements made to:
@@ -7,22 +7,29 @@ This script tests the improvements made to:
 3. trading/core/backtest_common.py (extracted utilities and frequency scaling)
 """
 
-import unittest
 import sys
-import tempfile
+import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime, timedelta
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
-import streamlit as st
+
+from trading.core.backtest_common import (
+    BacktestCommon,
+    Frequency,
+    calculate_backtest_metrics,
+    validate_backtest_data,
+)
+from trading.llm.prompt_parser import (
+    ActionPlan,
+    PromptParser,
+    parse_prompt,
+    parse_prompts,
+)
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from trading.llm.prompt_parser import PromptParser, ActionPlan, parse_prompt, parse_prompts
-from trading.core.backtest_common import BacktestCommon, Frequency, validate_backtest_data, calculate_backtest_metrics
 
 
 class TestPromptParser(unittest.TestCase):
@@ -31,7 +38,7 @@ class TestPromptParser(unittest.TestCase):
     def setUp(self):
         """Set up test environment."""
         # Mock spaCy to avoid loading large models
-        with patch('spacy.load') as mock_load:
+        with patch("spacy.load") as mock_load:
             mock_nlp = Mock()
             mock_nlp.return_value = Mock()
             mock_load.return_value = mock_nlp
@@ -47,9 +54,9 @@ class TestPromptParser(unittest.TestCase):
             export_type="csv",
             confidence=0.8,
             raw_prompt="Use LSTM with Bollinger Bands strategy",
-            extracted_entities={"models": ["LSTM"], "strategies": ["BollingerBands"]}
+            extracted_entities={"models": ["LSTM"], "strategies": ["BollingerBands"]},
         )
-        
+
         # Test normalization
         self.assertEqual(action_plan.model, "LSTM")
         self.assertEqual(action_plan.strategy, "BollingerBands")
@@ -66,11 +73,11 @@ class TestPromptParser(unittest.TestCase):
             export_type="json",
             confidence=0.9,
             raw_prompt="Test prompt",
-            extracted_entities={}
+            extracted_entities={},
         )
-        
+
         plan_dict = action_plan.to_dict()
-        
+
         self.assertIsInstance(plan_dict, dict)
         self.assertEqual(plan_dict["model"], "Transformer")
         self.assertEqual(plan_dict["strategy"], "MACD")
@@ -86,9 +93,9 @@ class TestPromptParser(unittest.TestCase):
             export_type="pdf",
             confidence=0.75,
             raw_prompt="Test prompt",
-            extracted_entities={}
+            extracted_entities={},
         )
-        
+
         plan_str = str(action_plan)
         self.assertIn("XGBoost", plan_str)
         self.assertIn("RSI", plan_str)
@@ -96,14 +103,14 @@ class TestPromptParser(unittest.TestCase):
         self.assertIn("pdf", plan_str)
         self.assertIn("0.75", plan_str)
 
-    @patch('spacy.load')
+    @patch("spacy.load")
     def test_prompt_parser_initialization(self, mock_load):
         """Test PromptParser initialization."""
         mock_nlp = Mock()
         mock_load.return_value = mock_nlp
-        
+
         parser = PromptParser()
-        
+
         self.assertIsNotNone(parser)
         self.assertIsNotNone(parser.matcher)
         self.assertIn("LSTM", parser.model_keywords)
@@ -132,14 +139,14 @@ class TestPromptParser(unittest.TestCase):
         self.assertIn("train", self.parser.action_keywords)
         self.assertIn("predict", self.parser.action_keywords)
 
-    @patch('spacy.load')
+    @patch("spacy.load")
     def test_parse_prompt_convenience_function(self, mock_load):
         """Test parse_prompt convenience function."""
         mock_nlp = Mock()
         mock_load.return_value = mock_nlp
-        
+
         # Mock the parsing process
-        with patch.object(PromptParser, 'parse_prompt') as mock_parse:
+        with patch.object(PromptParser, "parse_prompt") as mock_parse:
             mock_parse.return_value = ActionPlan(
                 model="Ensemble",
                 strategy="Momentum",
@@ -147,22 +154,22 @@ class TestPromptParser(unittest.TestCase):
                 export_type="csv",
                 confidence=0.5,
                 raw_prompt="Test",
-                extracted_entities={}
+                extracted_entities={},
             )
-            
+
             result = parse_prompt("Use ensemble model with momentum strategy")
-            
+
             self.assertIsInstance(result, ActionPlan)
             self.assertEqual(result.model, "Ensemble")
 
-    @patch('spacy.load')
+    @patch("spacy.load")
     def test_parse_prompts_batch(self, mock_load):
         """Test parse_prompts batch function."""
         mock_nlp = Mock()
         mock_load.return_value = mock_nlp
-        
+
         # Mock the parsing process
-        with patch.object(PromptParser, 'parse_batch') as mock_parse_batch:
+        with patch.object(PromptParser, "parse_batch") as mock_parse_batch:
             mock_parse_batch.return_value = [
                 ActionPlan(
                     model="LSTM",
@@ -171,7 +178,7 @@ class TestPromptParser(unittest.TestCase):
                     export_type="csv",
                     confidence=0.8,
                     raw_prompt="Test 1",
-                    extracted_entities={}
+                    extracted_entities={},
                 ),
                 ActionPlan(
                     model="XGBoost",
@@ -180,17 +187,17 @@ class TestPromptParser(unittest.TestCase):
                     export_type="json",
                     confidence=0.7,
                     raw_prompt="Test 2",
-                    extracted_entities={}
-                )
+                    extracted_entities={},
+                ),
             ]
-            
+
             prompts = [
                 "Use LSTM with Bollinger Bands and backtest",
-                "Use XGBoost with MACD strategy"
+                "Use XGBoost with MACD strategy",
             ]
-            
+
             results = parse_prompts(prompts)
-            
+
             self.assertEqual(len(results), 2)
             self.assertIsInstance(results[0], ActionPlan)
             self.assertIsInstance(results[1], ActionPlan)
@@ -202,16 +209,19 @@ class TestBacktestCommon(unittest.TestCase):
     def setUp(self):
         """Set up test environment."""
         self.common = BacktestCommon()
-        
+
         # Create test data
         dates = pd.date_range("2024-01-01", periods=100, freq="D")
-        self.test_data = pd.DataFrame({
-            "open": np.random.randn(100).cumsum() + 100,
-            "high": np.random.randn(100).cumsum() + 102,
-            "low": np.random.randn(100).cumsum() + 98,
-            "close": np.random.randn(100).cumsum() + 100,
-            "volume": np.random.randint(1000, 10000, 100)
-        }, index=dates)
+        self.test_data = pd.DataFrame(
+            {
+                "open": np.random.randn(100).cumsum() + 100,
+                "high": np.random.randn(100).cumsum() + 102,
+                "low": np.random.randn(100).cumsum() + 98,
+                "close": np.random.randn(100).cumsum() + 100,
+                "volume": np.random.randint(1000, 10000, 100),
+            },
+            index=dates,
+        )
 
     def test_frequency_enum(self):
         """Test Frequency enum values."""
@@ -223,10 +233,9 @@ class TestBacktestCommon(unittest.TestCase):
     def test_validate_data_success(self):
         """Test successful data validation."""
         is_valid, message = self.common.validate_data(
-            self.test_data,
-            required_columns=["open", "high", "low", "close", "volume"]
+            self.test_data, required_columns=["open", "high", "low", "close", "volume"]
         )
-        
+
         self.assertTrue(is_valid)
         self.assertEqual(message, "Data is valid")
 
@@ -234,7 +243,7 @@ class TestBacktestCommon(unittest.TestCase):
         """Test validation of empty data."""
         empty_data = pd.DataFrame()
         is_valid, message = self.common.validate_data(empty_data)
-        
+
         self.assertFalse(is_valid)
         self.assertIn("empty", message)
 
@@ -242,9 +251,9 @@ class TestBacktestCommon(unittest.TestCase):
         """Test validation with missing columns."""
         is_valid, message = self.common.validate_data(
             self.test_data,
-            required_columns=["open", "high", "low", "close", "volume", "missing_col"]
+            required_columns=["open", "high", "low", "close", "volume", "missing_col"],
         )
-        
+
         self.assertFalse(is_valid)
         self.assertIn("missing_col", message)
 
@@ -252,7 +261,7 @@ class TestBacktestCommon(unittest.TestCase):
         """Test validation of short data."""
         short_data = self.test_data.head(5)
         is_valid, message = self.common.validate_data(short_data, min_length=10)
-        
+
         self.assertFalse(is_valid)
         self.assertIn("minimum 10", message)
 
@@ -261,24 +270,24 @@ class TestBacktestCommon(unittest.TestCase):
         # Add some NaN values
         test_data_with_nan = self.test_data.copy()
         test_data_with_nan.loc[10:15, "close"] = np.nan
-        
+
         processed_data = self.common.preprocess_data(
-            test_data_with_nan,
-            frequency=Frequency.DAILY,
-            fill_method="ffill"
+            test_data_with_nan, frequency=Frequency.DAILY, fill_method="ffill"
         )
-        
+
         self.assertFalse(processed_data.isnull().any().any())
-        self.assertEqual(len(processed_data), len(self.test_data) - 6)  # NaN rows removed
+        self.assertEqual(
+            len(processed_data), len(self.test_data) - 6
+        )  # NaN rows removed
 
     def test_calculate_returns(self):
         """Test return calculation."""
         prices = pd.Series([100, 110, 105, 120, 115])
-        
+
         # Test log returns
         log_returns = self.common.calculate_returns(prices, method="log")
         self.assertEqual(len(log_returns), 4)  # First value is NaN
-        
+
         # Test simple returns
         simple_returns = self.common.calculate_returns(prices, method="simple")
         self.assertEqual(len(simple_returns), 4)
@@ -286,34 +295,36 @@ class TestBacktestCommon(unittest.TestCase):
     def test_calculate_volatility(self):
         """Test volatility calculation with frequency scaling."""
         returns = pd.Series(np.random.randn(252) * 0.02)  # 2% daily volatility
-        
+
         # Test daily volatility
-        daily_vol = self.common.calculate_volatility(returns, window=252, frequency=Frequency.DAILY)
+        daily_vol = self.common.calculate_volatility(
+            returns, window=252, frequency=Frequency.DAILY
+        )
         self.assertIsInstance(daily_vol, pd.Series)
-        
+
         # Test hourly volatility (should be higher due to scaling)
-        hourly_vol = self.common.calculate_volatility(returns, window=252, frequency=Frequency.HOUR_1)
+        hourly_vol = self.common.calculate_volatility(
+            returns, window=252, frequency=Frequency.HOUR_1
+        )
         self.assertIsInstance(hourly_vol, pd.Series)
 
     def test_calculate_sharpe_ratio(self):
         """Test Sharpe ratio calculation."""
         returns = pd.Series([0.01, 0.02, -0.01, 0.03, 0.01])  # Positive returns
-        
+
         sharpe = self.common.calculate_sharpe_ratio(
-            returns,
-            risk_free_rate=0.02,
-            frequency=Frequency.DAILY
+            returns, risk_free_rate=0.02, frequency=Frequency.DAILY
         )
-        
+
         self.assertIsInstance(sharpe, float)
         self.assertGreater(sharpe, 0)  # Should be positive for positive returns
 
     def test_calculate_max_drawdown(self):
         """Test maximum drawdown calculation."""
         prices = pd.Series([100, 110, 105, 120, 115, 125, 110, 130])
-        
+
         max_dd, peak_date, trough_date = self.common.calculate_max_drawdown(prices)
-        
+
         self.assertIsInstance(max_dd, float)
         self.assertLessEqual(max_dd, 0)  # Drawdown should be negative or zero
         self.assertIsInstance(peak_date, pd.Timestamp)
@@ -321,12 +332,10 @@ class TestBacktestCommon(unittest.TestCase):
 
     def test_calculate_win_rate(self):
         """Test win rate calculation."""
-        trades = pd.DataFrame({
-            "pnl": [100, -50, 200, -30, 150, -20]
-        })
-        
+        trades = pd.DataFrame({"pnl": [100, -50, 200, -30, 150, -20]})
+
         win_rate = self.common.calculate_win_rate(trades)
-        
+
         self.assertIsInstance(win_rate, float)
         self.assertGreaterEqual(win_rate, 0)
         self.assertLessEqual(win_rate, 1)
@@ -334,12 +343,10 @@ class TestBacktestCommon(unittest.TestCase):
 
     def test_calculate_profit_factor(self):
         """Test profit factor calculation."""
-        trades = pd.DataFrame({
-            "pnl": [100, -50, 200, -30, 150, -20]
-        })
-        
+        trades = pd.DataFrame({"pnl": [100, -50, 200, -30, 150, -20]})
+
         profit_factor = self.common.calculate_profit_factor(trades)
-        
+
         self.assertIsInstance(profit_factor, float)
         self.assertGreater(profit_factor, 0)
         # Gross profit: 450, Gross loss: 100, so profit factor should be 4.5
@@ -349,39 +356,31 @@ class TestBacktestCommon(unittest.TestCase):
         """Test Calmar ratio calculation."""
         returns = pd.Series([0.01, 0.02, -0.01, 0.03, 0.01])
         prices = pd.Series([100, 101, 103, 102, 105, 106])
-        
+
         calmar = self.common.calculate_calmar_ratio(returns, prices, Frequency.DAILY)
-        
+
         self.assertIsInstance(calmar, float)
 
     def test_calculate_sortino_ratio(self):
         """Test Sortino ratio calculation."""
         returns = pd.Series([0.01, 0.02, -0.01, 0.03, 0.01])
-        
+
         sortino = self.common.calculate_sortino_ratio(
-            returns,
-            risk_free_rate=0.02,
-            frequency=Frequency.DAILY
+            returns, risk_free_rate=0.02, frequency=Frequency.DAILY
         )
-        
+
         self.assertIsInstance(sortino, float)
 
     def test_calculate_metrics_summary(self):
         """Test comprehensive metrics calculation."""
         returns = pd.Series([0.01, 0.02, -0.01, 0.03, 0.01])
         prices = pd.Series([100, 101, 103, 102, 105, 106])
-        trades = pd.DataFrame({
-            "pnl": [100, -50, 200, -30]
-        })
-        
+        trades = pd.DataFrame({"pnl": [100, -50, 200, -30]})
+
         metrics = self.common.calculate_metrics_summary(
-            returns,
-            prices,
-            trades,
-            risk_free_rate=0.02,
-            frequency=Frequency.DAILY
+            returns, prices, trades, risk_free_rate=0.02, frequency=Frequency.DAILY
         )
-        
+
         self.assertIsInstance(metrics, dict)
         self.assertIn("total_return", metrics)
         self.assertIn("annual_return", metrics)
@@ -402,18 +401,17 @@ class TestBacktestCommon(unittest.TestCase):
             "calmar_ratio": 2.0,
             "max_drawdown": -0.08,
             "win_rate": 0.65,
-            "profit_factor": 1.8
+            "profit_factor": 1.8,
         }
-        
+
         report = self.common.generate_backtest_report(
-            metrics,
-            frequency=Frequency.DAILY
+            metrics, frequency=Frequency.DAILY
         )
-        
+
         self.assertIsInstance(report, str)
         self.assertIn("Backtest Report", report)
         self.assertIn("15.00%", report)  # Total return
-        self.assertIn("1.20", report)    # Sharpe ratio
+        self.assertIn("1.20", report)  # Sharpe ratio
 
     def test_frequency_scaling(self):
         """Test frequency scaling utilities."""
@@ -421,7 +419,7 @@ class TestBacktestCommon(unittest.TestCase):
         daily_window = 252
         hourly_window = self.common._scale_window(daily_window, Frequency.HOUR_1)
         self.assertGreater(hourly_window, daily_window)
-        
+
         # Test annualization factors
         daily_factor = self.common._get_annualization_factor(Frequency.DAILY)
         hourly_factor = self.common._get_annualization_factor(Frequency.HOUR_1)
@@ -433,11 +431,11 @@ class TestBacktestCommon(unittest.TestCase):
         # Test validate_backtest_data
         is_valid, message = validate_backtest_data(self.test_data)
         self.assertTrue(is_valid)
-        
+
         # Test calculate_backtest_metrics
         returns = pd.Series([0.01, 0.02, -0.01, 0.03, 0.01])
         prices = pd.Series([100, 101, 103, 102, 105, 106])
-        
+
         metrics = calculate_backtest_metrics(returns, prices, Frequency.DAILY)
         self.assertIsInstance(metrics, dict)
         self.assertIn("total_return", metrics)
@@ -449,13 +447,16 @@ class TestHybridModelIntegration(unittest.TestCase):
     def setUp(self):
         """Set up test environment."""
         self.common = BacktestCommon()
-        
+
         # Create mock data
         dates = pd.date_range("2024-01-01", periods=100, freq="D")
-        self.test_data = pd.DataFrame({
-            "close": np.random.randn(100).cumsum() + 100,
-            "volume": np.random.randint(1000, 10000, 100)
-        }, index=dates)
+        self.test_data = pd.DataFrame(
+            {
+                "close": np.random.randn(100).cumsum() + 100,
+                "volume": np.random.randint(1000, 10000, 100),
+            },
+            index=dates,
+        )
 
     def test_prompt_to_backtest_workflow(self):
         """Test workflow from prompt parsing to backtesting."""
@@ -467,34 +468,31 @@ class TestHybridModelIntegration(unittest.TestCase):
             export_type="csv",
             confidence=0.8,
             raw_prompt="Test ensemble with momentum strategy",
-            extracted_entities={}
+            extracted_entities={},
         )
-        
+
         # Validate data
         is_valid, message = self.common.validate_data(self.test_data)
         self.assertTrue(is_valid)
-        
+
         # Preprocess data
         processed_data = self.common.preprocess_data(
-            self.test_data,
-            frequency=Frequency.DAILY
+            self.test_data, frequency=Frequency.DAILY
         )
-        
+
         # Calculate returns
         returns = self.common.calculate_returns(processed_data["close"])
-        
+
         # Calculate metrics
         metrics = self.common.calculate_metrics_summary(
-            returns,
-            processed_data["close"],
-            frequency=Frequency.DAILY
+            returns, processed_data["close"], frequency=Frequency.DAILY
         )
-        
+
         # Verify results
         self.assertIsInstance(metrics, dict)
         self.assertIn("total_return", metrics)
         self.assertIn("sharpe_ratio", metrics)
-        
+
         # Check if backtest was requested
         self.assertTrue(action_plan.backtest_flag)
 
@@ -503,19 +501,19 @@ class TestHybridModelIntegration(unittest.TestCase):
         # Create returns data
         returns = pd.Series(np.random.randn(252) * 0.02)
         prices = pd.Series(np.random.randn(252).cumsum() + 100)
-        
+
         # Calculate metrics for different frequencies
         daily_metrics = self.common.calculate_metrics_summary(
             returns, prices, frequency=Frequency.DAILY
         )
-        
+
         hourly_metrics = self.common.calculate_metrics_summary(
             returns, prices, frequency=Frequency.HOUR_1
         )
-        
+
         # Volatility should be higher for hourly (more frequent trading)
         self.assertGreater(hourly_metrics["volatility"], daily_metrics["volatility"])
-        
+
         # Sharpe ratio should be properly scaled
         self.assertIsInstance(hourly_metrics["sharpe_ratio"], float)
         self.assertIsInstance(daily_metrics["sharpe_ratio"], float)
@@ -523,28 +521,29 @@ class TestHybridModelIntegration(unittest.TestCase):
 
 def run_performance_tests():
     """Run performance tests."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("PERFORMANCE TESTS")
-    print("="*60)
-    
+    print("=" * 60)
+
     # Test prompt parsing performance
     print("\nTesting PromptParser performance...")
     parser = PromptParser()
-    
+
     test_prompts = [
         "Use LSTM model with Bollinger Bands strategy and run backtest",
         "Apply XGBoost with MACD strategy and export to CSV",
         "Train Transformer model with RSI strategy",
         "Use ensemble approach with momentum strategy",
-        "Apply ARIMA model with mean reversion strategy"
+        "Apply ARIMA model with mean reversion strategy",
     ]
-    
+
     import time
+
     start_time = time.time()
-    
+
     for prompt in test_prompts:
         # Mock parsing to avoid spaCy loading
-        with patch.object(parser, 'parse_prompt') as mock_parse:
+        with patch.object(parser, "parse_prompt") as mock_parse:
             mock_parse.return_value = ActionPlan(
                 model="Ensemble",
                 strategy="Momentum",
@@ -552,35 +551,37 @@ def run_performance_tests():
                 export_type="csv",
                 confidence=0.8,
                 raw_prompt=prompt,
-                extracted_entities={}
+                extracted_entities={},
             )
-            result = parser.parse_prompt(prompt)
-    
+            parser.parse_prompt(prompt)
+
     elapsed = time.time() - start_time
-    print(f"  Average parsing time: {elapsed/len(test_prompts):.4f}s per prompt")
-    
+    print(f"  Average parsing time: {elapsed / len(test_prompts):.4f}s per prompt")
+
     # Test backtest common performance
     print("\nTesting BacktestCommon performance...")
     common = BacktestCommon()
-    
+
     # Create large dataset
-    large_data = pd.DataFrame({
-        "close": np.random.randn(10000).cumsum() + 100,
-        "volume": np.random.randint(1000, 10000, 10000)
-    })
-    
+    large_data = pd.DataFrame(
+        {
+            "close": np.random.randn(10000).cumsum() + 100,
+            "volume": np.random.randint(1000, 10000, 10000),
+        }
+    )
+
     start_time = time.time()
-    
+
     # Test data validation
     is_valid, _ = common.validate_data(large_data)
-    
+
     # Test preprocessing
     processed_data = common.preprocess_data(large_data, Frequency.DAILY)
-    
+
     # Test metrics calculation
     returns = common.calculate_returns(processed_data["close"])
     metrics = common.calculate_metrics_summary(returns, processed_data["close"])
-    
+
     elapsed = time.time() - start_time
     print(f"  Large dataset processing time: {elapsed:.4f}s")
     print(f"  Dataset size: {len(large_data)} rows")
@@ -590,17 +591,17 @@ def run_performance_tests():
 def main():
     """Run all tests."""
     print("Testing Prompt Parser, Hybrid Model, and Backtest Improvements")
-    print("="*70)
-    
+    print("=" * 70)
+
     # Run unit tests
-    unittest.main(argv=[''], exit=False, verbosity=2)
-    
+    unittest.main(argv=[""], exit=False, verbosity=2)
+
     # Run performance tests
     run_performance_tests()
-    
-    print("\n" + "="*70)
+
+    print("\n" + "=" * 70)
     print("ALL TESTS COMPLETED")
-    print("="*70)
+    print("=" * 70)
 
 
 if __name__ == "__main__":

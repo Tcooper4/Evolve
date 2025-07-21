@@ -468,7 +468,15 @@ class ExecutionRiskAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"Error checking portfolio risk: {e}")
-            return True
+            return RiskCheck(
+                check_name="Portfolio Risk Limit",
+                passed=False,
+                risk_level=RiskLevel.CRITICAL,
+                message=f"Error checking portfolio risk: {e}",
+                value=0.0,
+                threshold=0.0,
+                timestamp=datetime.now(),
+            )
 
     def _check_daily_loss_limit(
         self, portfolio_context: Optional[Dict[str, Any]]
@@ -502,7 +510,15 @@ class ExecutionRiskAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"Error checking daily loss limit: {e}")
-            return True
+            return RiskCheck(
+                check_name="Daily Loss Limit",
+                passed=False,
+                risk_level=RiskLevel.CRITICAL,
+                message=f"Error checking daily loss limit: {e}",
+                value=0.0,
+                threshold=0.0,
+                timestamp=datetime.now(),
+            )
 
     def _check_drawdown_limit(
         self, portfolio_context: Optional[Dict[str, Any]]
@@ -536,7 +552,15 @@ class ExecutionRiskAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"Error checking drawdown limit: {e}")
-            return True
+            return RiskCheck(
+                check_name="Drawdown Limit",
+                passed=False,
+                risk_level=RiskLevel.CRITICAL,
+                message=f"Error checking drawdown limit: {e}",
+                value=0.0,
+                threshold=0.0,
+                timestamp=datetime.now(),
+            )
 
     def _check_leverage_limit(
         self, size: float, portfolio_context: Optional[Dict[str, Any]]

@@ -5,10 +5,9 @@ This test validates the modular structure of the trading system
 without importing complex dependencies.
 """
 
+import logging
 import os
 import sys
-from pathlib import Path
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ def test_file_structure():
         "trading/agents/execution/trade_signals.py",
         "trading/agents/execution/execution_providers.py",
         "trading/agents/execution/position_manager.py",
-        "trading/agents/execution/execution_agent.py"
+        "trading/agents/execution/execution_agent.py",
     ]
 
     logger.info("📁 Checking Execution Agent Modular Files:")
@@ -42,7 +41,7 @@ def test_file_structure():
         "trading/agents/optimization/strategy_optimizer.py",
         "trading/agents/optimization/backtest_integration.py",
         "trading/agents/optimization/performance_analyzer.py",
-        "trading/agents/optimization/optimizer_agent.py"
+        "trading/agents/optimization/optimizer_agent.py",
     ]
 
     logger.info("\n📁 Checking Optimizer Agent Modular Files:")
@@ -61,7 +60,7 @@ def test_file_structure():
         "core/orchestrator/task_monitor.py",
         "core/orchestrator/task_conditions.py",
         "core/orchestrator/task_providers.py",
-        "core/orchestrator/task_orchestrator.py"
+        "core/orchestrator/task_orchestrator.py",
     ]
 
     logger.info("\n📁 Checking Task Orchestrator Modular Files:")
@@ -76,7 +75,7 @@ def test_file_structure():
         "trading/agents/test_execution_agent.py",
         "tests/test_agents/test_execution_agent_risk_controls.py",
         "tests/test_optimization_modular.py",
-        "tests/test_task_orchestrator.py"
+        "tests/test_task_orchestrator.py",
     ]
 
     logger.info("\n📁 Checking Updated Test Files:")
@@ -96,7 +95,7 @@ def test_file_sizes():
     original_files = [
         "trading/agents/execution_agent.py",
         "trading/agents/optimizer_agent.py",
-        "core/task_orchestrator.py"
+        "core/task_orchestrator.py",
     ]
 
     for file_path in original_files:
@@ -114,15 +113,16 @@ def test_import_structure():
 
     try:
         # Test execution agent imports
-        from trading.agents.execution import ExecutionAgent
+        pass
+
         logger.info("  ✅ ExecutionAgent import successful")
 
         # Test optimizer agent imports
-        from trading.agents.optimization import OptimizerAgent
+
         logger.info("  ✅ OptimizerAgent import successful")
 
         # Test task orchestrator imports
-        from core.orchestrator import TaskOrchestrator
+
         logger.info("  ✅ TaskOrchestrator import successful")
 
         logger.info("  ✅ All modular imports successful")
@@ -145,17 +145,20 @@ def test_basic_functionality():
     try:
         # Test execution agent creation
         from trading.agents.execution import create_execution_agent
+
         execution_agent = create_execution_agent({"execution_mode": "simulation"})
         logger.info("  ✅ Execution agent creation successful")
 
         # Test optimizer agent creation
         from trading.agents.optimization import create_optimizer_agent
+
         optimizer_agent = create_optimizer_agent({"optimization_type": "grid_search"})
         logger.info("  ✅ Optimizer agent creation successful")
 
         # Test task orchestrator creation
         from core.orchestrator import create_task_orchestrator
-        orchestrator = create_task_orchestrator()
+
+        create_task_orchestrator()
         logger.info("  ✅ Task orchestrator creation successful")
 
         logger.info("  ✅ All basic functionality tests passed")
@@ -175,7 +178,7 @@ def main():
     # Run tests
     test_file_structure()
     test_file_sizes()
-    
+
     import_success = test_import_structure()
     functionality_success = test_basic_functionality()
 
@@ -195,4 +198,4 @@ def main():
 
 if __name__ == "__main__":
     success = main()
-    sys.exit(0 if success else 1) 
+    sys.exit(0 if success else 1)

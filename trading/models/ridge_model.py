@@ -17,7 +17,6 @@ Features:
 import json
 import logging
 import pickle
-import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -31,6 +30,7 @@ try:
     from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
     from sklearn.model_selection import cross_val_score
     from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("⚠️ scikit-learn not available. Disabling Ridge models.")
@@ -426,12 +426,12 @@ class RidgeModel(BaseModel):
                         features = features_lagged
                     else:
                         raise ModelError(
-                            f"Feature mismatch: model expects {expected_features} features, but got {features.shape[1]}. Please provide input data with the same lag structure as used in training."
-                        )
+                            f"Feature mismatch: model expects {expected_features} features, but got {
+                                features.shape[1]}. Please provide input data with the same lag structure as used in training.")
                 else:
                     raise ModelError(
-                        f"Feature mismatch: model expects {expected_features} features, but got {features.shape[1]}. Please provide input data with the same feature structure as used in training."
-                    )
+                        f"Feature mismatch: model expects {expected_features} features, but got {
+                            features.shape[1]}. Please provide input data with the same feature structure as used in training.")
             predictions = self.model.predict(features)
             logger.info(
                 f"Generated Ridge predictions for {len(predictions)} observations"

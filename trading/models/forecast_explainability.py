@@ -12,6 +12,7 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
+from lime.lime_tabular import LimeTabularExplainer
 
 warnings.filterwarnings("ignore")
 
@@ -23,7 +24,6 @@ try:
 except ImportError:
     SHAP_AVAILABLE = False
 
-from lime.lime_tabular import LimeTabularExplainer
 
 logger = logging.getLogger(__name__)
 
@@ -730,9 +730,11 @@ class ForecastExplainability:
                         "date": e.timestamp,
                         "forecast_value": e.forecast_value,
                         "confidence_level": e.confidence_level,
-                        "explanation": e.explanation_text[:100] + "..."
-                        if len(e.explanation_text) > 100
-                        else e.explanation_text,
+                        "explanation": (
+                            e.explanation_text[:100] + "..."
+                            if len(e.explanation_text) > 100
+                            else e.explanation_text
+                        ),
                     }
                     for e in recent_explanations[-5:]  # Last 5 explanations
                 ],

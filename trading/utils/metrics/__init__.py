@@ -1,4 +1,4 @@
-﻿"""
+"""
 Metrics Module
 
 Provides scoring and evaluation functions for models.

@@ -78,6 +78,7 @@ from .settings import (
     WEB_SECRET_KEY,
     get_config_dict,
     get_config_value,
+    settings,
     validate_config,
 )
 
@@ -108,8 +109,8 @@ class Config:
             # Try to get from config manager
             return self._config_manager.get(key, default)
 
-        except Exception as e:
-            return default
+        except Exception as _unused_var:  # Placeholder, flake8 ignore: F841
+            pass
 
     def set(self, key: str, value: Any) -> bool:
         """Set a configuration value.

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Execution Replay System
 
 Enhanced with Batch 10 features: trade-by-trade visualization system for execution replay.
@@ -7,12 +7,12 @@ Enhanced with Batch 10 features: trade-by-trade visualization system for executi
 import json
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Tuple
+from typing import Any, Dict, List, Optional
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class ExecutionReplay:
 
     def __init__(self, replay_dir: str = "replays"):
         """Initialize the execution replay system.
-        
+
         Args:
             replay_dir: Directory for storing replay data
         """
@@ -30,28 +30,30 @@ class ExecutionReplay:
         self.replay_dir.mkdir(parents=True, exist_ok=True)
         self.replay_history = []
         self.current_replay = None
-        
-        logger.info(f"ExecutionReplay initialized with replay directory: {self.replay_dir}")
+
+        logger.info(
+            f"ExecutionReplay initialized with replay directory: {self.replay_dir}"
+        )
 
     def start_replay_session(
-        self, 
-        session_name: str, 
+        self,
+        session_name: str,
         initial_capital: float = 100000.0,
-        symbols: Optional[List[str]] = None
+        symbols: Optional[List[str]] = None,
     ) -> str:
         """Start a new replay session.
-        
+
         Args:
             session_name: Name of the replay session
             initial_capital: Starting capital
             symbols: List of symbols to track
-            
+
         Returns:
             Session ID
         """
         try:
             session_id = f"replay_{int(time.time())}_{session_name}"
-            
+
             self.current_replay = {
                 "session_id": session_id,
                 "session_name": session_name,
@@ -63,37 +65,39 @@ class ExecutionReplay:
                 "positions": {},
                 "equity_curve": [],
                 "market_data": {},
-                "events": []
+                "events": [],
             }
-            
+
             # Initialize equity curve
-            self.current_replay["equity_curve"].append({
-                "timestamp": datetime.now().isoformat(),
-                "equity": initial_capital,
-                "cash": initial_capital,
-                "positions_value": 0.0
-            })
-            
+            self.current_replay["equity_curve"].append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "equity": initial_capital,
+                    "cash": initial_capital,
+                    "positions_value": 0.0,
+                }
+            )
+
             logger.info(f"Started replay session: {session_id}")
             return session_id
-            
+
         except Exception as e:
             logger.error(f"Error starting replay session: {e}")
             return None
 
     def record_trade(
-        self, 
-        symbol: str, 
-        side: str, 
-        quantity: float, 
-        price: float, 
+        self,
+        symbol: str,
+        side: str,
+        quantity: float,
+        price: float,
         timestamp: Optional[datetime] = None,
         order_id: Optional[str] = None,
         slippage: float = 0.0,
-        commission: float = 0.0
+        commission: float = 0.0,
     ) -> bool:
         """Record a trade in the current replay session.
-        
+
         Args:
             symbol: Trading symbol
             side: 'buy' or 'sell'
@@ -103,7 +107,7 @@ class ExecutionReplay:
             order_id: Order identifier
             slippage: Execution slippage
             commission: Trading commission
-            
+
         Returns:
             True if trade recorded successfully
         """
@@ -111,54 +115,61 @@ class ExecutionReplay:
             if not self.current_replay:
                 logger.error("No active replay session")
                 return False
-            
+
             trade_timestamp = timestamp or datetime.now()
-            
+
             # Calculate trade value and update positions
             trade_value = quantity * price
             trade_cost = trade_value + commission
-            
+
             if side.lower() == "buy":
                 # Buying
                 if self.current_replay["current_capital"] < trade_cost:
-                    logger.warning(f"Insufficient capital for trade: {trade_cost} > {self.current_replay['current_capital']}")
+                    logger.warning(
+                        f"Insufficient capital for trade: {trade_cost} > {self.current_replay['current_capital']}"
+                    )
                     return False
-                
+
                 self.current_replay["current_capital"] -= trade_cost
-                
+
                 # Update positions
                 if symbol not in self.current_replay["positions"]:
                     self.current_replay["positions"][symbol] = {
                         "quantity": 0,
                         "avg_price": 0.0,
-                        "total_cost": 0.0
+                        "total_cost": 0.0,
                     }
-                
+
                 pos = self.current_replay["positions"][symbol]
                 total_quantity = pos["quantity"] + quantity
                 total_cost = pos["total_cost"] + trade_cost
-                
+
                 pos["quantity"] = total_quantity
-                pos["avg_price"] = total_cost / total_quantity if total_quantity > 0 else 0.0
+                pos["avg_price"] = (
+                    total_cost / total_quantity if total_quantity > 0 else 0.0
+                )
                 pos["total_cost"] = total_cost
-                
+
             else:  # sell
                 # Selling
-                if symbol not in self.current_replay["positions"] or self.current_replay["positions"][symbol]["quantity"] < quantity:
+                if (
+                    symbol not in self.current_replay["positions"]
+                    or self.current_replay["positions"][symbol]["quantity"] < quantity
+                ):
                     logger.warning(f"Insufficient position for sale: {symbol}")
                     return False
-                
+
                 # Calculate PnL
                 pos = self.current_replay["positions"][symbol]
                 realized_pnl = (price - pos["avg_price"]) * quantity - commission
-                
+
                 self.current_replay["current_capital"] += trade_value - commission
-                
+
                 # Update positions
                 pos["quantity"] -= quantity
                 if pos["quantity"] <= 0:
                     del self.current_replay["positions"][symbol]
-            
+
             # Record trade
             trade_record = {
                 "timestamp": trade_timestamp.isoformat(),
@@ -172,41 +183,43 @@ class ExecutionReplay:
                 "order_id": order_id,
                 "realized_pnl": realized_pnl if side.lower() == "sell" else 0.0,
                 "cash_after": self.current_replay["current_capital"],
-                "positions_after": self.current_replay["positions"].copy()
+                "positions_after": self.current_replay["positions"].copy(),
             }
-            
+
             self.current_replay["trades"].append(trade_record)
-            
+
             # Update equity curve
             positions_value = self._calculate_positions_value()
             total_equity = self.current_replay["current_capital"] + positions_value
-            
-            self.current_replay["equity_curve"].append({
-                "timestamp": trade_timestamp.isoformat(),
-                "equity": total_equity,
-                "cash": self.current_replay["current_capital"],
-                "positions_value": positions_value
-            })
-            
+
+            self.current_replay["equity_curve"].append(
+                {
+                    "timestamp": trade_timestamp.isoformat(),
+                    "equity": total_equity,
+                    "cash": self.current_replay["current_capital"],
+                    "positions_value": positions_value,
+                }
+            )
+
             # Record event
             self._record_event("trade_executed", trade_record)
-            
+
             logger.info(f"Trade recorded: {side} {quantity} {symbol} @ {price}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error recording trade: {e}")
             return False
 
     def record_market_data(
-        self, 
-        symbol: str, 
-        price: float, 
+        self,
+        symbol: str,
+        price: float,
         volume: float = 0.0,
-        timestamp: Optional[datetime] = None
+        timestamp: Optional[datetime] = None,
     ):
         """Record market data for replay.
-        
+
         Args:
             symbol: Trading symbol
             price: Current price
@@ -216,20 +229,20 @@ class ExecutionReplay:
         try:
             if not self.current_replay:
                 return
-            
+
             data_timestamp = timestamp or datetime.now()
-            
+
             if symbol not in self.current_replay["market_data"]:
                 self.current_replay["market_data"][symbol] = []
-            
+
             market_record = {
                 "timestamp": data_timestamp.isoformat(),
                 "price": price,
-                "volume": volume
+                "volume": volume,
             }
-            
+
             self.current_replay["market_data"][symbol].append(market_record)
-            
+
         except Exception as e:
             logger.error(f"Error recording market data: {e}")
 
@@ -237,18 +250,23 @@ class ExecutionReplay:
         """Calculate current positions value."""
         try:
             total_value = 0.0
-            
+
             for symbol, position in self.current_replay["positions"].items():
                 # Use latest market price if available
-                if symbol in self.current_replay["market_data"] and self.current_replay["market_data"][symbol]:
-                    latest_price = self.current_replay["market_data"][symbol][-1]["price"]
+                if (
+                    symbol in self.current_replay["market_data"]
+                    and self.current_replay["market_data"][symbol]
+                ):
+                    latest_price = self.current_replay["market_data"][symbol][-1][
+                        "price"
+                    ]
                     total_value += position["quantity"] * latest_price
                 else:
                     # Use average price as fallback
                     total_value += position["quantity"] * position["avg_price"]
-            
+
             return total_value
-            
+
         except Exception as e:
             logger.error(f"Error calculating positions value: {e}")
             return 0.0
@@ -259,17 +277,17 @@ class ExecutionReplay:
             event_record = {
                 "timestamp": datetime.now().isoformat(),
                 "event_type": event_type,
-                "event_data": event_data
+                "event_data": event_data,
             }
-            
+
             self.current_replay["events"].append(event_record)
-            
+
         except Exception as e:
             logger.error(f"Error recording event: {e}")
 
     def end_replay_session(self) -> Optional[str]:
         """End the current replay session and save data.
-        
+
         Returns:
             Path to saved replay file
         """
@@ -277,38 +295,44 @@ class ExecutionReplay:
             if not self.current_replay:
                 logger.error("No active replay session to end")
                 return None
-            
+
             # Add end time
             self.current_replay["end_time"] = datetime.now().isoformat()
-            
+
             # Calculate final statistics
             self.current_replay["statistics"] = self._calculate_session_statistics()
-            
+
             # Save replay data
             filename = f"{self.current_replay['session_id']}.json"
             filepath = self.replay_dir / filename
-            
-            with open(filepath, 'w') as f:
+
+            with open(filepath, "w") as f:
                 json.dump(self.current_replay, f, indent=2, default=str)
-            
+
             # Store in history
-            self.replay_history.append({
-                "session_id": self.current_replay["session_id"],
-                "session_name": self.current_replay["session_name"],
-                "filepath": str(filepath),
-                "start_time": self.current_replay["start_time"],
-                "end_time": self.current_replay["end_time"],
-                "total_trades": len(self.current_replay["trades"]),
-                "final_equity": self.current_replay["equity_curve"][-1]["equity"] if self.current_replay["equity_curve"] else 0.0
-            })
-            
+            self.replay_history.append(
+                {
+                    "session_id": self.current_replay["session_id"],
+                    "session_name": self.current_replay["session_name"],
+                    "filepath": str(filepath),
+                    "start_time": self.current_replay["start_time"],
+                    "end_time": self.current_replay["end_time"],
+                    "total_trades": len(self.current_replay["trades"]),
+                    "final_equity": (
+                        self.current_replay["equity_curve"][-1]["equity"]
+                        if self.current_replay["equity_curve"]
+                        else 0.0
+                    ),
+                }
+            )
+
             logger.info(f"Replay session ended: {filepath}")
-            
+
             # Clear current replay
             self.current_replay = None
-            
+
             return str(filepath)
-            
+
         except Exception as e:
             logger.error(f"Error ending replay session: {e}")
             return None
@@ -318,42 +342,52 @@ class ExecutionReplay:
         try:
             if not self.current_replay["trades"]:
                 return {"error": "No trades recorded"}
-            
+
             trades_df = pd.DataFrame(self.current_replay["trades"])
             equity_df = pd.DataFrame(self.current_replay["equity_curve"])
-            
+
             # Basic statistics
             total_trades = len(trades_df)
             buy_trades = len(trades_df[trades_df["side"] == "buy"])
             sell_trades = len(trades_df[trades_df["side"] == "sell"])
-            
+
             # PnL statistics
             total_realized_pnl = trades_df["realized_pnl"].sum()
             total_commission = trades_df["commission"].sum()
             total_slippage = trades_df["slippage"].sum()
-            
+
             # Equity statistics
             if len(equity_df) > 1:
                 initial_equity = equity_df.iloc[0]["equity"]
                 final_equity = equity_df.iloc[-1]["equity"]
                 total_return = (final_equity - initial_equity) / initial_equity
-                
+
                 # Calculate drawdown
                 equity_df["peak"] = equity_df["equity"].expanding().max()
-                equity_df["drawdown"] = (equity_df["equity"] - equity_df["peak"]) / equity_df["peak"]
+                equity_df["drawdown"] = (
+                    equity_df["equity"] - equity_df["peak"]
+                ) / equity_df["peak"]
                 max_drawdown = equity_df["drawdown"].min()
             else:
                 total_return = 0.0
                 max_drawdown = 0.0
-            
+
             # Trade analysis
             winning_trades = len(trades_df[trades_df["realized_pnl"] > 0])
             losing_trades = len(trades_df[trades_df["realized_pnl"] < 0])
             win_rate = winning_trades / total_trades if total_trades > 0 else 0.0
-            
-            avg_win = trades_df[trades_df["realized_pnl"] > 0]["realized_pnl"].mean() if winning_trades > 0 else 0.0
-            avg_loss = trades_df[trades_df["realized_pnl"] < 0]["realized_pnl"].mean() if losing_trades > 0 else 0.0
-            
+
+            avg_win = (
+                trades_df[trades_df["realized_pnl"] > 0]["realized_pnl"].mean()
+                if winning_trades > 0
+                else 0.0
+            )
+            avg_loss = (
+                trades_df[trades_df["realized_pnl"] < 0]["realized_pnl"].mean()
+                if losing_trades > 0
+                else 0.0
+            )
+
             return {
                 "total_trades": total_trades,
                 "buy_trades": buy_trades,
@@ -369,54 +403,58 @@ class ExecutionReplay:
                 "win_rate": win_rate,
                 "avg_win": avg_win,
                 "avg_loss": avg_loss,
-                "profit_factor": abs(avg_win / avg_loss) if avg_loss != 0 else float('inf'),
-                "final_equity": equity_df.iloc[-1]["equity"] if len(equity_df) > 0 else 0.0,
+                "profit_factor": (
+                    abs(avg_win / avg_loss) if avg_loss != 0 else float("inf")
+                ),
+                "final_equity": (
+                    equity_df.iloc[-1]["equity"] if len(equity_df) > 0 else 0.0
+                ),
                 "final_cash": equity_df.iloc[-1]["cash"] if len(equity_df) > 0 else 0.0,
-                "final_positions_value": equity_df.iloc[-1]["positions_value"] if len(equity_df) > 0 else 0.0
+                "final_positions_value": (
+                    equity_df.iloc[-1]["positions_value"] if len(equity_df) > 0 else 0.0
+                ),
             }
-            
+
         except Exception as e:
             logger.error(f"Error calculating session statistics: {e}")
             return {"error": str(e)}
 
     def load_replay(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Load a replay session from file.
-        
+
         Args:
             session_id: Session ID to load
-            
+
         Returns:
             Replay data dictionary
         """
         try:
             filename = f"{session_id}.json"
             filepath = self.replay_dir / filename
-            
+
             if not filepath.exists():
                 logger.error(f"Replay file not found: {filepath}")
                 return None
-            
-            with open(filepath, 'r') as f:
+
+            with open(filepath, "r") as f:
                 replay_data = json.load(f)
-            
+
             logger.info(f"Replay loaded: {session_id}")
             return replay_data
-            
+
         except Exception as e:
             logger.error(f"Error loading replay: {e}")
             return None
 
     def generate_replay_visualization(
-        self, 
-        session_id: str, 
-        output_dir: str = "replay_visualizations"
+        self, session_id: str, output_dir: str = "replay_visualizations"
     ) -> Optional[str]:
         """Generate visualization for a replay session.
-        
+
         Args:
             session_id: Session ID to visualize
             output_dir: Output directory for visualizations
-            
+
         Returns:
             Path to generated visualization file
         """
@@ -424,20 +462,20 @@ class ExecutionReplay:
             replay_data = self.load_replay(session_id)
             if not replay_data:
                 return None
-            
+
             output_path = Path(output_dir)
             output_path.mkdir(parents=True, exist_ok=True)
-            
+
             # Generate HTML visualization
             html_content = self._generate_replay_html(replay_data)
-            
+
             html_file = output_path / f"replay_{session_id}.html"
-            with open(html_file, 'w') as f:
+            with open(html_file, "w") as f:
                 f.write(html_content)
-            
+
             logger.info(f"Replay visualization generated: {html_file}")
             return str(html_file)
-            
+
         except Exception as e:
             logger.error(f"Error generating replay visualization: {e}")
             return None
@@ -477,7 +515,7 @@ class ExecutionReplay:
             <p>Session ID: {session_id}</p>
             <p>Duration: {start_time} to {end_time}</p>
         </div>
-        
+
         <div class="section">
             <h2>Performance Summary</h2>
             <div class="metrics">
@@ -507,12 +545,12 @@ class ExecutionReplay:
                 </div>
             </div>
         </div>
-        
+
         <div class="section">
             <h2>Equity Curve</h2>
             <div id="equityChart" class="chart-container"></div>
         </div>
-        
+
         <div class="section">
             <h2>Trade Log</h2>
             <div class="trade-log">
@@ -536,7 +574,7 @@ class ExecutionReplay:
             </div>
         </div>
     </div>
-    
+
     <script>
         // Equity curve chart
         const equityData = {equity_data};
@@ -551,10 +589,10 @@ class ExecutionReplay:
 </body>
 </html>
         """
-        
+
         # Prepare data for template
         stats = replay_data.get("statistics", {})
-        
+
         # Format trade rows
         trade_rows = ""
         for trade in replay_data.get("trades", []):
@@ -571,18 +609,20 @@ class ExecutionReplay:
                     <td>${trade.get('cash_after', 0):,.0f}</td>
                 </tr>
             """
-        
+
         # Prepare equity curve data
         equity_curve = replay_data.get("equity_curve", [])
-        equity_data = [{
-            "x": [point["timestamp"] for point in equity_curve],
-            "y": [point["equity"] for point in equity_curve],
-            "type": "scatter",
-            "mode": "lines",
-            "name": "Equity",
-            "line": {"color": "#007bff"}
-        }]
-        
+        equity_data = [
+            {
+                "x": [point["timestamp"] for point in equity_curve],
+                "y": [point["equity"] for point in equity_curve],
+                "type": "scatter",
+                "mode": "lines",
+                "name": "Equity",
+                "line": {"color": "#007bff"},
+            }
+        ]
+
         return html_template.format(
             session_name=replay_data.get("session_name", "Unknown"),
             session_id=replay_data.get("session_id", "Unknown"),
@@ -595,17 +635,17 @@ class ExecutionReplay:
             max_drawdown=stats.get("max_drawdown", 0.0),
             net_pnl=stats.get("net_pnl", 0.0),
             trade_rows=trade_rows,
-            equity_data=json.dumps(equity_data)
+            equity_data=json.dumps(equity_data),
         )
 
     def get_replay_summary(self) -> Dict[str, Any]:
         """Get summary of all replay sessions."""
         if not self.replay_history:
             return {"total_replays": 0}
-        
+
         total_replays = len(self.replay_history)
         total_trades = sum(replay["total_trades"] for replay in self.replay_history)
-        
+
         # Calculate average performance
         returns = []
         for replay in self.replay_history:
@@ -615,13 +655,19 @@ class ExecutionReplay:
                 if replay_data and replay_data.get("equity_curve"):
                     initial_equity = replay_data["equity_curve"][0]["equity"]
                     if initial_equity > 0:
-                        returns.append((replay["final_equity"] - initial_equity) / initial_equity)
-        
+                        returns.append(
+                            (replay["final_equity"] - initial_equity) / initial_equity
+                        )
+
         avg_return = np.mean(returns) if returns else 0.0
-        
+
         return {
             "total_replays": total_replays,
             "total_trades": total_trades,
             "average_return": avg_return,
-            "recent_replays": self.replay_history[-5:] if len(self.replay_history) > 5 else self.replay_history
+            "recent_replays": (
+                self.replay_history[-5:]
+                if len(self.replay_history) > 5
+                else self.replay_history
+            ),
         }

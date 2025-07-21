@@ -1,4 +1,4 @@
-﻿"""Base class for all ML models with common functionality."""
+"""Base class for all ML models with common functionality."""
 
 # Standard library imports
 import json
@@ -23,6 +23,7 @@ try:
     import torch.optim as optim
     from torch.optim.lr_scheduler import ReduceLROnPlateau
     from torch.utils.data import DataLoader, Dataset
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ PyTorch not available. Disabling deep learning models.")
@@ -38,6 +39,7 @@ except ImportError as e:
 # Try to import scikit-learn
 try:
     from sklearn.preprocessing import StandardScaler
+
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ scikit-learn not available. Disabling data preprocessing.")
@@ -136,8 +138,10 @@ class TimeSeriesDataset(Dataset):
             scaler: Optional scaler for features
         """
         if not TORCH_AVAILABLE:
-            raise ImportError("PyTorch is not available. Cannot create TimeSeriesDataset.")
-        
+            raise ImportError(
+                "PyTorch is not available. Cannot create TimeSeriesDataset."
+            )
+
         self.sequence_length = sequence_length
         self.target_col = target_col
         self.feature_cols = feature_cols
@@ -147,8 +151,10 @@ class TimeSeriesDataset(Dataset):
 
         # Scale features
         if not SKLEARN_AVAILABLE:
-            raise ImportError("scikit-learn is not available. Cannot perform data scaling.")
-        
+            raise ImportError(
+                "scikit-learn is not available. Cannot perform data scaling."
+            )
+
         if scaler is None:
             self.scaler = StandardScaler()
             self.features = self.scaler.fit_transform(data[feature_cols])
@@ -164,7 +170,7 @@ class TimeSeriesDataset(Dataset):
         self.sequence_targets = []
 
         for i in range(len(data) - sequence_length):
-            self.sequences.append(self.features[i : i + sequence_length])
+            self.sequences.append(self.features[i: i + sequence_length])
             self.sequence_targets.append(self.targets[i + sequence_length])
 
     def _validate_data(self, data: pd.DataFrame) -> None:
@@ -232,7 +238,7 @@ class BaseModel(ABC):
         self.optimizer = None
         self.scheduler = None
         self.criterion = None
-        
+
         if SKLEARN_AVAILABLE:
             self.scaler = StandardScaler()
         else:
@@ -357,9 +363,9 @@ class BaseModel(ABC):
             train_size = 1 - test_size - val_size
             train_data = data.iloc[: int(len(data) * train_size)]
             val_data = data.iloc[
-                int(len(data) * train_size) : int(len(data) * (train_size + val_size))
+                int(len(data) * train_size): int(len(data) * (train_size + val_size))
             ]
-            test_data = data.iloc[int(len(data) * (train_size + val_size)) :]
+            test_data = data.iloc[int(len(data) * (train_size + val_size)):]
 
             # Create datasets
             train_dataset = TimeSeriesDataset(
@@ -705,9 +711,9 @@ class BaseModel(ABC):
 
             checkpoint = {
                 "model_state_dict": self.model.state_dict() if self.model else None,
-                "optimizer_state_dict": self.optimizer.state_dict()
-                if self.optimizer
-                else None,
+                "optimizer_state_dict": (
+                    self.optimizer.state_dict() if self.optimizer else None
+                ),
                 "config": self.config,
                 "scaler": self.scaler,
                 "train_losses": self.train_losses,

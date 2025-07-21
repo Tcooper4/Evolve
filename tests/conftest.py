@@ -254,9 +254,11 @@ def pytest_configure(config):
 @pytest.fixture(autouse=True)
 def mock_external_apis():
     """Automatically mock external APIs for all tests."""
-    with patch("yfinance.download") as mock_yf, patch(
-        "requests.get"
-    ) as mock_requests, patch("openai.ChatCompletion.create") as mock_openai:
+    with (
+        patch("yfinance.download") as mock_yf,
+        patch("requests.get") as mock_requests,
+        patch("openai.ChatCompletion.create") as mock_openai,
+    ):
         # Mock yfinance
         mock_yf.return_value = pd.DataFrame(
             {

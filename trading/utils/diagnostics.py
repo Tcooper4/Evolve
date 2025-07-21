@@ -7,7 +7,7 @@ import platform
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,7 @@ import pandas as pd
 # Try to import psutil
 try:
     import psutil
+
     PSUTIL_AVAILABLE = True
 except ImportError as e:
     print("⚠️ psutil not available. Disabling system resource monitoring.")
@@ -25,6 +26,7 @@ except ImportError as e:
 # Try to import PyTorch
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError as e:
     print("⚠️ PyTorch not available. Disabling PyTorch diagnostics.")
@@ -32,7 +34,6 @@ except ImportError as e:
     torch = None
     TORCH_AVAILABLE = False
 
-from trading.utils.auto_repair import auto_repair
 from trading.utils.error_logger import error_logger
 
 

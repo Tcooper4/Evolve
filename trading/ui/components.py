@@ -1,4 +1,4 @@
-﻿"""Base UI components for the trading system.
+"""Base UI components for the trading system.
 
 This module provides reusable UI components that can be used across different pages
 and can be integrated with agentic systems for monitoring and control.
@@ -13,8 +13,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
-
-from trading.backtesting.edge_case_handler import EdgeCaseHandler
 
 from .config.registry import registry
 
@@ -122,9 +120,11 @@ def create_strategy_selector(
     selected_strategy = st.selectbox(
         "Select Strategy",
         options=strategy_names,
-        index=strategy_names.index(default_strategy)
-        if default_strategy in strategy_names
-        else 0,
+        index=(
+            strategy_names.index(default_strategy)
+            if default_strategy in strategy_names
+            else 0
+        ),
         key=key,
     )
 
@@ -221,9 +221,11 @@ def create_timeframe_selector(
     selected_timeframe = st.selectbox(
         "Select Timeframe",
         options=timeframes,
-        index=timeframes.index(default_timeframe)
-        if default_timeframe in timeframes
-        else 0,
+        index=(
+            timeframes.index(default_timeframe)
+            if default_timeframe in timeframes
+            else 0
+        ),
         key=key,
     )
 
@@ -479,7 +481,10 @@ def create_forecast_chart(
         )
 
     # Confidence intervals
-    if "lower_bound" in forecast_data.columns and "upper_bound" in forecast_data.columns:
+    if (
+        "lower_bound" in forecast_data.columns
+        and "upper_bound" in forecast_data.columns
+    ):
         fig.add_trace(
             go.Scatter(
                 x=forecast_data.index,
@@ -914,7 +919,9 @@ def create_system_metrics_panel(metrics: Dict[str, float]) -> Dict[str, Any]:
 
     with perf_col1:
         st.write("**Model Performance**")
-        st.write(f"Average Prediction Time: {metrics.get('avg_prediction_time', 0):.3f}s")
+        st.write(
+            f"Average Prediction Time: {metrics.get('avg_prediction_time', 0):.3f}s"
+        )
         st.write(f"Model Accuracy: {metrics.get('model_accuracy', 0):.2%}")
         st.write(f"Cache Hit Rate: {metrics.get('cache_hit_rate', 0):.2%}")
 
@@ -966,10 +973,7 @@ def create_strategy_pipeline_selector(
         Dictionary containing selected strategies and configuration
     """
     try:
-        from strategies.strategy_pipeline import (
-            AVAILABLE_STRATEGIES,
-            COMBINE_MODES,
-        )
+        from strategies.strategy_pipeline import AVAILABLE_STRATEGIES, COMBINE_MODES
 
         st.subheader("Strategy Pipeline Configuration")
 
@@ -1074,11 +1078,11 @@ def execute_strategy_pipeline(
     """
     try:
         from strategies.strategy_pipeline import (
-            rsi_strategy,
-            macd_strategy,
             bollinger_strategy,
-            sma_strategy,
             combine_signals,
+            macd_strategy,
+            rsi_strategy,
+            sma_strategy,
         )
 
         if not strategy_config or not strategy_config.get("strategies"):

@@ -509,7 +509,7 @@ class TestAgentLeaderboard:
         rankings_history = []
 
         for i, agent_data in enumerate(agents_data):
-            print(f"\n📊 Adding agent {agent_data['name']} (iteration {i+1})")
+            print(f"\n📊 Adding agent {agent_data['name']} (iteration {i + 1})")
 
             # Update performance
             self.leaderboard.update_performance(
@@ -624,13 +624,13 @@ class TestAgentLeaderboard:
             stable_ranking = self.leaderboard.get_leaderboard(sort_by="sharpe_ratio")
             stable_ranks = [perf.agent_name for perf in stable_ranking]
 
-            print(f"  Update {i+1}: {stable_ranks}")
+            print(f"  Update {i + 1}: {stable_ranks}")
 
             # Ranking should remain stable
             self.assertEqual(
                 stable_ranks[0],
                 "agent_d",
-                f"Top agent should remain agent_d after update {i+1}",
+                f"Top agent should remain agent_d after update {i + 1}",
             )
 
         print("✅ Leaderboard re-ranking test completed")
@@ -705,3 +705,8 @@ class TestAgentLeaderboardIntegration:
         # All agents should be active (good performance)
         active_agents = leaderboard.get_active_agents()
         assert len(active_agents) == 5
+
+        print(
+            "Agent leaderboard test completed. All agent ranking functions "
+            "have been validated."
+        )

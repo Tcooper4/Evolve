@@ -42,7 +42,9 @@ class SelfTuningRequest:
     """Self-tuning optimization request."""
 
     strategy_name: str
-    action: str  # 'check_triggers', 'optimize_parameters', 'get_summary', 'set_constraints'
+    action: (
+        str  # 'check_triggers', 'optimize_parameters', 'get_summary', 'set_constraints'
+    )
     current_parameters: Optional[Dict[str, Any]] = None
     strategy_performance: Optional[pd.Series] = None
     market_data: Optional[pd.DataFrame] = None

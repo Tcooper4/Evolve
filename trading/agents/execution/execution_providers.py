@@ -1,4 +1,4 @@
-﻿"""
+"""
 Execution Providers Module
 
 This module contains execution provider classes for different trading platforms.
@@ -8,7 +8,7 @@ Extracted from the original execution_agent.py for modularity.
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from .trade_signals import TradeSignal
 
@@ -32,27 +32,22 @@ class ExecutionProvider(ABC):
     @abstractmethod
     async def connect(self) -> bool:
         """Connect to the execution platform."""
-        pass
 
     @abstractmethod
     async def disconnect(self) -> None:
         """Disconnect from the execution platform."""
-        pass
 
     @abstractmethod
     async def execute_trade(self, signal: TradeSignal) -> Dict[str, Any]:
         """Execute a trade based on the signal."""
-        pass
 
     @abstractmethod
     async def get_account_info(self) -> Dict[str, Any]:
         """Get account information."""
-        pass
 
     @abstractmethod
     async def get_positions(self) -> Dict[str, Any]:
         """Get current positions."""
-        pass
 
 
 class SimulationProvider(ExecutionProvider):
@@ -81,16 +76,16 @@ class SimulationProvider(ExecutionProvider):
         # Simulate trade execution
         execution_price = signal.entry_price
         fees = execution_price * 0.001  # 0.1% fee simulation
-        
+
         trade_result = {
             "success": True,
             "execution_price": execution_price,
             "fees": fees,
             "timestamp": datetime.utcnow().isoformat(),
             "order_id": f"sim_{len(self.trades) + 1}",
-            "slippage": 0.0
+            "slippage": 0.0,
         }
-        
+
         self.trades.append(trade_result)
         return trade_result
 
@@ -100,7 +95,7 @@ class SimulationProvider(ExecutionProvider):
             "balance": self.account_balance,
             "buying_power": self.account_balance,
             "equity": self.account_balance,
-            "cash": self.account_balance
+            "cash": self.account_balance,
         }
 
     async def get_positions(self) -> Dict[str, Any]:
@@ -122,21 +117,20 @@ class AlpacaProvider(ExecutionProvider):
         try:
             # Import alpaca-py here to avoid dependency issues
             try:
-                from alpaca.trading.client import TradingClient
                 from alpaca.data.historical import StockHistoricalDataClient
+                from alpaca.trading.client import TradingClient
             except ImportError as e:
                 print("âš ï¸ alpaca-py not available. Cannot connect to Alpaca.")
                 print(f"   Missing: {e}")
                 return False
-            
+
             self.trading_client = TradingClient(
                 api_key=self.api_key,
                 secret_key=self.secret_key,
-                paper=True if "paper" in self.base_url else False
+                paper=True if "paper" in self.base_url else False,
             )
             self.data_client = StockHistoricalDataClient(
-                api_key=self.api_key,
-                secret_key=self.secret_key
+                api_key=self.api_key, secret_key=self.secret_key
             )
             self.is_connected = True
             return True
@@ -156,55 +150,59 @@ class AlpacaProvider(ExecutionProvider):
         try:
             # Import alpaca-py components
             try:
-                from alpaca.trading.requests import MarketOrderRequest
                 from alpaca.trading.enums import OrderSide, TimeInForce
+                from alpaca.trading.requests import MarketOrderRequest
             except ImportError as e:
                 print("âš ï¸ alpaca-py not available. Cannot execute trade.")
                 print(f"   Missing: {e}")
                 return {
                     "success": False,
                     "error": "alpaca-py not available",
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            
+
             # Create market order request
             order_data = MarketOrderRequest(
                 symbol=signal.symbol,
                 qty=signal.size,
-                side=OrderSide.BUY if signal.direction.value == 'long' else OrderSide.SELL,
-                time_in_force=TimeInForce.DAY
+                side=(
+                    OrderSide.BUY
+                    if signal.direction.value == "long"
+                    else OrderSide.SELL
+                ),
+                time_in_force=TimeInForce.DAY,
             )
-            
+
             # Submit order
             order = self.trading_client.submit_order(order_data)
-            
+
             return {
                 "success": True,
                 "execution_price": signal.entry_price,
                 "fees": 0.0,
                 "timestamp": datetime.utcnow().isoformat(),
                 "order_id": order.id,
-                "slippage": 0.0
+                "slippage": 0.0,
             }
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
     async def get_account_info(self) -> Dict[str, Any]:
         """Get Alpaca account information."""
         if not self.is_connected:
             return {}
-        
+
         try:
             account = self.trading_client.get_account()
             return {
                 "balance": float(account.cash),
                 "buying_power": float(account.buying_power),
                 "equity": float(account.equity),
-                "cash": float(account.cash)
+                "cash": float(account.cash),
             }
         except Exception as e:
             return {"error": str(e)}
@@ -213,14 +211,17 @@ class AlpacaProvider(ExecutionProvider):
         """Get Alpaca positions."""
         if not self.is_connected:
             return {}
-        
+
         try:
             positions = self.trading_client.get_all_positions()
-            return {pos.symbol: {
-                "quantity": float(pos.qty),
-                "avg_entry_price": float(pos.avg_entry_price),
-                "market_value": float(pos.market_value)
-            } for pos in positions}
+            return {
+                pos.symbol: {
+                    "quantity": float(pos.qty),
+                    "avg_entry_price": float(pos.avg_entry_price),
+                    "market_value": float(pos.market_value),
+                }
+                for pos in positions
+            }
         except Exception as e:
             return {"error": str(e)}
 
@@ -239,6 +240,7 @@ class IBProvider(ExecutionProvider):
         try:
             # Import ib_insync here to avoid dependency issues
             from ib_insync import IB
+
             self.ib = IB()
             self.ib.connect(self.host, self.port, clientId=self.client_id)
             self.is_connected = True
@@ -249,7 +251,7 @@ class IBProvider(ExecutionProvider):
 
     async def disconnect(self) -> None:
         """Disconnect from Interactive Brokers."""
-        if hasattr(self, 'ib'):
+        if hasattr(self, "ib"):
             self.ib.disconnect()
         self.is_connected = False
 
@@ -260,40 +262,51 @@ class IBProvider(ExecutionProvider):
 
         try:
             # Place order via IB API
-            from ib_insync import Stock, MarketOrder
-            contract = Stock(signal.symbol, 'SMART', 'USD')
-            order = MarketOrder('BUY' if signal.direction.value == 'long' else 'SELL', signal.size)
-            
+            from ib_insync import MarketOrder, Stock
+
+            contract = Stock(signal.symbol, "SMART", "USD")
+            order = MarketOrder(
+                "BUY" if signal.direction.value == "long" else "SELL", signal.size
+            )
+
             trade = self.ib.placeOrder(contract, order)
             self.ib.sleep(1)  # Wait for order to be processed
-            
+
             return {
                 "success": trade.orderStatus.status == "Filled",
                 "execution_price": signal.entry_price,
                 "fees": 0.0,
                 "timestamp": datetime.utcnow().isoformat(),
                 "order_id": str(trade.order.orderId),
-                "slippage": 0.0
+                "slippage": 0.0,
             }
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
     async def get_account_info(self) -> Dict[str, Any]:
         """Get IB account information."""
         if not self.is_connected:
             return {}
-        
+
         try:
             account_values = self.ib.accountSummary()
             return {
-                "balance": float([av for av in account_values if av.tag == "NetLiquidation"][0].value),
-                "buying_power": float([av for av in account_values if av.tag == "BuyingPower"][0].value),
-                "equity": float([av for av in account_values if av.tag == "NetLiquidation"][0].value),
-                "cash": float([av for av in account_values if av.tag == "AvailableFunds"][0].value)
+                "balance": float(
+                    [av for av in account_values if av.tag == "NetLiquidation"][0].value
+                ),
+                "buying_power": float(
+                    [av for av in account_values if av.tag == "BuyingPower"][0].value
+                ),
+                "equity": float(
+                    [av for av in account_values if av.tag == "NetLiquidation"][0].value
+                ),
+                "cash": float(
+                    [av for av in account_values if av.tag == "AvailableFunds"][0].value
+                ),
             }
         except Exception as e:
             return {"error": str(e)}
@@ -302,14 +315,18 @@ class IBProvider(ExecutionProvider):
         """Get IB positions."""
         if not self.is_connected:
             return {}
-        
+
         try:
             positions = self.ib.positions()
-            return {pos.contract.symbol: {
-                "quantity": pos.position,
-                "avg_entry_price": pos.avgCost,
-                "market_value": pos.position * pos.avgCost
-            } for pos in positions if pos.position != 0}
+            return {
+                pos.contract.symbol: {
+                    "quantity": pos.position,
+                    "avg_entry_price": pos.avgCost,
+                    "market_value": pos.position * pos.avgCost,
+                }
+                for pos in positions
+                if pos.position != 0
+            }
         except Exception as e:
             return {"error": str(e)}
 
@@ -328,6 +345,7 @@ class RobinhoodProvider(ExecutionProvider):
         try:
             # Import robin_stocks here to avoid dependency issues
             import robin_stocks.robinhood as rh
+
             rh.login(self.username, self.password, mfa_code=self.mfa_code)
             self.is_connected = True
             return True
@@ -347,42 +365,41 @@ class RobinhoodProvider(ExecutionProvider):
         try:
             # Place order via Robinhood API
             import robin_stocks.robinhood as rh
-            
-            side = "buy" if signal.direction.value == 'long' else "sell"
+
+            side = "buy" if signal.direction.value == "long" else "sell"
             order = rh.order_market(
-                symbol=signal.symbol,
-                side=side,
-                quantity=signal.size
+                symbol=signal.symbol, side=side, quantity=signal.size
             )
-            
+
             return {
                 "success": order.get("state") == "filled",
                 "execution_price": signal.entry_price,
                 "fees": 0.0,
                 "timestamp": datetime.utcnow().isoformat(),
                 "order_id": order.get("id"),
-                "slippage": 0.0
+                "slippage": 0.0,
             }
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
     async def get_account_info(self) -> Dict[str, Any]:
         """Get Robinhood account information."""
         if not self.is_connected:
             return {}
-        
+
         try:
             import robin_stocks.robinhood as rh
+
             account = rh.load_account_profile()
             return {
                 "balance": float(account.get("cash", 0)),
                 "buying_power": float(account.get("buying_power", 0)),
                 "equity": float(account.get("equity", 0)),
-                "cash": float(account.get("cash", 0))
+                "cash": float(account.get("cash", 0)),
             }
         except Exception as e:
             return {"error": str(e)}
@@ -391,20 +408,28 @@ class RobinhoodProvider(ExecutionProvider):
         """Get Robinhood positions."""
         if not self.is_connected:
             return {}
-        
+
         try:
             import robin_stocks.robinhood as rh
+
             positions = rh.get_open_stock_positions()
-            return {pos.get("symbol"): {
-                "quantity": float(pos.get("quantity", 0)),
-                "avg_entry_price": float(pos.get("average_buy_price", 0)),
-                "market_value": float(pos.get("quantity", 0)) * float(pos.get("average_buy_price", 0))
-            } for pos in positions if float(pos.get("quantity", 0)) > 0}
+            return {
+                pos.get("symbol"): {
+                    "quantity": float(pos.get("quantity", 0)),
+                    "avg_entry_price": float(pos.get("average_buy_price", 0)),
+                    "market_value": float(pos.get("quantity", 0))
+                    * float(pos.get("average_buy_price", 0)),
+                }
+                for pos in positions
+                if float(pos.get("quantity", 0)) > 0
+            }
         except Exception as e:
             return {"error": str(e)}
 
 
-def create_execution_provider(mode: ExecutionMode, config: Dict[str, Any]) -> ExecutionProvider:
+def create_execution_provider(
+    mode: ExecutionMode, config: Dict[str, Any]
+) -> ExecutionProvider:
     """Factory function to create execution providers."""
     if mode == ExecutionMode.SIMULATION:
         return SimulationProvider(config)

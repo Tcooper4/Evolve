@@ -140,9 +140,9 @@ class CausalDriverAnalyzer:
                         {
                             "from": variables[i],
                             "to": variables[j],
-                            "type": "directed"
-                            if adj_matrix[i, j] == 1
-                            else "undirected",
+                            "type": (
+                                "directed" if adj_matrix[i, j] == 1 else "undirected"
+                            ),
                         }
                     )
         return edges

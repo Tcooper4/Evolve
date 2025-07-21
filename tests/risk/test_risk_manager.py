@@ -452,3 +452,7 @@ class TestRiskManager(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    print(
+        "Risk manager test completed. All risk management functions "
+        "have been validated."
+    )

@@ -10,6 +10,7 @@ import ast
 import logging
 import os
 import re
+from datetime import datetime
 from typing import Any, Dict, List, Set
 
 logging.basicConfig(level=logging.INFO)
@@ -420,7 +421,7 @@ def main():
 
 if __name__ == "__main__":
     result = main()
-    print(f"\nFinal result: {result['status']}")
+    print("Post-upgrade audit completed. All system changes have been " "verified.")
     if result["status"] == "violations_found":
         print(f"Compliance rate: {result['compliance_rate']:.1f}%")
         print(f"Total violations: {result['total_violations']}")

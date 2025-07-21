@@ -7,7 +7,7 @@ Common utilities for service setup and configuration.
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from utils.logging import setup_logging as setup_enhanced_logging
 
@@ -24,15 +24,14 @@ def setup_service_logging(service_name: str, log_dir: str = "logs") -> logging.L
         service_name=service_name,
         log_dir=log_dir,
         enable_file_output=True,
-        enable_rotating_handlers=True
+        enable_rotating_handlers=True,
     )
 
     return logger
 
 
 def load_service_config(
-    env_mapping: Dict[str, str],
-    defaults: Optional[Dict[str, Any]] = None
+    env_mapping: Dict[str, str], defaults: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Load service configuration from environment variables.
@@ -61,21 +60,24 @@ def create_sample_market_data(rows: int = 100) -> Dict[str, Any]:
     import numpy as np
     import pandas as pd
 
-    dates = pd.date_range(start='2023-01-01', periods=rows, freq='D')
+    dates = pd.date_range(start="2023-01-01", periods=rows, freq="D")
     prices = 100 + np.cumsum(np.random.randn(rows) * 0.5)
 
-    data = pd.DataFrame({
-        'open': prices * 0.99,
-        'high': prices * 1.02,
-        'low': prices * 0.98,
-        'close': prices,
-        'volume': np.random.randint(1000000, 10000000, rows)
-    }, index=dates)
+    data = pd.DataFrame(
+        {
+            "open": prices * 0.99,
+            "high": prices * 1.02,
+            "low": prices * 0.98,
+            "close": prices,
+            "volume": np.random.randint(1000000, 10000000, rows),
+        },
+        index=dates,
+    )
 
     return {
-        'data': data,
-        'symbol': 'SAMPLE',
-        'start_date': dates[0],
-        'end_date': dates[-1],
-        'rows': rows
+        "data": data,
+        "symbol": "SAMPLE",
+        "start_date": dates[0],
+        "end_date": dates[-1],
+        "rows": rows,
     }

@@ -12,10 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from services.service_client import ServiceClient
+
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.service_client import ServiceClient
 
 logger = logging.getLogger(__name__)
 
@@ -36,15 +37,15 @@ class DemoSafeExecutor:
     """Demonstration class for safe executor functionality."""
 
     def __init__(self):
-        """Initialize the demo executor."""
+        """Initialize the demo safe executor."""
         self.client = None
         self.setup_logging()
 
-    from utils.launch_utils import setup_logging
+    def setup_logging(self):
+        """Set up logging for the service."""
+        return setup_logging(service_name="reasoning_service")
 
-def setup_logging():
-    """Set up logging for the service."""
-    return setup_logging(service_name="reasoning_service")def initialize_client(self) -> bool:
+    def initialize_client(self) -> bool:
         """Initialize ServiceClient."""
         try:
             logger.info("🔧 Initializing ServiceClient...")

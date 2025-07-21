@@ -89,12 +89,16 @@ class EnhancedUIComponents:
                     if config.param_type == "int":
                         value = st.slider(
                             config.display_name,
-                            min_value=int(config.min_value)
-                            if config.min_value is not None
-                            else 0,
-                            max_value=int(config.max_value)
-                            if config.max_value is not None
-                            else 100,
+                            min_value=(
+                                int(config.min_value)
+                                if config.min_value is not None
+                                else 0
+                            ),
+                            max_value=(
+                                int(config.max_value)
+                                if config.max_value is not None
+                                else 100
+                            ),
                             value=int(config.default_value),
                             step=int(config.step) if config.step else 1,
                             help=config.description,
@@ -120,12 +124,16 @@ class EnhancedUIComponents:
                     elif config.param_type == "float":
                         value = st.slider(
                             config.display_name,
-                            min_value=float(config.min_value)
-                            if config.min_value is not None
-                            else 0.0,
-                            max_value=float(config.max_value)
-                            if config.max_value is not None
-                            else 1.0,
+                            min_value=(
+                                float(config.min_value)
+                                if config.min_value is not None
+                                else 0.0
+                            ),
+                            max_value=(
+                                float(config.max_value)
+                                if config.max_value is not None
+                                else 1.0
+                            ),
                             value=float(config.default_value),
                             step=float(config.step) if config.step else 0.01,
                             help=config.description,
@@ -160,9 +168,11 @@ class EnhancedUIComponents:
                             value = st.selectbox(
                                 config.display_name,
                                 options=config.options,
-                                index=config.options.index(config.default_value)
-                                if config.default_value in config.options
-                                else 0,
+                                index=(
+                                    config.options.index(config.default_value)
+                                    if config.default_value in config.options
+                                    else 0
+                                ),
                                 help=config.description,
                             )
                         else:
@@ -202,9 +212,11 @@ class EnhancedUIComponents:
             st.metric(
                 "Overall Confidence",
                 f"{overall_confidence:.1%}",
-                delta=f"{overall_confidence - 0.5:.1%}"
-                if overall_confidence > 0.5
-                else f"{overall_confidence - 0.5:.1%}",
+                delta=(
+                    f"{overall_confidence - 0.5:.1%}"
+                    if overall_confidence > 0.5
+                    else f"{overall_confidence - 0.5:.1%}"
+                ),
             )
 
         with col2:
@@ -599,9 +611,9 @@ class EnhancedUIComponents:
                 st.metric(
                     "Sharpe Ratio",
                     f"{sharpe:.2f}",
-                    delta=f"{sharpe - 1.0:.2f}"
-                    if sharpe > 1.0
-                    else f"{sharpe - 1.0:.2f}",
+                    delta=(
+                        f"{sharpe - 1.0:.2f}" if sharpe > 1.0 else f"{sharpe - 1.0:.2f}"
+                    ),
                 )
 
         with col2:
@@ -622,9 +634,11 @@ class EnhancedUIComponents:
                 st.metric(
                     "Win Rate",
                     f"{win_rate:.1%}",
-                    delta=f"{win_rate - 0.5:.1%}"
-                    if win_rate > 0.5
-                    else f"{win_rate - 0.5:.1%}",
+                    delta=(
+                        f"{win_rate - 0.5:.1%}"
+                        if win_rate > 0.5
+                        else f"{win_rate - 0.5:.1%}"
+                    ),
                 )
 
         # Detailed metrics table

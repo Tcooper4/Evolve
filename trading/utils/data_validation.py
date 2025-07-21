@@ -172,5 +172,5 @@ def validate_date_range(
             end_date = pd.to_datetime(end_date)
 
         return start_date < end_date
-    except:
+    except BaseException:
         return False

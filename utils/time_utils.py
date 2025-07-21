@@ -1,4 +1,4 @@
-﻿"""
+"""
 Time utilities for datetime parsing and formatting.
 
 This module provides centralized time formatting and datetime parsing logic
@@ -7,7 +7,7 @@ for use across the trading platform, particularly for Prophet forecasting.
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 
 import pandas as pd
 
@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_datetime(
-    date_input: Union[str, datetime, pd.Timestamp],
-    format_hint: Optional[str] = None
+    date_input: Union[str, datetime, pd.Timestamp], format_hint: Optional[str] = None
 ) -> datetime:
     """Parse datetime from various input formats.
 
@@ -78,9 +77,7 @@ def format_datetime_for_prophet(dt: datetime) -> str:
 
 
 def create_date_range(
-    start_date: Union[str, datetime],
-    end_date: Union[str, datetime],
-    freq: str = "D"
+    start_date: Union[str, datetime], end_date: Union[str, datetime], freq: str = "D"
 ) -> pd.DatetimeIndex:
     """Create a date range for forecasting.
 
@@ -102,7 +99,7 @@ def calculate_forecast_horizon(
     data: pd.DataFrame,
     date_column: str,
     target_horizon: Optional[int] = None,
-    max_horizon: int = 365
+    max_horizon: int = 365,
 ) -> int:
     """Calculate appropriate forecast horizon based on data characteristics.
 
@@ -121,7 +118,9 @@ def calculate_forecast_horizon(
 
         # Auto-calculate based on data characteristics
         if date_column not in data.columns:
-            logger.warning(f"Date column '{date_column}' not found, using default horizon")
+            logger.warning(
+                f"Date column '{date_column}' not found, using default horizon"
+            )
             return 30
 
         # Parse dates
@@ -141,16 +140,16 @@ def calculate_forecast_horizon(
             default_horizon = 168  # 1 week
         elif median_diff <= timedelta(days=1):
             freq = "daily"
-            default_horizon = 30   # 1 month
+            default_horizon = 30  # 1 month
         elif median_diff <= timedelta(weeks=1):
             freq = "weekly"
-            default_horizon = 12   # 3 months
+            default_horizon = 12  # 3 months
         elif median_diff <= timedelta(days=30):
             freq = "monthly"
-            default_horizon = 12   # 1 year
+            default_horizon = 12  # 1 year
         else:
             freq = "yearly"
-            default_horizon = 5    # 5 years
+            default_horizon = 5  # 5 years
 
         # Calculate horizon based on data length
         data_length = len(data)
@@ -161,7 +160,9 @@ def calculate_forecast_horizon(
         else:
             horizon = min(default_horizon * 2, max_horizon)
 
-        logger.info(f"Auto-calculated forecast horizon: {horizon} periods for {freq} data")
+        logger.info(
+            f"Auto-calculated forecast horizon: {horizon} periods for {freq} data"
+        )
         return horizon
 
     except Exception as e:
@@ -185,11 +186,13 @@ def validate_date_column(data: pd.DataFrame, date_column: str) -> bool:
             return False
 
         # Try to parse dates
-        dates = pd.to_datetime(data[date_column], errors='coerce')
+        dates = pd.to_datetime(data[date_column], errors="coerce")
         invalid_count = dates.isnull().sum()
 
         if invalid_count > 0:
-            logger.warning(f"Found {invalid_count} invalid dates in column '{date_column}'")
+            logger.warning(
+                f"Found {invalid_count} invalid dates in column '{date_column}'"
+            )
             return False
 
         return True
@@ -200,9 +203,7 @@ def validate_date_column(data: pd.DataFrame, date_column: str) -> bool:
 
 
 def get_holiday_dates(
-    country: str = "US",
-    start_year: int = 2020,
-    end_year: int = 2030
+    country: str = "US", start_year: int = 2020, end_year: int = 2030
 ) -> pd.DataFrame:
     """Get holiday dates for a specific country.
 
@@ -217,23 +218,22 @@ def get_holiday_dates(
     try:
         import holidays
 
-        country_holidays = holidays.country_holidays(country, years=range(start_year, end_year + 1))
+        country_holidays = holidays.country_holidays(
+            country, years=range(start_year, end_year + 1)
+        )
 
         holiday_data = []
         for date, name in country_holidays.items():
-            holiday_data.append({
-                'ds': date,
-                'holiday': name
-            })
+            holiday_data.append({"ds": date, "holiday": name})
 
         return pd.DataFrame(holiday_data)
 
     except ImportError:
         logger.warning("holidays package not available, returning empty DataFrame")
-        return pd.DataFrame(columns=['ds', 'holiday'])
+        return pd.DataFrame(columns=["ds", "holiday"])
     except Exception as e:
         logger.error(f"Error getting holiday dates: {e}")
-        return pd.DataFrame(columns=['ds', 'holiday'])
+        return pd.DataFrame(columns=["ds", "holiday"])
 
 
 def add_time_features(data: pd.DataFrame, date_column: str) -> pd.DataFrame:
@@ -251,17 +251,17 @@ def add_time_features(data: pd.DataFrame, date_column: str) -> pd.DataFrame:
         dates = pd.to_datetime(df[date_column])
 
         # Add time features
-        df['year'] = dates.dt.year
-        df['month'] = dates.dt.month
-        df['day'] = dates.dt.day
-        df['dayofweek'] = dates.dt.dayofweek
-        df['quarter'] = dates.dt.quarter
-        df['is_month_end'] = dates.dt.is_month_end.astype(int)
-        df['is_month_start'] = dates.dt.is_month_start.astype(int)
-        df['is_quarter_end'] = dates.dt.is_quarter_end.astype(int)
-        df['is_quarter_start'] = dates.dt.is_quarter_start.astype(int)
-        df['is_year_end'] = dates.dt.is_year_end.astype(int)
-        df['is_year_start'] = dates.dt.is_year_start.astype(int)
+        df["year"] = dates.dt.year
+        df["month"] = dates.dt.month
+        df["day"] = dates.dt.day
+        df["dayofweek"] = dates.dt.dayofweek
+        df["quarter"] = dates.dt.quarter
+        df["is_month_end"] = dates.dt.is_month_end.astype(int)
+        df["is_month_start"] = dates.dt.is_month_start.astype(int)
+        df["is_quarter_end"] = dates.dt.is_quarter_end.astype(int)
+        df["is_quarter_start"] = dates.dt.is_quarter_start.astype(int)
+        df["is_year_end"] = dates.dt.is_year_end.astype(int)
+        df["is_year_start"] = dates.dt.is_year_start.astype(int)
 
         return df
 
@@ -270,7 +270,9 @@ def add_time_features(data: pd.DataFrame, date_column: str) -> pd.DataFrame:
         return data
 
 
-def detect_seasonality(data: pd.DataFrame, date_column: str, target_column: str) -> Dict[str, Any]:
+def detect_seasonality(
+    data: pd.DataFrame, date_column: str, target_column: str
+) -> Dict[str, Any]:
     """Detect seasonality patterns in time series data.
 
     Args:
@@ -288,35 +290,45 @@ def detect_seasonality(data: pd.DataFrame, date_column: str, target_column: str)
         target_series = df[target_column]
 
         seasonality_info = {
-            'daily': target_series.autocorr(lag=1),
-            'weekly': target_series.autocorr(lag=7) if len(target_series) > 7 else None,
-            'monthly': target_series.autocorr(lag=30) if len(target_series) > 30 else None,
-            'quarterly': target_series.autocorr(lag=90) if len(target_series) > 90 else None,
-            'yearly': target_series.autocorr(lag=365) if len(target_series) > 365 else None,
+            "daily": target_series.autocorr(lag=1),
+            "weekly": target_series.autocorr(lag=7) if len(target_series) > 7 else None,
+            "monthly": (
+                target_series.autocorr(lag=30) if len(target_series) > 30 else None
+            ),
+            "quarterly": (
+                target_series.autocorr(lag=90) if len(target_series) > 90 else None
+            ),
+            "yearly": (
+                target_series.autocorr(lag=365) if len(target_series) > 365 else None
+            ),
         }
 
         # Determine strongest seasonality
-        valid_seasonalities = {k: v for k, v in seasonality_info.items() if v is not None}
+        valid_seasonalities = {
+            k: v for k, v in seasonality_info.items() if v is not None
+        }
         if valid_seasonalities:
             strongest = max(valid_seasonalities.items(), key=lambda x: abs(x[1]))
-            seasonality_info['strongest'] = strongest
+            seasonality_info["strongest"] = strongest
 
         return seasonality_info
 
     except Exception as e:
         logger.error(f"Error detecting seasonality: {e}")
-        return {} 
+        return {}
 
 
-def normalize_datetime_index(df: pd.DataFrame, enforce_utc: bool = False) -> pd.DataFrame:
+def normalize_datetime_index(
+    df: pd.DataFrame, enforce_utc: bool = False
+) -> pd.DataFrame:
     """
     Normalize DataFrame index to remove timezone info or enforce UTC.
     If enforce_utc is True, convert to UTC. Otherwise, remove tz info.
     """
     idx = df.index
-    if hasattr(idx, 'tz') and idx.tz is not None:
+    if hasattr(idx, "tz") and idx.tz is not None:
         if enforce_utc:
-            df.index = idx.tz_convert('UTC')
+            df.index = idx.tz_convert("UTC")
         else:
             df.index = idx.tz_localize(None)
     return df

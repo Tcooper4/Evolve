@@ -6,6 +6,7 @@ Comprehensive test to verify all functions return structured outputs.
 """
 
 import sys
+from datetime import datetime
 from pathlib import Path
 
 # Add current directory to path
@@ -273,7 +274,7 @@ def main():
     print("=" * 60)
     print(f"✅ Passed: {passed}")
     print(f"❌ Failed: {failed}")
-    print(f"📈 Success Rate: {(passed/(passed+failed)*100):.1f}%")
+    print(f"📈 Success Rate: {(passed / (passed + failed) * 100):.1f}%")
 
     if failed == 0:
         print("\n🎉 ALL TESTS PASSED! Return statement compliance: 100%")
@@ -287,7 +288,9 @@ def main():
         print(f"\n⚠️ {failed} tests failed. Check individual results below.")
         for result in results:
             if not result.get("status", "").endswith("_passed"):
-                print(f"  ❌ {result['status']}: {result.get('error', 'Unknown error')}")
+                print(
+                    f"  ❌ {result['status']}: {result.get('error', 'Unknown error')}"
+                )
 
         return {
             "success": True,

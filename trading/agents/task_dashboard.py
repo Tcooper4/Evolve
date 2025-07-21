@@ -148,9 +148,11 @@ class TaskDashboard:
                     "Status": task.status.value,
                     "Agent": task.agent,
                     "Start": task.created_at,
-                    "End": task.updated_at
-                    if task.status == TaskStatus.COMPLETED
-                    else datetime.now(),
+                    "End": (
+                        task.updated_at
+                        if task.status == TaskStatus.COMPLETED
+                        else datetime.now()
+                    ),
                 }
             )
 
