@@ -388,7 +388,7 @@ class BacktestCompiler:
 
                     # Track strategy pair overlaps
                     for i, strategy1 in enumerate(strategies):
-                        for j, strategy2 in enumerate(strategies[i + 1:], i + 1):
+                        for j, strategy2 in enumerate(strategies[i + 1 :], i + 1):
                             pair = tuple(sorted([strategy1, strategy2]))
                             analysis["strategy_overlaps"][pair] = (
                                 analysis["strategy_overlaps"].get(pair, 0) + 1

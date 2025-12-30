@@ -401,8 +401,8 @@ if PROPHET_AVAILABLE:
                 # Check for required columns
                 if self.config["date_column"] not in data.columns:
                     logger.warning(
-                        f"Prophet predict: Missing required column '{
-                            self.config['date_column']}', returning empty result")
+                        f"Prophet predict: Missing required column '{self.config['date_column']}', returning empty result"
+                    )
                     return np.array([])
 
                 # Validate date column using time utilities

@@ -77,11 +77,8 @@ def system_health_check(
         return False
     # Log system info
     logger.info(
-        f"System: {
-            platform.system()} {
-            platform.release()} | Host: {
-                socket.gethostname()} | Python: {
-                    platform.python_version()}")
+        f"System: {platform.system()} {platform.release()} | Host: {socket.gethostname()} | Python: {platform.python_version()}"
+    )
     logger.info(
         f"Memory: {mem.available / (1024 ** 3):.2f} GB available | Disk: {disk.free / (1024 ** 3):.2f} GB free"
     )

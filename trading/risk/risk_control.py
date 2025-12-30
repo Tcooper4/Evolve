@@ -60,9 +60,8 @@ class RiskControl:
         is_high_risk = current_volatility > self.volatility_threshold
 
         logger.info(
-            f"Current volatility: {
-                current_volatility:.4f}, threshold: {
-                self.volatility_threshold:.4f}, risk: {is_high_risk}")
+            f"Current volatility: {current_volatility:.4f}, threshold: {self.volatility_threshold:.4f}, risk: {is_high_risk}"
+        )
         return is_high_risk
 
     def check_drawdown_risk(self, equity_curve: pd.Series) -> bool:

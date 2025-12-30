@@ -236,9 +236,9 @@ class EvolveOrchestratorIntegration:
 
         for agent_name in self.orchestrator.agents.keys():
             if agent_name not in self.orchestrator.agent_status:
-                self.orchestrator.agent_status[agent_name] = (
-                    self.orchestrator.AgentStatus(agent_name=agent_name)
-                )
+                self.orchestrator.agent_status[
+                    agent_name
+                ] = self.orchestrator.AgentStatus(agent_name=agent_name)
                 self.logger.info(f"Initialized status for {agent_name}")
 
     async def start_orchestrator(self):

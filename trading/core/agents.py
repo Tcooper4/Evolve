@@ -145,9 +145,9 @@ class AgentManager:
             event_type: [] for event_type in EventType
         }
         self.event_history: List[EventData] = []
-        self.agent_status_log: Dict[str, Dict[str, Any]] = (
-            {}
-        )  # Track agent status with timestamps
+        self.agent_status_log: Dict[
+            str, Dict[str, Any]
+        ] = {}  # Track agent status with timestamps
         self._load_agents()
 
     def register_agent(self, agent_config: AgentConfig) -> bool:
@@ -881,9 +881,7 @@ def handle_underperformance(status_report: Dict[str, Any]) -> None:
                 handler = NotificationHandler()
                 handler.send_alert(
                     level="critical",
-                    message=f"Critical performance degradation: Sharpe={
-                        current_sharpe:.3f}, Drawdown={
-                        current_drawdown:.3f}",
+                    message=f"Critical performance degradation: Sharpe={current_sharpe:.3f}, Drawdown={current_drawdown:.3f}",
                     recipients=["admin"],
                 )
                 logger.info("Alert notifications sent")
@@ -894,10 +892,8 @@ def handle_underperformance(status_report: Dict[str, Any]) -> None:
         logger.info("[Agent Callback] Underperformance detected. Status report:")
         logger.info(status_report)
         logger.info(
-            f"Actions taken: retraining={
-                current_sharpe < 0.5}, strategy_switch={
-                current_drawdown > 0.15}, alerts={
-                current_sharpe < 0.3}")
+            f"Actions taken: retraining={current_sharpe < 0.5}, strategy_switch={current_drawdown > 0.15}, alerts={current_sharpe < 0.3}"
+        )
 
     except Exception as e:
         logger.error(f"Error in legacy handle_underperformance: {e}")

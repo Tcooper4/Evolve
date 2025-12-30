@@ -452,7 +452,8 @@ def main():
     with col2:
         agentic_count = df["agentic"].sum()
         st.metric(
-            "Agentic Decisions", f"{agentic_count} ({agentic_count / len(df) * 100:.1f}%)"
+            "Agentic Decisions",
+            f"{agentic_count} ({agentic_count / len(df) * 100:.1f}%)",
         )
     with col3:
         avg_sharpe = df["sharpe"].mean()

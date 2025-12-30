@@ -113,7 +113,7 @@ class RewardFunction:
         # Store current performance for history
         if self.performance_history:
             recent_performance = np.mean(
-                [p["sharpe"] for p in self.performance_history[-self.lookback_period:]]
+                [p["sharpe"] for p in self.performance_history[-self.lookback_period :]]
             )
         else:
             recent_performance = 0.0  # Default value when no history available
@@ -231,7 +231,7 @@ class RewardFunction:
 
         # Keep only recent history
         if len(self.performance_history) > self.lookback_period * 2:
-            self.performance_history = self.performance_history[-self.lookback_period:]
+            self.performance_history = self.performance_history[-self.lookback_period :]
 
     def get_regime_summary(self) -> Dict[str, Any]:
         """
@@ -242,7 +242,7 @@ class RewardFunction:
         if not self.market_regime_history:
             return {"regimes": [], "weight_history": []}
 
-        recent_regimes = self.market_regime_history[-self.lookback_period:]
+        recent_regimes = self.market_regime_history[-self.lookback_period :]
         regime_counts = {}
         for record in recent_regimes:
             regime = record["regime"]

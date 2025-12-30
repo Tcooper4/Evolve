@@ -253,7 +253,7 @@ class LongTermPerformanceTracker:
             window_size = min(30, len(returns))
 
             for i in range(window_size, len(returns)):
-                window_returns = returns[i - window_size: i]
+                window_returns = returns[i - window_size : i]
                 window_excess = window_returns - daily_rf_rate
                 if np.std(window_excess) > 0:
                     rolling_sharpe.append(

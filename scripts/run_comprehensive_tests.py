@@ -322,9 +322,9 @@ class ComprehensiveTestRunner:
             self.install_dependencies()
 
             # Validate pandas-ta compatibility
-            self.test_results["pandas_ta_compatibility"] = (
-                self.validate_pandas_ta_compatibility()
-            )
+            self.test_results[
+                "pandas_ta_compatibility"
+            ] = self.validate_pandas_ta_compatibility()
 
             # Run different test categories
             self.test_results["smoke_tests"] = self.run_smoke_tests()

@@ -635,17 +635,7 @@ class ReportGenerator:
                 # Markdown table
                 md_table = "| Time | Action | PnL | Result | Model ID |\n|---|---|---|---|---|\n"
                 for _, row in log_df.iterrows():
-                    md_table += f"| {
-                        row.get(
-                            'timestamp', '')} | {
-                        row.get(
-                            'action', '')} | {
-                        row.get(
-                            'pnl', '')} | {
-                        row.get(
-                            'result', '')} | {
-                        row.get(
-                            'model_id', '')} |\n"
+                    md_table += f"| {row.get('timestamp', '')} | {row.get('action', '')} | {row.get('pnl', '')} | {row.get('result', '')} | {row.get('model_id', '')} |\n"
                 charts["trade_log_markdown"] = md_table
                 # For HTML, pass as list of dicts
                 charts["trade_log"] = log_df.to_dict(orient="records")

@@ -287,13 +287,13 @@ class RegimeDetectionAgent(BaseAgent):
             df["Volatility"] = df["close"].rolling(20).std()
 
             # Volatility (rolling standard deviation)
-            volatility = np.std(returns[-self.lookback_periods["short"]:]) * np.sqrt(
+            volatility = np.std(returns[-self.lookback_periods["short"] :]) * np.sqrt(
                 252
             )
 
             # Trend strength (linear regression slope)
-            x = np.arange(len(close_prices[-self.lookback_periods["medium"]:]))
-            y = close_prices[-self.lookback_periods["medium"]:]
+            x = np.arange(len(close_prices[-self.lookback_periods["medium"] :]))
+            y = close_prices[-self.lookback_periods["medium"] :]
             trend_slope = np.polyfit(x, y, 1)[0]
             trend_strength = abs(trend_slope) / np.mean(y)
 
@@ -307,10 +307,10 @@ class RegimeDetectionAgent(BaseAgent):
             if "volume" in data.columns:
                 volume = data["volume"].values
                 if len(volume) >= self.lookback_periods["short"]:
-                    recent_volume = np.mean(volume[-self.lookback_periods["short"]:])
+                    recent_volume = np.mean(volume[-self.lookback_periods["short"] :])
                     historical_volume = np.mean(
                         volume[
-                            -self.lookback_periods["medium"]: -self.lookback_periods[
+                            -self.lookback_periods["medium"] : -self.lookback_periods[
                                 "short"
                             ]
                         ]

@@ -620,9 +620,9 @@ class TradingContextManager:
                     # Rebuild active strategies set
                     if context.status == "active":
                         self.active_strategies.add(context.strategy_id)
-                        self.strategy_session_map[context.strategy_id] = (
-                            context.session_id
-                        )
+                        self.strategy_session_map[
+                            context.strategy_id
+                        ] = context.session_id
 
                 # Load stats
                 self.stats.update(data.get("stats", {}))

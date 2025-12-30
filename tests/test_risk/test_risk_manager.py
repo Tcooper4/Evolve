@@ -440,7 +440,9 @@ class TestRiskManager:
                 "risk_level": (
                     "High"
                     if risk_score > 70
-                    else "Medium" if risk_score > 30 else "Low"
+                    else "Medium"
+                    if risk_score > 30
+                    else "Low"
                 ),
                 "key_metrics": {},
                 "risk_breakdown": {},

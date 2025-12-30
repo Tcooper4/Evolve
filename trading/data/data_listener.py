@@ -192,10 +192,7 @@ class DataFeedWatchdog:
             "max_gap": max_gap,
             "threshold": self.gap_threshold,
             "timestamp": time.time(),
-            "message": f"Data feed '{feed_name}' has {
-                len(gaps)} timestamp gaps (avg: {
-                avg_gap:.1f}s, max: {
-                max_gap:.1f}s)",
+            "message": f"Data feed '{feed_name}' has {len(gaps)} timestamp gaps (avg: {avg_gap:.1f}s, max: {max_gap:.1f}s)",
         }
 
         self.stats["gap_alerts"] += 1
@@ -405,8 +402,7 @@ class DataListener:
                     "timestamp": time.time(),
                 }
 
-            url = f"wss://stream.binance.com:9443/stream?streams={'/'.join([s.lower() +
-                                                                            'usdt@trade' for s in symbols])}"
+            url = f"wss://stream.binance.com:9443/stream?streams={'/'.join([s.lower() + 'usdt@trade' for s in symbols])}"
             asyncio.run(self._binance_ws_loop(url))
 
             return {

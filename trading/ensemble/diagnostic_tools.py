@@ -281,9 +281,9 @@ class EnsembleDiagnosticTools:
 
             # Keep only recent history
             if len(self.model_performance_history[model_name]) > 100:
-                self.model_performance_history[model_name] = (
-                    self.model_performance_history[model_name][-100:]
-                )
+                self.model_performance_history[
+                    model_name
+                ] = self.model_performance_history[model_name][-100:]
 
     def generate_diagnostic_report(
         self, diagnostic: EnsembleDiagnostic, include_low_confidence: bool = None
@@ -373,8 +373,9 @@ class EnsembleDiagnosticTools:
         logger.info(f"  Reported Models: {len(log_models)}")
 
         if len(diagnostic.models) > len(log_models):
-            logger.info(f"  Filtered Models: {len(diagnostic.models) -
-                                              len(log_models)} (confidence < {self.confidence_threshold})")
+            logger.info(
+                f"  Filtered Models: {len(diagnostic.models) - len(log_models)} (confidence < {self.confidence_threshold})"
+            )
 
         # Log model details based on log level
         if self.log_level in [DiagnosticLevel.DETAILED, DiagnosticLevel.DEBUG]:

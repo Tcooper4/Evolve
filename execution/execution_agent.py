@@ -548,10 +548,10 @@ class ExecutionAgent:
         ):
             return (
                 False,
-                f"Position size limit exceeded: {
-                    new_position_value /
-                    total_portfolio_value:.2%} > {
-                    self.max_position_size:.2%}",
+                (
+                    f"Position size limit exceeded: {new_position_value / total_portfolio_value:.2%} > "
+                    f"{self.max_position_size:.2%}"
+                ),
             )
 
         return True, "Risk checks passed"

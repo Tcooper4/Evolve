@@ -226,8 +226,7 @@ class PromptValidationHandler:
         error_type = type(error).__name__
 
         # Log detailed error information
-        error_msg = f"GPT fallback failed (hash: {prompt_hash}, attempts: {fallback_attempts}, type: {error_type}): {
-            str(error)}"
+        error_msg = f"GPT fallback failed (hash: {prompt_hash}, attempts: {fallback_attempts}, type: {error_type}): {str(error)}"
         logger.error(error_msg, exc_info=True)
 
         return {

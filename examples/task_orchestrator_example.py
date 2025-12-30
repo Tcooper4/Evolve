@@ -236,9 +236,9 @@ class TaskOrchestratorExample:
 
             # Initialize agent status for mock agents
             for agent_name in self.mock_agents.keys():
-                self.orchestrator.agent_status[agent_name] = (
-                    self.orchestrator.AgentStatus(agent_name=agent_name)
-                )
+                self.orchestrator.agent_status[
+                    agent_name
+                ] = self.orchestrator.AgentStatus(agent_name=agent_name)
 
         self.logger.info(
             f"Orchestrator created with {len(self.orchestrator.tasks)} tasks"
@@ -364,9 +364,9 @@ class TaskOrchestratorExample:
             # Create a failing mock agent
             failing_agent = MockAgent("FailingAgent", 0.0)  # 0% success rate
             self.orchestrator.agents["failing_task"] = failing_agent
-            self.orchestrator.agent_status["failing_task"] = (
-                self.orchestrator.AgentStatus(agent_name="failing_task")
-            )
+            self.orchestrator.agent_status[
+                "failing_task"
+            ] = self.orchestrator.AgentStatus(agent_name="failing_task")
 
             # Execute the failing task
             await self.execute_specific_task("failing_task")

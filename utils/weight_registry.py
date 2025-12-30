@@ -231,7 +231,7 @@ class WeightRegistry:
 
             # Limit history size
             if len(model_entry["history"]) > self.max_history:
-                model_entry["history"] = model_entry["history"][-self.max_history:]
+                model_entry["history"] = model_entry["history"][-self.max_history :]
 
             self._save_registry()
 
@@ -283,7 +283,7 @@ class WeightRegistry:
 
             # Limit history size
             if len(model_entry["history"]) > self.max_history:
-                model_entry["history"] = model_entry["history"][-self.max_history:]
+                model_entry["history"] = model_entry["history"][-self.max_history :]
 
             # Add to global performance history
             global_record = {
@@ -299,7 +299,7 @@ class WeightRegistry:
             if len(self.registry["performance_history"]) > self.max_history:
                 self.registry["performance_history"] = self.registry[
                     "performance_history"
-                ][-self.max_history:]
+                ][-self.max_history :]
 
             self._save_registry()
 
@@ -409,7 +409,7 @@ class WeightRegistry:
             if len(self.registry["optimization_history"]) > self.max_history:
                 self.registry["optimization_history"] = self.registry[
                     "optimization_history"
-                ][-self.max_history:]
+                ][-self.max_history :]
 
             self._save_registry()
 

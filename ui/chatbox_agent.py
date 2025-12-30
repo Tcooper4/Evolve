@@ -715,12 +715,7 @@ class ChatboxAgent:
                 command.strategy, command.symbol, timeframe=command.timeframe
             )
 
-            return f"Backtest results for {
-                command.strategy} on {
-                command.symbol}: {
-                backtest_result.get(
-                    'summary',
-                    'Backtest completed')}"
+            return f"Backtest results for {command.strategy} on {command.symbol}: {backtest_result.get('summary', 'Backtest completed')}"
 
         except Exception as e:
             logger.error(f"Error in backtest: {e}")

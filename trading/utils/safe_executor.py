@@ -123,7 +123,8 @@ class SafeExecutor:
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(
-            f"SafeExecutor initialized with timeout={timeout_seconds}s, memory_limit={memory_limit_mb}MB, retries={max_retries}")
+            f"SafeExecutor initialized with timeout={timeout_seconds}s, memory_limit={memory_limit_mb}MB, retries={max_retries}"
+        )
 
     def execute_model(
         self,

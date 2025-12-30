@@ -94,9 +94,8 @@ class APILoggingMiddleware:
 
             # Log error
             self.logger.error(
-                f"❌ API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {
-                    execution_time:.3f}s | Error: {
-                    str(e)}")
+                f"❌ API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s | Error: {str(e)}"
+            )
 
             # Update statistics
             self._update_stats(endpoint, method, execution_time, False)
@@ -145,9 +144,8 @@ class APILoggingMiddleware:
 
             # Log error
             self.logger.error(
-                f"❌ API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {
-                    execution_time:.3f}s | Error: {
-                    str(e)}")
+                f"❌ API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s | Error: {str(e)}"
+            )
 
             # Update statistics
             self._update_stats(endpoint, method, execution_time, False)

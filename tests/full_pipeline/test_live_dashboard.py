@@ -118,7 +118,6 @@ def mock_streamlit():
         patch("streamlit.warning") as mock_warning,
         patch("streamlit.info") as mock_info,
     ):
-
         # Create a mock sidebar context manager
         mock_sidebar_context = MagicMock()
         mock_sidebar.return_value = mock_sidebar_context
@@ -155,7 +154,6 @@ class TestLiveDashboard:
         """Test dashboard startup and basic functionality."""
         # Mock the dashboard startup process
         with patch("subprocess.Popen") as mock_popen, patch("time.sleep") as mock_sleep:
-
             # Mock successful process
             mock_process = Mock()
             mock_process.poll.return_value = None  # Process is running
@@ -241,7 +239,6 @@ class TestLiveDashboard:
             patch("logging.error") as mock_log_error,
             patch("logging.info") as mock_log_info,
         ):
-
             # Mock process that crashes
             mock_process = Mock()
             mock_process.poll.side_effect = [None, 1]  # Running then crashed
@@ -279,7 +276,6 @@ class TestLiveDashboard:
     async def test_dashboard_refresh_mechanism(self, free_port):
         """Test dashboard refresh and auto-restart functionality."""
         with patch("subprocess.Popen") as mock_popen, patch("time.sleep") as mock_sleep:
-
             # Mock process that needs restart
             mock_process = Mock()
             mock_process.poll.side_effect = [
@@ -419,7 +415,6 @@ class TestLiveDashboard:
             patch("subprocess.Popen") as mock_popen,
             patch("signal.signal") as mock_signal,
         ):
-
             # Mock process
             mock_process = Mock()
             mock_process.poll.return_value = None
@@ -529,7 +524,6 @@ async def test_dashboard_end_to_end(free_port):
         patch("requests.get") as mock_get,
         patch("time.sleep") as mock_sleep,
     ):
-
         # Mock successful dashboard startup
         mock_process = Mock()
         mock_process.poll.return_value = None

@@ -253,10 +253,13 @@ try:
 except ImportError as e:
     logger.warning(f"Could not import prompt templates: {e}")
     PROMPT_TEMPLATES = {}
+
     def get_prompt_template(x):
         return None
+
     def list_prompt_templates():
         return []
+
 
 # Wildcard imports for core agents to improve usability during testing
 

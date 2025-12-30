@@ -198,10 +198,10 @@ class TradingEnvironment:
         # Technical indicators
         if self.current_step >= 20:
             # Moving averages
-            ma_5 = self.data.iloc[self.current_step - 5: self.current_step][
+            ma_5 = self.data.iloc[self.current_step - 5 : self.current_step][
                 "Close"
             ].mean()
-            ma_20 = self.data.iloc[self.current_step - 20: self.current_step][
+            ma_20 = self.data.iloc[self.current_step - 20 : self.current_step][
                 "Close"
             ].mean()
             ma_features = [

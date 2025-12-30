@@ -531,17 +531,17 @@ def demonstrate_detailed_analysis():
     # Performance distribution
     print(f"\nPerformance Distribution:")
     print(
-        f"  Sharpe Ratio - Mean: {
-            stability_report['sharpe_ratio']['mean']:.4f}, Std: {
-            stability_report['sharpe_ratio']['std']:.4f}")
+        f"  Sharpe Ratio - Mean: {stability_report['sharpe_ratio']['mean']:.4f}, "
+        f"Std: {stability_report['sharpe_ratio']['std']:.4f}"
+    )
     print(
-        f"  Total Return - Mean: {
-            stability_report['total_return']['mean']:.4f}, Std: {
-            stability_report['total_return']['std']:.4f}")
+        f"  Total Return - Mean: {stability_report['total_return']['mean']:.4f}, "
+        f"Std: {stability_report['total_return']['std']:.4f}"
+    )
     print(
-        f"  Max Drawdown - Mean: {
-            stability_report['max_drawdown']['mean']:.4f}, Std: {
-            stability_report['max_drawdown']['std']:.4f}")
+        f"  Max Drawdown - Mean: {stability_report['max_drawdown']['mean']:.4f}, "
+        f"Std: {stability_report['max_drawdown']['std']:.4f}"
+    )
 
     return result
 

@@ -119,9 +119,7 @@ def render_admin_dashboard():
         st.markdown("**System Events**")
         system_events = get_system_events()
         for event in system_events:
-            color = {"info": "🔵", "warning": "🟡", "error": "🔴"}.get(
-                event["level"], "⚪"
-            )
+            color = {"info": "🔵", "warning": "🟡", "error": "🔴"}.get(event["level"], "⚪")
             st.markdown(f"{color} {event['message']}")
 
 

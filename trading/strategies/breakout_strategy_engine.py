@@ -135,8 +135,8 @@ class BreakoutStrategyEngine:
                     continue
 
                 # Extract consolidation period
-                consolidation_data = data.iloc[start_idx: end_idx + 1]
-                consolidation_prices = close_prices.iloc[start_idx: end_idx + 1]
+                consolidation_data = data.iloc[start_idx : end_idx + 1]
+                consolidation_prices = close_prices.iloc[start_idx : end_idx + 1]
 
                 # Calculate range bounds
                 upper_bound = consolidation_prices.max()
@@ -155,7 +155,7 @@ class BreakoutStrategyEngine:
                 confidence = self._calculate_consolidation_confidence(
                     consolidation_data,
                     range_percentage,
-                    volatility.iloc[start_idx: end_idx + 1],
+                    volatility.iloc[start_idx : end_idx + 1],
                 )
 
                 # Create consolidation range

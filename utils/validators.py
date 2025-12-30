@@ -24,5 +24,6 @@ class SignalSchemaValidator:
     def assert_valid(df: pd.DataFrame):
         if not SignalSchemaValidator.validate(df):
             raise ValueError(
-                f"Signal DataFrame does not meet schema requirements: must have columns {
-                    SignalSchemaValidator.REQUIRED_COLS} and non-null index.")
+                f"Signal DataFrame does not meet schema requirements: must have columns "
+                f"{SignalSchemaValidator.REQUIRED_COLS} and non-null index."
+            )

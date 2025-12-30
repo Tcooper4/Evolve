@@ -296,12 +296,12 @@ class GNNForecaster(BaseModel):
 
         # Convert to numpy arrays
         X = data[self.config["feature_columns"]].values
-        y = data[self.config["target_column"]].values[self.config["sequence_length"]:]
+        y = data[self.config["target_column"]].values[self.config["sequence_length"] :]
 
         # Create sequences
         X_sequences = []
         for i in range(len(X) - self.config["sequence_length"]):
-            X_sequences.append(X[i: i + self.config["sequence_length"]])
+            X_sequences.append(X[i : i + self.config["sequence_length"]])
         X = np.array(X_sequences)
 
         # Normalize

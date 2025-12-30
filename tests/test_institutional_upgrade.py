@@ -99,7 +99,9 @@ class InstitutionalUpgradeTester:
             "upgrade_status": (
                 "COMPLETE"
                 if passed == total
-                else "PARTIAL" if passed > total // 2 else "FAILED"
+                else "PARTIAL"
+                if passed > total // 2
+                else "FAILED"
             ),
         }
 
@@ -796,7 +798,9 @@ class InstitutionalUpgradeTester:
             overall_health = (
                 "healthy"
                 if healthy_components == total_components
-                else "degraded" if healthy_components > 0 else "critical"
+                else "degraded"
+                if healthy_components > 0
+                else "critical"
             )
 
             return {

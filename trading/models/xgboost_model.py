@@ -18,6 +18,7 @@ import pandas as pd
 try:
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.preprocessing import StandardScaler
+
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
@@ -291,9 +292,11 @@ class XGBoostModel(BaseModel):
                 data["macd"], data["macd_signal"] = self._calculate_macd(data["close"])
 
                 # Bollinger Bands
-                data["bb_upper"], data["bb_middle"], data["bb_lower"] = (
-                    self._calculate_bollinger_bands(data["close"])
-                )
+                (
+                    data["bb_upper"],
+                    data["bb_middle"],
+                    data["bb_lower"],
+                ) = self._calculate_bollinger_bands(data["close"])
 
                 # Price changes
                 data["price_change"] = data["close"].pct_change()

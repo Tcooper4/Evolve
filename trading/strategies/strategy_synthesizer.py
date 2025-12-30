@@ -278,7 +278,7 @@ class StrategySynthesizer:
             agreement_matrix = {}
 
             for i, strategy1 in enumerate(strategies):
-                for j, strategy2 in enumerate(strategies[i + 1:], i + 1):
+                for j, strategy2 in enumerate(strategies[i + 1 :], i + 1):
                     agreement = (
                         directional_signals[strategy1] == directional_signals[strategy2]
                     ).mean()

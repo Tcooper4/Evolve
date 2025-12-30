@@ -180,22 +180,19 @@ class CommentaryGenerator:
         if intent == "model_recommendation":
             best_model = result.get("best_model")
             if best_model:
-                return f"Based on our analysis, the {
-                    best_model['model_type'].upper()} model shows the best performance for {symbol} with an overall score of {
-                    best_model['evaluation'].get(
-                        'overall_score',
-                        0):.2f}. This model has been evaluated across multiple metrics including Sharpe ratio, maximum drawdown, and win rate."
+                return f"Based on our analysis, the {best_model['model_type'].upper()} model shows the best performance for {symbol} with an overall score of {best_model['evaluation'].get('overall_score', 0):.2f}. This model has been evaluated across multiple metrics including Sharpe ratio, maximum drawdown, and win rate."
             else:
                 return f"Analysis completed for {symbol}, but no suitable model was found. Consider adjusting parameters or timeframes."
 
         elif intent == "trading_signal":
             signal = result.get("signal", {})
             if signal:
-                return f"Trading signal for {symbol}: {
-                    signal['signal']} ({
-                    signal['strength']} confidence). {
-                    signal['reasoning']} Model performance score: {
-                    signal['model_score']:.2f}"
+                return (
+                    f"Trading signal for {symbol}: {signal['signal']} "
+                    f"({signal['strength']} confidence). "
+                    f"{signal['reasoning']} "
+                    f"Model performance score: {signal['model_score']:.2f}"
+                )
             else:
                 return f"Unable to generate trading signal for {symbol}. Please check model availability and data quality."
 

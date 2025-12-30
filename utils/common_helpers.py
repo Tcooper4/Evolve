@@ -210,7 +210,7 @@ def flatten_dict(
 
 def chunk_list(lst: List[Any], chunk_size: int) -> List[List[Any]]:
     """Split a list into chunks of specified size."""
-    return [lst[i: i + chunk_size] for i in range(0, len(lst), chunk_size)]
+    return [lst[i : i + chunk_size] for i in range(0, len(lst), chunk_size)]
 
 
 def retry_on_failure(max_attempts: int = 3, delay: float = 1.0):

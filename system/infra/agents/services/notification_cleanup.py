@@ -704,7 +704,7 @@ class NotificationCleanupService:
             for i in range(0, len(user_ids), self._batch_size):
                 batch = UserBatch(
                     id=str(uuid4()),
-                    user_ids=user_ids[i: i + self._batch_size],
+                    user_ids=user_ids[i : i + self._batch_size],
                     expires_at=datetime.utcnow()
                     + timedelta(seconds=self.config.get("cleanup.batch_timeout", 300)),
                 )

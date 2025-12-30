@@ -211,9 +211,8 @@ class PromptResponseValidator:
             expected_type = schema.field_types[field_name]
             if not isinstance(field_value, expected_type):
                 errors.append(
-                    f"Field '{field_name}' has wrong type. Expected {
-                        expected_type.__name__}, got {
-                        type(field_value).__name__}")
+                    f"Field '{field_name}' has wrong type. Expected {expected_type.__name__}, got {type(field_value).__name__}"
+                )
 
         # Run field-specific validator
         if field_name in schema.field_validators:

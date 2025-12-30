@@ -237,9 +237,8 @@ class TestAgentMemoryManager:
         ]
 
         # Test validation
-        assert (
-            memory_manager._validate_memory_data(valid_data, "interaction", "test.json")
-
+        assert memory_manager._validate_memory_data(
+            valid_data, "interaction", "test.json"
         )
         assert (
             memory_manager._validate_memory_data(

@@ -683,7 +683,7 @@ class ModelInnovationAgent:
             with torch.no_grad():
                 X_test_tensor = torch.FloatTensor(X_test.values)
                 y_pred = candidate.model(X_test_tensor).squeeze().numpy()
-            
+
             # For neural networks, inference time is negligible (already computed)
             inference_time = 0.0
         else:

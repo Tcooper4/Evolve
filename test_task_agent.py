@@ -117,9 +117,7 @@ async def test_prompt_router_integration():
         if result.get("task_type") == "task":
             logger.info("Testing task execution through router...")
             task_result = await router.execute_routed_task(result)
-            logger.info(
-                f"✅ Routed task execution: {task_result.get('success', False)}"
-            )
+            logger.info(f"✅ Routed task execution: {task_result.get('success', False)}")
 
         return True
 

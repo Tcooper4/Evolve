@@ -628,7 +628,7 @@ class AgentMemory:
 
             # Calculate trend
             first_half = values[: len(values) // 2]
-            second_half = values[len(values) // 2:]
+            second_half = values[len(values) // 2 :]
 
             if not first_half or not second_half:
                 return {

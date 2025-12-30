@@ -357,7 +357,7 @@ class ForecastingOptimizer:
         """Prepare sequences for time series models."""
         sequences = []
         for i in range(len(data) - sequence_length):
-            sequences.append(data[i: i + sequence_length])
+            sequences.append(data[i : i + sequence_length])
         return np.array(sequences)
 
     def get_optimization_summary(self) -> Dict[str, Any]:

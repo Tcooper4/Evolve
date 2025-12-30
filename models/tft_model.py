@@ -101,11 +101,11 @@ class TimeSeriesDataset(Dataset):
             len(self.data) - self.sequence_length - self.prediction_horizon + 1
         ):
             # Input sequence
-            seq_data = self.data.iloc[i: i + self.sequence_length]
+            seq_data = self.data.iloc[i : i + self.sequence_length]
             # Target sequence
             target_data = self.data.iloc[
                 i
-                + self.sequence_length: i
+                + self.sequence_length : i
                 + self.sequence_length
                 + self.prediction_horizon
             ]
@@ -539,8 +539,8 @@ class TFTForecaster:
         val_size = int(len(data) * 0.15)
 
         train_data = data.iloc[:train_size]
-        val_data = data.iloc[train_size: train_size + val_size]
-        test_data = data.iloc[train_size + val_size:]
+        val_data = data.iloc[train_size : train_size + val_size]
+        test_data = data.iloc[train_size + val_size :]
 
         # Create datasets
         train_dataset = TimeSeriesDataset(

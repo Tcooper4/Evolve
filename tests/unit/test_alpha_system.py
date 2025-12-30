@@ -117,7 +117,6 @@ class TestAlphaGenAgent:
             patch.object(agent, "_generate_hypotheses") as mock_generate,
             patch.object(agent, "_rank_hypotheses") as mock_rank,
         ):
-
             mock_analyze.return_value = {"market_regime": "trending"}
             mock_generate.return_value = [
                 Hypothesis(
@@ -428,7 +427,6 @@ class TestSentimentIngestion:
             patch.object(agent, "_collect_substack_sentiment") as mock_substack,
             patch.object(agent, "_update_sentiment_index") as mock_update,
         ):
-
             mock_reddit.return_value = []
             mock_twitter.return_value = []
             mock_news.return_value = []
@@ -715,7 +713,6 @@ class TestAlphaOrchestrator:
             patch.object(agent.risk_validator, "execute") as mock_validator,
             patch.object(agent.alpha_registry, "execute") as mock_registry,
         ):
-
             # Mock sentiment result
             mock_sentiment.return_value = AgentResult(
                 success=True,

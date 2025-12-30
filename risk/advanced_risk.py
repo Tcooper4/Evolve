@@ -327,7 +327,7 @@ class AdvancedRiskAnalyzer:
         rolling_metrics = []
 
         for i in range(window, len(returns)):
-            window_returns = returns.iloc[i - window: i]
+            window_returns = returns.iloc[i - window : i]
             metrics = self.calculate_comprehensive_risk(window_returns)
 
             rolling_metrics.append(

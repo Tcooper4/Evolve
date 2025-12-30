@@ -288,8 +288,8 @@ class TCNModel(BaseModel):
         for epoch in range(epochs):
             epoch_loss = 0
             for i in range(0, len(X), batch_size):
-                batch_X = X[i: i + batch_size]
-                batch_y = y[i: i + batch_size]
+                batch_X = X[i : i + batch_size]
+                batch_y = y[i : i + batch_size]
 
                 # Forward pass
                 self.optimizer.zero_grad()

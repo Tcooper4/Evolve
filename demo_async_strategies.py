@@ -87,9 +87,7 @@ class StrategyExecutor:
 
         if result.get("success"):
             perf = result.get("performance_metrics", {})
-            logger.info(
-                f"✅ MACD completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}"
-            )
+            logger.info(f"✅ MACD completed - Sharpe: {perf.get('sharpe_ratio', 0):.3f}")
         else:
             logger.error(f"❌ MACD failed: {result.get('error', 'Unknown error')}")
 

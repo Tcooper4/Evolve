@@ -264,10 +264,9 @@ def demonstrate_model_comparison():
         # Find best overall model by Sharpe ratio
         best_sharpe_model = all_history.loc[all_history["sharpe"].idxmax()]
         print(
-            f"\nðŸ† Best Sharpe Ratio: {
-                best_sharpe_model['model_name']} ({
-                best_sharpe_model['ticker']}) - {
-                best_sharpe_model['sharpe']:.3f}")
+            f"\n🏆 Best Sharpe Ratio: {best_sharpe_model['model_name']} "
+            f"({best_sharpe_model['ticker']}) - {best_sharpe_model['sharpe']:.3f}"
+        )
 
         # Find best overall model by MSE
         best_mse_model = all_history.loc[all_history["mse"].idxmin()]

@@ -297,7 +297,6 @@ class TestExternalSignalsManager:
                         with patch.object(
                             manager.options_collector, "get_options_flow"
                         ) as mock_options:
-
                             # Mock successful responses
                             mock_news.return_value = []
                             mock_twitter.return_value = []
@@ -330,7 +329,6 @@ class TestExternalSignalsManager:
                         with patch.object(
                             manager.options_collector, "get_options_flow"
                         ) as mock_options:
-
                             # Mock some successful and some failed responses
                             mock_news.return_value = []
                             mock_twitter.side_effect = Exception("Twitter API Error")

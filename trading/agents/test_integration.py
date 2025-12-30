@@ -87,10 +87,8 @@ async def test_agent_integration():
                 win_rate=data["win_rate"],
             )
             logger.info(
-                f"  ✅ Added {
-                    data['agent_name']}: Sharpe={
-                    data['sharpe_ratio']:.2f}, Drawdown={
-                    data['max_drawdown']:.2%}")
+                f"  ✅ Added {data['agent_name']}: Sharpe={data['sharpe_ratio']:.2f}, Drawdown={data['max_drawdown']:.2%}"
+            )
 
         # Test leaderboard functionality
         logger.info("\n🏆 Testing Leaderboard Functionality:")

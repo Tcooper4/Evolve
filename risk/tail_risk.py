@@ -611,7 +611,9 @@ def calculate_portfolio_risk(
                 risk_metrics, f"var_{int(confidence_level * 100)}", risk_metrics.var_95
             ),
             "cvar": getattr(
-                risk_metrics, f"cvar_{int(confidence_level * 100)}", risk_metrics.cvar_95
+                risk_metrics,
+                f"cvar_{int(confidence_level * 100)}",
+                risk_metrics.cvar_95,
             ),
             "max_drawdown": risk_metrics.max_drawdown,
             "tail_risk_ratio": risk_metrics.tail_risk_ratio,

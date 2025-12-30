@@ -278,9 +278,7 @@ async def test_live_trade_execution():
                     if i % 3 != 0:  # 2/3 success rate
                         successful_trades += 1
                         trade["execution_status"] = "success"
-                        logger.info(
-                            f"   ✅ {action} {quantity} {symbol} @ ${price:.2f}"
-                        )
+                        logger.info(f"   ✅ {action} {quantity} {symbol} @ ${price:.2f}")
                     else:
                         trade["execution_status"] = "failed"
                         logger.info(

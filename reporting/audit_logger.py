@@ -723,7 +723,7 @@ class AuditLogger:
 
                 # Add new events
                 new_events = [
-                    asdict(event) for event in self.events[-self.batch_size:]
+                    asdict(event) for event in self.events[-self.batch_size :]
                 ]
                 data["events"].extend(new_events)
 
@@ -735,7 +735,7 @@ class AuditLogger:
                 with open(self.output_files["csv"], "a", newline="") as f:
                     writer = csv.writer(f)
 
-                    for event in self.events[-self.batch_size:]:
+                    for event in self.events[-self.batch_size :]:
                         writer.writerow(
                             [
                                 event.event_id,

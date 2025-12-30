@@ -275,9 +275,9 @@ class BackupManager:
                 "config", last_backup
             )
             components["data"] = await self._backup_changed_files("data", last_backup)
-            components["database"] = (
-                await self._backup_database()
-            )  # Always backup database
+            components[
+                "database"
+            ] = await self._backup_database()  # Always backup database
             components["logs"] = await self._backup_changed_files("logs", last_backup)
             components["models"] = await self._backup_changed_files(
                 "models", last_backup
@@ -303,9 +303,9 @@ class BackupManager:
             components["data"] = await self._backup_changed_files(
                 "data", last_full_backup
             )
-            components["database"] = (
-                await self._backup_database()
-            )  # Always backup database
+            components[
+                "database"
+            ] = await self._backup_database()  # Always backup database
             components["logs"] = await self._backup_changed_files(
                 "logs", last_full_backup
             )

@@ -112,7 +112,7 @@ class PairsTradingEngine:
 
             # Test all possible pairs
             for i, symbol1 in enumerate(symbols):
-                for symbol2 in symbols[i + 1:]:
+                for symbol2 in symbols[i + 1 :]:
                     if symbol1 in price_series and symbol2 in price_series:
                         result = self._test_cointegration(
                             symbol1, symbol2, price_series
@@ -297,8 +297,8 @@ class PairsTradingEngine:
             ratios = pd.Series(index=series1.index, dtype=float)
 
             for i in range(window, len(series1)):
-                window_series1 = series1.iloc[i - window: i]
-                window_series2 = series2.iloc[i - window: i]
+                window_series1 = series1.iloc[i - window : i]
+                window_series2 = series2.iloc[i - window : i]
 
                 try:
                     X = sm.add_constant(window_series2)

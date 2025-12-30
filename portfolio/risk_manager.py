@@ -802,11 +802,9 @@ if __name__ == "__main__":
     print(f"\nRebalancing Actions: {len(actions)}")
     for action in actions:
         print(
-            f"  {
-                action.action_type.upper()} {
-                action.ticker}: {
-                action.current_weight:.3f} â†’ {
-                    action.target_weight:.3f}")
+            f"  {action.action_type.upper()} {action.ticker}: "
+            f"{action.current_weight:.3f} → {action.target_weight:.3f}"
+        )
         print(f"    Priority: {action.priority}, Reason: {action.reason}")
 
     # Simulate portfolio returns

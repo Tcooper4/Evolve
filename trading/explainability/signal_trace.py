@@ -236,7 +236,7 @@ class SignalTracer:
 
         # Limit trace history
         if len(self.trace_history) > self.max_trace_history:
-            self.trace_history = self.trace_history[-self.max_trace_history:]
+            self.trace_history = self.trace_history[-self.max_trace_history :]
 
         logger.debug(f"Signal trace created: {signal_id} - {message}")
         return trace

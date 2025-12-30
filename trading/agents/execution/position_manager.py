@@ -257,7 +257,7 @@ class PositionManager:
 
             correlations = []
             for i, symbol1 in enumerate(symbols):
-                for symbol2 in symbols[i + 1:]:
+                for symbol2 in symbols[i + 1 :]:
                     corr_key = f"{symbol1}_{symbol2}_correlation"
                     if corr_key in market_data:
                         correlations.append(market_data[corr_key])

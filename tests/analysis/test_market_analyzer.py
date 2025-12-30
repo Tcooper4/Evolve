@@ -362,9 +362,7 @@ class TestMarketAnalyzer(unittest.TestCase):
             volatility_result = self.analyzer.analyze_volatility(cleaned_data)
             self.assertIsInstance(volatility_result, dict)
             self.assertIn("volatility", volatility_result)
-            logger.info(
-                f"✅ Volatility analysis: {volatility_result['volatility']:.3f}"
-            )
+            logger.info(f"✅ Volatility analysis: {volatility_result['volatility']:.3f}")
         except Exception as e:
             logger.warning(f"⚠️ Volatility analysis failed: {e}")
 

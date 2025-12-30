@@ -131,7 +131,11 @@ def display_market_analysis(analysis: Dict):
                 st.metric(
                     "Price Change",
                     f"{price_change:.2%}",
-                    delta="↗️" if price_change > 0 else "↘️" if price_change < 0 else "→",
+                    delta="↗️"
+                    if price_change > 0
+                    else "↘️"
+                    if price_change < 0
+                    else "→",
                 )
             else:
                 st.metric("Price Change", "N/A")

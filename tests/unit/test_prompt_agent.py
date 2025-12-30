@@ -509,7 +509,6 @@ class TestPromptAgentRetryLogic:
                 agent, "parse_intent_openai", side_effect=Exception("OpenAI failed")
             ),
         ):
-
             result = agent.parse_intent("forecast AAPL")
 
             # Should return fallback result

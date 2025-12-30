@@ -92,7 +92,71 @@ try:
     )
 
     CORE_COMPONENTS_AVAILABLE = True
+    logger.info("✅ UI components loaded successfully")
 except ImportError as e:
+    logger.warning(f"UI components import error: {e}")
+    CORE_COMPONENTS_AVAILABLE = False
+    # Create fallback functions
+    def render_sidebar():
+        return "🏠 Home & Chat", None
+    
+    def render_top_navigation():
+        st.markdown("## 🚀 Evolve AI Trading Platform")
+    
+    def render_voice_input():
+        pass
+    
+    def render_prompt_interface():
+        prompt = st.text_input("Enter your prompt:")
+        submit = st.button("Submit")
+        return prompt, submit
+    
+    def render_prompt_result(result):
+        st.write("Result:", result)
+    
+    def render_conversation_history():
+        pass
+    
+    def render_agent_logs():
+        pass
+    
+    def render_home_page():
+        st.write("Welcome to Evolve AI Trading Platform")
+    
+    def render_forecasting_page():
+        st.write("Forecasting page - not fully implemented")
+    
+    def render_strategy_page():
+        st.write("Strategy page - not fully implemented")
+    
+    def render_model_page():
+        st.write("Model page - not fully implemented")
+    
+    def render_reports_page():
+        st.write("Reports page - not fully implemented")
+    
+    def render_settings_page():
+        st.write("Settings page - not fully implemented")
+    
+    def render_system_monitor_page():
+        st.write("System monitor page - not fully implemented")
+    
+    def render_performance_analytics_page():
+        st.write("Performance analytics page - not fully implemented")
+    
+    def render_risk_management_page():
+        st.write("Risk management page - not fully implemented")
+    
+    def render_orchestrator_page():
+        st.write("Orchestrator page - not fully implemented")
+    
+    def render_footer():
+        st.markdown("---")
+        st.markdown("Evolve AI Trading Platform")
+except Exception as e:
+    import traceback
+
+    traceback.print_exc()
     logger.warning(f"Some modules not available: {e}")
     CORE_COMPONENTS_AVAILABLE = False
 
@@ -367,7 +431,11 @@ st.markdown(
 )
 
 # --- Sidebar and Navigation ---
-primary_nav, advanced_nav = render_sidebar()
+if CORE_COMPONENTS_AVAILABLE:
+    primary_nav, advanced_nav = render_sidebar()
+else:
+    st.error("UI components failed to load. Check logs for details.")
+    primary_nav = advanced_nav = None
 
 # --- Top Navigation Bar ---
 render_top_navigation()

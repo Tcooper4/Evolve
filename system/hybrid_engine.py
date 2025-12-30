@@ -582,7 +582,7 @@ class HybridEngine:
         # Keep only recent history
         if len(self.combination_history) > self.performance_history_window:
             self.combination_history = self.combination_history[
-                -self.performance_history_window:
+                -self.performance_history_window :
             ]
 
     def _get_empty_result(self) -> Dict[str, Any]:

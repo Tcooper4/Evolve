@@ -38,7 +38,9 @@ try:
 
     HUGGINGFACE_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ HuggingFace libraries not available. Disabling advanced NLP features.")
+    print(
+        "âš ï¸ HuggingFace libraries not available. Disabling advanced NLP features."
+    )
     print(f"   Missing: {e}")
     torch = None
     transformers = None

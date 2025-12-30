@@ -235,13 +235,13 @@ class MetaLearningFeedbackAgent(BaseAgent):
                         feedback = last_valid
                     else:
                         self.logger.warning(
-                            f"NaN detected in feedback for {
-                                feedback.model_name}, and no valid previous feedback. Skipping update.")
+                            f"NaN detected in feedback for {feedback.model_name}, and no valid previous feedback. Skipping update."
+                        )
                         return
                 else:
                     self.logger.warning(
-                        f"NaN detected in feedback for {
-                            feedback.model_name}, and no previous feedback. Skipping update.")
+                        f"NaN detected in feedback for {feedback.model_name}, and no previous feedback. Skipping update."
+                    )
                     return
 
             if feedback.model_name not in self.feedback_history:

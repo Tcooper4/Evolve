@@ -233,7 +233,9 @@ def render_prompt_result(result: Dict[str, Any]):
             signal_color = (
                 "ðŸŸ¢"
                 if result["signal"].lower() in ["buy", "long"]
-                else "ðŸ”´" if result["signal"].lower() in ["sell", "short"] else "ðŸŸ¡"
+                else "ðŸ”´"
+                if result["signal"].lower() in ["sell", "short"]
+                else "ðŸŸ¡"
             )
             st.metric("ðŸ“ˆ Signal", f"{signal_color} {result['signal']}")
     else:

@@ -67,7 +67,7 @@ class TestSignalGenerators:
         close_prices = [100] * 50
         # Add some volatility to trigger signals
         for i in range(10, 50, 5):
-            close_prices[i: i + 3] = [95, 94, 93]  # Oversold conditions
+            close_prices[i : i + 3] = [95, 94, 93]  # Oversold conditions
         return pd.DataFrame(
             {
                 "Close": close_prices,

@@ -299,7 +299,9 @@ def get_system_scorecard() -> Dict[str, Any]:
                     "status": (
                         "healthy"
                         if cpu_score > 70
-                        else "warning" if cpu_score > 50 else "critical"
+                        else "warning"
+                        if cpu_score > 50
+                        else "critical"
                     ),
                 },
                 "memory": {
@@ -308,7 +310,9 @@ def get_system_scorecard() -> Dict[str, Any]:
                     "status": (
                         "healthy"
                         if memory_score > 70
-                        else "warning" if memory_score > 50 else "critical"
+                        else "warning"
+                        if memory_score > 50
+                        else "critical"
                     ),
                 },
                 "disk": {
@@ -317,7 +321,9 @@ def get_system_scorecard() -> Dict[str, Any]:
                     "status": (
                         "healthy"
                         if disk_score > 70
-                        else "warning" if disk_score > 50 else "critical"
+                        else "warning"
+                        if disk_score > 50
+                        else "critical"
                     ),
                 },
             },

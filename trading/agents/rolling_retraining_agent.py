@@ -406,9 +406,8 @@ class RollingRetrainingAgent(BaseAgent):
             new_data = features.tail(self.retraining_config.min_train_size)
             if len(new_data) < self.retraining_config.min_train_size:
                 logger.info(
-                    f"Insufficient new data for retraining. Need {
-                        self.retraining_config.min_train_size}, have {
-                        len(new_data)}")
+                    f"Insufficient new data for retraining. Need {self.retraining_config.min_train_size}, have {len(new_data)}"
+                )
                 return False
 
             # Perform walk-forward validation
@@ -497,7 +496,7 @@ class RollingRetrainingAgent(BaseAgent):
 
                 # Update history
                 self.model_history = self.model_history[
-                    -self.retraining_config.max_models:
+                    -self.retraining_config.max_models :
                 ]
 
         except Exception as e:

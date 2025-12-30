@@ -86,7 +86,7 @@ class FallbackStrategy:
         if index < 20:  # Need some history
             return None
 
-        recent_prices = data["Close"].iloc[index - 20: index].values
+        recent_prices = data["Close"].iloc[index - 20 : index].values
         current_price = row["Close"]
 
         # Calculate simple indicators
@@ -142,7 +142,7 @@ class FallbackRSIStrategy(FallbackStrategy):
             return None
 
         # Calculate simple RSI
-        recent_prices = data["Close"].iloc[index - 14: index + 1].values
+        recent_prices = data["Close"].iloc[index - 14 : index + 1].values
         price_changes = np.diff(recent_prices)
 
         gains = np.where(price_changes > 0, price_changes, 0)
@@ -208,7 +208,7 @@ class FallbackMACDStrategy(FallbackStrategy):
             return None
 
         # Calculate simple MACD
-        recent_prices = data["Close"].iloc[index - 26: index + 1].values
+        recent_prices = data["Close"].iloc[index - 26 : index + 1].values
 
         # EMA 12
         ema_12 = self._calculate_ema(recent_prices, 12)
@@ -223,7 +223,7 @@ class FallbackMACDStrategy(FallbackStrategy):
         if index >= 35:  # Need more history for signal line
             macd_values = []
             for i in range(index - 9, index + 1):
-                prices = data["Close"].iloc[i - 26: i + 1].values
+                prices = data["Close"].iloc[i - 26 : i + 1].values
                 ema_12_i = self._calculate_ema(prices, 12)
                 ema_26_i = self._calculate_ema(prices, 26)
                 macd_values.append(ema_12_i - ema_26_i)
@@ -305,7 +305,7 @@ class FallbackBollingerStrategy(FallbackStrategy):
             return None
 
         # Calculate Bollinger Bands
-        recent_prices = data["Close"].iloc[index - 20: index + 1].values
+        recent_prices = data["Close"].iloc[index - 20 : index + 1].values
 
         # Middle band (SMA)
         middle_band = np.mean(recent_prices)
@@ -368,7 +368,7 @@ class FallbackSMAStrategy(FallbackStrategy):
             return None
 
         # Calculate SMAs
-        recent_prices = data["Close"].iloc[index - 50: index + 1].values
+        recent_prices = data["Close"].iloc[index - 50 : index + 1].values
 
         sma_20 = np.mean(recent_prices[-20:])
         sma_50 = np.mean(recent_prices)

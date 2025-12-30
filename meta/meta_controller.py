@@ -525,17 +525,14 @@ class MetaControllerAgent(BaseAgent):
                     action_type=ActionType.ALLOCATION_OPTIMIZATION,
                     trigger_condition=TriggerCondition.ALLOCATION_INEFFICIENCY,
                     timestamp=datetime.now().isoformat(),
-                    reason=f"Sharpe ratio degradation {
-                        target_sharpe -
-                        current_sharpe:.2f} exceeds threshold {
-                        sharpe_threshold:.2f}",
+                    reason=(
+                        f"Sharpe ratio degradation {target_sharpe - current_sharpe:.2f} "
+                        f"exceeds threshold {sharpe_threshold:.2f}"
+                    ),
                     priority=3,
                     estimated_duration=60,
-                    affected_components=[
-                        "portfolio",
-                        "allocator"],
-                    parameters={
-                        "optimization_type": "sharpe_improvement"},
+                    affected_components=["portfolio", "allocator"],
+                    parameters={"optimization_type": "sharpe_improvement"},
                 )
 
             # Check time-based optimization

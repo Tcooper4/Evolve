@@ -156,13 +156,13 @@ class MultiModelAggregator:
             # Maintain window size
             if len(model_perf.mse_history) > model_perf.window_size:
                 model_perf.mse_history = model_perf.mse_history[
-                    -model_perf.window_size:
+                    -model_perf.window_size :
                 ]
                 model_perf.mae_history = model_perf.mae_history[
-                    -model_perf.window_size:
+                    -model_perf.window_size :
                 ]
                 model_perf.accuracy_history = model_perf.accuracy_history[
-                    -model_perf.window_size:
+                    -model_perf.window_size :
                 ]
 
             # Store for history
@@ -307,9 +307,10 @@ class MultiModelAggregator:
                     forecasts, weights, forecast_length
                 )
             elif method == "trimmed_mean":
-                aggregated_forecast, model_contributions = (
-                    self._trimmed_mean_aggregation(forecasts, weights, forecast_length)
-                )
+                (
+                    aggregated_forecast,
+                    model_contributions,
+                ) = self._trimmed_mean_aggregation(forecasts, weights, forecast_length)
             else:
                 raise ValueError(f"Unknown aggregation method: {method}")
 

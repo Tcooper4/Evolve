@@ -844,17 +844,23 @@ class MarketAnalysis:
             "rsi": (
                 "oversold"
                 if rsi.iloc[-1] < 30
-                else "overbought" if rsi.iloc[-1] > 70 else "neutral"
+                else "overbought"
+                if rsi.iloc[-1] > 70
+                else "neutral"
             ),
             "stochastic": (
                 "oversold"
                 if k.iloc[-1] < 20
-                else "overbought" if k.iloc[-1] > 80 else "neutral"
+                else "overbought"
+                if k.iloc[-1] > 80
+                else "neutral"
             ),
             "cci": (
                 "oversold"
                 if cci.iloc[-1] < -100
-                else "overbought" if cci.iloc[-1] > 100 else "neutral"
+                else "overbought"
+                if cci.iloc[-1] > 100
+                else "neutral"
             ),
         }
 
