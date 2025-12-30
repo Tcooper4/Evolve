@@ -33,9 +33,8 @@ class NotificationSystem:
         }
 
         logger.info(
-            f"Notification system initialized - Slack: {
-                self.notification_status['slack']}, Email: {
-                self.notification_status['email']}")
+            f"Notification system initialized - Slack: {self.notification_status['slack']}, Email: {self.notification_status['email']}"
+        )
 
     def send_slack_notification(
         self,

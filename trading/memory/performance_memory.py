@@ -506,7 +506,9 @@ class PerformanceMemory:
                             "severity": (
                                 "high"
                                 if z_score > 3.0
-                                else "medium" if z_score > 2.5 else "low"
+                                else "medium"
+                                if z_score > 2.5
+                                else "low"
                             ),
                         }
 

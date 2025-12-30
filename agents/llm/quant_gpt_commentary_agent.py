@@ -103,7 +103,9 @@ class QuantGPTCommentaryAgent:
             except Exception as e:
                 self.logger.error(f"Failed to initialize market analyzer: {e}")
                 self.market_analyzer = None
-                print("âš ï¸ Market analyzer unavailable due to initialization failure")
+                print(
+                    "âš ï¸ Market analyzer unavailable due to initialization failure"
+                )
                 print(f"   Error: {e}")
 
             try:
@@ -455,9 +457,9 @@ class QuantGPTCommentaryAgent:
 
             # Identify patterns
             analysis["performance_trend"] = self._identify_performance_trend(returns)
-            analysis["risk_adjusted_performance"] = (
-                self._assess_risk_adjusted_performance(analysis)
-            )
+            analysis[
+                "risk_adjusted_performance"
+            ] = self._assess_risk_adjusted_performance(analysis)
             analysis["consistency"] = self._assess_performance_consistency(returns)
 
             return analysis

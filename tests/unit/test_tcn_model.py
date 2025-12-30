@@ -47,6 +47,7 @@ except ImportError:
 
     def load_model_state(x):
         return {}
+
     print("Warning: load_model_state not available, using mock")
 
 
@@ -312,9 +313,9 @@ class TestTCNModel:
         try:
             # Create input with different sequence lengths
             irregular_input = torch.randn(32, 10, 100)
-            irregular_input[0, :, 80:] = (
-                0.0  # Shorter effective sequence for first batch
-            )
+            irregular_input[
+                0, :, 80:
+            ] = 0.0  # Shorter effective sequence for first batch
 
             output = model(irregular_input)
 

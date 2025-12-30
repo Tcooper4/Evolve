@@ -160,7 +160,7 @@ def visualize_results(results, data, models):
     predictions = hybrid_model.predict(data)
 
     ax3.plot(
-        data.index[-len(predictions):],
+        data.index[-len(predictions) :],
         predictions,
         label=f"Ensemble ({best_method})",
         linestyle="--",

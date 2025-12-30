@@ -320,9 +320,9 @@ class ModelMonitor:
                 # Update drift scores
                 self.parameter_drift_scores[model_name].append(param_record.drift_score)
                 if len(self.parameter_drift_scores[model_name]) > 100:
-                    self.parameter_drift_scores[model_name] = (
-                        self.parameter_drift_scores[model_name][-100:]
-                    )
+                    self.parameter_drift_scores[
+                        model_name
+                    ] = self.parameter_drift_scores[model_name][-100:]
 
                 # Check for drift alerts
                 if param_record.drift_score > self.drift_threshold:
@@ -499,7 +499,9 @@ class ModelMonitor:
             severity = (
                 "high"
                 if drift_score > 0.5
-                else "medium" if drift_score > 0.2 else "low"
+                else "medium"
+                if drift_score > 0.2
+                else "low"
             )
 
             alert = DriftAlert(

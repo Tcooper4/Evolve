@@ -446,7 +446,6 @@ class ForecastDispatcher(BaseAgent):
             and consensus_result.agreement_level
             > self.consensus_config["agreement_threshold"]
         ):
-
             # Create consensus result
             best_result = ForecastResult(
                 model_name="consensus",

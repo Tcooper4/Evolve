@@ -120,7 +120,9 @@ class ConfidenceGenerator:
                     bands[level] = band
                     self.logger.info(f"Generated {level * 100:.0f}% confidence band")
                 except Exception as e:
-                    self.logger.error(f"Failed to generate {level * 100:.0f}% band: {e}")
+                    self.logger.error(
+                        f"Failed to generate {level * 100:.0f}% band: {e}"
+                    )
                     continue
 
             # Create confidence bands object

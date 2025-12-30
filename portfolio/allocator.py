@@ -414,7 +414,9 @@ class PortfolioAllocator:
             posterior_returns = prior_returns + tau * views
         except Exception as e:
             # Log the error and fallback to prior returns
-            logger.warning(f"Black-Litterman calculation failed: {e}, using prior returns")
+            logger.warning(
+                f"Black-Litterman calculation failed: {e}, using prior returns"
+            )
             posterior_returns = prior_returns
 
         # Use posterior returns for mean-variance optimization

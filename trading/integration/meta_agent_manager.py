@@ -99,7 +99,9 @@ class MetaAgentManager:
                 self.agent_status["log_visualization"] = MetaAgentStatus.IDLE
                 self.logger.info("âœ… LogVisualizationHandler initialized")
             except ImportError as e:
-                self.logger.warning(f"âš ï¸ LogVisualizationHandler not available: {e}")
+                self.logger.warning(
+                    f"âš ï¸ LogVisualizationHandler not available: {e}"
+                )
 
             # Documentation Analytics
             try:

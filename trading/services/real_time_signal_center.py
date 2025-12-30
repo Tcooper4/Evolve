@@ -285,7 +285,7 @@ class RealTimeSignalCenter:
 
                 # Keep only recent signals
                 if len(self.signals) > self.max_signals:
-                    self.signals = self.signals[-self.max_signals:]
+                    self.signals = self.signals[-self.max_signals :]
 
                 # Check for alert conditions
                 self._check_signal_alerts(signal)

@@ -315,12 +315,7 @@ class PerformanceMonitor:
                 id=alert_id,
                 metric_name=metric.name,
                 severity=severity,
-                message=f"{
-                    metric.name} is {severity}: {
-                    metric.value}{
-                    metric.unit} (threshold: {
-                    metric.threshold}{
-                        metric.unit})",
+                message=f"{metric.name} is {severity}: {metric.value}{metric.unit} (threshold: {metric.threshold}{metric.unit})",
                 timestamp=datetime.utcnow().isoformat(),
                 value=metric.value,
                 threshold=metric.threshold,

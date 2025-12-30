@@ -227,10 +227,10 @@ class InstitutionalGradeSystem:
 
             # Forecast Explainability
             if self.config["modules"]["forecast_explainability"]["enabled"]:
-                self.modules["forecast_explainability"] = (
-                    IntelligentForecastExplainability(
-                        confidence_levels=[0.68, 0.80, 0.95], max_features=10
-                    )
+                self.modules[
+                    "forecast_explainability"
+                ] = IntelligentForecastExplainability(
+                    confidence_levels=[0.68, 0.80, 0.95], max_features=10
                 )
 
             # Real-Time Signal Center

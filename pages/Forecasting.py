@@ -344,7 +344,7 @@ def plot_forecast_with_metrics(forecast_data: Dict[str, Any]):
         # Error distribution
         historical = forecast_data["historical_prices"]
         forecast = forecast_data["forecast_prices"]
-        errors = historical[-len(forecast):] - forecast
+        errors = historical[-len(forecast) :] - forecast
 
         fig.add_trace(
             go.Histogram(x=errors, name="Errors", marker_color="#f39c12", nbinsx=20),

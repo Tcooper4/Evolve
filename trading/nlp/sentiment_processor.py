@@ -37,7 +37,9 @@ try:
 
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ scikit-learn not available. Disabling cosine similarity calculations.")
+    print(
+        "âš ï¸ scikit-learn not available. Disabling cosine similarity calculations."
+    )
     print(f"   Missing: {e}")
     cosine_similarity = None
     SKLEARN_AVAILABLE = False

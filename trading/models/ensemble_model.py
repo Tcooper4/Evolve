@@ -781,7 +781,7 @@ class EnsembleModel(BaseModel):
             plt.subplot(2, 2, 1)
             plt.plot(data.index, data["close"], label="Actual", color="blue")
             plt.plot(
-                data.index[-len(predictions):],
+                data.index[-len(predictions) :],
                 predictions,
                 label="Predicted",
                 color="red",

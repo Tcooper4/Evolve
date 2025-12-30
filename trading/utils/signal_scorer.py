@@ -302,7 +302,9 @@ class SignalScorer:
                 "trend_direction": (
                     "increasing"
                     if slope > 0
-                    else "decreasing" if slope < 0 else "stable"
+                    else "decreasing"
+                    if slope < 0
+                    else "stable"
                 ),
             }
 

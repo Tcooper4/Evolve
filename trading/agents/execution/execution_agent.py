@@ -104,15 +104,15 @@ class ExecutionAgent(BaseAgent):
 
         if self.config.get("enable_ib", False):
             ib_config = provider_configs.get("interactive_brokers", {})
-            self.execution_providers[ExecutionMode.INTERACTIVE_BROKERS] = (
-                create_execution_provider(ExecutionMode.INTERACTIVE_BROKERS, ib_config)
-            )
+            self.execution_providers[
+                ExecutionMode.INTERACTIVE_BROKERS
+            ] = create_execution_provider(ExecutionMode.INTERACTIVE_BROKERS, ib_config)
 
         if self.config.get("enable_robinhood", False):
             rh_config = provider_configs.get("robinhood", {})
-            self.execution_providers[ExecutionMode.ROBINHOOD] = (
-                create_execution_provider(ExecutionMode.ROBINHOOD, rh_config)
-            )
+            self.execution_providers[
+                ExecutionMode.ROBINHOOD
+            ] = create_execution_provider(ExecutionMode.ROBINHOOD, rh_config)
 
     def _initialize_storage(self) -> None:
         """Initialize storage for execution data."""

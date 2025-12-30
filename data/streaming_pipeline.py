@@ -369,10 +369,10 @@ class PolygonDataProvider(DataProvider):
             polygon_timeframe = timeframe_map.get(timeframe, "1")
 
             # Build URL
-            url = f"{
-                self.rest_url}/v2/aggs/ticker/{symbol}/range/{polygon_timeframe}/day/{
-                start_date.strftime('%Y-%m-%d')}/{
-                end_date.strftime('%Y-%m-%d')}"
+            url = (
+                f"{self.rest_url}/v2/aggs/ticker/{symbol}/range/{polygon_timeframe}/day/"
+                f"{start_date.strftime('%Y-%m-%d')}/{end_date.strftime('%Y-%m-%d')}"
+            )
 
             if not self.session:
                 self.session = aiohttp.ClientSession()

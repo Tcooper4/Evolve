@@ -152,7 +152,7 @@ class PerformanceAnalyzer:
         first_half = sum(recent_scores[: len(recent_scores) // 2]) / (
             len(recent_scores) // 2
         )
-        second_half = sum(recent_scores[len(recent_scores) // 2:]) / (
+        second_half = sum(recent_scores[len(recent_scores) // 2 :]) / (
             len(recent_scores) - len(recent_scores) // 2
         )
 

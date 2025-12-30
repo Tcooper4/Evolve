@@ -850,9 +850,8 @@ class ModelDiscoveryAgent:
             )
 
             logger.info(
-                f"Benchmark completed. Approved: {
-                    self.discovery_stats['total_approved']}, Rejected: {
-                    self.discovery_stats['total_rejected']}")
+                f"Benchmark completed. Approved: {self.discovery_stats['total_approved']}, Rejected: {self.discovery_stats['total_rejected']}"
+            )
 
             return benchmark_results
 

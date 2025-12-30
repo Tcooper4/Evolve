@@ -428,9 +428,11 @@ class SignalScoreEvaluator:
                 logger.error(f"Error in multiple signal evaluation: {e}")
 
         # Calculate composite score
-        composite_score, confidence, recommended_action = (
-            self._calculate_composite_score(signal_scores)
-        )
+        (
+            composite_score,
+            confidence,
+            recommended_action,
+        ) = self._calculate_composite_score(signal_scores)
 
         # Create result
         result = EvaluationResult(

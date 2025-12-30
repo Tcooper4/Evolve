@@ -52,7 +52,6 @@ class TestAlpacaProviderMigration:
                 "alpaca.data.historical.StockHistoricalDataClient"
             ) as mock_data_client,
         ):
-
             # Mock successful connection
             mock_account = Mock()
             mock_account.cash = "10000.00"
@@ -93,7 +92,6 @@ class TestAlpacaProviderMigration:
             patch("alpaca.trading.enums.OrderSide") as mock_order_side,
             patch("alpaca.trading.enums.TimeInForce") as mock_time_in_force,
         ):
-
             # Mock successful order submission
             mock_order = Mock()
             mock_order.id = "test_order_123"
@@ -206,7 +204,6 @@ class TestAlpacaTradingInterfaceMigration:
             patch("alpaca.trading.enums.OrderSide") as mock_order_side,
             patch("alpaca.trading.enums.TimeInForce") as mock_time_in_force,
         ):
-
             # Mock successful order submission
             mock_order = Mock()
             mock_order.id = "test_order_123"
@@ -254,7 +251,6 @@ class TestAlpacaTradingInterfaceMigration:
             patch("alpaca.trading.enums.OrderSide") as mock_order_side,
             patch("alpaca.trading.enums.TimeInForce") as mock_time_in_force,
         ):
-
             # Mock successful order submission
             mock_order = Mock()
             mock_order.id = "test_limit_order_456"
@@ -423,7 +419,6 @@ class TestAlpacaBrokerAdapterMigration:
                 "alpaca.data.historical.StockHistoricalDataClient"
             ) as mock_data_client,
         ):
-
             # Mock successful connection
             mock_account = Mock()
             mock_account.id = "test_account_123"
@@ -453,7 +448,6 @@ class TestAlpacaBrokerAdapterMigration:
             patch("alpaca.trading.enums.OrderSide") as mock_order_side,
             patch("alpaca.trading.enums.TimeInForce") as mock_time_in_force,
         ):
-
             # Mock successful order submission
             mock_order = Mock()
             mock_order.id = "alpaca_order_456"

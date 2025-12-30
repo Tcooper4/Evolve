@@ -788,9 +788,7 @@ class PromptRouter:
             return {
                 "success": True,
                 "message": f"I understand you're asking about: '{prompt}'. I'm currently setting up the specialized agents to help you with this request. Please try again in a moment.",
-                "data": {
-                    "fallback_used": True,
-                    "error": str(e)},
+                "data": {"fallback_used": True, "error": str(e)},
                 "navigation_info": {},
                 "processing_time": 0.0,
                 "timestamp": datetime.now().isoformat(),

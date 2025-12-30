@@ -317,7 +317,9 @@ class FeatureEngineer(FeatureEngineering):
                 (
                     "importance"
                     if "importance" in importance_df.columns
-                    else "ranking" if "ranking" in importance_df.columns else "score"
+                    else "ranking"
+                    if "ranking" in importance_df.columns
+                    else "score"
                 ),
                 ascending=False,
             )

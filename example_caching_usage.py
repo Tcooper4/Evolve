@@ -216,7 +216,7 @@ def demonstrate_dynamic_caching():
 
         # Simple moving average forecast
         prices = data["entry_price"].values
-        forecast = np.mean(prices[-config.get("window", 10):]) * np.ones(horizon)
+        forecast = np.mean(prices[-config.get("window", 10) :]) * np.ones(horizon)
 
         return {
             "forecast": forecast,

@@ -154,7 +154,9 @@ def main():
                 status_icon = (
                     "✅"
                     if status["status"] == "healthy"
-                    else "⚠️" if status["status"] == "warning" else "❌"
+                    else "⚠️"
+                    if status["status"] == "warning"
+                    else "❌"
                 )
                 print(f"    {status_icon} {component}: {status['status']}")
     else:

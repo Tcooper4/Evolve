@@ -301,11 +301,11 @@ def main():
     print(f"\nSUMMARY:")
     print(f"Success Rate: {results['success_rate']:.1f}%")
     print(
-        f"Total: {
-            results['total']} | Success: {
-            results['success']} | Failures: {
-                results['failure']} | Warnings: {
-                    results['warning']}")
+        f"Total: {results['total']} | "
+        f"Success: {results['success']} | "
+        f"Failures: {results['failure']} | "
+        f"Warnings: {results['warning']}"
+    )
     print(
         "System check completed. All components have been verified "
         "and are operational."

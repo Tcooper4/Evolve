@@ -11,7 +11,7 @@ from automation.web.websocket import WebSocketHandler
 from fastapi import APIRouter, HTTPException, Request, WebSocket
 
 # Global notification manager instance
-notification_manager = None
+notif_manager_instance: NotificationManager = None
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -20,15 +20,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 # Initialize WebSocket handler
-websocket_handler = None
+websocket_handler_instance: WebSocketHandler = None
 
 
 def init_routes(
     notification_manager: NotificationManager, ws_handler: WebSocketHandler
 ):
-    global websocket_handler, notification_manager
-    websocket_handler = ws_handler
-    notification_manager = notification_manager
+    global notif_manager_instance, websocket_handler_instance
+    notif_manager_instance = notification_manager
+    websocket_handler_instance = ws_handler
 
     return {
         "success": True,
@@ -37,16 +37,10 @@ def init_routes(
     }
 
 
-@router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    user_id = (
-        request.state.user.get("username") if hasattr(request.state, "user") else None
-    )
-    if not user_id:
-        await websocket.close(code=4001)
-        return
-
-    await websocket_handler.handle_websocket(websocket, user_id)
+@router.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: str):
+    # Optionally validate user_id or perform auth here
+    await websocket_handler_instance.handle_websocket(websocket, user_id)
 
 
 @router.get("")
@@ -64,7 +58,7 @@ async def get_notifications(
         user_id = request.state.user["username"]
 
         # Get all notifications first
-        notifications = await notification_manager.get_user_notifications(
+        notifications = await notif_manager_instance.get_user_notifications(
             user_id=user_id,
             limit=1000,
             offset=0,
@@ -99,7 +93,7 @@ async def get_notifications(
 
         # Apply pagination
         total_count = len(notifications)
-        notifications = notifications[offset: offset + limit]
+        notifications = notifications[offset : offset + limit]
 
         return {
             "notifications": notifications,
@@ -129,7 +123,7 @@ async def get_notifications_by_priority(
         user_id = request.state.user["username"]
 
         # Get notifications by priority
-        notifications = await notification_manager.get_user_notifications(
+        notifications = await notif_manager_instance.get_user_notifications(
             user_id=user_id,
             limit=1000,
             offset=0,
@@ -154,7 +148,7 @@ async def get_notifications_by_priority(
 
         # Apply pagination
         total_count = len(priority_notifications)
-        priority_notifications = priority_notifications[offset: offset + limit]
+        priority_notifications = priority_notifications[offset : offset + limit]
 
         return {
             "notifications": priority_notifications,
@@ -181,7 +175,7 @@ async def get_notification_count_by_priority(
         user_id = request.state.user["username"]
 
         # Get notifications by priority
-        notifications = await notification_manager.get_user_notifications(
+        notifications = await notif_manager_instance.get_user_notifications(
             user_id=user_id,
             limit=1000,
             offset=0,
@@ -213,7 +207,7 @@ async def get_notification_priorities_summary(request: Request):
         user_id = request.state.user["username"]
 
         # Get all notifications
-        notifications = await notification_manager.get_user_notifications(
+        notifications = await notif_manager_instance.get_user_notifications(
             user_id=user_id, limit=1000, offset=0, unread_only=False
         )
 
@@ -255,7 +249,7 @@ async def mark_all_notifications_by_priority_as_read(
         user_id = request.state.user["username"]
 
         # Get notifications by priority
-        notifications = await notification_manager.get_user_notifications(
+        notifications = await notif_manager_instance.get_user_notifications(
             user_id=user_id, limit=1000, offset=0, unread_only=True
         )
 
@@ -266,7 +260,7 @@ async def mark_all_notifications_by_priority_as_read(
 
         marked_count = 0
         for notification in priority_notifications:
-            success = await notification_manager.mark_as_read(
+            success = await notif_manager_instance.mark_as_read(
                 notification["id"], user_id
             )
             if success:
@@ -294,7 +288,7 @@ async def delete_all_notifications_by_priority(
         user_id = request.state.user["username"]
 
         # Get notifications by priority
-        notifications = await notification_manager.get_user_notifications(
+        notifications = await notif_manager_instance.get_user_notifications(
             user_id=user_id, limit=1000, offset=0, unread_only=False
         )
 
@@ -305,7 +299,7 @@ async def delete_all_notifications_by_priority(
 
         deleted_count = 0
         for notification in priority_notifications:
-            success = await notification_manager.delete_notification(
+            success = await notif_manager_instance.delete_notification(
                 notification["id"], user_id
             )
             if success:
@@ -328,7 +322,7 @@ async def delete_all_notifications_by_priority(
 async def mark_notification_as_read(request: Request, notification_id: str):
     try:
         user_id = request.state.user["username"]
-        success = await notification_manager.mark_as_read(notification_id, user_id)
+        success = await notif_manager_instance.mark_as_read(notification_id, user_id)
 
         if not success:
             raise HTTPException(status_code=404, detail="Notification not found")
@@ -346,12 +340,12 @@ async def mark_notification_as_read(request: Request, notification_id: str):
 async def mark_all_notifications_as_read(request: Request):
     try:
         user_id = request.state.user["username"]
-        notifications = await notification_manager.get_user_notifications(
+        notifications = await notif_manager_instance.get_user_notifications(
             user_id=user_id, unread_only=True
         )
 
         for notification in notifications:
-            await notification_manager.mark_as_read(notification["id"], user_id)
+            await notif_manager_instance.mark_as_read(notification["id"], user_id)
 
         return None
     except Exception as e:
@@ -366,7 +360,7 @@ async def mark_all_notifications_as_read(request: Request):
 async def delete_notification(request: Request, notification_id: str):
     try:
         user_id = request.state.user["username"]
-        success = await notification_manager.delete_notification(
+        success = await notif_manager_instance.delete_notification(
             notification_id, user_id
         )
 
@@ -384,12 +378,14 @@ async def delete_notification(request: Request, notification_id: str):
 async def clear_all_notifications(request: Request):
     try:
         user_id = request.state.user["username"]
-        notifications = await notification_manager.get_user_notifications(
+        notifications = await notif_manager_instance.get_user_notifications(
             user_id=user_id
         )
 
         for notification in notifications:
-            await notification_manager.delete_notification(notification["id"], user_id)
+            await notif_manager_instance.delete_notification(
+                notification["id"], user_id
+            )
 
         return None
     except Exception as e:

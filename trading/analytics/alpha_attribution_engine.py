@@ -725,8 +725,8 @@ class AlphaAttributionEngine:
 
             for i in range(window, len(strategy_returns)):
                 # Get rolling window
-                strategy_window = strategy_returns.iloc[i - window: i]
-                benchmark_window = benchmark_returns.iloc[i - window: i]
+                strategy_window = strategy_returns.iloc[i - window : i]
+                benchmark_window = benchmark_returns.iloc[i - window : i]
 
                 # Run regression
                 try:
@@ -896,7 +896,7 @@ class AlphaAttributionEngine:
                         : len(rolling_performance) // 2
                     ].mean()
                     late_perf = rolling_performance.iloc[
-                        len(rolling_performance) // 2:
+                        len(rolling_performance) // 2 :
                     ].mean()
 
                     if early_perf != 0:

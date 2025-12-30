@@ -678,8 +678,9 @@ class WalkForwardOptimizer:
         if not configurations:
             return
 
-        self.logger.info(f"\n=== Top {min(self.top_n_configs,
-                                          len(configurations))} Configurations (Window {window_num}/{total_windows}) ===")
+        self.logger.info(
+            f"\n=== Top {min(self.top_n_configs, len(configurations))} Configurations (Window {window_num}/{total_windows}) ==="
+        )
 
         for i, config in enumerate(configurations[: self.top_n_configs]):
             self.logger.info(

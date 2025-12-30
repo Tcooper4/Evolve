@@ -149,7 +149,7 @@ class EnsembleIntegrityChecker:
         # Limit sample history
         if len(self.model_samples[model_id]) > self.reference_window * 2:
             self.model_samples[model_id] = self.model_samples[model_id][
-                -self.reference_window * 2:
+                -self.reference_window * 2 :
             ]
 
         self.sample_count += 1
@@ -385,7 +385,7 @@ class EnsembleIntegrityChecker:
                 continue
 
             # Use recent samples for reference
-            recent_samples = samples[-self.reference_window:]
+            recent_samples = samples[-self.reference_window :]
 
             # Combine predictions
             all_predictions = np.concatenate(recent_samples)

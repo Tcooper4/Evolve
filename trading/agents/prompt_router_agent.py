@@ -719,9 +719,8 @@ class PromptRouterAgent(BaseAgent):
             agent.last_used = datetime.now()
 
             self.logger.debug(
-                f"Updated {agent_name} performance: success_rate={
-                    agent.success_rate:.3f}, avg_response_time={
-                    agent.avg_response_time:.2f}s")
+                f"Updated {agent_name} performance: success_rate={agent.success_rate:.3f}, avg_response_time={agent.avg_response_time:.2f}s"
+            )
 
     def handle_prompt(self, prompt: str) -> AgentResult:
         """

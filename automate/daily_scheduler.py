@@ -219,7 +219,7 @@ async def run_daily_schedule(tickers: Optional[List[str]] = None) -> Dict[str, A
         # Process in batches to limit concurrency
         results = []
         for i in range(0, len(tasks), MAX_CONCURRENT_TICKERS):
-            batch = tasks[i: i + MAX_CONCURRENT_TICKERS]
+            batch = tasks[i : i + MAX_CONCURRENT_TICKERS]
             batch_results = await asyncio.gather(*batch)
             results.extend(batch_results)
 

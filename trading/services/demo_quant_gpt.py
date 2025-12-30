@@ -224,7 +224,9 @@ def demo_quant_gpt() -> dict:
                     results = result.get("results", {})
                     commentary = result.get("gpt_commentary", "")
 
-                    logger.info(f"â±ï¸  Processing Time: {processing_time:.2f} seconds")
+                    logger.info(
+                        f"â±ï¸  Processing Time: {processing_time:.2f} seconds"
+                    )
                     logger.info(f"ðŸŽ¯ Intent: {parsed.get('intent', 'unknown')}")
                     logger.info(f"ðŸ“ˆ Symbol: {parsed.get('symbol', 'N/A')}")
                     logger.info(f"â° Timeframe: {parsed.get('timeframe', 'N/A')}")

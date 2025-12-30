@@ -1004,9 +1004,7 @@ class UnifiedTradeReporter:
             charts_html = ""
             charts = report_data.get("charts", {})
             for chart_name, chart_path in charts.items():
-                charts_html += f'<div class="chart"><h3>{
-                    chart_name.replace(
-                        "_", " ").title()}</h3><img src="{chart_path}" style="max-width: 100%;"></div>'
+                charts_html += f'<div class="chart"><h3>{chart_name.replace("_", " ").title()}</h3><img src="{chart_path}" style="max-width: 100%;"></div>'
 
             return html_template.format(
                 symbol=symbol,

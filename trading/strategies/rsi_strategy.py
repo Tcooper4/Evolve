@@ -124,10 +124,8 @@ class RSIStrategy:
 
             if len(close_prices) < self.rsi_period + 1:
                 raise ValueError(
-                    f"Insufficient data for RSI calculation. Need at least {
-                        self.rsi_period +
-                        1} points, got {
-                        len(close_prices)}")
+                    f"Insufficient data for RSI calculation. Need at least {self.rsi_period + 1} points, got {len(close_prices)}"
+                )
 
             return calculate_rsi(close_prices, self.rsi_period)
 

@@ -527,7 +527,7 @@ class ParserEngine:
             )
 
             generated_text = response[0]["generated_text"]
-            intent_part = generated_text[len(classification_prompt):].strip()
+            intent_part = generated_text[len(classification_prompt) :].strip()
 
             # Extract intent from generated text
             intent = self._extract_intent_from_text(intent_part)

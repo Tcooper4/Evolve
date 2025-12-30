@@ -139,9 +139,7 @@ def example_service_client():
             processing_time = time.time() - start_time
 
             if result:
-                logger.info(
-                    f"✅ Service Response (processed in {processing_time:.2f}s)"
-                )
+                logger.info(f"✅ Service Response (processed in {processing_time:.2f}s)")
                 logger.info(f"Type: {result.get('type', 'unknown')}")
 
                 if result.get("type") == "query_processed":

@@ -122,11 +122,7 @@ class PromptClarificationAgent:
                     break
 
         if len(detected_strategies) > 1:
-            question = f"Did you mean {detected_strategies[0].upper()} strategy or {detected_strategies[1].upper()}?"
-            if len(detected_strategies) > 2:
-                question = f"Multiple strategies detected: {
-                    ', '.join(detected_strategies)}. Which one would you like to use?"
-
+            question = f"Multiple strategies detected: {', '.join(detected_strategies)}. Which one would you like to use?"
             return ClarificationRequest(
                 ambiguity_type=AmbiguityType.MULTIPLE_STRATEGIES,
                 original_prompt=prompt,

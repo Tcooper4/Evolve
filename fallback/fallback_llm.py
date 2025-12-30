@@ -413,10 +413,12 @@ class FallbackLLM:
     ) -> List[ParsedAction]:
         """Apply negation detection to actions."""
         for action in actions:
-            is_negated, strength, negation_type = (
-                self.negation_detector.is_action_negated(
-                    action.action_type.value, prompt
-                )
+            (
+                is_negated,
+                strength,
+                negation_type,
+            ) = self.negation_detector.is_action_negated(
+                action.action_type.value, prompt
             )
 
             if is_negated:

@@ -45,9 +45,7 @@ async def test_execution_agent_modular():
             confidence=0.8,
             entry_price=150.00,
         )
-        logger.info(
-            f"✅ Trade signal created: {signal.symbol} at ${signal.entry_price}"
-        )
+        logger.info(f"✅ Trade signal created: {signal.symbol} at ${signal.entry_price}")
 
         # Test execution agent creation
         config = {
@@ -98,9 +96,7 @@ async def test_optimizer_agent_modular():
             name="rsi_period", min_value=10, max_value=30, step=2, parameter_type="int"
         )
         validated_params = validator.validate_optimization_parameters([param])
-        logger.info(
-            f"✅ Parameter validation: {len(validated_params)} valid parameters"
-        )
+        logger.info(f"✅ Parameter validation: {len(validated_params)} valid parameters")
 
         # Test strategy optimizer
         optimizer = StrategyOptimizer({})

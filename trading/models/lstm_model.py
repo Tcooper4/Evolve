@@ -205,7 +205,7 @@ class LSTMModel(nn.Module):
 
             # Create sequences
             X_seq = self._create_sequences(X_tensor)
-            y_seq = y_tensor[self.config["sequence_length"]:]
+            y_seq = y_tensor[self.config["sequence_length"] :]
 
             # Create DataLoader
             dataset = TensorDataset(X_seq, y_seq)
@@ -334,7 +334,7 @@ class LSTMModel(nn.Module):
             sequence_length = getattr(self, "config", {}).get("sequence_length", 10)
             sequences = []
             for i in range(len(data) - sequence_length + 1):
-                sequences.append(data[i: i + sequence_length])
+                sequences.append(data[i : i + sequence_length])
             return torch.stack(sequences)
         except Exception as e:
             logger.error(f"Sequence creation failed: {e}")
@@ -578,11 +578,8 @@ class LSTMForecaster(BaseModel):
                 "max_sequence_length", 100
             ):
                 raise ValueError(
-                    f"sequence_length {
-                        self.config['sequence_length']} exceeds maximum allowed value of {
-                        self.config.get(
-                            'max_sequence_length',
-                            100)}")
+                    f"sequence_length {self.config['sequence_length']} exceeds maximum allowed value of {self.config.get('max_sequence_length', 100)}"
+                )
 
             # Validate feature columns
             if not self.config["feature_columns"]:
@@ -634,11 +631,8 @@ class LSTMForecaster(BaseModel):
             # Check sequence length
             if x.size(1) > self.config.get("max_sequence_length", 100):
                 raise ValueError(
-                    f"Input sequence length {
-                        x.size(1)} exceeds maximum allowed value of {
-                        self.config.get(
-                            'max_sequence_length',
-                            100)}")
+                    f"Input sequence length {x.size(1)} exceeds maximum allowed value of {self.config.get('max_sequence_length', 100)}"
+                )
 
             # Check batch size
             if (
@@ -720,7 +714,7 @@ class LSTMForecaster(BaseModel):
                 # Get target values
                 y = torch.FloatTensor(
                     normalized_data[
-                        self.config["sequence_length"]:,
+                        self.config["sequence_length"] :,
                         self.config["feature_columns"].index(
                             self.config["target_column"]
                         ),
@@ -746,7 +740,7 @@ class LSTMForecaster(BaseModel):
         """
         sequences = []
         for i in range(len(data) - self.config["sequence_length"]):
-            sequences.append(data[i: i + self.config["sequence_length"]])
+            sequences.append(data[i : i + self.config["sequence_length"]])
         return torch.stack(sequences)
 
     def _get_input_hash(self, data: pd.DataFrame) -> str:
@@ -872,7 +866,7 @@ class LSTMForecaster(BaseModel):
                 X_seq = []
                 y_seq = []
                 for i in range(len(X) - seq_len):
-                    X_seq.append(X.iloc[i: i + seq_len].values)
+                    X_seq.append(X.iloc[i : i + seq_len].values)
                     y_seq.append(y.iloc[i + seq_len])
                 X_seq = np.array(X_seq)
                 y_seq = np.array(y_seq)
@@ -1035,7 +1029,7 @@ class LSTMForecaster(BaseModel):
             seq_len = self.config["sequence_length"]
             X_seq = []
             for i in range(len(data) - seq_len + 1):
-                X_seq.append(data.iloc[i: i + seq_len].values)
+                X_seq.append(data.iloc[i : i + seq_len].values)
             X_seq = np.array(X_seq)
 
             # Convert to PyTorch tensor
@@ -1329,7 +1323,7 @@ class LSTMForecaster(BaseModel):
                 color="blue",
             )
             plt.plot(
-                data.index[self.config["sequence_length"]:],
+                data.index[self.config["sequence_length"] :],
                 predictions,
                 label="Predicted",
                 color="red",

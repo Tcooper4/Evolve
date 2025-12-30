@@ -164,8 +164,7 @@ class ARIMAModel(BaseModel):
 
             return {
                 "success": True,
-                "message": f"Enhanced Auto ARIMA model fitted successfully with {
-                    self.optimization_criterion.upper()} optimization",
+                "message": f"Enhanced Auto ARIMA model fitted successfully with {self.optimization_criterion.upper()} optimization",
                 "timestamp": pd.Timestamp.now().isoformat(),
                 "model": self,
                 "order": self.order,
@@ -264,7 +263,7 @@ class ARIMAModel(BaseModel):
         try:
             # Use last backtest_steps for validation
             train_data = data[: -self.backtest_steps]
-            test_data = data[-self.backtest_steps:]
+            test_data = data[-self.backtest_steps :]
 
             # Fit model on training data
             model.fit(train_data)
@@ -679,7 +678,7 @@ class ARIMAModel(BaseModel):
             plt.subplot(2, 2, 1)
             plt.plot(data.index, data.values, label="Actual", color="blue")
             plt.plot(
-                data.index[-len(predictions):],
+                data.index[-len(predictions) :],
                 predictions,
                 label="Predicted",
                 color="red",

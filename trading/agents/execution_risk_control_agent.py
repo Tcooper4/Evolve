@@ -490,9 +490,7 @@ class ExecutionRiskControlAgent(BaseAgent):
                 if minutes_since_last < self.cooling_period_minutes:
                     return {
                         "passed": False,
-                        "reason": f"Cooling period not met: {
-                            self.cooling_period_minutes -
-                            minutes_since_last:.0f} minutes remaining",
+                        "reason": f"Cooling period not met: {self.cooling_period_minutes - minutes_since_last:.0f} minutes remaining",
                     }
 
             return {"passed": True}

@@ -61,7 +61,7 @@ class HybridModel:
             try:
                 model.fit(data)
                 preds = model.predict(data)
-                actual = data["close"].values[-len(preds):]
+                actual = data["close"].values[-len(preds) :]
 
                 # Calculate comprehensive performance metrics
                 performance_metrics = self._calculate_performance_metrics(

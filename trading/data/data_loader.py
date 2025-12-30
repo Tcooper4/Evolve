@@ -394,7 +394,7 @@ class ParallelProcessor:
 
         # Split requests into chunks
         chunks = [
-            requests[i: i + self.config.chunk_size]
+            requests[i : i + self.config.chunk_size]
             for i in range(0, len(requests), self.config.chunk_size)
         ]
 

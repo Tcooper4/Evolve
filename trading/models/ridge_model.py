@@ -426,12 +426,12 @@ class RidgeModel(BaseModel):
                         features = features_lagged
                     else:
                         raise ModelError(
-                            f"Feature mismatch: model expects {expected_features} features, but got {
-                                features.shape[1]}. Please provide input data with the same lag structure as used in training.")
+                            f"Feature mismatch: model expects {expected_features} features, but got {features.shape[1]}. Please provide input data with the same lag structure as used in training."
+                        )
                 else:
                     raise ModelError(
-                        f"Feature mismatch: model expects {expected_features} features, but got {
-                            features.shape[1]}. Please provide input data with the same feature structure as used in training.")
+                        f"Feature mismatch: model expects {expected_features} features, but got {features.shape[1]}. Please provide input data with the same feature structure as used in training."
+                    )
             predictions = self.model.predict(features)
             logger.info(
                 f"Generated Ridge predictions for {len(predictions)} observations"

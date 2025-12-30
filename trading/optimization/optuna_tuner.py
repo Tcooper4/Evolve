@@ -241,8 +241,8 @@ class SharpeOptunaTuner:
                 X_val_seq = self._prepare_sequences(
                     X_val.values, params["sequence_length"]
                 )
-                y_train_seq = y_train.values[params["sequence_length"]:]
-                y_val_seq = y_val.values[params["sequence_length"]:]
+                y_train_seq = y_train.values[params["sequence_length"] :]
+                y_val_seq = y_val.values[params["sequence_length"] :]
 
                 # Train model
                 model.fit(
@@ -455,8 +455,8 @@ class SharpeOptunaTuner:
                 X_val_seq = self._prepare_sequences(
                     X_val.values, params["sequence_length"]
                 )
-                y_train_seq = y_train.values[params["sequence_length"]:]
-                y_val_seq = y_val.values[params["sequence_length"]:]
+                y_train_seq = y_train.values[params["sequence_length"] :]
+                y_val_seq = y_val.values[params["sequence_length"] :]
 
                 # Train model
                 model.fit(
@@ -516,7 +516,7 @@ class SharpeOptunaTuner:
         """Prepare sequences for time series models."""
         sequences = []
         for i in range(len(data) - sequence_length):
-            sequences.append(data[i: i + sequence_length])
+            sequences.append(data[i : i + sequence_length])
         return np.array(sequences)
 
     def optimize_all_models(

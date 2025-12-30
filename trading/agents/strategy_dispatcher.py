@@ -190,9 +190,11 @@ class StrategyValidator:
                 ValidationLevel.ADVANCED,
                 ValidationLevel.STRICT,
             ]:
-                param_errors, param_warnings, param_suggestions = (
-                    self._validate_parameters(strategy_config)
-                )
+                (
+                    param_errors,
+                    param_warnings,
+                    param_suggestions,
+                ) = self._validate_parameters(strategy_config)
                 errors.extend(param_errors)
                 warnings.extend(param_warnings)
                 suggestions.extend(param_suggestions)

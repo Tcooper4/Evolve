@@ -296,7 +296,6 @@ class TestLiveDashboardEnhancements:
             patch("subprocess.Popen") as mock_popen,
             patch("logging.error") as mock_log_error,
         ):
-
             # Mock process that crashes
             mock_process = Mock()
             mock_process.poll.side_effect = [None, 1]
@@ -318,7 +317,6 @@ class TestLiveDashboardEnhancements:
     async def test_dashboard_refresh_mechanism(self):
         """Test dashboard refresh mechanism."""
         with patch("subprocess.Popen") as mock_popen, patch("time.sleep") as mock_sleep:
-
             # Mock process that restarts
             mock_process = Mock()
             mock_process.poll.side_effect = [None, 1, None]

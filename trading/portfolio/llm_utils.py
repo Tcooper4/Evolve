@@ -524,7 +524,7 @@ Format the response as a comprehensive daily report."""
         correlations = {}
         symbols = list(returns.keys())
         for i, sym1 in enumerate(symbols):
-            for sym2 in symbols[i + 1:]:
+            for sym2 in symbols[i + 1 :]:
                 correlations[f"{sym1}-{sym2}"] = np.corrcoef(
                     [returns[sym1]], [returns[sym2]]
                 )[0, 1]

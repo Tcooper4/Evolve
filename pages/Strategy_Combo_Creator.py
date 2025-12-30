@@ -522,7 +522,7 @@ def display_strategy_comparison(
             strategies = list(individual_signals.keys())
 
             for i, strategy1 in enumerate(strategies):
-                for j, strategy2 in enumerate(strategies[i + 1:], i + 1):
+                for j, strategy2 in enumerate(strategies[i + 1 :], i + 1):
                     signal1 = individual_signals[strategy1]
                     signal2 = individual_signals[strategy2]
                     agreement = (signal1 == signal2).mean()

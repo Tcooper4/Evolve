@@ -170,7 +170,7 @@ class TimeSeriesDataset(Dataset):
         self.sequence_targets = []
 
         for i in range(len(data) - sequence_length):
-            self.sequences.append(self.features[i: i + sequence_length])
+            self.sequences.append(self.features[i : i + sequence_length])
             self.sequence_targets.append(self.targets[i + sequence_length])
 
     def _validate_data(self, data: pd.DataFrame) -> None:
@@ -363,9 +363,9 @@ class BaseModel(ABC):
             train_size = 1 - test_size - val_size
             train_data = data.iloc[: int(len(data) * train_size)]
             val_data = data.iloc[
-                int(len(data) * train_size): int(len(data) * (train_size + val_size))
+                int(len(data) * train_size) : int(len(data) * (train_size + val_size))
             ]
-            test_data = data.iloc[int(len(data) * (train_size + val_size)):]
+            test_data = data.iloc[int(len(data) * (train_size + val_size)) :]
 
             # Create datasets
             train_dataset = TimeSeriesDataset(

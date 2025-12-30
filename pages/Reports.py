@@ -472,10 +472,10 @@ def plot_performance_report(report_data: Dict[str, Any]):
         fig.update_layout(
             height=1000,
             showlegend=True,
-            title_text=f"Performance Report: {
-                report_data['symbol']} ({
-                report_data['start_date'].strftime('%Y-%m-%d')} to {
-                report_data['end_date'].strftime('%Y-%m-%d')})",
+            title_text=(
+                f"Performance Report: {report_data['symbol']} ("
+                f"{report_data['start_date'].strftime('%Y-%m-%d')} to {report_data['end_date'].strftime('%Y-%m-%d')})"
+            ),
             title_x=0.5,
         )
 

@@ -987,9 +987,9 @@ class LeaderboardManager:
                 )
 
                 # Calculate confidence based on data quality
-                latest_data["confidence"] = (
-                    0.8  # Default confidence for individual entries
-                )
+                latest_data[
+                    "confidence"
+                ] = 0.8  # Default confidence for individual entries
 
                 # Filter by confidence
                 latest_data = latest_data[latest_data["confidence"] >= min_confidence]

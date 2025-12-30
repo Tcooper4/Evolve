@@ -361,8 +361,8 @@ class StrategyComposer:
                 config = self.sub_strategies[strategy_name]
                 if performance < config.performance_threshold:
                     self.logger.warning(
-                        f"Strategy {strategy_name} performance {performance} below threshold {
-                            config.performance_threshold}")
+                        f"Strategy {strategy_name} performance {performance} below threshold {config.performance_threshold}"
+                    )
 
         except Exception as e:
             self.logger.error(f"Error updating performance for {strategy_name}: {e}")

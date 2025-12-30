@@ -174,7 +174,7 @@ class MonteCarloSimulator:
             for _ in range(n_blocks_needed):
                 # Sample a random starting point
                 start_idx = np.random.randint(0, n_historical - block_size + 1)
-                block = returns_array[start_idx: start_idx + block_size]
+                block = returns_array[start_idx : start_idx + block_size]
                 path.extend(block)
 
             # Trim to exact length if needed

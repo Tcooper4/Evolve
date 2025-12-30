@@ -396,7 +396,9 @@ class ForecastPostprocessor:
             "smoothing_effectiveness": (
                 "High"
                 if np.mean(smoothing_ratios) < 0.8
-                else "Medium" if np.mean(smoothing_ratios) < 0.95 else "Low"
+                else "Medium"
+                if np.mean(smoothing_ratios) < 0.95
+                else "Low"
             ),
         }
 

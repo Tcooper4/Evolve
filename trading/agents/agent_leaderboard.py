@@ -368,16 +368,14 @@ class AgentLeaderboard:
             if perf.sharpe_ratio < self.deprecation_thresholds["sharpe_ratio"]:
                 deprecated = True
                 reasons.append(
-                    f"Sharpe ratio {
-                        perf.sharpe_ratio:.2f} below threshold {
-                        self.deprecation_thresholds['sharpe_ratio']}")
+                    f"Sharpe ratio {perf.sharpe_ratio:.2f} below threshold {self.deprecation_thresholds['sharpe_ratio']}"
+                )
 
             if perf.max_drawdown > self.deprecation_thresholds["max_drawdown"]:
                 deprecated = True
                 reasons.append(
-                    f"Max drawdown {
-                        perf.max_drawdown:.2%} above threshold {
-                        self.deprecation_thresholds['max_drawdown']:.2%}")
+                    f"Max drawdown {perf.max_drawdown:.2%} above threshold {self.deprecation_thresholds['max_drawdown']:.2%}"
+                )
 
             if perf.win_rate < self.deprecation_thresholds["win_rate"]:
                 deprecated = True
@@ -388,20 +386,16 @@ class AgentLeaderboard:
             if perf.calmar_ratio < self.deprecation_thresholds.get("calmar_ratio", 0.0):
                 deprecated = True
                 reasons.append(
-                    f"Calmar ratio {
-                        perf.calmar_ratio:.2f} below threshold {
-                        self.deprecation_thresholds.get(
-                            'calmar_ratio', 0.0)}")
+                    f"Calmar ratio {perf.calmar_ratio:.2f} below threshold {self.deprecation_thresholds.get('calmar_ratio', 0.0)}"
+                )
 
             if perf.sortino_ratio < self.deprecation_thresholds.get(
                 "sortino_ratio", 0.0
             ):
                 deprecated = True
                 reasons.append(
-                    f"Sortino ratio {
-                        perf.sortino_ratio:.2f} below threshold {
-                        self.deprecation_thresholds.get(
-                            'sortino_ratio', 0.0)}")
+                    f"Sortino ratio {perf.sortino_ratio:.2f} below threshold {self.deprecation_thresholds.get('sortino_ratio', 0.0)}"
+                )
 
             # Update status
             if deprecated:

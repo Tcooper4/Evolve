@@ -540,7 +540,7 @@ class PositionSizingEngine:
         window = 60
 
         for i in range(window, len(returns)):
-            window_returns = returns.iloc[i - window: i]
+            window_returns = returns.iloc[i - window : i]
             win_rate = (window_returns > 0).mean()
             avg_win = window_returns[window_returns > 0].mean()
             avg_loss = abs(window_returns[window_returns < 0].mean())

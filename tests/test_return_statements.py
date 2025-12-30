@@ -288,9 +288,7 @@ def main():
         print(f"\n⚠️ {failed} tests failed. Check individual results below.")
         for result in results:
             if not result.get("status", "").endswith("_passed"):
-                print(
-                    f"  ❌ {result['status']}: {result.get('error', 'Unknown error')}"
-                )
+                print(f"  ❌ {result['status']}: {result.get('error', 'Unknown error')}")
 
         return {
             "success": True,

@@ -243,10 +243,10 @@ def prepare_forecast_data(
         X, y = [], []
 
         for i in range(len(data) - sequence_length - forecast_horizon + 1):
-            X.append(data[target_column].values[i: i + sequence_length])
+            X.append(data[target_column].values[i : i + sequence_length])
             y.append(
                 data[target_column].values[
-                    i + sequence_length: i + sequence_length + forecast_horizon
+                    i + sequence_length : i + sequence_length + forecast_horizon
                 ]
             )
 

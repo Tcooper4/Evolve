@@ -229,9 +229,8 @@ class SentimentSignals:
             self._cache_sentiment("reddit", ticker, sentiment_results)
 
             logger.info(
-                f"Reddit sentiment analysis completed for {ticker}: {
-                    len(all_posts)} posts, {
-                    len(all_comments)} comments")
+                f"Reddit sentiment analysis completed for {ticker}: {len(all_posts)} posts, {len(all_comments)} comments"
+            )
             return sentiment_results
 
         except Exception as e:
