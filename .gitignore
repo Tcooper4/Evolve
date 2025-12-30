@@ -152,3 +152,7 @@ tests/credentials/
 reports/*.html
 reports/*.pdf
 reports/*.pkl 
+# API configuration files (sensitive)
+config/agent_config.json
+config/*_config.json
+config/api_*.json
