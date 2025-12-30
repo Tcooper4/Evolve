@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from core.session_utils import (
+from utils.session_utils import (
     display_system_status,
     safe_session_set,
     update_last_updated,

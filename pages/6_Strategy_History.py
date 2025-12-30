@@ -18,7 +18,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from PIL import Image
 
-from core.session_utils import initialize_session_state, update_last_updated
+from utils.session_utils import initialize_session_state, update_last_updated
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
