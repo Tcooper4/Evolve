@@ -6,7 +6,7 @@ Manages API keys and secrets securely from environment variables.
 
 import os
 import logging
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 
 logger = logging.getLogger(__name__)
 
