@@ -13,7 +13,7 @@ import json
 import logging
 import warnings
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict
 
 import numpy as np
@@ -217,40 +217,170 @@ def calculate_forecast_metrics(
 
 
 def generate_forecast_data(symbol: str, days: int, model: str) -> Dict[str, Any]:
-    """Generate mock forecast data for demonstration."""
+    """Generate real forecast data using trained models."""
     try:
-        # Generate mock historical data
-        np.random.seed(42)
-        dates = pd.date_range(end=datetime.now(), periods=100, freq="D")
-        historical_prices = 100 + np.cumsum(np.random.randn(100) * 0.02)
-
-        # Generate forecast
-        forecast_dates = pd.date_range(start=dates[-1], periods=days + 1, freq="D")[1:]
-        forecast_prices = historical_prices[-1] + np.cumsum(
-            np.random.randn(days) * 0.015
-        )
-
-        # Generate confidence intervals
-        confidence_lower = forecast_prices * 0.95
-        confidence_upper = forecast_prices * 1.05
-
-        # Calculate metrics
-        metrics = calculate_forecast_metrics(
-            historical_prices[-30:], forecast_prices[:30]
-        )
-
-        return {
-            "symbol": symbol,
-            "model": model,
-            "historical_dates": dates,
-            "historical_prices": historical_prices,
-            "forecast_dates": forecast_dates,
-            "forecast_prices": forecast_prices,
-            "confidence_lower": confidence_lower,
-            "confidence_upper": confidence_upper,
-            "metrics": metrics,
-            "generated_at": datetime.now(),
-        }
+        # Import forecast engine
+        from models.forecast_engine import ForecastEngine, ModelType
+        from data.data_fetcher import DataFetcher
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        # Get historical data
+        data_fetcher = DataFetcher()
+        try:
+            # Fetch real historical data
+            historical_data = data_fetcher.get_historical_data(
+                symbol=symbol,
+                period=f"{max(days * 3, 252)}d"  # Get enough data for training
+            )
+            
+            if historical_data.empty:
+                logger.warning(f"No historical data available for {symbol}")
+                return {}
+            
+            # Prepare data for forecast engine
+            # Ensure we have required columns
+            if "Close" not in historical_data.columns and "close" not in historical_data.columns:
+                if len(historical_data.columns) > 0:
+                    # Use first numeric column
+                    price_col = historical_data.select_dtypes(include=[np.number]).columns[0]
+                    historical_data = historical_data.rename(columns={price_col: "Close"})
+                else:
+                    logger.error(f"No price data available for {symbol}")
+                    return {}
+            
+            # Rename to standard format
+            if "close" in historical_data.columns:
+                historical_data = historical_data.rename(columns={"close": "Close"})
+            
+            # Add timestamp if missing
+            if "timestamp" not in historical_data.columns:
+                if historical_data.index.name == "Date" or isinstance(historical_data.index, pd.DatetimeIndex):
+                    historical_data = historical_data.reset_index()
+                    if "Date" in historical_data.columns:
+                        historical_data = historical_data.rename(columns={"Date": "timestamp"})
+                    else:
+                        historical_data["timestamp"] = historical_data.index
+                else:
+                    historical_data["timestamp"] = pd.date_range(
+                        end=datetime.now(), periods=len(historical_data), freq="D"
+                    )
+            
+            # Initialize forecast engine
+            forecast_engine = ForecastEngine()
+            
+            # Map model string to ModelType
+            model_type_map = {
+                "lstm": ModelType.LSTM,
+                "arima": ModelType.ARIMA,
+                "xgboost": ModelType.XGBOOST,
+                "prophet": ModelType.PROPHET,
+                "transformer": ModelType.TRANSFORMER,
+                "ensemble": ModelType.ENSEMBLE,
+            }
+            
+            selected_model_type = model_type_map.get(model.lower(), ModelType.LSTM)
+            
+            # Generate forecast using real model
+            forecast_result = forecast_engine.generate_forecast(
+                data=historical_data,
+                model_type=selected_model_type,
+                forecast_days=days
+            )
+            
+            # Extract forecast values
+            forecast_values = forecast_result.forecast_values
+            forecast_dates = forecast_result.forecast_dates
+            
+            # Get historical prices and dates
+            historical_prices = historical_data["Close"].values
+            historical_dates = historical_data["timestamp"].values if "timestamp" in historical_data.columns else pd.date_range(
+                end=datetime.now(), periods=len(historical_data), freq="D"
+            )
+            
+            # Calculate confidence intervals based on model confidence
+            confidence = forecast_result.confidence
+            forecast_std = np.std(forecast_values) if len(forecast_values) > 1 else forecast_values[0] * 0.05
+            z_score = 1.96  # 95% confidence
+            
+            confidence_lower = np.array(forecast_values) - z_score * forecast_std * (1 - confidence)
+            confidence_upper = np.array(forecast_values) + z_score * forecast_std * (1 - confidence)
+            
+            # Calculate metrics using real forecast
+            metrics = calculate_forecast_metrics(
+                historical_prices[-min(30, len(historical_prices)):],
+                forecast_values[:min(30, len(forecast_values))]
+            )
+            
+            # Add model-specific metrics
+            metrics.update({
+                "model_confidence": confidence,
+                "model_type": forecast_result.model_type.value,
+                "processing_time": forecast_result.processing_time,
+            })
+            
+            return {
+                "symbol": symbol,
+                "model": model,
+                "historical_dates": historical_dates,
+                "historical_prices": historical_prices,
+                "forecast_dates": forecast_dates,
+                "forecast_prices": forecast_values,
+                "confidence_lower": confidence_lower,
+                "confidence_upper": confidence_upper,
+                "metrics": metrics,
+                "generated_at": datetime.now(),
+                "model_info": forecast_result.model_info,
+            }
+            
+        except ImportError as e:
+            logger.error(f"Failed to import forecast engine: {e}")
+            # Fallback: try forecast router
+            try:
+                from models.forecast_router import ForecastRouter
+                
+                router = ForecastRouter()
+                forecast_result = router.get_forecast(
+                    data=historical_data,
+                    horizon=days,
+                    model_type=model.lower()
+                )
+                
+                # Extract from router result
+                forecast_values = forecast_result.get("forecast", [])
+                if isinstance(forecast_values, pd.DataFrame):
+                    forecast_values = forecast_values.values.flatten()
+                
+                # Generate dates
+                last_date = historical_data["timestamp"].max() if "timestamp" in historical_data.columns else datetime.now()
+                forecast_dates = pd.date_range(
+                    start=last_date + timedelta(days=1), periods=days, freq="D"
+                )
+                
+                # Calculate confidence intervals
+                confidence = forecast_result.get("confidence", 0.8)
+                forecast_std = np.std(forecast_values) if len(forecast_values) > 1 else forecast_values[0] * 0.05
+                z_score = 1.96
+                confidence_lower = np.array(forecast_values) - z_score * forecast_std * (1 - confidence)
+                confidence_upper = np.array(forecast_values) + z_score * forecast_std * (1 - confidence)
+                
+                return {
+                    "symbol": symbol,
+                    "model": model,
+                    "historical_dates": historical_data["timestamp"].values if "timestamp" in historical_data.columns else pd.date_range(end=datetime.now(), periods=len(historical_data), freq="D"),
+                    "historical_prices": historical_data["Close"].values,
+                    "forecast_dates": forecast_dates,
+                    "forecast_prices": forecast_values,
+                    "confidence_lower": confidence_lower,
+                    "confidence_upper": confidence_upper,
+                    "metrics": calculate_forecast_metrics(historical_data["Close"].values[-30:], forecast_values[:30]),
+                    "generated_at": datetime.now(),
+                }
+            except Exception as e2:
+                logger.error(f"Failed to use forecast router: {e2}")
+                return {}
+                
     except Exception as e:
         logger.error(f"Error generating forecast data: {e}")
         return {}
