@@ -98,6 +98,11 @@ class TradingEnvironment(gym.Env):
             if "close" in self.data.columns
             else self.data.iloc[self.current_step, 0]
         )
+        
+        # Track previous state for reward calculation (no look-ahead bias)
+        self.last_price = None
+        self.last_shares_held = 0
+        self.entry_price = None  # Track entry price for PnL calculation
 
         return self._get_observation(), {}
 
@@ -117,8 +122,15 @@ class TradingEnvironment(gym.Env):
             else self.data.iloc[self.current_step, 0]
         )
 
-        # Execute action
-        reward = 0
+        # Calculate reward based on realized PnL from previous step
+        # This uses only past data, not future data (no look-ahead bias)
+        reward = 0.0
+        if self.last_price is not None and self.last_shares_held > 0:
+            # Realized PnL from price movement since last step
+            price_change = (current_price - self.last_price) / self.last_price
+            reward = price_change * self.last_shares_held * self.last_price
+        
+        # Execute current action
         if action == 1:  # Buy
             if self.balance > 0:
                 shares_to_buy = self.balance / current_price * self.max_position
@@ -126,6 +138,16 @@ class TradingEnvironment(gym.Env):
                 if cost <= self.balance:
                     self.shares_held += shares_to_buy
                     self.balance -= cost
+                    # Store entry price for future PnL calculation
+                    if self.entry_price is None:
+                        self.entry_price = current_price
+                    else:
+                        # Weighted average entry price
+                        total_shares = self.shares_held
+                        self.entry_price = (
+                            (self.entry_price * (total_shares - shares_to_buy) + 
+                             current_price * shares_to_buy) / total_shares
+                        )
                     reward = 0  # No immediate reward for buying
         elif action == 2:  # Sell
             if self.shares_held > 0:
@@ -136,11 +158,21 @@ class TradingEnvironment(gym.Env):
                 self.total_shares_sold += shares_to_sell
                 self.total_sales_value += revenue
 
-                # Calculate reward based on profit/loss
-                reward = revenue - (shares_to_sell * self.current_price)
+                # Calculate realized PnL from entry to exit
+                if self.entry_price is not None:
+                    cost_basis = shares_to_sell * self.entry_price
+                    realized_pnl = revenue - cost_basis
+                    reward += realized_pnl
+                
+                # Reset entry price if all shares sold
+                if self.shares_held == 0:
+                    self.entry_price = None
 
         # Move to next step
         self.current_step += 1
+        # Store current state for next step's reward calculation
+        self.last_price = current_price
+        self.last_shares_held = self.shares_held
         self.current_price = current_price
 
         # Check if episode is done
