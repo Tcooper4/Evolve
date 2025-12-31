@@ -877,8 +877,283 @@ with tab3:
 
 with tab4:
     st.header("Model Comparison")
-    st.markdown("Compare multiple models side-by-side")
-    st.info("Integration pending...")
+    st.markdown("Compare multiple models side-by-side and create ensemble forecasts")
+    
+    if st.session_state.forecast_data is None:
+        st.warning("⚠️ Please load data first in the Quick Forecast tab")
+    else:
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.subheader("📊 Select Models")
+            
+            models_to_compare = st.multiselect(
+                "Choose models to compare:",
+                ["LSTM", "XGBoost", "Prophet", "ARIMA"],
+                default=["LSTM", "XGBoost"],
+                help="Select 2-4 models to compare"
+            )
+            
+            if len(models_to_compare) < 2:
+                st.warning("Please select at least 2 models")
+            elif len(models_to_compare) > 4:
+                st.warning("Please select no more than 4 models")
+            
+            create_ensemble = st.checkbox("Create Ensemble Forecast", value=True)
+            
+            compare_button = st.button(
+                "🚀 Compare Models",
+                type="primary",
+                use_container_width=True,
+                disabled=len(models_to_compare) < 2
+            )
+        
+        with col2:
+            st.subheader("📈 Comparison Results")
+            
+            if compare_button and len(models_to_compare) >= 2:
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                try:
+                    data = st.session_state.forecast_data.copy()
+                    horizon = st.session_state.forecast_horizon
+                    
+                    # Ensure proper format
+                    if not isinstance(data.index, pd.DatetimeIndex):
+                        data.index = pd.to_datetime(data.index)
+                    
+                    if 'close' in data.columns:
+                        data['Close'] = data['close']
+                    
+                    forecasts = {}
+                    model_configs = {}
+                    
+                    # Train and forecast for each model
+                    total_models = len(models_to_compare)
+                    for idx, model_name in enumerate(models_to_compare):
+                        status_text.text(f"Training {model_name} ({idx+1}/{total_models})...")
+                        progress_bar.progress((idx) / (total_models + 1))
+                        
+                        try:
+                            # Create model config
+                            if model_name == "LSTM":
+                                config = {
+                                    "target_column": "close" if "close" in data.columns else "Close",
+                                    "sequence_length": 60,
+                                    "hidden_dim": 64,
+                                    "num_layers": 2,
+                                    "dropout": 0.2,
+                                    "learning_rate": 0.001
+                                }
+                                model = LSTMModel(config)
+                            elif model_name == "XGBoost":
+                                config = {
+                                    "target_column": "close" if "close" in data.columns else "Close",
+                                    "n_estimators": 100,
+                                    "max_depth": 5,
+                                    "learning_rate": 0.1
+                                }
+                                model = XGBoostModel(config)
+                            elif model_name == "Prophet":
+                                config = {
+                                    "date_column": "ds",
+                                    "target_column": "close" if 'close' in data.columns else 'Close",
+                                    "prophet_params": {}
+                                }
+                                model = ProphetModel(config)
+                            elif model_name == "ARIMA":
+                                config = {
+                                    "order": (5, 1, 0),
+                                    "use_auto_arima": True
+                                }
+                                model = ARIMAModel(config)
+                            
+                            model_configs[model_name] = config
+                            
+                            # Train model
+                            if model_name == "Prophet":
+                                train_df = pd.DataFrame({
+                                    'ds': data.index,
+                                    'y': data[config["target_column"]]
+                                })
+                                model.fit(train_df)
+                            elif model_name == "ARIMA":
+                                model.fit(data[config["target_column"]])
+                            else:
+                                model.fit(data, data[config["target_column"]])
+                            
+                            # Generate forecast
+                            forecast_result = model.forecast(data, horizon=horizon)
+                            
+                            # Extract forecast values
+                            if isinstance(forecast_result, dict):
+                                forecast_values = forecast_result.get('forecast', [])
+                                forecast_dates = forecast_result.get('dates', pd.date_range(
+                                    start=data.index[-1] + timedelta(days=1),
+                                    periods=horizon,
+                                    freq='D'
+                                ))
+                            else:
+                                forecast_values = forecast_result
+                                forecast_dates = pd.date_range(
+                                    start=data.index[-1] + timedelta(days=1),
+                                    periods=horizon,
+                                    freq='D'
+                                )
+                            
+                            if isinstance(forecast_values, (list, np.ndarray)):
+                                forecast_values = np.array(forecast_values).flatten()
+                            else:
+                                forecast_values = np.array([forecast_values] * horizon)
+                            
+                            forecasts[model_name] = {
+                                'values': forecast_values,
+                                'dates': forecast_dates[:len(forecast_values)]
+                            }
+                            
+                        except Exception as e:
+                            st.warning(f"Failed to train {model_name}: {str(e)}")
+                            continue
+                    
+                    progress_bar.progress(0.9)
+                    
+                    # Create ensemble if requested
+                    if create_ensemble and len(forecasts) >= 2:
+                        status_text.text("Creating ensemble forecast...")
+                        ensemble_values = []
+                        for i in range(horizon):
+                            values_at_step = [f['values'][i] for f in forecasts.values() if i < len(f['values'])]
+                            if values_at_step:
+                                ensemble_values.append(np.mean(values_at_step))
+                            else:
+                                ensemble_values.append(0)
+                        
+                        forecasts['Ensemble'] = {
+                            'values': np.array(ensemble_values),
+                            'dates': forecasts[list(forecasts.keys())[0]]['dates']
+                        }
+                    
+                    progress_bar.progress(1.0)
+                    status_text.text("Complete!")
+                    
+                    # Store results
+                    st.session_state.comparison_results = forecasts
+                    
+                    st.success(f"✅ Compared {len(forecasts)} models successfully!")
+                    
+                    # Display comparison chart
+                    fig = go.Figure()
+                    
+                    # Historical data
+                    hist_data = st.session_state.forecast_data
+                    fig.add_trace(go.Scatter(
+                        x=hist_data.index,
+                        y=hist_data['close'],
+                        mode='lines',
+                        name='Historical',
+                        line=dict(color='black', width=2)
+                    ))
+                    
+                    # Forecasts from each model
+                    colors = ['red', 'blue', 'green', 'orange', 'purple']
+                    for idx, (model_name, forecast_data) in enumerate(forecasts.items()):
+                        fig.add_trace(go.Scatter(
+                            x=forecast_data['dates'],
+                            y=forecast_data['values'],
+                            mode='lines+markers',
+                            name=model_name,
+                            line=dict(color=colors[idx % len(colors)], width=2, dash='dash' if model_name == 'Ensemble' else None),
+                            marker=dict(size=6)
+                        ))
+                    
+                    fig.update_layout(
+                        title=f"{st.session_state.symbol} - Model Comparison",
+                        xaxis_title="Date",
+                        yaxis_title="Price ($)",
+                        hovermode='x unified',
+                        height=600
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Metrics table
+                    st.markdown("---")
+                    st.subheader("📊 Performance Metrics")
+                    
+                    metrics_data = []
+                    for model_name, forecast_data in forecasts.items():
+                        if model_name == 'Ensemble':
+                            continue
+                        
+                        # Calculate simple metrics
+                        forecast_vals = forecast_data['values']
+                        last_price = hist_data['close'].iloc[-1]
+                        
+                        # Mean forecast
+                        mean_forecast = np.mean(forecast_vals)
+                        
+                        # Forecast range
+                        forecast_range = np.max(forecast_vals) - np.min(forecast_vals)
+                        
+                        # Trend (first vs last)
+                        trend = (forecast_vals[-1] - forecast_vals[0]) / forecast_vals[0] * 100 if len(forecast_vals) > 1 else 0
+                        
+                        metrics_data.append({
+                            'Model': model_name,
+                            'Mean Forecast': f"${mean_forecast:.2f}",
+                            'Range': f"${forecast_range:.2f}",
+                            'Trend (%)': f"{trend:.2f}%",
+                            'Std Dev': f"${np.std(forecast_vals):.2f}"
+                        })
+                    
+                    if metrics_data:
+                        metrics_df = pd.DataFrame(metrics_data)
+                        st.dataframe(metrics_df, use_container_width=True)
+                    
+                    # Forecast table
+                    st.markdown("---")
+                    st.subheader("📋 Forecast Values")
+                    
+                    # Create comparison DataFrame
+                    comparison_df = pd.DataFrame({
+                        'Date': forecasts[list(forecasts.keys())[0]]['dates']
+                    })
+                    
+                    for model_name, forecast_data in forecasts.items():
+                        comparison_df[model_name] = forecast_data['values'][:len(comparison_df)]
+                    
+                    # Format for display
+                    display_df = comparison_df.copy()
+                    for col in display_df.columns:
+                        if col != 'Date' and col in forecasts:
+                            display_df[col] = display_df[col].map('${:.2f}'.format)
+                    
+                    st.dataframe(display_df, use_container_width=True)
+                    
+                    # Download button
+                    csv = comparison_df.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Download Comparison CSV",
+                        data=csv,
+                        file_name=f"{st.session_state.symbol}_model_comparison.csv",
+                        mime="text/csv"
+                    )
+                
+                except Exception as e:
+                    st.error(f"Comparison failed: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
+                finally:
+                    progress_bar.empty()
+                    status_text.empty()
+            
+            # Display previous comparison if exists
+            if st.session_state.get('comparison_results'):
+                st.markdown("---")
+                st.markdown("**Previous Comparison Results**")
+                prev_results = st.session_state.comparison_results
+                st.info(f"Compared {len(prev_results)} models in previous run")
 
 with tab5:
     st.header("Market Analysis")
