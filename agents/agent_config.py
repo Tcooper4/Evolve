@@ -33,6 +33,12 @@ class AgentConfig:
     openai_temperature: float = 0.7
     require_openai: bool = False  # Set to True to make OpenAI API key mandatory
 
+    # Anthropic/Claude Configuration
+    anthropic_api_key: Optional[str] = None
+    use_anthropic: bool = False  # Set to True to enable Claude as LLM provider
+    anthropic_model: str = "claude-sonnet-4-20250514"
+    llm_provider_priority: str = "claude,openai,local"  # Comma-separated priority list
+
     # HuggingFace Configuration
     huggingface_model: str = "gpt2"
     huggingface_cache_dir: str = "cache/huggingface"
@@ -87,6 +93,16 @@ class AgentConfig:
             self.openai_timeout = int(os.getenv("OPENAI_TIMEOUT"))
         if os.getenv("OPENAI_MAX_TOKENS"):
             self.openai_max_tokens = int(os.getenv("OPENAI_MAX_TOKENS"))
+        
+        # Anthropic/Claude settings
+        if not self.anthropic_api_key:
+            self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+        use_anthropic_env = os.getenv("USE_ANTHROPIC", "false").lower()
+        self.use_anthropic = use_anthropic_env == "true"
+        if os.getenv("ANTHROPIC_MODEL"):
+            self.anthropic_model = os.getenv("ANTHROPIC_MODEL")
+        if os.getenv("LLM_PROVIDER_PRIORITY"):
+            self.llm_provider_priority = os.getenv("LLM_PROVIDER_PRIORITY")
 
     def _validate_config(self):
         """Validate configuration settings."""
@@ -110,6 +126,14 @@ class AgentConfig:
             raise ValueError("Max retries cannot be negative")
         if self.retry_delay < 0:
             raise ValueError("Retry delay cannot be negative")
+        
+        # Check Anthropic configuration if enabled
+        if self.use_anthropic and not self.anthropic_api_key:
+            warnings.warn(
+                "USE_ANTHROPIC=true but ANTHROPIC_API_KEY is missing. "
+                "Claude features will be unavailable.",
+                UserWarning
+            )
 
     def get_agent_setting(
         self, agent_name: str, setting_name: str, default: Any = None
