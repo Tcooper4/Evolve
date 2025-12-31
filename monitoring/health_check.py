@@ -242,6 +242,42 @@ class HealthChecker:
     def get_health_history(self, count: int = 10) -> list:
         """Get health check history"""
         return self.check_history[-count:]
+    
+    def check_component(self, component_name: str) -> Dict[str, Any]:
+        """
+        Check a specific component's health.
+        
+        Args:
+            component_name: Name of component to check
+                (database, brokers, models, system_resources, data_sources)
+        
+        Returns:
+            Component health status dictionary
+        """
+        component_checks = {
+            'database': self._check_database,
+            'brokers': self._check_brokers,
+            'models': self._check_models,
+            'system_resources': self._check_system_resources,
+            'data_sources': self._check_data_sources,
+        }
+        
+        if component_name not in component_checks:
+            return {
+                'status': HealthStatus.UNKNOWN.value,
+                'message': f'Unknown component: {component_name}',
+                'available_components': list(component_checks.keys()),
+                'timestamp': datetime.now().isoformat()
+            }
+        
+        try:
+            return component_checks[component_name]()
+        except Exception as e:
+            return {
+                'status': HealthStatus.UNKNOWN.value,
+                'message': f'Error checking {component_name}: {str(e)}',
+                'timestamp': datetime.now().isoformat()
+            }
 
 
 # Global health checker instance
