@@ -796,6 +796,61 @@ def test_agent_imports(self):
 **Breaking Changes:** None
 **Backward Compatibility:** Fully compatible - tests now functional instead of no-ops
 
+### C18: Ensure Benchmark Results Cannot Return Placeholder Results ✅
+
+**Status:** COMPLETED
+**Date:** 2024-12-19
+**Files Modified:**
+1. `agents/implementations/model_benchmarker.py` (lines 471-484, 366-384)
+2. `agents/model_generator_agent.py` (lines 845-863)
+
+**Changes Made:**
+- Removed fake/placeholder benchmark results from `_benchmark_generic_model()`
+- Generic model benchmarking now raises `NotImplementedError` instead of returning fake data
+- PyTorch benchmarking now raises `NotImplementedError` when PyTorch is unavailable
+- Clear error messages indicate what's missing and how to fix it
+
+**Old Behavior:**
+```python
+# ❌ Returned fake results for unimplemented frameworks
+def _benchmark_generic_model(...):
+    return BenchmarkResult(
+        mse=0.15,  # Fake data
+        mae=0.08,  # Fake data
+        r2_score=0.6,  # Fake data
+        ...
+    )
+```
+
+**New Behavior:**
+```python
+# ✅ Raises error for unimplemented frameworks
+def _benchmark_generic_model(...):
+    raise NotImplementedError(
+        f"Generic model benchmarking not implemented for {model_candidate.name}. "
+        f"Only sklearn and PyTorch models are currently supported."
+    )
+```
+
+**Key Principle:**
+- Unimplemented frameworks should raise `NotImplementedError` OR return `None` with clear status
+- Never return fake/placeholder data that could mislead model selection
+- Error messages should clearly indicate what's missing and how to fix it
+
+**Line Changes:**
+- agents/implementations/model_benchmarker.py:471-484 - Fixed _benchmark_generic_model()
+- agents/implementations/model_benchmarker.py:366-384 - Fixed PyTorch unavailable case
+- agents/model_generator_agent.py:845-863 - Fixed _benchmark_generic_model()
+
+**Test Results:**
+- ✅ No fake results returned for unimplemented frameworks
+- ✅ Clear errors raised for missing dependencies
+- ✅ Model selection not misled by fake data
+- ✅ Error messages are informative
+
+**Breaking Changes:** None (errors are raised instead of fake data - better behavior)
+**Backward Compatibility:** Fully compatible - errors are more informative than fake data
+
 **Key Findings:**
 1. **Current State:**
    - `PortfolioManager` can handle multiple positions (multiple symbols)
