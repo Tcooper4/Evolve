@@ -328,8 +328,8 @@ def get_backtester() -> Backtester:
 
 
 @app.route("/health", methods=["GET"])
-def health_check():
-    """Health check endpoint - returns system health status"""
+def health_check() -> Any:
+    """Health check endpoint - returns comprehensive system health status"""
     try:
         from monitoring.health_check import get_health_checker
         
@@ -344,17 +344,6 @@ def health_check():
             'error': str(e),
             'timestamp': datetime.now().isoformat()
         }), 503
-
-@app.route("/health", methods=["GET"])
-def health_check() -> Any:
-    """Health check endpoint."""
-    return jsonify(
-        {
-            "status": "healthy",
-            "timestamp": datetime.now().isoformat(),
-            "version": "1.0.0",
-        }
-    )
 
 
 # Enhanced routes with validation
