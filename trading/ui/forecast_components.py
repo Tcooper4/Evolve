@@ -15,7 +15,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from trading.components import (
+from trading.ui.components import (
     create_asset_selector,
     create_confidence_interval,
     create_date_range_selector,
@@ -373,3 +373,4 @@ def create_forecast_table(forecast_data: Dict[str, Any]) -> Dict[str, Any]:
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }
+
