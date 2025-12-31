@@ -1625,3 +1625,93 @@ except Exception as e:
 **Breaking Changes:** None
 **Backward Compatibility:** Fully compatible - error handling is opt-in
 
+### C28: Add Monitoring Dashboard/Health Endpoint ✅
+
+**Status:** COMPLETED
+**Date:** 2024-12-19
+**Files Created:**
+1. `monitoring/health_check.py` (new file)
+
+**Files Modified:**
+1. `trading/web/app.py` - Added /health endpoint
+
+**Changes Made:**
+- Created `HealthChecker` class for system health monitoring
+- Health status levels: HEALTHY, DEGRADED, UNHEALTHY, UNKNOWN
+- Component health checks:
+  - Database connectivity
+  - Broker availability
+  - Model registry status
+  - System resources (CPU, memory, disk) - requires psutil
+  - Data source connectivity
+- Health check history tracking
+- Health summary generation
+- Added `/health` API endpoint in Flask app
+- Endpoint returns JSON with health status and component details
+- HTTP status codes: 200 for healthy, 503 for unhealthy/degraded
+
+**Old Behavior:**
+```python
+# ❌ No health monitoring
+# No way to check system status
+# No API endpoint for health checks
+```
+
+**New Behavior:**
+```python
+# ✅ Comprehensive health monitoring
+from monitoring.health_check import get_health_checker
+
+checker = get_health_checker()
+health = checker.check_system_health()
+
+# Returns:
+# {
+#   'status': 'healthy',
+#   'uptime_seconds': 12345.6,
+#   'components': {
+#     'database': {'status': 'healthy', 'message': '...'},
+#     'brokers': {'status': 'healthy', 'message': '...'},
+#     'models': {'status': 'healthy', 'message': '...'},
+#     'system_resources': {'status': 'healthy', 'message': '...'},
+#     'data_sources': {'status': 'healthy', 'message': '...'}
+#   }
+# }
+
+# API endpoint: GET /health
+# Returns JSON with health status
+```
+
+**Health Check Features:**
+- **Component Checks:**
+  - Database - Tests database connection
+  - Brokers - Checks broker availability
+  - Models - Checks model registry
+  - System Resources - CPU, memory, disk usage (requires psutil)
+  - Data Sources - Checks data source connectivity
+  
+- **Health Status:**
+  - HEALTHY - All components operational
+  - DEGRADED - Some components degraded but functional
+  - UNHEALTHY - Critical components failing
+  - UNKNOWN - Unable to determine status
+  
+- **Health Checker Methods:**
+  - `check_system_health()` - Perform full health check
+  - `get_health_summary()` - Get health summary
+  - `get_health_history()` - Get health check history
+
+**Line Changes:**
+- monitoring/health_check.py:1-250 - New health check module
+- trading/web/app.py - Added /health endpoint
+
+**Test Results:**
+- ✅ Health checks work for all components
+- ✅ Health status correctly determined
+- ✅ API endpoint accessible
+- ✅ Health history tracked
+- ✅ Graceful handling when components unavailable
+
+**Breaking Changes:** None
+**Backward Compatibility:** Fully compatible - health checks are opt-in
+
