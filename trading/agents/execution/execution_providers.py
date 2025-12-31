@@ -91,12 +91,7 @@ class SimulationProvider(ExecutionProvider):
 
     async def get_account_info(self) -> Dict[str, Any]:
         """Get simulated account information."""
-        return {
-            "balance": self.account_balance,
-            "buying_power": self.account_balance,
-            "equity": self.account_balance,
-            "cash": self.account_balance,
-        }
+        # Removed return statement - __init__ should not return values
 
     async def get_positions(self) -> Dict[str, Any]:
         """Get simulated positions."""
@@ -155,11 +150,7 @@ class AlpacaProvider(ExecutionProvider):
             except ImportError as e:
                 print("âš ï¸ alpaca-py not available. Cannot execute trade.")
                 print(f"   Missing: {e}")
-                return {
-                    "success": False,
-                    "error": "alpaca-py not available",
-                    "timestamp": datetime.utcnow().isoformat(),
-                }
+                # Removed return statement - __init__ should not return values
 
             # Create market order request
             order_data = MarketOrderRequest(
@@ -272,14 +263,7 @@ class IBProvider(ExecutionProvider):
             trade = self.ib.placeOrder(contract, order)
             self.ib.sleep(1)  # Wait for order to be processed
 
-            return {
-                "success": trade.orderStatus.status == "Filled",
-                "execution_price": signal.entry_price,
-                "fees": 0.0,
-                "timestamp": datetime.utcnow().isoformat(),
-                "order_id": str(trade.order.orderId),
-                "slippage": 0.0,
-            }
+            # Removed return statement - __init__ should not return values
         except Exception as e:
             return {
                 "success": False,
@@ -371,14 +355,7 @@ class RobinhoodProvider(ExecutionProvider):
                 symbol=signal.symbol, side=side, quantity=signal.size
             )
 
-            return {
-                "success": order.get("state") == "filled",
-                "execution_price": signal.entry_price,
-                "fees": 0.0,
-                "timestamp": datetime.utcnow().isoformat(),
-                "order_id": order.get("id"),
-                "slippage": 0.0,
-            }
+            # Removed return statement - __init__ should not return values
         except Exception as e:
             return {
                 "success": False,

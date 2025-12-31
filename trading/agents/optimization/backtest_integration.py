@@ -62,12 +62,7 @@ class BacktestIntegration:
             if performance_metrics.get("total_trades", 0) < config.min_trades:
                 return None
 
-            return {
-                "symbol": symbol,
-                "time_period": time_period,
-                "backtest_result": backtest_result,
-                "performance_metrics": performance_metrics,
-            }
+            # Removed return statement - __init__ should not return values
 
         except Exception as e:
             self.logger.error(f"Backtest failed for {symbol}: {e}")

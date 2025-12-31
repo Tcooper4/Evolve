@@ -107,11 +107,7 @@ class InMemoryCache:
 
         logger.info(f"Initialized InMemoryCache with max_size={max_size}")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def add_data(self, symbol: str, timeframe: str, data: MarketData):
         """Add data to cache.
@@ -542,11 +538,7 @@ class StreamingPipeline:
             f"Initialized Streaming Pipeline with {len(config.symbols)} symbols"
         )
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def add_provider(self, name: str, provider: DataProvider):
         """Add data provider.

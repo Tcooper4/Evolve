@@ -59,11 +59,7 @@ class AutoformerModel(BaseModel):
         self.fitted = False
         self.feature_columns = config.get("feature_columns", [])
         self.target_column = config.get("target_column", "target")
-        return {
-            "success": True,
-            "message": "AutoformerModel initialized successfully",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def fit(
         self,

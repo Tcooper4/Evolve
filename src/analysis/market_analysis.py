@@ -56,11 +56,7 @@ class MarketAnalysis:
         self._setup_logging()
         self._initialize_indicators()
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def _setup_logging(self):
         """Setup logging configuration"""
