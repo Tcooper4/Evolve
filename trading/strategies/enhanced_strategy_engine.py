@@ -10,6 +10,7 @@ This module provides institutional-level strategy capabilities:
 """
 
 import logging
+import os
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -87,8 +88,6 @@ class PerformanceChecker:
         
         Thresholds can be provided directly or loaded from environment variables.
         """
-        import os
-        
         # Load thresholds from environment variables with defaults
         self.thresholds = thresholds or {
             "min_sharpe_ratio": float(os.getenv("SHARPE_THRESHOLD_POOR", "0.5")),
