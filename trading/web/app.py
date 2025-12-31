@@ -328,6 +328,24 @@ def get_backtester() -> Backtester:
 
 
 @app.route("/health", methods=["GET"])
+def health_check():
+    """Health check endpoint - returns system health status"""
+    try:
+        from monitoring.health_check import get_health_checker
+        
+        checker = get_health_checker()
+        health = checker.check_system_health()
+        status_code = 200 if health['status'] == 'healthy' else 503
+        return jsonify(health), status_code
+    except Exception as e:
+        log_manager.logger.error(f"Health check error: {str(e)}")
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 503
+
+@app.route("/health", methods=["GET"])
 def health_check() -> Any:
     """Health check endpoint."""
     return jsonify(
