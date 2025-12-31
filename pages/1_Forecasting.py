@@ -29,6 +29,7 @@ from trading.models.xgboost_model import XGBoostModel
 from trading.models.prophet_model import ProphetModel
 from trading.models.arima_model import ARIMAModel
 from trading.data.preprocessing import FeatureEngineering, DataPreprocessor
+from trading.agents.model_selector_agent import ModelSelectorAgent
 
 st.set_page_config(
     page_title="Forecasting & Market Analysis",
@@ -699,8 +700,180 @@ with tab2:
 
 with tab3:
     st.header("AI Model Selection")
-    st.markdown("Let AI analyze your data and recommend the best model")
-    st.info("Integration pending...")
+    st.markdown("""
+    🤖 Let AI analyze your data and recommend the best forecasting model.
+    
+    The AI considers:
+    - Data characteristics (trend, seasonality, volatility)
+    - Historical model performance
+    - Forecast horizon
+    - Computational efficiency
+    """)
+    
+    if st.session_state.forecast_data is None:
+        st.warning("⚠️ Please load data first in the Quick Forecast tab")
+    else:
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.subheader("📊 Data Analysis")
+            
+            analyze_button = st.button(
+                "🔍 Analyze Data & Recommend Model",
+                type="primary",
+                use_container_width=True
+            )
+            
+            if analyze_button:
+                with st.spinner("AI analyzing data characteristics..."):
+                    try:
+                        # Initialize agent
+                        agent = ModelSelectorAgent()
+                        
+                        # Detect market regime from data
+                        price_data = st.session_state.forecast_data['close'].values
+                        horizon = st.session_state.forecast_horizon
+                        
+                        # Determine horizon enum
+                        from trading.agents.model_selector_agent import ForecastingHorizon, MarketRegime
+                        
+                        if horizon <= 7:
+                            horizon_enum = ForecastingHorizon.SHORT_TERM
+                        elif horizon <= 30:
+                            horizon_enum = ForecastingHorizon.MEDIUM_TERM
+                        else:
+                            horizon_enum = ForecastingHorizon.LONG_TERM
+                        
+                        # Simple market regime detection
+                        price_trend = (price_data[-1] - price_data[0]) / price_data[0]
+                        volatility = price_data.std()
+                        
+                        if price_trend > 0.05:
+                            regime_enum = MarketRegime.TRENDING_UP
+                        elif price_trend < -0.05:
+                            regime_enum = MarketRegime.TRENDING_DOWN
+                        elif volatility > price_data.mean() * 0.1:
+                            regime_enum = MarketRegime.VOLATILE
+                        else:
+                            regime_enum = MarketRegime.SIDEWAYS
+                        
+                        # Use agent's select_model method
+                        selected_model_id, confidence = agent.select_model(
+                            horizon=horizon_enum,
+                            market_regime=regime_enum,
+                            data_length=len(price_data),
+                            required_features=[],
+                            performance_weight=0.6,
+                            capability_weight=0.4
+                        )
+                        
+                        # Get recommendations
+                        recommendations = agent.get_model_recommendations(
+                            horizon_enum, regime_enum, top_k=3
+                        )
+                        
+                        # Map model types to display names
+                        model_name_map = {
+                            'lstm': 'LSTM (Deep Learning)',
+                            'xgboost': 'XGBoost (Gradient Boosting)',
+                            'prophet': 'Prophet (Facebook)',
+                            'arima': 'ARIMA (Statistical)',
+                            'transformer': 'Transformer (Attention)',
+                            'ensemble': 'Ensemble (Multiple Models)'
+                        }
+                        
+                        # Extract model type from selected_model_id
+                        model_type = selected_model_id.split('_')[0] if '_' in selected_model_id else selected_model_id
+                        display_name = model_name_map.get(model_type.lower(), selected_model_id)
+                        
+                        # Create recommendation dict
+                        recommendation = {
+                            'model_name': display_name,
+                            'confidence': confidence,
+                            'reasoning': f"Selected based on data characteristics and forecast horizon of {horizon} days. Market regime: {regime_enum.value}.",
+                            'data_characteristics': {
+                                'Data Points': len(price_data),
+                                'Forecast Horizon': f"{horizon} days",
+                                'Volatility': f"{volatility:.2f}",
+                                'Trend': f"{price_trend*100:.2f}%",
+                                'Market Regime': regime_enum.value
+                            },
+                            'alternatives': [
+                                {
+                                    'model_name': model_name_map.get(rec.get('model_type', '').lower(), rec.get('model_id', '')),
+                                    'confidence': rec.get('total_score', 0.5),
+                                    'reason': f"Score: {rec.get('total_score', 0):.2f}"
+                                }
+                                for rec in recommendations[:3]
+                            ] if recommendations else []
+                        }
+                        
+                        st.session_state.ai_recommendation = recommendation
+                    
+                    except Exception as e:
+                        st.error(f"Analysis failed: {str(e)}")
+                        import traceback
+                        st.code(traceback.format_exc())
+        
+        with col2:
+            st.subheader("💡 AI Recommendation")
+            
+            if st.session_state.get('ai_recommendation'):
+                rec = st.session_state.ai_recommendation
+                
+                # Main recommendation
+                st.success(f"**Recommended Model: {rec['model_name']}**")
+                
+                # Confidence
+                confidence_pct = rec.get('confidence', 0.75) * 100
+                st.metric("Confidence", f"{confidence_pct:.1f}%")
+                
+                # Progress bar for confidence
+                st.progress(rec.get('confidence', 0.75))
+                
+                # Reasoning
+                with st.expander("🧠 Why this model?", expanded=True):
+                    st.markdown(rec.get('reasoning', 'Model selected based on data analysis'))
+                    
+                    if 'data_characteristics' in rec:
+                        st.markdown("**Data Characteristics:**")
+                        chars = rec['data_characteristics']
+                        for key, value in chars.items():
+                            st.text(f"• {key}: {value}")
+                
+                # Alternatives
+                if rec.get('alternatives'):
+                    with st.expander("🔄 Alternative Models"):
+                        for alt in rec['alternatives']:
+                            st.markdown(f"**{alt['model_name']}**")
+                            st.caption(f"Confidence: {alt.get('confidence', 0)*100:.1f}%")
+                            st.caption(alt.get('reason', ''))
+                            st.markdown("---")
+                
+                # Action buttons
+                col_a, col_b = st.columns(2)
+                
+                with col_a:
+                    if st.button("✅ Use Recommended Model", use_container_width=True):
+                        st.session_state.selected_model = rec['model_name']
+                        st.success(f"Selected: {rec['model_name']}")
+                        st.info("Go to Quick Forecast tab to generate forecast")
+                
+                with col_b:
+                    if st.button("🔄 Choose Different Model", use_container_width=True):
+                        st.session_state.show_override = True
+                
+                if st.session_state.get('show_override'):
+                    st.markdown("**Override AI Selection:**")
+                    override = st.selectbox(
+                        "Select model:",
+                        ["LSTM (Deep Learning)", "XGBoost (Gradient Boosting)", 
+                         "Prophet (Facebook)", "ARIMA (Statistical)"]
+                    )
+                    if st.button("Confirm Override"):
+                        st.session_state.selected_model = override
+                        st.session_state.show_override = False
+                        st.success(f"Selected: {override}")
 
 with tab4:
     st.header("Model Comparison")
