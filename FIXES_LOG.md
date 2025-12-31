@@ -927,6 +927,69 @@ if overall_score < ensemble_threshold:
 **Breaking Changes:** None (defaults match old hardcoded values)
 **Backward Compatibility:** Fully compatible - defaults identical to old hardcoded values
 
+### C20: Ensure Update Decision Gate Isn't Hardcoded ✅
+
+**Status:** COMPLETED
+**Date:** 2024-12-19
+**Files Modified:**
+1. `agents/agent_controller.py` (lines 565-571, 709, 727-742, 1192)
+2. `env.example` (added update decision gate thresholds)
+
+**Changes Made:**
+- Made `performance_score < 0.3` check configurable via `MODEL_UPDATE_THRESHOLD`
+- Made strategy selection thresholds (0.1, 0.3, 0.5) configurable
+- Made pipeline update threshold (0.5) configurable
+- Added all threshold environment variables to `env.example` with documentation
+
+**Thresholds Made Configurable:**
+- `MODEL_UPDATE_THRESHOLD` - Main decision gate (default: 0.3)
+- `MODEL_REPLACE_THRESHOLD` - Below this = replace model (default: 0.1)
+- `MODEL_RETRAIN_THRESHOLD` - Below this = retrain (default: 0.3)
+- `MODEL_TUNE_THRESHOLD` - Below this = tune (default: 0.5)
+- `MODEL_PIPELINE_UPDATE_THRESHOLD` - Pipeline update trigger (default: 0.5)
+
+**Old Behavior:**
+```python
+# ❌ Hardcoded thresholds
+"needs_update": performance_score < 0.3,  # Hardcoded
+if performance_score < 0.1:  # Hardcoded
+    update_type = "replace"
+elif performance_score < 0.3:  # Hardcoded
+    update_type = "retrain"
+elif performance_score < 0.5:  # Hardcoded
+    update_type = "tune"
+if performance_score < 0.5:  # Hardcoded
+```
+
+**New Behavior:**
+```python
+# ✅ Configurable via environment variables
+"needs_update": performance_score < self.update_threshold,
+if performance_score < self.replace_threshold:
+    update_type = "replace"
+elif performance_score < self.retrain_threshold:
+    update_type = "retrain"
+elif performance_score < self.tune_threshold:
+    update_type = "tune"
+if performance_score < pipeline_threshold:
+```
+
+**Line Changes:**
+- agents/agent_controller.py:565-571 - Added threshold initialization in `__init__`
+- agents/agent_controller.py:709 - Made needs_update threshold configurable
+- agents/agent_controller.py:727-742 - Made strategy selection thresholds configurable
+- agents/agent_controller.py:1192 - Made pipeline update threshold configurable
+- env.example:130-135 - Added update decision gate threshold configuration
+
+**Test Results:**
+- ✅ Thresholds read from environment variables
+- ✅ Defaults work correctly (match old hardcoded values)
+- ✅ Strategy selection logic works with new thresholds
+- ✅ Pipeline update logic works with new threshold
+
+**Breaking Changes:** None (defaults match old hardcoded values)
+**Backward Compatibility:** Fully compatible - defaults identical to old hardcoded values
+
 **Key Findings:**
 1. **Current State:**
    - `PortfolioManager` can handle multiple positions (multiple symbols)
