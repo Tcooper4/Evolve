@@ -714,6 +714,12 @@ class StreamingPipeline:
                 while self.is_running:
                     try:
                         message = await asyncio.wait_for(provider.websocket.recv(), timeout=30.0)
+                    except asyncio.TimeoutError:
+                        continue
+                    except Exception as e:
+                        logger.error(f'WebSocket error: {e}')
+                        break
+
                     if not self.is_running:
                         break
                     

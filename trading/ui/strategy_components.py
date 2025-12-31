@@ -15,7 +15,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from trading.components import (
+from trading.ui.components import (
     create_asset_selector,
     create_date_range_selector,
     create_parameter_inputs,
@@ -333,3 +333,4 @@ def create_strategy_export(
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }
+
