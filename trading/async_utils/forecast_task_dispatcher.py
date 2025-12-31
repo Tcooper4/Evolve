@@ -358,30 +358,121 @@ class ForecastTaskDispatcher:
         # Simulate model execution time
         await asyncio.sleep(0.1)
 
-        # Create mock forecast
-        future_dates = pd.date_range(
-            start=data.index[-1] + pd.Timedelta(days=1), periods=task.horizon, freq="D"
-        )
-
-        forecast_values = np.random.normal(100, 5, task.horizon)
-        forecast_df = pd.DataFrame(
-            {
-                "forecast": forecast_values,
-                "lower_bound": forecast_values - 2,
-                "upper_bound": forecast_values + 2,
-            },
-            index=future_dates,
-        )
-
-        return {
-            "forecast": forecast_df,
-            "confidence": 0.8,
-            "metadata": {
-                "model_version": "1.0",
-                "training_samples": len(data),
-                "last_training_date": data.index[-1].isoformat(),
-            },
-        }
+        # Generate real forecast using forecast engine
+        try:
+            from models.forecast_engine import ForecastEngine, ModelType
+            
+            # Initialize forecast engine
+            forecast_engine = ForecastEngine()
+            
+            # Prepare data for forecast engine
+            # Ensure we have required columns
+            prepared_data = data.copy()
+            if "Close" not in prepared_data.columns and "close" not in prepared_data.columns:
+                # Use first numeric column
+                price_col = prepared_data.select_dtypes(include=[np.number]).columns[0]
+                prepared_data = prepared_data.rename(columns={price_col: "Close"})
+            
+            if "close" in prepared_data.columns:
+                prepared_data = prepared_data.rename(columns={"close": "Close"})
+            
+            # Add timestamp if missing
+            if "timestamp" not in prepared_data.columns:
+                if isinstance(prepared_data.index, pd.DatetimeIndex):
+                    prepared_data = prepared_data.reset_index()
+                    if "Date" in prepared_data.columns:
+                        prepared_data = prepared_data.rename(columns={"Date": "timestamp"})
+                    else:
+                        prepared_data["timestamp"] = prepared_data.index
+                else:
+                    from datetime import datetime
+                    prepared_data["timestamp"] = pd.date_range(
+                        end=datetime.now(), periods=len(prepared_data), freq="D"
+                    )
+            
+            # Determine model type from task
+            model_type = ModelType.LSTM  # Default
+            if hasattr(task, 'model_name') and task.model_name:
+                model_type_map = {
+                    "lstm": ModelType.LSTM,
+                    "arima": ModelType.ARIMA,
+                    "xgboost": ModelType.XGBOOST,
+                    "prophet": ModelType.PROPHET,
+                    "transformer": ModelType.TRANSFORMER,
+                    "ensemble": ModelType.ENSEMBLE,
+                }
+                model_type = model_type_map.get(task.model_name.lower(), ModelType.LSTM)
+            
+            # Generate forecast using real model
+            forecast_result = forecast_engine.generate_forecast(
+                data=prepared_data,
+                model_type=model_type,
+                forecast_days=task.horizon
+            )
+            
+            # Extract forecast values and dates
+            forecast_values = forecast_result.forecast_values
+            forecast_dates = forecast_result.forecast_dates
+            
+            # Calculate confidence intervals
+            confidence = forecast_result.confidence
+            forecast_std = np.std(forecast_values) if len(forecast_values) > 1 else forecast_values[0] * 0.05
+            z_score = 1.96  # 95% confidence
+            
+            lower_bound = np.array(forecast_values) - z_score * forecast_std * (1 - confidence)
+            upper_bound = np.array(forecast_values) + z_score * forecast_std * (1 - confidence)
+            
+            forecast_df = pd.DataFrame(
+                {
+                    "forecast": forecast_values,
+                    "lower_bound": lower_bound,
+                    "upper_bound": upper_bound,
+                },
+                index=forecast_dates,
+            )
+            
+            return {
+                "forecast": forecast_df,
+                "confidence": confidence,
+                "metadata": {
+                    "model_version": forecast_result.model_info.get("version", "1.0"),
+                    "model_type": forecast_result.model_type.value,
+                    "training_samples": len(data),
+                    "last_training_date": prepared_data["timestamp"].max().isoformat() if "timestamp" in prepared_data.columns else data.index[-1].isoformat(),
+                    "processing_time": forecast_result.processing_time,
+                },
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating real forecast: {e}")
+            # Fallback to simple forecast if model fails
+            future_dates = pd.date_range(
+                start=data.index[-1] + pd.Timedelta(days=1), periods=task.horizon, freq="D"
+            )
+            
+            # Use last price as baseline for fallback
+            last_price = data.iloc[-1, 0] if len(data.columns) > 0 else 100.0
+            forecast_values = np.full(task.horizon, last_price)  # Flat forecast as fallback
+            
+            forecast_df = pd.DataFrame(
+                {
+                    "forecast": forecast_values,
+                    "lower_bound": forecast_values * 0.95,
+                    "upper_bound": forecast_values * 1.05,
+                },
+                index=future_dates,
+            )
+            
+            return {
+                "forecast": forecast_df,
+                "confidence": 0.5,  # Low confidence for fallback
+                "metadata": {
+                    "model_version": "fallback",
+                    "training_samples": len(data),
+                    "last_training_date": data.index[-1].isoformat(),
+                    "error": str(e),
+                },
+            }
 
     async def _cleanup_loop(self) -> None:
         """Periodic cleanup of old results and statistics"""
@@ -437,29 +528,120 @@ class ModelForecastDispatcher(ForecastTaskDispatcher):
     ) -> Dict[str, Any]:
         """Run model synchronously in thread pool"""
         try:
-            # This would call the actual model's forecast method
-            # For now, return mock data
-            future_dates = pd.date_range(
-                start=data.index[-1] + pd.Timedelta(days=1), periods=horizon, freq="D"
-            )
-
-            forecast_values = np.random.normal(100, 5, horizon)
-            forecast_df = pd.DataFrame(
-                {
-                    "forecast": forecast_values,
-                    "lower_bound": forecast_values - 2,
-                    "upper_bound": forecast_values + 2,
-                },
-                index=future_dates,
-            )
-
-            return {
-                "forecast": forecast_df,
-                "confidence": 0.8,
-                "metadata": {
-                    "model_type": type(model).__name__,
-                    "training_samples": len(data),
-                },
-            }
+            # Call the actual model's forecast method
+            if hasattr(model, "forecast"):
+                # Model has forecast method
+                forecast_result = model.forecast(data, horizon)
+                
+                # Handle different return types
+                if isinstance(forecast_result, dict):
+                    forecast_values = forecast_result.get("forecast", forecast_result.get("predictions", []))
+                    if isinstance(forecast_values, pd.DataFrame):
+                        forecast_values = forecast_values.values.flatten()
+                    
+                    # Generate dates if not provided
+                    if "forecast_dates" in forecast_result:
+                        future_dates = forecast_result["forecast_dates"]
+                    else:
+                        from datetime import datetime
+                        future_dates = pd.date_range(
+                            start=data.index[-1] + pd.Timedelta(days=1), periods=horizon, freq="D"
+                        )
+                    
+                    # Calculate confidence intervals
+                    confidence = forecast_result.get("confidence", 0.8)
+                    forecast_std = np.std(forecast_values) if len(forecast_values) > 1 else forecast_values[0] * 0.05
+                    z_score = 1.96
+                    lower_bound = np.array(forecast_values) - z_score * forecast_std * (1 - confidence)
+                    upper_bound = np.array(forecast_values) + z_score * forecast_std * (1 - confidence)
+                    
+                    forecast_df = pd.DataFrame(
+                        {
+                            "forecast": forecast_values,
+                            "lower_bound": lower_bound,
+                            "upper_bound": upper_bound,
+                        },
+                        index=future_dates,
+                    )
+                    
+                    return {
+                        "forecast": forecast_df,
+                        "confidence": confidence,
+                        "metadata": {
+                            "model_type": type(model).__name__,
+                            "training_samples": len(data),
+                        },
+                    }
+                else:
+                    # Forecast result is array-like
+                    forecast_values = np.array(forecast_result).flatten()
+                    future_dates = pd.date_range(
+                        start=data.index[-1] + pd.Timedelta(days=1), periods=horizon, freq="D"
+                    )
+                    
+                    forecast_std = np.std(forecast_values) if len(forecast_values) > 1 else forecast_values[0] * 0.05
+                    z_score = 1.96
+                    lower_bound = forecast_values - z_score * forecast_std
+                    upper_bound = forecast_values + z_score * forecast_std
+                    
+                    forecast_df = pd.DataFrame(
+                        {
+                            "forecast": forecast_values,
+                            "lower_bound": lower_bound,
+                            "upper_bound": upper_bound,
+                        },
+                        index=future_dates,
+                    )
+                    
+                    return {
+                        "forecast": forecast_df,
+                        "confidence": 0.8,
+                        "metadata": {
+                            "model_type": type(model).__name__,
+                            "training_samples": len(data),
+                        },
+                    }
+            elif hasattr(model, "predict"):
+                # Model has predict method
+                predictions = model.predict(data)
+                forecast_values = np.array(predictions).flatten()[:horizon]
+                
+                # If we need more values, extend with trend
+                if len(forecast_values) < horizon:
+                    last_value = forecast_values[-1] if len(forecast_values) > 0 else data.iloc[-1, 0]
+                    trend = (forecast_values[-1] - forecast_values[0]) / len(forecast_values) if len(forecast_values) > 1 else 0
+                    additional_values = [last_value + trend * i for i in range(1, horizon - len(forecast_values) + 1)]
+                    forecast_values = np.concatenate([forecast_values, additional_values])
+                
+                future_dates = pd.date_range(
+                    start=data.index[-1] + pd.Timedelta(days=1), periods=horizon, freq="D"
+                )
+                
+                forecast_std = np.std(forecast_values) if len(forecast_values) > 1 else forecast_values[0] * 0.05
+                z_score = 1.96
+                lower_bound = forecast_values - z_score * forecast_std
+                upper_bound = forecast_values + z_score * forecast_std
+                
+                forecast_df = pd.DataFrame(
+                    {
+                        "forecast": forecast_values,
+                        "lower_bound": lower_bound,
+                        "upper_bound": upper_bound,
+                    },
+                    index=future_dates,
+                )
+                
+                return {
+                    "forecast": forecast_df,
+                    "confidence": 0.8,
+                    "metadata": {
+                        "model_type": type(model).__name__,
+                        "training_samples": len(data),
+                    },
+                }
+            else:
+                raise ValueError(f"Model {type(model).__name__} does not have forecast or predict method")
+                
         except Exception as e:
+            logger.error(f"Model execution failed: {e}")
             raise RuntimeError(f"Model execution failed: {e}")

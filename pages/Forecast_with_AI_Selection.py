@@ -752,101 +752,187 @@ def calculate_win_rate(forecast_data):
         return 0.0
 
 
-def generate_forecast(ticker, selected_model):
-    """Generate realistic forecast data."""
+def generate_forecast(ticker, selected_model, horizon: int = 30):
+    """Generate real forecast data using trained models."""
     try:
-        # Generate sample historical data
-        dates = pd.date_range(start="2024-01-01", end="2024-12-31", freq="D")
-
-        # Create realistic price data with trend and volatility
-        np.random.seed(hash(ticker) % 1000)  # Consistent seed for each ticker
-
-        # Base price
-        base_price = 100.0
-
-        # Generate daily returns with trend and volatility
-        daily_returns = np.random.normal(
-            0.0005, 0.02, len(dates)
-        )  # 0.05% daily return, 2% volatility
-
-        # Add trend based on model type
-        if "trend" in selected_model.lower():
-            trend = np.linspace(0, 0.15, len(dates))  # 15% annual trend
-        elif "mean_reversion" in selected_model.lower():
-            trend = np.linspace(0, -0.05, len(dates))  # -5% annual trend
-        else:
-            trend = np.linspace(0, 0.08, len(dates))  # 8% annual trend
-
-        daily_returns += trend
-
-        # Calculate historical prices
-        historical_prices = base_price * np.cumprod(1 + daily_returns)
-
-        # Generate forecast (last 30 days)
-        forecast_dates = dates[-30:]
-        forecast_returns = np.random.normal(
-            0.0003, 0.015, 30
-        )  # Lower volatility for forecast
-
-        # Add model-specific forecast characteristics
-        if "lstm" in selected_model.lower():
-            forecast_returns += np.linspace(
-                0, 0.02, 30
-            )  # LSTM tends to be more conservative
-        elif "prophet" in selected_model.lower():
-            forecast_returns += 0.001 * np.sin(
-                np.linspace(0, 2 * np.pi, 30)
-            )  # Prophet adds seasonality
-        elif "tcn" in selected_model.lower():
-            forecast_returns += np.random.normal(0, 0.005, 30)  # TCN adds some noise
-
-        # Calculate forecast prices
-        last_price = historical_prices.iloc[-1]
-        forecast_prices = last_price * np.cumprod(1 + forecast_returns)
-
-        # Create confidence intervals
-        z_score = 1.96  # 95% confidence interval
-
-        forecast_volatility = np.std(forecast_returns) * np.sqrt(np.arange(1, 31))
-        upper_bound = forecast_prices * (1 + z_score * forecast_volatility)
-        lower_bound = forecast_prices * (1 - z_score * forecast_volatility)
-
-        # Combine historical and forecast data
-        all_dates = pd.concat([dates[:-30], forecast_dates])
-        all_prices = pd.concat(
-            [historical_prices[:-30], pd.Series(forecast_prices, index=forecast_dates)]
-        )
-
-        # Create forecast DataFrame
-        forecast_data = pd.DataFrame(
-            {
-                "historical": all_prices,
-                "forecast": pd.concat(
-                    [
-                        historical_prices[-30:],
-                        pd.Series(forecast_prices, index=forecast_dates),
-                    ]
-                ),
-                "upper": pd.concat(
-                    [
-                        historical_prices[-30:],
-                        pd.Series(upper_bound, index=forecast_dates),
-                    ]
-                ),
-                "lower": pd.concat(
-                    [
-                        historical_prices[-30:],
-                        pd.Series(lower_bound, index=forecast_dates),
-                    ]
-                ),
-            },
-            index=all_dates,
-        )
-
-        return forecast_data
-
+        # Import forecast engine and data fetcher
+        from models.forecast_engine import ForecastEngine, ModelType
+        from data.data_fetcher import DataFetcher
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        # Get real historical data
+        data_fetcher = DataFetcher()
+        try:
+            # Fetch historical data for the ticker
+            historical_data = data_fetcher.get_historical_data(
+                symbol=ticker,
+                period=f"{max(horizon * 3, 252)}d"  # Get enough data for training
+            )
+            
+            if historical_data.empty:
+                logger.warning(f"No historical data available for {ticker}")
+                st.warning(f"⚠️ No historical data available for {ticker}. Using fallback.")
+                return pd.DataFrame()
+            
+            # Prepare data for forecast engine
+            # Ensure we have required columns
+            if "Close" not in historical_data.columns and "close" not in historical_data.columns:
+                if len(historical_data.columns) > 0:
+                    # Use first numeric column
+                    price_col = historical_data.select_dtypes(include=[np.number]).columns[0]
+                    historical_data = historical_data.rename(columns={price_col: "Close"})
+                else:
+                    logger.error(f"No price data available for {ticker}")
+                    st.error(f"❌ No price data available for {ticker}")
+                    return pd.DataFrame()
+            
+            # Rename to standard format
+            if "close" in historical_data.columns:
+                historical_data = historical_data.rename(columns={"close": "Close"})
+            
+            # Add timestamp if missing
+            if "timestamp" not in historical_data.columns:
+                if historical_data.index.name == "Date" or isinstance(historical_data.index, pd.DatetimeIndex):
+                    historical_data = historical_data.reset_index()
+                    if "Date" in historical_data.columns:
+                        historical_data = historical_data.rename(columns={"Date": "timestamp"})
+                    else:
+                        historical_data["timestamp"] = pd.date_range(
+                            end=datetime.now(), periods=len(historical_data), freq="D"
+                        )
+                else:
+                    historical_data["timestamp"] = pd.date_range(
+                        end=datetime.now(), periods=len(historical_data), freq="D"
+                    )
+            
+            # Initialize forecast engine
+            forecast_engine = ForecastEngine()
+            
+            # Map model string to ModelType
+            model_type_map = {
+                "lstm": ModelType.LSTM,
+                "arima": ModelType.ARIMA,
+                "xgboost": ModelType.XGBOOST,
+                "prophet": ModelType.PROPHET,
+                "transformer": ModelType.TRANSFORMER,
+                "ensemble": ModelType.ENSEMBLE,
+                "tcn": ModelType.LSTM,  # TCN not in enum, use LSTM
+            }
+            
+            # Try to match model name
+            selected_model_type = ModelType.LSTM  # Default
+            for key, model_type in model_type_map.items():
+                if key in selected_model.lower():
+                    selected_model_type = model_type
+                    break
+            
+            # Generate forecast using real model
+            forecast_result = forecast_engine.generate_forecast(
+                data=historical_data,
+                model_type=selected_model_type,
+                forecast_days=horizon
+            )
+            
+            # Extract forecast values
+            forecast_values = forecast_result.forecast_values
+            forecast_dates = forecast_result.forecast_dates
+            
+            # Get historical prices and dates
+            historical_prices = historical_data["Close"].values
+            historical_dates = historical_data["timestamp"].values if "timestamp" in historical_data.columns else pd.date_range(
+                end=datetime.now(), periods=len(historical_data), freq="D"
+            )
+            
+            # Calculate confidence intervals based on model confidence
+            confidence = forecast_result.confidence
+            forecast_std = np.std(forecast_values) if len(forecast_values) > 1 else forecast_values[0] * 0.05
+            z_score = 1.96  # 95% confidence
+            
+            confidence_lower = np.array(forecast_values) - z_score * forecast_std * (1 - confidence)
+            confidence_upper = np.array(forecast_values) + z_score * forecast_std * (1 - confidence)
+            
+            # Convert to pandas Series for easier manipulation
+            forecast_prices_series = pd.Series(forecast_values, index=forecast_dates)
+            upper_bound_series = pd.Series(confidence_upper, index=forecast_dates)
+            lower_bound_series = pd.Series(confidence_lower, index=forecast_dates)
+            
+            # Combine historical and forecast data
+            historical_prices_series = pd.Series(historical_prices, index=historical_dates)
+            
+            # Create forecast DataFrame
+            forecast_data = pd.DataFrame(
+                {
+                    "historical": historical_prices_series,
+                    "forecast": pd.concat([
+                        historical_prices_series[-30:],  # Last 30 days of historical
+                        forecast_prices_series
+                    ]),
+                    "upper": pd.concat([
+                        historical_prices_series[-30:],
+                        upper_bound_series
+                    ]),
+                    "lower": pd.concat([
+                        historical_prices_series[-30:],
+                        lower_bound_series
+                    ]),
+                }
+            )
+            
+            return forecast_data
+            
+        except ImportError as e:
+            logger.error(f"Failed to import forecast engine: {e}")
+            # Fallback: try forecast router
+            try:
+                from models.forecast_router import ForecastRouter
+                
+                router = ForecastRouter()
+                forecast_result = router.get_forecast(
+                    data=historical_data,
+                    horizon=horizon,
+                    model_type=selected_model.lower()
+                )
+                
+                # Extract from router result
+                forecast_values = forecast_result.get("forecast", [])
+                if isinstance(forecast_values, pd.DataFrame):
+                    forecast_values = forecast_values.values.flatten()
+                
+                # Generate dates
+                last_date = historical_data["timestamp"].max() if "timestamp" in historical_data.columns else datetime.now()
+                forecast_dates = pd.date_range(
+                    start=last_date + timedelta(days=1), periods=horizon, freq="D"
+                )
+                
+                # Calculate confidence intervals
+                confidence = forecast_result.get("confidence", 0.8)
+                forecast_std = np.std(forecast_values) if len(forecast_values) > 1 else forecast_values[0] * 0.05
+                z_score = 1.96
+                confidence_lower = np.array(forecast_values) - z_score * forecast_std * (1 - confidence)
+                confidence_upper = np.array(forecast_values) + z_score * forecast_std * (1 - confidence)
+                
+                # Create DataFrame
+                historical_prices_series = pd.Series(historical_data["Close"].values, index=historical_data["timestamp"].values if "timestamp" in historical_data.columns else pd.date_range(end=datetime.now(), periods=len(historical_data), freq="D"))
+                forecast_prices_series = pd.Series(forecast_values, index=forecast_dates)
+                upper_bound_series = pd.Series(confidence_upper, index=forecast_dates)
+                lower_bound_series = pd.Series(confidence_lower, index=forecast_dates)
+                
+                return pd.DataFrame({
+                    "historical": historical_prices_series,
+                    "forecast": pd.concat([historical_prices_series[-30:], forecast_prices_series]),
+                    "upper": pd.concat([historical_prices_series[-30:], upper_bound_series]),
+                    "lower": pd.concat([historical_prices_series[-30:], lower_bound_series]),
+                })
+            except Exception as e2:
+                logger.error(f"Failed to use forecast router: {e2}")
+                st.error(f"❌ Forecast generation failed: {e2}")
+                return pd.DataFrame()
+                
     except Exception as e:
-        st.error(f"Error generating forecast: {e}")
+        logger.error(f"Error generating forecast: {e}")
+        st.error(f"❌ Error generating forecast: {e}")
         return pd.DataFrame()
 
 
