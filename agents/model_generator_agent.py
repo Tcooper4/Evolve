@@ -1146,10 +1146,65 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
                     with open(config_path, "w") as f:
                         json.dump(config, f, indent=2, default=str)
 
+                    # Register model in ModelRegistry
+                    try:
+                        from trading.models.registry import get_model_registry
+                        import importlib.util
+                        
+                        registry = get_model_registry()
+                        
+                        # Try to import the model class from the saved file
+                        try:
+                            spec = importlib.util.spec_from_file_location(
+                                candidate.name, model_path
+                            )
+                            if spec and spec.loader:
+                                module = importlib.util.module_from_spec(spec)
+                                spec.loader.exec_module(module)
+                                
+                                # Look for model class (convention: ModelNameModel or similar)
+                                model_class = None
+                                for attr_name in dir(module):
+                                    attr = getattr(module, attr_name)
+                                    if (isinstance(attr, type) and 
+                                        attr_name.endswith('Model') and
+                                        attr_name != 'BaseModel'):
+                                        model_class = attr
+                                        break
+                                
+                                if model_class:
+                                    registry.register_model(candidate.name, model_class)
+                                    logger.info(f"Registered {candidate.name} in ModelRegistry")
+                                else:
+                                    logger.warning(f"Could not find model class in {candidate.name}.py")
+                        except Exception as e:
+                            logger.warning(f"Could not import model class from {model_path}: {e}")
+                            # Still mark as deployed even if registration fails
+                            
+                    except ImportError:
+                        logger.warning("ModelRegistry not available, skipping registration")
+                    except Exception as e:
+                        logger.error(f"Error registering model in ModelRegistry: {e}")
+
+                    # Register in ForecastRouter if available
+                    try:
+                        from models.forecast_router import ForecastRouter
+                        
+                        router = ForecastRouter()
+                        if hasattr(router, 'model_registry') and candidate.name not in router.model_registry:
+                            # Try to add to router's registry
+                            if 'model_class' in locals() and model_class:
+                                router.model_registry[candidate.name] = model_class
+                                logger.info(f"Added {candidate.name} to ForecastRouter")
+                    except ImportError:
+                        logger.warning("ForecastRouter not available, skipping router registration")
+                    except Exception as e:
+                        logger.error(f"Error registering in ForecastRouter: {e}")
+
                     deployed.append(candidate.name)
                     candidate.implementation_status = "deployed"
 
-                    logger.info(f"Deployed model: {candidate.name}")
+                    logger.info(f"Deployed and integrated model: {candidate.name}")
 
             except Exception as e:
                 logger.error(f"Error deploying model {result.model_name}: {e}")
