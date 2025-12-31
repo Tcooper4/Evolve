@@ -5,6 +5,7 @@ Enhanced context management with session expiration and strategy limits
 
 import json
 import logging
+import os
 import threading
 import time
 import uuid
