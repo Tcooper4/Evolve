@@ -43,6 +43,9 @@ class AgentConfig:
     use_local_llm: bool = False  # Set to True to use local LLM
     local_llm_model: str = "llama3"  # Model to use (llama3, mistral, codellama, etc.)
     ollama_host: str = "http://localhost:11434"  # Ollama server URL
+    
+    # Paper Trading Configuration
+    paper_trading: bool = True  # Set to False for live trading
 
     # HuggingFace Configuration
     # Updated to modern model - gpt2 is from 2019
