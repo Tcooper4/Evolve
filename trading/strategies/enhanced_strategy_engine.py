@@ -586,12 +586,35 @@ class EnhancedStrategyEngine:
     def _execute_single_strategy(
         self, data: pd.DataFrame, config: StrategyConfig
     ) -> Optional[StrategyResult]:
-        """Execute a single strategy."""
+        """Execute a single strategy with validation."""
         try:
+            from trading.strategies.validation import StrategyExecutionValidator
+
             start_time = datetime.now()
+            validator = StrategyExecutionValidator()
+
+            # Validate execution context
+            is_valid, error = validator.validate_execution_context(None, data, {"config": config})
+            if not is_valid:
+                logger.error(f"Execution context validation failed for {config.name}: {error}")
+                return None
 
             # Generate signals based on strategy type
-            signals = self._generate_signals(data, config)
+            try:
+                signals = self._generate_signals(data, config)
+            except Exception as e:
+                logger.error(f"Signal generation failed for {config.name}: {e}")
+                return None
+
+            # Validate signals
+            if isinstance(signals, pd.DataFrame):
+                is_valid, error = validator.validate_signals_dataframe(signals, data)
+                if not is_valid:
+                    logger.error(f"Signals validation failed for {config.name}: {error}")
+                    return None
+            elif signals is None:
+                logger.error(f"Strategy {config.name} returned None signals")
+                return None
 
             # Calculate performance metrics
             performance = self._calculate_performance(signals, data)
@@ -601,7 +624,7 @@ class EnhancedStrategyEngine:
 
             execution_time = (datetime.now() - start_time).total_seconds()
 
-            return StrategyResult(
+            result = StrategyResult(
                 strategy_name=config.name,
                 signals=signals,
                 performance=performance,
@@ -612,8 +635,21 @@ class EnhancedStrategyEngine:
                 timestamp=datetime.now(),
             )
 
+            # Validate result
+            result_dict = {
+                "signals": signals,
+                "performance": performance,
+            }
+            is_valid, error = validator.validate_strategy_result(result_dict)
+            if not is_valid:
+                logger.error(f"Result validation failed for {config.name}: {error}")
+                return None
+
+            return result
+
         except Exception as e:
             logger.error(f"Strategy execution failed for {config.name}: {e}")
+            return None
 
     def _generate_signals(
         self, data: pd.DataFrame, config: StrategyConfig

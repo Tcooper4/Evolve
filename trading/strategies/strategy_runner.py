@@ -271,21 +271,62 @@ class AsyncStrategyRunner:
     async def _execute_strategy_core(
         self, strategy: BaseStrategy, data: pd.DataFrame
     ) -> Dict[str, Any]:
-        """Execute the core strategy logic."""
+        """Execute the core strategy logic with validation."""
         start_time = time.time()
 
         try:
-            # Execute strategy
-            signals = strategy.generate_signals(data)
+            # Import validator
+            from trading.strategies.validation import StrategyExecutionValidator, execute_strategy_with_validation
+
+            # Validate strategy state before execution
+            validator = StrategyExecutionValidator()
+            is_valid, error = validator.validate_strategy_state(strategy)
+            if not is_valid:
+                logger.error(f"Strategy state validation failed: {error}")
+                raise ValueError(f"Strategy state validation failed: {error}")
+
+            # Validate execution context
+            is_valid, error = validator.validate_execution_context(strategy, data)
+            if not is_valid:
+                logger.error(f"Execution context validation failed: {error}")
+                raise ValueError(f"Execution context validation failed: {error}")
+
+            # Execute strategy with validation
+            try:
+                signals = strategy.generate_signals(data)
+            except Exception as e:
+                logger.error(f"Strategy signal generation failed: {e}")
+                raise RuntimeError(f"Strategy signal generation failed: {e}")
+
+            # Validate signals
+            if isinstance(signals, pd.DataFrame):
+                is_valid, error = validator.validate_signals_dataframe(signals, data)
+                if not is_valid:
+                    logger.error(f"Signals validation failed: {error}")
+                    raise ValueError(f"Signals validation failed: {error}")
+            elif signals is None:
+                logger.error("Strategy returned None signals")
+                raise ValueError("Strategy returned None signals")
+
+            # Calculate performance
             performance = self._calculate_performance_metrics(data, signals)
 
             execution_time = time.time() - start_time
 
-            return {
+            result = {
                 "signals": signals,
                 "performance": performance,
                 "execution_time": execution_time,
+                "validation_passed": True,
             }
+
+            # Validate result
+            is_valid, error = validator.validate_strategy_result(result)
+            if not is_valid:
+                logger.error(f"Result validation failed: {error}")
+                raise ValueError(f"Result validation failed: {error}")
+
+            return result
 
         except Exception as e:
             logger.error(f"Strategy execution failed: {e}")
