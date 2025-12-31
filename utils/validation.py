@@ -10,8 +10,8 @@ from typing import Any, Callable
 from datetime import datetime
 
 
-class ValidationError(Exception):
-    """Raised when validation fails"""
+class InputInputValidationError(Exception):
+    """Raised when input validation fails"""
     pass
 
 
@@ -30,21 +30,21 @@ class InputValidator:
             Validated and normalized symbol
 
         Raises:
-            ValidationError: If symbol is invalid
+            InputInputValidationError: If symbol is invalid
         """
         if not symbol:
-            raise ValidationError("Symbol cannot be empty")
+            raise InputInputValidationError("Symbol cannot be empty")
 
         if not isinstance(symbol, str):
-            raise ValidationError(f"Symbol must be string, got {type(symbol)}")
+            raise InputInputValidationError(f"Symbol must be string, got {type(symbol)}")
 
         symbol = symbol.strip().upper()
 
         if len(symbol) < 1 or len(symbol) > 10:
-            raise ValidationError(f"Symbol length invalid: {len(symbol)} (must be 1-10 characters)")
+            raise InputInputValidationError(f"Symbol length invalid: {len(symbol)} (must be 1-10 characters)")
 
         if not re.match(r'^[A-Z][A-Z0-9.-]*$', symbol):
-            raise ValidationError(f"Symbol contains invalid characters: {symbol}")
+            raise InputInputValidationError(f"Symbol contains invalid characters: {symbol}")
 
         return symbol
 
@@ -62,21 +62,21 @@ class InputValidator:
             Validated quantity
 
         Raises:
-            ValidationError: If quantity is invalid
+            InputInputValidationError: If quantity is invalid
         """
         if not isinstance(quantity, (int, float)):
-            raise ValidationError(f"Quantity must be numeric, got {type(quantity)}")
+            raise InputInputValidationError(f"Quantity must be numeric, got {type(quantity)}")
 
         quantity = float(quantity)
 
         if quantity < min_qty:
-            raise ValidationError(f"Quantity {quantity} below minimum {min_qty}")
+            raise InputInputValidationError(f"Quantity {quantity} below minimum {min_qty}")
 
         if quantity > max_qty:
-            raise ValidationError(f"Quantity {quantity} exceeds maximum {max_qty}")
+            raise InputInputValidationError(f"Quantity {quantity} exceeds maximum {max_qty}")
 
         if quantity <= 0:
-            raise ValidationError(f"Quantity must be positive, got {quantity}")
+            raise InputInputValidationError(f"Quantity must be positive, got {quantity}")
 
         return quantity
 
@@ -94,18 +94,18 @@ class InputValidator:
             Validated price
 
         Raises:
-            ValidationError: If price is invalid
+            InputValidationError: If price is invalid
         """
         if not isinstance(price, (int, float)):
-            raise ValidationError(f"Price must be numeric, got {type(price)}")
+            raise InputValidationError(f"Price must be numeric, got {type(price)}")
 
         price = float(price)
 
         if price < min_price:
-            raise ValidationError(f"Price {price} below minimum {min_price}")
+            raise InputValidationError(f"Price {price} below minimum {min_price}")
 
         if price > max_price:
-            raise ValidationError(f"Price {price} exceeds maximum {max_price}")
+            raise InputValidationError(f"Price {price} exceeds maximum {max_price}")
 
         return price
 
@@ -121,15 +121,15 @@ class InputValidator:
             Validated and normalized side
 
         Raises:
-            ValidationError: If side is invalid
+            InputValidationError: If side is invalid
         """
         if not isinstance(side, str):
-            raise ValidationError(f"Side must be string, got {type(side)}")
+            raise InputValidationError(f"Side must be string, got {type(side)}")
 
         side = side.strip().lower()
 
         if side not in ['buy', 'sell', 'hold']:
-            raise ValidationError(f"Invalid side: {side} (must be 'buy', 'sell', or 'hold')")
+            raise InputValidationError(f"Invalid side: {side} (must be 'buy', 'sell', or 'hold')")
 
         return side
 
@@ -145,17 +145,17 @@ class InputValidator:
             Validated and normalized order type
 
         Raises:
-            ValidationError: If order type is invalid
+            InputValidationError: If order type is invalid
         """
         if not isinstance(order_type, str):
-            raise ValidationError(f"Order type must be string, got {type(order_type)}")
+            raise InputValidationError(f"Order type must be string, got {type(order_type)}")
 
         order_type = order_type.strip().lower()
 
         valid_types = ['market', 'limit', 'stop', 'stop_limit', 'twap', 'vwap', 'iceberg']
 
         if order_type not in valid_types:
-            raise ValidationError(
+            raise InputValidationError(
                 f"Invalid order type: {order_type} (must be one of {valid_types})"
             )
 
@@ -173,7 +173,7 @@ class InputValidator:
             Validated datetime object
 
         Raises:
-            ValidationError: If timestamp is invalid
+            InputValidationError: If timestamp is invalid
         """
         if isinstance(timestamp, datetime):
             return timestamp
@@ -182,15 +182,15 @@ class InputValidator:
             try:
                 return datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
             except ValueError:
-                raise ValidationError(f"Invalid timestamp format: {timestamp}")
+                raise InputValidationError(f"Invalid timestamp format: {timestamp}")
 
         if isinstance(timestamp, (int, float)):
             try:
                 return datetime.fromtimestamp(timestamp)
             except (ValueError, OSError):
-                raise ValidationError(f"Invalid timestamp value: {timestamp}")
+                raise InputValidationError(f"Invalid timestamp value: {timestamp}")
 
-        raise ValidationError(f"Timestamp must be datetime, string, or numeric, got {type(timestamp)}")
+        raise InputValidationError(f"Timestamp must be datetime, string, or numeric, got {type(timestamp)}")
 
     @staticmethod
     def validate_percentage(value: float, min_val: float = 0.0, max_val: float = 100.0) -> float:
@@ -206,18 +206,18 @@ class InputValidator:
             Validated percentage
 
         Raises:
-            ValidationError: If percentage is invalid
+            InputValidationError: If percentage is invalid
         """
         if not isinstance(value, (int, float)):
-            raise ValidationError(f"Percentage must be numeric, got {type(value)}")
+            raise InputValidationError(f"Percentage must be numeric, got {type(value)}")
 
         value = float(value)
 
         if value < min_val:
-            raise ValidationError(f"Percentage {value} below minimum {min_val}")
+            raise InputValidationError(f"Percentage {value} below minimum {min_val}")
 
         if value > max_val:
-            raise ValidationError(f"Percentage {value} exceeds maximum {max_val}")
+            raise InputValidationError(f"Percentage {value} exceeds maximum {max_val}")
 
         return value
 
@@ -235,21 +235,21 @@ class InputValidator:
             Validated integer
 
         Raises:
-            ValidationError: If value is invalid
+            InputValidationError: If value is invalid
         """
         if not isinstance(value, (int, float)):
-            raise ValidationError(f"Value must be numeric, got {type(value)}")
+            raise InputValidationError(f"Value must be numeric, got {type(value)}")
 
         try:
             value = int(value)
         except (ValueError, TypeError):
-            raise ValidationError(f"Cannot convert {value} to integer")
+            raise InputValidationError(f"Cannot convert {value} to integer")
 
         if value < min_val:
-            raise ValidationError(f"Value {value} below minimum {min_val}")
+            raise InputValidationError(f"Value {value} below minimum {min_val}")
 
         if value > max_val:
-            raise ValidationError(f"Value {value} exceeds maximum {max_val}")
+            raise InputValidationError(f"Value {value} exceeds maximum {max_val}")
 
         return value
 
