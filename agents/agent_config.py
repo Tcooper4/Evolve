@@ -12,6 +12,7 @@ This module provides centralized configuration for all agents including:
 import json
 import logging
 import os
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, Optional
@@ -30,6 +31,7 @@ class AgentConfig:
     openai_timeout: int = 30
     openai_max_tokens: int = 4000
     openai_temperature: float = 0.7
+    require_openai: bool = False  # Set to True to make OpenAI API key mandatory
 
     # HuggingFace Configuration
     huggingface_model: str = "gpt2"
@@ -73,6 +75,10 @@ class AgentConfig:
         # OpenAI settings
         if not self.openai_api_key:
             self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        
+        # Check if OpenAI is required
+        require_openai_env = os.getenv("REQUIRE_OPENAI", "false").lower()
+        self.require_openai = require_openai_env == "true"
 
         # Override with environment variables if present
         if os.getenv("OPENAI_MODEL"):
@@ -84,8 +90,18 @@ class AgentConfig:
 
     def _validate_config(self):
         """Validate configuration settings."""
+        # Check if OpenAI is required
         if not self.openai_api_key:
-            raise ValueError("OpenAI API key is missing in AgentConfig.")
+            if self.require_openai:
+                raise ValueError(
+                    "OpenAI API key is required (REQUIRE_OPENAI=true) but missing in AgentConfig."
+                )
+            else:
+                warnings.warn(
+                    "OpenAI API key is missing. OpenAI features will be disabled. "
+                    "Set OPENAI_API_KEY in .env to enable, or set REQUIRE_OPENAI=true to make it mandatory.",
+                    UserWarning
+                )
         if self.openai_timeout <= 0:
             raise ValueError("OpenAI timeout must be positive")
         if self.openai_max_tokens <= 0:
