@@ -7,7 +7,7 @@ Provides rate limiting to prevent API abuse and ensure fair resource usage.
 import time
 import logging
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
