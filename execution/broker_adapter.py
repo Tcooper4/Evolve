@@ -1117,11 +1117,15 @@ class BrokerAdapter:
         if self.advanced_executor:
             status = self.advanced_executor.get_order_status(order_id)
             if status:
+                # Get parent order to determine side
+                order_info = self.advanced_executor.active_orders.get(order_id)
+                side = order_info["order"].side if order_info else OrderSide.BUY
+                
                 # Convert to OrderExecution format
                 return OrderExecution(
                     order_id=status["order_id"],
                     ticker=status["ticker"],
-                    side=self.adapter.get_order_status(order_id).side if hasattr(self.adapter, 'get_order_status') else OrderSide.BUY,
+                    side=side,
                     order_type=OrderType(status["order_type"].lower()),
                     quantity=status["total_quantity"],
                     price=0.0,
