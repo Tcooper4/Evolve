@@ -1043,17 +1043,125 @@ class PortfolioManager:
         
         return allocation
 
-    def save(self, filename: str) -> None:
-        """Save portfolio state to file.
+    def save(self, filename: Optional[str] = None, portfolio_name: str = "default") -> None:
+        """Save portfolio state to database (or file if database unavailable).
 
         Args:
-            filename: Path to save the state
+            filename: Optional path to save the state (fallback if database unavailable)
+            portfolio_name: Name identifier for the portfolio
         """
         try:
+            # Try to save to database first
+            try:
+                from trading.database import get_db_session
+                from trading.database.models import PortfolioStateModel, PositionModel
+                from datetime import datetime
+                
+                with get_db_session() as session:
+                    # Get or create portfolio state
+                    portfolio_state = session.query(PortfolioStateModel).filter_by(
+                        portfolio_name=portfolio_name
+                    ).order_by(PortfolioStateModel.timestamp.desc()).first()
+                    
+                    if not portfolio_state:
+                        portfolio_state = PortfolioStateModel(
+                            portfolio_name=portfolio_name,
+                            timestamp=self.state.timestamp,
+                            cash=self.state.cash,
+                            equity=self.state.equity,
+                            leverage=self.state.leverage,
+                            available_capital=self.state.available_capital,
+                            total_pnl=self.state.total_pnl,
+                            unrealized_pnl=self.state.unrealized_pnl,
+                            metrics=self.state.metrics,
+                            risk_metrics=self.state.risk_metrics,
+                            market_regime=self.state.market_regime,
+                            strategy_weights=self.state.strategy_weights,
+                        )
+                        session.add(portfolio_state)
+                        session.flush()  # Get the ID
+                    else:
+                        # Update existing state
+                        portfolio_state.timestamp = self.state.timestamp
+                        portfolio_state.cash = self.state.cash
+                        portfolio_state.equity = self.state.equity
+                        portfolio_state.leverage = self.state.leverage
+                        portfolio_state.available_capital = self.state.available_capital
+                        portfolio_state.total_pnl = self.state.total_pnl
+                        portfolio_state.unrealized_pnl = self.state.unrealized_pnl
+                        portfolio_state.metrics = self.state.metrics
+                        portfolio_state.risk_metrics = self.state.risk_metrics
+                        portfolio_state.market_regime = self.state.market_regime
+                        portfolio_state.strategy_weights = self.state.strategy_weights
+                        portfolio_state.updated_at = datetime.utcnow()
+                    
+                    # Save positions
+                    # Delete old positions for this portfolio
+                    session.query(PositionModel).filter_by(portfolio_id=portfolio_state.id).delete()
+                    
+                    # Add open positions
+                    for pos in self.state.open_positions:
+                        position = PositionModel(
+                            portfolio_id=portfolio_state.id,
+                            symbol=pos.symbol,
+                            direction=pos.direction.value,
+                            entry_price=pos.entry_price,
+                            entry_time=pos.entry_time,
+                            size=pos.size,
+                            strategy=pos.strategy,
+                            take_profit=pos.take_profit,
+                            stop_loss=pos.stop_loss,
+                            max_holding_period_seconds=pos.max_holding_period.total_seconds() if pos.max_holding_period else None,
+                            exit_price=pos.exit_price,
+                            exit_time=pos.exit_time,
+                            pnl=pos.pnl,
+                            status=pos.status.value,
+                            rationale=pos.rationale.to_dict() if pos.rationale else None,
+                            unrealized_pnl=pos.unrealized_pnl,
+                            risk_metrics=pos.risk_metrics,
+                        )
+                        session.add(position)
+                    
+                    # Add closed positions
+                    for pos in self.state.closed_positions:
+                        position = PositionModel(
+                            portfolio_id=portfolio_state.id,
+                            symbol=pos.symbol,
+                            direction=pos.direction.value,
+                            entry_price=pos.entry_price,
+                            entry_time=pos.entry_time,
+                            size=pos.size,
+                            strategy=pos.strategy,
+                            take_profit=pos.take_profit,
+                            stop_loss=pos.stop_loss,
+                            max_holding_period_seconds=pos.max_holding_period.total_seconds() if pos.max_holding_period else None,
+                            exit_price=pos.exit_price,
+                            exit_time=pos.exit_time,
+                            pnl=pos.pnl,
+                            status=pos.status.value,
+                            rationale=pos.rationale.to_dict() if pos.rationale else None,
+                            unrealized_pnl=pos.unrealized_pnl,
+                            risk_metrics=pos.risk_metrics,
+                        )
+                        session.add(position)
+                    
+                    session.commit()
+                    logger.info(f"Saved portfolio state to database (portfolio: {portfolio_name})")
+                    return
+                    
+            except ImportError:
+                logger.warning("Database module not available, falling back to file storage")
+            except Exception as db_error:
+                logger.warning(f"Database save failed: {db_error}, falling back to file storage")
+            
+            # Fallback to file storage
+            if filename is None:
+                filename = f"data/portfolio_{portfolio_name}.json"
+            
             # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(filename), exist_ok=True)
 
-            # Save state
+            # Save state to file
             with open(filename, "w") as f:
                 json.dump(self.state.to_dict(), f, indent=2, default=str)
 
@@ -1063,13 +1171,95 @@ class PortfolioManager:
             logger.error(f"Error saving portfolio state: {e}")
             raise
 
-    def load(self, filename: str) -> None:
-        """Load portfolio state from file.
+    def load(self, filename: Optional[str] = None, portfolio_name: str = "default") -> None:
+        """Load portfolio state from database (or file if database unavailable).
 
         Args:
-            filename: Path to load the state from
+            filename: Optional path to load the state from (fallback if database unavailable)
+            portfolio_name: Name identifier for the portfolio
         """
         try:
+            # Try to load from database first
+            try:
+                from trading.database import get_db_session
+                from trading.database.models import PortfolioStateModel, PositionModel
+                from trading.portfolio.portfolio_manager import Position, PositionStatus, TradeDirection
+                
+                with get_db_session() as session:
+                    # Get latest portfolio state
+                    portfolio_state = session.query(PortfolioStateModel).filter_by(
+                        portfolio_name=portfolio_name
+                    ).order_by(PortfolioStateModel.timestamp.desc()).first()
+                    
+                    if portfolio_state:
+                        # Load positions
+                        positions = session.query(PositionModel).filter_by(
+                            portfolio_id=portfolio_state.id
+                        ).all()
+                        
+                        open_positions = []
+                        closed_positions = []
+                        
+                        for pos in positions:
+                            position = Position(
+                                symbol=pos.symbol,
+                                direction=TradeDirection(pos.direction),
+                                entry_price=pos.entry_price,
+                                entry_time=pos.entry_time,
+                                size=pos.size,
+                                strategy=pos.strategy,
+                                take_profit=pos.take_profit,
+                                stop_loss=pos.stop_loss,
+                                max_holding_period=timedelta(seconds=pos.max_holding_period_seconds) if pos.max_holding_period_seconds else None,
+                                exit_price=pos.exit_price,
+                                exit_time=pos.exit_time,
+                                pnl=pos.pnl,
+                                status=PositionStatus(pos.status),
+                                rationale=TradeRationale.from_dict(pos.rationale) if pos.rationale else None,
+                                unrealized_pnl=pos.unrealized_pnl,
+                                risk_metrics=pos.risk_metrics,
+                            )
+                            
+                            if pos.status == "open":
+                                open_positions.append(position)
+                            else:
+                                closed_positions.append(position)
+                        
+                        # Reconstruct PortfolioState
+                        self.state = PortfolioState(
+                            timestamp=portfolio_state.timestamp,
+                            cash=portfolio_state.cash,
+                            equity=portfolio_state.equity,
+                            leverage=portfolio_state.leverage,
+                            available_capital=portfolio_state.available_capital,
+                            total_pnl=portfolio_state.total_pnl,
+                            unrealized_pnl=portfolio_state.unrealized_pnl,
+                            open_positions=open_positions,
+                            closed_positions=closed_positions,
+                            metrics=portfolio_state.metrics or {},
+                            risk_metrics=portfolio_state.risk_metrics or {},
+                            market_regime=portfolio_state.market_regime or "",
+                            strategy_weights=portfolio_state.strategy_weights or {},
+                        )
+                        
+                        logger.info(f"Loaded portfolio state from database (portfolio: {portfolio_name})")
+                        return
+                    else:
+                        logger.info(f"No portfolio state found in database for {portfolio_name}")
+                        
+            except ImportError:
+                logger.warning("Database module not available, falling back to file storage")
+            except Exception as db_error:
+                logger.warning(f"Database load failed: {db_error}, falling back to file storage")
+            
+            # Fallback to file storage
+            if filename is None:
+                filename = f"data/portfolio_{portfolio_name}.json"
+            
+            if not os.path.exists(filename):
+                logger.warning(f"Portfolio file not found: {filename}. Starting with empty portfolio.")
+                return
+            
             with open(filename, "r") as f:
                 state_data = json.load(f)
 

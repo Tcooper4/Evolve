@@ -514,12 +514,62 @@ class TradingContextManager:
 
             return stats
 
-    def save_context_data(self, filepath: str) -> bool:
-        """Save context data to file."""
+    def save_context_data(self, filepath: Optional[str] = None) -> bool:
+        """Save context data to database (or file if database unavailable)."""
         if not self.enable_persistence:
             return False
 
         try:
+            # Try to save to database first
+            try:
+                from trading.database import get_db_session
+                from trading.database.models import TradingSessionModel
+                
+                with get_db_session() as session:
+                    # Save sessions
+                    for sid, trading_session in self.sessions.items():
+                        db_session = session.query(TradingSessionModel).filter_by(
+                            session_id=trading_session.session_id
+                        ).first()
+                        
+                        if db_session:
+                            # Update existing session
+                            db_session.user_id = trading_session.user_id
+                            db_session.status = trading_session.status.value
+                            db_session.last_activity = trading_session.last_activity
+                            db_session.max_age_seconds = trading_session.max_age.total_seconds() if trading_session.max_age else None
+                            db_session.strategies = trading_session.strategies
+                            db_session.context_data = trading_session.context_data
+                            db_session.metadata = trading_session.metadata
+                            db_session.updated_at = datetime.now()
+                        else:
+                            # Create new session
+                            db_session = TradingSessionModel(
+                                session_id=trading_session.session_id,
+                                user_id=trading_session.user_id,
+                                status=trading_session.status.value,
+                                created_at=trading_session.created_at,
+                                last_activity=trading_session.last_activity,
+                                max_age_seconds=trading_session.max_age.total_seconds() if trading_session.max_age else None,
+                                strategies=trading_session.strategies,
+                                context_data=trading_session.context_data,
+                                metadata=trading_session.metadata,
+                            )
+                            session.add(db_session)
+                    
+                    session.commit()
+                    logger.info(f"Saved context data to database: {len(self.sessions)} sessions")
+                    return True
+                    
+            except ImportError:
+                logger.warning("Database module not available, falling back to file storage")
+            except Exception as db_error:
+                logger.warning(f"Database save failed: {db_error}, falling back to file storage")
+            
+            # Fallback to file storage
+            if filepath is None:
+                filepath = "data/trading_context.json"
+            
             with self.lock:
                 data = {
                     "sessions": {
@@ -556,6 +606,7 @@ class TradingContextManager:
                     "stats": self.stats,
                 }
 
+                os.makedirs(os.path.dirname(filepath), exist_ok=True)
                 with open(filepath, "w") as f:
                     json.dump(data, f, indent=2, default=str)
 
@@ -566,12 +617,65 @@ class TradingContextManager:
             logger.error(f"Failed to save context data: {e}")
             return False
 
-    def load_context_data(self, filepath: str) -> bool:
-        """Load context data from file."""
+    def load_context_data(self, filepath: Optional[str] = None) -> bool:
+        """Load context data from database (or file if database unavailable)."""
         if not self.enable_persistence:
             return False
 
         try:
+            # Try to load from database first
+            try:
+                from trading.database import get_db_session
+                from trading.database.models import TradingSessionModel
+                
+                with get_db_session() as session:
+                    db_sessions = session.query(TradingSessionModel).all()
+                    
+                    if db_sessions:
+                        with self.lock:
+                            # Clear existing data
+                            self.sessions.clear()
+                            self.strategy_contexts.clear()
+                            self.active_strategies.clear()
+                            self.strategy_session_map.clear()
+                            
+                            # Load sessions from database
+                            for db_session in db_sessions:
+                                trading_session = TradingSession(
+                                    session_id=db_session.session_id,
+                                    user_id=db_session.user_id,
+                                    status=SessionStatus(db_session.status),
+                                    created_at=db_session.created_at,
+                                    last_activity=db_session.last_activity,
+                                    strategies=db_session.strategies or {},
+                                    context_data=db_session.context_data or {},
+                                    metadata=db_session.metadata or {},
+                                    max_age=(
+                                        timedelta(seconds=db_session.max_age_seconds)
+                                        if db_session.max_age_seconds
+                                        else None
+                                    ),
+                                )
+                                self.sessions[db_session.session_id] = trading_session
+                            
+                            logger.info(f"Loaded context data from database: {len(self.sessions)} sessions")
+                            return True
+                    else:
+                        logger.info("No sessions found in database")
+                        
+            except ImportError:
+                logger.warning("Database module not available, falling back to file storage")
+            except Exception as db_error:
+                logger.warning(f"Database load failed: {db_error}, falling back to file storage")
+            
+            # Fallback to file storage
+            if filepath is None:
+                filepath = "data/trading_context.json"
+            
+            if not os.path.exists(filepath):
+                logger.warning(f"Context file not found: {filepath}")
+                return False
+            
             with open(filepath, "r") as f:
                 data = json.load(f)
 
