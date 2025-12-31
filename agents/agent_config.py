@@ -40,7 +40,9 @@ class AgentConfig:
     llm_provider_priority: str = "claude,openai,local"  # Comma-separated priority list
 
     # HuggingFace Configuration
-    huggingface_model: str = "gpt2"
+    # Updated to modern model - gpt2 is from 2019
+    huggingface_model: str = "meta-llama/Llama-3.2-3B-Instruct"
+    # Alternative options: 'mistralai/Mistral-7B-Instruct-v0.2', 'microsoft/phi-2'
     huggingface_cache_dir: str = "cache/huggingface"
     huggingface_timeout: int = 60
 
@@ -103,6 +105,10 @@ class AgentConfig:
             self.anthropic_model = os.getenv("ANTHROPIC_MODEL")
         if os.getenv("LLM_PROVIDER_PRIORITY"):
             self.llm_provider_priority = os.getenv("LLM_PROVIDER_PRIORITY")
+        
+        # HuggingFace settings
+        if os.getenv("HUGGINGFACE_MODEL"):
+            self.huggingface_model = os.getenv("HUGGINGFACE_MODEL")
 
     def _validate_config(self):
         """Validate configuration settings."""
