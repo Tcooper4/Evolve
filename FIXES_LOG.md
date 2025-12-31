@@ -1790,3 +1790,70 @@ if not validation['valid']:
 **Breaking Changes:** None
 **Backward Compatibility:** Fully compatible - secrets management is opt-in
 
+### C30: Add Rate Limiting ✅
+
+**Status:** COMPLETED
+**Date:** 2024-12-19
+**Files Created:**
+1. `utils/rate_limiter.py` (new file)
+
+**Changes Made:**
+- Created `RateLimiter` class for rate limiting
+- Configurable calls per minute and time window
+- Per-key rate limiting (user, IP, endpoint, etc.)
+- Automatic blocking when limit exceeded
+- Remaining calls tracking
+- Reset time calculation
+- Wait functionality for rate-limited calls
+- Key reset and clear all functionality
+
+**Old Behavior:**
+```python
+# ❌ No rate limiting - API abuse possible
+def api_endpoint():
+    # No protection against excessive calls
+    return process_request()
+```
+
+**New Behavior:**
+```python
+# ✅ Rate limiting protection
+from utils.rate_limiter import get_rate_limiter
+
+limiter = get_rate_limiter(calls_per_minute=60)
+
+def api_endpoint():
+    user_id = get_user_id()
+    
+    if not limiter.check_rate_limit(user_id):
+        return {"error": "Rate limit exceeded"}, 429
+    
+    # Process request
+    return process_request()
+```
+
+**Rate Limiter Features:**
+- `check_rate_limit(key)` - Check if call is allowed
+- `wait_if_needed(key)` - Wait if rate limited
+- `get_remaining_calls(key)` - Get remaining calls
+- `get_reset_time(key)` - Get reset time
+- `reset_key(key)` - Reset rate limit for key
+- `clear_all()` - Clear all rate limit data
+
+**Configuration:**
+- Default: 60 calls per minute
+- Configurable time window (default: 60 seconds)
+- Per-key tracking (user, IP, endpoint, etc.)
+
+**Line Changes:**
+- utils/rate_limiter.py:1-150 - New rate limiter module
+
+**Test Results:**
+- ✅ Rate limits enforced correctly
+- ✅ Remaining calls tracked
+- ✅ Reset time calculated
+- ✅ Key blocking works
+
+**Breaking Changes:** None
+**Backward Compatibility:** Fully compatible - rate limiting is opt-in
+
