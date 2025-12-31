@@ -10,7 +10,7 @@ import logging
 import threading
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional
 
 import aiohttp
@@ -310,7 +310,7 @@ class DataProvider:
 
 
 class PolygonDataProvider(DataProvider):
-    """Polygon.io data provider."""
+    """Polygon.io data provider with real WebSocket streaming."""
 
     def __init__(self, api_key: str):
         """Initialize Polygon provider.
@@ -322,32 +322,61 @@ class PolygonDataProvider(DataProvider):
         self.base_url = "wss://delayed.polygon.io"
         self.rest_url = "https://api.polygon.io"
         self.websocket = None
+        self.is_connected = False
 
     async def connect(self):
-        """Connect to Polygon websocket."""
-        try:
-            self.websocket = await websockets.connect(
-                f"{self.base_url}/stocks",
-                extra_headers={"Authorization": f"Bearer {self.api_key}"},
-            )
-            logger.info("Connected to Polygon websocket")
-        except Exception as e:
-            logger.error(f"Error connecting to Polygon: {e}")
-            raise
+        """Connect to Polygon websocket with retry logic."""
+        max_retries = 3
+        retry_delay = 2.0
+        
+        for attempt in range(max_retries):
+            try:
+                self.websocket = await websockets.connect(
+                    f"{self.base_url}/stocks",
+                    extra_headers={"Authorization": f"Bearer {self.api_key}"},
+                    ping_interval=20,
+                    ping_timeout=10,
+                )
+                self.is_connected = True
+                logger.info("Connected to Polygon websocket")
+                return
+            except Exception as e:
+                logger.warning(f"Polygon connection attempt {attempt + 1} failed: {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    logger.error(f"Failed to connect to Polygon after {max_retries} attempts")
+                    self.is_connected = False
+                    raise
 
     async def subscribe(self, symbols: List[str], timeframes: List[str]):
         """Subscribe to Polygon data streams."""
-        if not self.websocket:
+        if not self.websocket or not self.is_connected:
             await self.connect()
 
-        # Subscribe to trades and quotes
+        # Subscribe to trades (T) and aggregates (A) for real-time bars
+        # Format: T.SYMBOL for trades, A.SYMBOL for aggregates
+        trade_params = ",".join([f"T.{s}" for s in symbols])
+        aggregate_params = ",".join([f"A.{s}" for s in symbols])
+        
         subscribe_message = {
             "action": "subscribe",
-            "params": f"T.{','.join(symbols)},Q.{','.join(symbols)}",
+            "params": f"{trade_params},{aggregate_params}",
         }
 
         await self.websocket.send(json.dumps(subscribe_message))
-        logger.info(f"Subscribed to {len(symbols)} symbols on Polygon")
+        logger.info(f"Subscribed to {len(symbols)} symbols on Polygon (trades and aggregates)")
+
+    async def disconnect(self):
+        """Disconnect from Polygon websocket."""
+        if self.websocket:
+            try:
+                await self.websocket.close()
+                self.is_connected = False
+                logger.info("Disconnected from Polygon websocket")
+            except Exception as e:
+                logger.error(f"Error disconnecting from Polygon: {e}")
 
     async def get_historical_data(
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
@@ -632,62 +661,370 @@ class StreamingPipeline:
         logger.info("Stopped streaming pipeline")
 
     async def _stream_data(self):
-        """Main streaming loop."""
-        while self.is_running:
+        """Main streaming loop with real WebSocket connections."""
+        # Start WebSocket listeners for each active provider
+        websocket_tasks = []
+        
+        for name, provider in self.providers.items():
+            if name in self.active_providers:
+                # Create WebSocket listener task for each provider
+                task = asyncio.create_task(
+                    self._websocket_listener(name, provider)
+                )
+                websocket_tasks.append(task)
+        
+        # If no WebSocket providers, fall back to polling
+        if not websocket_tasks:
+            logger.warning("No WebSocket providers available, using polling mode")
+            while self.is_running:
+                try:
+                    await self._poll_data_providers()
+                    await self._process_triggers()
+                    await asyncio.sleep(self.config.update_frequency)
+                except asyncio.CancelledError:
+                    break
+                except Exception as e:
+                    logger.error(f"Error in polling loop: {e}")
+                    self.stats["errors"] += 1
+                    await asyncio.sleep(self.config.update_frequency)
+        else:
+            # Wait for all WebSocket tasks
             try:
-                # Simulate data streaming (in practice, this would be real websocket data)
-                await self._simulate_data_stream()
-
-                # Process triggers
-                await self._process_triggers()
-
-                # Update statistics
-                self.stats["messages_received"] += len(self.config.symbols)
-
-                # Wait for next update
-                await asyncio.sleep(self.config.update_frequency)
-
+                await asyncio.gather(*websocket_tasks)
             except asyncio.CancelledError:
-                break
+                pass
             except Exception as e:
-                logger.error(f"Error in streaming loop: {e}")
+                logger.error(f"Error in WebSocket tasks: {e}")
                 self.stats["errors"] += 1
 
+    async def _websocket_listener(self, provider_name: str, provider: DataProvider):
+        """Listen to WebSocket messages from a provider."""
+        reconnect_delay = 1.0
+        max_reconnect_delay = 60.0
+        
+        while self.is_running:
+            try:
+                # Check if provider supports WebSocket streaming
+                if not hasattr(provider, 'websocket') or provider.websocket is None:
+                    # Provider doesn't support WebSocket, skip
+                    await asyncio.sleep(5)
+                    continue
+                
+                # Listen for messages
+                while self.is_running:
+                    try:
+                        message = await asyncio.wait_for(provider.websocket.recv(), timeout=30.0)
+                    if not self.is_running:
+                        break
+                    
+                    try:
+                        # Parse message based on provider type
+                        market_data = await self._parse_websocket_message(
+                            provider_name, message
+                        )
+                        
+                        if market_data:
+                            # Add to cache
+                            self.cache.add_data(
+                                market_data.symbol,
+                                market_data.timeframe,
+                                market_data
+                            )
+                            
+                            # Call data callbacks
+                            for callback in self.data_callbacks:
+                                try:
+                                    callback(market_data)
+                                except Exception as e:
+                                    logger.error(f"Error in data callback: {e}")
+                            
+                            # Update statistics
+                            self.stats["messages_received"] += 1
+                            
+                            # Process triggers
+                            await self._process_triggers()
+                    
+                    except asyncio.TimeoutError:
+                        # Send ping to keep connection alive
+                        try:
+                            await provider.websocket.ping()
+                        except:
+                            break  # Connection lost, will reconnect
+                        continue
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Failed to parse WebSocket message: {e}")
+                        continue
+                    except Exception as e:
+                        logger.error(f"Error processing WebSocket message: {e}")
+                        self.stats["errors"] += 1
+                        continue
+                
+            except websockets.exceptions.ConnectionClosed:
+                logger.warning(f"WebSocket connection closed for {provider_name}, reconnecting...")
+                reconnect_delay = min(reconnect_delay * 2, max_reconnect_delay)
+                await asyncio.sleep(reconnect_delay)
+                
+                # Attempt to reconnect
+                try:
+                    await provider.connect()
+                    await provider.subscribe(self.config.symbols, self.config.timeframes)
+                    reconnect_delay = 1.0  # Reset delay on successful reconnect
+                    logger.info(f"Reconnected to {provider_name}")
+                except Exception as e:
+                    logger.error(f"Failed to reconnect to {provider_name}: {e}")
+                    self.stats["errors"] += 1
+            
+            except Exception as e:
+                logger.error(f"Error in WebSocket listener for {provider_name}: {e}")
+                self.stats["errors"] += 1
+                
                 # Call error callbacks
                 for callback in self.error_callbacks:
                     try:
                         callback(e)
                     except Exception as callback_error:
                         logger.error(f"Error in error callback: {callback_error}")
+                
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = min(reconnect_delay * 2, max_reconnect_delay)
 
-    async def _simulate_data_stream(self):
-        """Simulate data streaming (for testing)."""
+    async def _parse_websocket_message(self, provider_name: str, message: Any) -> Optional[MarketData]:
+        """Parse WebSocket message into MarketData based on provider."""
+        try:
+            if provider_name == "polygon":
+                return self._parse_polygon_message(message)
+            elif provider_name == "finnhub":
+                return self._parse_finnhub_message(message)
+            elif provider_name == "alpaca":
+                return self._parse_alpaca_message(message)
+            else:
+                # Generic JSON parsing
+                if isinstance(message, str):
+                    data = json.loads(message)
+                else:
+                    data = message
+                
+                # Try to extract market data from generic format
+                if "symbol" in data and "price" in data:
+                    return MarketData(
+                        symbol=data["symbol"],
+                        timestamp=datetime.fromtimestamp(
+                            data.get("timestamp", datetime.now().timestamp())
+                        ),
+                        open=data.get("open", data["price"]),
+                        high=data.get("high", data["price"]),
+                        low=data.get("low", data["price"]),
+                        close=data["price"],
+                        volume=data.get("volume", 0),
+                        timeframe=data.get("timeframe", "1m"),
+                        source=provider_name,
+                    )
+                
+                return None
+        
+        except Exception as e:
+            logger.error(f"Error parsing {provider_name} message: {e}")
+            return None
+
+    def _parse_polygon_message(self, message: Any) -> Optional[MarketData]:
+        """Parse Polygon.io WebSocket message."""
+        try:
+            if isinstance(message, str):
+                data = json.loads(message)
+            else:
+                data = message
+            
+            # Polygon message format: [{"ev": "T", "sym": "AAPL", "p": 150.0, "s": 100, "t": 1234567890}]
+            if isinstance(data, list):
+                data = data[0]
+            
+            event_type = data.get("ev")  # "T" for trade, "Q" for quote, "A" for aggregate
+            
+            if event_type == "T":  # Trade
+                symbol = data.get("sym", "")
+                price = float(data.get("p", 0))
+                size = float(data.get("s", 0))
+                timestamp_ms = data.get("t", 0)
+                
+                return MarketData(
+                    symbol=symbol,
+                    timestamp=datetime.fromtimestamp(timestamp_ms / 1000),
+                    open=price,
+                    high=price,
+                    low=price,
+                    close=price,
+                    volume=size,
+                    timeframe="1m",
+                    source="polygon",
+                )
+            
+            elif event_type == "A":  # Aggregate (bar)
+                symbol = data.get("sym", "")
+                open_price = float(data.get("o", 0))
+                high_price = float(data.get("h", 0))
+                low_price = float(data.get("l", 0))
+                close_price = float(data.get("c", 0))
+                volume = float(data.get("v", 0))
+                timestamp_ms = data.get("s", 0)  # Start time
+                
+                return MarketData(
+                    symbol=symbol,
+                    timestamp=datetime.fromtimestamp(timestamp_ms / 1000),
+                    open=open_price,
+                    high=high_price,
+                    low=low_price,
+                    close=close_price,
+                    volume=volume,
+                    timeframe="1m",
+                    source="polygon",
+                )
+            
+            return None
+        
+        except Exception as e:
+            logger.error(f"Error parsing Polygon message: {e}")
+            return None
+
+    def _parse_finnhub_message(self, message: Any) -> Optional[MarketData]:
+        """Parse Finnhub WebSocket message."""
+        try:
+            if isinstance(message, str):
+                data = json.loads(message)
+            else:
+                data = message
+            
+            # Finnhub message format: {"type": "trade", "data": [{"s": "AAPL", "p": 150.0, "v": 100, "t": 1234567890}]}
+            if data.get("type") == "trade":
+                trade_data = data.get("data", [])
+                if trade_data:
+                    trade = trade_data[0]
+                    symbol = trade.get("s", "")
+                    price = float(trade.get("p", 0))
+                    volume = float(trade.get("v", 0))
+                    timestamp_ms = trade.get("t", 0)
+                    
+                    return MarketData(
+                        symbol=symbol,
+                        timestamp=datetime.fromtimestamp(timestamp_ms / 1000),
+                        open=price,
+                        high=price,
+                        low=price,
+                        close=price,
+                        volume=volume,
+                        timeframe="1m",
+                        source="finnhub",
+                    )
+            
+            return None
+        
+        except Exception as e:
+            logger.error(f"Error parsing Finnhub message: {e}")
+            return None
+
+    def _parse_alpaca_message(self, message: Any) -> Optional[MarketData]:
+        """Parse Alpaca WebSocket message."""
+        try:
+            if isinstance(message, str):
+                data = json.loads(message)
+            else:
+                data = message
+            
+            # Alpaca message format: [{"T": "t", "S": "AAPL", "p": 150.0, "s": 100, "t": "2023-01-01T00:00:00Z"}]
+            if isinstance(data, list):
+                data = data[0]
+            
+            msg_type = data.get("T")  # "t" for trade, "q" for quote, "b" for bar
+            
+            if msg_type == "t":  # Trade
+                symbol = data.get("S", "")
+                price = float(data.get("p", 0))
+                size = float(data.get("s", 0))
+                timestamp_str = data.get("t", "")
+                
+                try:
+                    timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                except:
+                    timestamp = datetime.now()
+                
+                return MarketData(
+                    symbol=symbol,
+                    timestamp=timestamp,
+                    open=price,
+                    high=price,
+                    low=price,
+                    close=price,
+                    volume=size,
+                    timeframe="1m",
+                    source="alpaca",
+                )
+            
+            elif msg_type == "b":  # Bar
+                symbol = data.get("S", "")
+                open_price = float(data.get("o", 0))
+                high_price = float(data.get("h", 0))
+                low_price = float(data.get("l", 0))
+                close_price = float(data.get("c", 0))
+                volume = float(data.get("v", 0))
+                timestamp_str = data.get("t", "")
+                
+                try:
+                    timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                except:
+                    timestamp = datetime.now()
+                
+                return MarketData(
+                    symbol=symbol,
+                    timestamp=timestamp,
+                    open=open_price,
+                    high=high_price,
+                    low=low_price,
+                    close=close_price,
+                    volume=volume,
+                    timeframe="1m",
+                    source="alpaca",
+                )
+            
+            return None
+        
+        except Exception as e:
+            logger.error(f"Error parsing Alpaca message: {e}")
+            return None
+
+    async def _poll_data_providers(self):
+        """Poll data providers when WebSocket is not available (fallback)."""
         for symbol in self.config.symbols:
             for timeframe in self.config.timeframes:
-                # Generate simulated data
-                current_price = 100.0 + np.random.normal(0, 1)
-
-                market_data = MarketData(
-                    symbol=symbol,
-                    timestamp=datetime.now(),
-                    open=current_price - 0.5,
-                    high=current_price + 0.5,
-                    low=current_price - 0.5,
-                    close=current_price,
-                    volume=np.random.randint(1000, 10000),
-                    timeframe=timeframe,
-                    source="simulated",
-                )
-
-                # Add to cache
-                self.cache.add_data(symbol, timeframe, market_data)
-
-                # Call data callbacks
-                for callback in self.data_callbacks:
-                    try:
-                        callback(market_data)
-                    except Exception as e:
-                        logger.error(f"Error in data callback: {e}")
+                # Try to get latest data from providers
+                for name, provider in self.providers.items():
+                    if name in self.active_providers:
+                        try:
+                            # Get historical data and use latest as current
+                            end_date = datetime.now()
+                            start_date = end_date - timedelta(days=1)
+                            
+                            historical_data = await provider.get_historical_data(
+                                symbol, timeframe, start_date, end_date
+                            )
+                            
+                            if historical_data and len(historical_data) > 0:
+                                # Use the latest data point
+                                latest = historical_data[-1]
+                                
+                                # Add to cache
+                                self.cache.add_data(symbol, timeframe, latest)
+                                
+                                # Call data callbacks
+                                for callback in self.data_callbacks:
+                                    try:
+                                        callback(latest)
+                                    except Exception as e:
+                                        logger.error(f"Error in data callback: {e}")
+                                
+                                break  # Found data, move to next symbol/timeframe
+                        
+                        except Exception as e:
+                            logger.debug(f"Error polling {name} for {symbol}: {e}")
+                            continue
 
     async def _process_triggers(self):
         """Process data triggers."""
