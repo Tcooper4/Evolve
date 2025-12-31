@@ -19,6 +19,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
+from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 
 # Backend imports
@@ -959,7 +960,7 @@ with tab4:
                             elif model_name == "Prophet":
                                 config = {
                                     "date_column": "ds",
-                                    "target_column": "close" if 'close' in data.columns else 'Close",
+                                    "target_column": "close" if 'close' in data.columns else 'Close',
                                     "prophet_params": {}
                                 }
                                 model = ProphetModel(config)
