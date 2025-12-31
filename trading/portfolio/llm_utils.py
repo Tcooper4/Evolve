@@ -119,12 +119,6 @@ class LLMInterface:
 
         logger.info("Initialized LLMInterface")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
-
     def generate_trade_rationale(
         self, symbol: str, direction: str, strategy: str, market_data: Dict[str, Any]
     ) -> Optional[TradeRationale]:

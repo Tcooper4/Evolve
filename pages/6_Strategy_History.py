@@ -279,7 +279,6 @@ def plot_sector_performance(df, group_by):
 
 def main():
     """Main entry point for the Strategy History dashboard."""
-    st.set_page_config(page_title="Strategy History", page_icon="⚡", layout="wide")
 
     # Initialize session state
     initialize_session_state()
