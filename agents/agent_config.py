@@ -117,6 +117,10 @@ class AgentConfig:
         # HuggingFace settings
         if os.getenv("HUGGINGFACE_MODEL"):
             self.huggingface_model = os.getenv("HUGGINGFACE_MODEL")
+        
+        # Paper Trading settings
+        paper_trading_env = os.getenv("PAPER_TRADING", "true").lower()
+        self.paper_trading = paper_trading_env == "true"
 
     def _validate_config(self):
         """Validate configuration settings."""
