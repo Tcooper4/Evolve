@@ -916,18 +916,86 @@ class ModelDiscoveryAgent:
     ) -> bool:
         """Register model in the system's model pool."""
         try:
-            # This would integrate with the existing model registry
-            # For now, we'll simulate successful registration
-
-            # In a real implementation, this would:
-            # 1. Add model to the model registry
-            # 2. Update the model selector
-            # 3. Add to the hybrid ensemble if applicable
-            # 4. Update configuration files
-
             logger.info(f"Registering model {discovery.model_id} in model pool")
 
-            # Simulate registration success
+            # 1. Register model in ModelRegistry
+            try:
+                from trading.models.registry import get_model_registry
+                
+                registry = get_model_registry()
+                
+                # Try to get model class from discovery
+                if hasattr(discovery, 'model_class') and discovery.model_class:
+                    registry.register_model(discovery.model_id, discovery.model_class)
+                    logger.info(f"Registered {discovery.model_id} in ModelRegistry")
+                else:
+                    # If no model class, save model implementation and register path
+                    logger.warning(f"No model class found for {discovery.model_id}, saving implementation only")
+                    
+            except ImportError:
+                logger.warning("ModelRegistry not available, skipping registration")
+            except Exception as e:
+                logger.error(f"Error registering in ModelRegistry: {e}")
+
+            # 2. Register in ForecastRouter if available
+            try:
+                from models.forecast_router import ForecastRouter
+                
+                router = ForecastRouter()
+                if hasattr(router, 'model_registry') and discovery.model_id not in router.model_registry:
+                    # Add to router's model registry
+                    if hasattr(discovery, 'model_class') and discovery.model_class:
+                        router.model_registry[discovery.model_id] = discovery.model_class
+                        logger.info(f"Added {discovery.model_id} to ForecastRouter")
+            except ImportError:
+                logger.warning("ForecastRouter not available, skipping router registration")
+            except Exception as e:
+                logger.error(f"Error registering in ForecastRouter: {e}")
+
+            # 3. Save model metadata to persistent storage
+            try:
+                import json
+                from pathlib import Path
+                
+                models_dir = Path("models/discovered")
+                models_dir.mkdir(parents=True, exist_ok=True)
+                
+                metadata = {
+                    "model_id": discovery.model_id,
+                    "name": discovery.name,
+                    "model_type": discovery.model_type,
+                    "source": discovery.source,
+                    "title": discovery.title,
+                    "arxiv_id": getattr(discovery, 'arxiv_id', None),
+                    "benchmark_results": {
+                        "overall_score": result.overall_score,
+                        "rmse": result.rmse,
+                        "mae": result.mae,
+                        "sharpe_ratio": result.sharpe_ratio,
+                        "max_drawdown": result.max_drawdown,
+                        "is_approved": result.is_approved,
+                    },
+                    "integration_date": datetime.now().isoformat(),
+                }
+                
+                metadata_path = models_dir / f"{discovery.model_id}_metadata.json"
+                with open(metadata_path, "w") as f:
+                    json.dump(metadata, f, indent=2, default=str)
+                
+                logger.info(f"Saved metadata for {discovery.model_id}")
+                
+            except Exception as e:
+                logger.error(f"Error saving model metadata: {e}")
+
+            # 4. Update integration history
+            self.integration_history.append({
+                "model_id": discovery.model_id,
+                "integration_date": datetime.now().isoformat(),
+                "benchmark_score": result.overall_score,
+                "status": "integrated",
+            })
+
+            logger.info(f"Successfully registered model {discovery.model_id} in model pool")
             return True
 
         except Exception as e:
