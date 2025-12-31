@@ -566,6 +566,14 @@ class UpdaterWorkflow:
         """Initialize the updater workflow."""
         self.logger = logging.getLogger(f"{__name__}.UpdaterWorkflow")
         self.workflow_name = "model_updater"
+        
+        # Load configurable thresholds from environment variables
+        import os
+        self.update_threshold = float(os.getenv("MODEL_UPDATE_THRESHOLD", "0.3"))
+        self.replace_threshold = float(os.getenv("MODEL_REPLACE_THRESHOLD", "0.1"))
+        self.retrain_threshold = float(os.getenv("MODEL_RETRAIN_THRESHOLD", "0.3"))
+        self.tune_threshold = float(os.getenv("MODEL_TUNE_THRESHOLD", "0.5"))
+        self.pipeline_update_threshold = float(os.getenv("MODEL_PIPELINE_UPDATE_THRESHOLD", "0.5"))
 
     async def __call__(self, **kwargs) -> AgentWorkflowResult:
         """
@@ -706,7 +714,7 @@ class UpdaterWorkflow:
                     "sharpe_ratio": sharpe_ratio,
                     "max_drawdown": max_drawdown,
                     "win_rate": win_rate,
-                    "needs_update": performance_score < 0.3,
+                    "needs_update": performance_score < self.update_threshold,
                 },
             }
 
@@ -725,11 +733,11 @@ class UpdaterWorkflow:
             performance_score = analysis_data.get("performance_score", 0.0)
 
             if update_type == "auto":
-                if performance_score < 0.1:
+                if performance_score < self.replace_threshold:
                     update_type = "replace"
-                elif performance_score < 0.3:
+                elif performance_score < self.retrain_threshold:
                     update_type = "retrain"
-                elif performance_score < 0.5:
+                elif performance_score < self.tune_threshold:
                     update_type = "tune"
                 else:
                     update_type = "ensemble_adjust"
@@ -738,8 +746,8 @@ class UpdaterWorkflow:
                 "success": True,
                 "data": {
                     "update_type": update_type,
-                    "priority": "high" if performance_score < 0.3 else "normal",
-                    "target_improvement": max(0.1, 0.5 - performance_score),
+                    "priority": "high" if performance_score < self.update_threshold else "normal",
+                    "target_improvement": max(0.1, self.tune_threshold - performance_score),
                 },
             }
 
@@ -1189,8 +1197,10 @@ class AgentController:
 
             # Determine if update is needed based on performance
             performance_score = evaluation_data.get("performance_score", 0.0)
-            if performance_score < 0.5:  # Threshold for updates
-                self.logger.info("Performance below threshold, updating model")
+            # Use configurable threshold from UpdaterWorkflow
+            pipeline_threshold = self.updater.pipeline_update_threshold
+            if performance_score < pipeline_threshold:
+                self.logger.info(f"Performance below threshold ({pipeline_threshold}), updating model")
                 update_result = await self.updater(
                     model_id=model_data["model_id"],
                     evaluation_result=evaluation_data,
