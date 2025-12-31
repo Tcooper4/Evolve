@@ -108,12 +108,43 @@ class StateManager:
         self._file_lock = filelock.FileLock(str(lock_file), timeout=30)
 
     def _load_state(self):
-        """Load state from file with version validation."""
-        if not self.state_file.exists():
-            logger.info("No existing state file found, starting fresh")
-            return
-
+        """Load state from database (or file if database unavailable)."""
         try:
+            # Try to load from database first
+            try:
+                from trading.database import get_db_session
+                from trading.database.models import StateManagerModel
+                
+                with get_db_session() as session:
+                    state_records = session.query(StateManagerModel).all()
+                    
+                    if state_records:
+                        # Load state from database
+                        self._state = {}
+                        for record in state_records:
+                            self._state[record.state_key] = record.state_value
+                            # Use the latest version found
+                            if record.version:
+                                self._version = StateVersion(record.version)
+                        
+                        if state_records:
+                            self._last_save = max(r.updated_at for r in state_records)
+                        
+                        logger.info(f"State loaded from database: {len(self._state)} keys")
+                        return
+                    else:
+                        logger.info("No state found in database")
+                        
+            except ImportError:
+                logger.warning("Database module not available, falling back to file storage")
+            except Exception as db_error:
+                logger.warning(f"Database load failed: {db_error}, falling back to file storage")
+            
+            # Fallback to file storage
+            if not self.state_file.exists():
+                logger.info("No existing state file found, starting fresh")
+                return
+
             with self._file_lock:
                 with open(self.state_file, "rb") as f:
                     # Check if file is gzipped
@@ -185,11 +216,49 @@ class StateManager:
             self._state = {}
 
     def _save_state(self, force: bool = False):
-        """Save state to file with version header."""
+        """Save state to database (or file if database unavailable)."""
         if not self._dirty and not force:
             return
 
         try:
+            # Try to save to database first
+            try:
+                from trading.database import get_db_session
+                from trading.database.models import StateManagerModel
+                
+                with get_db_session() as session:
+                    # Save each state key-value pair
+                    for key, value in self._state.items():
+                        state_record = session.query(StateManagerModel).filter_by(
+                            state_key=key
+                        ).first()
+                        
+                        if state_record:
+                            # Update existing record
+                            state_record.state_value = value
+                            state_record.version = self._version.version
+                            state_record.updated_at = datetime.now()
+                        else:
+                            # Create new record
+                            state_record = StateManagerModel(
+                                state_key=key,
+                                state_value=value,
+                                version=self._version.version,
+                            )
+                            session.add(state_record)
+                    
+                    session.commit()
+                    self._dirty = False
+                    self._last_save = datetime.now()
+                    logger.info(f"State saved to database: {len(self._state)} keys")
+                    return
+                    
+            except ImportError:
+                logger.warning("Database module not available, falling back to file storage")
+            except Exception as db_error:
+                logger.warning(f"Database save failed: {db_error}, falling back to file storage")
+            
+            # Fallback to file storage
             with self._file_lock:
                 # Create backup before saving
                 if self.state_file.exists():
