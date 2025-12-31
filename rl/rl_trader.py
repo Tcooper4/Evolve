@@ -79,6 +79,11 @@ class TradingEnvironment:
         self.returns = []
         self.trades = []
         self.portfolio_values = [self.initial_balance]
+        
+        # Track previous state for reward calculation (no look-ahead bias)
+        self.last_price = None
+        self.last_shares = 0
+        self.last_action = None
 
         observation = self._get_observation()
         info = self._get_info()
@@ -108,12 +113,22 @@ class TradingEnvironment:
         return observation, reward, done, False, info
 
     def _execute_action(self, action: int) -> float:
-        """Execute trading action."""
+        """Execute trading action.
+        
+        Reward is calculated based on realized PnL from PREVIOUS step,
+        not future price movements (no look-ahead bias).
+        """
         current_price = self.data.iloc[self.current_step]["Close"]
-        next_price = self.data.iloc[self.current_step + 1]["Close"]
-
-        reward = 0
-
+        
+        # Calculate reward based on realized PnL from previous step
+        # This uses only past data, not future data
+        reward = 0.0
+        if self.last_price is not None and self.last_shares > 0:
+            # Realized PnL from price movement since last step
+            price_change = (current_price - self.last_price) / self.last_price
+            reward = price_change * self.last_shares * self.last_price
+        
+        # Execute current action
         if action == 0:  # Buy
             if self.balance > 0:
                 position_value = self.balance * self.max_position
@@ -134,10 +149,6 @@ class TradingEnvironment:
                         }
                     )
 
-                    # Calculate reward
-                    price_change = (next_price - current_price) / current_price
-                    reward = price_change * shares_to_buy * current_price
-
         elif action == 1:  # Sell
             if self.shares > 0:
                 proceeds = self.shares * current_price * (1 - self.transaction_fee)
@@ -153,14 +164,25 @@ class TradingEnvironment:
                         "proceeds": proceeds,
                     }
                 )
-
-                # Calculate reward
-                price_change = (current_price - next_price) / current_price
-                reward = price_change * self.shares * current_price
+                
+                # Additional reward for selling (realized profit/loss)
+                if self.last_price is not None:
+                    # Calculate realized PnL from entry to exit
+                    entry_price = self.last_price  # Approximate entry price
+                    pnl = (current_price - entry_price) * self.shares
+                    reward += pnl
+                
                 self.shares = 0
 
         else:  # Hold
-            reward = -0.0001  # Small penalty for holding
+            # Small penalty for holding (only if we had a position)
+            if self.last_shares > 0:
+                reward -= 0.0001
+        
+        # Store current state for next step's reward calculation
+        self.last_price = current_price
+        self.last_shares = self.shares
+        self.last_action = action
 
         return reward
 
