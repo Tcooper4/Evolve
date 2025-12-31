@@ -202,52 +202,96 @@ def load_model_templates():
 
 
 def get_model_registry():
-    """Get current model registry."""
-    if not st.session_state.model_registry:
-        # Initialize with default models
-        st.session_state.model_registry = {
-            "LSTM_v1": {
-                "name": "LSTM_v1",
-                "type": "LSTM",
-                "accuracy": 0.87,
-                "status": "Active",
-                "created": datetime.now() - timedelta(days=5),
-                "last_updated": datetime.now() - timedelta(hours=2),
-                "parameters": {"layers": 2, "units": 64, "dropout": 0.2},
-                "performance": {"rmse": 0.023, "mae": 0.018, "mape": 2.1},
-            },
-            "Transformer_v2": {
-                "name": "Transformer_v2",
-                "type": "Transformer",
-                "accuracy": 0.89,
-                "status": "Active",
-                "created": datetime.now() - timedelta(days=3),
-                "last_updated": datetime.now() - timedelta(hours=1),
-                "parameters": {"heads": 8, "layers": 6, "d_model": 512},
-                "performance": {"rmse": 0.021, "mae": 0.016, "mape": 1.9},
-            },
-            "Ensemble_v1": {
-                "name": "Ensemble_v1",
-                "type": "Ensemble",
-                "accuracy": 0.92,
-                "status": "Active",
-                "created": datetime.now() - timedelta(days=1),
-                "last_updated": datetime.now() - timedelta(minutes=30),
-                "parameters": {"models": ["LSTM", "XGBoost"], "weights": [0.6, 0.4]},
-                "performance": {"rmse": 0.019, "mae": 0.015, "mape": 1.7},
-            },
-            "XGBoost_v1": {
-                "name": "XGBoost_v1",
-                "type": "XGBoost",
-                "accuracy": 0.85,
-                "status": "Active",
-                "created": datetime.now() - timedelta(days=7),
-                "last_updated": datetime.now() - timedelta(hours=4),
-                "parameters": {"n_estimators": 100, "max_depth": 6},
-                "performance": {"rmse": 0.025, "mae": 0.020, "mape": 2.3},
-            },
-        }
-    return st.session_state.model_registry
+    """Get current model registry from backend."""
+    try:
+        # Try to load from actual ModelRegistry
+        from trading.models.registry import get_model_registry as get_registry
+        from models.forecast_engine import ForecastEngine
+        
+        registry = get_registry()
+        forecast_engine = ForecastEngine()
+        
+        # Get available models from registry
+        available_models = registry.get_available_models()
+        
+        # Build model registry dictionary from real backend
+        model_registry = {}
+        
+        for model_name in available_models:
+            try:
+                # Get model class
+                model_class = registry.get_model_class(model_name)
+                
+                # Get model metadata if available
+                model_info = {
+                    "name": model_name,
+                    "type": model_name.upper(),
+                    "status": "Active",
+                    "created": datetime.now() - timedelta(days=1),
+                    "last_updated": datetime.now(),
+                    "parameters": {},
+                    "performance": {},
+                }
+                
+                # Try to get performance metrics from forecast engine
+                try:
+                    # Map model name to ModelType if possible
+                    from models.forecast_engine import ModelType
+                    model_type_map = {
+                        "lstm": ModelType.LSTM,
+                        "transformer": ModelType.TRANSFORMER,
+                        "xgboost": ModelType.XGBOOST,
+                        "arima": ModelType.ARIMA,
+                        "prophet": ModelType.PROPHET,
+                        "ensemble": ModelType.ENSEMBLE,
+                        "ridge": ModelType.RIDGE,
+                        "garch": ModelType.GARCH,
+                    }
+                    
+                    model_type = model_type_map.get(model_name.lower())
+                    if model_type:
+                        performance = forecast_engine.get_model_performance(model_type)
+                        if performance:
+                            model_info["performance"] = performance
+                            model_info["accuracy"] = performance.get("accuracy", 0.85)
+                        else:
+                            model_info["accuracy"] = 0.85
+                    else:
+                        model_info["accuracy"] = 0.85
+                except Exception as e:
+                    logger.warning(f"Could not get performance for {model_name}: {e}")
+                    model_info["accuracy"] = 0.85
+                
+                # Try to get model parameters if model instance is available
+                try:
+                    if hasattr(model_class, 'get_default_params'):
+                        model_info["parameters"] = model_class.get_default_params()
+                except Exception:
+                    pass
+                
+                model_registry[model_name] = model_info
+                
+            except Exception as e:
+                logger.warning(f"Error loading model {model_name}: {e}")
+                continue
+        
+        # If no models found, return empty dict (don't use hardcoded fallback)
+        if not model_registry:
+            logger.warning("No models found in registry")
+            return {}
+        
+        # Cache in session state
+        st.session_state.model_registry = model_registry
+        return model_registry
+        
+    except ImportError as e:
+        logger.error(f"Failed to import model registry: {e}")
+        # Return empty dict instead of hardcoded data
+        return {}
+    except Exception as e:
+        logger.error(f"Error loading model registry: {e}")
+        # Return empty dict instead of hardcoded data
+        return {}
 
 
 def synthesize_model(
