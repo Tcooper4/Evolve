@@ -750,6 +750,52 @@ if self.last_price is not None and self.last_shares > 0:
 **Breaking Changes:** None (RL agents need retraining with correct rewards)
 **Backward Compatibility:** Fully compatible - reward calculation improved, no API changes
 
+### C17: Replace/Repair Basic Import Tests ✅
+
+**Status:** COMPLETED
+**Date:** 2024-12-19
+**Files Modified:**
+1. `tests/test_basic_imports.py` (lines 25-172)
+
+**Changes Made:**
+- Replaced all `pass` statements with actual import tests
+- Added 8 test functions covering all major modules:
+  - `test_core_imports()` - PortfolioManager, BaseStrategy, BrokerAdapter, ModelRegistry
+  - `test_strategy_imports()` - BollingerStrategy, MACDStrategy, RSI, StrategyManager, StrategyGatekeeper
+  - `test_agent_imports()` - AgentRegistry, AgentConfig, AnthropicProvider (optional)
+  - `test_data_imports()` - YFinanceProvider, DatabaseManager (optional), StreamingClient (optional)
+  - `test_backtesting_imports()` - Backtester, MonteCarloSimulator (optional)
+  - `test_optimization_imports()` - GeneticOptimizer, SelfTuningOptimizer
+  - `test_utils_imports()` - setup_logger, calculate_sharpe_ratio, calculate_max_drawdown
+  - `test_config_imports()` - AgentConfig, AppConfig, config_loader (optional)
+- Added error handling for optional dependencies
+- Added encoding error handling for Windows console compatibility
+- Removed emoji characters for cross-platform compatibility
+
+**Old Code:**
+```python
+def test_import_agents():
+    pass  # TODO: Actually test imports
+```
+
+**New Code:**
+```python
+def test_agent_imports(self):
+    from agents.registry import AgentRegistry, get_agent
+    from agents.agent_config import AgentConfig
+    # ... with proper error handling
+```
+
+**Test Results:**
+- ✅ All import tests now actually test imports
+- ✅ Catches missing dependencies
+- ✅ Verifies module structure
+- ✅ Handles optional dependencies gracefully
+- ✅ Windows console encoding issues handled
+
+**Breaking Changes:** None
+**Backward Compatibility:** Fully compatible - tests now functional instead of no-ops
+
 **Key Findings:**
 1. **Current State:**
    - `PortfolioManager` can handle multiple positions (multiple symbols)
