@@ -24,6 +24,10 @@ from datetime import datetime, timedelta
 # Backend imports
 from trading.data.data_loader import DataLoader, DataLoadRequest
 from trading.data.providers.yfinance_provider import YFinanceProvider
+from trading.models.lstm_model import LSTMModel
+from trading.models.xgboost_model import XGBoostModel
+from trading.models.prophet_model import ProphetModel
+from trading.models.arima_model import ARIMAModel
 
 st.set_page_config(
     page_title="Forecasting & Market Analysis",
@@ -203,6 +207,195 @@ with tab1:
         # Data table (expandable)
         with st.expander("📋 View Full Data"):
             st.dataframe(data.tail(50), use_container_width=True)
+        
+        # Model Selection & Forecasting
+        st.markdown("---")
+        st.subheader("🎯 Generate Forecast")
+        
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.markdown("**Select Model**")
+            
+            model_descriptions = {
+                "LSTM (Deep Learning)": "Neural network for time series. Best for complex patterns.",
+                "XGBoost (Gradient Boosting)": "Tree-based model. Fast and accurate for most data.",
+                "Prophet (Facebook)": "Handles seasonality well. Good for business data.",
+                "ARIMA (Statistical)": "Classic statistical model. Works well for stationary data."
+            }
+            
+            selected_model = st.radio(
+                "Choose model:",
+                list(model_descriptions.keys()),
+                help="Different models work better for different data patterns"
+            )
+            
+            st.info(model_descriptions[selected_model])
+            
+            forecast_button = st.button(
+                "🚀 Generate Forecast",
+                type="primary",
+                use_container_width=True
+            )
+        
+        with col2:
+            if forecast_button:
+                try:
+                    with st.spinner(f"Training {selected_model}..."):
+                        # Get data
+                        data = st.session_state.forecast_data.copy()
+                        horizon = st.session_state.forecast_horizon
+                        
+                        # Prepare data for models (ensure proper format)
+                        if not isinstance(data.index, pd.DatetimeIndex):
+                            data.index = pd.to_datetime(data.index)
+                        
+                        # Initialize model with proper config
+                        model = None
+                        if "LSTM" in selected_model:
+                            config = {
+                                "target_column": "close",
+                                "sequence_length": 60,
+                                "hidden_dim": 64,
+                                "num_layers": 2,
+                                "dropout": 0.2,
+                                "learning_rate": 0.001
+                            }
+                            model = LSTMModel(config)
+                        elif "XGBoost" in selected_model:
+                            config = {
+                                "target_column": "close",
+                                "n_estimators": 100,
+                                "max_depth": 5,
+                                "learning_rate": 0.1
+                            }
+                            model = XGBoostModel(config)
+                        elif "Prophet" in selected_model:
+                            config = {
+                                "date_column": data.index.name if data.index.name else "ds",
+                                "target_column": "close",
+                                "prophet_params": {}
+                            }
+                            model = ProphetModel(config)
+                        elif "ARIMA" in selected_model:
+                            config = {
+                                "order": (5, 1, 0),
+                                "use_auto_arima": True
+                            }
+                            model = ARIMAModel(config)
+                        
+                        if model is None:
+                            st.error("Failed to initialize model")
+                        else:
+                            # Train model
+                            if "Prophet" in selected_model:
+                                # Prophet needs special format
+                                train_df = pd.DataFrame({
+                                    'ds': data.index,
+                                    'y': data['close']
+                                })
+                                fit_result = model.fit(train_df)
+                            elif "ARIMA" in selected_model:
+                                # ARIMA needs series
+                                fit_result = model.fit(data['close'])
+                            else:
+                                # LSTM and XGBoost use DataFrame
+                                fit_result = model.fit(data, data['close'])
+                            
+                            # Generate forecast
+                            forecast_result = model.forecast(data, horizon=horizon)
+                            
+                            # Extract forecast values
+                            if isinstance(forecast_result, dict):
+                                forecast_values = forecast_result.get('forecast', [])
+                                forecast_dates = forecast_result.get('dates', pd.date_range(
+                                    start=data.index[-1] + timedelta(days=1),
+                                    periods=horizon,
+                                    freq='D'
+                                ))
+                            else:
+                                forecast_values = forecast_result
+                                forecast_dates = pd.date_range(
+                                    start=data.index[-1] + timedelta(days=1),
+                                    periods=horizon,
+                                    freq='D'
+                                )
+                            
+                            # Ensure forecast_values is array-like
+                            if isinstance(forecast_values, (list, np.ndarray)):
+                                forecast_values = np.array(forecast_values).flatten()
+                            else:
+                                forecast_values = np.array([forecast_values] * horizon)
+                            
+                            # Create forecast DataFrame
+                            forecast_df = pd.DataFrame({
+                                'forecast': forecast_values
+                            }, index=forecast_dates[:len(forecast_values)])
+                            
+                            # Store in session state
+                            st.session_state.current_forecast = forecast_df
+                            st.session_state.current_model = selected_model
+                            
+                            st.success(f"✅ Forecast generated using {selected_model}")
+                
+                except Exception as e:
+                    st.error(f"Error generating forecast: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
+                    st.info("Try adjusting the date range or selecting a different model.")
+            
+            # Display forecast
+            if st.session_state.get('current_forecast') is not None:
+                st.markdown(f"**Forecast using {st.session_state.current_model}**")
+                
+                # Create combined chart
+                fig = go.Figure()
+                
+                # Historical data
+                hist_data = st.session_state.forecast_data
+                fig.add_trace(go.Scatter(
+                    x=hist_data.index,
+                    y=hist_data['close'],
+                    mode='lines',
+                    name='Historical',
+                    line=dict(color='blue', width=2)
+                ))
+                
+                # Forecast
+                forecast_df = st.session_state.current_forecast
+                fig.add_trace(go.Scatter(
+                    x=forecast_df.index,
+                    y=forecast_df['forecast'],
+                    mode='lines+markers',
+                    name='Forecast',
+                    line=dict(color='red', width=2, dash='dash'),
+                    marker=dict(size=8)
+                ))
+                
+                fig.update_layout(
+                    title=f"{st.session_state.symbol} - Historical & Forecast",
+                    xaxis_title="Date",
+                    yaxis_title="Price ($)",
+                    hovermode='x unified',
+                    height=500
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Forecast table
+                st.markdown("**Forecast Values:**")
+                display_df = forecast_df.copy()
+                display_df['forecast'] = display_df['forecast'].map('${:.2f}'.format)
+                st.dataframe(display_df, use_container_width=True)
+                
+                # Download button
+                csv = forecast_df.to_csv()
+                st.download_button(
+                    label="📥 Download Forecast CSV",
+                    data=csv,
+                    file_name=f"{st.session_state.symbol}_forecast.csv",
+                    mime="text/csv"
+                )
 
 with tab2:
     st.header("Advanced Forecasting")
