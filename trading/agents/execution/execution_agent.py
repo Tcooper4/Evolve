@@ -237,6 +237,46 @@ class ExecutionAgent(BaseAgent):
 
             # Calculate execution price
             execution_price = self._calculate_execution_price(signal, market_data)
+            
+            # Log decision for parity checking
+            try:
+                from testing.parity_checker import get_parity_checker
+                from datetime import datetime
+                
+                parity_checker = get_parity_checker()
+                
+                # Extract features from market data
+                features = {
+                    "price": execution_price,
+                    "quantity": signal.size or 1.0,
+                    "confidence": signal.confidence,
+                    "strategy": signal.strategy,
+                }
+                
+                # Add market data features if available
+                symbol_key = f"{signal.symbol}_price"
+                if symbol_key in market_data:
+                    features["market_price"] = market_data[symbol_key]
+                
+                # Create signal dict
+                signal_dict = {
+                    "action": signal.direction.value if hasattr(signal.direction, 'value') else str(signal.direction),
+                    "quantity": signal.size or 1.0,
+                    "price": execution_price,
+                    "entry_price": signal.entry_price,
+                }
+                
+                # Log live decision
+                parity_checker.log_live_decision(
+                    timestamp=datetime.now(),
+                    symbol=signal.symbol,
+                    signal=signal_dict,
+                    features=features,
+                    context={"strategy": signal.strategy, "live": True},
+                )
+            except Exception as e:
+                # Don't fail if parity checker not available
+                self.logger.debug(f"Could not log live decision for parity: {e}")
 
             # Execute trade based on mode
             if self.execution_mode == ExecutionMode.SIMULATION:

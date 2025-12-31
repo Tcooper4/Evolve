@@ -185,6 +185,40 @@ class Backtester:
         signal: float,
     ) -> Trade:
         """Execute a trade and record it with cost model adjustments."""
+        # Log decision for parity checking
+        try:
+            from testing.parity_checker import get_parity_checker
+            
+            parity_checker = get_parity_checker()
+            
+            # Extract features from current state (if available)
+            features = {
+                "price": price,
+                "quantity": quantity,
+                "signal": signal,
+                "strategy": strategy,
+            }
+            
+            # Create signal dict
+            signal_dict = {
+                "action": "buy" if trade_type == TradeType.BUY else "sell",
+                "quantity": quantity,
+                "price": price,
+                "type": trade_type.name,
+            }
+            
+            # Log backtest decision
+            parity_checker.log_backtest_decision(
+                timestamp=timestamp,
+                symbol=asset,
+                signal=signal_dict,
+                features=features,
+                context={"strategy": strategy, "backtest": True},
+            )
+        except Exception as e:
+            # Don't fail if parity checker not available
+            logger.debug(f"Could not log backtest decision for parity: {e}")
+        
         position_size = self._calculate_position_size(asset, price, strategy, signal)
 
         # Use the robust cost model
