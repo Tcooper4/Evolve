@@ -851,6 +851,82 @@ def _benchmark_generic_model(...):
 **Breaking Changes:** None (errors are raised instead of fake data - better behavior)
 **Backward Compatibility:** Fully compatible - errors are more informative than fake data
 
+### C19: Ensure Hardcoded Evaluator/Decision Thresholds Are Configurable ✅
+
+**Status:** COMPLETED
+**Date:** 2024-12-19
+**Files Modified:**
+1. `trading/strategies/enhanced_strategy_engine.py` (lines 82-98, 110-115)
+2. `trading/agents/updater_agent.py` (lines 85-94, 435)
+3. `env.example` (added threshold configuration section)
+
+**Changes Made:**
+- Made `PerformanceChecker` thresholds configurable via environment variables
+- Made `UpdaterAgent` update thresholds configurable via environment variables
+- Fixed hardcoded `overall_score < 0.6` check to use `MODEL_UPDATE_ENSEMBLE_THRESHOLD`
+- Fixed hardcoded strategy retirement thresholds to use environment variables
+- Added all threshold environment variables to `env.example` with documentation
+
+**Thresholds Made Configurable:**
+- `SHARPE_THRESHOLD_POOR` - Below this = poor performance (default: 0.5)
+- `SHARPE_THRESHOLD_GOOD` - Above this = good performance (default: 1.0)
+- `DRAWDOWN_THRESHOLD` - Below this = poor performance (default: -0.15)
+- `WIN_RATE_THRESHOLD` - Below this = poor performance (default: 0.45)
+- `VOLATILITY_THRESHOLD` - Above this = high volatility (default: 0.25)
+- `CALMAR_THRESHOLD` - Below this = poor risk-adjusted return (default: 0.5)
+- `MSE_THRESHOLD` - Above this = high prediction error (default: 0.1)
+- `ACCURACY_THRESHOLD` - Below this = low accuracy (default: 0.55)
+- `MODEL_UPDATE_CRITICAL_SHARPE` - Below this = replace model (default: 0.0)
+- `MODEL_UPDATE_CRITICAL_DRAWDOWN` - Below this = replace model (default: -0.25)
+- `MODEL_UPDATE_CRITICAL_WIN_RATE` - Below this = replace model (default: 0.3)
+- `MODEL_UPDATE_RETRAIN_SHARPE` - Below this = needs retraining (default: 0.3)
+- `MODEL_UPDATE_RETRAIN_DRAWDOWN` - Below this = needs retraining (default: -0.15)
+- `MODEL_UPDATE_TUNE_SHARPE` - Below this = needs tuning (default: 0.5)
+- `MODEL_UPDATE_TUNE_DRAWDOWN` - Below this = needs tuning (default: -0.10)
+- `MODEL_UPDATE_ENSEMBLE_THRESHOLD` - Below this = adjust ensemble (default: 0.6)
+- `STRATEGY_RETIRE_SHARPE` - Below this = retire strategy (default: 0.0)
+- `STRATEGY_RETIRE_WIN_RATE` - Below this = retire strategy (default: 0.2)
+- `STRATEGY_RETIRE_RETURN` - Below this = retire strategy (default: -0.2)
+
+**Old Behavior:**
+```python
+# ❌ Hardcoded thresholds
+THRESHOLDS = {
+    "min_sharpe_ratio": 0.5,  # Hardcoded
+    "max_drawdown": -0.15,  # Hardcoded
+    ...
+}
+if overall_score < 0.6:  # Hardcoded
+```
+
+**New Behavior:**
+```python
+# ✅ Configurable via environment variables
+self.thresholds = {
+    "min_sharpe_ratio": float(os.getenv("SHARPE_THRESHOLD_POOR", "0.5")),
+    "max_drawdown": float(os.getenv("DRAWDOWN_THRESHOLD", "-0.15")),
+    ...
+}
+ensemble_threshold = float(os.getenv("MODEL_UPDATE_ENSEMBLE_THRESHOLD", "0.6"))
+if overall_score < ensemble_threshold:
+```
+
+**Line Changes:**
+- trading/strategies/enhanced_strategy_engine.py:82-98 - Made thresholds configurable
+- trading/strategies/enhanced_strategy_engine.py:110-115 - Made retirement thresholds configurable
+- trading/agents/updater_agent.py:85-94 - Made update thresholds configurable
+- trading/agents/updater_agent.py:435 - Made ensemble threshold configurable
+- env.example:95-130 - Added threshold configuration section
+
+**Test Results:**
+- ✅ Thresholds read from environment variables
+- ✅ Defaults work correctly (match old hardcoded values)
+- ✅ Can adjust per strategy/use case
+- ✅ Backward compatible
+
+**Breaking Changes:** None (defaults match old hardcoded values)
+**Backward Compatibility:** Fully compatible - defaults identical to old hardcoded values
+
 **Key Findings:**
 1. **Current State:**
    - `PortfolioManager` can handle multiple positions (multiple symbols)
