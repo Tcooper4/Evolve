@@ -82,19 +82,27 @@ class StrategyResult:
 class PerformanceChecker:
     """Comprehensive meta-agent for strategy and model performance evaluation and improvement."""
 
-    # Default thresholds (can be loaded from config)
-    THRESHOLDS = {
-        "min_sharpe_ratio": 0.5,
-        "max_drawdown": -0.15,
-        "min_win_rate": 0.45,
-        "max_volatility": 0.25,
-        "min_calmar_ratio": 0.5,
-        "max_mse": 0.1,
-        "min_accuracy": 0.55,
-    }
-
     def __init__(self, thresholds: Optional[Dict[str, float]] = None):
-        self.thresholds = thresholds or self.THRESHOLDS.copy()
+        """Initialize PerformanceChecker with configurable thresholds.
+        
+        Thresholds can be provided directly or loaded from environment variables.
+        """
+        import os
+        
+        # Load thresholds from environment variables with defaults
+        self.thresholds = thresholds or {
+            "min_sharpe_ratio": float(os.getenv("SHARPE_THRESHOLD_POOR", "0.5")),
+            "max_drawdown": float(os.getenv("DRAWDOWN_THRESHOLD", "-0.15")),
+            "min_win_rate": float(os.getenv("WIN_RATE_THRESHOLD", "0.45")),
+            "max_volatility": float(os.getenv("VOLATILITY_THRESHOLD", "0.25")),
+            "min_calmar_ratio": float(os.getenv("CALMAR_THRESHOLD", "0.5")),
+            "max_mse": float(os.getenv("MSE_THRESHOLD", "0.1")),
+            "min_accuracy": float(os.getenv("ACCURACY_THRESHOLD", "0.55")),
+        }
+        
+        # Override with provided thresholds if any
+        if thresholds:
+            self.thresholds.update(thresholds)
 
     def check_strategy_performance(
         self, strategy_name: str, performance: Dict[str, float]
@@ -107,11 +115,17 @@ class PerformanceChecker:
         performance.get("calmar_ratio", 0)
         total_return = performance.get("total_return", 0)
 
+        # Load retirement thresholds from environment
+        import os
+        retire_sharpe = float(os.getenv("STRATEGY_RETIRE_SHARPE", "0.0"))
+        retire_win_rate = float(os.getenv("STRATEGY_RETIRE_WIN_RATE", "0.2"))
+        retire_return = float(os.getenv("STRATEGY_RETIRE_RETURN", "-0.2"))
+        
         should_retire = (
-            sharpe < 0
+            sharpe < retire_sharpe
             or drawdown < self.thresholds["max_drawdown"] * 2
-            or win_rate < 0.2
-            or total_return < -0.2
+            or win_rate < retire_win_rate
+            or total_return < retire_return
         )
         should_tune = (
             sharpe < self.thresholds["min_sharpe_ratio"]

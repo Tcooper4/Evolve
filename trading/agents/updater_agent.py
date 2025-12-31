@@ -82,15 +82,16 @@ class UpdaterAgent(BaseAgent):
         # Initialize sub-agents
         self.model_builder = ModelBuilderAgent()
 
-        # Update thresholds
+        # Update thresholds - configurable via environment variables
+        import os
         self.update_thresholds = {
-            "critical_sharpe": 0.0,
-            "critical_drawdown": -0.25,
-            "critical_win_rate": 0.3,
-            "retrain_sharpe": 0.3,
-            "retrain_drawdown": -0.15,
-            "tune_sharpe": 0.5,
-            "tune_drawdown": -0.10,
+            "critical_sharpe": float(os.getenv("MODEL_UPDATE_CRITICAL_SHARPE", "0.0")),
+            "critical_drawdown": float(os.getenv("MODEL_UPDATE_CRITICAL_DRAWDOWN", "-0.25")),
+            "critical_win_rate": float(os.getenv("MODEL_UPDATE_CRITICAL_WIN_RATE", "0.3")),
+            "retrain_sharpe": float(os.getenv("MODEL_UPDATE_RETRAIN_SHARPE", "0.3")),
+            "retrain_drawdown": float(os.getenv("MODEL_UPDATE_RETRAIN_DRAWDOWN", "-0.15")),
+            "tune_sharpe": float(os.getenv("MODEL_UPDATE_TUNE_SHARPE", "0.5")),
+            "tune_drawdown": float(os.getenv("MODEL_UPDATE_TUNE_DRAWDOWN", "-0.10")),
         }
 
         # Update history
@@ -431,7 +432,8 @@ class UpdaterAgent(BaseAgent):
             return "tune", "normal"
 
         # Check for ensemble weight adjustment
-        if overall_score < 0.6:
+        ensemble_threshold = float(os.getenv("MODEL_UPDATE_ENSEMBLE_THRESHOLD", "0.6"))
+        if overall_score < ensemble_threshold:
             return "ensemble_adjust", "low"
 
         return None, "low"
