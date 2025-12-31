@@ -47,6 +47,9 @@ class OrderType(Enum):
     STOP = "stop"
     STOP_LIMIT = "stop_limit"
     TRAILING_STOP = "trailing_stop"
+    TWAP = "twap"  # Time-Weighted Average Price
+    VWAP = "vwap"  # Volume-Weighted Average Price
+    ICEBERG = "iceberg"  # Iceberg order (hidden quantity)
 
 
 class OrderSide(Enum):
@@ -82,6 +85,13 @@ class OrderRequest:
     time_in_force: str = "day"
     client_order_id: Optional[str] = None
     timestamp: str = None
+    # Advanced order parameters
+    twap_duration_seconds: Optional[int] = None  # For TWAP orders
+    twap_slice_count: Optional[int] = None  # Number of slices for TWAP
+    vwap_start_time: Optional[str] = None  # For VWAP orders
+    vwap_end_time: Optional[str] = None  # For VWAP orders
+    iceberg_visible_quantity: Optional[float] = None  # For Iceberg orders
+    iceberg_reveal_quantity: Optional[float] = None  # Quantity to reveal when filled
 
 
 @dataclass
@@ -1032,6 +1042,15 @@ class BrokerAdapter:
             raise ValueError(f"Unsupported broker type: {broker_type}")
 
         self.logger = logging.getLogger(__name__)
+        
+        # Advanced order executor for TWAP/VWAP/Iceberg
+        self.advanced_executor = None
+        if config and config.get("enable_advanced_orders", True):
+            try:
+                from execution.advanced_order_executor import AdvancedOrderExecutor
+                self.advanced_executor = AdvancedOrderExecutor(self.adapter)
+            except ImportError:
+                self.logger.warning("Advanced order executor not available")
 
     async def connect(self) -> bool:
         """Connect to broker"""
@@ -1042,15 +1061,80 @@ class BrokerAdapter:
         await self.adapter.disconnect()
 
     async def submit_order(self, order: OrderRequest) -> OrderExecution:
-        """Submit order"""
-        return await self.adapter.submit_order(order)
+        """Submit order (supports advanced order types)."""
+        # Check if this is an advanced order type
+        if order.order_type in [OrderType.TWAP, OrderType.VWAP, OrderType.ICEBERG]:
+            if not self.advanced_executor:
+                # Initialize advanced executor if not already done
+                try:
+                    from execution.advanced_order_executor import AdvancedOrderExecutor
+                    self.advanced_executor = AdvancedOrderExecutor(self.adapter)
+                    await self.advanced_executor.start()
+                except ImportError:
+                    raise ValueError(
+                        f"Advanced order type {order.order_type.value} requires "
+                        "AdvancedOrderExecutor but it's not available"
+                    )
+            
+            # Submit via advanced executor
+            order_id = await self.advanced_executor.submit_advanced_order(order)
+            
+            # Return a pending execution (will be updated as slices fill)
+            return OrderExecution(
+                order_id=order.order_id,
+                ticker=order.ticker,
+                side=order.side,
+                order_type=order.order_type,
+                quantity=order.quantity,
+                price=order.price or 0.0,
+                executed_quantity=0.0,
+                average_price=0.0,
+                commission=0.0,
+                timestamp=datetime.now().isoformat(),
+                status=OrderStatus.PENDING,
+                fills=[],
+                metadata={"advanced_order": True, "order_id": order_id},
+            )
+        else:
+            # Standard order - submit directly
+            return await self.adapter.submit_order(order)
 
     async def cancel_order(self, order_id: str) -> bool:
-        """Cancel order"""
+        """Cancel order (supports advanced orders)."""
+        # Check if this is an advanced order
+        if self.advanced_executor:
+            status = self.advanced_executor.get_order_status(order_id)
+            if status:
+                # Cancel advanced order
+                return await self.advanced_executor.cancel_advanced_order(order_id)
+        
+        # Standard order cancellation
         return await self.adapter.cancel_order(order_id)
 
     async def get_order_status(self, order_id: str) -> Optional[OrderExecution]:
-        """Get order status"""
+        """Get order status (supports advanced orders)."""
+        # Check if this is an advanced order
+        if self.advanced_executor:
+            status = self.advanced_executor.get_order_status(order_id)
+            if status:
+                # Convert to OrderExecution format
+                return OrderExecution(
+                    order_id=status["order_id"],
+                    ticker=status["ticker"],
+                    side=self.adapter.get_order_status(order_id).side if hasattr(self.adapter, 'get_order_status') else OrderSide.BUY,
+                    order_type=OrderType(status["order_type"].lower()),
+                    quantity=status["total_quantity"],
+                    price=0.0,
+                    executed_quantity=status["executed_quantity"],
+                    average_price=status["average_price"],
+                    commission=0.0,
+                    timestamp=datetime.now().isoformat(),
+                    status=OrderStatus(status["status"]),
+                    fills=[],
+                    metadata={"advanced_order": True, "slices": status["slices"]},
+                )
+        
+        # Standard order status
         return await self.adapter.get_order_status(order_id)
 
     async def get_position(self, ticker: str) -> Optional[Position]:
