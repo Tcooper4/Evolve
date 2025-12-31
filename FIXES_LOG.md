@@ -1191,6 +1191,120 @@ def deploy_models(self, selected_models):
 **Breaking Changes:** None
 **Backward Compatibility:** Fully compatible - adds missing integration functionality
 
+### C24: Ensure Strategy Execution Path Has Production-Grade Correctness Checks ✅
+
+**Status:** COMPLETED
+**Date:** 2024-12-19
+**Files Created:**
+1. `trading/strategies/validation.py` (new file)
+
+**Files Modified:**
+1. `trading/strategies/strategy_runner.py` (lines 271-293)
+2. `trading/strategies/enhanced_strategy_engine.py` (lines 586-618)
+
+**Changes Made:**
+- Created `StrategyExecutionValidator` class with comprehensive validation
+- Validates signals (action, symbol, quantity, price, types)
+- Validates strategy state (initialized, data available, required methods)
+- Validates signals DataFrame (NaN, infinite, index alignment, required columns)
+- Validates execution context before running
+- Validates strategy results
+- Integrated validation into `StrategyRunner` and `EnhancedStrategyEngine`
+- No silent failures - all validation errors are logged and raised
+
+**Old Behavior:**
+```python
+# ❌ No validation - silent failures possible
+def _execute_strategy_core(self, strategy, data):
+    signals = strategy.generate_signals(data)  # No validation!
+    # Could return None, empty DataFrame, invalid values
+    performance = self._calculate_performance_metrics(data, signals)
+    return {"signals": signals, "performance": performance}
+```
+
+**New Behavior:**
+```python
+# ✅ Comprehensive validation
+def _execute_strategy_core(self, strategy, data):
+    validator = StrategyExecutionValidator()
+    
+    # Validate strategy state
+    is_valid, error = validator.validate_strategy_state(strategy)
+    if not is_valid:
+        raise ValueError(f"Strategy state validation failed: {error}")
+    
+    # Validate execution context
+    is_valid, error = validator.validate_execution_context(strategy, data)
+    if not is_valid:
+        raise ValueError(f"Execution context validation failed: {error}")
+    
+    # Execute with error handling
+    signals = strategy.generate_signals(data)
+    
+    # Validate signals
+    is_valid, error = validator.validate_signals_dataframe(signals, data)
+    if not is_valid:
+        raise ValueError(f"Signals validation failed: {error}")
+    
+    # Validate result
+    result = {"signals": signals, "performance": performance}
+    is_valid, error = validator.validate_strategy_result(result)
+    if not is_valid:
+        raise ValueError(f"Result validation failed: {error}")
+    
+    return result
+```
+
+**Validation Checks:**
+- Signal validation:
+  - Not None
+  - Required fields (action, symbol, quantity)
+  - Valid action values (buy, sell, hold, long, short)
+  - Positive quantity
+  - Valid symbol type (string, non-empty)
+  - Valid price (if present, positive, not NaN/inf)
+  
+- Strategy state validation:
+  - Strategy not None
+  - Strategy initialized
+  - Data available (not None, not empty)
+  - Required methods present (generate_signals)
+  
+- Signals DataFrame validation:
+  - Not None
+  - Is DataFrame
+  - Not empty
+  - Required columns present (signal, position)
+  - No NaN or infinite values
+  - Index alignment with data (if provided)
+  
+- Execution context validation:
+  - Strategy state valid
+  - Market data valid (DataFrame, not empty, has 'Close' column)
+  
+- Result validation:
+  - Not None
+  - Is dict
+  - Required keys present (signals)
+  - Signals valid
+
+**Line Changes:**
+- trading/strategies/validation.py:1-350 - New validation module
+- trading/strategies/strategy_runner.py:271-293 - Added validation to _execute_strategy_core
+- trading/strategies/enhanced_strategy_engine.py:586-618 - Added validation to _execute_single_strategy
+
+**Test Results:**
+- ✅ Invalid signals caught and logged
+- ✅ Invalid strategy states caught
+- ✅ Empty/None signals detected
+- ✅ NaN/infinite values detected
+- ✅ Index misalignment detected
+- ✅ No silent failures
+- ✅ Clear error messages
+
+**Breaking Changes:** None (adds safety checks, doesn't change behavior for valid inputs)
+**Backward Compatibility:** Fully compatible - validation only adds safety, doesn't change valid behavior
+
 **Key Findings:**
 1. **Current State:**
    - `PortfolioManager` can handle multiple positions (multiple symbols)
