@@ -364,23 +364,11 @@ class ModelBenchmarker:
             )
 
         except ImportError:
-            # PyTorch not available - return placeholder with warning
-            logger.warning(
-                f"PyTorch not available. Cannot benchmark {model_candidate.name}. "
-                "Install with: pip install torch"
-            )
-            return BenchmarkResult(
-                model_name=model_candidate.name,
-                mse=float("inf"),
-                mae=float("inf"),
-                r2_score=0.0,
-                sharpe_ratio=0.0,
-                max_drawdown=1.0,
-                training_time=0.0,
-                inference_time=0.0,
-                memory_usage=0.0,
-                overall_score=0.0,
-                benchmark_date=datetime.now().isoformat(),
+            # PyTorch not available - raise error instead of returning fake data
+            raise NotImplementedError(
+                f"PyTorch benchmarking not available for {model_candidate.name}. "
+                f"PyTorch is required for benchmarking {model_candidate.model_type} models. "
+                f"Install with: pip install torch"
             )
         except Exception as e:
             logger.error(
@@ -471,33 +459,17 @@ class ModelBenchmarker:
     def _benchmark_generic_model(
         self, model_candidate: ModelCandidate, X: np.ndarray, y: np.ndarray
     ) -> BenchmarkResult:
-        """Benchmark a generic model."""
-        try:
-            # For now, return a placeholder result
-            # In a full implementation, this would evaluate the generated code
-            logger.warning(
-                f"Generic model benchmarking not fully implemented for {model_candidate.name}"
-            )
-
-            return BenchmarkResult(
-                model_name=model_candidate.name,
-                mse=0.15,
-                mae=0.08,
-                r2_score=0.6,
-                sharpe_ratio=1.0,
-                max_drawdown=0.2,
-                training_time=2.0,
-                inference_time=0.02,
-                memory_usage=150.0,
-                overall_score=0.0,
-                benchmark_date="",
-            )
-
-        except Exception as e:
-            logger.error(
-                f"Error benchmarking generic model {model_candidate.name}: {e}"
-            )
-            raise
+        """Benchmark a generic model.
+        
+        Raises NotImplementedError if generic model benchmarking is not available.
+        """
+        # Generic model benchmarking is not implemented
+        # Raise error instead of returning fake data
+        raise NotImplementedError(
+            f"Generic model benchmarking not implemented for {model_candidate.name}. "
+            f"Only sklearn and PyTorch models are currently supported. "
+            f"Model type: {model_candidate.model_type}"
+        )
 
     def _calculate_trading_metrics(
         self, y_true: np.ndarray, y_pred: np.ndarray

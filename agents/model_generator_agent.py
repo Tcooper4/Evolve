@@ -845,20 +845,16 @@ class ModelBenchmarker:
     def _benchmark_generic_model(
         self, model_candidate: ModelCandidate, X: np.ndarray, y: np.ndarray
     ) -> BenchmarkResult:
-        """Benchmark generic model."""
-        # Placeholder implementation
-        return BenchmarkResult(
-            model_name=model_candidate.name,
-            mse=0.015,
-            mae=0.1,
-            r2_score=0.65,
-            sharpe_ratio=1.1,
-            max_drawdown=0.18,
-            training_time=5.0,
-            inference_time=0.002,
-            memory_usage=50.0,
-            overall_score=0.0,
-            benchmark_date=datetime.now().isoformat(),
+        """Benchmark generic model.
+        
+        Raises NotImplementedError if generic model benchmarking is not available.
+        """
+        # Generic model benchmarking is not implemented
+        # Raise error instead of returning fake data
+        raise NotImplementedError(
+            f"Generic model benchmarking not implemented for {model_candidate.name}. "
+            f"Only sklearn and PyTorch models are currently supported. "
+            f"Model type: {model_candidate.model_type}"
         )
 
     def _calculate_trading_metrics(
