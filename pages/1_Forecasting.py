@@ -28,6 +28,7 @@ from trading.models.lstm_model import LSTMModel
 from trading.models.xgboost_model import XGBoostModel
 from trading.models.prophet_model import ProphetModel
 from trading.models.arima_model import ARIMAModel
+from trading.data.preprocessing import FeatureEngineering, DataPreprocessor
 
 st.set_page_config(
     page_title="Forecasting & Market Analysis",
@@ -399,8 +400,302 @@ with tab1:
 
 with tab2:
     st.header("Advanced Forecasting")
-    st.markdown("Full model configuration and hyperparameter tuning")
-    st.info("Integration pending...")
+    st.markdown("Full model configuration with hyperparameter tuning and feature engineering")
+    
+    if st.session_state.forecast_data is None:
+        st.warning("⚠️ Please load data first in the Quick Forecast tab")
+    else:
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.subheader("⚙️ Configuration")
+            
+            # Model selection
+            model_type = st.selectbox(
+                "Model Type",
+                ["LSTM", "XGBoost", "Prophet", "ARIMA"]
+            )
+            
+            st.markdown("---")
+            st.markdown(f"**{model_type} Parameters**")
+            
+            # Model-specific hyperparameters
+            params = {}
+            
+            if model_type == "LSTM":
+                params['hidden_dim'] = st.slider("Hidden Dimension", 16, 256, 64, 16)
+                params['num_layers'] = st.slider("Number of Layers", 1, 5, 2)
+                params['dropout'] = st.slider("Dropout Rate", 0.0, 0.5, 0.2, 0.05)
+                params['learning_rate'] = st.number_input("Learning Rate", 0.0001, 0.1, 0.001, format="%.4f")
+                params['sequence_length'] = st.slider("Sequence Length", 30, 120, 60, 10)
+            
+            elif model_type == "XGBoost":
+                params['n_estimators'] = st.slider("Number of Trees", 50, 500, 100, 50)
+                params['max_depth'] = st.slider("Max Depth", 3, 15, 5, 1)
+                params['learning_rate'] = st.slider("Learning Rate", 0.01, 0.3, 0.1, 0.01)
+                params['subsample'] = st.slider("Subsample Ratio", 0.5, 1.0, 0.8, 0.1)
+                params['colsample_bytree'] = st.slider("Feature Sampling", 0.5, 1.0, 0.8, 0.1)
+            
+            elif model_type == "Prophet":
+                params['changepoint_prior_scale'] = st.slider("Changepoint Prior Scale", 0.001, 0.5, 0.05, 0.001)
+                params['seasonality_prior_scale'] = st.slider("Seasonality Prior Scale", 0.01, 10.0, 10.0, 0.1)
+                params['holidays_prior_scale'] = st.slider("Holidays Prior Scale", 0.01, 10.0, 10.0, 0.1)
+                params['seasonality_mode'] = st.selectbox("Seasonality Mode", ['additive', 'multiplicative'])
+            
+            elif model_type == "ARIMA":
+                p = st.slider("AR Order (p)", 0, 10, 5, 1)
+                d = st.slider("Differencing (d)", 0, 2, 1, 1)
+                q = st.slider("MA Order (q)", 0, 10, 0, 1)
+                params['order'] = (p, d, q)
+                params['use_auto_arima'] = st.checkbox("Use Auto ARIMA", value=True)
+            
+            st.markdown("---")
+            st.subheader("🔧 Feature Engineering")
+            
+            use_technical = st.checkbox("Add Technical Indicators", value=False)
+            indicators = []
+            if use_technical:
+                indicators = st.multiselect(
+                    "Select Indicators",
+                    ["SMA", "EMA", "RSI", "MACD", "Bollinger Bands", "ATR"],
+                    default=["SMA", "RSI"]
+                )
+            
+            use_lags = st.checkbox("Add Lag Features", value=False)
+            lag_periods = []
+            if use_lags:
+                lag_periods = st.multiselect(
+                    "Lag Periods",
+                    [1, 2, 3, 5, 7, 14, 21, 30],
+                    default=[1, 7, 14]
+                )
+            
+            normalize = st.checkbox("Normalize Data", value=True)
+            
+            train_button = st.button("🚀 Train Model", type="primary", use_container_width=True)
+        
+        with col2:
+            st.subheader("📊 Results")
+            
+            if train_button:
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                try:
+                    # Prepare data
+                    data = st.session_state.forecast_data.copy()
+                    
+                    # Ensure proper column names (capitalize for FeatureEngineering)
+                    if 'close' in data.columns:
+                        data['Close'] = data['close']
+                    if 'open' in data.columns:
+                        data['Open'] = data['open']
+                    if 'high' in data.columns:
+                        data['High'] = data['high']
+                    if 'low' in data.columns:
+                        data['Low'] = data['low']
+                    if 'volume' in data.columns:
+                        data['Volume'] = data['volume']
+                    
+                    # Ensure we have required columns
+                    if 'Open' not in data.columns:
+                        data['Open'] = data['Close']
+                    if 'High' not in data.columns:
+                        data['High'] = data['Close']
+                    if 'Low' not in data.columns:
+                        data['Low'] = data['Close']
+                    if 'Volume' not in data.columns:
+                        data['Volume'] = 1000000
+                    
+                    # Feature engineering
+                    if use_technical:
+                        status_text.text("Adding technical indicators...")
+                        progress_bar.progress(0.2)
+                        fe = FeatureEngineering()
+                        
+                        if "SMA" in indicators or "EMA" in indicators:
+                            ma_features = fe.calculate_moving_averages(data)
+                            data = pd.concat([data, ma_features], axis=1)
+                        
+                        if "RSI" in indicators:
+                            rsi_features = fe.calculate_rsi(data)
+                            data = pd.concat([data, rsi_features], axis=1)
+                        
+                        if "MACD" in indicators:
+                            macd_features = fe.calculate_macd(data)
+                            data = pd.concat([data, macd_features], axis=1)
+                        
+                        if "Bollinger Bands" in indicators:
+                            bb_features = fe.calculate_bollinger_bands(data)
+                            data = pd.concat([data, bb_features], axis=1)
+                    
+                    if use_lags:
+                        status_text.text("Adding lag features...")
+                        progress_bar.progress(0.4)
+                        for lag in lag_periods:
+                            data[f'lag_{lag}'] = data['Close'].shift(lag)
+                    
+                    # Remove NaN
+                    data = data.dropna()
+                    
+                    if len(data) < 30:
+                        st.error("Not enough data after feature engineering. Try fewer features or more historical data.")
+                        progress_bar.empty()
+                        status_text.empty()
+                    else:
+                        # Normalize
+                        if normalize:
+                            status_text.text("Normalizing data...")
+                            progress_bar.progress(0.6)
+                            preprocessor = DataPreprocessor()
+                            # Normalize only numeric columns
+                            numeric_cols = data.select_dtypes(include=[np.number]).columns
+                            for col in numeric_cols:
+                                if col != 'Close':  # Don't normalize target yet
+                                    data[col] = (data[col] - data[col].mean()) / (data[col].std() + 1e-8)
+                        
+                        # Train model
+                        status_text.text(f"Training {model_type}...")
+                        progress_bar.progress(0.8)
+                        
+                        # Create model config
+                        model_config = {
+                            "target_column": "close" if "close" in data.columns else "Close"
+                        }
+                        
+                        if model_type == "LSTM":
+                            model_config.update({
+                                "sequence_length": params.get('sequence_length', 60),
+                                "hidden_dim": params.get('hidden_dim', 64),
+                                "num_layers": params.get('num_layers', 2),
+                                "dropout": params.get('dropout', 0.2),
+                                "learning_rate": params.get('learning_rate', 0.001)
+                            })
+                            model = LSTMModel(model_config)
+                        elif model_type == "XGBoost":
+                            model_config.update({
+                                "n_estimators": params.get('n_estimators', 100),
+                                "max_depth": params.get('max_depth', 5),
+                                "learning_rate": params.get('learning_rate', 0.1),
+                                "subsample": params.get('subsample', 0.8),
+                                "colsample_bytree": params.get('colsample_bytree', 0.8)
+                            })
+                            model = XGBoostModel(model_config)
+                        elif model_type == "Prophet":
+                            model_config.update({
+                                "date_column": "ds",
+                                "target_column": "close" if "close" in data.columns else "Close",
+                                "prophet_params": {
+                                    "changepoint_prior_scale": params.get('changepoint_prior_scale', 0.05),
+                                    "seasonality_prior_scale": params.get('seasonality_prior_scale', 10.0),
+                                    "holidays_prior_scale": params.get('holidays_prior_scale', 10.0),
+                                    "seasonality_mode": params.get('seasonality_mode', 'additive')
+                                }
+                            })
+                            model = ProphetModel(model_config)
+                        elif model_type == "ARIMA":
+                            model_config.update({
+                                "order": params.get('order', (5, 1, 0)),
+                                "use_auto_arima": params.get('use_auto_arima', True)
+                            })
+                            model = ARIMAModel(model_config)
+                        
+                        # Train model
+                        if model_type == "Prophet":
+                            train_df = pd.DataFrame({
+                                'ds': data.index,
+                                'y': data[model_config["target_column"]]
+                            })
+                            fit_result = model.fit(train_df)
+                        elif model_type == "ARIMA":
+                            fit_result = model.fit(data[model_config["target_column"]])
+                        else:
+                            fit_result = model.fit(data, data[model_config["target_column"]])
+                        
+                        # Generate forecast
+                        progress_bar.progress(0.9)
+                        forecast_result = model.forecast(data, horizon=st.session_state.forecast_horizon)
+                        
+                        progress_bar.progress(1.0)
+                        status_text.text("Complete!")
+                        
+                        st.success("✅ Model trained successfully!")
+                        
+                        # Extract forecast
+                        if isinstance(forecast_result, dict):
+                            forecast_values = forecast_result.get('forecast', [])
+                            forecast_dates = forecast_result.get('dates', pd.date_range(
+                                start=data.index[-1] + timedelta(days=1),
+                                periods=st.session_state.forecast_horizon,
+                                freq='D'
+                            ))
+                        else:
+                            forecast_values = forecast_result
+                            forecast_dates = pd.date_range(
+                                start=data.index[-1] + timedelta(days=1),
+                                periods=st.session_state.forecast_horizon,
+                                freq='D'
+                            )
+                        
+                        if isinstance(forecast_values, (list, np.ndarray)):
+                            forecast_values = np.array(forecast_values).flatten()
+                        else:
+                            forecast_values = np.array([forecast_values] * st.session_state.forecast_horizon)
+                        
+                        # Store forecast
+                        forecast_df = pd.DataFrame({
+                            'forecast': forecast_values
+                        }, index=forecast_dates[:len(forecast_values)])
+                        
+                        st.session_state.advanced_forecast = forecast_df
+                        st.session_state.advanced_model = model_type
+                        
+                        # Display forecast chart
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(
+                            x=data.index,
+                            y=data[model_config["target_column"]],
+                            mode='lines',
+                            name='Historical',
+                            line=dict(color='blue', width=2)
+                        ))
+                        fig.add_trace(go.Scatter(
+                            x=forecast_df.index,
+                            y=forecast_df['forecast'],
+                            mode='lines+markers',
+                            name='Forecast',
+                            line=dict(color='red', width=2, dash='dash'),
+                            marker=dict(size=8)
+                        ))
+                        fig.update_layout(
+                            title=f"{st.session_state.symbol} - Advanced Forecast ({model_type})",
+                            xaxis_title="Date",
+                            yaxis_title="Price ($)",
+                            hovermode='x unified',
+                            height=500
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+                        # Display forecast table
+                        st.markdown("**Forecast Values:**")
+                        display_df = forecast_df.copy()
+                        display_df['forecast'] = display_df['forecast'].map('${:.2f}'.format)
+                        st.dataframe(display_df, use_container_width=True)
+                
+                except Exception as e:
+                    st.error(f"Training failed: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
+                finally:
+                    progress_bar.empty()
+                    status_text.empty()
+            
+            # Display previous forecast if exists
+            if st.session_state.get('advanced_forecast') is not None:
+                st.markdown("---")
+                st.markdown(f"**Previous Forecast ({st.session_state.get('advanced_model', 'Unknown')})**")
+                prev_forecast = st.session_state.advanced_forecast
+                st.dataframe(prev_forecast.tail(10), use_container_width=True)
 
 with tab3:
     st.header("AI Model Selection")
