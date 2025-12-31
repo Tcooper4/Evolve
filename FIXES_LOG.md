@@ -990,6 +990,57 @@ if performance_score < pipeline_threshold:
 **Breaking Changes:** None (defaults match old hardcoded values)
 **Backward Compatibility:** Fully compatible - defaults identical to old hardcoded values
 
+### C21: Add Local/Offline LLM Option ✅
+
+**Status:** COMPLETED
+**Date:** 2024-12-19
+**Files Created:**
+1. `agents/llm_providers/local_provider.py` (new file)
+
+**Files Modified:**
+1. `agents/llm_providers/__init__.py` (added LocalLLMProvider export)
+2. `agents/agent_config.py` (added local LLM configuration)
+3. `env.example` (added local LLM settings)
+
+**Changes Made:**
+- Created `LocalLLMProvider` class for Ollama integration
+- Automatic detection of Ollama availability at initialization
+- Offline LLM capability without external APIs
+- Configurable model selection (llama3, mistral, codellama, etc.)
+- Added local LLM configuration to `AgentConfig`
+- Added environment variables to `env.example` with documentation
+- Compatible with existing provider interface
+
+**Local LLM Features:**
+- Completely offline operation
+- No API keys required
+- Multiple model support via Ollama
+- Automatic availability detection
+- Compatible with existing provider interface
+- Error handling and graceful fallback
+
+**Configuration Options:**
+- `USE_LOCAL_LLM` - Enable local LLM (default: false)
+- `LOCAL_LLM_MODEL` - Model to use (default: llama3)
+- `OLLAMA_HOST` - Ollama server URL (default: http://localhost:11434)
+
+**Implementation Details:**
+- Uses Ollama API for local model inference
+- Formats messages for Ollama's prompt format
+- Supports chat completion interface matching other providers
+- Includes model listing functionality
+- Handles connection errors gracefully
+
+**Test Results:**
+- ✅ LocalLLMProvider class created
+- ✅ Ollama connection detection works
+- ✅ Chat completions interface implemented
+- ✅ Configuration integrated into AgentConfig
+- ✅ Environment variables documented
+
+**Breaking Changes:** None (local LLM is optional)
+**Backward Compatibility:** Fully compatible - local LLM is opt-in feature
+
 **Key Findings:**
 1. **Current State:**
    - `PortfolioManager` can handle multiple positions (multiple symbols)
