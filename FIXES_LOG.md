@@ -1715,3 +1715,78 @@ health = checker.check_system_health()
 **Breaking Changes:** None
 **Backward Compatibility:** Fully compatible - health checks are opt-in
 
+### C29: Implement Secrets Management ✅
+
+**Status:** COMPLETED
+**Date:** 2024-12-19
+**Files Created:**
+1. `utils/secrets.py` (new file)
+
+**Changes Made:**
+- Created `SecretsManager` class for managing API keys and secrets
+- Loads secrets from environment variables
+- Supports common trading system secrets:
+  - LLM API keys (OpenAI, Anthropic)
+  - Broker API keys (Alpaca, Binance, IBKR)
+  - Data provider keys (Polygon, Alpha Vantage, Finnhub)
+  - System secrets (Redis, Database, Flask)
+- Secret validation and status checking
+- Reload secrets from environment
+- Secure secret access (no logging of values)
+
+**Old Behavior:**
+```python
+# ❌ Direct environment access, no management
+api_key = os.getenv('OPENAI_API_KEY')
+if not api_key:
+    raise ValueError("API key not found")
+```
+
+**New Behavior:**
+```python
+# ✅ Centralized secrets management
+from utils.secrets import get_secrets_manager
+
+sm = get_secrets_manager()
+api_key = sm.get_secret('OPENAI_API_KEY')
+
+# Check if secret exists
+if sm.has_secret('OPENAI_API_KEY'):
+    # Use secret
+    pass
+
+# Validate required secrets
+validation = sm.validate_secrets(['OPENAI_API_KEY', 'ALPACA_API_KEY'])
+if not validation['valid']:
+    print(f"Missing secrets: {validation['missing']}")
+```
+
+**Secrets Manager Features:**
+- `get_secret(key)` - Get secret value
+- `set_secret(key, value)` - Set secret (for testing)
+- `has_secret(key)` - Check if secret exists
+- `validate_secrets(required_keys)` - Validate required secrets
+- `get_secret_status()` - Get status of all secrets
+- `reload_secrets()` - Reload from environment
+
+**Supported Secrets:**
+- OPENAI_API_KEY, ANTHROPIC_API_KEY
+- ALPACA_API_KEY, ALPACA_SECRET_KEY
+- POLYGON_API_KEY, ALPHA_VANTAGE_API_KEY, FINNHUB_API_KEY
+- BINANCE_API_KEY, BINANCE_SECRET_KEY
+- IBKR_USERNAME, IBKR_PASSWORD
+- REDIS_PASSWORD, DATABASE_PASSWORD
+- FLASK_SECRET_KEY
+
+**Line Changes:**
+- utils/secrets.py:1-120 - New secrets management module
+
+**Test Results:**
+- ✅ Secrets loaded from environment
+- ✅ Secret validation works
+- ✅ Status checking works
+- ✅ Reload functionality works
+
+**Breaking Changes:** None
+**Backward Compatibility:** Fully compatible - secrets management is opt-in
+
