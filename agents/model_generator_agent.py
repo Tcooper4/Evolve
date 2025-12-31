@@ -836,25 +836,11 @@ class ModelBenchmarker:
     ) -> BenchmarkResult:
         """Benchmark PyTorch model."""
         if not TORCH_AVAILABLE:
-            raise ImportError("PyTorch not available")
+            raise ImportError("PyTorch not available. Install with: pip install torch")
 
-        # This is a simplified implementation
-        # In practice, you'd implement the actual model from the candidate
-
-        # For now, return placeholder results
-        return BenchmarkResult(
-            model_name=model_candidate.name,
-            mse=0.01,
-            mae=0.08,
-            r2_score=0.75,
-            sharpe_ratio=1.5,
-            max_drawdown=0.12,
-            training_time=10.0,
-            inference_time=0.001,
-            memory_usage=100.0,
-            overall_score=0.0,
-            benchmark_date=datetime.now().isoformat(),
-        )
+        # Delegate to ModelBenchmarker for consistency
+        # This avoids code duplication and ensures consistent benchmarking
+        return self.benchmarker._benchmark_pytorch_model(model_candidate, X, y)
 
     def _benchmark_generic_model(
         self, model_candidate: ModelCandidate, X: np.ndarray, y: np.ndarray
