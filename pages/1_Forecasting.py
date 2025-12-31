@@ -30,6 +30,7 @@ from trading.models.prophet_model import ProphetModel
 from trading.models.arima_model import ARIMAModel
 from trading.data.preprocessing import FeatureEngineering, DataPreprocessor
 from trading.agents.model_selector_agent import ModelSelectorAgent
+from trading.market.market_analyzer import MarketAnalyzer
 
 st.set_page_config(
     page_title="Forecasting & Market Analysis",
@@ -1157,6 +1158,393 @@ with tab4:
 
 with tab5:
     st.header("Market Analysis")
-    st.markdown("Technical indicators and market regime detection")
-    st.info("Integration pending...")
+    st.markdown("Technical indicators, market regime detection, trend analysis, and correlation tools")
+    
+    if st.session_state.forecast_data is None:
+        st.warning("⚠️ Please load data first in the Quick Forecast tab")
+    else:
+        # Analysis options
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            show_technical = st.checkbox("Technical Indicators", value=True)
+        with col2:
+            show_regime = st.checkbox("Market Regime", value=True)
+        with col3:
+            show_trend = st.checkbox("Trend Analysis", value=True)
+        
+        analyze_button = st.button("🔍 Run Analysis", type="primary", use_container_width=True)
+        
+        if analyze_button:
+            data = st.session_state.forecast_data.copy()
+            
+            # Ensure proper column names
+            if 'close' in data.columns:
+                data['Close'] = data['close']
+            if 'open' in data.columns:
+                data['Open'] = data['open']
+            if 'high' in data.columns:
+                data['High'] = data['high']
+            if 'low' in data.columns:
+                data['Low'] = data['low']
+            if 'volume' in data.columns:
+                data['Volume'] = data['volume']
+            
+            # Ensure required columns exist
+            if 'Open' not in data.columns:
+                data['Open'] = data['Close']
+            if 'High' not in data.columns:
+                data['High'] = data['Close']
+            if 'Low' not in data.columns:
+                data['Low'] = data['Close']
+            if 'Volume' not in data.columns:
+                data['Volume'] = 1000000
+            
+            # Technical Indicators
+            if show_technical:
+                st.markdown("---")
+                st.subheader("📊 Technical Indicators")
+                
+                try:
+                    fe = FeatureEngineering()
+                    
+                    # Calculate indicators
+                    indicators_data = {}
+                    
+                    # Moving Averages
+                    ma_data = fe.calculate_moving_averages(data)
+                    indicators_data.update(ma_data.to_dict('series'))
+                    
+                    # RSI
+                    rsi_data = fe.calculate_rsi(data)
+                    indicators_data.update(rsi_data.to_dict('series'))
+                    
+                    # MACD
+                    macd_data = fe.calculate_macd(data)
+                    indicators_data.update(macd_data.to_dict('series'))
+                    
+                    # Bollinger Bands
+                    bb_data = fe.calculate_bollinger_bands(data)
+                    indicators_data.update(bb_data.to_dict('series'))
+                    
+                    # Create indicators DataFrame
+                    indicators_df = pd.DataFrame(indicators_data, index=data.index)
+                    
+                    # Display key indicators
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        if 'RSI' in indicators_df.columns:
+                            current_rsi = indicators_df['RSI'].iloc[-1]
+                            st.metric("RSI", f"{current_rsi:.2f}")
+                            if current_rsi > 70:
+                                st.warning("Overbought")
+                            elif current_rsi < 30:
+                                st.info("Oversold")
+                    
+                    with col2:
+                        if 'SMA_20' in indicators_df.columns:
+                            sma_20 = indicators_df['SMA_20'].iloc[-1]
+                            current_price = data['Close'].iloc[-1]
+                            st.metric("SMA(20)", f"${sma_20:.2f}")
+                            if current_price > sma_20:
+                                st.success("Above SMA")
+                            else:
+                                st.error("Below SMA")
+                    
+                    with col3:
+                        if 'MACD' in indicators_df.columns and 'MACD_Signal' in indicators_df.columns:
+                            macd_val = indicators_df['MACD'].iloc[-1]
+                            signal_val = indicators_df['MACD_Signal'].iloc[-1]
+                            st.metric("MACD", f"{macd_val:.2f}")
+                            if macd_val > signal_val:
+                                st.success("Bullish")
+                            else:
+                                st.error("Bearish")
+                    
+                    with col4:
+                        if 'BB_Upper' in indicators_df.columns and 'BB_Lower' in indicators_df.columns:
+                            upper = indicators_df['BB_Upper'].iloc[-1]
+                            lower = indicators_df['BB_Lower'].iloc[-1]
+                            current = data['Close'].iloc[-1]
+                            st.metric("Bollinger Position", f"{((current - lower) / (upper - lower) * 100):.1f}%")
+                    
+                    # Chart with indicators
+                    fig = make_subplots(
+                        rows=3, cols=1,
+                        subplot_titles=("Price with Moving Averages", "RSI", "MACD"),
+                        vertical_spacing=0.1,
+                        row_heights=[0.5, 0.25, 0.25]
+                    )
+                    
+                    # Price and MAs
+                    fig.add_trace(go.Scatter(
+                        x=data.index,
+                        y=data['Close'],
+                        mode='lines',
+                        name='Close Price',
+                        line=dict(color='blue', width=2)
+                    ), row=1, col=1)
+                    
+                    if 'SMA_20' in indicators_df.columns:
+                        fig.add_trace(go.Scatter(
+                            x=indicators_df.index,
+                            y=indicators_df['SMA_20'],
+                            mode='lines',
+                            name='SMA(20)',
+                            line=dict(color='orange', width=1, dash='dash')
+                        ), row=1, col=1)
+                    
+                    if 'SMA_50' in indicators_df.columns:
+                        fig.add_trace(go.Scatter(
+                            x=indicators_df.index,
+                            y=indicators_df['SMA_50'],
+                            mode='lines',
+                            name='SMA(50)',
+                            line=dict(color='red', width=1, dash='dash')
+                        ), row=1, col=1)
+                    
+                    # Bollinger Bands
+                    if 'BB_Upper' in indicators_df.columns:
+                        fig.add_trace(go.Scatter(
+                            x=indicators_df.index,
+                            y=indicators_df['BB_Upper'],
+                            mode='lines',
+                            name='BB Upper',
+                            line=dict(color='gray', width=1, dash='dot'),
+                            showlegend=False
+                        ), row=1, col=1)
+                        
+                        fig.add_trace(go.Scatter(
+                            x=indicators_df.index,
+                            y=indicators_df['BB_Lower'],
+                            mode='lines',
+                            name='BB Lower',
+                            line=dict(color='gray', width=1, dash='dot'),
+                            fill='tonexty',
+                            fillcolor='rgba(128,128,128,0.1)',
+                            showlegend=False
+                        ), row=1, col=1)
+                    
+                    # RSI
+                    if 'RSI' in indicators_df.columns:
+                        fig.add_trace(go.Scatter(
+                            x=indicators_df.index,
+                            y=indicators_df['RSI'],
+                            mode='lines',
+                            name='RSI',
+                            line=dict(color='purple', width=2)
+                        ), row=2, col=1)
+                        
+                        # Add overbought/oversold lines
+                        fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
+                        fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
+                    
+                    # MACD
+                    if 'MACD' in indicators_df.columns:
+                        fig.add_trace(go.Scatter(
+                            x=indicators_df.index,
+                            y=indicators_df['MACD'],
+                            mode='lines',
+                            name='MACD',
+                            line=dict(color='blue', width=2)
+                        ), row=3, col=1)
+                        
+                        if 'MACD_Signal' in indicators_df.columns:
+                            fig.add_trace(go.Scatter(
+                                x=indicators_df.index,
+                                y=indicators_df['MACD_Signal'],
+                                mode='lines',
+                                name='Signal',
+                                line=dict(color='red', width=2)
+                            ), row=3, col=1)
+                    
+                    fig.update_layout(height=800, showlegend=True, hovermode='x unified')
+                    fig.update_xaxes(title_text="Date", row=3, col=1)
+                    fig.update_yaxes(title_text="Price ($)", row=1, col=1)
+                    fig.update_yaxes(title_text="RSI", row=2, col=1)
+                    fig.update_yaxes(title_text="MACD", row=3, col=1)
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Indicators table
+                    with st.expander("📋 View All Indicators"):
+                        st.dataframe(indicators_df.tail(50), use_container_width=True)
+                
+                except Exception as e:
+                    st.error(f"Error calculating indicators: {str(e)}")
+            
+            # Market Regime Detection
+            if show_regime:
+                st.markdown("---")
+                st.subheader("🎯 Market Regime Detection")
+                
+                try:
+                    analyzer = MarketAnalyzer()
+                    
+                    # Detect trend regime
+                    trend_regime = analyzer.detect_market_regime(data, "trend")
+                    
+                    # Detect volatility regime
+                    volatility_regime = analyzer.detect_market_regime(data, "volatility")
+                    
+                    # Display regime information
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("**Trend Regime**")
+                        regime = trend_regime.get('regime', 'unknown')
+                        strength = trend_regime.get('strength', 0)
+                        
+                        if regime == 'up':
+                            st.success(f"📈 Uptrend (Strength: {strength:.2%})")
+                        elif regime == 'down':
+                            st.error(f"📉 Downtrend (Strength: {abs(strength):.2%})")
+                        else:
+                            st.info(f"➡️ Sideways")
+                        
+                        st.metric("MA Short (20)", f"${trend_regime.get('ma_short', 0):.2f}")
+                        st.metric("MA Long (50)", f"${trend_regime.get('ma_long', 0):.2f}")
+                    
+                    with col2:
+                        st.markdown("**Volatility Regime**")
+                        vol_regime = volatility_regime.get('regime', 'unknown')
+                        current_vol = volatility_regime.get('current_volatility', 0)
+                        
+                        if 'high' in vol_regime:
+                            st.warning(f"⚡ High Volatility ({current_vol:.2%})")
+                        elif 'low' in vol_regime:
+                            st.success(f"🔇 Low Volatility ({current_vol:.2%})")
+                        else:
+                            st.info(f"📊 Normal Volatility ({current_vol:.2%})")
+                        
+                        st.metric("Volatility Rank", f"{volatility_regime.get('volatility_rank', 0):.2%}")
+                        st.metric("Volatility Trend", volatility_regime.get('volatility_trend', 'unknown'))
+                    
+                    # Store regime in session state
+                    st.session_state.market_regime = {
+                        'trend': trend_regime,
+                        'volatility': volatility_regime
+                    }
+                
+                except Exception as e:
+                    st.error(f"Error detecting market regime: {str(e)}")
+            
+            # Trend Analysis
+            if show_trend:
+                st.markdown("---")
+                st.subheader("📈 Trend Analysis")
+                
+                try:
+                    # Calculate trend metrics
+                    returns = data['Close'].pct_change()
+                    
+                    # Short-term trend (5 days)
+                    short_trend = (data['Close'].iloc[-1] / data['Close'].iloc[-6] - 1) * 100 if len(data) >= 6 else 0
+                    
+                    # Medium-term trend (20 days)
+                    medium_trend = (data['Close'].iloc[-1] / data['Close'].iloc[-21] - 1) * 100 if len(data) >= 21 else 0
+                    
+                    # Long-term trend (full period)
+                    long_trend = (data['Close'].iloc[-1] / data['Close'].iloc[0] - 1) * 100
+                    
+                    # Volatility
+                    volatility = returns.std() * np.sqrt(252) * 100
+                    
+                    # Display metrics
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("Short-term (5d)", f"{short_trend:.2f}%", 
+                                delta=f"{short_trend:.2f}%")
+                    
+                    with col2:
+                        st.metric("Medium-term (20d)", f"{medium_trend:.2f}%",
+                                delta=f"{medium_trend:.2f}%")
+                    
+                    with col3:
+                        st.metric("Long-term (Full)", f"{long_trend:.2f}%",
+                                delta=f"{long_trend:.2f}%")
+                    
+                    with col4:
+                        st.metric("Annualized Volatility", f"{volatility:.2f}%")
+                    
+                    # Trend chart
+                    fig = go.Figure()
+                    
+                    # Price
+                    fig.add_trace(go.Scatter(
+                        x=data.index,
+                        y=data['Close'],
+                        mode='lines',
+                        name='Price',
+                        line=dict(color='blue', width=2)
+                    ))
+                    
+                    # Trend lines
+                    if len(data) >= 20:
+                        # 20-day moving average
+                        ma20 = data['Close'].rolling(20).mean()
+                        fig.add_trace(go.Scatter(
+                            x=ma20.index,
+                            y=ma20.values,
+                            mode='lines',
+                            name='MA(20)',
+                            line=dict(color='orange', width=1, dash='dash')
+                        ))
+                    
+                    if len(data) >= 50:
+                        # 50-day moving average
+                        ma50 = data['Close'].rolling(50).mean()
+                        fig.add_trace(go.Scatter(
+                            x=ma50.index,
+                            y=ma50.values,
+                            mode='lines',
+                            name='MA(50)',
+                            line=dict(color='red', width=1, dash='dash')
+                        ))
+                    
+                    fig.update_layout(
+                        title=f"{st.session_state.symbol} - Trend Analysis",
+                        xaxis_title="Date",
+                        yaxis_title="Price ($)",
+                        hovermode='x unified',
+                        height=400
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                except Exception as e:
+                    st.error(f"Error analyzing trend: {str(e)}")
+            
+            # Correlation Analysis (if multiple symbols available)
+            st.markdown("---")
+            st.subheader("🔗 Correlation Analysis")
+            st.info("Correlation analysis requires multiple symbols. Load additional data to compare.")
+            
+            # Summary
+            st.markdown("---")
+            st.subheader("📋 Analysis Summary")
+            
+            summary_data = {
+                'Metric': [],
+                'Value': []
+            }
+            
+            if show_technical and 'RSI' in locals() and 'indicators_df' in locals():
+                summary_data['Metric'].append('Current RSI')
+                summary_data['Value'].append(f"{indicators_df['RSI'].iloc[-1]:.2f}")
+            
+            if show_regime and 'trend_regime' in locals():
+                summary_data['Metric'].append('Market Regime')
+                summary_data['Value'].append(trend_regime.get('regime', 'unknown').upper())
+            
+            if show_trend:
+                summary_data['Metric'].append('Overall Trend')
+                trend_direction = "UP" if long_trend > 0 else "DOWN"
+                summary_data['Value'].append(f"{trend_direction} ({long_trend:.2f}%)")
+            
+            if summary_data['Metric']:
+                summary_df = pd.DataFrame(summary_data)
+                st.dataframe(summary_df, use_container_width=True, hide_index=True)
 
