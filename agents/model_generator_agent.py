@@ -1325,4 +1325,4 @@ def run_model_evolution_sync(
         )
     except Exception as e:
         logger.error(f"Error in model evolution: {e}")
-        return {"error": str(e)}
+        self._config = {"error": str(e)}

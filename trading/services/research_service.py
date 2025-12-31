@@ -304,4 +304,4 @@ class ResearchService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {"error": str(e)}
+            self._config = {"error": str(e)}
