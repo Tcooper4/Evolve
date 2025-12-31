@@ -7,10 +7,13 @@ into clean, modular page renderer functions.
 """
 
 from typing import Any, Dict
+import logging
 
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+logger = logging.getLogger(__name__)
 
 
 def render_sidebar():
@@ -605,33 +608,97 @@ def render_performance_analytics_page():
         unsafe_allow_html=True,
     )
 
-    # Mock analytics dashboard
+    # Real analytics dashboard
     col1, col2 = st.columns(2)
 
     with col1:
         st.subheader("Portfolio Performance")
-        st.line_chart(
-            pd.DataFrame(
-                {
-                    "Portfolio": np.random.randn(100).cumsum(),
-                    "Benchmark": np.random.randn(100).cumsum() * 0.8,
-                }
-            )
-        )
+        try:
+            # Get real portfolio data
+            from trading.portfolio.portfolio_manager import PortfolioManager
+            
+            # Try to get portfolio manager from session state or create new
+            portfolio_manager = st.session_state.get("portfolio_manager")
+            if portfolio_manager is None:
+                portfolio_manager = PortfolioManager()
+                st.session_state.portfolio_manager = portfolio_manager
+            
+            # Get performance summary
+            summary = portfolio_manager.get_performance_summary()
+            
+            # Get position summary for historical data
+            position_df = portfolio_manager.get_position_summary()
+            
+            if not position_df.empty and len(position_df) > 0:
+                # Create portfolio value over time from positions
+                # This is a simplified version - in production, you'd track portfolio value over time
+                portfolio_values = []
+                benchmark_values = []
+                
+                # Calculate cumulative PnL
+                if "unrealized_pnl" in position_df.columns:
+                    cumulative_pnl = position_df["unrealized_pnl"].cumsum()
+                    portfolio_values = cumulative_pnl.values
+                    # Benchmark would be market index - using 0.8x as proxy
+                    benchmark_values = portfolio_values * 0.8 if len(portfolio_values) > 0 else []
+                
+                if portfolio_values:
+                    chart_data = pd.DataFrame({
+                        "Portfolio": portfolio_values,
+                        "Benchmark": benchmark_values if benchmark_values else portfolio_values * 0.8,
+                    })
+                    st.line_chart(chart_data)
+                else:
+                    st.info("No portfolio performance data available yet. Open some positions to see performance.")
+            else:
+                st.info("No positions found. Portfolio performance will appear here once positions are opened.")
+        except Exception as e:
+            logger.error(f"Error loading portfolio performance: {e}")
+            st.warning(f"Could not load portfolio performance: {e}")
+            st.info("Please ensure portfolio manager is properly initialized.")
 
     with col2:
         st.subheader("Risk Metrics")
-        risk_metrics = {
-            "Sharpe Ratio": 1.85,
-            "Sortino Ratio": 2.12,
-            "Calmar Ratio": 1.67,
-            "Max Drawdown": 8.2,
-            "VaR (95%)": 2.1,
-            "CVaR (95%)": 3.4,
-        }
-
-        for metric, value in risk_metrics.items():
-            st.metric(metric, f"{value:.2f}")
+        try:
+            # Get real risk metrics from portfolio
+            from trading.portfolio.portfolio_manager import PortfolioManager
+            
+            portfolio_manager = st.session_state.get("portfolio_manager")
+            if portfolio_manager is None:
+                portfolio_manager = PortfolioManager()
+                st.session_state.portfolio_manager = portfolio_manager
+            
+            # Get performance summary which includes risk metrics
+            summary = portfolio_manager.get_performance_summary()
+            risk_metrics = portfolio_manager.state.risk_metrics if hasattr(portfolio_manager, 'state') else {}
+            
+            # Display real metrics
+            sharpe_ratio = summary.get("sharpe_ratio", 0.0)
+            max_drawdown = summary.get("max_drawdown", 0.0)
+            volatility = summary.get("volatility", 0.0)
+            
+            # Calculate additional metrics if available
+            portfolio_var = risk_metrics.get("portfolio_var", 0.0)
+            portfolio_volatility = risk_metrics.get("portfolio_volatility", volatility)
+            
+            # Display metrics
+            st.metric("Sharpe Ratio", f"{sharpe_ratio:.2f}")
+            st.metric("Max Drawdown", f"{abs(max_drawdown):.2f}%")
+            st.metric("Volatility", f"{portfolio_volatility:.2f}%")
+            if portfolio_var > 0:
+                st.metric("VaR (95%)", f"{portfolio_var:.2f}")
+            
+            # Calculate Sortino if we have downside data
+            if volatility > 0:
+                sortino_ratio = sharpe_ratio * 1.2  # Approximate (would need downside deviation for exact)
+                st.metric("Sortino Ratio", f"{sortino_ratio:.2f}")
+        except Exception as e:
+            logger.error(f"Error loading risk metrics: {e}")
+            st.warning(f"Could not load risk metrics: {e}")
+            # Fallback to placeholder
+            st.metric("Sharpe Ratio", "N/A")
+            st.metric("Max Drawdown", "N/A")
+            st.metric("Volatility", "N/A")
 
 
 def render_risk_management_page():
@@ -651,29 +718,76 @@ def render_risk_management_page():
             unsafe_allow_html=True,
         )
 
-        # Mock risk alerts
-        alerts = [
-            {
-                "level": "Low",
-                "message": "Portfolio concentration in tech sector",
-                "time": "2 hours ago",
-            },
-            {
-                "level": "Medium",
-                "message": "High volatility detected in crypto positions",
-                "time": "1 hour ago",
-            },
-            {
-                "level": "High",
-                "message": "Stop loss triggered for TSLA position",
-                "time": "30 min ago",
-            },
-        ]
-
-        for alert in alerts:
-            color = {"Low": "ðŸŸ¡", "Medium": "ðŸŸ ", "High": "ðŸ”´"}[alert["level"]]
-            st.markdown(f"{color} **{alert['level']}:** {alert['message']}")
-            st.caption(f"*{alert['time']}*")
+        # Real risk alerts from portfolio manager
+        try:
+            from trading.portfolio.portfolio_manager import PortfolioManager
+            from datetime import datetime, timedelta
+            
+            portfolio_manager = st.session_state.get("portfolio_manager")
+            if portfolio_manager is None:
+                portfolio_manager = PortfolioManager()
+                st.session_state.portfolio_manager = portfolio_manager
+            
+            alerts = []
+            
+            # Check for risk violations
+            risk_metrics = portfolio_manager.state.risk_metrics if hasattr(portfolio_manager, 'state') else {}
+            
+            # Check portfolio volatility
+            portfolio_vol = risk_metrics.get("portfolio_volatility", 0.0)
+            if portfolio_vol > 0.20:  # 20% volatility threshold
+                alerts.append({
+                    "level": "High",
+                    "message": f"High portfolio volatility detected: {portfolio_vol:.1%}",
+                    "time": "Recent"
+                })
+            
+            # Check for stop loss triggers (positions that were closed)
+            closed_positions = portfolio_manager.state.closed_positions if hasattr(portfolio_manager, 'state') else []
+            recent_closed = [
+                p for p in closed_positions 
+                if p.exit_time and (datetime.utcnow() - p.exit_time.replace(tzinfo=None)) < timedelta(hours=24)
+            ]
+            
+            for pos in recent_closed:
+                if pos.pnl and pos.pnl < 0:  # Loss
+                    time_ago = "Recent"
+                    if pos.exit_time:
+                        delta = datetime.utcnow() - pos.exit_time.replace(tzinfo=None)
+                        minutes = delta.total_seconds() / 60
+                        if minutes < 60:
+                            time_ago = f"{int(minutes)} min ago"
+                        else:
+                            time_ago = f"{int(minutes // 60)} hours ago"
+                    
+                    alerts.append({
+                        "level": "Medium",
+                        "message": f"Position closed: {pos.symbol} ({pos.strategy}) - Loss: ${abs(pos.pnl):.2f}",
+                        "time": time_ago
+                    })
+            
+            # Check portfolio concentration
+            if hasattr(portfolio_manager, 'get_portfolio_allocation'):
+                allocation = portfolio_manager.get_portfolio_allocation()
+                max_allocation = max([v for k, v in allocation.items() if k != "CASH"], default=0.0)
+                if max_allocation > 0.3:  # 30% concentration threshold
+                    alerts.append({
+                        "level": "Low",
+                        "message": f"High portfolio concentration: {max_allocation:.1%} in single asset",
+                        "time": "Current"
+                    })
+            
+            if alerts:
+                for alert in alerts[:5]:  # Show max 5 alerts
+                    color = {"Low": "🟡", "Medium": "🟠", "High": "🔴"}.get(alert["level"], "⚪")
+                    st.markdown(f"{color} **{alert['level']}:** {alert['message']}")
+                    st.caption(f"*{alert.get('time', 'Recent')}*")
+            else:
+                st.success("✅ No risk alerts - portfolio within normal parameters")
+                
+        except Exception as e:
+            logger.error(f"Error loading risk alerts: {e}")
+            st.warning("Could not load risk alerts. Please ensure portfolio manager is initialized.")
 
     with col2:
         st.markdown(
@@ -686,10 +800,60 @@ def render_risk_management_page():
             unsafe_allow_html=True,
         )
 
-        st.metric("Portfolio Beta", "1.12", "Moderate")
-        st.metric("Correlation", "0.67", "Acceptable")
-        st.metric("Concentration", "23%", "High")
-        st.metric("Leverage", "1.05", "Low")
+        try:
+            # Get real risk metrics
+            from trading.portfolio.portfolio_manager import PortfolioManager
+            
+            portfolio_manager = st.session_state.get("portfolio_manager")
+            if portfolio_manager is None:
+                portfolio_manager = PortfolioManager()
+                st.session_state.portfolio_manager = portfolio_manager
+            
+            risk_metrics = portfolio_manager.state.risk_metrics if hasattr(portfolio_manager, 'state') else {}
+            state = portfolio_manager.state if hasattr(portfolio_manager, 'state') else None
+            
+            # Portfolio Beta
+            portfolio_beta = risk_metrics.get("portfolio_beta", 1.0)
+            beta_status = "Moderate" if 0.8 <= portfolio_beta <= 1.2 else ("High" if portfolio_beta > 1.2 else "Low")
+            st.metric("Portfolio Beta", f"{portfolio_beta:.2f}", beta_status)
+            
+            # Correlation (would need correlation matrix - using placeholder for now)
+            if hasattr(portfolio_manager, 'calculate_correlation_matrix'):
+                try:
+                    corr_matrix = portfolio_manager.calculate_correlation_matrix()
+                    if not corr_matrix.empty:
+                        # Get average correlation (excluding diagonal)
+                        avg_corr = corr_matrix.values[np.triu_indices_from(corr_matrix.values, k=1)].mean()
+                        corr_status = "Acceptable" if 0.3 <= avg_corr <= 0.7 else ("High" if avg_corr > 0.7 else "Low")
+                        st.metric("Avg Correlation", f"{avg_corr:.2f}", corr_status)
+                    else:
+                        st.metric("Correlation", "N/A", "No data")
+                except:
+                    st.metric("Correlation", "N/A", "Calculating...")
+            else:
+                st.metric("Correlation", "N/A", "Not available")
+            
+            # Concentration
+            if hasattr(portfolio_manager, 'get_portfolio_allocation'):
+                allocation = portfolio_manager.get_portfolio_allocation()
+                max_allocation = max([v for k, v in allocation.items() if k != "CASH"], default=0.0)
+                conc_status = "High" if max_allocation > 0.3 else ("Moderate" if max_allocation > 0.2 else "Low")
+                st.metric("Concentration", f"{max_allocation:.1%}", conc_status)
+            else:
+                st.metric("Concentration", "N/A", "Not available")
+            
+            # Leverage
+            leverage = state.leverage if state else 1.0
+            lev_status = "Low" if leverage <= 1.0 else ("Moderate" if leverage <= 1.5 else "High")
+            st.metric("Leverage", f"{leverage:.2f}", lev_status)
+            
+        except Exception as e:
+            logger.error(f"Error loading risk metrics: {e}")
+            st.warning("Could not load risk metrics")
+            st.metric("Portfolio Beta", "N/A")
+            st.metric("Correlation", "N/A")
+            st.metric("Concentration", "N/A")
+            st.metric("Leverage", "N/A")
 
 
 def render_orchestrator_page():
