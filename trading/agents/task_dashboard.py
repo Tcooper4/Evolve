@@ -27,11 +27,7 @@ class TaskDashboard:
         self.task_memory = task_memory
         self._setup_session_state()
 
-        return {
-            "success": True,
-            "message": "Task dashboard initialized",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def _setup_session_state(self):
         """Setup Streamlit session state variables."""

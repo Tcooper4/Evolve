@@ -56,11 +56,7 @@ class ReturnStatementFixer:
             "*.zip",
         }
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def should_scan_file(self, filepath: Path) -> bool:
         """Check if file should be scanned."""

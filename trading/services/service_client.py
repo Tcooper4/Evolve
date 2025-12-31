@@ -41,11 +41,7 @@ class ServiceClient:
 
         logger.info("ServiceClient initialized")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def send_request(
         self,

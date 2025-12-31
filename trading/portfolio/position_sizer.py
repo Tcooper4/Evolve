@@ -178,11 +178,7 @@ class PositionSizer:
             f"PositionSizer initialized with strategy: {self.config['default_strategy'].value}"
         )
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def calculate_position_size(
         self,

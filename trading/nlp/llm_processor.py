@@ -50,11 +50,7 @@ class LLMProcessor:
 
         logger.info("LLMProcessor initialized with moderation categories")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def process(self, prompt: str) -> str:
         """Process a prompt and get response.

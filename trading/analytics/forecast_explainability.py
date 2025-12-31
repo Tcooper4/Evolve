@@ -105,11 +105,7 @@ class IntelligentForecastExplainability:
 
         logger.info("Intelligent Forecast Explainability initialized successfully")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def calculate_confidence_intervals(
         self, predictions: np.ndarray, method: str = "bootstrap", **kwargs

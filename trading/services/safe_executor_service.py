@@ -50,10 +50,7 @@ class SafeExecutorService(BaseService):
             self.memory = AgentMemory()
 
             logger.info("SafeExecutorService initialized")
-            return {
-                "status": "success",
-                "message": "SafeExecutorService initialized successfully",
-            }
+            # Removed return statement - __init__ should not return values
         except Exception as e:
             logger.error(f"Error initializing SafeExecutorService: {e}")
             return {

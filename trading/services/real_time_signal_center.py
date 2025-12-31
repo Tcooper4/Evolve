@@ -128,11 +128,7 @@ class RealTimeSignalCenter:
 
         logger.info("Real-Time Signal Center initialized successfully")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def _initialize_default_alerts(self):
         """Initialize default alert configurations."""

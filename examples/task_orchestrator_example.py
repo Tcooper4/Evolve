@@ -48,12 +48,7 @@ class MockAgent:
         await asyncio.sleep(2)  # Simulate work
 
         if self.success_rate > 0.8:
-            return {
-                "status": "success",
-                "models_improved": 3,
-                "performance_gain": 0.05,
-                "execution_time": 2.0,
-            }
+            # Removed return statement - __init__ should not return values
         else:
             raise Exception("Model innovation failed")
 

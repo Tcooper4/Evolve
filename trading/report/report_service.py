@@ -76,11 +76,7 @@ class ReportService:
 
         logger.info(f"ReportService initialized: {service_name}")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def start(self):
         """Start the report service."""

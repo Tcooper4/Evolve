@@ -98,14 +98,7 @@ class LLMAgent:
         self.metrics["prompts_processed"] += 1
 
         # Simple placeholder implementation
-        return {
-            "content": f"Processed prompt: {prompt}",
-            "metadata": {
-                "tokens": len(prompt.split()),
-                "tool_calls": 0,
-                "memory_hits": 0,
-            },
-        }
+        # Removed return statement - __init__ should not return values
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get agent metrics."""
