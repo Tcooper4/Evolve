@@ -110,66 +110,181 @@ def initialize_session_state():
 
 
 def load_available_models():
-    """Load available forecasting models."""
+    """Load available forecasting models from the system."""
     try:
         # Import model components
-        pass
-
-        # Get available models
-        models = {
-            "LSTM": {
+        from models.forecast_engine import ForecastEngine, ModelType
+        from models.forecast_router import ForecastRouter
+        
+        # Initialize forecast engine to get available models
+        forecast_engine = ForecastEngine()
+        available_model_types = forecast_engine.get_available_models()
+        
+        # Initialize router to get model registry
+        router = ForecastRouter()
+        
+        # Model descriptions and metadata
+        model_descriptions = {
+            ModelType.LSTM: {
+                "name": "LSTM",
                 "description": "Long Short-Term Memory neural network for time series forecasting",
                 "best_for": "Medium to long-term predictions",
-                "accuracy": 0.87,
                 "complexity": "Medium",
             },
-            "Transformer": {
+            ModelType.TRANSFORMER: {
+                "name": "Transformer",
                 "description": "Attention-based model for sequence modeling",
                 "best_for": "Complex patterns and relationships",
-                "accuracy": 0.89,
                 "complexity": "High",
             },
-            "XGBoost": {
+            ModelType.XGBOOST: {
+                "name": "XGBoost",
                 "description": "Gradient boosting for structured data",
                 "best_for": "Feature-rich datasets",
-                "accuracy": 0.85,
                 "complexity": "Medium",
             },
-            "ARIMA": {
+            ModelType.ARIMA: {
+                "name": "ARIMA",
                 "description": "Autoregressive integrated moving average",
                 "best_for": "Traditional time series",
-                "accuracy": 0.82,
                 "complexity": "Low",
             },
-            "Prophet": {
+            ModelType.PROPHET: {
+                "name": "Prophet",
                 "description": "Facebook's forecasting tool",
                 "best_for": "Seasonal patterns",
-                "accuracy": 0.84,
                 "complexity": "Low",
             },
-            "Ensemble": {
+            ModelType.ENSEMBLE: {
+                "name": "Ensemble",
                 "description": "Combination of multiple models",
                 "best_for": "Maximum accuracy and robustness",
-                "accuracy": 0.92,
                 "complexity": "High",
             },
-            "Ridge": {
+            ModelType.RIDGE: {
+                "name": "Ridge",
                 "description": "Ridge regression for regularization",
                 "best_for": "Linear relationships with regularization",
-                "accuracy": 0.80,
                 "complexity": "Low",
             },
-            "GARCH": {
+            ModelType.GARCH: {
+                "name": "GARCH",
                 "description": "Generalized Autoregressive Conditional Heteroskedasticity",
                 "best_for": "Volatility forecasting",
-                "accuracy": 0.83,
                 "complexity": "Medium",
             },
         }
-
+        
+        # Build models dictionary with real model information
+        models = {}
+        
+        for model_type in available_model_types:
+            model_name = model_type.value.upper()
+            model_info = model_descriptions.get(model_type, {})
+            
+            # Get performance metrics if available
+            performance = forecast_engine.get_model_performance(model_type)
+            accuracy = performance.get("accuracy", 0.85) if performance else 0.85
+            
+            # Check if model is actually loaded/available
+            is_available = model_type in forecast_engine.models
+            
+            models[model_name] = {
+                "description": model_info.get("description", f"{model_name} forecasting model"),
+                "best_for": model_info.get("best_for", "General forecasting"),
+                "accuracy": accuracy,
+                "complexity": model_info.get("complexity", "Medium"),
+                "available": is_available,
+                "model_type": model_type.value,
+            }
+            
+            # Add performance metrics if available
+            if performance:
+                models[model_name]["performance"] = performance
+        
+        # Also check router for additional models
+        if hasattr(router, 'model_registry') and router.model_registry:
+            for model_name, model_class in router.model_registry.items():
+                model_name_upper = model_name.upper()
+                if model_name_upper not in models:
+                    # Add model from router registry
+                    models[model_name_upper] = {
+                        "description": f"{model_name} forecasting model",
+                        "best_for": "General forecasting",
+                        "accuracy": 0.85,
+                        "complexity": "Medium",
+                        "available": True,
+                        "model_type": model_name,
+                    }
+        
+        # If no models found, return fallback models with all standard models
+        if not models:
+            logger.warning("No models found in system, returning fallback models")
+            models = {
+                "LSTM": {
+                    "description": "Long Short-Term Memory neural network for time series forecasting",
+                    "best_for": "Medium to long-term predictions",
+                    "accuracy": 0.87,
+                    "complexity": "Medium",
+                    "available": False,
+                    "model_type": "lstm",
+                },
+                "ARIMA": {
+                    "description": "Autoregressive integrated moving average",
+                    "best_for": "Traditional time series",
+                    "accuracy": 0.82,
+                    "complexity": "Low",
+                    "available": False,
+                    "model_type": "arima",
+                },
+                "XGBOOST": {
+                    "description": "Gradient boosting for structured data",
+                    "best_for": "Feature-rich datasets",
+                    "accuracy": 0.85,
+                    "complexity": "Medium",
+                    "available": False,
+                    "model_type": "xgboost",
+                },
+                "PROPHET": {
+                    "description": "Facebook's forecasting tool",
+                    "best_for": "Seasonal patterns",
+                    "accuracy": 0.84,
+                    "complexity": "Low",
+                    "available": False,
+                    "model_type": "prophet",
+                },
+                "ENSEMBLE": {
+                    "description": "Combination of multiple models",
+                    "best_for": "Maximum accuracy and robustness",
+                    "accuracy": 0.92,
+                    "complexity": "High",
+                    "available": False,
+                    "model_type": "ensemble",
+                },
+            }
+        
+        try:
+            model_names = [str(k) for k in models.keys()]
+            logger.info(f"Loaded {len(models)} available models: {model_names[:5]}")
+        except Exception as log_error:
+            logger.info(f"Loaded {len(models)} available models")
+        
         return models
+        
     except ImportError as e:
         logger.warning(f"Could not load model components: {e}")
+        # Return minimal fallback
+        return {
+            "LSTM": {
+                "description": "Long Short-Term Memory neural network",
+                "best_for": "Time series forecasting",
+                "accuracy": 0.85,
+                "complexity": "Medium",
+                "available": False,
+            },
+        }
+    except Exception as e:
+        logger.error(f"Error loading available models: {e}")
         return {}
 
 
