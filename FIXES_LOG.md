@@ -696,6 +696,60 @@ None yet.
 **Breaking Changes:** None
 **Backward Compatibility:** Fully compatible - new order types are optional, existing orders unchanged
 
+---
+
+## Phase 3: Configuration & Quality (C16-C25)
+
+### C16: Fix RL Environment Look-Ahead Bias ✅
+
+**Status:** COMPLETED
+**Date:** 2024-12-19
+**Files Modified:**
+1. `rl/rl_trader.py` (lines 70-88, 110-165)
+2. `trading/agents/rl_trainer.py` (lines 87-144)
+
+**Changes Made:**
+- Removed `next_price` from reward calculation (look-ahead bias)
+- Reward now based on realized PnL from previous step
+- Added state tracking: `last_price`, `last_shares`, `last_action`
+- Reward uses only historical data (current_price - last_price) * last_position
+- Fixed both TradingEnvironment classes
+
+**Old Behavior:**
+```python
+# ❌ Used future price in reward
+next_price = self.data.iloc[self.current_step + 1]["Close"]
+reward = (next_price - current_price) * shares  # Look-ahead bias!
+```
+
+**New Behavior:**
+```python
+# ✅ Uses only past data
+if self.last_price is not None and self.last_shares > 0:
+    price_change = (current_price - self.last_price) / self.last_price
+    reward = price_change * self.last_shares * self.last_price
+```
+
+**Key Principle:**
+- Reward at time `t` can only use data up to time `t-1`
+- Cannot use `next_price`, `future_return`, or any forward-looking data
+- Reward is based on what ALREADY happened, not what WILL happen
+
+**Line Changes:**
+- rl/rl_trader.py:70-88 - Added state tracking in reset()
+- rl/rl_trader.py:110-165 - Fixed _execute_action() to use past data only
+- trading/agents/rl_trainer.py:87-101 - Added state tracking in reset()
+- trading/agents/rl_trainer.py:120-144 - Fixed step() to use past data only
+
+**Test Results:**
+- ✅ Reward calculation uses only past data
+- ✅ No look-ahead bias in reward function
+- ✅ State tracking works correctly
+- ✅ RL training is now valid (agents need retraining with correct rewards)
+
+**Breaking Changes:** None (RL agents need retraining with correct rewards)
+**Backward Compatibility:** Fully compatible - reward calculation improved, no API changes
+
 **Key Findings:**
 1. **Current State:**
    - `PortfolioManager` can handle multiple positions (multiple symbols)
