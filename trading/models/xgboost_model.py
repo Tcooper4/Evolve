@@ -132,6 +132,11 @@ class XGBoostModel(BaseModel):
 
             import yaml
 
+            # Get GPU configuration if available
+            from trading.utils.gpu_utils import get_xgboost_device
+            
+            gpu_config = get_xgboost_device()
+
             # Default hyperparameters
             default_params = {
                 "n_estimators": 100,
@@ -143,6 +148,9 @@ class XGBoostModel(BaseModel):
                 "objective": "reg:squarederror",
                 "eval_metric": "rmse",
             }
+            
+            # Add GPU configuration if available
+            default_params.update(gpu_config)
 
             # Try to load from config file
             config_paths = [
