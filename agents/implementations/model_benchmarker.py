@@ -263,31 +263,210 @@ class ModelBenchmarker:
     ) -> BenchmarkResult:
         """Benchmark a PyTorch model."""
         try:
-            # For now, return a placeholder result
-            # In a full implementation, this would create and train the PyTorch model
-            logger.warning(
-                f"PyTorch benchmarking not fully implemented for {model_candidate.name}"
+            # Check if PyTorch is available
+            try:
+                import torch
+                import torch.nn as nn
+                import torch.optim as optim
+                from torch.utils.data import DataLoader, TensorDataset
+                from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+                from sklearn.model_selection import train_test_split
+            except ImportError:
+                logger.warning("PyTorch not available. Install with: pip install torch")
+                raise ImportError("PyTorch not available")
+
+            # Split data
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42
             )
+
+            # Get model parameters from hyperparameters or use defaults
+            input_dim = X_train.shape[1]
+            hidden_dim = model_candidate.hyperparameters.get("hidden_dim", 64)
+            num_layers = model_candidate.hyperparameters.get("num_layers", 2)
+            output_dim = 1
+            dropout = model_candidate.hyperparameters.get("dropout", 0.2)
+            learning_rate = model_candidate.hyperparameters.get("learning_rate", 0.001)
+            epochs = model_candidate.hyperparameters.get("epochs", 50)
+            batch_size = model_candidate.hyperparameters.get("batch_size", 32)
+
+            # Create model based on type
+            model_type = model_candidate.model_type.lower()
+            if "lstm" in model_type:
+                model = self._create_lstm_model(input_dim, hidden_dim, num_layers, output_dim, dropout)
+            elif "transformer" in model_type or "attention" in model_type:
+                model = self._create_transformer_model(input_dim, hidden_dim, output_dim, dropout)
+            else:
+                # Default to a simple feedforward network
+                model = self._create_feedforward_model(input_dim, hidden_dim, output_dim, dropout)
+
+            # Move to GPU if available
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            model = model.to(device)
+
+            # Prepare data
+            X_train_tensor = torch.FloatTensor(X_train).to(device)
+            y_train_tensor = torch.FloatTensor(y_train.reshape(-1, 1)).to(device)
+            X_test_tensor = torch.FloatTensor(X_test).to(device)
+            y_test_tensor = torch.FloatTensor(y_test).to(device)
+
+            # Create data loaders
+            train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+            train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+            # Loss and optimizer
+            criterion = nn.MSELoss()
+            optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+            # Train model
+            train_start = time.time()
+            model.train()
+            for epoch in range(epochs):
+                for batch_X, batch_y in train_loader:
+                    optimizer.zero_grad()
+                    outputs = model(batch_X)
+                    loss = criterion(outputs, batch_y)
+                    loss.backward()
+                    optimizer.step()
+            training_time = time.time() - train_start
+
+            # Evaluate model
+            model.eval()
+            inference_start = time.time()
+            with torch.no_grad():
+                y_pred_tensor = model(X_test_tensor)
+                y_pred = y_pred_tensor.cpu().numpy().flatten()
+            inference_time = time.time() - inference_start
+
+            # Calculate metrics
+            mse = mean_squared_error(y_test, y_pred)
+            mae = mean_absolute_error(y_test, y_pred)
+            r2 = r2_score(y_test, y_pred)
+
+            # Calculate trading metrics
+            sharpe_ratio, max_drawdown = self._calculate_trading_metrics(y_test, y_pred)
+
+            # Measure memory usage
+            memory_usage = psutil.Process().memory_info().rss / 1024 / 1024  # MB
 
             return BenchmarkResult(
                 model_name=model_candidate.name,
-                mse=0.1,
-                mae=0.05,
-                r2_score=0.7,
-                sharpe_ratio=1.2,
-                max_drawdown=0.15,
-                training_time=1.0,
-                inference_time=0.01,
-                memory_usage=100.0,
-                overall_score=0.0,
+                mse=mse,
+                mae=mae,
+                r2_score=r2,
+                sharpe_ratio=sharpe_ratio,
+                max_drawdown=max_drawdown,
+                training_time=training_time,
+                inference_time=inference_time,
+                memory_usage=memory_usage,
+                overall_score=0.0,  # Will be calculated later
                 benchmark_date="",
             )
 
+        except ImportError:
+            # PyTorch not available - return placeholder with warning
+            logger.warning(
+                f"PyTorch not available. Cannot benchmark {model_candidate.name}. "
+                "Install with: pip install torch"
+            )
+            return BenchmarkResult(
+                model_name=model_candidate.name,
+                mse=float("inf"),
+                mae=float("inf"),
+                r2_score=0.0,
+                sharpe_ratio=0.0,
+                max_drawdown=1.0,
+                training_time=0.0,
+                inference_time=0.0,
+                memory_usage=0.0,
+                overall_score=0.0,
+                benchmark_date=datetime.now().isoformat(),
+            )
         except Exception as e:
             logger.error(
                 f"Error benchmarking PyTorch model {model_candidate.name}: {e}"
             )
             raise
+
+    def _create_lstm_model(
+        self, input_dim: int, hidden_dim: int, num_layers: int, output_dim: int, dropout: float
+    ):
+        """Create an LSTM model."""
+        import torch.nn as nn
+
+        class LSTMModel(nn.Module):
+            def __init__(self, input_dim, hidden_dim, num_layers, output_dim, dropout):
+                super(LSTMModel, self).__init__()
+                self.hidden_dim = hidden_dim
+                self.num_layers = num_layers
+                # Reshape input for LSTM (batch, seq_len, features)
+                # For time series, we'll use a sequence length of 1 with all features
+                self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, dropout=dropout if num_layers > 1 else 0)
+                self.fc = nn.Linear(hidden_dim, output_dim)
+                self.dropout = nn.Dropout(dropout)
+
+            def forward(self, x):
+                # Reshape for LSTM: (batch, features) -> (batch, 1, features)
+                x = x.unsqueeze(1)
+                lstm_out, _ = self.lstm(x)
+                lstm_out = self.dropout(lstm_out[:, -1, :])
+                out = self.fc(lstm_out)
+                return out
+
+        return LSTMModel(input_dim, hidden_dim, num_layers, output_dim, dropout)
+
+    def _create_transformer_model(
+        self, input_dim: int, hidden_dim: int, output_dim: int, dropout: float
+    ):
+        """Create a simple transformer model."""
+        import torch.nn as nn
+
+        class TransformerModel(nn.Module):
+            def __init__(self, input_dim, hidden_dim, output_dim, dropout):
+                super(TransformerModel, self).__init__()
+                self.input_projection = nn.Linear(input_dim, hidden_dim)
+                encoder_layer = nn.TransformerEncoderLayer(
+                    d_model=hidden_dim, nhead=4, dim_feedforward=hidden_dim * 2, dropout=dropout, batch_first=True
+                )
+                self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=2)
+                self.fc = nn.Linear(hidden_dim, output_dim)
+                self.dropout = nn.Dropout(dropout)
+
+            def forward(self, x):
+                # Reshape for transformer: (batch, features) -> (batch, 1, features)
+                x = x.unsqueeze(1)
+                x = self.input_projection(x)
+                x = self.transformer(x)
+                x = self.dropout(x[:, -1, :])
+                out = self.fc(x)
+                return out
+
+        return TransformerModel(input_dim, hidden_dim, output_dim, dropout)
+
+    def _create_feedforward_model(
+        self, input_dim: int, hidden_dim: int, output_dim: int, dropout: float
+    ):
+        """Create a feedforward neural network."""
+        import torch.nn as nn
+
+        class FeedforwardModel(nn.Module):
+            def __init__(self, input_dim, hidden_dim, output_dim, dropout):
+                super(FeedforwardModel, self).__init__()
+                self.fc1 = nn.Linear(input_dim, hidden_dim)
+                self.fc2 = nn.Linear(hidden_dim, hidden_dim // 2)
+                self.fc3 = nn.Linear(hidden_dim // 2, output_dim)
+                self.dropout = nn.Dropout(dropout)
+                self.relu = nn.ReLU()
+
+            def forward(self, x):
+                x = self.relu(self.fc1(x))
+                x = self.dropout(x)
+                x = self.relu(self.fc2(x))
+                x = self.dropout(x)
+                x = self.fc3(x)
+                return x
+
+        return FeedforwardModel(input_dim, hidden_dim, output_dim, dropout)
 
     def _benchmark_generic_model(
         self, model_candidate: ModelCandidate, X: np.ndarray, y: np.ndarray
