@@ -177,6 +177,11 @@ class PortfolioManager:
         self.performance_logger = PerformanceLogger()
         self.llm_interface = LLMInterface(self.config.get("llm_config"))
 
+        # Multi-asset portfolio support
+        self.symbols: List[str] = []
+        if "symbols" in self.config:
+            self.symbols = self.config["symbols"] if isinstance(self.config["symbols"], list) else [self.config["symbols"]]
+
         # Initialize state
         self.state = PortfolioState(
             timestamp=datetime.utcnow(),
@@ -195,6 +200,7 @@ class PortfolioManager:
         )
 
         # Set up logging
+        self.logger = logger  # Use module-level logger
         self.logger.setLevel(logging.INFO)
 
         # Create necessary directories with safety guards
@@ -866,6 +872,176 @@ class PortfolioManager:
                 "total_pnl": 0.0,
                 "sharpe_ratio": 0.0,
             }
+
+    def initialize_portfolio(
+        self, symbols: List[str], initial_capital: Optional[float] = None
+    ) -> None:
+        """Initialize portfolio with multiple symbols.
+
+        Args:
+            symbols: List of trading symbols to track
+            initial_capital: Initial capital (uses existing if None)
+        """
+        if not isinstance(symbols, list):
+            raise ValueError("symbols must be a list of strings")
+        
+        if not all(isinstance(s, str) for s in symbols):
+            raise ValueError("All symbols must be strings")
+        
+        self.symbols = symbols
+        
+        if initial_capital is not None:
+            self.state.cash = initial_capital
+            self.state.equity = initial_capital
+            self.state.available_capital = initial_capital
+        
+        logger.info(f"Initialized portfolio with {len(symbols)} symbols: {symbols}")
+
+    def get_symbols(self) -> List[str]:
+        """Get list of portfolio symbols.
+
+        Returns:
+            List of symbols in the portfolio
+        """
+        return self.symbols.copy()
+
+    def get_all_positions(self) -> Dict[str, List[Position]]:
+        """Get all positions grouped by symbol.
+
+        Returns:
+            Dictionary mapping symbol to list of positions
+        """
+        positions_by_symbol: Dict[str, List[Position]] = {}
+        
+        # Group open positions
+        for position in self.state.open_positions:
+            if position.symbol not in positions_by_symbol:
+                positions_by_symbol[position.symbol] = []
+            positions_by_symbol[position.symbol].append(position)
+        
+        # Group closed positions
+        for position in self.state.closed_positions:
+            if position.symbol not in positions_by_symbol:
+                positions_by_symbol[position.symbol] = []
+            positions_by_symbol[position.symbol].append(position)
+        
+        return positions_by_symbol
+
+    def calculate_correlation_matrix(
+        self, market_data: Optional[Dict[str, Any]] = None, lookback_days: int = 252
+    ) -> pd.DataFrame:
+        """Calculate correlation matrix for portfolio symbols.
+
+        Args:
+            market_data: Optional market data dictionary with price history
+            lookback_days: Number of days to use for correlation calculation
+
+        Returns:
+            DataFrame with correlation matrix
+        """
+        if not self.symbols:
+            logger.warning("No symbols in portfolio, returning empty correlation matrix")
+            return pd.DataFrame()
+
+        try:
+            # Get price data
+            price_data = {}
+            if market_data and "prices" in market_data:
+                price_data = market_data["prices"]
+            elif market_data and "price_history" in market_data:
+                price_data = market_data["price_history"]
+            else:
+                # Try to get from positions
+                logger.warning("No market data provided, using position entry prices")
+                for symbol in self.symbols:
+                    symbol_positions = [
+                        p for p in self.state.open_positions + self.state.closed_positions
+                        if p.symbol == symbol
+                    ]
+                    if symbol_positions:
+                        # Use entry prices as proxy
+                        prices = [p.entry_price for p in symbol_positions]
+                        price_data[symbol] = pd.Series(prices)
+            
+            # Convert to DataFrame
+            if price_data:
+                # Ensure all are Series/DataFrame
+                price_series = {}
+                for symbol in self.symbols:
+                    if symbol in price_data:
+                        if isinstance(price_data[symbol], (list, np.ndarray)):
+                            price_series[symbol] = pd.Series(price_data[symbol])
+                        elif isinstance(price_data[symbol], pd.Series):
+                            price_series[symbol] = price_data[symbol]
+                        elif isinstance(price_data[symbol], pd.DataFrame):
+                            # Try to get close price
+                            if "close" in price_data[symbol].columns:
+                                price_series[symbol] = price_data[symbol]["close"]
+                            elif "Close" in price_data[symbol].columns:
+                                price_series[symbol] = price_data[symbol]["Close"]
+                            else:
+                                price_series[symbol] = price_data[symbol].iloc[:, 0]
+                
+                if price_series:
+                    df = pd.DataFrame(price_series)
+                    # Calculate returns
+                    returns = df.pct_change().dropna()
+                    # Limit to lookback period
+                    if len(returns) > lookback_days:
+                        returns = returns.tail(lookback_days)
+                    # Calculate correlation
+                    corr_matrix = returns.corr()
+                    return corr_matrix
+            
+            # Fallback: return identity matrix if no data
+            logger.warning("Insufficient data for correlation, returning identity matrix")
+            n = len(self.symbols)
+            return pd.DataFrame(
+                np.eye(n), index=self.symbols, columns=self.symbols
+            )
+            
+        except Exception as e:
+            logger.error(f"Error calculating correlation matrix: {e}")
+            # Return identity matrix as fallback
+            n = len(self.symbols)
+            return pd.DataFrame(
+                np.eye(n), index=self.symbols, columns=self.symbols
+            )
+
+    def get_portfolio_allocation(self) -> Dict[str, float]:
+        """Get current portfolio allocation by symbol.
+
+        Returns:
+            Dictionary mapping symbol to allocation percentage
+        """
+        if not self.symbols or self.state.equity == 0:
+            return {symbol: 0.0 for symbol in self.symbols} if self.symbols else {}
+        
+        allocation = {}
+        total_value = 0.0
+        
+        # Calculate value per symbol
+        symbol_values = {}
+        for position in self.state.open_positions:
+            if position.symbol not in symbol_values:
+                symbol_values[position.symbol] = 0.0
+            # Use entry price * size as value (or could use current price if available)
+            position_value = position.entry_price * position.size
+            symbol_values[position.symbol] += position_value
+            total_value += position_value
+        
+        # Add cash as "CASH" allocation
+        cash_allocation = self.state.cash / self.state.equity if self.state.equity > 0 else 0.0
+        
+        # Calculate percentages
+        for symbol in self.symbols:
+            symbol_value = symbol_values.get(symbol, 0.0)
+            allocation[symbol] = symbol_value / self.state.equity if self.state.equity > 0 else 0.0
+        
+        # Add cash allocation
+        allocation["CASH"] = cash_allocation
+        
+        return allocation
 
     def save(self, filename: str) -> None:
         """Save portfolio state to file.
