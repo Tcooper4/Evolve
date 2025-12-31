@@ -38,6 +38,11 @@ class AgentConfig:
     use_anthropic: bool = False  # Set to True to enable Claude as LLM provider
     anthropic_model: str = "claude-sonnet-4-20250514"
     llm_provider_priority: str = "claude,openai,local"  # Comma-separated priority list
+    
+    # Local LLM Configuration (Ollama)
+    use_local_llm: bool = False  # Set to True to use local LLM
+    local_llm_model: str = "llama3"  # Model to use (llama3, mistral, codellama, etc.)
+    ollama_host: str = "http://localhost:11434"  # Ollama server URL
 
     # HuggingFace Configuration
     # Updated to modern model - gpt2 is from 2019
