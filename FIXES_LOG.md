@@ -1528,3 +1528,100 @@ validated_quantity = validator.validate_quantity(quantity)
 **Breaking Changes:** None
 **Backward Compatibility:** Fully compatible - validation is opt-in via decorator or manual calls
 
+### C27: Implement Unified Error Handling System ✅
+
+**Status:** COMPLETED
+**Date:** 2024-12-19
+**Files Created:**
+1. `utils/error_handling.py` (new file)
+
+**Changes Made:**
+- Created `TradingError` base exception class with categorization and severity
+- Created specialized error classes:
+  - `DataError` - Data-related errors
+  - `BrokerError` - Broker-related errors
+  - `ModelError` - Model-related errors
+  - `StrategyError` - Strategy-related errors
+  - `RiskError` - Risk management errors
+  - `ValidationError` - Validation errors
+- Created `ErrorHandler` class for centralized error handling
+- Error severity levels: LOW, MEDIUM, HIGH, CRITICAL
+- Error categories: DATA, BROKER, MODEL, STRATEGY, RISK, SYSTEM, VALIDATION, NETWORK, CONFIG
+- Error logging with severity-based log levels
+- Error callbacks for custom error handling
+- Error filtering by category and severity
+- Created `@handle_errors` decorator for automatic error handling
+
+**Old Behavior:**
+```python
+# ❌ Inconsistent error handling
+try:
+    data = fetch_data(symbol)
+except Exception as e:
+    logger.error(f"Error: {e}")  # No categorization, no severity
+    return None
+```
+
+**New Behavior:**
+```python
+# ✅ Unified error handling
+from utils.error_handling import handle_errors, ErrorCategory, ErrorSeverity, DataError
+
+# Using decorator
+@handle_errors(category=ErrorCategory.DATA, severity=ErrorSeverity.LOW)
+def fetch_data(symbol):
+    # Errors automatically handled and logged
+    pass
+
+# Manual error handling
+from utils.error_handling import get_error_handler
+
+handler = get_error_handler()
+try:
+    data = fetch_data(symbol)
+except Exception as e:
+    handler.handle_error(
+        DataError("Failed to fetch data", ErrorSeverity.MEDIUM),
+        context={"symbol": symbol}
+    )
+```
+
+**Error Handling Features:**
+- **Error Categories:**
+  - DATA - Data fetching/processing errors
+  - BROKER - Broker connection/execution errors
+  - MODEL - Model training/prediction errors
+  - STRATEGY - Strategy execution errors
+  - RISK - Risk management errors
+  - SYSTEM - System-level errors
+  - VALIDATION - Input validation errors
+  - NETWORK - Network/API errors
+  - CONFIG - Configuration errors
+  
+- **Error Severity:**
+  - LOW - Informational, non-critical
+  - MEDIUM - Warning, may affect functionality
+  - HIGH - Error, significant impact
+  - CRITICAL - Critical failure, system may be unstable
+  
+- **Error Handler Methods:**
+  - `handle_error()` - Handle and log error
+  - `register_callback()` - Register error callback
+  - `get_recent_errors()` - Get recent errors
+  - `get_errors_by_category()` - Filter by category
+  - `get_errors_by_severity()` - Filter by severity
+  - `clear_log()` - Clear error log
+
+**Line Changes:**
+- utils/error_handling.py:1-350 - New error handling module
+
+**Test Results:**
+- ✅ Errors logged with proper categorization
+- ✅ Severity-based logging works
+- ✅ Callbacks triggered correctly
+- ✅ Error filtering works
+- ✅ Decorator handles errors automatically
+
+**Breaking Changes:** None
+**Backward Compatibility:** Fully compatible - error handling is opt-in
+
