@@ -115,7 +115,6 @@ class PerformanceChecker:
         total_return = performance.get("total_return", 0)
 
         # Load retirement thresholds from environment
-        import os
         retire_sharpe = float(os.getenv("STRATEGY_RETIRE_SHARPE", "0.0"))
         retire_win_rate = float(os.getenv("STRATEGY_RETIRE_WIN_RATE", "0.2"))
         retire_return = float(os.getenv("STRATEGY_RETIRE_RETURN", "-0.2"))
