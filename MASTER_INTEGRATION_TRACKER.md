@@ -108,8 +108,8 @@ For each page, complete these steps:
 
 ## 📈 PROGRESS TRACKING
 
-### Week 1 Progress: ____%
-- PAGE 1: [x] Not Started [x] In Progress [ ] Complete
+### Week 1 Progress: 10%
+- PAGE 1: [ ] Not Started [ ] In Progress [x] Complete
 - PAGE 2: [ ] Not Started [ ] In Progress [ ] Complete
 - PAGE 3: [ ] Not Started [ ] In Progress [ ] Complete
 
@@ -126,7 +126,7 @@ For each page, complete these steps:
 ### Week 4 Progress: ____%
 - PAGE 10: [ ] Not Started [ ] In Progress [ ] Complete
 
-**Overall Progress: _____ / 10 pages complete**
+**Overall Progress: 1 / 10 pages complete**
 
 ---
 
