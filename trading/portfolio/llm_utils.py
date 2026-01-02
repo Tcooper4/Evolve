@@ -408,8 +408,16 @@ Format the response as a comprehensive daily report."""
 
         # Analyze strategy performance
         for strategy, trades in strategy_trades.items():
+            if not trades:
+                continue
+                
             pnl = sum(t.get("pnl", 0) for t in trades)
-            win_rate = sum(1 for t in trades if t.get("pnl", 0) > 0) / len(trades)
+            num_trades = len(trades)
+            
+            if num_trades > 0:
+                win_rate = sum(1 for t in trades if t.get("pnl", 0) > 0) / num_trades
+            else:
+                continue
 
             if pnl > 0 and win_rate > 0.6:
                 shifts.append(

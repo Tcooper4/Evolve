@@ -80,8 +80,8 @@ def align_signals_with_index(
         for col in numeric_columns:
             aligned_signals[col] = (
                 aligned_signals[col]
-                .fillna(method="ffill")
-                .fillna(method="bfill")
+                .ffill()
+                .bfill()
                 .fillna(0)
             )
 
@@ -389,8 +389,8 @@ def calculate_rsi_fallback(prices: pd.Series, period: int = 14) -> pd.Series:
         avg_gains = gains.rolling(window=period).mean()
         avg_losses = losses.rolling(window=period).mean()
 
-        # Calculate RS and RSI
-        rs = avg_gains / avg_losses
+        # Calculate RS and RSI - Safely calculate RS with division-by-zero protection
+        rs = np.where(avg_losses > 1e-10, avg_gains / avg_losses, 0.0)
         rsi = 100 - (100 / (1 + rs))
 
         # Ensure alignment with original index

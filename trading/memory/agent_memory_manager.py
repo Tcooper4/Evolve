@@ -1044,7 +1044,11 @@ class AgentMemoryManager:
             recent_successes = sum(
                 1 for record in recent_memory if record.get("success")
             )
-            success_rate = recent_successes / len(recent_memory)
+
+            if len(recent_memory) > 0:
+                success_rate = recent_successes / len(recent_memory)
+            else:
+                success_rate = 0.0
 
             # Calculate average confidence
             avg_confidence = np.mean(
@@ -1132,7 +1136,11 @@ class AgentMemoryManager:
             recent_successes = sum(
                 1 for record in recent_memory if record.get("success")
             )
-            success_rate = recent_successes / len(recent_memory)
+
+            if len(recent_memory) > 0:
+                success_rate = recent_successes / len(recent_memory)
+            else:
+                success_rate = 0.0
 
             # Calculate average confidence
             avg_confidence = np.mean(

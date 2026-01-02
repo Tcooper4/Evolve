@@ -105,12 +105,20 @@ class MetricNormalizer:
         if metric_type == "ratio":
             # For ratios like Sharpe, normalize using log transformation
             log_values = np.log(np.abs(values) + 1)  # Add 1 to handle zero/negative
-            normalized = (log_values - log_values.min()) / (
-                log_values.max() - log_values.min()
-            )
+            value_range = log_values.max() - log_values.min()
+            if value_range > 1e-10:
+                normalized = (log_values - log_values.min()) / value_range
+            else:
+                # All values are the same, return 0.5 (neutral)
+                normalized = np.full_like(log_values, 0.5)
         elif metric_type == "percentage":
             # For percentages like win rate, use min-max normalization
-            normalized = (values - values.min()) / (values.max() - values.min())
+            value_range = values.max() - values.min()
+            if value_range > 1e-10:
+                normalized = (values - values.min()) / value_range
+            else:
+                # All values are the same
+                normalized = np.full_like(values, 0.5)
         else:  # absolute
             # For absolute values like returns, use robust normalization
             median = np.median(values)

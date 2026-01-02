@@ -847,12 +847,7 @@ class EnhancedStrategyEngine:
         )
 
         # Clamp to [0, 1]
-        return {
-            "success": True,
-            "result": max(0.0, min(1.0, adjusted_confidence)),
-            "message": "Operation completed successfully",
-            "timestamp": datetime.now().isoformat(),
-        }
+        return max(0.0, min(1.0, adjusted_confidence))
 
     def _log_strategy_performance(
         self, combined_result: StrategyResult, strategy_results: List[Dict[str, Any]]

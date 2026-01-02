@@ -31,8 +31,12 @@ class PerformanceMetrics:
         """Calculate Sharpe ratio."""
         try:
             excess_returns = returns - risk_free_rate / 252  # Daily risk-free rate
-            return np.sqrt(252) * excess_returns.mean() / excess_returns.std()
-        except BaseException:
+            std_returns = excess_returns.std()
+            if std_returns > 1e-10:
+                return np.sqrt(252) * excess_returns.mean() / std_returns
+            else:
+                return 0.0
+        except Exception:
             return 0.0
 
     def calculate_sortino_ratio(
@@ -43,8 +47,12 @@ class PerformanceMetrics:
             excess_returns = returns - risk_free_rate / 252
             downside_returns = excess_returns[excess_returns < 0]
             downside_std = np.sqrt(np.mean(downside_returns**2))
-            return np.sqrt(252) * excess_returns.mean() / downside_std
-        except BaseException:
+            
+            if downside_std > 1e-10:
+                return np.sqrt(252) * excess_returns.mean() / downside_std
+            else:
+                return 0.0
+        except Exception:
             return 0.0
 
     def calculate_max_drawdown(
@@ -192,9 +200,16 @@ class RiskMetrics:
         """Calculate Ulcer Index."""
         try:
             rolling_max = cumulative_returns.expanding().max()
-            drawdown = (cumulative_returns - rolling_max) / rolling_max
+            
+            # Safe drawdown calculation
+            drawdown = np.where(
+                rolling_max > 1e-10,
+                (cumulative_returns - rolling_max) / rolling_max,
+                0.0
+            )
+            
             return np.sqrt(np.mean(drawdown**2))
-        except BaseException:
+        except Exception:
             return 0.0
 
     def calculate_gain_to_pain_ratio(self, returns: pd.Series) -> float:

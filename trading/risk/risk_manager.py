@@ -1043,8 +1043,11 @@ class RiskManager:
             if self.position_config.get("volatility_scaling", True):
                 # Inverse volatility scaling
                 target_volatility = self.config.get("target_volatility", 0.15)
-                volatility_ratio = (
-                    target_volatility / volatility_forecast.forecasted_volatility
+                # Safely calculate volatility ratio with division-by-zero protection
+                volatility_ratio = np.where(
+                    volatility_forecast.forecasted_volatility > 1e-10,
+                    target_volatility / volatility_forecast.forecasted_volatility,
+                    1.0  # Default to 1.0 if forecasted volatility is zero
                 )
                 volatility_adjusted_size = base_position_size * volatility_ratio
             else:
@@ -1063,7 +1066,7 @@ class RiskManager:
                     "confidence_threshold", 0.7
                 )
                 if confidence_score < confidence_threshold:
-                    risk_adjusted_size *= confidence_score / confidence_threshold
+                    risk_adjusted_size *= confidence_score / max(confidence_threshold, 1e-10)
             else:
                 risk_adjusted_size = volatility_adjusted_size
 

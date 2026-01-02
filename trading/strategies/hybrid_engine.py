@@ -295,8 +295,12 @@ class HybridEngine:
             if len(close) < 20:
                 return True
 
-            # Calculate volatility
-            returns = np.diff(close) / close[:-1]
+            # Calculate volatility - Safely calculate returns with division-by-zero protection
+            returns = np.where(
+                close[:-1] > 1e-10,
+                np.diff(close) / close[:-1],
+                0.0
+            )
             volatility = np.std(returns[-20:])
 
             # Reject signals in extremely high volatility
@@ -460,7 +464,12 @@ class HybridEngine:
         try:
             close = data["close"].values
             if len(close) >= 20:
-                returns = np.diff(close) / close[:-1]
+                # Safely calculate returns with division-by-zero protection
+                returns = np.where(
+                    close[:-1] > 1e-10,
+                    np.diff(close) / close[:-1],
+                    0.0
+                )
                 volatility = np.std(returns[-20:])
 
                 if volatility > 0.04:
@@ -523,7 +532,12 @@ class HybridEngine:
                 conditions["trend"] = "bullish" if current_price > sma_20 else "bearish"
 
                 # Volatility analysis
-                returns = np.diff(close) / close[:-1]
+                # Safely calculate returns with division-by-zero protection
+                returns = np.where(
+                    close[:-1] > 1e-10,
+                    np.diff(close) / close[:-1],
+                    0.0
+                )
                 volatility = np.std(returns[-20:])
                 conditions["volatility"] = "high" if volatility > 0.03 else "low"
 

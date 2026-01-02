@@ -98,9 +98,17 @@ class HybridModel:
             actual = actual[-min_len:]
             preds = preds[-min_len:]
 
-            # Calculate returns
-            actual_returns = np.diff(actual) / actual[:-1]
-            pred_returns = np.diff(preds) / preds[:-1]
+            # Calculate returns - Safely calculate with division-by-zero protection
+            actual_returns = np.where(
+                actual[:-1] > 1e-10,
+                np.diff(actual) / actual[:-1],
+                0.0
+            )
+            pred_returns = np.where(
+                preds[:-1] > 1e-10,
+                np.diff(preds) / preds[:-1],
+                0.0
+            )
 
             # Sharpe Ratio
             sharpe_ratio = self._calculate_sharpe_ratio(actual_returns, pred_returns)
@@ -151,7 +159,7 @@ class HybridModel:
             mean_return = np.mean(strategy_returns)
             std_return = np.std(strategy_returns)
 
-            if std_return == 0:
+            if std_return <= 1e-10:
                 return 0.0
             # Annualize (assuming daily data)
             sharpe_ratio = (mean_return / std_return) * np.sqrt(252)
@@ -204,8 +212,12 @@ class HybridModel:
             # Calculate running maximum
             running_max = np.maximum.accumulate(cumulative_returns)
 
-            # Calculate drawdown
-            drawdown = (cumulative_returns - running_max) / running_max
+            # Calculate drawdown - Safely calculate with division-by-zero protection
+            drawdown = np.where(
+                running_max > 1e-10,
+                (cumulative_returns - running_max) / running_max,
+                0.0
+            )
 
             # Get maximum drawdown
             max_drawdown = np.min(drawdown)
@@ -347,14 +359,14 @@ class HybridModel:
 
             model_scores[name] = score
 
-        # Normalize weights
+        # Normalize weights - Safely calculate with division-by-zero protection
         total_score = sum(model_scores.values())
-        if total_score > 0:
+        if total_score > 1e-10:
             weights = {
                 name: score / total_score for name, score in model_scores.items()
             }
         else:
-            # Equal weights if no positive scores
+            # Fallback to equal weights
             weights = {name: 1.0 / len(self.models) for name in self.models}
 
         return weights
@@ -413,14 +425,14 @@ class HybridModel:
 
             model_scores[name] = score
 
-        # Normalize weights
+        # Normalize weights - Safely calculate with division-by-zero protection
         total_score = sum(model_scores.values())
-        if total_score > 0:
+        if total_score > 1e-10:
             weights = {
                 name: score / total_score for name, score in model_scores.items()
             }
         else:
-            # Equal weights if no positive scores
+            # Fallback to equal weights
             weights = {name: 1.0 / len(self.models) for name in self.models}
 
         return weights
@@ -453,7 +465,7 @@ class HybridModel:
                 model_rankings[name] = 0.0
         # Convert rankings to weights using exponential weighting
         max_ranking = max(model_rankings.values()) if model_rankings else 1.0
-        if max_ranking > 0:
+        if max_ranking > 1e-10:
             weights = {
                 name: np.exp(ranking / max_ranking)
                 for name, ranking in model_rankings.items()
@@ -463,7 +475,7 @@ class HybridModel:
 
         # Normalize weights
         total_weight = sum(weights.values())
-        if total_weight > 0:
+        if total_weight > 1e-10:
             weights = {name: weight / total_weight for name, weight in weights.items()}
         else:
             weights = {name: 1.0 / len(self.models) for name in self.models}

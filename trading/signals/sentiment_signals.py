@@ -462,11 +462,11 @@ class SentimentSignals:
                     news_sentiment.get("analyzed_texts", 0) / 50
                 )  # Normalize
 
-            signals["confidence"] = (
-                min(1.0, sum(confidence_factors) / len(confidence_factors))
-                if confidence_factors
-                else 0.0
-            )
+            # Safely calculate confidence with division-by-zero protection
+            if len(confidence_factors) > 0:
+                signals["confidence"] = min(1.0, sum(confidence_factors) / len(confidence_factors))
+            else:
+                signals["confidence"] = 0.0
 
             return signals
 

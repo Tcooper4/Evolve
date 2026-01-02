@@ -235,7 +235,13 @@ class RiskMetrics:
         """Calculate maximum drawdown."""
         cumulative = (1 + returns).cumprod()
         running_max = np.maximum.accumulate(cumulative)
-        drawdowns = cumulative / running_max - 1
+        
+        drawdowns = np.where(
+            running_max > 1e-10,
+            cumulative / running_max - 1,
+            0.0
+        )
+        
         return float(drawdowns.min())
 
     def value_at_risk(self, returns: np.ndarray, confidence: float = 0.95) -> float:

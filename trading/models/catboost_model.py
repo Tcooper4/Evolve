@@ -63,10 +63,18 @@ class CatBoostModel(BaseModel):
             for i in range(horizon):
                 # Get prediction for next step
                 pred = self.predict(current_data)
-                forecast_values.append(pred[-1])
+                if len(pred) > 0:
+                    forecast_values.append(pred[-1])
+                else:
+                    logger.warning("Empty prediction array, skipping")
+                    break
 
                 # Update data for next iteration
-                new_row = current_data.iloc[-1].copy()
+                if len(current_data) > 0:
+                    new_row = current_data.iloc[-1].copy()
+                else:
+                    logger.warning("Empty data, cannot continue forecast")
+                    break
                 new_row[self.target_column] = pred[-1]  # Update with prediction
                 current_data = pd.concat(
                     [current_data, pd.DataFrame([new_row])], ignore_index=True

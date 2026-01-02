@@ -142,7 +142,11 @@ class BreakoutStrategyEngine:
                 upper_bound = consolidation_prices.max()
                 lower_bound = consolidation_prices.min()
                 range_width = upper_bound - lower_bound
-                range_percentage = range_width / lower_bound
+                # Safely calculate range percentage with division-by-zero protection
+                if lower_bound > 1e-10:
+                    range_percentage = range_width / lower_bound
+                else:
+                    range_percentage = 0.0  # Skip this consolidation range
 
                 # Check if range is within threshold
                 if range_percentage > self.range_threshold:
@@ -265,9 +269,11 @@ class BreakoutStrategyEngine:
             range_confidence = max(0.0, 1.0 - (range_percentage / self.range_threshold))
 
             # Volatility confidence (lower volatility = higher confidence)
-            vol_confidence = max(
-                0.0, 1.0 - (volatility.mean() / volatility.quantile(0.5))
-            )
+            vol_median = volatility.quantile(0.5)
+            if vol_median > 1e-10:
+                vol_confidence = max(0.0, 1.0 - (volatility.mean() / vol_median))
+            else:
+                vol_confidence = 1.0  # Perfect confidence if no volatility
 
             # Duration confidence (optimal duration = higher confidence)
             duration = len(data)
@@ -280,7 +286,11 @@ class BreakoutStrategyEngine:
             # Volume consistency confidence
             volume_confidence = 1.0
             if "volume" in data.columns:
-                volume_cv = data["volume"].std() / data["volume"].mean()
+                volume_mean = data["volume"].mean()
+                if volume_mean > 1e-10:
+                    volume_cv = data["volume"].std() / volume_mean
+                else:
+                    volume_cv = 0.0  # No volume variation if mean is zero
                 volume_confidence = max(0.0, 1.0 - volume_cv)
 
             # Weighted average

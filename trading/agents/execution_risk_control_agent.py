@@ -603,9 +603,14 @@ class ExecutionRiskControlAgent(BaseAgent):
             # Apply position size limit
             portfolio_value = self._get_portfolio_value()
             max_position_value = portfolio_value * self.max_position_size
-            max_quantity_by_value = max_position_value / trade_request.price
 
-            max_quantity = min(max_quantity, max_quantity_by_value)
+            # Safe division by price
+            if trade_request.price > 1e-10:
+                max_quantity_by_value = max_position_value / trade_request.price
+                max_quantity = min(max_quantity, max_quantity_by_value)
+            else:
+                # If price is zero or invalid, use only the existing max_quantity
+                pass
 
             return max(0.0, max_quantity)
 
@@ -690,7 +695,13 @@ class ExecutionRiskControlAgent(BaseAgent):
 
             # Simulate execution
             execution_price = self._simulate_execution(trade_request, actual_quantity)
-            slippage = abs(execution_price - trade_request.price) / trade_request.price
+
+            # Safe slippage calculation
+            if trade_request.price > 1e-10:
+                slippage = abs(execution_price - trade_request.price) / trade_request.price
+            else:
+                slippage = 0.0  # Cannot calculate meaningful slippage with zero price
+
             commission = self._calculate_commission(actual_quantity, execution_price)
 
             # Update tracking

@@ -67,8 +67,15 @@ class CCIStrategy:
             lambda x: np.mean(np.abs(x - x.mean()))
         )
 
-        # Calculate CCI
-        cci = (typical_price - sma_tp) / (self.config.constant * mean_deviation)
+        # Calculate denominator
+        denominator = self.config.constant * mean_deviation
+        
+        # Safely calculate CCI with division-by-zero protection
+        cci = np.where(
+            np.abs(denominator) > 1e-10,
+            (typical_price - sma_tp) / denominator,
+            0  # Default to 0 when denominator is too small
+        )
 
         return cci
 
@@ -260,7 +267,12 @@ class CCIStrategy:
             elif metric == "max_drawdown":
                 cumulative_returns = (1 + strategy_returns).cumprod()
                 running_max = cumulative_returns.expanding().max()
-                drawdown = (cumulative_returns - running_max) / running_max
+                # Safely calculate drawdown with division-by-zero protection
+                drawdown = np.where(
+                    running_max > 1e-10,
+                    (cumulative_returns - running_max) / running_max,
+                    0.0
+                )
                 return drawdown.min()
             else:
                 return 0.0

@@ -127,12 +127,16 @@ class TradingEnvironment(gym.Env):
         reward = 0.0
         if self.last_price is not None and self.last_shares_held > 0:
             # Realized PnL from price movement since last step
-            price_change = (current_price - self.last_price) / self.last_price
-            reward = price_change * self.last_shares_held * self.last_price
+            if self.last_price > 1e-10:
+                price_change = (current_price - self.last_price) / self.last_price
+                reward = price_change * self.last_shares_held * self.last_price
+            else:
+                price_change = 0.0
+                reward = 0.0
         
         # Execute current action
         if action == 1:  # Buy
-            if self.balance > 0:
+            if self.balance > 0 and current_price > 1e-10:
                 shares_to_buy = self.balance / current_price * self.max_position
                 cost = shares_to_buy * current_price * (1 + self.transaction_fee)
                 if cost <= self.balance:

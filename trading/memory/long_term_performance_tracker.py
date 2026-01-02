@@ -229,9 +229,17 @@ class LongTermPerformanceTracker:
             if len(metrics) < 2:
                 return
 
-            # Calculate returns
-            values = [m.value for m in metrics]
-            returns = np.diff(values) / values[:-1]
+            # Calculate returns with safe division
+            values = np.array([m.value for m in metrics])
+
+            if len(values) < 2:
+                return
+
+            returns = np.where(
+                values[:-1] > 1e-10,
+                np.diff(values) / values[:-1],
+                0.0
+            )
 
             if len(returns) == 0:
                 return

@@ -9,6 +9,8 @@ from typing import Optional
 
 warnings.filterwarnings("ignore")
 
+logger = logging.getLogger(__name__)
+
 # Try to import execution libraries with fallbacks
 try:
     import ccxt
@@ -42,15 +44,46 @@ class AgentMemory:
 
 
 def calculate_metrics(returns):
-    # Removed return statement - __init__ should not return values
-    def __init__(self, config: TradingConfig = None):
-                # Removed return statement - __init__ should not return values
-                # Removed return statement - __init__ should not return values
-            # Removed return statement - __init__ should not return values
-            # Removed return statement - __init__ should not return values
-            # Removed return statement - __init__ should not return values
-                # Removed return statement - __init__ should not return values
+    """Calculate performance metrics from returns."""
+    import numpy as np
+    if len(returns) == 0:
+        return {}
+    
+    returns_array = np.array(returns)
+    return {
+        "mean": float(np.mean(returns_array)),
+        "std": float(np.std(returns_array)),
+        "sharpe": float(np.mean(returns_array) / np.std(returns_array)) if np.std(returns_array) > 0 else 0.0,
+        "max_drawdown": float(np.min(returns_array)) if len(returns_array) > 0 else 0.0
+    }
 
+
+class ExecutionEngine:
+    """Execution Engine for Trade Execution."""
+    
+    def __init__(self, config: TradingConfig = None):
+        """Initialize Execution Engine."""
+        self.config = config or TradingConfig()
+        self.brokers = {}
+        self.execution_history = []
+        self.active_orders = {}
+        self.failed_orders = []
+        self.skipped_orders = []
+        self.max_slippage_threshold = 0.05  # 5% max slippage
+        
+        # Initialize brokers based on config
+        if self.config.execution_mode == "live":
+            # Initialize live brokers if configured
+            if self.config.broker_api_key:
+                # Broker initialization would go here
+                pass
+    
+    def _execute_alpaca_order(self, order_request: dict) -> dict:
+        """Execute order via Alpaca broker."""
+        try:
+            if "alpaca" not in self.brokers:
+                return {"status": "error", "message": "Alpaca broker not available"}
+            
             alpaca_order = self.brokers["alpaca"].submit_order(order_request)
 
             return {
@@ -129,12 +162,16 @@ def calculate_metrics(returns):
 
             time.sleep(0.1)  # Simulate execution delay
 
-            # Calculate slippage
-            slippage = abs(execution_price - simulated_price) / simulated_price
-            if slippage > self.max_slippage_threshold:
-                skip_msg = f"Simulated slippage too high: {slippage:.2%}"
-                logger.warning(skip_msg)
-                return {"status": "skipped", "message": skip_msg}
+            # Calculate slippage with division-by-zero protection
+            if simulated_price > 1e-10:
+                slippage = abs(execution_price - simulated_price) / simulated_price
+                if slippage > self.max_slippage_threshold:
+                    skip_msg = f"Simulated slippage too high: {slippage:.2%}"
+                    logger.warning(skip_msg)
+                    return {"status": "skipped", "message": skip_msg}
+            else:
+                logger.warning(f"Invalid simulated_price {simulated_price}, skipping slippage check")
+                slippage = 0.0
 
             return {
                 "status": "success",

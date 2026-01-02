@@ -230,7 +230,12 @@ class ForecastNormalizer:
         )
 
         # Fill any remaining NaN values
-        aligned_df = aligned_df.fillna(method=self.fill_method)
+        if self.fill_method == "ffill":
+            aligned_df = aligned_df.ffill()
+        elif self.fill_method == "bfill":
+            aligned_df = aligned_df.bfill()
+        else:
+            aligned_df = aligned_df.fillna(0)  # Default to 0
 
         return aligned_df, reference_index
 
@@ -261,7 +266,12 @@ class ForecastNormalizer:
         )
 
         # Fill any remaining NaN values
-        aligned_df = aligned_df.fillna(method=self.fill_method)
+        if self.fill_method == "ffill":
+            aligned_df = aligned_df.ffill()
+        elif self.fill_method == "bfill":
+            aligned_df = aligned_df.bfill()
+        else:
+            aligned_df = aligned_df.fillna(0)  # Default to 0
 
         return aligned_df, reference_index
 

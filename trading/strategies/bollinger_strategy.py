@@ -92,7 +92,7 @@ class BollingerStrategy(BaseStrategy):
             raise ValueError(f"Data must contain columns: {missing_columns}")
 
         # Clean NaNs
-        df_lower = df_lower.drop_duplicates(subset=df_lower.index)
+        df_lower = df_lower[~df_lower.index.duplicated(keep='first')]
         df_lower = df_lower.dropna()
         if len(df_lower) < 2:
             logger.warning(
@@ -118,7 +118,7 @@ class BollingerStrategy(BaseStrategy):
         # Handle NaN values
         if df_lower["close"].isna().any():
             df_lower["close"] = (
-                df_lower["close"].fillna(method="ffill").fillna(method="bfill")
+                df_lower["close"].ffill().bfill()
             )
 
         if df_lower["volume"].isna().any():
@@ -141,12 +141,12 @@ class BollingerStrategy(BaseStrategy):
             # Calculate Bollinger Bands
             upper_band, middle_band, lower_band = self.calculate_bands(df_lower)
 
-            # Calculate squeeze condition (bandwidth)
-            bandwidth = (upper_band - lower_band) / middle_band
+            # Calculate squeeze condition (bandwidth) - Safely calculate bandwidth with division-by-zero protection
+            bandwidth = (upper_band - lower_band) / (middle_band + 1e-10)
             squeeze_condition = bandwidth < config.squeeze_threshold
 
-            # Initialize signals DataFrame
-            signals = pd.DataFrame(index=df.index)
+            # Initialize signals DataFrame with df_lower index
+            signals = pd.DataFrame(index=df_lower.index)
             signals["signal"] = 0
 
             # Generate signals (avoid trades during squeeze)
@@ -155,6 +155,10 @@ class BollingerStrategy(BaseStrategy):
 
             signals.loc[buy_condition, "signal"] = 1  # Buy signal
             signals.loc[sell_condition, "signal"] = -1  # Sell signal
+            
+            # Reindex to match original df index if needed
+            if not df_lower.index.equals(df.index):
+                signals = signals.reindex(df.index, fill_value=0)
 
             # Add squeeze information
             signals["bandwidth"] = bandwidth

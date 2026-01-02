@@ -189,7 +189,10 @@ class RidgeModel(BaseModel):
             target_col = "close"
         else:
             # Use the last column as target
-            target_col = numeric_data.columns[-1]
+            if len(numeric_data.columns) > 0:
+                target_col = numeric_data.columns[-1]
+            else:
+                raise ValueError("No numeric columns found for target")
         # Separate features and target
         feature_cols = [col for col in numeric_data.columns if col != target_col]
         if not feature_cols:
@@ -232,7 +235,10 @@ class RidgeModel(BaseModel):
             poly_features = poly.fit_transform(features)
 
             # Keep only the polynomial features (exclude original features to avoid duplication)
-            original_feature_count = features.shape[1]
+            if features.shape[1] > 0:
+                original_feature_count = features.shape[1]
+            else:
+                raise ValueError("No features available for training")
             polynomial_features = poly_features[:, original_feature_count:]
 
             # Combine original and polynomial features
@@ -350,7 +356,7 @@ class RidgeModel(BaseModel):
                 ),
                 "mean_absolute_error": float(mean_absolute_error(target, predictions)),
                 "mean_absolute_percentage_error": float(
-                    np.mean(np.abs((target - predictions) / target)) * 100
+                    np.mean(np.abs((target - predictions) / (target + 1e-10))) * 100
                 ),
             }
 
@@ -404,7 +410,10 @@ class RidgeModel(BaseModel):
         try:
             # Prepare data
             features, _ = self._prepare_data(data, is_training=False)
-            expected_features = self.scaler.mean_.shape[0]
+            if hasattr(self.scaler, 'mean_') and len(self.scaler.mean_) > 0:
+                expected_features = self.scaler.mean_.shape[0]
+            else:
+                raise ValueError("Scaler not fitted or has no features")
             if features.shape[1] != expected_features:
                 # Try to add lag features if not already present
                 if self.config.get("use_lags", True):
@@ -516,7 +525,7 @@ class RidgeModel(BaseModel):
                 ),
                 "mean_absolute_error": float(mean_absolute_error(target, predictions)),
                 "mean_absolute_percentage_error": float(
-                    np.mean(np.abs((target - predictions) / target)) * 100
+                    np.mean(np.abs((target - predictions) / (target + 1e-10))) * 100
                 ),
             }
 

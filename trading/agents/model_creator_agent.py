@@ -235,9 +235,17 @@ class BacktestEngine:
             y_pred = model.predict(X_test)
             inference_time = (datetime.now() - start_time).total_seconds()
 
-            # Calculate returns for trading metrics
-            returns = np.diff(y_test) / y_test[:-1]
-            pred_returns = np.diff(y_pred) / y_pred[:-1]
+            # Calculate returns for trading metrics with safe division
+            returns = np.where(
+                y_test[:-1] > 1e-10,
+                np.diff(y_test) / y_test[:-1],
+                0.0
+            )
+            pred_returns = np.where(
+                y_pred[:-1] > 1e-10,
+                np.diff(y_pred) / y_pred[:-1],
+                0.0
+            )
 
             # Trading signals (simple strategy)
             signals = np.where(pred_returns > 0, 1, -1)
@@ -257,7 +265,12 @@ class BacktestEngine:
             # Maximum drawdown
             cumulative_returns = np.cumprod(1 + returns)
             rolling_max = np.maximum.accumulate(cumulative_returns)
-            drawdown = (cumulative_returns - rolling_max) / rolling_max
+
+            drawdown = np.where(
+                rolling_max > 1e-10,
+                (cumulative_returns - rolling_max) / rolling_max,
+                0.0
+            )
             max_drawdown = np.min(drawdown)
 
             return {

@@ -136,10 +136,14 @@ class StrategyValidator:
         std_return = returns.std()
         sharpe_ratio = mean_return / std_return if std_return > 0 else 0
 
-        # Calculate drawdown
+        # Calculate drawdown - Safely calculate with division-by-zero protection
         cumulative_returns = (1 + returns).cumprod()
         running_max = cumulative_returns.expanding().max()
-        drawdown = (cumulative_returns - running_max) / running_max
+        drawdown = np.where(
+            running_max > 1e-10,
+            (cumulative_returns - running_max) / running_max,
+            0.0
+        )
         max_drawdown = abs(drawdown.min())
 
         # Calculate return consistency
@@ -177,9 +181,13 @@ class StrategyValidator:
     def _calculate_return_consistency(self, returns: pd.Series) -> float:
         """Calculate return consistency score."""
         try:
-            # Calculate rolling Sharpe ratios
-            rolling_sharpe = (
-                returns.rolling(window=20).mean() / returns.rolling(window=20).std()
+            # Calculate rolling Sharpe ratios - Safely calculate with division-by-zero protection
+            rolling_mean = returns.rolling(window=20).mean()
+            rolling_std = returns.rolling(window=20).std()
+            rolling_sharpe = np.where(
+                rolling_std > 1e-10,
+                rolling_mean / rolling_std,
+                0.0
             )
             rolling_sharpe = rolling_sharpe.dropna()
 
@@ -212,11 +220,13 @@ class StrategyValidator:
             if len(rolling_vol) < 10:
                 return 0.0
 
-            # Calculate volatility of volatility
-            vol_of_vol = (
-                rolling_vol.std() / rolling_vol.mean()
-                if rolling_vol.mean() > 0
-                else 1.0
+            # Calculate volatility of volatility - Safely calculate with division-by-zero protection
+            vol_mean = rolling_vol.mean()
+            vol_std = rolling_vol.std()
+            vol_of_vol = np.where(
+                vol_mean > 1e-10,
+                vol_std / vol_mean,
+                0.0
             )
 
             # Stability score (lower vol of vol = more stable)
@@ -294,7 +304,12 @@ class RegimeDetector:
             # Trend features
             sma_20 = data["close"].rolling(20).mean()
             sma_50 = data["close"].rolling(50).mean()
-            features["trend_strength"] = (sma_20 - sma_50) / sma_50
+            # Safe division for trend strength
+            features["trend_strength"] = np.where(
+                sma_50 > 1e-10,
+                (sma_20 - sma_50) / sma_50,
+                0.0
+            )
 
             # Momentum features
             features["momentum"] = data["close"].pct_change(20)

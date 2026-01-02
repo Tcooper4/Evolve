@@ -469,10 +469,18 @@ class TradeExecutionSimulator:
         """Calculate current bid-ask spread."""
         try:
             if "high" in market_data.columns and "low" in market_data.columns:
-                # Use high-low range as proxy for spread
+                # Use high-low range as proxy for spread - Safely calculate with division-by-zero protection
                 recent_high_low = market_data[["high", "low"]].tail(20)
                 avg_range = (recent_high_low["high"] - recent_high_low["low"]).mean()
-                spread = avg_range / market_data["close"].iloc[-1]
+                
+                close_price = market_data["close"].iloc[-1]
+                if close_price > 1e-10:
+                    spread = avg_range / close_price
+                else:
+                    # Fallback to volatility-based spread if close price is invalid
+                    self.logger.warning(f"Invalid close price {close_price}, using volatility-based spread")
+                    volatility = market_data["close"].pct_change().std()
+                    spread = self.base_spread + (volatility * self.volatility_spread_factor)
             else:
                 # Use volatility-based spread
                 volatility = market_data["close"].pct_change().std()

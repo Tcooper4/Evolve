@@ -376,7 +376,7 @@ def prepare_forecast_data(data: pd.DataFrame) -> pd.DataFrame:
                 df.index = pd.date_range(start="2020-01-01", periods=len(df), freq="D")
 
     # Handle missing values
-    df = df.fillna(method="ffill").fillna(method="bfill")
+    df = df.ffill().bfill()
 
     # Ensure numeric columns
     numeric_cols = df.select_dtypes(include=[np.number]).columns

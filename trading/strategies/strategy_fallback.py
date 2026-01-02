@@ -9,6 +9,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -610,8 +611,11 @@ class StrategyFallback:
         delta = prices.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        rs = gain / loss
+        
+        # Safe RSI calculation
+        rs = np.where(loss > 1e-10, gain / loss, 0.0)
         rsi = 100 - (100 / (1 + rs))
+        
         return rsi
 
     def _calculate_macd(

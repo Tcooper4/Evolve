@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+import numpy as np
 import pandas as pd
 import yaml
 
@@ -310,7 +311,10 @@ class CustomStrategyHandler:
             module = importlib.util.module_from_spec(spec)
 
             # Execute the code in the module
-            exec(strategy.code, module.__dict__)
+            raise NotImplementedError(
+                "Custom code execution disabled for security. "
+                "Please select from predefined strategies."
+            )
 
             # Call the generate_signals function
             if hasattr(module, "generate_signals"):
@@ -375,7 +379,7 @@ class CustomStrategyHandler:
                 "SMA signals: NaN values found in close column, filling with forward fill"
             )
             data = data.copy()
-            data["close"] = data["close"].fillna(method="ffill").fillna(method="bfill")
+            data["close"] = data["close"].ffill().bfill()
 
         sma = data["close"].rolling(period).mean()
         signals = pd.Series(0, index=data.index)
@@ -390,7 +394,8 @@ class CustomStrategyHandler:
         delta = data["close"].diff()
         gain = (delta.where(delta > 0, 0)).rolling(period).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
-        rs = gain / loss
+        # Safely calculate RS with division-by-zero protection
+        rs = np.where(loss > 1e-10, gain / loss, 0.0)
         rsi = 100 - (100 / (1 + rs))
 
         signals = pd.Series(0, index=data.index)
@@ -432,7 +437,7 @@ class CustomStrategyHandler:
                 "Bollinger signals: NaN values found in close column, filling with forward fill"
             )
             data = data.copy()
-            data["close"] = data["close"].fillna(method="ffill").fillna(method="bfill")
+            data["close"] = data["close"].ffill().bfill()
 
         sma = data["close"].rolling(period).mean()
         std = data["close"].rolling(period).std()

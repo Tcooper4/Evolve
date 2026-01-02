@@ -196,8 +196,8 @@ class LSTMModel(nn.Module):
             os.makedirs(checkpoint_dir, exist_ok=True)
 
             # Scale the data
-            X_scaled = self.scaler.fit_transform(X)
-            y_scaled = self.scaler.fit_transform(y.values.reshape(-1, 1))
+            X_scaled = self.X_scaler.fit_transform(X)
+            y_scaled = self.y_scaler.fit_transform(y.values.reshape(-1, 1))
 
             # Convert to tensors
             X_tensor = torch.FloatTensor(X_scaled)
@@ -240,8 +240,12 @@ class LSTMModel(nn.Module):
 
                         epoch_loss += loss.item()
 
-                    # Calculate average epoch loss
-                    avg_epoch_loss = epoch_loss / len(dataloader)
+                    # Calculate average epoch loss - Safely calculate with division-by-zero protection
+                    avg_epoch_loss = (
+                        epoch_loss / len(dataloader)
+                        if len(dataloader) > 0
+                        else 0.0
+                    )
                     history["train_loss"].append(avg_epoch_loss)
 
                     # Update learning rate scheduler
@@ -304,10 +308,10 @@ class LSTMModel(nn.Module):
                 logger.warning(
                     "Input data contains NaN values, filling with forward fill"
                 )
-                data = data.fillna(method="ffill").fillna(method="bfill")
+                data = data.ffill().bfill()
 
             # Perform prediction
-            X_scaled = self.scaler.transform(data)
+            X_scaled = self.X_scaler.transform(data)
             X_tensor = torch.FloatTensor(X_scaled)
             X_seq = self._create_sequences(X_tensor)
 
@@ -404,7 +408,8 @@ class LSTMForecaster(BaseModel):
 
             # Initialize components
             self.model = None
-            self.scaler = StandardScaler()
+            self.X_scaler = StandardScaler()
+            self.y_scaler = StandardScaler()
             self.is_trained = False
             self.training_history = {"loss": [], "val_loss": []}
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -689,18 +694,18 @@ class LSTMForecaster(BaseModel):
                 logger.warning(
                     "Input data contains NaN values, filling with forward fill"
                 )
-                data = data.fillna(method="ffill").fillna(method="bfill")
+                data = data.ffill().bfill()
 
             # Normalize data
             if is_training:
-                self.scaler = StandardScaler()
-                normalized_data = self.scaler.fit_transform(
+                self.X_scaler = StandardScaler()
+                normalized_data = self.X_scaler.fit_transform(
                     data[self.config["feature_columns"]]
                 )
             else:
-                if not hasattr(self, "scaler"):
+                if not hasattr(self, "X_scaler"):
                     raise ValueError("Model must be trained before prediction")
-                normalized_data = self.scaler.transform(
+                normalized_data = self.X_scaler.transform(
                     data[self.config["feature_columns"]]
                 )
 
@@ -952,9 +957,17 @@ class LSTMForecaster(BaseModel):
                                 loss = criterion(outputs, batch_y)
                                 val_loss += loss.item()
 
-                        # Calculate average losses
-                        avg_train_loss = train_loss / len(train_loader)
-                        avg_val_loss = val_loss / len(val_loader)
+                        # Calculate average losses - Safely calculate with division-by-zero protection
+                        avg_train_loss = (
+                            train_loss / len(train_loader)
+                            if len(train_loader) > 0
+                            else 0.0
+                        )
+                        avg_val_loss = (
+                            val_loss / len(val_loader)
+                            if len(val_loader) > 0
+                            else 0.0
+                        )
 
                         # Update scheduler
                         scheduler.step(avg_val_loss)
@@ -1103,7 +1116,8 @@ class LSTMForecaster(BaseModel):
                 {
                     "model_state_dict": self.model.state_dict(),
                     "config": self.config,
-                    "scaler": self.scaler,
+                    "X_scaler": self.X_scaler,
+                    "y_scaler": self.y_scaler,
                     "device": self.device,
                 },
                 path,
@@ -1137,9 +1151,15 @@ class LSTMForecaster(BaseModel):
             if "model_state_dict" in checkpoint:
                 self.model.load_state_dict(checkpoint["model_state_dict"])
 
-            # Load scaler
-            if "scaler" in checkpoint:
-                self.scaler = checkpoint["scaler"]
+            # Load scalers
+            if "X_scaler" in checkpoint:
+                self.X_scaler = checkpoint["X_scaler"]
+            if "y_scaler" in checkpoint:
+                self.y_scaler = checkpoint["y_scaler"]
+            # Backward compatibility: if old format with single scaler, use it for both
+            if "scaler" in checkpoint and "X_scaler" not in checkpoint:
+                self.X_scaler = checkpoint["scaler"]
+                self.y_scaler = checkpoint["scaler"]
 
             self.logger.info(f"Model loaded successfully from {path}")
 
@@ -1192,7 +1212,7 @@ class LSTMForecaster(BaseModel):
                 logger.warning(f"Large forecast horizon ({horizon}) may be unreliable")
 
             # Check if model is trained
-            if not hasattr(self, "scaler") or self.scaler is None:
+            if not hasattr(self, "X_scaler") or self.X_scaler is None:
                 raise ModelPredictionError("Model must be trained before forecasting")
 
             # Prepare data
@@ -1224,9 +1244,9 @@ class LSTMForecaster(BaseModel):
 
                 forecasts = np.concatenate(forecasts, axis=0).flatten()
 
-                # Inverse transform forecasts
-                if hasattr(self, "scaler") and self.scaler is not None:
-                    forecasts = self.scaler.inverse_transform(forecasts.reshape(-1, 1))
+                # Inverse transform forecasts using y_scaler
+                if hasattr(self, "y_scaler") and self.y_scaler is not None:
+                    forecasts = self.y_scaler.inverse_transform(forecasts.reshape(-1, 1))
 
                 # Create forecast dates
                 last_date = (

@@ -126,7 +126,12 @@ class EnsembleModel(BaseModel):
                 if self.config["voting_method"] == "mse":
                     score = -np.mean((actual - preds) ** 2)  # Negative MSE
                 elif self.config["voting_method"] == "sharpe":
-                    returns = np.diff(preds) / preds[:-1]
+                    # Safely calculate returns with division-by-zero protection
+                    returns = np.where(
+                        preds[:-1] > 1e-10,
+                        np.diff(preds) / preds[:-1],
+                        0.0
+                    )
                     score = (
                         np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0
                     )
@@ -271,7 +276,12 @@ class EnsembleModel(BaseModel):
             try:
                 # Get model's trend prediction
                 preds = model.predict(data.iloc[-20:])
-                pred_returns = np.diff(preds) / preds[:-1]
+                # Safely calculate pred_returns with division-by-zero protection
+                pred_returns = np.where(
+                    preds[:-1] > 1e-10,
+                    np.diff(preds) / preds[:-1],
+                    0.0
+                )
                 pred_trend = np.mean(pred_returns)
 
                 # Calculate trend alignment
@@ -387,7 +397,7 @@ class EnsembleModel(BaseModel):
         self.strategy_patterns[regime] = {
             "timestamp": datetime.now().isoformat(),
             "model_confidences": confidences,
-            "best_model": max(confidences.items(), key=lambda x: x[1])[0],
+            "best_model": max(confidences.items(), key=lambda x: x[1])[0] if confidences else None,
         }
         self._save_strategy_patterns()
 
@@ -511,7 +521,10 @@ class EnsembleModel(BaseModel):
                 }
 
             # Calculate weighted average
-            weighted_pred = np.zeros_like(list(model_predictions.values())[0])
+            if model_predictions:
+                weighted_pred = np.zeros_like(list(model_predictions.values())[0])
+            else:
+                raise ValueError("No model predictions available")
 
             for model_name, pred in model_predictions.items():
                 weight = adjusted_weights.get(model_name, 0)
@@ -574,7 +587,7 @@ class EnsembleModel(BaseModel):
 
             # Generate final prediction based on direction and magnitude
             avg_magnitude = np.mean(
-                [np.abs(pred[0]) for pred in model_predictions.values()]
+                [np.abs(pred[0]) for pred in model_predictions.values() if len(pred) > 0]
             )
             final_prediction = final_direction * avg_magnitude
 
@@ -584,9 +597,15 @@ class EnsembleModel(BaseModel):
                     len(list(model_predictions.values())[0]), final_prediction
                 )
 
+            # Safely calculate confidence with division-by-zero protection
+            confidence_value = (
+                abs(total_vote) / len(model_predictions)
+                if len(model_predictions) > 0
+                else 0.0
+            )
             logger.info(
                 f"Vote-based ensemble prediction completed. Direction: {final_direction}, "
-                f"Confidence: {abs(total_vote) / len(model_predictions):.2f}"
+                f"Confidence: {confidence_value:.2f}"
             )
             return final_prediction
 
@@ -724,10 +743,16 @@ class EnsembleModel(BaseModel):
             for i in range(horizon):
                 # Get prediction for next step
                 pred = self.predict(current_data)
-                forecast_values.append(pred[-1])
+                if len(pred) > 0:
+                    forecast_values.append(pred[-1])
+                else:
+                    break
 
                 # Update data for next iteration
-                new_row = current_data.iloc[-1].copy()
+                if len(current_data) > 0:
+                    new_row = current_data.iloc[-1].copy()
+                else:
+                    break
                 new_row["close"] = pred[-1]  # Update with prediction
                 current_data = pd.concat(
                     [current_data, pd.DataFrame([new_row])], ignore_index=True

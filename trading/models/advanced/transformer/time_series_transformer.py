@@ -486,7 +486,7 @@ class TransformerForecaster(BaseModel):
                 logging.warning(
                     "Data contains missing values, filling with forward fill"
                 )
-                data = data.fillna(method="ffill").fillna(method="bfill")
+                data = data.ffill().bfill()
 
             # Check for required columns
             required_cols = self.config.get("feature_columns", ["close", "volume"])

@@ -251,7 +251,7 @@ class CompositeStrategy:
         # Conflict if no clear majority
         total_signals = sum(signal_counts.values())
         max_signals = max(signal_counts.values())
-        if max_signals / total_signals < self.majority_threshold:
+        if total_signals > 0 and max_signals / total_signals < self.majority_threshold:
             return True
 
         return False
@@ -268,9 +268,11 @@ class CompositeStrategy:
         max(signal_confidences.get(best_signal, [0.0]))
 
         # Calculate weighted confidence
-        weighted_confidence = sum(signal_confidences.get(best_signal, [0.0])) / len(
-            signal_confidences.get(best_signal, [1.0])
-        )
+        confidence_list = signal_confidences.get(best_signal, [0.0])
+        if len(confidence_list) > 0:
+            weighted_confidence = sum(confidence_list) / len(confidence_list)
+        else:
+            weighted_confidence = 0.5  # Default confidence
 
         return ConflictResolution(
             final_signal=best_signal,
@@ -347,7 +349,10 @@ class CompositeStrategy:
 
         # Calculate average confidence
         confidences = [signal.confidence for signal in self.strategy_signals.values()]
-        summary["average_confidence"] = sum(confidences) / len(confidences)
+        if len(confidences) > 0:
+            summary["average_confidence"] = sum(confidences) / len(confidences)
+        else:
+            summary["average_confidence"] = 0.0
 
         # Check for conflicts
         signal_counts = self._count_signals()

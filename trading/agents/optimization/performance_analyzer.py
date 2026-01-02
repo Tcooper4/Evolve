@@ -128,11 +128,20 @@ class PerformanceAnalyzer:
             if result.optimization_score > 0
         ]
 
+        # Safely calculate metrics with division-by-zero protection
+        total_optimizations = len(self.optimization_history)
+        num_scores = len(scores)
+        num_successful = len(successful_results)
+
         return {
-            "total_optimizations": len(self.optimization_history),
-            "average_score": sum(scores) / len(scores),
-            "best_score": max(scores),
-            "success_rate": len(successful_results) / len(self.optimization_history),
+            "total_optimizations": total_optimizations,
+            "average_score": sum(scores) / num_scores if num_scores > 0 else 0.0,
+            "best_score": max(scores) if scores else 0.0,
+            "success_rate": (
+                num_successful / total_optimizations 
+                if total_optimizations > 0 
+                else 0.0
+            ),
             "recent_trend": self._calculate_recent_trend(),
         }
 
@@ -148,13 +157,16 @@ class PerformanceAnalyzer:
         if len(recent_scores) < 2:
             return "insufficient_data"
 
-        # Calculate trend
-        first_half = sum(recent_scores[: len(recent_scores) // 2]) / (
-            len(recent_scores) // 2
-        )
-        second_half = sum(recent_scores[len(recent_scores) // 2 :]) / (
-            len(recent_scores) - len(recent_scores) // 2
-        )
+        # Calculate trend with safe division
+        mid_point = len(recent_scores) // 2
+        first_half_len = mid_point
+        second_half_len = len(recent_scores) - mid_point
+
+        if first_half_len > 0 and second_half_len > 0:
+            first_half = sum(recent_scores[:mid_point]) / first_half_len
+            second_half = sum(recent_scores[mid_point:]) / second_half_len
+        else:
+            return "insufficient_data"
 
         if second_half > first_half * 1.1:
             return "improving"

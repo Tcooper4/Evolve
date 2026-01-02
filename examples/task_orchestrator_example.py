@@ -49,6 +49,7 @@ class MockAgent:
 
         if self.success_rate > 0.8:
             # Removed return statement - __init__ should not return values
+            pass
         else:
             raise Exception("Model innovation failed")
 
