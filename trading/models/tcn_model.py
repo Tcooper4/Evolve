@@ -155,11 +155,7 @@ class TCNModel(BaseModel):
         super().__init__(default_config)
         self._validate_config()
         self._setup_model()
-        return {
-            "success": True,
-            "message": "TCNModel initialized",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # __init__ should not return anything
 
     def _validate_config(self) -> None:
         """Validate model configuration.
@@ -291,8 +287,8 @@ class TCNModel(BaseModel):
             self.y_mean = y.mean()
             self.y_std = y.std()
 
-        X = (X - self.X_mean) / self.X_std
-        y = (y - self.y_mean) / self.y_std
+        X = (X - self.X_mean) / (self.X_std + 1e-10)
+        y = (y - self.y_mean) / (self.y_std + 1e-10)
 
         # Convert to tensors
         X = torch.FloatTensor(X)
@@ -435,11 +431,17 @@ class TCNModel(BaseModel):
             for i in range(horizon):
                 # Get prediction for next step
                 pred = self.predict(current_data)
-                forecast_values.append(pred[-1])
+                if len(pred) > 0:
+                    forecast_values.append(pred[-1])
+                else:
+                    break
 
                 # Update data for next iteration (simple approach)
                 # In a production system, you might want more sophisticated handling
-                new_row = current_data.iloc[-1].copy()
+                if len(current_data) > 0:
+                    new_row = current_data.iloc[-1].copy()
+                else:
+                    break
                 new_row["close"] = pred[-1]  # Update with prediction
                 current_data = pd.concat(
                     [current_data, pd.DataFrame([new_row])], ignore_index=True

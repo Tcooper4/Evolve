@@ -289,7 +289,7 @@ class PortfolioSimulator:
 
             # Black-Litterman formula
             M1 = np.linalg.inv(tau * covariance_matrix)
-            M2 = P.T @ np.linalg.inv(Omega)
+            M2 = P.T @ np.linalg.inv(Omega) @ P
 
             bl_returns = np.linalg.inv(M1 + M2) @ (M1 @ Pi + M2 @ Q)
 
@@ -303,22 +303,31 @@ class PortfolioSimulator:
 
         except Exception as e:
             self.logger.error(f"Error in Black-Litterman optimization: {str(e)}")
-            return {
-                "success": True,
-                "result": self._mean_variance_optimization(
-                    expected_returns, covariance_matrix, constraints
-                ),
-                "message": "Operation completed successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
+            return self._mean_variance_optimization(expected_returns, covariance_matrix, constraints)
 
     def _estimate_market_cap_weights(self, returns_data: pd.DataFrame) -> pd.Series:
         """Estimate market capitalization weights."""
         try:
             # Use inverse volatility as proxy for market cap weights
             volatilities = returns_data.std()
-            inv_vol_weights = 1 / volatilities
-            market_cap_weights = inv_vol_weights / inv_vol_weights.sum()
+
+            # Safe inverse volatility calculation
+            inv_vol_weights = np.where(
+                volatilities > 1e-10,
+                1 / volatilities,
+                0.0
+            )
+
+            # Normalize (with additional safety)
+            total_inv_vol = inv_vol_weights.sum()
+            if total_inv_vol > 1e-10:
+                market_cap_weights = inv_vol_weights / total_inv_vol
+            else:
+                # Equal weights fallback
+                market_cap_weights = pd.Series(
+                    1.0 / len(volatilities), 
+                    index=volatilities.index
+                )
 
             return market_cap_weights
 
@@ -403,9 +412,14 @@ class PortfolioSimulator:
 
             def risk_parity_objective(weights):
                 portfolio_vol = np.sqrt(weights.T @ covariance_matrix.values @ weights)
-                asset_contributions = (
-                    weights * (covariance_matrix.values @ weights) / portfolio_vol
-                )
+
+                if portfolio_vol > 1e-10:
+                    asset_contributions = (
+                        weights * (covariance_matrix.values @ weights) / portfolio_vol
+                    )
+                else:
+                    # Zero volatility portfolio - equal contributions
+                    asset_contributions = np.ones_like(weights) / len(weights)
 
                 # Minimize variance of risk contributions
                 risk_contribution_var = np.var(asset_contributions)
@@ -462,7 +476,12 @@ class PortfolioSimulator:
             def negative_sharpe(weights):
                 portfolio_return = expected_returns.values @ weights
                 portfolio_vol = np.sqrt(weights.T @ covariance_matrix.values @ weights)
-                sharpe = (portfolio_return - self.risk_free_rate) / portfolio_vol
+
+                if portfolio_vol > 1e-10:
+                    sharpe = (portfolio_return - self.risk_free_rate) / portfolio_vol
+                else:
+                    sharpe = 0.0  # Zero volatility = zero Sharpe
+                
                 return -sharpe
 
             def constraint_sum_to_one(weights):
@@ -585,8 +604,11 @@ class PortfolioSimulator:
                 weight_array.T @ covariance_matrix.values @ weight_array
             )
 
-            # Calculate Sharpe ratio
-            sharpe_ratio = (expected_return - self.risk_free_rate) / expected_volatility
+            # Calculate Sharpe ratio with safe division
+            if expected_volatility > 1e-10:
+                sharpe_ratio = (expected_return - self.risk_free_rate) / expected_volatility
+            else:
+                sharpe_ratio = 0.0
 
             # Calculate historical portfolio returns
             portfolio_returns = returns_data @ weight_array

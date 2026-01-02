@@ -377,20 +377,32 @@ class PositionSizer:
         if avg_loss == 0 or win_rate <= 0 or win_rate >= 1:
             return params.base_position_size
 
-        # Calculate Kelly fraction
-        b = avg_win / avg_loss  # odds received
+        # Calculate Kelly fraction with division-by-zero protection
+        if avg_loss > 1e-10:
+            b = avg_win / avg_loss  # odds received
+        else:
+            # If no losses, use conservative estimate
+            return params.base_position_size
+            
         p = win_rate
         q = 1 - win_rate
 
-        kelly_fraction = (b * p - q) / b
+        if b > 1e-10:
+            kelly_fraction = (b * p - q) / b
+        else:
+            kelly_fraction = 0.0
 
         # Apply conservative Kelly fraction
         kelly_fraction *= params.kelly_fraction
 
-        # Convert to position size
-        position_size = (
-            kelly_fraction * portfolio_context.total_capital / risk_per_share
-        )
+        # Convert to position size with division-by-zero protection
+        if risk_per_share > 1e-10:
+            position_size = (
+                kelly_fraction * portfolio_context.total_capital / risk_per_share
+            )
+        else:
+            self.logger.warning(f"Invalid risk_per_share {risk_per_share}")
+            return 0.0
 
         return max(0, min(position_size, params.max_position_size))
 

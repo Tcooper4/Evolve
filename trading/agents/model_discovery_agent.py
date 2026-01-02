@@ -580,21 +580,39 @@ class ModelBenchmarker:
             # Basic regression metrics
             rmse = np.sqrt(np.mean((y_true - y_pred) ** 2))
             mae = np.mean(np.abs(y_true - y_pred))
-            mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+            
+            # MAPE with safe division
+            mask = np.abs(y_true) > 1e-10
+            if mask.any():
+                mape = np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
+            else:
+                mape = 0.0
 
-            # Trading metrics
-            returns = np.diff(y_true) / y_true[:-1]
-            pred_returns = np.diff(y_pred) / y_pred[:-1]
+            # Trading metrics with safe division
+            returns = np.where(
+                y_true[:-1] > 1e-10,
+                np.diff(y_true) / y_true[:-1],
+                0.0
+            )
+            pred_returns = np.where(
+                y_pred[:-1] > 1e-10,
+                np.diff(y_pred) / y_pred[:-1],
+                0.0
+            )
 
-            # Sharpe ratio
+            # Sharpe ratio (already has check)
             sharpe_ratio = (
                 np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0
             )
 
-            # Max drawdown
+            # Max drawdown with safe division
             cumulative = np.cumprod(1 + returns)
             running_max = np.maximum.accumulate(cumulative)
-            drawdown = (cumulative - running_max) / running_max
+            drawdown = np.where(
+                running_max > 1e-10,
+                (cumulative - running_max) / running_max,
+                0.0
+            )
             max_drawdown = np.min(drawdown)
 
             # Win rate

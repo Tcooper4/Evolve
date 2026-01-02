@@ -250,8 +250,13 @@ class OptionsForecaster:
         options_list = []
 
         for strike in strikes:
-            # Calculate synthetic implied volatility
-            moneyness = np.log(strike / underlying_price)
+            # Calculate synthetic implied volatility with safe division
+            if underlying_price > 1e-10:
+                moneyness = np.log(strike / underlying_price)
+            else:
+                # If underlying price is invalid, skip this strike
+                continue
+            
             time_to_expiry = (expiration_date - datetime.now()).days / 365
 
             # Synthetic IV surface

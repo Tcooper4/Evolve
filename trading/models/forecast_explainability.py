@@ -396,10 +396,13 @@ class ForecastExplainability:
             Explanation text
         """
         try:
-            # Calculate change percentage
+            # Calculate change percentage - Safely calculate with division-by-zero protection
             if target_history is not None and len(target_history) > 0:
                 current_value = target_history.iloc[-1]
-                change_pct = ((forecast_value - current_value) / current_value) * 100
+                if current_value > 1e-10:
+                    change_pct = ((forecast_value - current_value) / current_value) * 100
+                else:
+                    change_pct = 0.0
             else:
                 change_pct = 0.0
 

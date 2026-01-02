@@ -295,10 +295,13 @@ class Backtester:
                 self.equity_account += trade_value
                 # Update leverage
                 if self.enable_leverage:
-                    self.leverage_used = min(
-                        self.max_leverage,
-                        (self.equity_account - self.cash_account) / self.cash_account,
+                    # Safely calculate leverage with division-by-zero protection
+                    leverage_ratio = (
+                        (self.equity_account - self.cash_account) / self.cash_account
+                        if self.cash_account > 1e-10
+                        else 0.0
                     )
+                    self.leverage_used = min(self.max_leverage, leverage_ratio)
             else:  # SELL
                 # Credit cash account
                 self.cash_account += total_cost
@@ -306,9 +309,13 @@ class Backtester:
                 self.equity_account -= trade_value
                 # Update leverage
                 if self.enable_leverage:
-                    self.leverage_used = max(
-                        0, (self.equity_account - self.cash_account) / self.cash_account
+                    # Safely calculate leverage with division-by-zero protection
+                    leverage_ratio = (
+                        (self.equity_account - self.cash_account) / self.cash_account
+                        if self.cash_account > 1e-10
+                        else 0.0
                     )
+                    self.leverage_used = max(0, leverage_ratio)
 
             # Record account state
             account_state = {
@@ -432,10 +439,10 @@ class Backtester:
 
                 # Handle NaN values based on method
                 if fill_method == "ffill":
-                    signals_df = signals_df.fillna(method="ffill")
+                    signals_df = signals_df.ffill()
                     self.logger.info("Filled NaN values using forward fill")
                 elif fill_method == "bfill":
-                    signals_df = signals_df.fillna(method="bfill")
+                    signals_df = signals_df.bfill()
                     self.logger.info("Filled NaN values using backward fill")
                 elif fill_method == "drop":
                     signals_df = signals_df.dropna()
@@ -447,7 +454,7 @@ class Backtester:
                     self.logger.warning(
                         f"Unknown fill method: {fill_method}, using forward fill"
                     )
-                    signals_df = signals_df.fillna(method="ffill")
+                    signals_df = signals_df.ffill()
 
             # Check for infinite values
             inf_count = (
@@ -458,7 +465,7 @@ class Backtester:
                     f"Found {inf_count} infinite values in signals DataFrame"
                 )
                 signals_df = signals_df.replace([np.inf, -np.inf], np.nan)
-                signals_df = signals_df.fillna(method="ffill")
+                signals_df = signals_df.ffill()
 
             # Validate final DataFrame
             if signals_df.isna().any().any():

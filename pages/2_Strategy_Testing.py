@@ -1071,7 +1071,10 @@ def generate_signals(data: pd.DataFrame, fast: int = 12, slow: int = 26, signal:
                                 'Series': pd.Series
                             }
                             
-                            exec(strategy_code, test_namespace)
+                            raise NotImplementedError(
+                                "Custom code execution disabled for security. "
+                                "Please select from predefined strategies."
+                            )
                             
                             # Test generate_signals function
                             if 'generate_signals' in test_namespace:

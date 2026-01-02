@@ -328,12 +328,24 @@ class ModelEvaluatorAgent(BaseAgent):
             mae = np.mean(np.abs(predictions - actual_values))
             rmse = np.sqrt(mse)
 
-            # Percentage error
-            mape = np.mean(np.abs((actual_values - predictions) / actual_values)) * 100
+            # Percentage error with safe division
+            mask = np.abs(actual_values) > 1e-10
+            if mask.any():
+                mape = np.mean(np.abs((actual_values[mask] - predictions[mask]) / actual_values[mask])) * 100
+            else:
+                mape = 0.0
 
-            # Trading-specific metrics
-            returns = np.diff(actual_values) / actual_values[:-1]
-            predicted_returns = np.diff(predictions) / predictions[:-1]
+            # Trading-specific metrics with safe division
+            returns = np.where(
+                actual_values[:-1] > 1e-10,
+                np.diff(actual_values) / actual_values[:-1],
+                0.0
+            )
+            predicted_returns = np.where(
+                predictions[:-1] > 1e-10,
+                np.diff(predictions) / predictions[:-1],
+                0.0
+            )
 
             # Sharpe ratio
             sharpe_ratio = calculate_sharpe_ratio(returns) if len(returns) > 1 else 0.0

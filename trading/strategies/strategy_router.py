@@ -509,9 +509,13 @@ class StrategyRouter:
 
         if active_signals:
             # Calculate statistics
-            summary["average_confidence"] = sum(
-                s.confidence for s in active_signals
-            ) / len(active_signals)
+            num_signals = len(active_signals)
+            if num_signals > 0:
+                summary["average_confidence"] = sum(
+                    s.confidence for s in active_signals
+                ) / num_signals
+            else:
+                summary["average_confidence"] = 0.0
 
             for signal in active_signals:
                 # Count by signal type

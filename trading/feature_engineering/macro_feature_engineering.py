@@ -207,7 +207,7 @@ class MacroFeatureEngineer:
                 enriched_df = enriched_df.join(fred_resampled, how="left")
 
                 # Forward fill missing values
-                enriched_df = enriched_df.fillna(method="ffill")
+                enriched_df = enriched_df.ffill()
 
                 # Add lagged features
                 enriched_df = self._add_lagged_features(enriched_df, fred_data.columns)
@@ -219,7 +219,7 @@ class MacroFeatureEngineer:
             if not wb_data.empty:
                 wb_resampled = wb_data.resample("D").ffill()
                 enriched_df = enriched_df.join(wb_resampled, how="left")
-                enriched_df = enriched_df.fillna(method="ffill")
+                enriched_df = enriched_df.ffill()
 
             # Add derived features
             enriched_df = self._add_derived_features(enriched_df)
@@ -404,7 +404,7 @@ class MacroFeatureEngineer:
                 return {}
 
             # Prepare data
-            X = df[feature_cols].fillna(method="ffill").fillna(0)
+            X = df[feature_cols].ffill().fillna(0)
             y = df[target_col].fillna(0)
 
             # Encode categorical features

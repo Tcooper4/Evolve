@@ -134,9 +134,9 @@ class BacktestCommon:
 
         # Fill missing values
         if fill_method == "ffill":
-            processed_data.fillna(method="ffill", inplace=True)
+            processed_data.ffill(inplace=True)
         elif fill_method == "bfill":
-            processed_data.fillna(method="bfill", inplace=True)
+            processed_data.bfill(inplace=True)
         elif fill_method == "interpolate":
             processed_data.interpolate(method="linear", inplace=True)
 

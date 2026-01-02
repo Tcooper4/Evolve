@@ -208,7 +208,13 @@ class SignalScorer:
         )
         weighted_sum += current_score * weights[-1]
 
-        return weighted_sum / weights.sum()
+        # Safely calculate weighted average with division-by-zero protection
+        weights_total = weights.sum()
+        if weights_total > 1e-10:
+            return weighted_sum / weights_total
+        else:
+            # If no weights, return simple average or current score
+            return current_score
 
     def _apply_step_decay(
         self, historical_scores: List[float], current_score: float
@@ -286,9 +292,14 @@ class SignalScorer:
             # Calculate slope and intercept
             slope, intercept = np.polyfit(x, y, 1)
 
-            # Calculate R-squared
+            # Calculate R-squared with safe division
             y_pred = slope * x + intercept
-            r_squared = 1 - np.sum((y - y_pred) ** 2) / np.sum((y - np.mean(y)) ** 2)
+            ss_total = np.sum((y - np.mean(y)) ** 2)
+            if ss_total > 1e-10:
+                r_squared = 1 - np.sum((y - y_pred) ** 2) / ss_total
+            else:
+                # Perfect fit if all y values are same
+                r_squared = 1.0 if np.allclose(y, y_pred) else 0.0
 
             return {
                 "trend_slope": float(slope),

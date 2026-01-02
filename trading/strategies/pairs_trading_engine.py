@@ -202,12 +202,7 @@ class PairsTradingEngine:
 
         except Exception as e:
             self.logger.error(f"Error testing cointegration: {str(e)}")
-            return {
-                "success": True,
-                "result": self._create_no_cointegration_result(symbol1, symbol2),
-                "message": "Operation completed successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
+            return self._create_no_cointegration_result(symbol1, symbol2)
 
     def _create_no_cointegration_result(
         self, symbol1: str, symbol2: str

@@ -153,9 +153,15 @@ class StrategyRanker:
             if stats["usage_count"] < self.min_usage_count:
                 continue
 
-            # Calculate metrics
-            success_rate = stats["success_count"] / stats["usage_count"]
-            avg_confidence = stats["total_confidence"] / stats["usage_count"]
+            # Calculate metrics with division-by-zero protection
+            usage_count = stats["usage_count"]
+            if usage_count > 0:
+                success_rate = stats["success_count"] / usage_count
+                avg_confidence = stats["total_confidence"] / usage_count
+            else:
+                logger.warning(f"Strategy {strategy_name} has zero usage_count")
+                success_rate = 0.0
+                avg_confidence = 0.0
             usage_frequency = self._calculate_usage_frequency(strategy_name)
             recent_performance = self._calculate_recent_performance(strategy_name)
 

@@ -1546,6 +1546,11 @@ if filled_orders:
                                 execution_time = (exec_time - order_time).total_seconds()
                             except:
                                 execution_time = 0.0
+                except Exception as e:
+                    # If we can't get order status, use default values
+                    logger.warning(f"Could not get order status for {order_id}: {str(e)}")
+                    execution_price = order_price
+                    execution_time = 0.0
         
         # Calculate slippage (difference between expected and actual price)
         if order_price > 0:

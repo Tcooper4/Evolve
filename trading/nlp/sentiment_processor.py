@@ -669,9 +669,12 @@ class SentimentProcessor:
                     f"Used {soft_matches_used} soft matches out of {matched_words} total matches"
                 )
 
-            # Normalize score to [-1, 1] range
-            avg_score = total_score / matched_words
-            return max(-1.0, min(1.0, avg_score))
+            # Normalize score to [-1, 1] range with safe division
+            if matched_words > 0:
+                avg_score = total_score / matched_words
+                return max(-1.0, min(1.0, avg_score))
+            else:
+                return 0.0  # Neutral sentiment if no matches
 
         except Exception as e:
             logger.warning(f"Error calculating base sentiment: {e}")

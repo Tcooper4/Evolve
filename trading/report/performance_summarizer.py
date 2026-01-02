@@ -76,13 +76,16 @@ class PerformanceSummarizer:
 
             # Risk-adjusted metrics
             excess_returns = returns - rf_rate / self.trading_days_per_year
-            sharpe_ratio = (
-                excess_returns.mean()
-                / returns.std()
-                * np.sqrt(self.trading_days_per_year)
-                if returns.std() > 0
-                else 0
-            )
+            # Safe Sharpe ratio calculation
+            returns_std = returns.std()
+            if returns_std > 1e-10:
+                sharpe_ratio = (
+                    excess_returns.mean()
+                    / returns_std
+                    * np.sqrt(self.trading_days_per_year)
+                )
+            else:
+                sharpe_ratio = 0.0
 
             # Sortino ratio (using downside deviation)
             downside_returns = returns[returns < 0]
@@ -91,16 +94,23 @@ class PerformanceSummarizer:
                 if len(downside_returns) > 0
                 else 0
             )
-            sortino_ratio = (
-                excess_returns.mean() / downside_deviation
-                if downside_deviation > 0
-                else 0
-            )
+            # Safe Sortino ratio calculation
+            if downside_deviation > 1e-10:
+                sortino_ratio = (
+                    excess_returns.mean() * np.sqrt(self.trading_days_per_year)
+                    / downside_deviation
+                )
+            else:
+                sortino_ratio = 0.0
 
-            # Maximum drawdown
+            # Maximum drawdown - Safely calculate with division-by-zero protection
             cumulative_returns = (1 + returns).cumprod()
             running_max = cumulative_returns.expanding().max()
-            drawdown = (cumulative_returns - running_max) / running_max
+            drawdown = np.where(
+                running_max > 1e-10,
+                (cumulative_returns - running_max) / running_max,
+                0.0
+            )
             max_drawdown = drawdown.min()
 
             # Calmar ratio
@@ -244,11 +254,15 @@ class PerformanceSummarizer:
             return 0.0
 
         excess_returns = returns - risk_free_rate / self.trading_days_per_year
-        return (
-            excess_returns.mean() / returns.std() * np.sqrt(self.trading_days_per_year)
-            if returns.std() > 0
-            else 0
-        )
+        # Safe Sharpe ratio calculation
+        returns_std = returns.std()
+        if returns_std > 1e-10:
+            sharpe_ratio = (
+                excess_returns.mean() / returns_std * np.sqrt(self.trading_days_per_year)
+            )
+        else:
+            sharpe_ratio = 0.0
+        return sharpe_ratio
 
     def _calculate_rolling_drawdown(self, returns: pd.Series) -> float:
         """Calculate rolling maximum drawdown."""
@@ -257,7 +271,12 @@ class PerformanceSummarizer:
 
         cumulative_returns = (1 + returns).cumprod()
         running_max = cumulative_returns.expanding().max()
-        drawdown = (cumulative_returns - running_max) / running_max
+        # Safely calculate drawdown with division-by-zero protection
+        drawdown = np.where(
+            running_max > 1e-10,
+            (cumulative_returns - running_max) / running_max,
+            0.0
+        )
         return drawdown.min()
 
     def compare_strategies(

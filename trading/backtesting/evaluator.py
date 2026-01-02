@@ -436,9 +436,17 @@ class ModelEvaluator:
                     "volatility": 0.0,
                 }
 
-            # Calculate returns
-            actual_returns = np.diff(y_true) / y_true[:-1]
-            pred_returns = np.diff(y_pred) / y_pred[:-1]
+            # Calculate returns with division-by-zero protection
+            actual_returns = np.where(
+                y_true[:-1] > 1e-10,
+                np.diff(y_true) / y_true[:-1],
+                0.0
+            )
+            pred_returns = np.where(
+                y_pred[:-1] > 1e-10,
+                np.diff(y_pred) / y_pred[:-1],
+                0.0
+            )
 
             # Trading signals (simple strategy)
             signals = np.where(pred_returns > 0, 1, -1)
@@ -469,7 +477,12 @@ class ModelEvaluator:
             # Maximum drawdown
             cumulative_returns = np.cumprod(1 + strategy_returns)
             running_max = np.maximum.accumulate(cumulative_returns)
-            drawdown = (cumulative_returns - running_max) / running_max
+            # Safely calculate drawdown with division-by-zero protection
+            drawdown = np.where(
+                running_max > 1e-10,
+                (cumulative_returns - running_max) / running_max,
+                0.0
+            )
             max_drawdown = np.min(drawdown)
 
             # Win rate

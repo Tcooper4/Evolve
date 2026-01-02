@@ -138,7 +138,14 @@ class DataPreprocessor:
                 if std == 0:
                     continue
 
-                z_scores = np.abs((result[col] - result[col].mean()) / std)
+                # Safe z-score calculation
+                mean_val = result[col].mean()
+                std_val = std
+                z_scores = np.where(
+                    std_val > 1e-10,
+                    np.abs((result[col] - mean_val) / std_val),
+                    0.0
+                )
                 outliers = z_scores > self.outlier_threshold
 
                 if outliers.any():
@@ -459,7 +466,8 @@ class FeatureEngineering:
         gain = (delta.where(delta > 0, 0)).rolling(window=self.rsi_window).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=self.rsi_window).mean()
 
-        rs = gain / loss
+        # Safe RSI calculation with division-by-zero protection
+        rs = np.where(loss > 1e-10, gain / loss, 0.0)
         rsi = 100 - (100 / (1 + rs))
 
         return pd.DataFrame({"RSI": rsi}, index=data.index)
@@ -504,7 +512,12 @@ class FeatureEngineering:
         std = data["Close"].rolling(window=self.bb_window).std()
         upper_band = middle_band + (std * self.bb_std)
         lower_band = middle_band - (std * self.bb_std)
-        bandwidth = (upper_band - lower_band) / middle_band
+        # Safe bandwidth calculation
+        bandwidth = np.where(
+            middle_band > 1e-10,
+            (upper_band - lower_band) / middle_band,
+            0.0
+        )
 
         return pd.DataFrame(
             {
@@ -582,7 +595,14 @@ class FeatureEngineering:
         if len(data) >= 14:
             low_14 = data["Low"].rolling(window=14).min()
             high_14 = data["High"].rolling(window=14).max()
-            result["Stoch_K"] = 100 * ((data["Close"] - low_14) / (high_14 - low_14))
+            
+            # Safe Stochastic calculation
+            range_14 = high_14 - low_14
+            result["Stoch_K"] = np.where(
+                range_14 > 1e-10,
+                100 * ((data["Close"] - low_14) / range_14),
+                50.0  # Neutral value when no range
+            )
             result["Stoch_D"] = result["Stoch_K"].rolling(window=3).mean()
 
         return result
@@ -809,7 +829,12 @@ class DataValidator:
             if std == 0:
                 continue
 
-            z_scores = np.abs((data[col] - mean) / std)
+            # Safe z-score calculation
+            z_scores = np.where(
+                std > 1e-10,
+                np.abs((data[col] - mean) / std),
+                0.0
+            )
             result[f"{col}_outlier"] = z_scores > self.outlier_threshold
 
         return result
@@ -937,7 +962,12 @@ class DataScaler:
         if std_val == 0:
             return data
 
-        z_scores = np.abs((data[column] - mean_val) / std_val)
+        # Safe z-score calculation
+        z_scores = np.where(
+            std_val > 1e-10,
+            np.abs((data[column] - mean_val) / std_val),
+            0.0
+        )
         outliers = z_scores > self.outlier_threshold
 
         if outliers.any():
@@ -998,7 +1028,11 @@ class DataScaler:
                 if std_val == 0:
                     std_val = 1.0  # Avoid division by zero
 
-                result[col] = (result[col] - mean_val) / std_val
+                # Safe z-score normalization
+                if std_val > 1e-10:
+                    result[col] = (result[col] - mean_val) / std_val
+                else:
+                    result[col] = 0.0  # Constant value, normalize to zero
 
         return result
 
@@ -1049,15 +1083,22 @@ class DataScaler:
                     std = stats["std"]
                     if std == 0:
                         std = 1.0
-                    result[col] = (result[col] - stats["mean"]) / std
+                    # Safe z-score normalization
+                    if std > 1e-10:
+                        result[col] = (result[col] - stats["mean"]) / std
+                    else:
+                        result[col] = 0.0  # Constant value, normalize to zero
                 elif self.scaling_method == "minmax":
                     # Min-max scaling
                     if stats["max"] == stats["min"]:
                         result[col] = 0.0
                     else:
-                        result[col] = (result[col] - stats["min"]) / (
-                            stats["max"] - stats["min"]
-                        )
+                        # Safe min-max normalization
+                        value_range = stats["max"] - stats["min"]
+                        if value_range > 1e-10:
+                            result[col] = (result[col] - stats["min"]) / value_range
+                        else:
+                            result[col] = 0.0  # All values same, normalize to zero
                 elif self.scaling_method == "robust":
                     # Robust scaling using median and IQR
                     iqr = stats["q3"] - stats["q1"]
@@ -1143,7 +1184,14 @@ def remove_outliers(
             upper_bound = Q3 + 1.5 * IQR
             mask = (df[col] >= lower_bound) & (df[col] <= upper_bound)
         else:  # zscore
-            z_scores = np.abs((df[col] - df[col].mean()) / df[col].std())
+            # Safe z-score calculation
+            mean_val = df[col].mean()
+            std_val = df[col].std()
+            z_scores = np.where(
+                std_val > 1e-10,
+                np.abs((df[col] - mean_val) / std_val),
+                0.0
+            )
             mask = z_scores < 3
 
         outliers = (~mask).sum()

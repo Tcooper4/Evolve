@@ -215,7 +215,7 @@ class ModelSwapper:
         # Check MSE against current ensemble
         if self.active_models:
             current_mse = self._get_ensemble_mse()
-            if current_mse is not None:
+            if current_mse is not None and current_mse > 1e-10:
                 mse_increase = (metrics.mse - current_mse) / current_mse
                 if mse_increase > self.max_mse_increase:
                     logger.debug(
@@ -528,9 +528,13 @@ class ModelSwapper:
         if successful_swaps == 1:
             self.stats["avg_performance_improvement"] = improvement
         else:
-            self.stats["avg_performance_improvement"] = (
-                current_avg * (successful_swaps - 1) + improvement
-            ) / successful_swaps
+            # Safely calculate average improvement with division-by-zero protection
+            if successful_swaps > 0:
+                self.stats["avg_performance_improvement"] = (
+                    current_avg * (successful_swaps - 1) + improvement
+                ) / successful_swaps
+            else:
+                self.stats["avg_performance_improvement"] = improvement
 
     def get_swap_statistics(self) -> Dict[str, Any]:
         """Get swap operation statistics."""
@@ -539,9 +543,13 @@ class ModelSwapper:
         # Add recent performance
         if self.swap_history:
             recent_swaps = self.swap_history[-10:]  # Last 10 swaps
-            stats["recent_success_rate"] = sum(
-                1 for s in recent_swaps if s.success
-            ) / len(recent_swaps)
+            # Safely calculate success rate with division-by-zero protection
+            if len(recent_swaps) > 0:
+                stats["recent_success_rate"] = sum(
+                    1 for s in recent_swaps if s.success
+                ) / len(recent_swaps)
+            else:
+                stats["recent_success_rate"] = 0.0
             stats["recent_avg_improvement"] = np.mean(
                 [s.performance_improvement for s in recent_swaps if s.success]
             )

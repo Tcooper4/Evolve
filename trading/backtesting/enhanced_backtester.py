@@ -613,7 +613,12 @@ class EnhancedBacktester:
             # Simple position sizing: use confidence as position size factor
             confidence = signal.get("confidence", 0.5)
             base_position = self.initial_cash * 0.1  # 10% of initial cash per trade
-            position_size = (base_position * confidence) / price
+            # Safely calculate position size with division-by-zero protection
+            if price > 1e-10:
+                position_size = (base_position * confidence) / price
+            else:
+                logger.warning(f"Invalid price {price}, using zero position size")
+                position_size = 0.0
             return max(position_size, 0)  # Ensure non-negative
         except Exception as e:
             logger.error(f"Error calculating position size: {e}")

@@ -262,7 +262,11 @@ class AlphaAttributionEngine:
                 return pd.Series(index=data.index, data=0.0)
 
             volume_ma = data["Volume"].rolling(20).mean()
-            volume_factor = (data["Volume"] - volume_ma) / volume_ma
+            volume_factor = np.where(
+                volume_ma > 1e-10,
+                (data["Volume"] - volume_ma) / volume_ma,
+                0.0
+            )
             return volume_factor
         except Exception as e:
             self.logger.error(f"Error calculating volume factor: {e}")
@@ -281,8 +285,13 @@ class AlphaAttributionEngine:
             upper_band = sma + (2 * std)
             lower_band = sma - (2 * std)
 
-            # Position within Bollinger Bands
-            position = (data["Close"] - lower_band) / (upper_band - lower_band)
+            # Position within Bollinger Bands - Safe division
+            bb_range = upper_band - lower_band
+            position = np.where(
+                bb_range > 1e-10,
+                (data["Close"] - lower_band) / bb_range,
+                0.5  # Neutral position if no range
+            )
             mean_reversion_factor = 0.5 - position  # Distance from center
             return mean_reversion_factor
         except Exception as e:
@@ -301,10 +310,22 @@ class AlphaAttributionEngine:
             sma_50 = data["Close"].rolling(50).mean()
             sma_200 = data["Close"].rolling(200).mean()
 
-            # Trend strength based on moving average alignment
-            trend_short = (data["Close"] - sma_20) / sma_20
-            trend_medium = (sma_20 - sma_50) / sma_50
-            trend_long = (sma_50 - sma_200) / sma_200
+            # Trend strength based on moving average alignment - Safe calculations
+            trend_short = np.where(
+                sma_20 > 1e-10,
+                (data["Close"] - sma_20) / sma_20,
+                0.0
+            )
+            trend_medium = np.where(
+                sma_50 > 1e-10,
+                (sma_20 - sma_50) / sma_50,
+                0.0
+            )
+            trend_long = np.where(
+                sma_200 > 1e-10,
+                (sma_50 - sma_200) / sma_200,
+                0.0
+            )
 
             trend_factor = (trend_short + trend_medium + trend_long) / 3
             return trend_factor

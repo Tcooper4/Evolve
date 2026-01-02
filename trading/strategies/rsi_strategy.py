@@ -120,7 +120,7 @@ class RSIStrategy:
                 raise ValueError("Data must contain 'Close' column")
 
             # Handle NaN values
-            close_prices = data["Close"].fillna(method="ffill").fillna(method="bfill")
+            close_prices = data["Close"].ffill().bfill()
 
             if len(close_prices) < self.rsi_period + 1:
                 raise ValueError(
@@ -243,7 +243,7 @@ class RSIStrategy:
                     "Input data contains NaN values, filling with forward fill"
                 )
                 df_lower["close"] = (
-                    df_lower["close"].fillna(method="ffill").fillna(method="bfill")
+                    df_lower["close"].ffill().bfill()
                 )
 
             # Update parameters with kwargs if provided

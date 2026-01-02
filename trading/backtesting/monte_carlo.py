@@ -290,8 +290,11 @@ class MonteCarloSimulator:
         final_values = self.simulated_paths.iloc[-1]
         initial_capital = self.results["initial_capital"]
 
-        # Calculate statistics
-        total_returns = (final_values - initial_capital) / initial_capital
+        # Calculate statistics - Safely calculate total returns with division-by-zero protection
+        if initial_capital > 1e-10:
+            total_returns = (final_values - initial_capital) / initial_capital
+        else:
+            total_returns = pd.Series(0.0, index=final_values.index)
 
         stats = {
             "mean_final_value": final_values.mean(),
@@ -507,7 +510,12 @@ class MonteCarloSimulator:
             if col.startswith("P") or col == "Mean":
                 equity_curve = self.percentiles[col]
                 running_max = equity_curve.cummax()
-                drawdown = (equity_curve - running_max) / running_max
+                # Safely calculate drawdown with division-by-zero protection
+                drawdown = np.where(
+                    running_max > 1e-10,
+                    (equity_curve - running_max) / running_max,
+                    0.0
+                )
                 drawdowns[f"max_drawdown_{col}"] = drawdown.min()
 
         return drawdowns

@@ -514,7 +514,11 @@ class GridOptimizer(BaseOptimizer):
                     "n_combinations": len(grid_combinations),
                     "optimization_time": self.optimization_end_time
                     - self.optimization_start_time,
-                    "parallel_efficiency": len(valid_results) / len(grid_combinations),
+                    "parallel_efficiency": (
+                        len(valid_results) / len(grid_combinations)
+                        if len(grid_combinations) > 0
+                        else 0.0
+                    ),
                 },
                 timestamp=datetime.now(),
                 optimizer_type="grid",
@@ -630,7 +634,11 @@ class RandomSearchOptimizer(BaseOptimizer):
                     "n_iterations": len(param_combinations),
                     "optimization_time": self.optimization_end_time
                     - self.optimization_start_time,
-                    "success_rate": len(valid_results) / len(param_combinations),
+                    "success_rate": (
+                        len(valid_results) / len(param_combinations)
+                        if len(param_combinations) > 0
+                        else 0.0
+                    ),
                 },
                 timestamp=datetime.now(),
                 optimizer_type="random_search",

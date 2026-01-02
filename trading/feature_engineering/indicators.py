@@ -11,6 +11,7 @@ from datetime import datetime
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Union
 
+import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -91,7 +92,7 @@ def rolling_zscore(
     mean = series.rolling(window=window).mean()
     std = series.rolling(window=window).std()
     result = (series - mean) / std
-    return result.fillna(method="ffill") if fillna else result
+    return result.ffill() if fillna else result
 
 
 @register_indicator()
@@ -109,7 +110,7 @@ def price_ratios(df: pd.DataFrame, fillna: bool = True) -> pd.DataFrame:
     out = pd.DataFrame(index=df.index)
     out["HL_RATIO"] = df["high"] / df["low"]
     out["CO_RATIO"] = df["close"] / df["open"]
-    return out.fillna(method="ffill") if fillna else out
+    return out.ffill() if fillna else out
 
 
 @register_indicator()
@@ -128,9 +129,10 @@ def rsi(df: pd.DataFrame, window: int = 14, fillna: bool = True) -> pd.Series:
     delta = df["close"].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-    rs = gain / loss
+    # Safe RSI calculation
+    rs = np.where(loss > 1e-10, gain / loss, 0.0)
     result = 100 - (100 / (1 + rs))
-    return result.fillna(method="ffill") if fillna else result
+    return result.ffill() if fillna else result
 
 
 @register_indicator()
@@ -161,7 +163,7 @@ def macd(
     hist = macd - signal_line
 
     result = pd.DataFrame({"MACD": macd, "SIGNAL": signal_line, "HIST": hist})
-    return result.fillna(method="ffill") if fillna else result
+    return result.ffill() if fillna else result
 
 
 @register_indicator()
@@ -187,7 +189,7 @@ def atr(df: pd.DataFrame, window: int = 14, fillna: bool = True) -> pd.Series:
 
     tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
     result = tr.rolling(window=window).mean()
-    return result.fillna(method="ffill") if fillna else result
+    return result.ffill() if fillna else result
 
 
 @register_indicator()
@@ -212,7 +214,7 @@ def bollinger_bands(
     lower = middle - (std * num_std)
 
     result = pd.DataFrame({"BB_UPPER": upper, "BB_MIDDLE": middle, "BB_LOWER": lower})
-    return result.fillna(method="ffill") if fillna else result
+    return result.ffill() if fillna else result
 
 
 @register_indicator()
@@ -229,7 +231,7 @@ def sma(df: pd.DataFrame, window: int = 20, fillna: bool = True) -> pd.Series:
     """
     _check_required_columns(df, ["close"])
     result = df["close"].rolling(window=window).mean()
-    return result.fillna(method="ffill") if fillna else result
+    return result.ffill() if fillna else result
 
 
 @register_indicator()
@@ -246,7 +248,7 @@ def ema(df: pd.DataFrame, window: int = 20, fillna: bool = True) -> pd.Series:
     """
     _check_required_columns(df, ["close"])
     result = df["close"].ewm(span=window, adjust=False).mean()
-    return result.fillna(method="ffill") if fillna else result
+    return result.ffill() if fillna else result
 
 
 def get_indicator_descriptions() -> Dict[str, str]:

@@ -231,16 +231,22 @@ class PositionSizingEngine:
             avg_win = wins.mean()
             avg_loss = abs(losses.mean())
 
-            if avg_loss == 0:
-                return self.kelly_config["min_size"]
-
             # Kelly formula: f = (bp - q) / b
             # where b = odds received, p = probability of win, q = probability of loss
-            b = avg_win / avg_loss
-            p = win_rate
-            q = 1 - p
-
-            kelly_fraction = (b * p - q) / b
+            # Safely calculate Kelly fraction with division-by-zero protection
+            if avg_loss > 1e-10:
+                b = avg_win / avg_loss
+                p = win_rate
+                q = 1 - p
+                
+                if b > 1e-10:
+                    kelly_fraction = (b * p - q) / b
+                else:
+                    kelly_fraction = 0.0
+            else:
+                # No losses recorded, use conservative estimate
+                logger.warning("Kelly calculation: avg_loss is zero, using min_size")
+                return self.kelly_config["min_size"]
 
             # Apply fractional Kelly and constraints
             fractional_kelly = kelly_fraction * self.kelly_config["fraction"]
@@ -269,9 +275,13 @@ class PositionSizingEngine:
             volatility = returns.std() * np.sqrt(252)
             volatility = max(volatility, self.volatility_config["volatility_floor"])
 
-            # Target volatility sizing
+            # Target volatility sizing with additional safety
             target_vol = self.volatility_config["target_volatility"]
-            size = target_vol / volatility
+            if volatility > 1e-10:
+                size = target_vol / volatility
+            else:
+                logger.warning(f"Volatility {volatility} too low despite floor, using min size")
+                return 0.01
 
             # Apply constraints
             size = max(0.01, min(size, self.max_position_size))

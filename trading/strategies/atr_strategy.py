@@ -145,7 +145,14 @@ class ATRStrategy:
         signals.loc[~(volume_mask & price_mask), "signal"] = 0
 
         # Add signal strength based on ATR
-        signals["signal_strength"] = atr / atr.rolling(window=self.config.period).mean()
+        atr_mean = atr.rolling(window=self.config.period).mean()
+        # Avoid division by zero
+        signals["signal_strength"] = np.where(
+            atr_mean > 1e-10,  # Small threshold to avoid division by near-zero
+            atr / atr_mean,
+            1.0  # Default signal strength when no volatility
+        )
+        # Still clip to reasonable range
         signals["signal_strength"] = signals["signal_strength"].clip(0.5, 2.0)
 
         # Add stop loss levels
@@ -338,7 +345,12 @@ class ATRStrategy:
             elif metric == "max_drawdown":
                 cumulative_returns = (1 + strategy_returns).cumprod()
                 running_max = cumulative_returns.expanding().max()
-                drawdown = (cumulative_returns - running_max) / running_max
+                # Safely calculate drawdown with division-by-zero protection
+                drawdown = np.where(
+                    running_max > 1e-10,
+                    (cumulative_returns - running_max) / running_max,
+                    0.0
+                )
                 return drawdown.min()
             else:
                 return 0.0

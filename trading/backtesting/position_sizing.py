@@ -190,7 +190,13 @@ class PositionSizingEngine:
             )
 
         # Risk-based sizing: risk_per_trade / volatility
-        position_size = self.risk_per_trade / volatility
+        if volatility > 1e-10:
+            position_size = self.risk_per_trade / volatility
+        else:
+            # Use equal-weighted sizing if volatility is zero
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
         return min(position_size, MAX_POSITION_SIZE)
 
     def _calculate_kelly_size(
@@ -996,12 +1002,16 @@ class PositionSizingEngine:
         recent_vol = returns.tail(20).std()
         long_term_vol = returns.tail(252).std()
 
-        if long_term_vol == 0:
-            return self._calculate_equal_weighted_size(
-                asset, price, strategy, signal, data, positions
-            )
-
-        vol_ratio = recent_vol / long_term_vol
+        # Safely calculate vol_ratio with division-by-zero protection
+        if long_term_vol > 1e-10:
+            vol_ratio = recent_vol / long_term_vol
+        else:
+            # Default to neutral if no long-term volatility, or use equal-weighted sizing
+            if recent_vol == 0:
+                return self._calculate_equal_weighted_size(
+                    asset, price, strategy, signal, data, positions
+                )
+            vol_ratio = 1.0  # Default to neutral if no long-term volatility
 
         # Calculate trend regime
         recent_return = returns.tail(20).mean()

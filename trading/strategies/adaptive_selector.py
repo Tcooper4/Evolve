@@ -225,8 +225,13 @@ class TrendAnalyzer:
             short_ma = price_data.rolling(window=self.short_period).mean()
             long_ma = price_data.rolling(window=self.long_period).mean()
 
-            # MA trend
-            ma_score = (short_ma.iloc[-1] - long_ma.iloc[-1]) / long_ma.iloc[-1]
+            # MA trend - Safely calculate MA score with division-by-zero protection
+            long_ma_val = long_ma.iloc[-1]
+            short_ma_val = short_ma.iloc[-1]
+            if np.abs(long_ma_val) > 1e-10:
+                ma_score = (short_ma_val - long_ma_val) / long_ma_val
+            else:
+                ma_score = 0.0
 
             # RSI trend
             rsi = self._calculate_rsi(price_data)
@@ -998,19 +1003,26 @@ class AdaptiveSelector:
             # This would use actual volume data
             # For now, return a default score
             return 0.5
-        except BaseException:
+        except Exception:
             return 0.5
 
     def _calculate_momentum_score(self, price_data: pd.Series) -> float:
         """Calculate momentum score."""
         try:
-            # Calculate momentum over different periods
-            momentum_5 = (price_data.iloc[-1] - price_data.iloc[-5]) / price_data.iloc[
-                -5
-            ]
-            momentum_10 = (
-                price_data.iloc[-1] - price_data.iloc[-10]
-            ) / price_data.iloc[-10]
+            # Calculate momentum over different periods - Safely calculate momentum with division-by-zero protection
+            price_5 = price_data.iloc[-5]
+            price_10 = price_data.iloc[-10]
+            price_current = price_data.iloc[-1]
+            
+            if np.abs(price_5) > 1e-10:
+                momentum_5 = (price_current - price_5) / price_5
+            else:
+                momentum_5 = 0.0
+                
+            if np.abs(price_10) > 1e-10:
+                momentum_10 = (price_current - price_10) / price_10
+            else:
+                momentum_10 = 0.0
 
             # Combine momentum signals
             combined_momentum = (momentum_5 + momentum_10) / 2

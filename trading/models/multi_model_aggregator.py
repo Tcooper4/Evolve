@@ -142,8 +142,13 @@ class MultiModelAggregator:
             mse = np.mean((predictions - actuals) ** 2)
             mae = np.mean(np.abs(predictions - actuals))
 
-            # Calculate accuracy (percentage of predictions within 5% of actual)
-            accuracy = np.mean(np.abs((predictions - actuals) / actuals) < 0.05)
+            # Calculate accuracy (percentage of predictions within 5% of actual) with safe division
+            percentage_errors = np.where(
+                np.abs(actuals) > 1e-10,
+                np.abs((predictions - actuals) / actuals),
+                np.inf  # Flag as error if actual is zero
+            )
+            accuracy = np.mean(percentage_errors < 0.05)
 
             # Update model performance
             model_perf = self.model_performance[model_name]

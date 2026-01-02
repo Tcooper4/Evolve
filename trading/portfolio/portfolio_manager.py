@@ -443,7 +443,12 @@ class PortfolioManager:
         """
         # Get base size from risk settings
         risk_per_trade = self.config.get("risk_per_trade", 0.02)  # 2% per trade
-        base_size = self.state.available_capital * risk_per_trade / price
+        # Safely calculate base size with division-by-zero protection
+        if price > 1e-10:
+            base_size = self.state.available_capital * risk_per_trade / price
+        else:
+            logger.warning(f"Invalid price {price} for position sizing")
+            return 0.0  # Return early with zero size
 
         # Adjust for volatility
         volatility = market_data.get("volatility", {}).get(symbol, 0.2)

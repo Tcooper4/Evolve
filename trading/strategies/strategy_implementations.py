@@ -128,10 +128,12 @@ def mean_reversion_strategy(
         current_price = data["Close"].iloc[-1]
         current_sma = sma.iloc[-1]
 
-        # Position within bands
-        band_position = (current_price - lower_band.iloc[-1]) / (
-            upper_band.iloc[-1] - lower_band.iloc[-1]
-        )
+        # Position within bands with safe division
+        band_range = upper_band.iloc[-1] - lower_band.iloc[-1]
+        if band_range > 1e-10:
+            band_position = (current_price - lower_band.iloc[-1]) / band_range
+        else:
+            band_position = 0.5  # Neutral position if no range
 
         # Signal generation
         if band_position < 0.2:  # Near lower band
@@ -265,8 +267,11 @@ def trend_following_strategy(
         current_sma_short = sma_short.iloc[-1]
         current_sma_long = sma_long.iloc[-1]
 
-        # Trend strength
-        trend_strength = abs(current_sma_short - current_sma_long) / current_sma_long
+        # Trend strength with safe division
+        if current_sma_long > 1e-10:
+            trend_strength = abs(current_sma_short - current_sma_long) / current_sma_long
+        else:
+            trend_strength = 0.0
 
         # Signal generation
         if current_sma_short > current_sma_long and trend_strength > 0.02:

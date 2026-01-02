@@ -56,14 +56,14 @@ class ForecastPostprocessor:
         if self.nan_strategy == "dropna":
             df_clean = df.dropna()
         elif self.nan_strategy == "forward_fill":
-            df_clean = df.fillna(method="ffill").fillna(method="bfill")
+            df_clean = df.ffill().bfill()
         elif self.nan_strategy == "interpolate":
-            df_clean = df.interpolate(method="linear").fillna(method="ffill")
+            df_clean = df.interpolate(method="linear").ffill()
         else:
             logger.warning(
                 f"Unknown NaN strategy: {self.nan_strategy}, using forward_fill"
             )
-            df_clean = df.fillna(method="ffill").fillna(method="bfill")
+            df_clean = df.ffill().bfill()
 
         # Check if too much data was lost
         valid_ratio = len(df_clean) / len(df)
