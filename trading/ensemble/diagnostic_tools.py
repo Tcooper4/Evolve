@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
+from trading.utils.safe_math import safe_divide
+
 logger = logging.getLogger(__name__)
 
 
@@ -213,7 +215,7 @@ class EnsembleDiagnosticTools:
         unique_types = len(set(model_types))
 
         # Type diversity (0-1)
-        type_diversity = unique_types / len(models)
+        type_diversity = safe_divide(unique_types, len(models), default=0.0)
 
         # Performance diversity (standard deviation of prediction quality)
         qualities = [model.prediction_quality for model in models]

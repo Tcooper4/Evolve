@@ -31,12 +31,6 @@ C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\data\providers\y
   Line 94: cache_path = CACHE_DIR / f"{symbol}.pkl"
   Line 123: cache_path = CACHE_DIR / f"{symbol}.pkl"
 
-C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\ensemble\diagnostic_tools.py
-  Line 216: type_diversity = unique_types / len(models)
-
-C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\evaluation\metrics.py
-  Line 293: drawdowns = cumulative / running_max - 1
-
 C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\execution\execution_replay.py
   Line 474: html_file = output_path / f"replay_{session_id}.html"
 
@@ -62,10 +56,6 @@ C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\memory\logger_ut
 C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\memory\long_term_performance_tracker.py
   Line 938: weighted_average = weighted_sum / total_weight
 
-C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\memory\model_monitor.py
-  Line 1225: current_hist = current_hist / current_hist.sum()
-  Line 1226: historical_hist = historical_hist / historical_hist.sum()
-
 C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\memory\performance_logger.py
   Line 628: filepath = export_dir / filename
 
@@ -85,9 +75,6 @@ C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\meta_learning\mo
 
 C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\models\base_model.py
   Line 284: log_file = log_dir / f"{self.__class__.__name__}.log"
-
-C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\models\advanced\ensemble\ensemble_model.py
-  Line 372: weights = weights / weights.sum()
 
 C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\nlp\sentiment_processor.py
   Line 373: engagement_rate = total_engagement / max(1, metrics.followers_count)
@@ -113,11 +100,6 @@ C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\report\unified_t
   Line 491: trade_return = pnl / initial_cash if initial_cash > 0 else 0.0
 
 C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\strategies\ensemble_methods.py
-  Line 500: avg_position_size = total_position_size / total_weight
-  Line 501: avg_risk_score = total_risk_score / total_weight
-  Line 592: avg_predicted_return = total_predicted_return / total_weight
-  Line 593: avg_position_size = total_position_size / total_weight
-  Line 594: avg_risk_score = total_risk_score / total_weight
   Line 659: avg_confidence = total_confidence / total_weight
   Line 660: avg_position_size = total_position_size / total_weight
   Line 661: avg_risk_score = total_risk_score / total_weight
@@ -151,7 +133,4 @@ C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\utils\safe_indic
 
 C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\utils\signal_generation.py
   Line 102: completeness_score = non_zero_signals / total_signals if total_signals > 0 else 0.0
-
-C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\utils\metrics\scorer.py
-  Line 359: weights = weights / np.sum(weights)
 

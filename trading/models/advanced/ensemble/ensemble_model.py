@@ -27,6 +27,7 @@ except ImportError as e:
 
 from trading.memory.performance_memory import PerformanceMemory
 from trading.models.base_model import BaseModel
+from trading.utils.safe_math import safe_divide
 
 
 class EnsembleForecaster(BaseModel):
@@ -369,7 +370,7 @@ class EnsembleForecaster(BaseModel):
         else:
             weights = values
 
-        weights = weights / weights.sum()
+        weights = safe_divide(weights, weights.sum(), default=1.0 / len(weights))
         self.model_weights = torch.tensor(
             weights, device=self.device, dtype=self.model_weights.dtype
         )
