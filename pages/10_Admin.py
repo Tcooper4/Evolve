@@ -304,7 +304,8 @@ with tab1:
             try:
                 dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
                 timestamp_str = dt.strftime('%Y-%m-%d %H:%M:%S')
-            except:
+            except (ValueError, AttributeError):
+                # If parsing fails, use original timestamp string
                 timestamp_str = timestamp
             
             event_type = event.get('type', 'info')
@@ -995,7 +996,8 @@ with tab3:
                 try:
                     dt = datetime.fromisoformat(last_run.replace('Z', '+00:00'))
                     last_run = dt.strftime('%Y-%m-%d %H:%M')
-                except:
+                except (ValueError, AttributeError):
+                    # Keep original string if parsing fails
                     pass
             
             agents_data.append({
@@ -1094,7 +1096,7 @@ with tab3:
                     try:
                         dt = datetime.fromisoformat(last_run.replace('Z', '+00:00'))
                         st.markdown(f"**Last Run:** {dt.strftime('%Y-%m-%d %H:%M:%S')}")
-                    except:
+                    except (ValueError, AttributeError):
                         st.markdown(f"**Last Run:** {last_run}")
                 else:
                     st.markdown("**Last Run:** Never")
@@ -1129,7 +1131,8 @@ with tab3:
                         try:
                             dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
                             timestamp = dt.strftime('%Y-%m-%d %H:%M:%S')
-                        except:
+                        except (ValueError, AttributeError):
+                            # Keep original timestamp if parsing fails
                             pass
                         history_data.append({
                             "Timestamp": timestamp,
@@ -1412,7 +1415,8 @@ with tab4:
             else:
                 bytes_sent = 12.5
                 bytes_recv = 45.8
-        except:
+        except Exception as e:
+            # Fallback to default values if network stats unavailable
             bytes_sent = 12.5
             bytes_recv = 45.8
         
@@ -1743,7 +1747,7 @@ with tab5:
             log_date_obj = datetime.fromisoformat(log.get("timestamp", "").replace('Z', '+00:00')).date()
             if log_date_obj != log_date:
                 continue
-        except:
+        except (ValueError, AttributeError, KeyError):
             continue
         
         # Search filter
@@ -1777,7 +1781,8 @@ with tab5:
                 try:
                     dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
                     timestamp_str = dt.strftime('%Y-%m-%d %H:%M:%S')
-                except:
+                except (ValueError, AttributeError):
+                    # If parsing fails, use original timestamp string
                     timestamp_str = timestamp
                 
                 level = log.get("level", "INFO")
@@ -1970,7 +1975,7 @@ with tab5:
         try:
             import streamlit as st_module
             st.code(f"{st_module.__version__}")
-        except:
+        except (ImportError, AttributeError):
             st.code("Unknown")
         
         st.markdown("**Session State Keys:**")

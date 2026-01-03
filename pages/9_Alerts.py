@@ -158,7 +158,8 @@ with tab1:
                 try:
                     dt = datetime.fromisoformat(last_triggered.replace('Z', '+00:00'))
                     last_triggered = dt.strftime('%Y-%m-%d %H:%M')
-                except:
+                except (ValueError, AttributeError) as e:
+                    # Keep original string if parsing fails
                     pass
             
             alerts_data.append({
@@ -273,7 +274,7 @@ with tab1:
                     try:
                         dt = datetime.fromisoformat(last_triggered.replace('Z', '+00:00'))
                         st.markdown(f"**Last Triggered:** {dt.strftime('%Y-%m-%d %H:%M:%S')}")
-                    except:
+                    except (ValueError, AttributeError) as e:
                         st.markdown(f"**Last Triggered:** {last_triggered}")
                 else:
                     st.markdown("**Last Triggered:** Never")
@@ -334,7 +335,7 @@ with tab1:
                     try:
                         dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
                         timestamp_str = dt.strftime('%Y-%m-%d %H:%M:%S')
-                    except:
+                    except (ValueError, AttributeError) as e:
                         timestamp_str = timestamp
                 else:
                     timestamp_str = timestamp
@@ -1160,7 +1161,7 @@ with tab4:
             trigger_date = datetime.fromisoformat(trigger.get('timestamp', '').replace('Z', '+00:00')).date()
             if trigger_date < history_date_from or trigger_date > history_date_to:
                 continue
-        except:
+        except (ValueError, AttributeError, KeyError) as e:
             continue
         
         # Alert filter
@@ -1225,7 +1226,7 @@ with tab4:
                     timestamp_str = dt.strftime('%Y-%m-%d %H:%M:%S')
                     date_str = dt.strftime('%Y-%m-%d')
                     time_str = dt.strftime('%H:%M:%S')
-                except:
+                except (ValueError, AttributeError) as e:
                     timestamp_str = timestamp
                     date_str = timestamp
                     time_str = ''
@@ -1328,7 +1329,7 @@ with tab4:
                     dt = datetime.fromisoformat(trigger.get('timestamp', '').replace('Z', '+00:00'))
                     date_key = dt.strftime('%Y-%m-%d')
                     daily_counts[date_key] = daily_counts.get(date_key, 0) + 1
-                except:
+                except (ValueError, AttributeError, KeyError) as e:
                     continue
             
             if daily_counts:

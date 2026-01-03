@@ -181,7 +181,8 @@ with tab1:
                 if 'portfolio_manager' in st.session_state:
                     try:
                         portfolio_data = st.session_state.portfolio_manager.get_portfolio_summary()
-                    except:
+                    except Exception as e:
+                        # If portfolio summary fails, continue without it
                         pass
                 
                 # Generate report content
@@ -1030,7 +1031,8 @@ with tab3:
                 try:
                     next_run_dt = datetime.fromisoformat(next_run.replace('Z', '+00:00'))
                     next_run_str = next_run_dt.strftime('%Y-%m-%d %H:%M')
-                except:
+                except (ValueError, AttributeError):
+                    # If parsing fails, use original string
                     next_run_str = next_run
             else:
                 next_run_str = "Not scheduled"
@@ -1121,7 +1123,7 @@ with tab3:
                     try:
                         next_run_dt = datetime.fromisoformat(next_run.replace('Z', '+00:00'))
                         st.markdown(f"**Next Run:** {next_run_dt.strftime('%Y-%m-%d %H:%M:%S')}")
-                    except:
+                    except (ValueError, AttributeError):
                         st.markdown(f"**Next Run:** {next_run}")
                 else:
                     st.markdown("**Next Run:** Not scheduled")
@@ -1131,7 +1133,7 @@ with tab3:
                     try:
                         last_run_dt = datetime.fromisoformat(last_run.replace('Z', '+00:00'))
                         st.markdown(f"**Last Run:** {last_run_dt.strftime('%Y-%m-%d %H:%M:%S')}")
-                    except:
+                    except (ValueError, AttributeError):
                         st.markdown(f"**Last Run:** {last_run}")
                 else:
                     st.markdown("**Last Run:** Never")
@@ -1241,7 +1243,8 @@ with tab4:
                 try:
                     dt = datetime.fromisoformat(generated_at.replace('Z', '+00:00'))
                     generated_at = dt.strftime('%Y-%m-%d %H:%M')
-                except:
+                except (ValueError, AttributeError):
+                    # Keep original string if parsing fails
                     pass
             
             # Estimate file size (in real implementation, this would be actual file size)
@@ -1360,7 +1363,7 @@ with tab4:
                     try:
                         dt = datetime.fromisoformat(generated_at.replace('Z', '+00:00'))
                         st.markdown(f"**Generated:** {dt.strftime('%Y-%m-%d %H:%M:%S')}")
-                    except:
+                    except (ValueError, AttributeError):
                         st.markdown(f"**Generated:** {generated_at}")
                 else:
                     st.markdown(f"**Generated:** {generated_at}")
@@ -1408,7 +1411,8 @@ with tab4:
                             if dt < cutoff_date:
                                 del st.session_state.generated_reports[name]
                                 deleted_count += 1
-                        except:
+                        except (ValueError, AttributeError, KeyError):
+                            # Skip if date parsing or deletion fails
                             pass
                 
                 if deleted_count > 0:

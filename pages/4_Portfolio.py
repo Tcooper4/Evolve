@@ -987,7 +987,7 @@ with tab2:
                             position_volatility = returns.std() * np.sqrt(252) * 100
                         else:
                             position_volatility = 0.0
-                    except:
+                    except (ValueError, AttributeError, ZeroDivisionError) as e:
                         position_volatility = 0.0
                     
                     col_metrics1, col_metrics2, col_metrics3, col_metrics4 = st.columns(4)
@@ -1913,7 +1913,8 @@ with tab4:
                         data = data_loader.load_data(request)
                         if data is not None and not data.empty and 'Close' in data.columns:
                             returns_data[symbol] = data['Close'].pct_change().dropna()
-                    except:
+                    except Exception as e:
+                        # If data loading fails, skip this symbol
                         pass
                 
                 if len(returns_data) >= 2:
@@ -1940,7 +1941,8 @@ with tab4:
                                     vol = result.get('expected_volatility', result.get('portfolio_volatility', 0))
                                     frontier_vols.append(vol * 100)
                                     frontier_returns.append(target_ret * 100)
-                            except:
+                            except (KeyError, ValueError, TypeError) as e:
+                                # If metric extraction fails, skip this point
                                 pass
                         
                         if frontier_vols and frontier_returns:

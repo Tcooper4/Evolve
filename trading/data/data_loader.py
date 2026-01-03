@@ -19,6 +19,8 @@ from typing import Any, Dict, List, Optional
 import joblib
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 # Try to import yfinance
 try:
     import yfinance as yf
@@ -276,7 +278,7 @@ class ParallelProcessor:
                     success=success,
                     completed=self._completed_count,
                     total=self._total_count,
-                    progress=self._completed_count / self._total_count,
+                    progress=safe_divide(self._completed_count, self._total_count, default=0.0),
                 )
 
     def _load_single_ticker_with_retry(

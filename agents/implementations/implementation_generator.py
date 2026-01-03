@@ -36,7 +36,12 @@ class ModelImplementationGenerator:
         logger.info("Initialized ModelImplementationGenerator")
 
     def _load_templates(self) -> Dict[str, str]:
-        """Load code templates for different model types."""
+        """Load code templates for different model types.
+        
+        Note: The methods below return STRING TEMPLATES, not actual implementations.
+        These templates contain placeholder code (with 'pass' statements) that will
+        be replaced during code generation.
+        """
         return {
             "lstm": self._get_lstm_template(),
             "transformer": self._get_transformer_template(),
