@@ -101,7 +101,7 @@ class ForecastRouter:
                 self._load_models_from_config(config_models)
             else:
                 # Use dynamic registry
-                from trading.models.registry import get_model_registry
+                from trading.models.model_registry import get_registry as get_model_registry
 
                 registry = get_model_registry()
                 self.model_registry = registry.registry

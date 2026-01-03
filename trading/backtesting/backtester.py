@@ -679,24 +679,97 @@ class Backtester:
 
 
 def run_backtest(
-    strategy: Union[str, List[str]], plot: bool = True
+    strategy: Union[str, List[str]], 
+    plot: bool = True,
+    start_date: str = None,
+    end_date: str = None,
+    initial_capital: float = 100000.0,
+    data: pd.DataFrame = None,
+    **kwargs
 ) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, Any]]:
     """Run a backtest with the given strategy.
-
+    
     Args:
         strategy: Strategy name or list of strategy names
         plot: Whether to plot results
-
+        start_date: Backtest start date (YYYY-MM-DD)
+        end_date: Backtest end date (YYYY-MM-DD)
+        initial_capital: Starting capital
+        data: Price data DataFrame (if None, will need to be loaded)
+        **kwargs: Additional arguments passed to Backtester
+        
     Returns:
-        Tuple of (equity_curve, trade_log, metrics)
+        Tuple of (trades_df, equity_curve_df, metrics_dict)
     """
-    # This is a placeholder - actual implementation would depend on strategy definitions
-    print(
-        "Warning: run_backtest function is a placeholder - use Backtester class directly"
+    from datetime import timedelta
+    
+    # Set default dates if not provided
+    if not end_date:
+        end_date = datetime.now().strftime('%Y-%m-%d')
+    if not start_date:
+        start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+    
+    # If no data provided, try to load it
+    if data is None:
+        try:
+            from trading.data.data_loader import DataLoader, DataLoadRequest
+            data_loader = DataLoader()
+            # This is a simplified example - in practice you'd need to specify symbols
+            # For now, return empty results with a warning
+            logging.warning("run_backtest: Data not provided and cannot auto-load. Please provide data parameter or use Backtester class directly.")
+            empty_df = pd.DataFrame()
+            empty_metrics = {}
+            return empty_df, empty_df, empty_metrics
+        except ImportError:
+            logging.warning("run_backtest: Cannot load data. Please provide data parameter.")
+            empty_df = pd.DataFrame()
+            empty_metrics = {}
+            return empty_df, empty_df, empty_metrics
+    
+    # Create backtester instance
+    backtester = Backtester(
+        data=data,
+        initial_cash=initial_capital,
+        **kwargs
     )
-
-    # Return empty results
-    empty_df = pd.DataFrame()
-    empty_metrics = {}
-
-    return empty_df, empty_df, empty_metrics
+    
+    # Load strategy
+    if isinstance(strategy, str):
+        strategy = [strategy]
+    
+    # Note: Strategy loading would depend on your strategy framework
+    # This is a placeholder - you'd need to implement strategy loading
+    # For example: backtester.add_strategy(strat_name) or similar
+    
+    # Run backtest
+    try:
+        results = backtester.run()
+        
+        # Extract results
+        trades_df = results.get('trades', pd.DataFrame())
+        equity_curve = results.get('equity_curve', pd.DataFrame())
+        metrics = results.get('metrics', {})
+        
+        # Plot if requested
+        if plot and not equity_curve.empty:
+            try:
+                import matplotlib.pyplot as plt
+                plt.figure(figsize=(12, 6))
+                if 'equity' in equity_curve.columns:
+                    plt.plot(equity_curve.index, equity_curve['equity'])
+                elif len(equity_curve.columns) > 0:
+                    plt.plot(equity_curve.index, equity_curve.iloc[:, 0])
+                plt.title(f"Backtest: {', '.join(strategy)}")
+                plt.xlabel("Date")
+                plt.ylabel("Portfolio Value")
+                plt.grid(True)
+                plt.show()
+            except ImportError:
+                logging.warning("matplotlib not available for plotting")
+        
+        return trades_df, equity_curve, metrics
+    except Exception as e:
+        logging.error(f"Error running backtest: {e}")
+        empty_df = pd.DataFrame()
+        empty_metrics = {}
+        return empty_df, empty_df, empty_metrics

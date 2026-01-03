@@ -214,43 +214,64 @@ class ExecutionAgent:
                 self.logger.info("Falling back to simulation mode")
 
     def _load_historical_data(self):
-        """Load historical market data for simulation"""
+        """Load historical market data for simulation using real data providers"""
         try:
-            # This would typically load from your data system
-            # For now, create sample historical data
-            dates = pd.date_range("2023-01-01", "2023-12-31", freq="D")
-
-            for ticker in ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL"]:
-                # Generate realistic price data
-                base_price = 100 + np.random.randint(0, 900)
-                returns = np.random.normal(0.001, self.market_volatility, len(dates))
-                prices = [base_price]
-
-                for ret in returns[1:]:
-                    prices.append(prices[-1] * (1 + ret))
-
-                # Create market data history
-                market_data_list = []
-                for i, date in enumerate(dates):
-                    price = prices[i]
-                    spread = price * 0.001  # 0.1% spread
-
-                    market_data = MarketData(
-                        ticker=ticker,
-                        bid=price - spread / 2,
-                        ask=price + spread / 2,
-                        last=price,
-                        volume=np.random.randint(1000000, 10000000),
-                        timestamp=date.isoformat(),
-                        spread=spread,
-                        volatility=self.market_volatility,
+            # Use real data providers instead of generating mock data
+            from trading.data.providers import get_data_provider
+            
+            data_provider = get_data_provider()
+            if data_provider is None:
+                raise RuntimeError("No data provider available. Cannot load historical data.")
+            
+            # Load data for common tickers used in simulation
+            tickers = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL"]
+            end_date = datetime.now().strftime("%Y-%m-%d")
+            start_date = (datetime.now() - pd.Timedelta(days=365)).strftime("%Y-%m-%d")
+            
+            for ticker in tickers:
+                try:
+                    # Fetch real historical data
+                    historical_data = data_provider.fetch(
+                        symbol=ticker,
+                        start_date=start_date,
+                        end_date=end_date,
+                        interval="1d"
                     )
-                    market_data_list.append(market_data)
-
-                self.market_data_history[ticker] = market_data_list
+                    
+                    if historical_data is None or historical_data.empty:
+                        self.logger.warning(f"No historical data available for {ticker}")
+                        continue
+                    
+                    # Convert to MarketData objects
+                    market_data_list = []
+                    for idx, row in historical_data.iterrows():
+                        close_price = row.get('Close', row.get('close', 100.0))
+                        spread = close_price * 0.001  # 0.1% spread
+                        
+                        market_data = MarketData(
+                            ticker=ticker,
+                            bid=close_price - spread / 2,
+                            ask=close_price + spread / 2,
+                            last=close_price,
+                            volume=row.get('Volume', row.get('volume', 1000000)),
+                            timestamp=idx.isoformat() if hasattr(idx, 'isoformat') else str(idx),
+                            spread=spread,
+                            volatility=self.market_volatility,
+                        )
+                        market_data_list.append(market_data)
+                    
+                    self.market_data_history[ticker] = market_data_list
+                    self.logger.info(f"Loaded {len(market_data_list)} historical data points for {ticker}")
+                    
+                except Exception as e:
+                    self.logger.warning(f"Failed to load historical data for {ticker}: {e}")
+                    # Don't fail completely, just skip this ticker
+                    continue
 
         except Exception as e:
             self.logger.error(f"Failed to load historical data: {e}")
+            # Don't raise - allow simulation to continue without historical data
+            self.market_data_history = {}
 
     def _get_current_market_data(self, ticker: str) -> MarketData:
         """Get current market data for a ticker"""

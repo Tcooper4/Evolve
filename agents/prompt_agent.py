@@ -38,10 +38,12 @@ try:
 
     HUGGINGFACE_AVAILABLE = True
 except ImportError as e:
-    print(
-        "âš ï¸ HuggingFace libraries not available. Disabling advanced NLP features."
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(
+        "HuggingFace libraries not available. Disabling advanced NLP features."
     )
-    print(f"   Missing: {e}")
+    logger.warning(f"   Missing: {e}")
     torch = None
     transformers = None
     sentence_transformers = None

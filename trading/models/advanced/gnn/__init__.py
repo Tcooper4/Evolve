@@ -1,5 +1,8 @@
-# This file is intentionally left empty to make the directory a proper Python package.
+"""Graph Neural Network models for market forecasting."""
 
-from .gnn_model import GNNForecaster
-
-__all__ = ["GNNForecaster"]
+try:
+    from .gnn_model import GNNForecaster, GNNModel, GraphNeuralNetwork
+    __all__ = ['GNNForecaster', 'GNNModel', 'GraphNeuralNetwork']
+except ImportError as e:
+    # PyTorch not available
+    __all__ = []

@@ -16,8 +16,9 @@ from .task_models import AgentStatus, TaskExecution, TaskStatus
 class TaskMonitor:
     """Monitors task execution and system health."""
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] = None, orchestrator=None):
         self.config = config or {}
+        self.orchestrator = orchestrator
         self.logger = logging.getLogger(__name__)
 
         # Monitoring state

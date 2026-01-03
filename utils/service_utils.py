@@ -55,6 +55,9 @@ def load_service_config(
 
 def create_sample_market_data(rows: int = 100) -> Dict[str, Any]:
     """
+    ⚠️ WARNING: This function generates fake data for TESTING ONLY.
+    DO NOT use in production code. Use real data providers instead.
+    
     Create sample market data for testing.
     """
     import numpy as np

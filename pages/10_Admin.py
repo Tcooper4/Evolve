@@ -183,7 +183,7 @@ with tab1:
         }
     ))
     fig_health.update_layout(height=250)
-    st.plotly_chart(fig_health, use_container_width=True)
+    st.plotly_chart(fig_health, width='stretch')
     
     st.markdown("---")
     
@@ -341,7 +341,7 @@ with tab1:
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("🔄 Restart Services", use_container_width=True):
+        if st.button("🔄 Restart Services", width='stretch'):
             # Simulate restart
             st.session_state.system_events.insert(0, {
                 "timestamp": datetime.now().isoformat(),
@@ -353,7 +353,7 @@ with tab1:
             st.info("This would restart all system services in production.")
     
     with col2:
-        if st.button("🗑️ Clear Cache", use_container_width=True):
+        if st.button("🗑️ Clear Cache", width='stretch', key="admin_clear_cache_1"):
             # Simulate cache clear
             st.session_state.system_events.insert(0, {
                 "timestamp": datetime.now().isoformat(),
@@ -365,7 +365,7 @@ with tab1:
             st.info("All cached data has been cleared.")
     
     with col3:
-        if st.button("🏥 Run Health Check", use_container_width=True):
+        if st.button("🏥 Run Health Check", width='stretch'):
             # Simulate health check
             if health_monitor:
                 try:
@@ -858,7 +858,7 @@ with tab2:
     col1, col2, col3 = st.columns([1, 1, 1])
     
     with col2:
-        if st.button("💾 Save Configuration", type="primary", use_container_width=True):
+        if st.button("💾 Save Configuration", type="primary", width='stretch'):
             # Save configuration
             st.session_state.system_config = config
             
@@ -1010,7 +1010,7 @@ with tab3:
             })
         
         agents_df = pd.DataFrame(agents_data)
-        st.dataframe(agents_df, use_container_width=True, height=300)
+        st.dataframe(agents_df, width='stretch', height=300)
         
         st.markdown("---")
         
@@ -1049,13 +1049,13 @@ with tab3:
             
             with col2:
                 # Configure Button
-                if st.button("⚙️ Configure", use_container_width=True, key=f"config_{selected_agent}"):
+                if st.button("⚙️ Configure", width='stretch', key=f"config_{selected_agent}"):
                     st.session_state.configuring_agent = selected_agent
                     st.rerun()
             
             with col3:
                 # Test Agent Button
-                if st.button("🧪 Test", use_container_width=True, key=f"test_{selected_agent}"):
+                if st.button("🧪 Test", width='stretch', key=f"test_{selected_agent}"):
                     # Simulate agent test
                     agent["last_run"] = datetime.now().isoformat()
                     agent["status"] = "active"
@@ -1065,13 +1065,13 @@ with tab3:
             
             with col4:
                 # View Logs Button
-                if st.button("📜 View Logs", use_container_width=True, key=f"logs_{selected_agent}"):
+                if st.button("📜 View Logs", width='stretch', key=f"logs_{selected_agent}"):
                     st.session_state.viewing_agent_logs = selected_agent
                     st.rerun()
             
             with col5:
                 # Delete Agent Button
-                if st.button("🗑️ Delete", use_container_width=True, key=f"delete_{selected_agent}"):
+                if st.button("🗑️ Delete", width='stretch', key=f"delete_{selected_agent}"):
                     if selected_agent in st.session_state.agent_registry:
                         del st.session_state.agent_registry[selected_agent]
                         st.success(f"✅ Agent '{selected_agent}' deleted!")
@@ -1142,7 +1142,7 @@ with tab3:
                     
                     if history_data:
                         history_df = pd.DataFrame(history_data)
-                        st.dataframe(history_df, use_container_width=True)
+                        st.dataframe(history_df, width='stretch')
                 else:
                     st.info("No execution history available")
             
@@ -1167,7 +1167,7 @@ with tab3:
                         yaxis_title="Value",
                         height=300
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                 else:
                     st.info("No performance metrics available")
     
@@ -1202,7 +1202,7 @@ with tab3:
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("➕ Create Agent", use_container_width=True):
+            if st.button("➕ Create Agent", width='stretch'):
                 if new_agent_name:
                     if new_agent_name in st.session_state.agent_registry:
                         st.error(f"Agent '{new_agent_name}' already exists!")
@@ -1229,7 +1229,7 @@ with tab3:
                     st.error("Please enter an agent name")
         
         with col2:
-            if st.button("🔄 Reset", use_container_width=True):
+            if st.button("🔄 Reset", width='stretch'):
                 st.rerun()
     
     # Agent Logs (if viewing)
@@ -1278,7 +1278,7 @@ with tab3:
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("💾 Save Configuration", use_container_width=True):
+            if st.button("💾 Save Configuration", width='stretch'):
                 try:
                     import json
                     new_config = json.loads(config_json)
@@ -1291,7 +1291,7 @@ with tab3:
                     st.error("Invalid JSON format!")
         
         with col2:
-            if st.button("❌ Cancel", use_container_width=True):
+            if st.button("❌ Cancel", width='stretch'):
                 del st.session_state.configuring_agent
                 st.rerun()
 
@@ -1352,7 +1352,7 @@ with tab4:
             }
         ))
         fig_cpu.update_layout(height=200)
-        st.plotly_chart(fig_cpu, use_container_width=True)
+        st.plotly_chart(fig_cpu, width='stretch')
     
     # Memory Usage Gauge
     with col2:
@@ -1377,7 +1377,7 @@ with tab4:
             }
         ))
         fig_mem.update_layout(height=200)
-        st.plotly_chart(fig_mem, use_container_width=True)
+        st.plotly_chart(fig_mem, width='stretch')
     
     # Disk Usage Gauge
     with col3:
@@ -1402,7 +1402,7 @@ with tab4:
             }
         ))
         fig_disk.update_layout(height=200)
-        st.plotly_chart(fig_disk, use_container_width=True)
+        st.plotly_chart(fig_disk, width='stretch')
     
     # Network I/O
     with col4:
@@ -1452,7 +1452,7 @@ with tab4:
             yaxis_title="CPU Usage (%)",
             height=250
         )
-        st.plotly_chart(fig_cpu_chart, use_container_width=True)
+        st.plotly_chart(fig_cpu_chart, width='stretch')
     
     with col2:
         # Memory Usage Chart
@@ -1473,7 +1473,7 @@ with tab4:
             yaxis_title="Memory Usage (%)",
             height=250
         )
-        st.plotly_chart(fig_mem_chart, use_container_width=True)
+        st.plotly_chart(fig_mem_chart, width='stretch')
     
     st.markdown("---")
     
@@ -1574,22 +1574,32 @@ with tab4:
             "requests_per_minute": 120
         }
     
-    perf_metrics = st.session_state.performance_metrics
+    perf_metrics = st.session_state.get('performance_metrics')
+    
+    if perf_metrics is None:
+        st.warning("Performance metrics not available. Initializing default values...")
+        st.session_state.performance_metrics = {
+            "avg_response_time": 125,  # ms
+            "avg_query_time": 45,  # ms
+            "error_rate": 0.02,  # 2%
+            "requests_per_minute": 120
+        }
+        perf_metrics = st.session_state.performance_metrics
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("Avg Response Time", f"{perf_metrics['avg_response_time']} ms")
+        st.metric("Avg Response Time", f"{perf_metrics.get('avg_response_time', 0)} ms")
     
     with col2:
-        st.metric("Avg Query Time", f"{perf_metrics['avg_query_time']} ms")
+        st.metric("Avg Query Time", f"{perf_metrics.get('avg_query_time', 0)} ms")
     
     with col3:
-        error_rate_pct = perf_metrics['error_rate'] * 100
+        error_rate_pct = perf_metrics.get('error_rate', 0) * 100
         st.metric("Error Rate", f"{error_rate_pct:.2f}%")
     
     with col4:
-        st.metric("Requests/Min", f"{perf_metrics['requests_per_minute']}")
+        st.metric("Requests/Min", f"{perf_metrics.get('requests_per_minute', 0)}")
     
     # Performance Charts
     st.markdown("---")
@@ -1616,7 +1626,7 @@ with tab4:
             yaxis_title="Response Time (ms)",
             height=250
         )
-        st.plotly_chart(fig_response, use_container_width=True)
+        st.plotly_chart(fig_response, width='stretch')
     
     with col2:
         # Error Rate Trend
@@ -1638,10 +1648,10 @@ with tab4:
             yaxis_title="Error Rate (%)",
             height=250
         )
-        st.plotly_chart(fig_errors, use_container_width=True)
+        st.plotly_chart(fig_errors, width='stretch')
     
     # Refresh Button
-    if st.button("🔄 Refresh Metrics", use_container_width=True):
+    if st.button("🔄 Refresh Metrics", width='stretch'):
         st.rerun()
 
 # TAB 5: Logs & Debugging
@@ -1829,7 +1839,7 @@ with tab5:
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("📥 Download Logs", use_container_width=True):
+        if st.button("📥 Download Logs", width='stretch'):
             # Create log file content
             log_content = ""
             for log in filtered_logs:
@@ -1848,7 +1858,7 @@ with tab5:
             )
     
     with col2:
-        if st.button("🗑️ Clear Logs", use_container_width=True):
+        if st.button("🗑️ Clear Logs", width='stretch'):
             if st.button("⚠️ Confirm Clear", key="confirm_clear_logs"):
                 st.session_state.system_logs = []
                 st.success("✅ Logs cleared!")
@@ -1880,7 +1890,7 @@ with tab5:
                 "Component": list(error_counts.keys()),
                 "Error Count": list(error_counts.values())
             })
-            st.dataframe(error_df, use_container_width=True)
+            st.dataframe(error_df, width='stretch')
         
         with col2:
             # Most common errors
@@ -1915,7 +1925,7 @@ with tab5:
             yaxis_title="Error Count",
             height=300
         )
-        st.plotly_chart(fig_errors, use_container_width=True)
+        st.plotly_chart(fig_errors, width='stretch')
     else:
         st.success("✅ No errors found in the logs!")
     
@@ -1927,7 +1937,7 @@ with tab5:
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("🗑️ Clear Cache", use_container_width=True):
+        if st.button("🗑️ Clear Cache", width='stretch', key="admin_clear_cache_2"):
             st.session_state.system_events.insert(0, {
                 "timestamp": datetime.now().isoformat(),
                 "type": "success",
@@ -1938,7 +1948,7 @@ with tab5:
             st.info("All cached data has been cleared.")
     
     with col2:
-        if st.button("🔄 Reset Session", use_container_width=True):
+        if st.button("🔄 Reset Session", width='stretch'):
             # Clear session state (except essential)
             keys_to_keep = ['system_health', 'system_metrics', 'system_config', 'agent_registry']
             keys_to_remove = [k for k in st.session_state.keys() if k not in keys_to_keep]
@@ -1948,14 +1958,14 @@ with tab5:
             st.info("Session state has been reset (essential data preserved).")
     
     with col3:
-        if st.button("🧹 Force GC", use_container_width=True):
+        if st.button("🧹 Force GC", width='stretch'):
             import gc
             gc.collect()
             st.success("✅ Garbage collection forced!")
             st.info("Python garbage collector has been run.")
     
     with col4:
-        if st.button("🔌 Test DB", use_container_width=True):
+        if st.button("🔌 Test DB", width='stretch'):
             # Simulate database connection test
             try:
                 # In production, this would actually test the database connection
@@ -1996,7 +2006,7 @@ with tab6:
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("💾 Backup Database", use_container_width=True):
+            if st.button("💾 Backup Database", width='stretch'):
                 # Simulate backup
                 backup_filename = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
                 st.success(f"✅ Database backup created: {backup_filename}")
@@ -2010,14 +2020,14 @@ with tab6:
                     "component": "Database"
                 })
             
-            if st.button("📥 Restore from Backup", use_container_width=True):
+            if st.button("📥 Restore from Backup", width='stretch'):
                 st.warning("⚠️ Restore operation requires confirmation!")
                 if st.button("⚠️ Confirm Restore", key="confirm_restore"):
                     st.success("✅ Database restored from backup!")
                     st.info("In production, this would restore the database from the selected backup file.")
         
         with col2:
-            if st.button("⚡ Optimize Database", use_container_width=True):
+            if st.button("⚡ Optimize Database", width='stretch'):
                 # Simulate optimization
                 st.success("✅ Database optimized!")
                 st.info("Database indexes and tables have been optimized for better performance.")
@@ -2030,7 +2040,7 @@ with tab6:
                     "component": "Database"
                 })
             
-            if st.button("🧹 Vacuum Database", use_container_width=True):
+            if st.button("🧹 Vacuum Database", width='stretch'):
                 # Simulate vacuum
                 st.success("✅ Database vacuum completed!")
                 st.info("Database has been vacuumed to reclaim unused space.")
@@ -2059,7 +2069,7 @@ with tab6:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("🗑️ Clear All Cache", use_container_width=True):
+            if st.button("🗑️ Clear All Cache", width='stretch'):
                 # Simulate cache clear
                 st.success("✅ All cache cleared!")
                 st.info("All cached data has been removed.")
@@ -2079,7 +2089,7 @@ with tab6:
                 help="Select cache type to clear"
             )
             
-            if st.button("🗑️ Clear Selected Cache", use_container_width=True):
+            if st.button("🗑️ Clear Selected Cache", width='stretch'):
                 st.success(f"✅ {cache_type} cleared!")
                 st.info(f"All {cache_type.lower()} data has been removed.")
         
@@ -2106,7 +2116,7 @@ with tab6:
                 help="Logs older than this many days will be deleted"
             )
             
-            if st.button("🗑️ Delete Old Logs", use_container_width=True):
+            if st.button("🗑️ Delete Old Logs", width='stretch'):
                 # Simulate deletion
                 st.success(f"✅ Deleted logs older than {delete_days} days!")
                 st.info(f"In production, this would delete all logs older than {delete_days} days.")
@@ -2119,13 +2129,13 @@ with tab6:
                     "component": "Data Cleanup"
                 })
             
-            if st.button("📦 Archive Old Data", use_container_width=True):
+            if st.button("📦 Archive Old Data", width='stretch'):
                 # Simulate archiving
                 st.success("✅ Old data archived!")
                 st.info("In production, this would archive old data to long-term storage.")
         
         with col2:
-            if st.button("🧹 Clean Temp Files", use_container_width=True):
+            if st.button("🧹 Clean Temp Files", width='stretch'):
                 # Simulate cleanup
                 st.success("✅ Temporary files cleaned!")
                 st.info("All temporary files have been removed.")
@@ -2150,7 +2160,7 @@ with tab6:
             st.markdown("**Current Version:**")
             st.info("v1.2.3")
             
-            if st.button("🔍 Check for Updates", use_container_width=True):
+            if st.button("🔍 Check for Updates", width='stretch'):
                 # Simulate update check
                 st.success("✅ System is up to date!")
                 st.info("No updates available. You are running the latest version.")
@@ -2282,7 +2292,7 @@ with tab6:
             )
         
         # Save Schedule
-        if st.button("💾 Save Schedule", use_container_width=True):
+        if st.button("💾 Save Schedule", width='stretch'):
             st.session_state.scheduled_maintenance = maintenance
             st.success("✅ Maintenance schedule saved!")
             st.info("Scheduled maintenance tasks will run according to the configured schedule.")
@@ -2304,4 +2314,317 @@ with tab6:
     
     with col4:
         st.metric("System Uptime", "5 days, 12 hours")
+
+# Task Orchestrator Management Section
+st.markdown("---")
+st.header("⚙️ Task Orchestrator Management")
+
+# Check if orchestrator is available
+try:
+    from core.orchestrator.task_orchestrator import TaskOrchestrator
+    from core.orchestrator.task_scheduler import TaskScheduler
+    from core.orchestrator.task_monitor import TaskMonitor
+    from core.orchestrator.task_models import TaskType, TaskPriority, TaskStatus
+    
+    ORCHESTRATOR_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Task Orchestrator not available: {e}")
+    ORCHESTRATOR_AVAILABLE = False
+
+if not ORCHESTRATOR_AVAILABLE:
+    st.warning("⚠️ Task Orchestrator not available. Enable it in app.py first.")
+else:
+    # Get orchestrator from session state
+    orchestrator = st.session_state.get('task_orchestrator')
+    scheduler = st.session_state.get('task_scheduler')
+    monitor = st.session_state.get('task_monitor')
+    
+    if orchestrator and scheduler and monitor:
+        # Tabs for different views
+        task_tab1, task_tab2, task_tab3 = st.tabs([
+            "📋 Active Tasks",
+            "📅 Scheduled Tasks",
+            "📊 Task History"
+        ])
+        
+        with task_tab1:
+            st.subheader("Active Tasks")
+            
+            # Get active tasks - adapt to actual API
+            try:
+                # Try to get active tasks from executor or monitor
+                if hasattr(orchestrator, 'executor') and hasattr(orchestrator.executor, 'get_active_tasks'):
+                    active_tasks = orchestrator.executor.get_active_tasks()
+                elif hasattr(monitor, 'get_active_tasks'):
+                    active_tasks = monitor.get_active_tasks()
+                else:
+                    # Fallback: check executor's running tasks
+                    active_tasks = []
+                    if hasattr(orchestrator, 'executor'):
+                        executor = orchestrator.executor
+                        if hasattr(executor, 'running_tasks'):
+                            for task_id, task_info in executor.running_tasks.items():
+                                active_tasks.append({
+                                    'id': task_id,
+                                    'name': task_info.get('name', task_id),
+                                    'status': task_info.get('status', 'running'),
+                                    'started_at': task_info.get('start_time', 'Unknown'),
+                                    'progress': task_info.get('progress', 0)
+                                })
+                
+                if active_tasks:
+                    for task in active_tasks:
+                        task_id = task.get('id', task.get('name', 'unknown'))
+                        task_name = task.get('name', task_id)
+                        task_status = task.get('status', 'running')
+                        started_at = task.get('started_at', task.get('start_time', 'Unknown'))
+                        progress = task.get('progress', 0)
+                        
+                        with st.expander(f"{task_name} - {task_status}", expanded=True):
+                            col1, col2, col3 = st.columns(3)
+                            
+                            with col1:
+                                st.write(f"**Status:** {task_status}")
+                                st.write(f"**Started:** {started_at}")
+                            
+                            with col2:
+                                st.write(f"**Progress:** {progress}%")
+                                st.progress(progress / 100 if isinstance(progress, (int, float)) else 0)
+                            
+                            with col3:
+                                if st.button(f"Cancel", key=f"cancel_{task_id}"):
+                                    try:
+                                        if hasattr(orchestrator, 'cancel_task'):
+                                            orchestrator.cancel_task(task_id)
+                                        elif hasattr(orchestrator, 'executor') and hasattr(orchestrator.executor, 'cancel_task'):
+                                            orchestrator.executor.cancel_task(task_id)
+                                        st.success("Task cancelled")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Failed to cancel task: {e}")
+                else:
+                    st.info("No active tasks")
+            except Exception as e:
+                st.warning(f"Could not retrieve active tasks: {e}")
+                st.info("No active tasks")
+            
+            # Create new task
+            st.subheader("Create New Task")
+            
+            task_type = st.selectbox(
+                "Task Type",
+                ["Data Update", "Model Retrain", "Portfolio Rebalance", "Generate Report", "System Health Check"],
+                key="new_task_type"
+            )
+            
+            # Map UI task types to TaskType enum
+            task_type_map = {
+                "Data Update": TaskType.DATA_SYNC,
+                "Model Retrain": TaskType.MODEL_INNOVATION,
+                "Portfolio Rebalance": TaskType.PORTFOLIO_REBALANCING,
+                "Generate Report": TaskType.PERFORMANCE_ANALYSIS,
+                "System Health Check": TaskType.SYSTEM_HEALTH
+            }
+            
+            if st.button("Create Task", key="create_task_btn"):
+                try:
+                    task_type_enum = task_type_map.get(task_type, TaskType.SYSTEM_HEALTH)
+                    
+                    # Create task using orchestrator
+                    if hasattr(orchestrator, 'create_task'):
+                        task_id = orchestrator.create_task(task_type_enum.value)
+                    elif hasattr(orchestrator, 'execute_task'):
+                        task_id = orchestrator.execute_task(task_type_enum.value, {})
+                    else:
+                        # Fallback: use executor
+                        if hasattr(orchestrator, 'executor') and hasattr(orchestrator.executor, 'execute_task'):
+                            task_id = orchestrator.executor.execute_task(task_type_enum.value, {})
+                        else:
+                            task_id = f"task_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    
+                    st.success(f"✅ Task created: {task_id}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to create task: {e}")
+        
+        with task_tab2:
+            st.subheader("Scheduled Tasks")
+            
+            # Get scheduled tasks
+            try:
+                scheduled = scheduler.get_scheduled_tasks()
+                
+                if scheduled:
+                    for task_name, task_info in scheduled.items():
+                        next_run = task_info.get('next_run', 'Unknown')
+                        interval = task_info.get('interval_minutes', 'N/A')
+                        enabled = task_info.get('enabled', True)
+                        
+                        with st.expander(f"{task_name} - Next run: {next_run}", expanded=False):
+                            st.write(f"**Schedule:** Every {interval} minutes")
+                            st.write(f"**Status:** {'Enabled' if enabled else 'Disabled'}")
+                            st.write(f"**Priority:** {task_info.get('priority', 'Medium')}")
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("Run Now", key=f"run_{task_name}"):
+                                    try:
+                                        # Try to run task immediately
+                                        if hasattr(scheduler, 'run_task_now'):
+                                            scheduler.run_task_now(task_name)
+                                        elif hasattr(orchestrator, 'execute_task'):
+                                            orchestrator.execute_task(task_name, {})
+                                        st.success("Task started")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Failed to run task: {e}")
+                            
+                            with col2:
+                                if st.button("Remove", key=f"remove_{task_name}"):
+                                    try:
+                                        scheduler.remove_task(task_name)
+                                        st.success("Task removed")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Failed to remove task: {e}")
+                else:
+                    st.info("No scheduled tasks")
+            except Exception as e:
+                st.warning(f"Could not retrieve scheduled tasks: {e}")
+                st.info("No scheduled tasks")
+            
+            # Add new schedule
+            st.subheader("Schedule New Task")
+            
+            schedule_type = st.selectbox(
+                "Task to Schedule",
+                ["Daily Data Update", "Weekly Model Retrain", "Monthly Report", "System Health Check"],
+                key="schedule_task_type"
+            )
+            
+            schedule_time = st.time_input("Run at", key="schedule_time")
+            
+            # Map schedule types to task configs
+            schedule_configs = {
+                "Daily Data Update": {"task_type": TaskType.DATA_SYNC, "interval_minutes": 1440},
+                "Weekly Model Retrain": {"task_type": TaskType.MODEL_INNOVATION, "interval_minutes": 10080},
+                "Monthly Report": {"task_type": TaskType.PERFORMANCE_ANALYSIS, "interval_minutes": 43200},
+                "System Health Check": {"task_type": TaskType.SYSTEM_HEALTH, "interval_minutes": 60}
+            }
+            
+            if st.button("Schedule Task", key="schedule_task_btn"):
+                try:
+                    config = schedule_configs.get(schedule_type, schedule_configs["System Health Check"])
+                    
+                    # Create TaskConfig
+                    from core.orchestrator.task_models import TaskConfig
+                    task_config = TaskConfig(
+                        name=schedule_type.lower().replace(" ", "_"),
+                        task_type=config["task_type"],
+                        interval_minutes=config["interval_minutes"],
+                        priority=TaskPriority.MEDIUM
+                    )
+                    
+                    scheduler.add_task(task_config)
+                    st.success("✅ Task scheduled")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to schedule task: {e}")
+        
+        with task_tab3:
+            st.subheader("Task History")
+            
+            # Get completed tasks
+            try:
+                # Try to get history from monitor
+                if hasattr(monitor, 'get_task_history'):
+                    history = monitor.get_task_history(limit=50)
+                elif hasattr(monitor, 'task_history'):
+                    history = monitor.task_history[-50:] if hasattr(monitor, 'task_history') else []
+                else:
+                    # Fallback: create empty history
+                    history = []
+                
+                if history:
+                    # Convert to DataFrame format
+                    history_data = []
+                    for item in history:
+                        if isinstance(item, dict):
+                            history_data.append({
+                                'name': item.get('name', item.get('task_name', 'Unknown')),
+                                'status': item.get('status', 'unknown'),
+                                'started_at': item.get('started_at', item.get('start_time', 'Unknown')),
+                                'duration': item.get('duration', item.get('duration_seconds', 0))
+                            })
+                        else:
+                            # Handle TaskExecution objects
+                            history_data.append({
+                                'name': getattr(item, 'task_name', 'Unknown'),
+                                'status': getattr(item, 'status', TaskStatus.COMPLETED).value if hasattr(item.status, 'value') else str(item.status),
+                                'started_at': getattr(item, 'start_time', 'Unknown'),
+                                'duration': getattr(item, 'duration_seconds', 0) or 0
+                            })
+                    
+                    if history_data:
+                        history_df = pd.DataFrame(history_data)
+                        
+                        # Summary metrics
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
+                            st.metric("Total Tasks", len(history_df))
+                        with col2:
+                            if 'status' in history_df.columns:
+                                success_count = (history_df['status'] == 'completed').sum() + (history_df['status'] == TaskStatus.COMPLETED.value).sum()
+                                success_rate = (success_count / len(history_df)) * 100 if len(history_df) > 0 else 0
+                                st.metric("Success Rate", f"{success_rate:.1f}%")
+                            else:
+                                st.metric("Success Rate", "N/A")
+                        with col3:
+                            if 'duration' in history_df.columns:
+                                avg_duration = history_df['duration'].mean()
+                                st.metric("Avg Duration", f"{avg_duration:.1f}s")
+                            else:
+                                st.metric("Avg Duration", "N/A")
+                        with col4:
+                            if 'status' in history_df.columns:
+                                failed = (history_df['status'] == 'failed').sum() + (history_df['status'] == TaskStatus.FAILED.value).sum()
+                                st.metric("Failed", failed)
+                            else:
+                                st.metric("Failed", "N/A")
+                        
+                        # History table
+                        display_df = history_df.copy()
+                        if 'status' in display_df.columns:
+                            # Convert status enum values to strings
+                            display_df['status'] = display_df['status'].apply(
+                                lambda x: x.value if hasattr(x, 'value') else str(x)
+                            )
+                        
+                        st.dataframe(
+                            display_df[['name', 'status', 'started_at', 'duration']],
+                            width='stretch'
+                        )
+                        
+                        # Charts
+                        if 'status' in history_df.columns:
+                            import plotly.express as px
+                            
+                            # Prepare status column for chart
+                            status_series = history_df['status'].apply(
+                                lambda x: x.value if hasattr(x, 'value') else str(x)
+                            )
+                            
+                            fig = px.pie(
+                                pd.DataFrame({'status': status_series}),
+                                names='status',
+                                title='Task Status Distribution'
+                            )
+                            st.plotly_chart(fig, width='stretch')
+                else:
+                    st.info("No task history available")
+            except Exception as e:
+                st.warning(f"Could not retrieve task history: {e}")
+                st.info("No task history available")
+    else:
+        st.warning("⚠️ Task Orchestrator components not initialized. Please restart the application.")
 

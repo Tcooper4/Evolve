@@ -133,7 +133,7 @@ class HealthChecker:
     def _check_models(self) -> Dict[str, Any]:
         """Check model registry"""
         try:
-            from trading.models.registry import get_model_registry
+            from trading.models.model_registry import get_registry as get_model_registry
             
             registry = get_model_registry()
             models = registry.get_available_models()

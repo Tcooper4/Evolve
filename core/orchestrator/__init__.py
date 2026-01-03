@@ -13,7 +13,7 @@ This package contains the modularized task orchestrator components:
 
 from .task_conditions import TaskConditions
 from .task_executor import TaskExecution, TaskExecutor
-from .task_models import AgentStatus
+from .task_models import AgentStatus, TaskPriority, TaskStatus, TaskType
 from .task_monitor import TaskMonitor
 from .task_orchestrator import (
     TaskOrchestrator,
@@ -23,10 +23,7 @@ from .task_orchestrator import (
 from .task_providers import AgentTaskProvider, TaskProvider
 from .task_scheduler import (
     TaskConfig,
-    TaskPriority,
     TaskScheduler,
-    TaskStatus,
-    TaskType,
 )
 
 __all__ = [

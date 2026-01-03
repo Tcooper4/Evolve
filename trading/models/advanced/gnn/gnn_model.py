@@ -1,539 +1,479 @@
-"""Graph Neural Network for time series forecasting."""
+"""
+Graph Neural Network (GNN) Model for Market Forecasting
 
-# Standard library imports
+GNN models relationships between assets using graph structures.
+Useful for:
+- Multi-asset forecasting with dependencies
+- Modeling sector/industry relationships
+- Capturing market contagion effects
+- Portfolio optimization with relationship awareness
+"""
+
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-# Third-party imports
 import numpy as np
 import pandas as pd
 
-# Try to import PyTorch
 try:
     import torch
     import torch.nn as nn
     import torch.nn.functional as F
-
     TORCH_AVAILABLE = True
-except ImportError as e:
-    print("âš ï¸ PyTorch not available. Disabling GNN models.")
-    print(f"   Missing: {e}")
+except ImportError:
+    TORCH_AVAILABLE = False
     torch = None
     nn = None
     F = None
-    TORCH_AVAILABLE = False
 
-# Local imports
-from trading.models.base_model import BaseModel, ModelRegistry, ValidationError
+from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
 
 
-class GNNLayer(nn.Module):
-    """Graph Neural Network layer."""
-
-    def __init__(self, in_channels: int, out_channels: int, dropout: float = 0.2):
-        """Initialize GNN layer.
-
+class GraphConvLayer(nn.Module):
+    """Graph Convolutional Layer for processing graph-structured data."""
+    
+    def __init__(self, in_features: int, out_features: int):
+        """Initialize graph convolution layer.
+        
         Args:
-            in_channels: Number of input channels
-            out_channels: Number of output channels
-            dropout: Dropout rate
+            in_features: Number of input features per node
+            out_features: Number of output features per node
         """
         if not TORCH_AVAILABLE:
-            raise ImportError("PyTorch is not available. Cannot create GNNLayer.")
-
-        try:
-            from torch_geometric.nn import GCNConv
-        except ImportError:
-            raise ImportError(
-                "torch_geometric is not installed. Please install it with 'pip install torch-geometric'."
-            )
-        super().__init__()
-        self.conv = GCNConv(in_channels, out_channels)
-        self.bn = nn.BatchNorm1d(out_channels)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
-        """Forward pass through GNN layer.
-
+            raise ImportError("PyTorch is required for GraphConvLayer")
+        super(GraphConvLayer, self).__init__()
+        self.linear = nn.Linear(in_features, out_features)
+        
+    def forward(self, x: torch.Tensor, adjacency: torch.Tensor) -> torch.Tensor:
+        """Forward pass through graph convolution.
+        
         Args:
-            x: Node features tensor of shape (num_nodes, in_channels)
-            edge_index: Graph connectivity tensor of shape (2, num_edges)
-
+            x: Node features [num_nodes, in_features]
+            adjacency: Adjacency matrix [num_nodes, num_nodes]
+            
         Returns:
-            Updated node features tensor of shape (num_nodes, out_channels)
+            Updated node features [num_nodes, out_features]
         """
-        try:
-            pass
-        except ImportError:
-            raise ImportError(
-                "torch_geometric is not installed. Please install it with 'pip install torch-geometric'."
-            )
-        x = self.conv(x, edge_index)
-        x = self.bn(x)
-        x = F.relu(x)
-        x = self.dropout(x)
+        # Apply linear transformation
+        x = self.linear(x)
+        
+        # Aggregate neighbor information
+        # Normalize adjacency matrix
+        degree = adjacency.sum(dim=1, keepdim=True)
+        degree[degree == 0] = 1  # Avoid division by zero
+        adjacency_normalized = adjacency / degree
+        
+        # Message passing: aggregate features from neighbors
+        x = torch.matmul(adjacency_normalized, x)
+        
         return x
 
 
-@ModelRegistry.register("GNN")
-class GNNForecaster(BaseModel):
-    """Graph Neural Network forecaster for time series data."""
-
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize GNN forecaster.
-
+class GNNModel(nn.Module):
+    """Graph Neural Network for time series forecasting."""
+    
+    def __init__(
+        self,
+        num_nodes: int,
+        node_features: int,
+        hidden_size: int = 64,
+        num_layers: int = 2,
+        dropout: float = 0.2,
+        use_lstm: bool = True
+    ):
+        """Initialize GNN model.
+        
         Args:
-            config: Configuration dictionary containing:
-                - input_size: Size of input features (default: 2)
-                - hidden_size: Size of hidden layers (default: 64)
-                - output_size: Size of output features (default: 1)
-                - num_layers: Number of GNN layers (default: 2)
-                - dropout: Dropout rate (default: 0.2)
-                - sequence_length: Length of input sequences (default: 10)
-                - feature_columns: List of feature column names (default: ['close', 'volume'])
-                - target_column: Name of target column (default: 'close')
-                - learning_rate: Learning rate (default: 0.001)
-                - use_lr_scheduler: Whether to use learning rate scheduler (default: True)
+            num_nodes: Number of nodes in graph (e.g., number of stocks)
+            node_features: Number of features per node (e.g., OHLCV = 5)
+            hidden_size: Hidden layer size
+            num_layers: Number of GNN layers
+            dropout: Dropout rate
+            use_lstm: Whether to use LSTM for temporal modeling
         """
         if not TORCH_AVAILABLE:
-            raise ImportError("PyTorch is not available. Cannot create GNNForecaster.")
-
-        try:
-            pass
-        except ImportError:
-            raise ImportError(
-                "torch_geometric is not installed. Please install it with 'pip install torch-geometric'."
+            raise ImportError("PyTorch is required for GNNModel")
+        super(GNNModel, self).__init__()
+        
+        self.num_nodes = num_nodes
+        self.node_features = node_features
+        self.hidden_size = hidden_size
+        self.use_lstm = use_lstm
+        
+        # Graph convolutional layers
+        self.gnn_layers = nn.ModuleList()
+        
+        # First layer
+        self.gnn_layers.append(GraphConvLayer(node_features, hidden_size))
+        
+        # Middle layers
+        for _ in range(num_layers - 1):
+            self.gnn_layers.append(GraphConvLayer(hidden_size, hidden_size))
+        
+        # Optional LSTM for temporal dependencies
+        if use_lstm:
+            self.lstm = nn.LSTM(
+                input_size=hidden_size,
+                hidden_size=hidden_size,
+                num_layers=1,
+                batch_first=True
             )
-        if config is None:
-            config = {}
-
-        # Set default configuration
-        default_config = {
-            "input_size": 2,
-            "hidden_size": 64,
-            "output_size": 1,
-            "num_layers": 2,
-            "dropout": 0.2,
-            "sequence_length": 10,
-            "feature_columns": ["close", "volume"],
-            "target_column": "close",
-            "learning_rate": 0.001,
-            "use_lr_scheduler": True,
-        }
-        default_config.update(config)
-
-        super().__init__(default_config)
-        self._validate_config()
-        self._setup_model()
-
-    def _validate_config(self) -> None:
-        """Validate model configuration.
-
-        Raises:
-            ValidationError: If configuration is invalid
-        """
-        # Validate required parameters
-        required_params = [
-            "input_size",
-            "hidden_size",
-            "output_size",
-            "num_layers",
-            "dropout",
-            "sequence_length",
-            "feature_columns",
-            "target_column",
-        ]
-        for param in required_params:
-            if param not in self.config:
-                raise ValidationError(f"Missing required parameter: {param}")
-
-        # Validate parameter values
-        if self.config["input_size"] <= 0:
-            raise ValidationError("input_size must be positive")
-        if self.config["hidden_size"] <= 0:
-            raise ValidationError("hidden_size must be positive")
-        if self.config["output_size"] <= 0:
-            raise ValidationError("output_size must be positive")
-        if self.config["num_layers"] <= 0:
-            raise ValidationError("num_layers must be positive")
-        if not 0 <= self.config["dropout"] <= 1:
-            raise ValidationError("dropout must be between 0 and 1")
-        if self.config["sequence_length"] < 2:
-            raise ValidationError("sequence_length must be at least 2")
-        if not self.config["feature_columns"]:
-            raise ValidationError("feature_columns cannot be empty")
-        if len(self.config["feature_columns"]) != self.config["input_size"]:
-            raise ValidationError(
-                f"Number of feature columns ({len(self.config['feature_columns'])}) "
-                f"must match input_size ({self.config['input_size']})"
-            )
-
-    def build_model(self) -> nn.Module:
-        """Build the GNN model architecture.
-
-        Returns:
-            PyTorch model
-        """
-        layers = []
-
-        # Input layer
-        layers.append(
-            GNNLayer(
-                self.config["input_size"],
-                self.config["hidden_size"],
-                self.config["dropout"],
-            )
-        )
-
-        # Hidden layers
-        for _ in range(self.config["num_layers"] - 1):
-            layers.append(
-                GNNLayer(
-                    self.config["hidden_size"],
-                    self.config["hidden_size"],
-                    self.config["dropout"],
-                )
-            )
-
+        
+        # Dropout
+        self.dropout = nn.Dropout(dropout)
+        
         # Output layer
-        self.gnn_layers = nn.ModuleList(layers)
-        self.fc = nn.Linear(self.config["hidden_size"], self.config["output_size"])
-
-        # Initialize weights
-        for name, param in self.named_parameters():
-            if "weight" in name and param.dim() > 1:
-                nn.init.xavier_uniform_(param)
-            elif "bias" in name:
-                nn.init.zeros_(param)
-
-        return nn.ModuleList([*self.gnn_layers, self.fc])
-
-    def _create_graph(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Create graph structure from time series data.
-
+        self.fc = nn.Linear(hidden_size, 1)
+        
+    def forward(
+        self,
+        x: torch.Tensor,
+        adjacency: torch.Tensor,
+        temporal: bool = True
+    ) -> torch.Tensor:
+        """Forward pass.
+        
         Args:
-            x: Input tensor of shape (batch_size, seq_len, input_size)
-
+            x: Node features [batch, seq_len, num_nodes, node_features] or
+               [batch, num_nodes, node_features] if not temporal
+            adjacency: Adjacency matrix [num_nodes, num_nodes]
+            temporal: Whether to process temporal dimension with LSTM
+            
         Returns:
-            Tuple of (node_features, edge_index) where:
-                node_features: Shape (batch_size * seq_len, input_size)
-                edge_index: Shape (2, num_edges)
+            Predictions [batch, num_nodes] or [batch, seq_len, num_nodes]
         """
-        batch_size, seq_len, _ = x.shape
-
-        # Reshape to node features
-        node_features = x.reshape(-1, self.config["input_size"])
-
-        # Create temporal edges
-        edges = []
-        for b in range(batch_size):
-            for i in range(seq_len):
-                # Connect to previous time step
-                if i > 0:
-                    edges.append([b * seq_len + i, b * seq_len + i - 1])
-                # Connect to next time step
-                if i < seq_len - 1:
-                    edges.append([b * seq_len + i, b * seq_len + i + 1])
-
-        edge_index = torch.tensor(edges, dtype=torch.long, device=self.device).t()
-
-        return node_features, edge_index
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass of the model.
-
-        Args:
-            x: Input tensor of shape (batch_size, seq_len, input_size)
-
-        Returns:
-            Output tensor of shape (batch_size, output_size)
-        """
-        # Create graph structure
-        node_features, edge_index = self._create_graph(x)
-
-        # Apply GNN layers
-        for layer in self.gnn_layers:
-            node_features = layer(node_features, edge_index)
-
-        # Global pooling
         batch_size = x.size(0)
-        seq_len = x.size(1)
-        node_features = node_features.reshape(batch_size, seq_len, -1)
-        pooled = global_mean_pool(
-            node_features, torch.zeros(batch_size, dtype=torch.long, device=self.device)
-        )
+        
+        if temporal and len(x.shape) == 4:
+            # Temporal data: [batch, seq_len, num_nodes, features]
+            seq_len = x.size(1)
+            
+            # Process each timestep through GNN
+            outputs = []
+            for t in range(seq_len):
+                x_t = x[:, t, :, :]  # [batch, num_nodes, features]
+                
+                # Apply GNN layers
+                for i, gnn_layer in enumerate(self.gnn_layers):
+                    x_t = gnn_layer(x_t, adjacency)
+                    x_t = F.relu(x_t)
+                    x_t = self.dropout(x_t)
+                
+                outputs.append(x_t)
+            
+            # Stack outputs: [batch, seq_len, num_nodes, hidden]
+            h = torch.stack(outputs, dim=1)
+            
+            # Apply LSTM if enabled
+            if self.use_lstm:
+                # Reshape for LSTM: [batch*num_nodes, seq_len, hidden]
+                h_reshaped = h.permute(0, 2, 1, 3).reshape(
+                    batch_size * self.num_nodes, seq_len, self.hidden_size
+                )
+                
+                lstm_out, _ = self.lstm(h_reshaped)
+                
+                # Take last timestep and reshape back
+                h = lstm_out[:, -1, :].reshape(batch_size, self.num_nodes, self.hidden_size)
+            else:
+                # Just take last timestep
+                h = h[:, -1, :, :]
+        else:
+            # Non-temporal: [batch, num_nodes, features]
+            h = x
+            
+            # Apply GNN layers
+            for i, gnn_layer in enumerate(self.gnn_layers):
+                h = gnn_layer(h, adjacency)
+                h = F.relu(h)
+                h = self.dropout(h)
+        
+        # Output layer: [batch, num_nodes, hidden] -> [batch, num_nodes, 1]
+        output = self.fc(h)
+        
+        # Squeeze last dimension: [batch, num_nodes]
+        output = output.squeeze(-1)
+        
+        return output
 
-        # Output layer
-        out = self.fc(pooled)
-        return out
 
-    def _prepare_data(
-        self, data: pd.DataFrame, is_training: bool
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Prepare data for training or prediction.
-
+class GNNForecaster:
+    """Graph Neural Network Forecaster for multi-asset time series.
+    
+    Models relationships between assets using graph structure.
+    """
+    
+    def __init__(
+        self,
+        num_assets: int = 10,
+        hidden_size: int = 64,
+        num_layers: int = 2,
+        seq_length: int = 30,
+        learning_rate: float = 0.001,
+        correlation_threshold: float = 0.5
+    ):
+        """Initialize GNN forecaster.
+        
         Args:
-            data: Input data as pandas DataFrame
-            is_training: Whether data is for training
-
+            num_assets: Number of assets to model
+            hidden_size: Hidden layer size
+            num_layers: Number of GNN layers
+            seq_length: Sequence length for temporal modeling
+            learning_rate: Learning rate
+            correlation_threshold: Threshold for creating edges (0-1)
+        """
+        if not TORCH_AVAILABLE:
+            raise ImportError("PyTorch is required for GNN models")
+        
+        self.num_assets = num_assets
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.seq_length = seq_length
+        self.learning_rate = learning_rate
+        self.correlation_threshold = correlation_threshold
+        
+        self.model = None
+        self.scaler = StandardScaler()
+        self.adjacency_matrix = None
+        self.is_fitted = False
+        
+    def _build_adjacency_matrix(self, data: pd.DataFrame) -> torch.Tensor:
+        """Build adjacency matrix from correlation.
+        
+        Args:
+            data: Multi-asset price data
+            
         Returns:
-            Tuple of (X, y) tensors where:
-                X: Shape (batch_size, sequence_length, input_size)
-                y: Shape (batch_size, output_size)
+            Adjacency matrix as tensor
         """
-        # Validate data
-        if data.isnull().any().any():
-            raise ValidationError("Data contains missing values")
-
-        # Check if all required columns exist
-        missing_cols = [
-            col for col in self.config["feature_columns"] if col not in data.columns
-        ]
-        if missing_cols:
-            raise ValidationError(f"Missing required columns: {missing_cols}")
-
-        # Convert to numpy arrays
-        X = data[self.config["feature_columns"]].values
-        y = data[self.config["target_column"]].values[self.config["sequence_length"] :]
-
+        # Calculate correlation matrix
+        correlation = data.corr().values
+        
+        # Threshold correlations to create edges
+        adjacency = (np.abs(correlation) > self.correlation_threshold).astype(float)
+        
+        # Add self-loops
+        np.fill_diagonal(adjacency, 1.0)
+        
+        return torch.FloatTensor(adjacency)
+    
+    def _prepare_graph_data(
+        self,
+        data: pd.DataFrame
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Prepare data for GNN training.
+        
+        Args:
+            data: Multi-asset price data [time, assets]
+            
+        Returns:
+            Tuple of (features, targets)
+        """
+        # Assume data has columns for each asset
+        num_timesteps = len(data)
+        
+        # Scale data
+        scaled_data = self.scaler.fit_transform(data.values)
+        
         # Create sequences
-        X_sequences = []
-        for i in range(len(X) - self.config["sequence_length"]):
-            X_sequences.append(X[i : i + self.config["sequence_length"]])
-        X = np.array(X_sequences)
-
-        # Normalize
-        if is_training:
-            self.X_mean = X.mean(axis=(0, 1))
-            self.X_std = X.std(axis=(0, 1))
-            self.y_mean = y.mean()
-            self.y_std = y.std()
-
-        X = (X - self.X_mean) / self.X_std
-        y = (y - self.y_mean) / self.y_std
-
-        # Convert to tensors
-        X = torch.FloatTensor(X)
-        y = torch.FloatTensor(y).unsqueeze(-1)
-
-        # Move to device
-        X = X.to(self.device)
-        y = y.to(self.device)
-
+        X_list = []
+        y_list = []
+        
+        for i in range(num_timesteps - self.seq_length):
+            # Features: [seq_length, num_assets]
+            X_seq = scaled_data[i:i + self.seq_length]
+            
+            # Target: next values for all assets
+            y_seq = scaled_data[i + self.seq_length]
+            
+            X_list.append(X_seq)
+            y_list.append(y_seq)
+        
+        # Stack into tensors
+        # X: [num_samples, seq_length, num_assets, 1]
+        X = torch.FloatTensor(np.array(X_list)).unsqueeze(-1)
+        
+        # y: [num_samples, num_assets]
+        y = torch.FloatTensor(np.array(y_list))
+        
         return X, y
-
-    def save(self, path: str) -> None:
-        """Save model state.
-
-        Args:
-            path: Path to save model state
-        """
-        if self.model is None:
-            raise ValueError("Model not initialized")
-
-        state = {
-            "model_state": self.model.state_dict(),
-            "optimizer_state": self.optimizer.state_dict() if self.optimizer else None,
-            "scheduler_state": self.scheduler.state_dict() if self.scheduler else None,
-            "config": self.config,
-            "history": self.history,
-            "best_loss": self.best_loss,
-            "X_mean": self.X_mean if hasattr(self, "X_mean") else None,
-            "X_std": self.X_std if hasattr(self, "X_std") else None,
-            "y_mean": self.y_mean if hasattr(self, "y_mean") else None,
-            "y_std": self.y_std if hasattr(self, "y_std") else None,
-        }
-        torch.save(state, path)
-
-    def load(self, path: str) -> None:
-        """Load model state.
-
-        Args:
-            path: Path to load model state from
-        """
-        state = torch.load(path, weights_only=False)
-        self.config = state["config"]
-        self.history = state["history"]
-        self.best_loss = state["best_loss"]
-
-        if self.model is not None:
-            self.model.load_state_dict(state["model_state"])
-
-        if self.optimizer is not None and state["optimizer_state"] is not None:
-            self.optimizer.load_state_dict(state["optimizer_state"])
-
-        if self.scheduler is not None and state["scheduler_state"] is not None:
-            self.scheduler.load_state_dict(state["scheduler_state"])
-
-        # Load normalization parameters
-        if state["X_mean"] is not None:
-            self.X_mean = state["X_mean"]
-            self.X_std = state["X_std"]
-            self.y_mean = state["y_mean"]
-            self.y_std = state["y_std"]
-
+    
     def fit(
         self,
-        train_data: Tuple[torch.Tensor, torch.Tensor],
-        val_data: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
-        **kwargs,
-    ) -> Dict[str, Any]:
+        data: pd.DataFrame,
+        epochs: int = 100,
+        batch_size: int = 32
+    ) -> 'GNNForecaster':
         """Train the GNN model.
-
+        
         Args:
-            train_data: Tuple of (features, adjacency_matrix) for training
-            val_data: Optional tuple of (features, adjacency_matrix) for validation
-            **kwargs: Additional training arguments
-
+            data: Multi-asset price data [time, assets]
+            epochs: Number of training epochs
+            batch_size: Batch size
+            
         Returns:
-            Dictionary containing training history
+            self
         """
-        train_features, train_adj = train_data
-        if val_data is not None:
-            val_features, val_adj = val_data
-
-        # Training setup
-        optimizer = torch.optim.Adam(
-            self.parameters(), lr=self.config.get("learning_rate", 0.001)
+        # Build adjacency matrix from correlations
+        self.adjacency_matrix = self._build_adjacency_matrix(data)
+        
+        # Prepare data
+        X, y = self._prepare_graph_data(data)
+        
+        # Create model
+        self.model = GNNModel(
+            num_nodes=self.num_assets,
+            node_features=1,  # Just price for now
+            hidden_size=self.hidden_size,
+            num_layers=self.num_layers,
+            use_lstm=True
         )
+        
+        # Setup training
         criterion = nn.MSELoss()
-
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        
         # Training loop
-        history = {"train_loss": [], "val_loss": []}
-        best_val_loss = float("inf")
-        patience = self.config.get("patience", 10)
-        patience_counter = 0
-
-        for epoch in range(self.config.get("epochs", 100)):
-            # Training step
-            self.train()
-            optimizer.zero_grad()
-            train_pred = self(train_features)
-            train_loss = criterion(train_pred, train_features)
-            train_loss.backward()
-            optimizer.step()
-
-            # Validation step
-            if val_data is not None:
-                self.eval()
-                with torch.no_grad():
-                    val_pred = self(val_features)
-                    val_loss = criterion(val_pred, val_features)
-
-                # Early stopping
-                if val_loss < best_val_loss:
-                    best_val_loss = val_loss
-                    patience_counter = 0
-                else:
-                    patience_counter += 1
-
-                if patience_counter >= patience:
-                    logger.info(f"Early stopping at epoch {epoch}")
-                    break
-
-                history["val_loss"].append(val_loss.item())
-
-            history["train_loss"].append(train_loss.item())
-
-            if epoch % 10 == 0:
-                logger.info(
-                    f"Epoch {epoch}: train_loss = {train_loss.item():.4f}, "
-                    f"val_loss = {val_loss.item():.4f if val_data is not None else 'N/A'}"
-                )
-
-        return history
-
-    def predict(self, x: torch.Tensor) -> torch.Tensor:
-        """Make predictions using the GNN model.
-
+        num_batches = len(X) // batch_size
+        if num_batches == 0:
+            num_batches = 1
+        
+        self.model.train()
+        for epoch in range(epochs):
+            epoch_loss = 0.0
+            
+            # Shuffle data
+            indices = torch.randperm(len(X))
+            
+            for i in range(num_batches):
+                # Get batch
+                batch_indices = indices[i * batch_size:(i + 1) * batch_size]
+                if len(batch_indices) == 0:
+                    continue
+                batch_X = X[batch_indices]
+                batch_y = y[batch_indices]
+                
+                # Forward pass
+                optimizer.zero_grad()
+                predictions = self.model(batch_X, self.adjacency_matrix, temporal=True)
+                
+                # Calculate loss
+                loss = criterion(predictions, batch_y)
+                
+                # Backward pass
+                loss.backward()
+                optimizer.step()
+                
+                epoch_loss += loss.item()
+            
+            if (epoch + 1) % 10 == 0:
+                avg_loss = epoch_loss / max(num_batches, 1)
+                logger.info(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.6f}")
+        
+        self.is_fitted = True
+        return self
+    
+    def predict(self, data: pd.DataFrame, horizon: int = 1) -> np.ndarray:
+        """Generate predictions for all assets.
+        
         Args:
-            x: Input tensor of shape (batch_size, num_nodes, input_size)
-
+            data: Recent price data [time, assets]
+            horizon: Forecast horizon (only 1 supported currently)
+            
         Returns:
-            Predicted values
+            Predictions for each asset
         """
-        self.eval()
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before prediction")
+        
+        self.model.eval()
+        
+        # Take last sequence
+        recent_data = data.values[-self.seq_length:]
+        scaled_data = self.scaler.transform(recent_data)
+        
+        # Prepare input: [1, seq_length, num_assets, 1]
+        x = torch.FloatTensor(scaled_data).unsqueeze(0).unsqueeze(-1)
+        
+        # Predict
         with torch.no_grad():
-            return self(x)
-
-    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
-        """Generate forecast for future time steps.
-
+            predictions = self.model(x, self.adjacency_matrix, temporal=True)
+        
+        # Inverse transform
+        predictions = predictions.numpy()
+        predictions = self.scaler.inverse_transform(predictions)
+        
+        return predictions.flatten()
+    
+    def forecast(
+        self,
+        data: pd.DataFrame,
+        horizon: int = 30,
+        target_asset: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Generate forecast for assets.
+        
         Args:
-            data: Historical data DataFrame
-            horizon: Number of time steps to forecast
-
+            data: Historical price data
+            horizon: Forecast horizon
+            target_asset: Specific asset to forecast (or None for all)
+            
         Returns:
-            Dictionary containing forecast results
+            Forecast dictionary
         """
-        try:
-            # Make initial prediction
-            self.predict(data)
+        # For simplicity, do multi-step forecasting by iterating
+        predictions = []
+        current_data = data.copy()
+        
+        self.model.eval()
+        
+        for step in range(horizon):
+            # Predict next step
+            next_pred = self.predict(current_data, horizon=1)
+            predictions.append(next_pred)
+            
+            # Update data with prediction
+            new_row = pd.DataFrame([next_pred], columns=data.columns, index=[current_data.index[-1] + pd.Timedelta(days=1)])
+            current_data = pd.concat([current_data.iloc[1:], new_row])
+        
+        predictions = np.array(predictions)
+        
+        # If target asset specified, extract it
+        if target_asset and target_asset in data.columns:
+            asset_idx = data.columns.get_loc(target_asset)
+            forecast_values = predictions[:, asset_idx]
+        else:
+            # Return predictions for first asset
+            forecast_values = predictions[:, 0]
+        
+        # Create dates
+        last_date = data.index[-1] if hasattr(data.index, 'freq') else pd.Timestamp.now()
+        forecast_dates = pd.date_range(start=last_date, periods=horizon + 1, freq='D')[1:]
+        
+        return {
+            'forecast': forecast_values,
+            'all_assets': predictions,  # Predictions for all assets
+            'dates': forecast_dates,
+            'model_type': 'GNN',
+            'horizon': horizon,
+            'num_assets': self.num_assets,
+            'confidence': np.full(horizon, 0.75)  # Conservative confidence
+        }
+    
+    def get_relationship_matrix(self) -> np.ndarray:
+        """Get the learned relationship matrix.
+        
+        Returns:
+            Adjacency matrix showing asset relationships
+        """
+        if self.adjacency_matrix is None:
+            raise ValueError("Model must be fitted first")
+        
+        return self.adjacency_matrix.numpy()
 
-            # Generate multi-step forecast
-            forecast_values = []
-            current_data = data.copy()
 
-            for i in range(horizon):
-                # Get prediction for next step
-                pred = self.predict(current_data)
-                forecast_values.append(pred[-1])
+# For backward compatibility
+GraphNeuralNetwork = GNNForecaster
 
-                # Update data for next iteration
-                new_row = current_data.iloc[-1].copy()
-                new_row[self.config.get("target_column", "close")] = pred[
-                    -1
-                ]  # Update with prediction
-                current_data = pd.concat(
-                    [current_data, pd.DataFrame([new_row])], ignore_index=True
-                )
-                current_data = current_data.iloc[1:]  # Remove oldest row
-
-            return {
-                "forecast": np.array(forecast_values),
-                "confidence": 0.8,  # GNN confidence
-                "model": "GNN",
-                "horizon": horizon,
-                "feature_columns": self.config.get("feature_columns", []),
-                "target_column": self.config.get("target_column", "close"),
-            }
-
-        except Exception as e:
-            logger.error(f"Error in GNN model forecast: {e}")
-            raise RuntimeError(f"GNN model forecasting failed: {e}")
-
-    def summary(self):
-        super().summary()
-
-    def infer(self):
-        super().infer()
-
-    def shap_interpret(self, X_sample):
-        """Run SHAP interpretability on a sample batch."""
-        try:
-            import shap
-        except ImportError:
-            logger.warning(
-                "SHAP is not installed. Please install it with 'pip install shap'."
-            )
-            return
-        explainer = shap.DeepExplainer(self.model, X_sample)
-        shap_values = explainer.shap_values(X_sample)
-        shap.summary_plot(shap_values, X_sample.cpu().numpy())
-
-    def test_synthetic(self):
-        """Test model on synthetic data."""
-        import numpy as np
-        import pandas as pd
-
-        n = 100
-        df = pd.DataFrame(
-            {"close": np.sin(np.linspace(0, 10, n)), "volume": np.random.rand(n)}
-        )
-        self.fit(df.iloc[:80], df.iloc[80:])
-        y_pred = self.predict(df.iloc[80:])
-        logger.info(
-            f'Synthetic test MSE: {((y_pred.flatten() - df["close"].iloc[80:].values) ** 2).mean()}'
-        )

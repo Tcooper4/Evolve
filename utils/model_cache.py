@@ -110,12 +110,23 @@ class ModelCache:
         Returns:
             Callable: Cached function
         """
+        # For instance methods, ignore 'self' parameter
+        import inspect
+        sig = inspect.signature(func)
+        is_method = 'self' in sig.parameters
+        
         if cache_key:
             # Use custom cache key
-            cached_func = self.memory.cache(func, func_id=cache_key)
+            if is_method:
+                cached_func = self.memory.cache(func, func_id=cache_key, ignore=['self'])
+            else:
+                cached_func = self.memory.cache(func, func_id=cache_key)
         else:
             # Use default caching
-            cached_func = self.memory.cache(func)
+            if is_method:
+                cached_func = self.memory.cache(func, ignore=['self'])
+            else:
+                cached_func = self.memory.cache(func)
 
         return cached_func
 

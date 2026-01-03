@@ -234,6 +234,10 @@ class YFinanceProvider(BaseDataProvider):
                 interval=interval,
             )
 
+            # Normalize column names to lowercase (yfinance returns capitalized)
+            if not data.empty:
+                data.columns = data.columns.str.lower()
+
             # Validate data
             self._validate_data(data)
 

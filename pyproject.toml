@@ -57,6 +57,15 @@ dependencies = [
     "newsapi-python>=0.2.6",
     "fredapi>=0.4.0",
     "wbdata>=0.3.0",
+    # Missing dependencies added
+    "pyyaml>=6.0.0",
+    "schedule>=1.2.0",
+    "statsmodels>=0.14.0",
+    "arch>=6.0.0",
+    "catboost>=1.2.0",
+    # Optional dependencies (with fallbacks in code)
+    "flaml>=2.0.0",
+    "autoformer-pytorch>=0.1.0",
 ]
 
 [project.optional-dependencies]

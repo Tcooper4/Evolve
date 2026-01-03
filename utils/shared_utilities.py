@@ -55,7 +55,10 @@ def create_sample_data(
     trend: float = 0.0,
 ) -> pd.DataFrame:
     """
-    Create sample market data for testing.
+    Create sample market data for TESTING ONLY.
+    
+    ⚠️ WARNING: This function generates fake data for unit testing.
+    DO NOT use in production code. Use real data providers instead.
     """
     dates = pd.date_range(start=start_date, periods=rows, freq="D")
     np.random.seed(42)  # For reproducible results
@@ -81,6 +84,10 @@ def create_sample_data(
 def create_sample_forecast_data(
     rows: int = 100, features: int = 10, target_column: str = "target"
 ) -> pd.DataFrame:
+    """
+    ⚠️ WARNING: This function generates fake data for TESTING ONLY.
+    DO NOT use in production code. Use real data providers instead.
+    
     """
     Create sample forecasting data with features and target.
     """

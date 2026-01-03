@@ -15,8 +15,14 @@ Features:
 import logging
 import os
 import sys
+from pathlib import Path
 from typing import List
 from datetime import datetime
+
+# Add project root to Python path for imports (Streamlit pages run in separate context)
+project_root = Path(__file__).parent.parent.absolute()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 import numpy as np
 import pandas as pd
@@ -28,7 +34,19 @@ from trading.data.data_loader import DataLoader, DataLoadRequest
 from utils.math_utils import calculate_volatility, calculate_beta
 from trading.utils.performance_metrics import PerformanceMetrics
 from trading.optimization.portfolio_optimizer import PortfolioOptimizer
-from portfolio.allocator import PortfolioAllocator, AllocationStrategy
+# Import from portfolio package (handles availability checks)
+# Try direct import first (more reliable with Streamlit)
+try:
+    from portfolio.allocator import PortfolioAllocator, AllocationStrategy
+except (ImportError, ModuleNotFoundError) as e:
+    try:
+        # Fallback: try package-level import
+        from portfolio import PortfolioAllocator, AllocationStrategy
+    except (ImportError, ModuleNotFoundError):
+        PortfolioAllocator = None
+        AllocationStrategy = None
+        import logging
+        logging.warning(f"PortfolioAllocator not available: {e}")
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -48,6 +66,93 @@ if "portfolio_manager" not in st.session_state:
     st.session_state.portfolio_manager = PortfolioManager()
 
 # Helper functions
+def calculate_option_greeks(strike, spot, time_to_expiry, volatility, option_type='call'):
+    """Calculate Black-Scholes option Greeks."""
+    try:
+        from scipy.stats import norm
+        import numpy as np
+        
+        r = 0.05  # Risk-free rate (update as needed)
+        
+        if time_to_expiry <= 0:
+            time_to_expiry = 0.001  # Avoid division by zero
+        
+        d1 = (np.log(spot / strike) + (r + 0.5 * volatility**2) * time_to_expiry) / (volatility * np.sqrt(time_to_expiry))
+        d2 = d1 - volatility * np.sqrt(time_to_expiry)
+        
+        if option_type.lower() == 'call':
+            delta = norm.cdf(d1)
+            theta = (-spot * norm.pdf(d1) * volatility / (2 * np.sqrt(time_to_expiry)) 
+                    - r * strike * np.exp(-r * time_to_expiry) * norm.cdf(d2))
+            rho = strike * time_to_expiry * np.exp(-r * time_to_expiry) * norm.cdf(d2)
+        else:  # put
+            delta = -norm.cdf(-d1)
+            theta = (-spot * norm.pdf(d1) * volatility / (2 * np.sqrt(time_to_expiry)) 
+                    + r * strike * np.exp(-r * time_to_expiry) * norm.cdf(-d2))
+            rho = -strike * time_to_expiry * np.exp(-r * time_to_expiry) * norm.cdf(-d2)
+        
+        gamma = norm.pdf(d1) / (spot * volatility * np.sqrt(time_to_expiry)) if volatility > 0 else 0
+        vega = spot * norm.pdf(d1) * np.sqrt(time_to_expiry)
+        
+        return {
+            'delta': delta,
+            'gamma': gamma,
+            'theta': theta / 365,  # Daily theta
+            'vega': vega / 100,  # Vega per 1% change
+            'rho': rho / 100  # Rho per 1% change
+        }
+    except ImportError:
+        logger.warning("scipy not available for Greeks calculation")
+        return {'delta': 0.0, 'gamma': 0.0, 'theta': 0.0, 'vega': 0.0, 'rho': 0.0}
+    except Exception as e:
+        logger.warning(f"Error calculating Greeks: {e}")
+        return {'delta': 0.0, 'gamma': 0.0, 'theta': 0.0, 'vega': 0.0, 'rho': 0.0}
+
+def calculate_position_beta(ticker: str, market_ticker: str = 'SPY', days: int = 252) -> float:
+    """Calculate beta of a position relative to market.
+    
+    Args:
+        ticker: Stock ticker
+        market_ticker: Market index ticker (default SPY)
+        days: Lookback period in days
+        
+    Returns:
+        Beta value (1.0 if cannot calculate)
+    """
+    try:
+        import yfinance as yf
+        from datetime import timedelta
+        
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        
+        # Fetch data
+        stock_data = yf.download(ticker, start=start_date, end=end_date, progress=False)
+        market_data = yf.download(market_ticker, start=start_date, end=end_date, progress=False)
+        
+        if len(stock_data) < 50 or len(market_data) < 50:
+            return 1.0  # Not enough data
+        
+        # Calculate returns
+        stock_returns = stock_data['Close'].pct_change().dropna()
+        market_returns = market_data['Close'].pct_change().dropna()
+        
+        # Align dates
+        common_dates = stock_returns.index.intersection(market_returns.index)
+        stock_returns = stock_returns.loc[common_dates]
+        market_returns = market_returns.loc[common_dates]
+        
+        if len(stock_returns) < 50 or len(market_returns) < 50:
+            return 1.0  # Not enough aligned data
+        
+        # Calculate beta using existing utility function
+        beta = calculate_beta(stock_returns, market_returns)
+        
+        return float(beta) if not np.isnan(beta) else 1.0
+        
+    except Exception as e:
+        logger.warning(f"Could not calculate beta for {ticker}: {e}")
+        return 1.0  # Default to market beta
 
 def load_portfolio_state(filename: str) -> None:
     """Load portfolio state from file."""
@@ -969,8 +1074,8 @@ with tab2:
                 st.subheader("📈 Position Metrics")
                 
                 try:
-                    # Calculate position beta (simplified - would need market data)
-                    position_beta = 1.0  # Placeholder - would calculate from historical data
+                    # Calculate position beta from historical data
+                    position_beta = calculate_position_beta(position.symbol, market_ticker='SPY', days=252)
                     
                     # Calculate position volatility
                     try:
@@ -994,10 +1099,40 @@ with tab2:
                     col_metrics1.metric("Beta", f"{position_beta:.2f}")
                     col_metrics2.metric("Volatility", f"{position_volatility:.2f}%")
                     
-                    # Greeks placeholder (for options)
+                    # Calculate options Greeks if position is an option
                     if position.symbol.endswith("C") or position.symbol.endswith("P"):
-                        col_metrics3.metric("Delta", "N/A")
-                        col_metrics4.metric("Gamma", "N/A")
+                        # Try to extract option details
+                        try:
+                            # Estimate option parameters (in production, get from position data)
+                            strike = getattr(position, 'strike', current_price * 1.1)
+                            time_to_expiry = getattr(position, 'time_to_expiry', 30/365)  # Default 30 days
+                            volatility = getattr(position, 'volatility', 0.2)  # Default 20% vol
+                            option_type = 'call' if position.symbol.endswith("C") else 'put'
+                            
+                            greeks = calculate_option_greeks(
+                                strike=strike,
+                                spot=current_price,
+                                time_to_expiry=time_to_expiry,
+                                volatility=volatility,
+                                option_type=option_type
+                            )
+                            
+                            col_metrics3.metric("Delta", f"{greeks['delta']:.4f}")
+                            col_metrics4.metric("Gamma", f"{greeks['gamma']:.4f}")
+                            
+                            # Show additional Greeks in expander
+                            with st.expander("📊 All Greeks"):
+                                col_g1, col_g2, col_g3 = st.columns(3)
+                                with col_g1:
+                                    st.metric("Theta", f"{greeks['theta']:.4f}")
+                                with col_g2:
+                                    st.metric("Vega", f"{greeks['vega']:.4f}")
+                                with col_g3:
+                                    st.metric("Rho", f"{greeks['rho']:.4f}")
+                        except Exception as e:
+                            logger.warning(f"Could not calculate Greeks: {e}")
+                            col_metrics3.metric("Delta", "N/A")
+                            col_metrics4.metric("Gamma", "N/A")
                     else:
                         col_metrics3.metric("Risk Score", "Medium")
                         col_metrics4.metric("Correlation", "N/A")
@@ -1589,7 +1724,11 @@ with tab4:
     st.header("⚙️ Portfolio Optimization")
     st.markdown("Optimize portfolio allocation using Modern Portfolio Theory and advanced models")
     
-    # Initialize optimizers
+    # Initialize optimizers (with None check)
+    if PortfolioAllocator is None:
+        st.error("⚠️ Portfolio allocation modules not available. Please ensure portfolio package is properly installed.")
+        st.stop()
+    
     optimizer = PortfolioOptimizer(risk_free_rate=0.02)
     allocator = PortfolioAllocator()
     
@@ -2234,23 +2373,42 @@ with tab5:
     with col_div1:
         st.markdown("**Dividend History**")
         
-        # Simulated dividend data (in real implementation, would fetch from data provider)
+        # Fetch real dividend data from data provider
         dividend_symbols = list(set([pos.symbol for pos in portfolio.state.open_positions + portfolio.state.closed_positions]))
         
         if dividend_symbols:
-            # Create sample dividend history
             dividend_history = []
-            for symbol in dividend_symbols[:10]:  # Limit to 10
-                # Simulate quarterly dividends
-                for i in range(4):
-                    dividend_date = datetime.now().date() - pd.Timedelta(days=90 * (i + 1))
-                    dividend_amount = np.random.uniform(0.5, 3.0)  # $0.50 - $3.00 per share
-                    dividend_history.append({
-                        "symbol": symbol,
-                        "date": dividend_date,
-                        "amount": dividend_amount,
-                        "type": "Quarterly"
-                    })
+            try:
+                # Try to get real dividend data
+                from trading.data.providers import get_data_provider
+                import yfinance as yf
+                
+                data_provider = get_data_provider()
+                for symbol in dividend_symbols[:10]:  # Limit to 10
+                    try:
+                        # Use yfinance to get dividend history
+                        ticker = yf.Ticker(symbol)
+                        dividend_data = ticker.dividends
+                        
+                        if not dividend_data.empty:
+                            # Get last 4 dividends
+                            recent_dividends = dividend_data.tail(4)
+                            for date, amount in recent_dividends.items():
+                                dividend_history.append({
+                                    "symbol": symbol,
+                                    "date": date.date() if hasattr(date, 'date') else date,
+                                    "amount": float(amount),
+                                    "type": "Quarterly"
+                                })
+                        else:
+                            # No dividend data available - skip this symbol
+                            st.warning(f"No dividend data available for {symbol}")
+                    except Exception as e:
+                        st.warning(f"Could not fetch dividend data for {symbol}: {e}")
+                        continue
+            except Exception as e:
+                st.error(f"Failed to fetch dividend data: {e}. Please ensure data providers are configured.")
+                dividend_history = []
             
             if dividend_history:
                 dividend_df = pd.DataFrame(dividend_history)

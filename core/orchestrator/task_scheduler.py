@@ -16,8 +16,9 @@ from .task_models import TaskConfig
 class TaskScheduler:
     """Handles task scheduling and timing."""
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] = None, orchestrator=None):
         self.config = config or {}
+        self.orchestrator = orchestrator
         self.logger = logging.getLogger(__name__)
 
         # Task registry
