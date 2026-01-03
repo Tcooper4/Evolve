@@ -36,6 +36,7 @@ except ImportError as e:
     IsolationForest = None
     SKLEARN_AVAILABLE = False
 
+from trading.utils.safe_math import safe_divide
 from utils.safe_json_saver import safe_save_historical_data
 
 logger = logging.getLogger(__name__)
@@ -1222,8 +1223,8 @@ def _calculate_chi_square_drift(
         historical_hist, _ = np.histogram(historical_data, bins=bins)
 
         # Normalize histograms
-        current_hist = current_hist / current_hist.sum()
-        historical_hist = historical_hist / historical_hist.sum()
+        current_hist = safe_divide(current_hist, current_hist.sum(), default=1.0 / len(current_hist))
+        historical_hist = safe_divide(historical_hist, historical_hist.sum(), default=1.0 / len(historical_hist))
 
         # Calculate chi-square statistic
         chi_square = np.sum(

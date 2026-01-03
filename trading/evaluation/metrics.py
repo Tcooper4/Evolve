@@ -3,7 +3,7 @@ from typing import Dict
 
 import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from trading.utils.safe_math import safe_mape
+from trading.utils.safe_math import safe_divide, safe_mape
 
 
 class RegressionMetrics:
@@ -290,7 +290,7 @@ def calculate_max_drawdown(returns: np.ndarray) -> float:
         return 0.0
     cumulative = (1 + returns).cumprod()
     running_max = np.maximum.accumulate(cumulative)
-    drawdowns = cumulative / running_max - 1
+    drawdowns = safe_divide(cumulative, running_max, default=1.0) - 1
     return float(drawdowns.min())
 
 
