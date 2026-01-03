@@ -14,6 +14,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 logger = logging.getLogger(__name__)
 
 
@@ -375,7 +377,7 @@ class ExecutionReplay:
             # Trade analysis
             winning_trades = len(trades_df[trades_df["realized_pnl"] > 0])
             losing_trades = len(trades_df[trades_df["realized_pnl"] < 0])
-            win_rate = winning_trades / total_trades if total_trades > 0 else 0.0
+            win_rate = safe_divide(winning_trades, total_trades, default=0.0)
 
             avg_win = (
                 trades_df[trades_df["realized_pnl"] > 0]["realized_pnl"].mean()

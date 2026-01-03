@@ -28,6 +28,8 @@ from typing import Any, Dict, List, Optional
 import matplotlib.pyplot as plt
 import numpy as np
 import openai
+
+from trading.utils.safe_math import safe_returns
 import pandas as pd
 import requests
 import seaborn as sns
@@ -321,7 +323,7 @@ class ReportGenerator:
             rmse = np.sqrt(mse)
 
             # Calculate returns and Sharpe ratio
-            returns = np.diff(actuals) / actuals[:-1]
+            returns = safe_returns(actuals, method='simple')
             sharpe_ratio = (
                 np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0.0
             )

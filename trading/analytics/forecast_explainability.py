@@ -568,7 +568,8 @@ class IntelligentForecastExplainability:
             if mean_pred == 0:
                 return 0.5
 
-            cv = std_pred / abs(mean_pred)
+            from trading.utils.safe_math import safe_divide
+            cv = safe_divide(std_pred, abs(mean_pred), default=0.0)
 
             # Convert to confidence score (lower CV = higher confidence)
             confidence = max(0.1, min(0.9, 1.0 - cv))

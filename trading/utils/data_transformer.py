@@ -184,12 +184,9 @@ def calculate_technical_indicators(data: pd.DataFrame) -> pd.DataFrame:
         result["ema_12"] = data["close"].ewm(span=12).mean()
         result["ema_26"] = data["close"].ewm(span=26).mean()
 
-        # RSI
-        delta = data["close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        result["rsi"] = 100 - (100 / (1 + rs))
+        # RSI using safe division
+        from trading.utils.safe_math import safe_rsi
+        result["rsi"] = safe_rsi(data["close"], period=14)
 
         # MACD
         result["macd"] = result["ema_12"] - result["ema_26"]

@@ -22,6 +22,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_rsi, safe_drawdown
+
 warnings.filterwarnings("ignore")
 
 logger = logging.getLogger(__name__)
@@ -172,17 +174,8 @@ class RegimeClassifier:
 
     def _calculate_momentum(self, data: pd.DataFrame) -> float:
         """Calculate momentum indicator."""
-        # RSI-based momentum
-        delta = data["Close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        # Safely calculate RS with division-by-zero protection
-        rs = np.where(
-            loss > 1e-10,
-            gain / loss,
-            0.0  # When loss is zero, RS is zero
-        )
-        rsi = 100 - (100 / (1 + rs))
+        # RSI-based momentum using safe division
+        rsi = safe_rsi(data["Close"], period=14)
 
         # MACD-based momentum
         exp1 = data["Close"].ewm(span=12).mean()
@@ -457,7 +450,7 @@ class StrategyGatekeeper:
             total_return = (1 + strategy_returns).prod() - 1
             win_rate = self._calculate_win_rate(strategy_returns)
             profit_factor = self._calculate_profit_factor(strategy_returns)
-            calmar_ratio = total_return / max_drawdown if max_drawdown > 0 else 0
+            calmar_ratio = safe_divide(total_return, max_drawdown, default=0.0)
             sortino_ratio = self._calculate_sortino_ratio(strategy_returns)
 
             # Calculate regime-specific performance
@@ -512,8 +505,7 @@ class StrategyGatekeeper:
     def _calculate_max_drawdown(self, returns: pd.Series) -> float:
         """Calculate maximum drawdown."""
         cumulative = (1 + returns).cumprod()
-        running_max = cumulative.expanding().max()
-        drawdown = (cumulative - running_max) / running_max
+        drawdown = safe_drawdown(cumulative)
         return abs(drawdown.min())
 
     def _calculate_win_rate(self, returns: pd.Series) -> float:

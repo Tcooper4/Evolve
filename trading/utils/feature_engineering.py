@@ -175,13 +175,17 @@ class FeatureEngineer:
             if all(
                 col in data.columns for col in ["bb_upper", "bb_middle", "bb_lower"]
             ):
-                # Safe Bollinger Band calculations
+                # Safe Bollinger Band calculations using safe_divide
+                from trading.utils.safe_math import safe_divide
+                
                 bb_range = data["bb_upper"] - data["bb_lower"]
-                result["bb_position"] = np.where(
-                    bb_range > 1e-10,
-                    (data["close"] - data["bb_lower"]) / bb_range,
-                    0.5  # Neutral position
+                result["bb_position"] = safe_divide(
+                    data["close"] - data["bb_lower"],
+                    bb_range,
+                    default=0.5
                 )
+                # Clamp to [0, 1] range
+                result["bb_position"] = result["bb_position"].clip(0.0, 1.0)
 
                 result["bb_squeeze"] = np.where(
                     data["bb_middle"] > 1e-10,

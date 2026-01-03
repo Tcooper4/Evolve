@@ -29,6 +29,7 @@ from trading.backtesting.risk_metrics import RiskMetricsEngine
 # Local imports
 from trading.backtesting.trade_models import Trade, TradeType
 from trading.backtesting.visualization import BacktestVisualizer
+from trading.utils.safe_math import safe_divide
 
 # Constants
 TRADING_DAYS_PER_YEAR = 252
@@ -537,7 +538,7 @@ class Backtester:
         losing_trades = len([t for t in self.trades if t.pnl and t.pnl < 0])
 
         total_pnl = sum([t.pnl or 0 for t in self.trades])
-        avg_pnl = total_pnl / total_trades if total_trades > 0 else 0
+        avg_pnl = safe_divide(total_pnl, total_trades, default=0.0)
 
         return {
             "total_trades": total_trades,

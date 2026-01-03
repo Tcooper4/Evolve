@@ -16,6 +16,7 @@ import numpy as np
 from trading.agents.base_agent_interface import AgentConfig, AgentResult, BaseAgent
 from trading.memory.agent_memory import AgentMemory
 from trading.models.model_registry import ModelRegistry
+from trading.utils.safe_math import safe_divide
 from trading.utils.performance_metrics import (
     calculate_max_drawdown,
     calculate_sharpe_ratio,
@@ -328,24 +329,14 @@ class ModelEvaluatorAgent(BaseAgent):
             mae = np.mean(np.abs(predictions - actual_values))
             rmse = np.sqrt(mse)
 
-            # Percentage error with safe division
-            mask = np.abs(actual_values) > 1e-10
-            if mask.any():
-                mape = np.mean(np.abs((actual_values[mask] - predictions[mask]) / actual_values[mask])) * 100
-            else:
-                mape = 0.0
+            # Percentage error using safe division utility
+            from trading.utils.safe_math import safe_mape
+            mape = safe_mape(actual_values, predictions)
 
-            # Trading-specific metrics with safe division
-            returns = np.where(
-                actual_values[:-1] > 1e-10,
-                np.diff(actual_values) / actual_values[:-1],
-                0.0
-            )
-            predicted_returns = np.where(
-                predictions[:-1] > 1e-10,
-                np.diff(predictions) / predictions[:-1],
-                0.0
-            )
+            # Trading-specific metrics using safe division utility
+            from trading.utils.safe_math import safe_returns
+            returns = safe_returns(actual_values, method='simple')
+            predicted_returns = safe_returns(predictions, method='simple')
 
             # Sharpe ratio
             sharpe_ratio = calculate_sharpe_ratio(returns) if len(returns) > 1 else 0.0
@@ -355,7 +346,7 @@ class ModelEvaluatorAgent(BaseAgent):
 
             # Win rate
             correct_directions = np.sum(np.sign(returns) == np.sign(predicted_returns))
-            win_rate = correct_directions / len(returns) if len(returns) > 0 else 0.0
+            win_rate = safe_divide(correct_directions, len(returns), default=0.0)
 
             # Profit factor
             positive_returns = returns[returns > 0]
@@ -429,7 +420,7 @@ class ModelEvaluatorAgent(BaseAgent):
                 count += 1
 
             if count > 0:
-                final_score = score / count
+                final_score = safe_divide(score, count, default=0.0)
             else:
                 final_score = 0.0
 

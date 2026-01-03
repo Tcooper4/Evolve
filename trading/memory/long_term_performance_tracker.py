@@ -235,11 +235,8 @@ class LongTermPerformanceTracker:
             if len(values) < 2:
                 return
 
-            returns = np.where(
-                values[:-1] > 1e-10,
-                np.diff(values) / values[:-1],
-                0.0
-            )
+            from trading.utils.safe_math import safe_returns
+            returns = safe_returns(values, method='simple')
 
             if len(returns) == 0:
                 return

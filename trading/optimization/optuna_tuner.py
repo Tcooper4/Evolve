@@ -27,6 +27,7 @@ from optuna.pruners import MedianPruner
 from optuna.samplers import TPESampler
 
 from utils.math_utils import calculate_sharpe_ratio
+from trading.utils.safe_math import safe_drawdown, safe_returns
 
 logger = logging.getLogger(__name__)
 
@@ -112,8 +113,8 @@ class SharpeOptunaTuner:
         try:
             # Calculate returns
             if len(y_true) > 1:
-                actual_returns = np.diff(y_true) / y_true[:-1]
-                pred_returns = np.diff(y_pred) / y_pred[:-1]
+                actual_returns = safe_returns(y_true, method='simple')
+                pred_returns = safe_returns(y_pred, method='simple')
 
                 # Trading signals (simple strategy)
                 signals = np.where(pred_returns > 0, 1, -1)
@@ -127,8 +128,7 @@ class SharpeOptunaTuner:
 
                 # Maximum drawdown
                 cumulative_returns = np.cumprod(1 + strategy_returns)
-                running_max = np.maximum.accumulate(cumulative_returns)
-                drawdown = (cumulative_returns - running_max) / running_max
+                drawdown = safe_drawdown(cumulative_returns)
                 max_drawdown = np.min(drawdown)
 
                 # Total return

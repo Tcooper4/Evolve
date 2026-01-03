@@ -16,6 +16,8 @@ from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 # Try to import scikit-learn
 try:
     from sklearn.ensemble import VotingRegressor
@@ -282,7 +284,7 @@ class MultiStrategyHybridEngine:
             historical_vol = returns.rolling(20).std().iloc[-1]
 
             # Volatility ratio
-            vol_ratio = current_vol / max(historical_vol, 1e-10)
+            vol_ratio = safe_divide(current_vol, max(historical_vol, 1e-10), default=1.0)
 
             # Price action
             current_return = returns.iloc[-1]
@@ -406,7 +408,7 @@ class MultiStrategyHybridEngine:
             # Calculate volume indicators
             volume_ma = data["Volume"].rolling(20).mean()
             current_volume = data["Volume"].iloc[-1]
-            volume_ratio = current_volume / max(volume_ma.iloc[-1], 1e-10)
+            volume_ratio = safe_divide(current_volume, max(volume_ma.iloc[-1], 1e-10), default=1.0)
 
             # Price action
             returns = data["Close"].pct_change()
@@ -553,9 +555,9 @@ class MultiStrategyHybridEngine:
                 total_weight += weight
 
             if total_weight > 0:
-                avg_return = weighted_return / total_weight
-                avg_confidence = weighted_confidence / total_weight
-                avg_risk = weighted_risk / total_weight
+            avg_return = safe_divide(weighted_return, total_weight, default=0.0)
+            avg_confidence = safe_divide(weighted_confidence, total_weight, default=0.0)
+            avg_risk = safe_divide(weighted_risk, total_weight, default=0.0)
             else:
                 avg_return = 0.0
                 avg_confidence = 0.5

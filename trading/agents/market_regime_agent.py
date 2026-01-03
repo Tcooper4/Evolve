@@ -20,6 +20,8 @@ import yfinance as yf
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
+from trading.utils.safe_math import safe_divide
+
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 
 logger = logging.getLogger(__name__)
@@ -382,12 +384,14 @@ class MarketRegimeAgent(BaseAgent):
             prices = data["Close"].values
             x = np.arange(len(prices))
             slope = np.polyfit(x, prices, 1)[0]
-            trend_strength = slope / np.mean(prices) * 252
+            trend_strength = safe_divide(slope, np.mean(prices), default=0.0) * 252
 
             # Momentum (12-day vs 26-day moving average)
+            from trading.utils.safe_math import safe_price_momentum
+            
             ma12 = data["Close"].rolling(12).mean()
             ma26 = data["Close"].rolling(26).mean()
-            momentum = (ma12.iloc[-1] - ma26.iloc[-1]) / ma26.iloc[-1]
+            momentum = safe_price_momentum(ma12.iloc[-1], ma26.iloc[-1])
 
             # Volume trend
             volume_ma = data["Volume"].rolling(20).mean()

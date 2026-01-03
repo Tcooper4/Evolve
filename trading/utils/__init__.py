@@ -39,6 +39,20 @@ from .logging import (
 from .model_evaluation import ModelEvaluator, ModelValidator
 from .model_monitoring import ModelMonitor
 from .performance_metrics import PerformanceMetrics, RiskMetrics, TradingMetrics
+from .safe_math import (
+    safe_divide,
+    safe_rsi,
+    safe_returns,
+    safe_drawdown,
+    safe_sharpe_ratio,
+    safe_sortino_ratio,
+    safe_calmar_ratio,
+    safe_mape,
+    safe_normalize,
+    safe_kelly_fraction,
+    safe_bollinger_position,
+    safe_price_momentum,
+)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 # Import from core utils
@@ -483,4 +497,17 @@ __all__ = [
     "ModelEvaluator",
     "ModelValidator",
     "ModelMonitor",
+    # Safe math utilities
+    "safe_divide",
+    "safe_rsi",
+    "safe_returns",
+    "safe_drawdown",
+    "safe_sharpe_ratio",
+    "safe_sortino_ratio",
+    "safe_calmar_ratio",
+    "safe_mape",
+    "safe_normalize",
+    "safe_kelly_fraction",
+    "safe_bollinger_position",
+    "safe_price_momentum",
 ]

@@ -8,6 +8,8 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_sharpe_ratio
+
 logger = logging.getLogger(__name__)
 
 
@@ -98,17 +100,10 @@ class HybridModel:
             actual = actual[-min_len:]
             preds = preds[-min_len:]
 
-            # Calculate returns - Safely calculate with division-by-zero protection
-            actual_returns = np.where(
-                actual[:-1] > 1e-10,
-                np.diff(actual) / actual[:-1],
-                0.0
-            )
-            pred_returns = np.where(
-                preds[:-1] > 1e-10,
-                np.diff(preds) / preds[:-1],
-                0.0
-            )
+            # Calculate returns using safe division utility
+            from trading.utils.safe_math import safe_returns
+            actual_returns = safe_returns(actual, method='simple')
+            pred_returns = safe_returns(preds, method='simple')
 
             # Sharpe Ratio
             sharpe_ratio = self._calculate_sharpe_ratio(actual_returns, pred_returns)
@@ -156,13 +151,7 @@ class HybridModel:
             if len(strategy_returns) == 0:
                 return -1.0
             # Calculate Sharpe ratio (annualized)
-            mean_return = np.mean(strategy_returns)
-            std_return = np.std(strategy_returns)
-
-            if std_return <= 1e-10:
-                return 0.0
-            # Annualize (assuming daily data)
-            sharpe_ratio = (mean_return / std_return) * np.sqrt(252)
+            sharpe_ratio = safe_sharpe_ratio(strategy_returns, risk_free_rate=0.0, periods_per_year=252)
             return float(sharpe_ratio)
 
         except Exception as e:

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from trading.data.preprocessing import FeatureEngineering
+from trading.utils.safe_math import safe_rsi, safe_price_momentum
 
 # Try to import pandas_ta, with fallback
 try:
@@ -697,12 +698,8 @@ class FeatureEngineer(FeatureEngineering):
         # Volatility
         df["volatility"] = df["returns"].rolling(window=20).std()
 
-        # RSI - Safe RSI calculation with division-by-zero protection
-        delta = df["close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = np.where(loss > 1e-10, gain / loss, 0.0)
-        df["RSI"] = 100 - (100 / (1 + rs))
+        # RSI - Using safe division utility
+        df["RSI"] = safe_rsi(df["close"], period=14)
 
         # MACD
         exp1 = df["close"].ewm(span=12, adjust=False).mean()
@@ -719,8 +716,8 @@ class FeatureEngineer(FeatureEngineering):
         df["volume_ma"] = df["volume"].rolling(window=20).mean()
         df["volume_std"] = df["volume"].rolling(window=20).std()
 
-        # Price momentum
-        df["momentum"] = df["close"] / df["close"].shift(10) - 1
+        # Price momentum - Using safe division utility
+        df["momentum"] = safe_price_momentum(df["close"], df["close"].shift(10))
 
         # Drop NaN values
         df = df.dropna()

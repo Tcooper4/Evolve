@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
+from trading.utils.safe_math import safe_divide
+
 logger = logging.getLogger(__name__)
 
 
@@ -249,7 +251,7 @@ class StrategyRanker:
                     recent_usage += 1
 
         # Normalize by time window
-        frequency = recent_usage / self.history_window
+        frequency = safe_divide(recent_usage, self.history_window, default=0.0)
 
         return min(1.0, frequency)  # Cap at 1.0
 
@@ -305,7 +307,7 @@ class StrategyRanker:
             # Calculate relevance score
             if prompt_words and strategy_words:
                 overlap = len(prompt_words.intersection(strategy_words))
-                relevance_score = overlap / len(prompt_words)
+                relevance_score = safe_divide(overlap, len(prompt_words), default=0.0)
                 if relevance_score > 0.1:  # At least 10% overlap
                     relevant_strategies.append(strategy)
 

@@ -14,6 +14,8 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 logger = logging.getLogger(__name__)
 
 
@@ -197,7 +199,7 @@ def volatility_breakout_strategy(
         avg_volatility = returns.rolling(60).std().iloc[-1]
 
         # Volatility ratio
-        vol_ratio = current_volatility / avg_volatility if avg_volatility > 0 else 1.0
+        vol_ratio = safe_divide(current_volatility, avg_volatility, default=1.0)
 
         # Price momentum
         price_momentum = data["Close"].pct_change(5).iloc[-1]

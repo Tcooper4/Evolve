@@ -24,6 +24,8 @@ from trading.utils.performance_metrics import (
     calculate_sharpe_ratio,
 )
 
+from trading.utils.safe_math import safe_divide
+
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 
 
@@ -347,9 +349,11 @@ class SelfTuningOptimizerAgent(BaseAgent):
             returns = market_data["close"].pct_change().dropna()
             volatility = returns.rolling(window=20).std().iloc[-1]
 
+            from trading.utils.safe_math import safe_price_momentum
+            
             sma_short = market_data["close"].rolling(window=10).mean()
             sma_long = market_data["close"].rolling(window=50).mean()
-            trend = (sma_short.iloc[-1] - sma_long.iloc[-1]) / sma_long.iloc[-1]
+            trend = safe_price_momentum(sma_short.iloc[-1], sma_long.iloc[-1])
 
             if volatility > 0.03:
                 return "high_volatility"
@@ -378,7 +382,7 @@ class SelfTuningOptimizerAgent(BaseAgent):
 
             # Check if current volatility is significantly higher
             if historical_volatility > 0:
-                volatility_ratio = current_volatility / historical_volatility
+                volatility_ratio = safe_divide(current_volatility, historical_volatility, default=1.0)
                 return volatility_ratio > 2.0  # 2x historical volatility
 
             return False

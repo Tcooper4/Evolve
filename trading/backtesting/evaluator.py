@@ -17,6 +17,7 @@ from trading.backtesting.performance_analysis import PerformanceAnalyzer
 from trading.backtesting.risk_metrics import RiskMetricsEngine
 from trading.models.base_model import BaseModel
 from trading.strategies.registry import BaseStrategy
+from trading.utils.safe_math import safe_divide
 from utils.math_utils import calculate_sharpe_ratio
 
 logger = logging.getLogger(__name__)
@@ -436,17 +437,10 @@ class ModelEvaluator:
                     "volatility": 0.0,
                 }
 
-            # Calculate returns with division-by-zero protection
-            actual_returns = np.where(
-                y_true[:-1] > 1e-10,
-                np.diff(y_true) / y_true[:-1],
-                0.0
-            )
-            pred_returns = np.where(
-                y_pred[:-1] > 1e-10,
-                np.diff(y_pred) / y_pred[:-1],
-                0.0
-            )
+            # Calculate returns using safe division utility
+            from trading.utils.safe_math import safe_returns
+            actual_returns = safe_returns(y_true, method='simple')
+            pred_returns = safe_returns(y_pred, method='simple')
 
             # Trading signals (simple strategy)
             signals = np.where(pred_returns > 0, 1, -1)
@@ -474,16 +468,11 @@ class ModelEvaluator:
                 else -1.0
             )
 
-            # Maximum drawdown
+            # Maximum drawdown using safe division utility
+            from trading.utils.safe_math import safe_drawdown
             cumulative_returns = np.cumprod(1 + strategy_returns)
-            running_max = np.maximum.accumulate(cumulative_returns)
-            # Safely calculate drawdown with division-by-zero protection
-            drawdown = np.where(
-                running_max > 1e-10,
-                (cumulative_returns - running_max) / running_max,
-                0.0
-            )
-            max_drawdown = np.min(drawdown)
+            drawdown = safe_drawdown(cumulative_returns)
+            max_drawdown = float(np.min(drawdown))
 
             # Win rate
             win_rate = np.mean(strategy_returns > 0)
@@ -662,7 +651,7 @@ class ModelEvaluator:
                 return 1.0
 
             within_std = sum(1 for v in values if abs(v - mean_val) <= std_val)
-            consistency = within_std / len(values)
+            consistency = safe_divide(within_std, len(values), default=0.0)
 
             return consistency
         except Exception:

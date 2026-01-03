@@ -11,6 +11,7 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_rsi
 from .rsi_utils import generate_rsi_signals_core, validate_rsi_parameters
 
 warnings.filterwarnings("ignore")
@@ -355,7 +356,7 @@ def generate_signals(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
 
 
 def calculate_rsi_fallback(prices: pd.Series, period: int = 14) -> pd.Series:
-    """Calculate RSI using a fallback implementation when pandas_ta is not available.
+    """Calculate RSI using safe division utility.
     Enhanced with index alignment and validation.
 
     Args:
@@ -375,27 +376,8 @@ def calculate_rsi_fallback(prices: pd.Series, period: int = 14) -> pd.Series:
                 f"Insufficient data: {len(prices)} points, need at least {period}"
             )
 
-        # Store original index
-        original_index = prices.index.copy()
-
-        # Calculate price changes
-        delta = prices.diff()
-
-        # Separate gains and losses
-        gains = delta.where(delta > 0, 0)
-        losses = -delta.where(delta < 0, 0)
-
-        # Calculate average gains and losses
-        avg_gains = gains.rolling(window=period).mean()
-        avg_losses = losses.rolling(window=period).mean()
-
-        # Calculate RS and RSI - Safely calculate RS with division-by-zero protection
-        rs = np.where(avg_losses > 1e-10, avg_gains / avg_losses, 0.0)
-        rsi = 100 - (100 / (1 + rs))
-
-        # Ensure alignment with original index
-        rsi = rsi.reindex(original_index)
-
+        # Use safe_rsi which handles all edge cases including division by zero
+        rsi = safe_rsi(prices, period=period)
         return rsi
 
     except Exception as e:

@@ -210,12 +210,9 @@ def calculate_technical_indicators(
     data["sma_short"] = data["close"].rolling(window=config.lookback_period).mean()
     data["sma_long"] = data["close"].rolling(window=config.lookback_period * 2).mean()
 
-    # Calculate RSI
-    delta = data["close"].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=config.lookback_period).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=config.lookback_period).mean()
-    rs = gain / loss
-    data["rsi"] = 100 - (100 / (1 + rs))
+    # Calculate RSI using safe division
+    from trading.utils.safe_math import safe_rsi
+    data["rsi"] = safe_rsi(data["close"], period=config.lookback_period)
 
     # Calculate MACD with span validation
     span1, span2, signal_span = 12, 26, 9

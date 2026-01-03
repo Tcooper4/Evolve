@@ -581,24 +581,14 @@ class ModelBenchmarker:
             rmse = np.sqrt(np.mean((y_true - y_pred) ** 2))
             mae = np.mean(np.abs(y_true - y_pred))
             
-            # MAPE with safe division
-            mask = np.abs(y_true) > 1e-10
-            if mask.any():
-                mape = np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
-            else:
-                mape = 0.0
+            # MAPE using safe division utility
+            from trading.utils.safe_math import safe_mape
+            mape = safe_mape(y_true, y_pred)
 
-            # Trading metrics with safe division
-            returns = np.where(
-                y_true[:-1] > 1e-10,
-                np.diff(y_true) / y_true[:-1],
-                0.0
-            )
-            pred_returns = np.where(
-                y_pred[:-1] > 1e-10,
-                np.diff(y_pred) / y_pred[:-1],
-                0.0
-            )
+            # Trading metrics using safe division utility
+            from trading.utils.safe_math import safe_returns
+            returns = safe_returns(y_true, method='simple')
+            pred_returns = safe_returns(y_pred, method='simple')
 
             # Sharpe ratio (already has check)
             sharpe_ratio = (

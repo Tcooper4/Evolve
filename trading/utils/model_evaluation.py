@@ -6,6 +6,7 @@ import logging
 from typing import Dict, Optional
 
 import numpy as np
+from trading.utils.safe_math import safe_mape
 
 # Try to import scikit-learn
 try:
@@ -55,8 +56,7 @@ class ModelEvaluator:
                 "rmse": np.sqrt(mean_squared_error(y_true_clean, y_pred_clean)),
                 "mae": mean_absolute_error(y_true_clean, y_pred_clean),
                 "r2": r2_score(y_true_clean, y_pred_clean),
-                "mape": np.mean(np.abs((y_true_clean - y_pred_clean) / y_true_clean))
-                * 100,
+                "mape": safe_mape(y_true_clean, y_pred_clean),
             }
 
             return metrics

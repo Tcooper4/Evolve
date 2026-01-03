@@ -235,17 +235,10 @@ class BacktestEngine:
             y_pred = model.predict(X_test)
             inference_time = (datetime.now() - start_time).total_seconds()
 
-            # Calculate returns for trading metrics with safe division
-            returns = np.where(
-                y_test[:-1] > 1e-10,
-                np.diff(y_test) / y_test[:-1],
-                0.0
-            )
-            pred_returns = np.where(
-                y_pred[:-1] > 1e-10,
-                np.diff(y_pred) / y_pred[:-1],
-                0.0
-            )
+            # Calculate returns for trading metrics using safe division utility
+            from trading.utils.safe_math import safe_returns
+            returns = safe_returns(y_test, method='simple')
+            pred_returns = safe_returns(y_pred, method='simple')
 
             # Trading signals (simple strategy)
             signals = np.where(pred_returns > 0, 1, -1)
@@ -310,8 +303,9 @@ class ModelEvaluator:
             mae = mean_absolute_error(y_true, y_pred)
             r2 = r2_score(y_true, y_pred)
 
-            # MAPE
-            mape = np.mean(np.abs((y_true - y_pred) / (y_true + 1e-8))) * 100
+            # MAPE using safe division utility
+            from trading.utils.safe_math import safe_mape
+            mape = safe_mape(y_true, y_pred)
 
             # Directional accuracy
             if len(y_true) > 1:
@@ -321,9 +315,10 @@ class ModelEvaluator:
             else:
                 directional_accuracy = 0.0
 
-            # Trading metrics (simplified)
-            returns = np.diff(y_true) / (y_true[:-1] + 1e-8)
-            pred_returns = np.diff(y_pred) / (y_pred[:-1] + 1e-8)
+            # Trading metrics using safe division utility
+            from trading.utils.safe_math import safe_returns
+            returns = safe_returns(y_true, method='simple')
+            pred_returns = safe_returns(y_pred, method='simple')
 
             signals = np.where(pred_returns > 0, 1, -1)
             actual_direction = np.where(returns > 0, 1, -1)

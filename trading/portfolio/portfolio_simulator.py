@@ -16,6 +16,7 @@ from scipy.optimize import minimize
 
 from trading.risk.risk_analyzer import RiskAnalyzer
 from trading.utils.performance_metrics import calculate_max_drawdown
+from trading.utils.safe_math import safe_divide
 
 
 class OptimizationMethod(str, Enum):
@@ -320,12 +321,11 @@ class PortfolioSimulator:
 
             # Normalize (with additional safety)
             total_inv_vol = inv_vol_weights.sum()
-            if total_inv_vol > 1e-10:
-                market_cap_weights = inv_vol_weights / total_inv_vol
-            else:
-                # Equal weights fallback
+            market_cap_weights = safe_divide(inv_vol_weights, total_inv_vol, default=1.0 / len(volatilities))
+            # Ensure proper index if default is used
+            if isinstance(market_cap_weights, (int, float)):
                 market_cap_weights = pd.Series(
-                    1.0 / len(volatilities), 
+                    market_cap_weights, 
                     index=volatilities.index
                 )
 

@@ -19,6 +19,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_drawdown
+
 logger = logging.getLogger(__name__)
 
 
@@ -795,8 +797,7 @@ class EnhancedStrategyEngine:
 
             # Calculate max drawdown
             cumulative_returns = (1 + strategy_returns).cumprod()
-            running_max = cumulative_returns.expanding().max()
-            drawdown = (cumulative_returns - running_max) / running_max
+            drawdown = safe_drawdown(cumulative_returns)
             max_drawdown = drawdown.min()
 
             # Calculate win rate

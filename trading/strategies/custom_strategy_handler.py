@@ -17,6 +17,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from trading.utils.safe_math import safe_rsi
+
 logger = logging.getLogger(__name__)
 
 
@@ -390,13 +392,8 @@ class CustomStrategyHandler:
     def _generate_rsi_signals(
         self, data: pd.DataFrame, period: int, threshold: float
     ) -> pd.Series:
-        """Generate RSI-based signals."""
-        delta = data["close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
-        # Safely calculate RS with division-by-zero protection
-        rs = np.where(loss > 1e-10, gain / loss, 0.0)
-        rsi = 100 - (100 / (1 + rs))
+        """Generate RSI-based signals using safe division."""
+        rsi = safe_rsi(data["close"], period=period)
 
         signals = pd.Series(0, index=data.index)
         signals[rsi < 30] = 1  # Oversold

@@ -5,6 +5,8 @@ from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_rsi
+
 # Configure logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -462,13 +464,8 @@ class FeatureEngineering:
                 f"Need at least {self.rsi_window + 1} data points for RSI calculation"
             )
 
-        delta = data["Close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=self.rsi_window).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=self.rsi_window).mean()
-
-        # Safe RSI calculation with division-by-zero protection
-        rs = np.where(loss > 1e-10, gain / loss, 0.0)
-        rsi = 100 - (100 / (1 + rs))
+        # Use safe_rsi which handles all edge cases including division by zero
+        rsi = safe_rsi(data["Close"], period=self.rsi_window)
 
         return pd.DataFrame({"RSI": rsi}, index=data.index)
 

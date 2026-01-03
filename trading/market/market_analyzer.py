@@ -89,9 +89,11 @@ class MarketAnalyzer:
 
     def _detect_trend_regime(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Detect trend-based market regime."""
+        from trading.utils.safe_math import safe_price_momentum
+        
         ma_short = data["Close"].rolling(window=20).mean()
         ma_long = data["Close"].rolling(window=50).mean()
-        trend_strength = (ma_short - ma_long) / ma_long
+        trend_strength = safe_price_momentum(ma_short, ma_long)
 
         if len(trend_strength.dropna()) == 0:
             raise ValueError("Insufficient data for trend analysis")

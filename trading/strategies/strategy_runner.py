@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 from .base_strategy import BaseStrategy
 from .registry import StrategyRegistry
 
@@ -434,7 +436,7 @@ class AsyncStrategyRunner:
         for signals in signals_list[1:]:
             combined = combined.add(signals, fill_value=0)
 
-        combined = combined / len(signals_list)
+        combined = safe_divide(combined, len(signals_list), default=0.0)
         return combined
 
     def _calculate_performance_metrics(

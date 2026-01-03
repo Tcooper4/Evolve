@@ -8,6 +8,7 @@ safely, preventing the widespread RSI division bug that appears in 11+ files.
 import numpy as np
 import pandas as pd
 from typing import Union
+from trading.utils.safe_math import safe_divide
 
 def safe_rsi(
     prices: Union[pd.Series, pd.DataFrame],
@@ -49,10 +50,11 @@ def safe_rsi(
     loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
     
     # Safe division: rs = gain / loss
-    rs = np.where(loss > epsilon, gain / loss, 0.0)
+    rs = safe_divide(gain, loss, default=0.0, epsilon=epsilon)
     
-    # Calculate RSI
-    rsi = 100 - (100 / (1 + rs))
+    # Calculate RSI - use safe_divide for final calculation to handle edge cases
+    denominator = 1 + rs
+    rsi = 100 - safe_divide(100, denominator, default=50.0, epsilon=epsilon)
     
     return pd.Series(rsi, index=price_series.index, name="RSI")
 
@@ -81,10 +83,11 @@ def safe_bollinger_bandwidth(
     lower_band = middle_band - (std * num_std)
     
     # Safe division
-    bandwidth = np.where(
-        middle_band > epsilon,
-        (upper_band - lower_band) / middle_band,
-        0.0
+    bandwidth = safe_divide(
+        upper_band - lower_band,
+        middle_band,
+        default=0.0,
+        epsilon=epsilon
     )
     
     return pd.Series(bandwidth, index=prices.index, name="BB_Bandwidth")
@@ -117,11 +120,13 @@ def safe_stochastic(
     
     # Safe division
     price_range = high_max - low_min
-    stoch_k = np.where(
-        price_range > epsilon,
-        100 * ((close - low_min) / price_range),
-        50.0  # Neutral value
+    stoch_k_raw = safe_divide(
+        close - low_min,
+        price_range,
+        default=0.5,  # Neutral value when range is zero
+        epsilon=epsilon
     )
+    stoch_k = 100 * stoch_k_raw
     
     stoch_k = pd.Series(stoch_k, index=close.index, name="Stoch_K")
     stoch_d = stoch_k.rolling(window=d_period).mean()

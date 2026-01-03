@@ -509,14 +509,10 @@ class MonteCarloSimulator:
         for col in self.percentiles.columns:
             if col.startswith("P") or col == "Mean":
                 equity_curve = self.percentiles[col]
-                running_max = equity_curve.cummax()
-                # Safely calculate drawdown with division-by-zero protection
-                drawdown = np.where(
-                    running_max > 1e-10,
-                    (equity_curve - running_max) / running_max,
-                    0.0
-                )
-                drawdowns[f"max_drawdown_{col}"] = drawdown.min()
+                # Use safe drawdown utility
+                from trading.utils.safe_math import safe_drawdown
+                drawdown = safe_drawdown(equity_curve)
+                drawdowns[f"max_drawdown_{col}"] = float(drawdown.min())
 
         return drawdowns
 

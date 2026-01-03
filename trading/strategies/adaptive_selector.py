@@ -250,14 +250,11 @@ class TrendAnalyzer:
             return 0.0
 
     def _calculate_rsi(self, price_data: pd.Series, period: int = 14) -> float:
-        """Calculate RSI indicator."""
+        """Calculate RSI indicator using safe division."""
         try:
-            delta = price_data.diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-            rs = gain / loss
-            rsi = 100 - (100 / (1 + rs))
-            return rsi.iloc[-1]
+            from trading.utils.safe_math import safe_rsi
+            rsi = safe_rsi(price_data, period=period)
+            return float(rsi.iloc[-1]) if len(rsi) > 0 else 50.0
         except BaseException:
             return 50.0
 

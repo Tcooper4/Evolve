@@ -18,6 +18,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_rsi, safe_sharpe_ratio
+
 # Try to import matplotlib
 try:
     import matplotlib.pyplot as plt
@@ -132,9 +134,7 @@ class StrategyValidator:
             }
 
         # Calculate basic metrics
-        mean_return = returns.mean()
-        std_return = returns.std()
-        sharpe_ratio = mean_return / std_return if std_return > 0 else 0
+        sharpe_ratio = safe_sharpe_ratio(returns, risk_free_rate=0.0, periods_per_year=252)
 
         # Calculate drawdown - Safely calculate with division-by-zero protection
         cumulative_returns = (1 + returns).cumprod()
@@ -302,14 +302,12 @@ class RegimeDetector:
             features["kurtosis"] = returns.rolling(self.lookback_window).kurt()
 
             # Trend features
+            from trading.utils.safe_math import safe_price_momentum
+            
             sma_20 = data["close"].rolling(20).mean()
             sma_50 = data["close"].rolling(50).mean()
-            # Safe division for trend strength
-            features["trend_strength"] = np.where(
-                sma_50 > 1e-10,
-                (sma_20 - sma_50) / sma_50,
-                0.0
-            )
+            # Use safe_price_momentum for trend strength
+            features["trend_strength"] = safe_price_momentum(sma_20, sma_50)
 
             # Momentum features
             features["momentum"] = data["close"].pct_change(20)
@@ -338,13 +336,8 @@ class RegimeDetector:
         return features
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
-        """Calculate RSI indicator."""
-        delta = prices.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
+        """Calculate RSI indicator using safe division."""
+        return safe_rsi(prices, period=period)
 
     def detect_regimes(self, data: pd.DataFrame) -> List[RegimeInfo]:
         """Detect market regimes in the data.

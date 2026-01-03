@@ -244,7 +244,8 @@ class AlphaAttributionEngine:
             returns = data["Close"].pct_change()
             volatility_5 = returns.rolling(5).std()
             volatility_20 = returns.rolling(20).std()
-            volatility_factor = volatility_5 / volatility_20 - 1
+            from trading.utils.safe_math import safe_divide
+            volatility_factor = safe_divide(volatility_5, volatility_20, default=1.0) - 1
             return volatility_factor
         except Exception as e:
             self.logger.error(f"Error calculating volatility factor: {e}")
@@ -311,21 +312,11 @@ class AlphaAttributionEngine:
             sma_200 = data["Close"].rolling(200).mean()
 
             # Trend strength based on moving average alignment - Safe calculations
-            trend_short = np.where(
-                sma_20 > 1e-10,
-                (data["Close"] - sma_20) / sma_20,
-                0.0
-            )
-            trend_medium = np.where(
-                sma_50 > 1e-10,
-                (sma_20 - sma_50) / sma_50,
-                0.0
-            )
-            trend_long = np.where(
-                sma_200 > 1e-10,
-                (sma_50 - sma_200) / sma_200,
-                0.0
-            )
+            from trading.utils.safe_math import safe_price_momentum
+            
+            trend_short = safe_price_momentum(data["Close"], sma_20)
+            trend_medium = safe_price_momentum(sma_20, sma_50)
+            trend_long = safe_price_momentum(sma_50, sma_200)
 
             trend_factor = (trend_short + trend_medium + trend_long) / 3
             return trend_factor

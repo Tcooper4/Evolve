@@ -144,7 +144,8 @@ class BacktestIntegration:
             profit_factor = self._calculate_profit_factor(trades)
 
             # Calculate Calmar ratio
-            calmar_ratio = total_return / max_drawdown if max_drawdown > 0 else 0.0
+            from trading.utils.safe_math import safe_divide
+            calmar_ratio = safe_divide(total_return, max_drawdown, default=0.0)
 
             return {
                 "total_return": total_return,
