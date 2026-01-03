@@ -1039,7 +1039,8 @@ if logs:
             try:
                 dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
                 time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except:
+            except (ValueError, AttributeError):
+                # If parsing fails, use original timestamp
                 time_str = timestamp
             
             # Color code by level
@@ -1418,7 +1419,8 @@ if st.session_state.fill_notifications:
         try:
             dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
             time_str = dt.strftime("%H:%M:%S")
-        except:
+        except (ValueError, AttributeError):
+            # If parsing fails, use original timestamp
             time_str = timestamp
         
         st.success(f"**{time_str}** - {notif.get('message', 'Order filled')}")
@@ -1515,7 +1517,8 @@ if filled_orders:
             # Try to extract numeric value
             try:
                 order_price = float(order_price.replace('$', '').replace(',', ''))
-            except:
+            except (ValueError, AttributeError):
+                # If conversion fails, default to 0
                 order_price = 0
         
         quantity = order.get('quantity', 0)
@@ -1524,7 +1527,8 @@ if filled_orders:
         else:
             try:
                 quantity = float(str(quantity).replace(',', ''))
-            except:
+            except (ValueError, AttributeError):
+                # If conversion fails, default to 0
                 quantity = 0
         
         # Get execution data if available from execution agent
@@ -1544,7 +1548,8 @@ if filled_orders:
                                 exec_time = datetime.fromisoformat(execution.timestamp.replace('Z', '+00:00'))
                                 order_time = datetime.fromisoformat(order['timestamp'].replace('Z', '+00:00'))
                                 execution_time = (exec_time - order_time).total_seconds()
-                            except:
+                            except (ValueError, AttributeError, KeyError):
+                                # If timestamp parsing fails, default to 0
                                 execution_time = 0.0
                 except Exception as e:
                     # If we can't get order status, use default values
@@ -1702,7 +1707,8 @@ if filled_orders:
                             fill_by_date[date] = {'filled': 0, 'total': 0}
                         fill_by_date[date]['filled'] += 1
                         fill_by_date[date]['total'] += 1
-                except:
+                except (KeyError, ValueError, AttributeError):
+                    # If date parsing or dict access fails, skip this entry
                     pass
             
             if fill_by_date:

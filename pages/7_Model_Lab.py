@@ -107,7 +107,7 @@ if 'data_loader' not in st.session_state:
             from trading.data.providers.provider_manager import ProviderManager
             provider_manager = ProviderManager()
             st.session_state.data_loader = DataLoader(provider_manager) if MODEL_MODULES_AVAILABLE else None
-        except:
+        except Exception as e:
             # Fallback: try direct instantiation
             st.session_state.data_loader = DataLoader() if MODEL_MODULES_AVAILABLE else None
     except Exception as e:
@@ -2869,7 +2869,7 @@ with tab6:
                                         feature_names = ['Close', 'Volume', 'SMA_20', 'RSI', 'MACD', 'Bollinger_Upper', 'Bollinger_Lower']
                                         importances = np.random.rand(len(feature_names))
                                         importances = importances / importances.sum()
-                                except:
+                                except (ValueError, AttributeError, ZeroDivisionError) as e:
                                     feature_names = ['Close', 'Volume', 'SMA_20', 'RSI', 'MACD']
                                     importances = np.random.rand(len(feature_names))
                                     importances = importances / importances.sum()
@@ -2949,7 +2949,7 @@ with tab6:
                                 try:
                                     explainer = shap.TreeExplainer(model)
                                     shap_values = explainer.shap_values(X_sample)
-                                except:
+                                except Exception as e:
                                     st.warning("Could not create TreeExplainer. Using synthetic SHAP values for demonstration.")
                                     shap_values = np.random.randn(n_samples, n_features)
                             else:
@@ -3145,7 +3145,7 @@ with tab6:
                                 if model is not None and hasattr(model, 'predict'):
                                     try:
                                         return model.predict(X)
-                                    except:
+                                    except Exception as e:
                                         return np.random.randn(len(X))
                                 return np.random.randn(len(X))
                             
@@ -3493,7 +3493,8 @@ with tab7:
                         from datetime import datetime
                         dt = datetime.fromisoformat(trained_at.replace('Z', '+00:00'))
                         trained_at = dt.strftime('%Y-%m-%d %H:%M')
-                    except:
+                    except (ValueError, AttributeError):
+                        # Keep original string if parsing fails
                         pass
                 
                 table_data.append({
@@ -3592,7 +3593,7 @@ with tab7:
                         from datetime import datetime
                         dt = datetime.fromisoformat(trained_at.replace('Z', '+00:00'))
                         st.markdown(f"**Trained At:** {dt.strftime('%Y-%m-%d %H:%M:%S')}")
-                    except:
+                    except (ValueError, AttributeError):
                         st.markdown(f"**Trained At:** {trained_at}")
                 else:
                     st.markdown(f"**Trained At:** {trained_at}")

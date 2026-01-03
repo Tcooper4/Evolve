@@ -47,17 +47,17 @@ finnhub_key = os.getenv("FINNHUB_API_KEY")
 polygon_key = os.getenv("POLYGON_API_KEY")
 
 if alpha_vantage_key:
-    logger.info(f"✅ ALPHA_VANTAGE_API_KEY loaded: {alpha_vantage_key[:10]}...")
+    logger.info("✅ ALPHA_VANTAGE_API_KEY loaded successfully")
 else:
     logger.warning("❌ ALPHA_VANTAGE_API_KEY not found")
 
 if finnhub_key:
-    logger.info(f"✅ FINNHUB_API_KEY loaded: {finnhub_key[:10]}...")
+    logger.info("✅ FINNHUB_API_KEY loaded successfully")
 else:
     logger.warning("❌ FINNHUB_API_KEY not found")
 
 if polygon_key:
-    logger.info(f"✅ POLYGON_API_KEY loaded: {polygon_key[:10]}...")
+    logger.info("✅ POLYGON_API_KEY loaded successfully")
 else:
     logger.warning("❌ POLYGON_API_KEY not found")
 
@@ -161,23 +161,12 @@ except Exception as e:
     CORE_COMPONENTS_AVAILABLE = False
 
 # Add Task Orchestrator integration after the existing imports
-try:
-    pass
-
-    ORCHESTRATOR_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"Task Orchestrator not available: {e}")
-    ORCHESTRATOR_AVAILABLE = False
+# Task Orchestrator integration - placeholder for future implementation
+ORCHESTRATOR_AVAILABLE = False
 
 # Add Agent Controller integration
-try:
-    pass
-
-    AGENT_CONTROLLER_AVAILABLE = True
-    logger.info("✅ Agent Controller initialized successfully")
-except ImportError as e:
-    logger.warning(f"Agent Controller not available: {e}")
-    AGENT_CONTROLLER_AVAILABLE = False
+# Agent Controller integration - placeholder for future implementation  
+AGENT_CONTROLLER_AVAILABLE = False
 
 # Enhanced ChatGPT-like styling
 st.markdown(
