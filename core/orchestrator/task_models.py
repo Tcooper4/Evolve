@@ -43,6 +43,8 @@ class TaskType(Enum):
     SYSTEM_HEALTH = "system_health"
     DATA_SYNC = "data_sync"
     PERFORMANCE_ANALYSIS = "performance_analysis"
+    PORTFOLIO_REBALANCING = "portfolio_rebalancing"  # Added for config compatibility
+    MARKET_ANALYSIS = "market_analysis"  # Added for config compatibility
 
 
 @dataclass

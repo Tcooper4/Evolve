@@ -928,7 +928,7 @@ class ModelDiscoveryAgent:
 
             # 1. Register model in ModelRegistry
             try:
-                from trading.models.registry import get_model_registry
+                from trading.models.model_registry import get_registry as get_model_registry
                 
                 registry = get_model_registry()
                 

@@ -940,13 +940,22 @@ class SimulationBrokerAdapter(BaseBrokerAdapter):
         self.logger.info("Disconnected from simulation broker")
 
     async def submit_order(self, order: OrderRequest) -> OrderExecution:
-        """Simulate order submission"""
+        """Simulate order submission using real market prices"""
         # Simulate execution delay
         await asyncio.sleep(0.1)
 
-        # Generate execution price
+        # Get execution price from real market data
         if order.order_type == OrderType.MARKET:
-            execution_price = 100.0 + np.random.normal(0, 1)  # Simulated price
+            try:
+                # Get real market data for execution price
+                market_data = await self.get_market_data(order.ticker)
+                execution_price = market_data.last
+            except Exception as e:
+                self.logger.error(f"Failed to get real market price for {order.ticker}: {e}")
+                raise RuntimeError(
+                    f"Cannot execute order for {order.ticker}. "
+                    "Real market data is required for simulation."
+                )
         else:
             execution_price = order.price
 
@@ -1004,20 +1013,45 @@ class SimulationBrokerAdapter(BaseBrokerAdapter):
         return self.account
 
     async def get_market_data(self, ticker: str) -> MarketData:
-        """Get simulated market data"""
-        price = 100.0 + np.random.normal(0, 2)
-        spread = price * 0.001
-
-        return MarketData(
-            ticker=ticker,
-            bid=price - spread / 2,
-            ask=price + spread / 2,
-            last=price,
-            volume=np.random.randint(1000000, 10000000),
-            timestamp=datetime.now().isoformat(),
-            spread=spread,
-            volatility=0.02,
-        )
+        """Get simulated market data using real price data"""
+        try:
+            # Try to get real market data first
+            from trading.data.providers import get_data_provider
+            
+            data_provider = get_data_provider()
+            if data_provider:
+                try:
+                    # Get current price from real data provider
+                    current_price = data_provider.get_live_price(ticker)
+                    if current_price and current_price > 0:
+                        price = float(current_price)
+                        spread = price * 0.001
+                        
+                        return MarketData(
+                            ticker=ticker,
+                            bid=price - spread / 2,
+                            ask=price + spread / 2,
+                            last=price,
+                            volume=1000000,  # Default volume for simulation
+                            timestamp=datetime.now().isoformat(),
+                            spread=spread,
+                            volatility=0.02,
+                        )
+                except Exception as e:
+                    self.logger.warning(f"Failed to get real price for {ticker}: {e}")
+            
+            # Fallback: raise error instead of using fake data
+            raise RuntimeError(
+                f"Cannot get market data for {ticker}. "
+                "Real data provider is required. Please ensure data providers are configured."
+            )
+        except RuntimeError:
+            raise
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to get market data for {ticker}: {e}. "
+                "Real data provider is required."
+            )
 
 
 class BrokerAdapter:

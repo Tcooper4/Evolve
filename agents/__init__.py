@@ -25,6 +25,11 @@ from .model_innovation_agent import (
     create_model_innovation_agent,
 )
 from .prompt_agent import PromptAgent, create_prompt_agent
+try:
+    from .agent_controller import AgentController, get_agent_controller
+except ImportError:
+    AgentController = None
+    get_agent_controller = None
 from .registry import (
     ALL_AGENTS,
     AgentRegistry,
@@ -38,6 +43,22 @@ from .registry import (
     search_agents,
 )
 from .strategy_research_agent import StrategyResearchAgent
+
+# Import agent controller if available
+try:
+    from .agent_controller import AgentController
+    _AGENT_CONTROLLER_AVAILABLE = True
+except ImportError:
+    _AGENT_CONTROLLER_AVAILABLE = False
+    AgentController = None
+
+# Import task router if available
+try:
+    from .task_router import TaskRouter
+    _TASK_ROUTER_AVAILABLE = True
+except ImportError:
+    _TASK_ROUTER_AVAILABLE = False
+    TaskRouter = None
 
 __all__ = [
     # Legacy agents
@@ -72,3 +93,10 @@ __all__ = [
     "get_performance_checker_agent",
     "get_voice_prompt_agent",
 ]
+
+# Add agent controller exports if available
+if _AGENT_CONTROLLER_AVAILABLE:
+    __all__.append("AgentController")
+
+if _TASK_ROUTER_AVAILABLE:
+    __all__.append("TaskRouter")

@@ -135,9 +135,14 @@ class MultiIntentPrompt:
 class TaskRouter:
     """Intelligent task router for multi-intent prompts."""
 
-    def __init__(self):
-        """Initialize the task router."""
+    def __init__(self, registry=None):
+        """Initialize the task router.
+        
+        Args:
+            registry: Optional AgentRegistry instance
+        """
         self.logger = logging.getLogger(__name__)
+        self.registry = registry
 
         # Task execution tracking
         self.active_tasks: Dict[str, TaskExecution] = {}

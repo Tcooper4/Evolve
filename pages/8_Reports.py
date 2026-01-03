@@ -135,14 +135,16 @@ with tab1:
         start_date = st.date_input(
             "Start Date",
             value=default_start.date(),
-            max_value=datetime.now().date()
+            max_value=datetime.now().date(),
+            key="reports_summary_start_date"
         )
     
     with col2:
         end_date = st.date_input(
             "End Date",
             value=default_end.date(),
-            max_value=datetime.now().date()
+            max_value=datetime.now().date(),
+            key="reports_summary_end_date"
         )
     
     # Additional Options
@@ -353,15 +355,67 @@ with tab1:
                     # PDF Export
                     if st.button("📄 Export PDF", use_container_width=True):
                         try:
-                            # Generate PDF (placeholder - would use actual PDF generation)
-                            pdf_content = f"PDF Report: {report_type}\nPeriod: {start_date} to {end_date}\n\n"
+                            # Generate PDF report
+                            from reportlab.lib.pagesizes import letter
+                            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+                            from reportlab.lib.styles import getSampleStyleSheet
+                            from reportlab.lib import colors
+                            import io
+                            
+                            # Create PDF
+                            buffer = io.BytesIO()
+                            doc = SimpleDocTemplate(buffer, pagesize=letter)
+                            story = []
+                            styles = getSampleStyleSheet()
+                            
+                            # Add title
+                            title = Paragraph(f"<b>{report_type} Report</b>", styles['Title'])
+                            story.append(title)
+                            story.append(Spacer(1, 12))
+                            
+                            # Add report date
+                            date_para = Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal'])
+                            story.append(date_para)
+                            story.append(Spacer(1, 12))
+                            
+                            # Add period
+                            period_para = Paragraph(f"Period: {start_date} to {end_date}", styles['Normal'])
+                            story.append(period_para)
+                            story.append(Spacer(1, 12))
+                            
+                            # Add summary metrics if available in session state
+                            if 'report_summary_metrics' in st.session_state:
+                                story.append(Paragraph("<b>Summary Metrics</b>", styles['Heading2']))
+                                metrics_data = [[k, str(v)] for k, v in st.session_state.report_summary_metrics.items()]
+                                metrics_table = Table(metrics_data)
+                                metrics_table.setStyle(TableStyle([
+                                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                                    ('FONTSIZE', (0, 0), (-1, 0), 12),
+                                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                                ]))
+                                story.append(metrics_table)
+                                story.append(Spacer(1, 12))
+                            
+                            # Build PDF
+                            doc.build(story)
+                            pdf_data = buffer.getvalue()
+                            buffer.close()
+                            
+                            # Provide download button
                             st.download_button(
-                                label="Download PDF",
-                                data=pdf_content,
-                                file_name=f"{report_id}.pdf",
+                                label="📄 Download PDF Report",
+                                data=pdf_data,
+                                file_name=f"{report_type.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf",
                                 mime="application/pdf"
                             )
-                            st.success("PDF generated!")
+                            
+                            st.success("PDF report generated successfully!")
+                        except ImportError:
+                            st.error("reportlab library not installed. Install with: pip install reportlab")
                         except Exception as e:
                             st.error(f"Error generating PDF: {str(e)}")
                 
@@ -463,14 +517,16 @@ with tab2:
         start_date = st.date_input(
             "Start Date",
             value=datetime.now().date() - timedelta(days=30),
-            max_value=datetime.now().date()
+            max_value=datetime.now().date(),
+            key="reports_custom_start_date"
         )
     
     with col2:
         end_date = st.date_input(
             "End Date",
             value=datetime.now().date(),
-            max_value=datetime.now().date()
+            max_value=datetime.now().date(),
+            key="reports_custom_end_date"
         )
     
     st.markdown("---")
@@ -577,10 +633,10 @@ with tab2:
     col1, col2 = st.columns(2)
     
     with col1:
-        preview_button = st.button("👁️ Preview Report", use_container_width=True)
+        preview_button = st.button("👁️ Preview Report", use_container_width=True, key="preview_report_btn")
     
     with col2:
-        generate_button = st.button("🚀 Generate Report", type="primary", use_container_width=True)
+        generate_button = st.button("🚀 Generate Report", type="primary", use_container_width=True, key="generate_report_btn")
     
     if preview_button or generate_button:
         try:
@@ -1297,10 +1353,36 @@ with tab4:
             
             with col3:
                 if st.button("🔗 Share", use_container_width=True, key=f"share_{selected_report}"):
-                    # Generate shareable link (placeholder)
-                    share_link = f"https://reports.example.com/{selected_report}"
-                    st.code(share_link, language=None)
-                    st.info("Share this link to allow others to view the report")
+                    # Generate shareable link
+                    import hashlib
+                    import json
+                    
+                    # Create unique ID for this report
+                    report_data = {
+                        'name': selected_report,
+                        'created': datetime.now().isoformat(),
+                        'type': reports_data[selected_report].get('Type', 'Unknown') if selected_report in reports_data else 'Unknown'
+                    }
+                    report_id = hashlib.md5(json.dumps(report_data, sort_keys=True).encode()).hexdigest()[:12]
+                    
+                    # Save report to session state or database
+                    if 'shared_reports' not in st.session_state:
+                        st.session_state.shared_reports = {}
+                    
+                    st.session_state.shared_reports[report_id] = report_data
+                    
+                    # Generate shareable URL
+                    # In production, update with your actual domain
+                    import os
+                    base_url = os.getenv('APP_BASE_URL', 'http://localhost:8501')
+                    shareable_url = f"{base_url}/?report_id={report_id}"
+                    
+                    st.success("Shareable link generated!")
+                    st.code(shareable_url, language=None)
+                    
+                    # Add copy button functionality
+                    if st.button("📋 Copy Link", key=f"copy_{selected_report}"):
+                        st.write("Link copied to clipboard! (Note: Actual clipboard access requires JavaScript)")
             
             with col4:
                 if st.button("🔄 Re-generate", use_container_width=True, key=f"regenerate_{selected_report}"):

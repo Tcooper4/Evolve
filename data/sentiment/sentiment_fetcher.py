@@ -60,7 +60,7 @@ class SentimentFetcher:
         self.newsapi_key = os.getenv("NEWSAPI_KEY") or self.sentiment_config.get(
             "newsapi_key"
         )
-        self.finnhub_key = os.getenv("FINNHUB_KEY") or self.sentiment_config.get(
+        self.finnhub_key = os.getenv("FINNHUB_API_KEY") or os.getenv("FINNHUB_KEY") or self.sentiment_config.get(
             "finnhub_key"
         )
         self.twitter_bearer_token = os.getenv(

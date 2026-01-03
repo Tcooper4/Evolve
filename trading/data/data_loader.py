@@ -482,9 +482,6 @@ class DataLoader:
                     interval=request.interval,
                     auto_adjust=request.auto_adjust,
                     prepost=request.prepost,
-                    threads=request.threads,
-                    proxy=request.proxy,
-                    progress=request.progress,
                 )
             else:
                 data = ticker_obj.history(
@@ -492,10 +489,11 @@ class DataLoader:
                     interval=request.interval,
                     auto_adjust=request.auto_adjust,
                     prepost=request.prepost,
-                    threads=request.threads,
-                    proxy=request.proxy,
-                    progress=request.progress,
                 )
+
+            # Normalize column names to lowercase (yfinance returns capitalized)
+            if not data.empty:
+                data.columns = data.columns.str.lower()
 
             # Validate data
             is_valid, error_msg = self.validator.validate_market_data(
@@ -582,7 +580,7 @@ class DataLoader:
                             success=True,
                             completed=i,
                             total=len(requests),
-                            progress=i / len(requests),
+                            progress=safe_divide(i, len(requests), default=0.0),
                         )
 
                     response = self.load_market_data(request)
@@ -594,7 +592,7 @@ class DataLoader:
                             success=response.success,
                             completed=i + 1,
                             total=len(requests),
-                            progress=(i + 1) / len(requests),
+                            progress=safe_divide(i + 1, len(requests), default=0.0),
                         )
 
                 return results
@@ -637,7 +635,9 @@ class DataLoader:
                 # Fallback to history
                 hist = ticker_obj.history(period="1d")
                 if not hist.empty:
-                    current_price = hist["Close"].iloc[-1]
+                    # Normalize column names to lowercase (yfinance returns capitalized)
+                    hist.columns = hist.columns.str.lower()
+                    current_price = hist["close"].iloc[-1]
                 else:
                     return PriceResponse(
                         success=False,

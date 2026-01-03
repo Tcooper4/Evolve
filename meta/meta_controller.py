@@ -30,7 +30,11 @@ import numpy as np
 import schedule
 
 # Local imports
-from agents.base_agent import BaseAgent
+try:
+    from agents.base_agent import BaseAgent
+except ImportError:
+    # Fallback to trading.agents
+    from trading.agents.base_agent_interface import BaseAgent
 from agents.model_innovation_agent import ModelInnovationAgent
 from agents.strategy_research_agent import StrategyResearchAgent
 from data.sentiment.sentiment_fetcher import SentimentFetcher

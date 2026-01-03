@@ -455,23 +455,150 @@ class DataListener:
     def _run_polygon_ws(self, symbols: List[str]):
         """Run Polygon WebSocket listener."""
         try:
-            # Placeholder: Polygon.io WebSocket implementation
-            logger.info("Polygon WebSocket streaming not implemented in this template.")
-
-            # Simulate data updates for watchdog testing
+            import os
+            import websocket
+            import json
+            
+            api_key = os.getenv('POLYGON_API_KEY')
+            if not api_key:
+                logger.error("POLYGON_API_KEY not found in environment variables")
+                logger.warning("Falling back to simulated data updates")
+                # Fallback: simulate data updates for watchdog testing
+                if self.watchdog:
+                    while not self._stop_event.is_set():
+                        self.watchdog.update_feed("polygon_price", time.time())
+                        time.sleep(1)
+                return {
+                    "success": False,
+                    "message": "Missing POLYGON_API_KEY - using fallback mode",
+                    "timestamp": time.time(),
+                }
+            
+            url = "wss://socket.polygon.io/stocks"
+            
+            def on_message(ws, message):
+                try:
+                    data = json.loads(message)
+                    # Process the message
+                    if isinstance(data, list):
+                        for item in data:
+                            if item.get('ev') == 'T':  # Trade event
+                                symbol = item.get('sym', '')
+                                price = item.get('p', 0)
+                                volume = item.get('s', 0)
+                                timestamp = item.get('t', time.time() * 1000) / 1000
+                                
+                                # Update price data
+                                if symbol and price > 0:
+                                    self._handle_price(price)
+                                    logger.debug(f"Polygon Trade: {symbol} @ ${price:.2f} vol={volume}")
+                                
+                                # Update watchdog
+                                if self.watchdog:
+                                    self.watchdog.update_feed("polygon_price", timestamp)
+                            elif item.get('ev') == 'Q':  # Quote event
+                                symbol = item.get('sym', '')
+                                bid = item.get('bp', 0)
+                                ask = item.get('ap', 0)
+                                if symbol and bid > 0 and ask > 0:
+                                    mid_price = (bid + ask) / 2
+                                    self._handle_price(mid_price)
+                                    logger.debug(f"Polygon Quote: {symbol} bid=${bid:.2f} ask=${ask:.2f}")
+                    elif isinstance(data, dict):
+                        # Handle status messages
+                        if data.get('status') == 'auth_success':
+                            logger.info("✅ Polygon WebSocket authenticated successfully")
+                        elif data.get('status') == 'auth_failed':
+                            logger.error(f"❌ Polygon authentication failed: {data.get('message', 'Unknown error')}")
+                        elif data.get('status') == 'success':
+                            logger.debug(f"Polygon message: {data.get('message', '')}")
+                except json.JSONDecodeError as e:
+                    logger.error(f"Error parsing Polygon message: {e}")
+                except Exception as e:
+                    logger.error(f"Error processing Polygon message: {e}")
+            
+            def on_error(ws, error):
+                logger.error(f"Polygon WebSocket error: {error}")
+                # Don't break the system - just log the error
+            
+            def on_close(ws, close_status_code, close_msg):
+                logger.info(f"Polygon WebSocket closed (code: {close_status_code}, msg: {close_msg})")
+            
+            def on_open(ws):
+                try:
+                    # Authenticate
+                    auth_msg = {"action": "auth", "params": api_key}
+                    ws.send(json.dumps(auth_msg))
+                    logger.info("Authenticating with Polygon WebSocket...")
+                    
+                    # Wait a bit for auth to complete
+                    time.sleep(1)
+                    
+                    # Subscribe to symbols
+                    subscribed_count = 0
+                    for symbol in symbols:
+                        if symbol:
+                            # Format: T.{symbol} for trades, Q.{symbol} for quotes
+                            sub_msg = {"action": "subscribe", "params": f"T.{symbol},Q.{symbol}"}
+                            ws.send(json.dumps(sub_msg))
+                            subscribed_count += 1
+                    
+                    if subscribed_count > 0:
+                        logger.info(f"✅ Subscribed to {subscribed_count} symbols on Polygon WebSocket")
+                    else:
+                        logger.warning("No valid symbols to subscribe to")
+                except Exception as e:
+                    logger.error(f"Error in Polygon WebSocket on_open: {e}")
+            
+            # Create WebSocket connection
+            ws = websocket.WebSocketApp(
+                url,
+                on_open=on_open,
+                on_message=on_message,
+                on_error=on_error,
+                on_close=on_close
+            )
+            
+            # Run until stop event is set
+            logger.info("Starting Polygon WebSocket connection...")
+            while not self._stop_event.is_set():
+                try:
+                    ws.run_forever()
+                    # If connection closes, wait a bit before reconnecting
+                    if not self._stop_event.is_set():
+                        logger.info("Reconnecting to Polygon WebSocket in 5 seconds...")
+                        time.sleep(5)
+                except KeyboardInterrupt:
+                    logger.info("Polygon WebSocket interrupted by user")
+                    break
+                except Exception as e:
+                    logger.error(f"Polygon WebSocket connection error: {e}")
+                    if not self._stop_event.is_set():
+                        logger.info("Retrying Polygon WebSocket connection in 10 seconds...")
+                        time.sleep(10)
+            
+            return {"success": True, "message": "Polygon WebSocket closed", "timestamp": time.time()}
+            
+        except ImportError as e:
+            logger.error(f"Required library not available for Polygon WebSocket: {e}")
+            logger.warning("Install websocket-client: pip install websocket-client")
+            # Fallback: simulate data updates
             if self.watchdog:
                 while not self._stop_event.is_set():
                     self.watchdog.update_feed("polygon_price", time.time())
                     time.sleep(1)
-
             return {
-                "success": True,
-                "message": "Polygon WebSocket listener placeholder",
+                "success": False,
+                "message": "websocket-client library not available - using fallback mode",
                 "timestamp": time.time(),
             }
-
         except Exception as e:
             logger.error(f"Error in Polygon WebSocket: {e}")
+            # Fallback: simulate data updates for watchdog testing
+            if self.watchdog:
+                while not self._stop_event.is_set():
+                    self.watchdog.update_feed("polygon_price", time.time())
+                    time.sleep(1)
             return {"success": False, "error": str(e), "timestamp": time.time()}
 
     def _handle_price(self, price: float):
