@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
+from trading.utils.safe_math import safe_divide
+
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 
 logger = logging.getLogger(__name__)
@@ -308,7 +310,7 @@ class MetaLearnerAgent(BaseAgent):
             total_count = successful_count + unsuccessful_count
 
             if total_count > 0:
-                success_rate = successful_count / total_count
+                success_rate = safe_divide(successful_count, total_count, default=0.0)
                 self.meta_models["action_success_rates"][action] = success_rate
 
         # Update context performance models

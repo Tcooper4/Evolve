@@ -14,6 +14,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_drawdown, safe_divide
+
 warnings.filterwarnings("ignore")
 
 logger = logging.getLogger(__name__)
@@ -227,25 +229,17 @@ class PositionSizingEngine:
             if len(wins) == 0 or len(losses) == 0:
                 return self.kelly_config["min_size"]
 
-            win_rate = len(wins) / len(returns)
+            win_rate = safe_divide(len(wins), len(returns), default=0.0)
             avg_win = wins.mean()
             avg_loss = abs(losses.mean())
 
-            # Kelly formula: f = (bp - q) / b
-            # where b = odds received, p = probability of win, q = probability of loss
-            # Safely calculate Kelly fraction with division-by-zero protection
-            if avg_loss > 1e-10:
-                b = avg_win / avg_loss
-                p = win_rate
-                q = 1 - p
-                
-                if b > 1e-10:
-                    kelly_fraction = (b * p - q) / b
-                else:
-                    kelly_fraction = 0.0
-            else:
-                # No losses recorded, use conservative estimate
-                logger.warning("Kelly calculation: avg_loss is zero, using min_size")
+            # Kelly formula using safe division utility
+            from trading.utils.safe_math import safe_kelly_fraction
+            kelly_fraction = safe_kelly_fraction(avg_win, avg_loss, win_rate)
+            
+            if kelly_fraction <= 0:
+                # No valid Kelly fraction, use conservative estimate
+                logger.warning("Kelly calculation: invalid fraction, using min_size")
                 return self.kelly_config["min_size"]
 
             # Apply fractional Kelly and constraints
@@ -277,9 +271,8 @@ class PositionSizingEngine:
 
             # Target volatility sizing with additional safety
             target_vol = self.volatility_config["target_volatility"]
-            if volatility > 1e-10:
-                size = target_vol / volatility
-            else:
+            size = safe_divide(target_vol, volatility, default=0.01)
+            if size <= 1e-10:
                 logger.warning(f"Volatility {volatility} too low despite floor, using min size")
                 return 0.01
 
@@ -326,11 +319,10 @@ class PositionSizingEngine:
             portfolio_vol_target = portfolio_context.get("target_volatility", 0.15)
 
             # Risk parity: equal risk contribution
-            target_risk_contribution = portfolio_vol_target / len(
-                portfolio_context.get("assets", [1])
-            )
+            n_assets = len(portfolio_context.get("assets", [1]))
+            target_risk_contribution = safe_divide(portfolio_vol_target, n_assets, default=0.0)
 
-            size = target_risk_contribution / asset_vol
+            size = safe_divide(target_risk_contribution, asset_vol, default=0.01)
 
             return max(0.01, min(size, self.max_position_size))
 
@@ -350,13 +342,12 @@ class PositionSizingEngine:
         try:
             # Calculate maximum drawdown
             cumulative = (1 + returns).cumprod()
-            running_max = cumulative.expanding().max()
-            drawdown = (cumulative - running_max) / running_max
+            drawdown = safe_drawdown(cumulative)
             max_dd = abs(drawdown.min())
 
             # Size inversely proportional to max drawdown
             max_dd_limit = self.drawdown_config["max_drawdown"]
-            size = max_dd_limit / max(max_dd, 0.01)
+            size = safe_divide(max_dd_limit, max(max_dd, 0.01), default=0.01)
 
             # Apply recovery factor
             size *= self.drawdown_config["recovery_factor"]
@@ -460,11 +451,7 @@ class PositionSizingEngine:
         """
         try:
             volatility = returns.std() * np.sqrt(252)
-            sharpe_ratio = (
-                returns.mean() / returns.std() * np.sqrt(252)
-                if returns.std() > 0
-                else 0
-            )
+            sharpe_ratio = safe_divide(returns.mean(), returns.std(), default=0.0) * np.sqrt(252)
             max_drawdown = self._calculate_max_drawdown(returns)
             var_95 = np.percentile(returns, 5)
 
@@ -494,8 +481,7 @@ class PositionSizingEngine:
         """
         try:
             cumulative = (1 + returns).cumprod()
-            running_max = cumulative.expanding().max()
-            drawdown = (cumulative - running_max) / running_max
+            drawdown = safe_drawdown(cumulative)
             return abs(drawdown.min())
         except (ValueError, TypeError, IndexError) as e:
             logger.debug(f"Max drawdown calculation failed: {e}")
@@ -641,8 +627,8 @@ class PositionSizingEngine:
 
             # Use risk parity approach for allocation
             volatilities = np.sqrt(np.diag(covariance_matrix))
-            risk_contributions = 1 / volatilities
-            weights = risk_contributions / risk_contributions.sum()
+            risk_contributions = safe_divide(1.0, volatilities, default=0.0)
+            weights = safe_divide(risk_contributions, risk_contributions.sum(), default=1.0 / len(volatilities))
 
             # Apply constraints
             constrained_weights = self._apply_portfolio_constraints(weights, assets)
@@ -699,7 +685,7 @@ class PositionSizingEngine:
         constrained_weights = np.minimum(constrained_weights, self.max_position_size)
 
         # Normalize weights
-        constrained_weights = constrained_weights / constrained_weights.sum()
+        constrained_weights = safe_divide(constrained_weights, constrained_weights.sum(), default=1.0 / len(constrained_weights))
 
         return constrained_weights
 
@@ -725,8 +711,8 @@ class PositionSizingEngine:
 
             # Diversification ratio
             if weighted_avg_variance > 0:
-                diversification_ratio = weighted_avg_variance / portfolio_variance
-                return min(diversification_ratio / len(weights), 1.0)
+                diversification_ratio = safe_divide(weighted_avg_variance, portfolio_variance, default=0.0)
+                return min(safe_divide(diversification_ratio, len(weights), default=0.0), 1.0)
             else:
                 return 0.0
 
@@ -746,7 +732,7 @@ class PositionSizingEngine:
             Default allocation
         """
         n_assets = len(assets)
-        equal_weights = np.ones(n_assets) / n_assets
+        equal_weights = safe_divide(np.ones(n_assets), n_assets, default=1.0)
 
         return PortfolioAllocation(
             allocations=dict(zip(assets.keys(), equal_weights)),

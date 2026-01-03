@@ -17,6 +17,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 # Try to import scikit-learn
 try:
     from sklearn.ensemble import VotingRegressor
@@ -307,10 +309,10 @@ class DynamicEnsembleVoter:
             total_weight += weight
 
         if total_weight > 0:
-            avg_confidence = total_confidence / total_weight
-            avg_predicted_return = total_predicted_return / total_weight
-            avg_position_size = total_position_size / total_weight
-            avg_risk_score = total_risk_score / total_weight
+            avg_confidence = safe_divide(total_confidence, total_weight, default=0.0)
+            avg_predicted_return = safe_divide(total_predicted_return, total_weight, default=0.0)
+            avg_position_size = safe_divide(total_position_size, total_weight, default=0.0)
+            avg_risk_score = safe_divide(total_risk_score, total_weight, default=0.0)
         else:
             avg_confidence = 0.5
             avg_predicted_return = 0.0
@@ -493,8 +495,8 @@ def combine_weighted_average(
         total_weight += weight
 
     if total_weight > 0:
-        avg_confidence = total_confidence / total_weight
-        avg_predicted_return = total_predicted_return / total_weight
+        avg_confidence = safe_divide(total_confidence, total_weight, default=0.0)
+        avg_predicted_return = safe_divide(total_predicted_return, total_weight, default=0.0)
         avg_position_size = total_position_size / total_weight
         avg_risk_score = total_risk_score / total_weight
     else:

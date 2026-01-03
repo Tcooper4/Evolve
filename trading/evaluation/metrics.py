@@ -3,6 +3,7 @@ from typing import Dict
 
 import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from trading.utils.safe_math import safe_mape
 
 
 class RegressionMetrics:
@@ -92,12 +93,7 @@ class TimeSeriesMetrics:
         self, actuals: np.ndarray, predictions: np.ndarray
     ) -> float:
         """Return MAPE."""
-        actuals = np.asarray(actuals)
-        predictions = np.asarray(predictions)
-        mask = actuals != 0
-        return float(
-            np.mean(np.abs((actuals[mask] - predictions[mask]) / actuals[mask])) * 100
-        )
+        return float(safe_mape(actuals, predictions))
 
     def symmetric_mean_absolute_percentage_error(
         self, actuals: np.ndarray, predictions: np.ndarray
@@ -278,13 +274,14 @@ class RiskMetrics:
 
 
 def calculate_sharpe_ratio(returns: np.ndarray, risk_free_rate: float = 0.0) -> float:
-    """Calculate the Sharpe ratio for a series of returns."""
+    """Calculate the Sharpe ratio for a series of returns using safe division."""
+    from trading.utils.safe_math import safe_sharpe_ratio
     if len(returns) == 0:
         return 0.0
-    excess = returns - risk_free_rate / len(returns)
-    return (
-        float(np.sqrt(252) * excess.mean() / excess.std()) if excess.std() != 0 else 0.0
-    )
+    # Convert to pandas Series for safe_sharpe_ratio
+    import pandas as pd
+    returns_series = pd.Series(returns)
+    return safe_sharpe_ratio(returns_series, risk_free_rate=risk_free_rate, periods_per_year=252)
 
 
 def calculate_max_drawdown(returns: np.ndarray) -> float:

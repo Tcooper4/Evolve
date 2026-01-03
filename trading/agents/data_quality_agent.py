@@ -18,6 +18,7 @@ from trading.data.data_loader import DataLoader
 from trading.data.providers.alpha_vantage_provider import AlphaVantageProvider
 from trading.data.providers.yfinance_provider import YFinanceProvider
 from trading.memory.agent_memory import AgentMemory
+from trading.utils.safe_math import safe_divide
 
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 
@@ -486,7 +487,7 @@ class DataQualityAgent(BaseAgent):
 
             if outliers.any():
                 outlier_count = outliers.sum()
-                outlier_ratio = outlier_count / len(series)
+                outlier_ratio = safe_divide(outlier_count, len(series), default=0.0)
 
                 anomaly = DataAnomaly(
                     anomaly_type=AnomalyType.OUTLIER,
@@ -576,7 +577,7 @@ class DataQualityAgent(BaseAgent):
             # Zero volume
             zero_volume = (data["volume"] == 0).sum()
             if zero_volume > 0:
-                zero_ratio = zero_volume / len(data)
+                zero_ratio = safe_divide(zero_volume, len(data), default=0.0)
 
                 anomaly = DataAnomaly(
                     anomaly_type=AnomalyType.ZERO_VOLUME,
@@ -736,7 +737,7 @@ class DataQualityAgent(BaseAgent):
                 return 1.0
 
             # Consistency score is inverse of issue ratio
-            issue_ratio = consistency_issues / total_checks
+            issue_ratio = safe_divide(consistency_issues, total_checks, default=0.0)
             return max(0.0, 1.0 - issue_ratio)
 
         except Exception as e:
@@ -795,7 +796,7 @@ class DataQualityAgent(BaseAgent):
                 return 1.0
 
             # Accuracy score is inverse of weighted issue ratio
-            issue_ratio = weighted_issues / total_weight
+            issue_ratio = safe_divide(weighted_issues, total_weight, default=0.0)
             return max(0.0, 1.0 - issue_ratio)
 
         except Exception as e:

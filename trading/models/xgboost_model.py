@@ -29,6 +29,7 @@ from trading.exceptions import (
     ModelPredictionError,
     ModelTrainingError,
 )
+from trading.utils.safe_math import safe_rsi
 from utils.forecast_helpers import safe_forecast
 from utils.model_cache import cache_model_operation
 
@@ -332,15 +333,9 @@ class XGBoostModel(BaseModel):
             return data
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
-        """Calculate RSI with error handling."""
+        """Calculate RSI with error handling using safe division."""
         try:
-            delta = prices.diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-            # Safely calculate RS with division-by-zero protection
-            rs = np.where(loss > 1e-10, gain / loss, 0.0)
-            rsi = 100 - (100 / (1 + rs))
-            return rsi
+            return safe_rsi(prices, period=period)
         except Exception as e:
             logger.error(f"RSI calculation failed: {e}")
             return pd.Series(50.0, index=prices.index)  # Neutral RSI

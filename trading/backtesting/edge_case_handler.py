@@ -11,6 +11,8 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 logger = logging.getLogger(__name__)
 
 
@@ -74,7 +76,7 @@ class EdgeCaseHandler:
                 }
 
             # Check for signal clustering
-            signal_ratio = buy_signals / total_signals if total_signals > 0 else 0
+            signal_ratio = safe_divide(buy_signals, total_signals, default=0.0)
             if signal_ratio > 0.8 or signal_ratio < 0.2:
                 self.warnings.append(
                     f"Signal imbalance detected: {signal_ratio:.1%} buy signals"

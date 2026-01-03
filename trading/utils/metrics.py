@@ -6,6 +6,8 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_drawdown
+
 
 def _safe_divide(
     numerator: float, denominator: float, default_value: float = 0.0
@@ -81,8 +83,7 @@ def calculate_trading_metrics(
 
     # Calculate drawdown
     cumulative_returns = np.cumprod(1 + returns)
-    running_max = np.maximum.accumulate(cumulative_returns)
-    drawdown = (cumulative_returns - running_max) / running_max
+    drawdown = safe_drawdown(cumulative_returns)
     max_drawdown = np.min(drawdown)
 
     # Calculate win rate

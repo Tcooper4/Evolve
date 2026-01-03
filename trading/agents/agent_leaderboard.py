@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
 from utils.safe_json_saver import safe_save_historical_data
 
 logger = logging.getLogger(__name__)
@@ -284,7 +285,7 @@ class AgentLeaderboard:
                 total_return / abs(max_drawdown) if max_drawdown != 0 else 0.0
             )
             volatility = extra_metrics.get("volatility", 0.0) if extra_metrics else 0.0
-            sortino_ratio = total_return / volatility if volatility > 0 else 0.0
+            sortino_ratio = safe_divide(total_return, volatility, default=0.0)
             profit_factor = (
                 extra_metrics.get("profit_factor", 0.0) if extra_metrics else 0.0
             )

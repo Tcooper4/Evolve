@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from trading.utils.safe_math import safe_mape
 
 logger = logging.getLogger(__name__)
 
@@ -160,10 +161,8 @@ def calculate_forecast_metrics(
     rmse = np.sqrt(mse)
     mae = np.mean(np.abs(actual - predicted))
 
-    # Calculate MAPE (Mean Absolute Percentage Error)
-    mape = (
-        np.mean(np.abs((actual - predicted) / np.where(actual != 0, actual, 1))) * 100
-    )
+    # Calculate MAPE (Mean Absolute Percentage Error) using safe division
+    mape = safe_mape(actual, predicted)
 
     return {"mse": mse, "rmse": rmse, "mae": mae, "mape": mape}
 

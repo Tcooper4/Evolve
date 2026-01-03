@@ -89,9 +89,11 @@ def rolling_zscore(
     Returns:
         Series with rolling z-scores
     """
+    from trading.utils.safe_math import safe_divide
+    
     mean = series.rolling(window=window).mean()
     std = series.rolling(window=window).std()
-    result = (series - mean) / std
+    result = safe_divide(series - mean, std, default=0.0)
     return result.ffill() if fillna else result
 
 
@@ -115,7 +117,7 @@ def price_ratios(df: pd.DataFrame, fillna: bool = True) -> pd.DataFrame:
 
 @register_indicator()
 def rsi(df: pd.DataFrame, window: int = 14, fillna: bool = True) -> pd.Series:
-    """Calculate Relative Strength Index.
+    """Calculate Relative Strength Index using safe division.
 
     Args:
         df: Input DataFrame with OHLC data
@@ -125,13 +127,10 @@ def rsi(df: pd.DataFrame, window: int = 14, fillna: bool = True) -> pd.Series:
     Returns:
         Series with RSI values
     """
+    from trading.utils.safe_math import safe_rsi
+    
     _check_required_columns(df, ["close"])
-    delta = df["close"].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-    # Safe RSI calculation
-    rs = np.where(loss > 1e-10, gain / loss, 0.0)
-    result = 100 - (100 / (1 + rs))
+    result = safe_rsi(df["close"], period=window)
     return result.ffill() if fillna else result
 
 

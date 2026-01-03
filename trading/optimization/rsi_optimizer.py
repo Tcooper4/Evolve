@@ -11,6 +11,7 @@ from plotly.subplots import make_subplots
 
 from trading.optimization.base_optimizer import BaseOptimizer
 from trading.strategies.rsi_signals import generate_rsi_signals
+from trading.utils.safe_math import safe_drawdown, safe_divide
 
 logger = logging.getLogger(__name__)
 
@@ -258,7 +259,7 @@ class RSIOptimizer(BaseOptimizer):
                 else 0
             )
             volatility = returns.std() * np.sqrt(252) if len(returns) > 0 else 0
-            sharpe_ratio = annual_return / volatility if volatility != 0 else 0
+            sharpe_ratio = safe_divide(annual_return, volatility, default=0.0)
 
             # Win rate
             winning_trades = returns[returns > 0]
@@ -299,8 +300,7 @@ class RSIOptimizer(BaseOptimizer):
         Returns:
             Drawdown series
         """
-        rolling_max = equity_curve.expanding().max()
-        drawdown = (equity_curve - rolling_max) / rolling_max
+        drawdown = safe_drawdown(equity_curve)
         return drawdown
 
     def plot_equity_curve(

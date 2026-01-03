@@ -372,9 +372,11 @@ class StrategySelectorAgent(BaseAgent):
             volatility = returns.rolling(window=20).std().iloc[-1]
 
             # Calculate trend
+            from trading.utils.safe_math import safe_price_momentum
+            
             sma_short = market_data["close"].rolling(window=10).mean()
             sma_long = market_data["close"].rolling(window=50).mean()
-            trend = (sma_short.iloc[-1] - sma_long.iloc[-1]) / sma_long.iloc[-1]
+            trend = safe_price_momentum(sma_short.iloc[-1], sma_long.iloc[-1])
 
             # Determine regime
             if volatility > 0.03:
@@ -404,9 +406,11 @@ class StrategySelectorAgent(BaseAgent):
     def _calculate_trend_strength(self, market_data: pd.DataFrame) -> float:
         """Calculate trend strength."""
         try:
+            from trading.utils.safe_math import safe_price_momentum
+            
             sma_short = market_data["close"].rolling(window=10).mean()
             sma_long = market_data["close"].rolling(window=50).mean()
-            return abs((sma_short.iloc[-1] - sma_long.iloc[-1]) / sma_long.iloc[-1])
+            return abs(safe_price_momentum(sma_short.iloc[-1], sma_long.iloc[-1]))
         except Exception as e:
             self.logger.error(f"Error calculating trend strength: {str(e)}")
             return 0.01

@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from trading.utils.safe_math import safe_mape
 
 from trading.ui.components import (
     create_asset_selector,
@@ -204,10 +205,7 @@ def create_forecast_metrics(
         # Calculate error metrics
         mae = np.mean(np.abs(data["actual"] - data["prediction"]))
         rmse = np.sqrt(np.mean((data["actual"] - data["prediction"]) ** 2))
-        mape = (
-            np.mean(np.abs((data["actual"] - data["prediction"]) / data["actual"]))
-            * 100
-        )
+        mape = safe_mape(data["actual"].values, data["prediction"].values)
 
         metrics = {"MAE": mae, "RMSE": rmse, "MAPE": mape}
 

@@ -20,6 +20,7 @@ from trading.strategies.registry import (
     MACDStrategy,
     RSIStrategy,
 )
+from trading.utils.safe_math import safe_divide
 from trading.utils.performance_metrics import (
     calculate_max_drawdown,
     calculate_sharpe_ratio,
@@ -164,9 +165,9 @@ class MetricNormalizer:
 
                 for _ in range(n_bootstrap):
                     sample = returns.sample(n=len(returns), replace=True)
-                    if sample.std() > 0:
-                        sharpe = sample.mean() / sample.std() * np.sqrt(252)
-                        sharpe_ratios.append(sharpe)
+                    from trading.utils.safe_math import safe_sharpe_ratio
+                    sharpe = safe_sharpe_ratio(sample, risk_free_rate=0.0, periods_per_year=252)
+                    sharpe_ratios.append(sharpe)
 
                 sharpe_ratios = np.array(sharpe_ratios)
                 ci_lower = np.percentile(
@@ -202,7 +203,7 @@ class MetricNormalizer:
                 total_trades = len(returns)
 
                 if total_trades > 0:
-                    win_rate = wins / total_trades
+                    win_rate = safe_divide(wins, total_trades, default=0.0)
                     # Wilson confidence interval
                     z = self.z_score
                     denominator = 1 + z**2 / total_trades

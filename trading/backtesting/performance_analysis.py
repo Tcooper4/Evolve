@@ -482,17 +482,10 @@ class PerformanceAnalyzer:
         return metrics
 
     def _max_drawdown(self, equity_curve: pd.Series) -> float:
-        """Calculate maximum drawdown from equity curve."""
-        running_max = equity_curve.cummax()
-        
-        # Safely calculate drawdown with division-by-zero protection
-        drawdown = np.where(
-            running_max > 1e-10,
-            (equity_curve - running_max) / running_max,
-            0.0
-        )
-        
-        return drawdown.min()
+        """Calculate maximum drawdown from equity curve using safe division."""
+        from trading.utils.safe_math import safe_drawdown
+        drawdown = safe_drawdown(equity_curve)
+        return float(drawdown.min())
 
     def combine_metrics(self, metrics_list: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Combine multiple metrics dictionaries into a summary."""

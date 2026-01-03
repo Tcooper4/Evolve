@@ -17,6 +17,8 @@ from typing import Any, Dict, List, Optional
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from trading.utils.safe_math import safe_drawdown
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -378,8 +380,7 @@ class MetricsCalculator:
         """
         try:
             cumulative = (1 + returns).cumprod()
-            running_max = cumulative.expanding().max()
-            drawdown = (cumulative - running_max) / running_max
+            drawdown = safe_drawdown(cumulative)
 
             # Find the maximum drawdown period
             max_dd_idx = drawdown.idxmin()

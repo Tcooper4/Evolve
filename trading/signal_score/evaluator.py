@@ -14,6 +14,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
+from trading.utils.safe_math import safe_divide
+
 logger = logging.getLogger(__name__)
 
 
@@ -236,8 +238,8 @@ class SignalScoreEvaluator:
             sma_long = self._apply_nan_protection(sma_long)
 
         # Calculate price position relative to SMAs
-        short_ratio = current_price / sma_short if sma_short > 0 else 1.0
-        long_ratio = current_price / sma_long if sma_long > 0 else 1.0
+        short_ratio = safe_divide(current_price, sma_short, default=1.0)
+        long_ratio = safe_divide(current_price, sma_long, default=1.0)
 
         # Determine signal
         if short_ratio > 1.02 and long_ratio > 1.02:
@@ -327,12 +329,14 @@ class SignalScoreEvaluator:
             lower_band = self._apply_nan_protection(lower_band)
             middle_band = self._apply_nan_protection(middle_band)
 
-        # Calculate position within bands
-        band_width = upper_band - lower_band
-        if band_width > 0:
-            position = (current_price - lower_band) / band_width
-        else:
-            position = 0.5
+        # Calculate position within bands using safe function
+        from trading.utils.safe_math import safe_bollinger_position
+        
+        position = safe_bollinger_position(
+            price=current_price,
+            upper_band=upper_band,
+            lower_band=lower_band
+        )
 
         # Determine signal
         if position <= 0.1:  # Near lower band
@@ -473,10 +477,10 @@ class SignalScoreEvaluator:
         if total_weight == 0:
             return 0.0, 0.0, SignalType.HOLD
 
-        weighted_score = (
-            sum(s.score * s.confidence for s in valid_scores) / total_weight
+        weighted_score = safe_divide(
+            sum(s.score * s.confidence for s in valid_scores), total_weight, default=0.0
         )
-        avg_confidence = total_weight / len(valid_scores)
+        avg_confidence = safe_divide(total_weight, len(valid_scores), default=0.0)
 
         # Determine recommended action
         if weighted_score >= 0.6:

@@ -15,6 +15,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from trading.utils.safe_math import safe_sharpe_ratio
+
 from trading.ui.components import (
     create_asset_selector,
     create_date_range_selector,
@@ -172,7 +174,7 @@ def create_performance_metrics(
         # Calculate return metrics
         total_return = (data["equity"].iloc[-1] / data["equity"].iloc[0] - 1) * 100
         annual_return = total_return * (252 / len(data))
-        sharpe_ratio = np.sqrt(252) * data["returns"].mean() / data["returns"].std()
+        sharpe_ratio = safe_sharpe_ratio(data["returns"], risk_free_rate=0.0, periods_per_year=252)
         max_drawdown = data["drawdown"].min() * 100
 
         metrics = {

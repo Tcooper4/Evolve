@@ -12,6 +12,8 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 from .bollinger_strategy import BollingerStrategy
 from .macd_strategy import MACDStrategy
 
@@ -200,7 +202,7 @@ class StrategySynthesizer:
 
             # Normalize by total weight
             if total_weight > 0:
-                combined_signal = combined_signal / total_weight
+                combined_signal = safe_divide(combined_signal, total_weight, default=0.0)
 
             logger.info(
                 f"Weighted average combination completed using {len(signals)} strategies"

@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 
 class SizingStrategy(Enum):
     """Position sizing strategy enum."""
@@ -230,18 +232,22 @@ class PositionSizer:
                 adjusted_size, portfolio_context, params
             )
 
+            # Create sizing details using safe division
+            from trading.utils.safe_math import safe_divide
+            
+            risk_amount = abs(entry_price - stop_loss_price) * final_size
+            position_value = entry_price * final_size
+            
             # Create sizing details
             sizing_details = {
                 "strategy": params.strategy.value,
                 "base_size": base_size,
                 "adjusted_size": adjusted_size,
                 "final_size": final_size,
-                "risk_amount": abs(entry_price - stop_loss_price) * final_size,
-                "risk_percentage": (abs(entry_price - stop_loss_price) * final_size)
-                / portfolio_context.total_capital,
-                "position_value": entry_price * final_size,
-                "position_percentage": (entry_price * final_size)
-                / portfolio_context.total_capital,
+                "risk_amount": risk_amount,
+                "risk_percentage": safe_divide(risk_amount, portfolio_context.total_capital, default=0.0),
+                "position_value": position_value,
+                "position_percentage": safe_divide(position_value, portfolio_context.total_capital, default=0.0),
                 "market_context": market_context.to_dict(),
                 "signal_context": signal_context.to_dict(),
                 "portfolio_context": portfolio_context.to_dict(),
@@ -378,10 +384,9 @@ class PositionSizer:
             return params.base_position_size
 
         # Calculate Kelly fraction with division-by-zero protection
-        if avg_loss > 1e-10:
-            b = avg_win / avg_loss  # odds received
-        else:
-            # If no losses, use conservative estimate
+        b = safe_divide(avg_win, avg_loss, default=0.0)  # odds received
+        if b <= 1e-10:
+            # If no losses or invalid ratio, use conservative estimate
             return params.base_position_size
             
         p = win_rate

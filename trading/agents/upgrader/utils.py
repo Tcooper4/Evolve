@@ -118,7 +118,8 @@ def detect_drift(model_id: str) -> bool:
         historical_mae = np.mean([m.get("mae", 0) for m in recent_metrics[:-10]])
 
         if historical_mae > 0:
-            degradation_ratio = recent_mae / historical_mae
+            from trading.utils.safe_math import safe_divide
+            degradation_ratio = safe_divide(recent_mae, historical_mae, default=1.0)
             has_drifted = degradation_ratio > 1.2  # 20% degradation threshold
 
             logger.info(

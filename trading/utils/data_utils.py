@@ -297,12 +297,9 @@ def calculate_technical_indicators(
             df[f"ema_{window}"] = df["close"].ewm(span=window).mean()
 
         elif indicator == "rsi":
+            from trading.utils.safe_math import safe_rsi
             window = params["rsi"]["window"]
-            delta = df["close"].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-            rs = gain / loss
-            df[f"rsi_{window}"] = 100 - (100 / (1 + rs))
+            df[f"rsi_{window}"] = safe_rsi(df["close"], period=window)
 
         elif indicator == "macd":
             fast = params["macd"]["fast"]

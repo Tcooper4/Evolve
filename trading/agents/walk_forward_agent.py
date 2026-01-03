@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
+from trading.utils.safe_math import safe_drawdown
 
 logger = logging.getLogger(__name__)
 
@@ -460,8 +461,7 @@ class WalkForwardAgent(BaseAgent):
         """
         try:
             cumulative = (1 + returns).cumprod()
-            running_max = cumulative.expanding().max()
-            drawdown = (cumulative - running_max) / running_max
+            drawdown = safe_drawdown(cumulative)
             return drawdown.min()
         except (ValueError, TypeError, AttributeError) as e:
             logger.warning(f"Error calculating max drawdown: {e}")

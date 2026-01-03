@@ -17,6 +17,8 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field, ValidationError, validator
 
+from trading.utils.safe_math import safe_drawdown, safe_divide
+
 # Setup logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -390,7 +392,7 @@ class BaseOptimizer(ABC):
                 else 0
             )
             volatility = returns.std() * np.sqrt(252) if len(returns) > 0 else 0
-            sharpe_ratio = annual_return / volatility if volatility != 0 else 0
+            sharpe_ratio = safe_divide(annual_return, volatility, default=0.0)
 
             # Win rate
             winning_trades = returns[returns > 0]
@@ -400,12 +402,11 @@ class BaseOptimizer(ABC):
             )
 
             # Drawdown
-            rolling_max = equity_curve.expanding().max()
-            drawdown = (equity_curve - rolling_max) / rolling_max
+            drawdown = safe_drawdown(equity_curve)
             max_drawdown = drawdown.min() if len(drawdown) > 0 else 0
 
             # Additional metrics
-            calmar_ratio = annual_return / abs(max_drawdown) if max_drawdown != 0 else 0
+            calmar_ratio = safe_divide(annual_return, abs(max_drawdown), default=0.0)
             sortino_ratio = (
                 annual_return / (returns[returns < 0].std() * np.sqrt(252))
                 if len(returns[returns < 0]) > 0

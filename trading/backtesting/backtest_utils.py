@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_drawdown, safe_divide
+
 logger = logging.getLogger(__name__)
 
 
@@ -203,8 +205,7 @@ class BacktestUtils:
             return 0.0
 
         prices = df["Close"]
-        running_max = prices.expanding().max()
-        drawdown = (prices - running_max) / running_max
+        drawdown = safe_drawdown(prices)
 
         return abs(drawdown.min())
 
@@ -254,7 +255,7 @@ class BacktestUtils:
             }
 
         profitable_trades = sum(1 for ret in trade_returns if ret > 0)
-        win_rate = profitable_trades / len(trade_returns)
+        win_rate = safe_divide(profitable_trades, len(trade_returns), default=0.0)
         avg_trade_return = np.mean(trade_returns)
 
         return {

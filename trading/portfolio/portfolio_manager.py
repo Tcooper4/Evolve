@@ -17,6 +17,7 @@ from redis.exceptions import RedisError
 from trading.optimization.performance_logger import PerformanceLogger
 from trading.optimization.strategy_selection_agent import StrategySelectionAgent
 from trading.portfolio.llm_utils import DailyCommentary, LLMInterface, TradeRationale
+from trading.utils.safe_math import safe_divide
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
@@ -807,12 +808,12 @@ class PortfolioManager:
 
             # Calculate P&L metrics
             total_pnl = sum([p.pnl or 0 for p in self.state.closed_positions])
-            avg_pnl = total_pnl / total_positions if total_positions > 0 else 0.0
+            avg_pnl = safe_divide(total_pnl, total_positions, default=0.0)
 
             # Calculate risk metrics
             pnl_values = [p.pnl or 0 for p in self.state.closed_positions]
             volatility = np.std(pnl_values) if len(pnl_values) > 1 else 0.0
-            sharpe_ratio = avg_pnl / volatility if volatility > 0 else 0.0
+            sharpe_ratio = safe_divide(avg_pnl, volatility, default=0.0)
 
             # Calculate drawdown - handle empty array case
             if len(pnl_values) > 0:
@@ -1035,13 +1036,15 @@ class PortfolioManager:
             symbol_values[position.symbol] += position_value
             total_value += position_value
         
-        # Add cash as "CASH" allocation
-        cash_allocation = self.state.cash / self.state.equity if self.state.equity > 0 else 0.0
+        # Add cash as "CASH" allocation using safe division
+        from trading.utils.safe_math import safe_divide
+        
+        cash_allocation = safe_divide(self.state.cash, self.state.equity, default=0.0)
         
         # Calculate percentages
         for symbol in self.symbols:
             symbol_value = symbol_values.get(symbol, 0.0)
-            allocation[symbol] = symbol_value / self.state.equity if self.state.equity > 0 else 0.0
+            allocation[symbol] = safe_divide(symbol_value, self.state.equity, default=0.0)
         
         # Add cash allocation
         allocation["CASH"] = cash_allocation

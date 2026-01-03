@@ -371,6 +371,8 @@ class EnhancedDataValidator:
         Returns:
             DataFrame with normalized columns
         """
+        from trading.utils.safe_math import safe_normalize
+        
         logger.info(f"🔧 Normalizing {columns} with method: {method}")
 
         df_normalized = df.copy()
@@ -379,18 +381,8 @@ class EnhancedDataValidator:
             if col not in df_normalized.columns:
                 continue
 
-            if method == "zscore":
-                mean = df_normalized[col].mean()
-                std = df_normalized[col].std()
-                df_normalized[col] = (df_normalized[col] - mean) / std
-            elif method == "minmax":
-                min_val = df_normalized[col].min()
-                max_val = df_normalized[col].max()
-                df_normalized[col] = (df_normalized[col] - min_val) / (
-                    max_val - min_val
-                )
-            else:
-                raise ValueError(f"Unknown normalization method: {method}")
+            # Use safe_normalize to handle division by zero
+            df_normalized[col] = safe_normalize(df_normalized[col], method=method)
 
         logger.info("✅ Data normalization completed")
         return df_normalized

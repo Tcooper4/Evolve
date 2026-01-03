@@ -193,9 +193,9 @@ def calculate_rsi_fallback(prices: pd.Series, period: int = 14) -> pd.Series:
         avg_gains = gains.rolling(window=period, min_periods=1).mean()
         avg_losses = losses.rolling(window=period, min_periods=1).mean()
 
-        # Calculate RS and RSI with division by zero protection
-        rs = avg_gains / avg_losses.replace(0, np.nan)
-        rsi = 100 - (100 / (1 + rs))
+        # Calculate RSI using safe division utility
+        from trading.utils.safe_math import safe_rsi
+        rsi = safe_rsi(prices, period=period)
 
         # Handle division by zero cases
         rsi = rsi.fillna(50.0)  # Neutral value for division by zero

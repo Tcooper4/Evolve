@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from trading.logs.logger import log_metrics
+from trading.utils.safe_math import safe_divide
 
 # Try to import PyTorch
 try:
@@ -204,7 +205,7 @@ class MarketIndicators:
         seed = deltas[: period + 1]
         up = seed[seed >= 0].sum() / period
         down = -seed[seed < 0].sum() / period
-        rs = up / down
+        rs = safe_divide(up, down, default=0.0)
         rsi = np.zeros_like(prices)
         rsi[:period] = 100.0 - 100.0 / (1.0 + rs)
 
@@ -219,7 +220,7 @@ class MarketIndicators:
 
             up = (up * (period - 1) + upval) / period
             down = (down * (period - 1) + downval) / period
-            rs = up / down
+            rs = safe_divide(up, down, default=0.0)
             rsi[i] = 100.0 - 100.0 / (1.0 + rs)
 
         return rsi

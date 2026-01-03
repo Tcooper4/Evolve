@@ -14,6 +14,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from trading.utils.safe_math import safe_divide
+
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 
 logger = logging.getLogger(__name__)
@@ -457,7 +459,7 @@ class ExecutionRiskControlAgent(BaseAgent):
             # Check daily loss limit
             daily_loss = abs(self.daily_pnl.get(today, 0.0))
             portfolio_value = self._get_portfolio_value()
-            loss_ratio = daily_loss / portfolio_value if portfolio_value > 0 else 0
+            loss_ratio = safe_divide(daily_loss, portfolio_value, default=0.0)
 
             if loss_ratio > self.max_daily_loss:
                 return {
@@ -605,8 +607,8 @@ class ExecutionRiskControlAgent(BaseAgent):
             max_position_value = portfolio_value * self.max_position_size
 
             # Safe division by price
-            if trade_request.price > 1e-10:
-                max_quantity_by_value = max_position_value / trade_request.price
+            max_quantity_by_value = safe_divide(max_position_value, trade_request.price, default=0.0)
+            if max_quantity_by_value > 1e-10:
                 max_quantity = min(max_quantity, max_quantity_by_value)
             else:
                 # If price is zero or invalid, use only the existing max_quantity

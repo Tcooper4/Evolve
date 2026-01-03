@@ -126,12 +126,9 @@ class EnsembleModel(BaseModel):
                 if self.config["voting_method"] == "mse":
                     score = -np.mean((actual - preds) ** 2)  # Negative MSE
                 elif self.config["voting_method"] == "sharpe":
-                    # Safely calculate returns with division-by-zero protection
-                    returns = np.where(
-                        preds[:-1] > 1e-10,
-                        np.diff(preds) / preds[:-1],
-                        0.0
-                    )
+                    # Safely calculate returns using safe division utility
+                    from trading.utils.safe_math import safe_returns
+                    returns = safe_returns(preds, method='simple')
                     score = (
                         np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0
                     )
@@ -276,12 +273,9 @@ class EnsembleModel(BaseModel):
             try:
                 # Get model's trend prediction
                 preds = model.predict(data.iloc[-20:])
-                # Safely calculate pred_returns with division-by-zero protection
-                pred_returns = np.where(
-                    preds[:-1] > 1e-10,
-                    np.diff(preds) / preds[:-1],
-                    0.0
-                )
+                # Safely calculate pred_returns using safe division utility
+                from trading.utils.safe_math import safe_returns
+                pred_returns = safe_returns(preds, method='simple')
                 pred_trend = np.mean(pred_returns)
 
                 # Calculate trend alignment

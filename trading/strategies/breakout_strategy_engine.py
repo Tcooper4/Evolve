@@ -14,6 +14,7 @@ import pandas as pd
 
 from trading.strategies.rsi_signals import calculate_rsi
 from trading.utils.performance_metrics import calculate_volatility
+from trading.utils.safe_math import safe_divide
 
 
 class BreakoutType(str, Enum):
@@ -144,7 +145,7 @@ class BreakoutStrategyEngine:
                 range_width = upper_bound - lower_bound
                 # Safely calculate range percentage with division-by-zero protection
                 if lower_bound > 1e-10:
-                    range_percentage = range_width / lower_bound
+                    range_percentage = safe_divide(range_width, lower_bound, default=0.0)
                 else:
                     range_percentage = 0.0  # Skip this consolidation range
 
@@ -279,7 +280,7 @@ class BreakoutStrategyEngine:
             duration = len(data)
             duration_confidence = 1.0
             if duration < self.min_consolidation_days:
-                duration_confidence = duration / self.min_consolidation_days
+                duration_confidence = safe_divide(duration, self.min_consolidation_days, default=0.0)
             elif duration > self.max_consolidation_days:
                 duration_confidence = self.max_consolidation_days / duration
 
@@ -518,9 +519,8 @@ class BreakoutStrategyEngine:
             current_volume = data["volume"].iloc[-1] if "volume" in data.columns else 0
 
             # Calculate volume spike ratio
-            volume_spike = current_volume / consolidation_range.volume_profile.get(
-                "mean_volume", 1
-            )
+            mean_volume = consolidation_range.volume_profile.get("mean_volume", 1)
+            volume_spike = safe_divide(current_volume, mean_volume, default=1.0)
 
             # Check RSI divergence
             rsi = calculate_rsi(data["close"], period=self.rsi_period)

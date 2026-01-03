@@ -19,6 +19,7 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import TimeSeriesSplit
 
+from trading.utils.safe_math import safe_rsi
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 
 warnings.filterwarnings("ignore")
@@ -281,15 +282,10 @@ class RollingRetrainingAgent(BaseAgent):
             return pd.DataFrame()
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
-        """Calculate RSI indicator."""
+        """Calculate RSI indicator using safe division."""
         try:
-            delta = prices.diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-            rs = gain / loss
-            rsi = 100 - (100 / (1 + rs))
-            return rsi
-        except (ValueError, TypeError, ZeroDivisionError) as e:
+            return safe_rsi(prices, period=period)
+        except Exception as e:
             logger.warning(f"Error calculating RSI: {e}")
             return pd.Series(index=prices.index, data=50)
 
@@ -311,11 +307,20 @@ class RollingRetrainingAgent(BaseAgent):
     ) -> pd.Series:
         """Calculate position within Bollinger Bands."""
         try:
+            from trading.utils.safe_math import safe_divide
+            
             sma = prices.rolling(period).mean()
             std = prices.rolling(period).std()
             upper_band = sma + (2 * std)
             lower_band = sma - (2 * std)
-            position = (prices - lower_band) / (upper_band - lower_band)
+            
+            # Use safe_divide for Bollinger position: (price - lower) / (upper - lower)
+            band_range = upper_band - lower_band
+            position = safe_divide(prices - lower_band, band_range, default=0.5)
+            
+            # Clamp to [0, 1] range
+            position = position.clip(0.0, 1.0)
+            
             return position
         except (ValueError, TypeError, ZeroDivisionError) as e:
             logger.warning(f"Error calculating Bollinger position: {e}")
