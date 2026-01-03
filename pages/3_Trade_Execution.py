@@ -12,15 +12,49 @@ Features:
 - Execution quality analytics
 """
 
+import sys
+from pathlib import Path
+
+# Add project root to Python path for imports (Streamlit pages run in separate context)
+project_root = Path(__file__).parent.parent.absolute()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import yfinance as yf
 
 # Backend imports
-from execution.broker_adapter import BrokerAdapter, BrokerType
-from execution.execution_agent import ExecutionAgent, ExecutionMode, OrderSide, OrderType
+# Import from execution package (handles availability checks)
+# Try direct imports first (more reliable with Streamlit)
+try:
+    from execution.broker_adapter import BrokerAdapter, BrokerType
+except (ImportError, ModuleNotFoundError) as e:
+    try:
+        # Fallback: try package-level import
+        from execution import BrokerAdapter, BrokerType
+    except (ImportError, ModuleNotFoundError):
+        BrokerAdapter = None
+        BrokerType = None
+        import logging
+        logging.warning(f"BrokerAdapter not available: {e}")
+
+try:
+    from execution.execution_agent import ExecutionAgent, ExecutionMode, OrderSide, OrderType
+except (ImportError, ModuleNotFoundError) as e:
+    try:
+        # Fallback: try package-level import
+        from execution import ExecutionAgent, ExecutionMode, OrderSide, OrderType
+    except (ImportError, ModuleNotFoundError):
+        ExecutionAgent = None
+        ExecutionMode = None
+        OrderSide = None
+        OrderType = None
+        import logging
+        logging.warning(f"ExecutionAgent not available: {e}")
 from trading.portfolio.portfolio_manager import PortfolioManager
 from trading.agents.execution_risk_control_agent import ExecutionRiskControlAgent
 
@@ -43,6 +77,27 @@ if 'active_orders' not in st.session_state:
     st.session_state.active_orders = []
 if 'order_history' not in st.session_state:
     st.session_state.order_history = []
+
+@st.cache_data(ttl=60)  # Cache for 60 seconds
+def get_current_price(ticker: str) -> float:
+    """Fetch current price for a ticker using yfinance.
+    
+    Args:
+        ticker: Stock ticker symbol
+        
+    Returns:
+        Current price or None if cannot fetch
+    """
+    try:
+        ticker_obj = yf.Ticker(ticker)
+        # Try multiple price fields
+        price = (ticker_obj.info.get('currentPrice') or 
+                ticker_obj.info.get('regularMarketPrice') or
+                ticker_obj.info.get('previousClose'))
+        return float(price) if price else None
+    except Exception as e:
+        st.warning(f"Could not fetch price for {ticker}: {e}")
+        return None
 
 # Main page title
 st.title("💰 Trade Execution & Order Management")
@@ -76,13 +131,19 @@ st.markdown("Fast order entry for simple trades")
 # Initialize execution agent if needed
 if st.session_state.execution_agent is None:
     try:
-        # Initialize execution agent in simulation mode for paper trading
-        mode = ExecutionMode.PAPER if st.session_state.execution_mode == "paper" else ExecutionMode.LIVE
-        # For now, use simulation mode
-        st.session_state.execution_agent = ExecutionAgent()
-        st.session_state.execution_agent.execution_mode = ExecutionMode.SIMULATION
+        # Check if ExecutionMode is available
+        if ExecutionMode is None or ExecutionAgent is None:
+            st.warning("⚠️ Execution modules not available. Please ensure execution package is properly installed.")
+            st.session_state.execution_agent = None
+        else:
+            # Initialize execution agent in simulation mode for paper trading
+            mode = ExecutionMode.PAPER if st.session_state.execution_mode == "paper" else ExecutionMode.LIVE
+            # For now, use simulation mode
+            st.session_state.execution_agent = ExecutionAgent()
+            st.session_state.execution_agent.execution_mode = ExecutionMode.SIMULATION
     except Exception as e:
         st.warning(f"Could not initialize execution agent: {str(e)}. Using simulation mode.")
+        st.session_state.execution_agent = None
 
 col1, col2 = st.columns([1, 1])
 
@@ -115,7 +176,11 @@ with col1:
         key="quick_order_type"
     )
     
-    # Convert to enum
+    # Convert to enum (with None check)
+    if OrderType is None or OrderSide is None:
+        st.error("⚠️ Execution modules not available. Please ensure execution package is properly installed.")
+        st.stop()
+    
     order_type = OrderType.MARKET if order_type_str == "Market" else OrderType.LIMIT
     order_side = OrderSide.BUY if side == "Buy" else OrderSide.SELL
     
@@ -131,11 +196,13 @@ with col1:
     
     # Limit price (conditional on order type)
     limit_price = None
-    if order_type == OrderType.LIMIT:
+    if OrderType is not None and order_type == OrderType.LIMIT:
+        # Get current price for default value
+        default_price = get_current_price(symbol) if symbol else None
         limit_price = st.number_input(
             "Limit Price ($)",
             min_value=0.01,
-            value=150.0,
+            value=float(default_price) if default_price else 100.0,
             step=0.01,
             format="%.2f",
             help="Maximum price to pay (buy) or minimum price to receive (sell)",
@@ -176,8 +243,19 @@ with col1:
         )
     
     with col_calc2:
-        # Get current price (simulated)
-        current_price = limit_price if limit_price else 150.0  # Placeholder
+        # Fetch real-time price
+        fetched_price = get_current_price(symbol) if symbol else None
+        current_price = limit_price or fetched_price
+        if not current_price:
+            st.warning(f"⚠️ Cannot fetch price for {symbol}. Please enter manually.")
+            current_price = st.number_input(
+                "Current Price",
+                min_value=0.01,
+                value=100.0,
+                step=0.01,
+                help="Enter the current market price",
+                key="manual_current_price"
+            )
         
         # Calculate position size based on risk
         risk_amount = account_value * (risk_per_trade / 100)
@@ -227,14 +305,15 @@ with col2:
             risk_checks.append("✅ Quantity valid")
         
         # Price validation for limit orders
-        if order_type == OrderType.LIMIT:
+        if OrderType is not None and order_type == OrderType.LIMIT:
             if limit_price is None or limit_price <= 0:
                 risk_errors.append("❌ Limit price required and must be positive")
             else:
                 risk_checks.append("✅ Limit price valid")
         
         # Order value check
-        estimated_price = limit_price if limit_price else 150.0  # Placeholder
+        fetched_price = get_current_price(symbol) if symbol else None
+        estimated_price = limit_price or fetched_price or 100.0
         order_value = quantity * estimated_price
         
         if order_value > account_value:
@@ -272,7 +351,8 @@ with col2:
     st.subheader("📋 Order Summary")
     
     if symbol and quantity > 0:
-        estimated_price = limit_price if limit_price else 150.0  # Placeholder
+        fetched_price = get_current_price(symbol) if symbol else None
+        estimated_price = limit_price or fetched_price or 100.0
         order_value = quantity * estimated_price
         estimated_commission = order_value * 0.001  # 0.1% commission estimate
         total_cost = order_value + estimated_commission
@@ -420,7 +500,9 @@ with st.expander("📦 Bracket Orders (Entry + Take Profit + Stop Loss)", expand
         bracket_entry_type = st.selectbox("Entry Type", ["Market", "Limit"], key="bracket_entry_type")
         bracket_entry_price = None
         if bracket_entry_type == "Limit":
-            bracket_entry_price = st.number_input("Entry Limit Price ($)", min_value=0.01, value=150.0, step=0.01, key="bracket_entry_price")
+            # Get current price for default value
+            default_price = get_current_price(bracket_symbol) or 150.0
+            bracket_entry_price = st.number_input("Entry Limit Price ($)", min_value=0.01, value=float(default_price), step=0.01, key="bracket_entry_price")
     
     with col_b2:
         st.markdown("**Risk Management:**")
@@ -452,7 +534,8 @@ with st.expander("📦 Bracket Orders (Entry + Take Profit + Stop Loss)", expand
         if bracket_symbol and bracket_quantity > 0:
             try:
                 # Calculate TP/SL prices if using percentages
-                entry_price = bracket_entry_price if bracket_entry_price else 150.0  # Placeholder
+                fetched_price = get_current_price(bracket_symbol) if bracket_symbol else None
+                entry_price = bracket_entry_price or fetched_price or 100.0
                 
                 if use_take_profit and take_profit_type == "Percentage":
                     if bracket_side == "Buy":
@@ -504,7 +587,9 @@ with st.expander("📈 Trailing Stop Orders", expanded=False):
         trailing_symbol = st.text_input("Symbol", value="AAPL", key="trailing_symbol").upper().strip()
         trailing_side = st.radio("Side", ["Buy", "Sell"], horizontal=True, key="trailing_side")
         trailing_quantity = st.number_input("Quantity", min_value=1, value=100, key="trailing_quantity")
-        trailing_entry_price = st.number_input("Entry Price ($)", min_value=0.01, value=150.0, step=0.01, key="trailing_entry")
+        # Get current price for default value
+        default_trailing_price = get_current_price(trailing_symbol) if trailing_symbol else None
+        trailing_entry_price = st.number_input("Entry Price ($)", min_value=0.01, value=float(default_trailing_price) if default_trailing_price else 100.0, step=0.01, key="trailing_entry")
     
     with col_t2:
         trailing_type = st.selectbox("Trailing Type", ["Percentage", "Fixed Amount"], key="trailing_type")
@@ -554,7 +639,9 @@ with st.expander("🔀 Conditional Orders (If-Then)", expanded=False):
         
         if condition_type == "Price":
             condition_operator = st.selectbox("Operator", [">", "<", ">=", "<=", "=="], key="cond_op_price")
-            condition_value = st.number_input("Price ($)", min_value=0.01, value=150.0, step=0.01, key="cond_price")
+            # Get current price for default value
+            default_price = get_current_price(condition_symbol) or 150.0
+            condition_value = st.number_input("Price ($)", min_value=0.01, value=float(default_price), step=0.01, key="cond_price")
         elif condition_type == "Volume":
             condition_operator = st.selectbox("Operator", [">", "<"], key="cond_op_vol")
             condition_value = st.number_input("Volume", min_value=1, value=1000000, step=10000, key="cond_volume")
@@ -571,7 +658,9 @@ with st.expander("🔀 Conditional Orders (If-Then)", expanded=False):
         action_order_type = st.selectbox("Order Type", ["Market", "Limit"], key="action_order_type")
         action_price = None
         if action_order_type == "Limit":
-            action_price = st.number_input("Limit Price ($)", min_value=0.01, value=150.0, step=0.01, key="action_price")
+            # Get current price for default value
+            default_price = get_current_price(action_symbol) or 150.0
+            action_price = st.number_input("Limit Price ($)", min_value=0.01, value=float(default_price), step=0.01, key="action_price")
     
     if st.button("🔀 Submit Conditional Order", type="primary", use_container_width=True, key="submit_conditional"):
         if condition_symbol and action_symbol and action_quantity > 0:
@@ -611,7 +700,9 @@ with st.expander("🔄 OCO Orders (One Cancels Other)", expanded=False):
         oco_side1 = st.radio("Side", ["Buy", "Sell"], horizontal=True, key="oco_side1")
         oco_quantity1 = st.number_input("Quantity", min_value=1, value=100, key="oco_qty1")
         oco_type1 = st.selectbox("Order Type", ["Limit", "Stop"], key="oco_type1")
-        oco_price1 = st.number_input("Price ($)", min_value=0.01, value=150.0, step=0.01, key="oco_price1")
+        # Get current price for default value
+        default_price = get_current_price(oco_symbol) or 150.0
+        oco_price1 = st.number_input("Price ($)", min_value=0.01, value=float(default_price), step=0.01, key="oco_price1")
     
     with col_o2:
         st.markdown("**Order 2:**")
@@ -663,7 +754,9 @@ with st.expander("🦵 Multi-Leg Orders", expanded=False):
             leg_side = st.selectbox("Side", ["Buy", "Sell"], key=f"leg_side_{i}")
             leg_quantity = st.number_input("Quantity", min_value=1, value=100, key=f"leg_qty_{i}")
         with col_leg3:
-            leg_price = st.number_input("Price ($)", min_value=0.01, value=150.0, step=0.01, key=f"leg_price_{i}")
+            # Get current price for default value
+            default_price = get_current_price(leg_symbol) or 150.0
+            leg_price = st.number_input("Price ($)", min_value=0.01, value=float(default_price), step=0.01, key=f"leg_price_{i}")
         
         legs.append({
             "symbol": leg_symbol,
@@ -955,16 +1048,67 @@ with col_config2:
                 st.info(f"⏹️ Stopped {selected_strategy}")
                 st.rerun()
         
-        # Daily stats (placeholder)
+        # Daily stats (calculated from session state)
         st.markdown("---")
         st.markdown("**📊 Today's Stats:**")
+        
+        # Calculate orders placed today
+        today = datetime.now().strftime('%Y-%m-%d')
+        orders_today = len([
+            o for o in st.session_state.get('order_history', [])
+            if o.get('timestamp', '').startswith(today)
+        ])
+        
+        # Calculate daily P&L from filled orders
+        # Get all filled orders from today
+        filled_orders_today = [
+            o for o in st.session_state.get('order_history', [])
+            if o.get('timestamp', '').startswith(today) and 
+               o.get('status', '').lower() == 'filled'
+        ]
+        
+        daily_pnl = 0.0
+        if filled_orders_today:
+            # Calculate P&L for each filled order
+            for order in filled_orders_today:
+                symbol = order.get('symbol', '')
+                side = order.get('side', '').lower()
+                quantity = float(order.get('quantity', 0))
+                fill_price = float(order.get('price', 0) or order.get('fill_price', 0))
+                
+                if symbol and quantity > 0 and fill_price > 0:
+                    # Get current price for the symbol
+                    current_price = get_current_price(symbol)
+                    if current_price:
+                        # Calculate unrealized P&L
+                        if side == 'buy':
+                            # For buys: profit if current price > fill price
+                            pnl = (current_price - fill_price) * quantity
+                        else:  # sell
+                            # For sells: profit if fill price > current price
+                            pnl = (fill_price - current_price) * quantity
+                        daily_pnl += pnl
+                    else:
+                        # If we can't get current price, use stored P&L if available
+                        daily_pnl += float(order.get('pnl', 0))
+                else:
+                    # Use stored P&L if available
+                    daily_pnl += float(order.get('pnl', 0))
+        
+        # Count active orders
+        active_orders = len([
+            o for o in st.session_state.get('active_orders', [])
+            if o.get('status', '').lower() not in ['filled', 'cancelled', 'rejected']
+        ])
+        
         col_stat1, col_stat2, col_stat3 = st.columns(3)
         with col_stat1:
-            st.metric("Orders Placed", "0")  # Placeholder
+            st.metric("Orders Placed", str(orders_today))
         with col_stat2:
-            st.metric("Daily P&L", "$0.00")  # Placeholder
+            pnl_color = "normal" if daily_pnl >= 0 else "inverse"
+            st.metric("Daily P&L", f"${daily_pnl:,.2f}", delta_color=pnl_color)
         with col_stat3:
-            st.metric("Active Positions", "0")  # Placeholder
+            st.metric("Active Positions", str(active_orders))
     
     else:
         st.info("Select a strategy and configure it to enable execution controls")
@@ -1244,10 +1388,18 @@ if active_orders_list:
             )
             
             if selected_order['order_type'].lower() in ['limit', 'stop', 'stop_limit']:
+                # Get current price for default if order price is invalid
+                order_symbol = selected_order.get('symbol', '')
+                default_modify_price = None
+                if isinstance(selected_order['price'], (int, float)) and selected_order['price'] > 0:
+                    default_modify_price = float(selected_order['price'])
+                elif order_symbol:
+                    default_modify_price = get_current_price(order_symbol)
+                
                 new_price = st.number_input(
                     "New Price ($)",
                     min_value=0.01,
-                    value=float(selected_order['price']) if isinstance(selected_order['price'], (int, float)) else 150.0,
+                    value=float(default_modify_price) if default_modify_price else 100.0,
                     step=0.01,
                     key="modify_price"
                 )
@@ -1256,13 +1408,47 @@ if active_orders_list:
                 st.info("Market orders cannot have price modified")
             
             if st.button("💾 Update Order", type="primary", use_container_width=True):
-                st.info("Order modification functionality requires broker API support. This is a placeholder.")
-                st.session_state.auto_execution_logs.append({
-                    "timestamp": datetime.now().isoformat(),
-                    "level": "INFO",
-                    "message": f"Order modification requested for {selected_order['order_id']}: qty={new_quantity}, price={new_price}"
-                })
-                st.rerun()
+                if st.session_state.execution_agent:
+                    try:
+                        # Modify order through execution agent
+                        order_id = selected_order['order_id']
+                        
+                        # Check if execution agent has modify_order method
+                        if hasattr(st.session_state.execution_agent, 'modify_order'):
+                            result = st.session_state.execution_agent.modify_order(
+                                order_id=order_id,
+                                new_price=new_price,
+                                new_quantity=new_quantity
+                            )
+                            
+                            if result.get('success', False):
+                                st.success("Order modified successfully!")
+                                # Update in session state
+                                for i, o in enumerate(st.session_state.active_orders):
+                                    if o.get('order_id') == order_id:
+                                        if new_price is not None:
+                                            st.session_state.active_orders[i]['price'] = new_price
+                                        st.session_state.active_orders[i]['quantity'] = new_quantity
+                                        break
+                                st.rerun()
+                            else:
+                                st.error(f"Failed to modify order: {result.get('message', 'Unknown error')}")
+                        else:
+                            # Fallback: update in session state
+                            order_id = selected_order['order_id']
+                            for i, o in enumerate(st.session_state.active_orders):
+                                if o.get('order_id') == order_id:
+                                    if new_price is not None:
+                                        st.session_state.active_orders[i]['price'] = new_price
+                                    st.session_state.active_orders[i]['quantity'] = new_quantity
+                                    st.session_state.active_orders[i]['modified_at'] = datetime.now().isoformat()
+                                    break
+                            st.success("Order updated in session state (broker API modification not available)")
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Error modifying order: {e}")
+                else:
+                    st.warning("Execution agent not initialized. Cannot modify orders.")
     
     # Batch operations
     if len(selected_indices) > 1:

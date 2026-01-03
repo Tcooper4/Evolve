@@ -12,10 +12,18 @@ All triggered from a single input with professional styling.
 
 import logging
 import os
+import sys
 import warnings
 from datetime import datetime
+from pathlib import Path
 
 import streamlit as st
+
+# Add project root to Python path for imports
+# This ensures modules can be imported correctly in Streamlit
+project_root = Path(__file__).parent.absolute()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 # Configure logging first
 logging.basicConfig(level=logging.INFO)
@@ -160,13 +168,77 @@ except Exception as e:
     logger.warning(f"Some modules not available: {e}")
     CORE_COMPONENTS_AVAILABLE = False
 
-# Add Task Orchestrator integration after the existing imports
-# Task Orchestrator integration - placeholder for future implementation
-ORCHESTRATOR_AVAILABLE = False
+# Add Task Orchestrator integration
+try:
+    from core.orchestrator.task_orchestrator import TaskOrchestrator
+    from core.orchestrator.task_scheduler import TaskScheduler
+    from core.orchestrator.task_monitor import TaskMonitor
+    
+    # Initialize orchestrator components
+    task_orchestrator = TaskOrchestrator()
+    task_scheduler = TaskScheduler(orchestrator=task_orchestrator)
+    task_monitor = TaskMonitor(orchestrator=task_orchestrator)
+    
+    # Store in session state for access across pages
+    if 'task_orchestrator' not in st.session_state:
+        st.session_state.task_orchestrator = task_orchestrator
+    if 'task_scheduler' not in st.session_state:
+        st.session_state.task_scheduler = task_scheduler
+    if 'task_monitor' not in st.session_state:
+        st.session_state.task_monitor = task_monitor
+    
+    ORCHESTRATOR_AVAILABLE = True
+    logger.info("✅ Task Orchestrator initialized successfully")
+    
+except ImportError as e:
+    logger.warning(f"Task Orchestrator not available: {e}")
+    ORCHESTRATOR_AVAILABLE = False
+except Exception as e:
+    logger.error(f"Error initializing Task Orchestrator: {e}")
+    ORCHESTRATOR_AVAILABLE = False
 
 # Add Agent Controller integration
-# Agent Controller integration - placeholder for future implementation  
-AGENT_CONTROLLER_AVAILABLE = False
+try:
+    from agents.agent_controller import AgentController
+    from agents.task_router import TaskRouter
+    from agents.registry import AgentRegistry
+    
+    # Initialize agent infrastructure
+    agent_registry = AgentRegistry()
+    task_router = TaskRouter(registry=agent_registry)
+    agent_controller = AgentController(
+        registry=agent_registry,
+        router=task_router
+    )
+    
+    # Store in session state
+    if 'agent_controller' not in st.session_state:
+        st.session_state.agent_controller = agent_controller
+    if 'agent_registry' not in st.session_state:
+        st.session_state.agent_registry = agent_registry
+    if 'task_router' not in st.session_state:
+        st.session_state.task_router = task_router
+    
+    AGENT_CONTROLLER_AVAILABLE = True
+    logger.info("✅ Agent Controller initialized successfully")
+    
+except ImportError as e:
+    logger.warning(f"Agent Controller not available: {e}")
+    AGENT_CONTROLLER_AVAILABLE = False
+except Exception as e:
+    logger.error(f"Error initializing Agent Controller: {e}")
+    AGENT_CONTROLLER_AVAILABLE = False
+
+# Try to initialize (but don't fail if it doesn't work)
+try:
+    init_task_orchestrator()
+except Exception as e:
+    logger.debug(f"Task Orchestrator initialization deferred: {e}")
+
+try:
+    init_agent_controller()
+except Exception as e:
+    logger.debug(f"Agent Controller initialization deferred: {e}")
 
 # Enhanced ChatGPT-like styling
 st.markdown(
