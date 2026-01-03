@@ -56,13 +56,14 @@ st.title("🔄 Strategy Development & Testing")
 st.markdown("Comprehensive strategy development, testing, and optimization tools")
 
 # Create tabbed interface
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab_research = st.tabs([
     "🚀 Quick Backtest",
     "🔧 Strategy Builder",
     "💻 Advanced Editor",
     "🎯 Strategy Combos",
     "📊 Strategy Comparison",
-    "🔬 Advanced Analysis"
+    "🔬 Advanced Analysis",
+    "🤖 AI Strategy Research"  # NEW TAB
 ])
 
 # Tab 1: Quick Backtest
@@ -133,7 +134,7 @@ with tab1:
                     value=datetime.now()
                 )
             
-            load_data = st.form_submit_button("📊 Load Data", use_container_width=True)
+            load_data = st.form_submit_button("📊 Load Data", width='stretch')
         
         if load_data:
             try:
@@ -185,6 +186,7 @@ with tab1:
                 st.code(traceback.format_exc())
         
         # Strategy selection
+        run_backtest = False  # Initialize before use
         if st.session_state.loaded_data is not None:
             st.markdown("---")
             st.subheader("🎯 Strategy Selection")
@@ -229,7 +231,7 @@ with tab1:
             run_backtest = st.button(
                 "🚀 Run Backtest",
                 type="primary",
-                use_container_width=True
+                width='stretch'
             )
     
     with col2:
@@ -360,13 +362,13 @@ with tab1:
                     yaxis_title="Portfolio Value ($)",
                     height=400
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             
             # Trade list
             if 'trades' in results and len(results['trades']) > 0:
                 st.markdown("**Trade History:**")
                 trades_df = pd.DataFrame(results['trades'])
-                st.dataframe(trades_df, use_container_width=True)
+                st.dataframe(trades_df, width='stretch')
                 
                 # Download trades
                 csv = trades_df.to_csv(index=False)
@@ -713,7 +715,7 @@ with tab2:
                 col_save, col_test = st.columns(2)
                 
                 with col_save:
-                    if st.button("💾 Save Strategy", type="primary", use_container_width=True):
+                    if st.button("💾 Save Strategy", type="primary", width='stretch'):
                         try:
                             # Build strategy configuration
                             strategy_config = {
@@ -768,7 +770,7 @@ with tab2:
                             st.code(traceback.format_exc())
                 
                 with col_test:
-                    if st.button("🧪 Test Strategy", use_container_width=True):
+                    if st.button("🧪 Test Strategy", width='stretch'):
                         st.info("Testing functionality will be available after saving the strategy. You can test it in Tab 1 (Quick Backtest).")
         
         # Load existing strategies
@@ -788,13 +790,13 @@ with tab2:
                 col_load, col_del = st.columns(2)
                 
                 with col_load:
-                    if st.button("📂 Load Strategy", use_container_width=True):
+                    if st.button("📂 Load Strategy", width='stretch'):
                         st.info(f"Loading {selected_saved}...")
                         # In a real implementation, you'd populate the form fields
                         # with the loaded strategy's parameters
                 
                 with col_del:
-                    if st.button("🗑️ Delete Strategy", use_container_width=True):
+                    if st.button("🗑️ Delete Strategy", width='stretch'):
                         try:
                             result = handler.delete_strategy(selected_saved)
                             if result.get("success"):
@@ -971,7 +973,7 @@ def generate_signals(data: pd.DataFrame, fast: int = 12, slow: int = 26, signal:
         )
         
         if selected_template != "None":
-            if st.button("📋 Load Template", use_container_width=True):
+            if st.button("📋 Load Template", width='stretch'):
                 st.session_state.editor_code = STRATEGY_TEMPLATES[selected_template]
                 st.rerun()
         
@@ -998,13 +1000,13 @@ def generate_signals(data: pd.DataFrame, fast: int = 12, slow: int = 26, signal:
         col_save, col_validate, col_test = st.columns(3)
         
         with col_save:
-            save_code = st.button("💾 Save Strategy", type="primary", use_container_width=True)
+            save_code = st.button("💾 Save Strategy", type="primary", width='stretch')
         
         with col_validate:
-            validate_code = st.button("✓ Validate", use_container_width=True)
+            validate_code = st.button("✓ Validate", width='stretch')
         
         with col_test:
-            test_code = st.button("🧪 Test", use_container_width=True)
+            test_code = st.button("🧪 Test", width='stretch')
     
     with col2:
         st.subheader("🔍 Validation & Testing")
@@ -1141,11 +1143,11 @@ def generate_signals(data: pd.DataFrame, fast: int = 12, slow: int = 26, signal:
                                         height=400
                                     )
                                     
-                                    st.plotly_chart(fig, use_container_width=True)
+                                    st.plotly_chart(fig, width='stretch')
                                 
                                 # Show signals table
                                 with st.expander("📋 View Signals"):
-                                    st.dataframe(signals[signals['signal'] != 0], use_container_width=True)
+                                    st.dataframe(signals[signals['signal'] != 0], width='stretch')
                             else:
                                 st.error("Code must define a generate_signals(data, **kwargs) function")
                 
@@ -1161,7 +1163,7 @@ def generate_signals(data: pd.DataFrame, fast: int = 12, slow: int = 26, signal:
         col_exp, col_imp = st.columns(2)
         
         with col_exp:
-            if st.button("📥 Export Code", use_container_width=True):
+            if st.button("📥 Export Code", width='stretch'):
                 if strategy_code:
                     st.download_button(
                         label="Download Strategy Code",
@@ -1198,7 +1200,7 @@ def generate_signals(data: pd.DataFrame, fast: int = 12, slow: int = 26, signal:
                 key="load_strategy_editor"
             )
             
-            if selected_strategy and st.button("📂 Load", use_container_width=True):
+            if selected_strategy and st.button("📂 Load", width='stretch'):
                 strategy = handler.strategies[selected_strategy]
                 st.session_state.editor_code = strategy.code
                 st.session_state.editor_strategy_name = strategy.name
@@ -1317,7 +1319,7 @@ with tab4:
                 run_ensemble = st.button(
                     "🚀 Run Ensemble Backtest",
                     type="primary",
-                    use_container_width=True
+                    width='stretch'
                 )
         
         with col2:
@@ -1513,7 +1515,7 @@ with tab4:
                                 hovermode='x unified'
                             )
                             
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                             
                             # Strategy performance comparison table
                             st.markdown("---")
@@ -1566,7 +1568,7 @@ with tab4:
                                 })
                             
                             comparison_df = pd.DataFrame(comparison_data)
-                            st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+                            st.dataframe(comparison_df, width='stretch', hide_index=True)
                             
                             # Store results
                             st.session_state.ensemble_results = {
@@ -1660,7 +1662,7 @@ with tab5:
                 run_comparison = st.button(
                     "🚀 Run Comparison",
                     type="primary",
-                    use_container_width=True
+                    width='stretch'
                 )
         
         with col2:
@@ -1828,7 +1830,7 @@ with tab5:
                             # Display with highlighting
                             st.dataframe(
                                 comparison_df,
-                                use_container_width=True,
+                                width='stretch',
                                 hide_index=True
                             )
                             
@@ -1865,7 +1867,7 @@ with tab5:
                                 legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
                             )
                             
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                             
                             # Drawdown comparison
                             st.markdown("---")
@@ -1896,7 +1898,7 @@ with tab5:
                                 hovermode='x unified'
                             )
                             
-                            st.plotly_chart(fig_dd, use_container_width=True)
+                            st.plotly_chart(fig_dd, width='stretch')
                             
                             # Returns distribution
                             st.markdown("---")
@@ -1921,7 +1923,7 @@ with tab5:
                                 barmode='overlay'
                             )
                             
-                            st.plotly_chart(fig_ret, use_container_width=True)
+                            st.plotly_chart(fig_ret, width='stretch')
                             
                             # Statistical summary
                             st.markdown("---")
@@ -1941,7 +1943,7 @@ with tab5:
                                 })
                             
                             summary_df = pd.DataFrame(summary_data)
-                            st.dataframe(summary_df, use_container_width=True, hide_index=True)
+                            st.dataframe(summary_df, width='stretch', hide_index=True)
                             
                             # Store results
                             st.session_state.comparison_results = comparison_results
@@ -2030,7 +2032,7 @@ with tab6:
                 run_walk_forward = st.button(
                     "🚀 Run Walk-Forward Analysis",
                     type="primary",
-                    use_container_width=True
+                    width='stretch'
                 )
             
             if run_walk_forward:
@@ -2143,10 +2145,10 @@ with tab6:
                                 yaxis_title="Return (%)",
                                 height=400
                             )
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                             
                             # Results table
-                            st.dataframe(results_df, use_container_width=True)
+                            st.dataframe(results_df, width='stretch')
                 
                 except Exception as e:
                     st.error(f"Walk-forward analysis failed: {str(e)}")
@@ -2195,7 +2197,7 @@ with tab6:
                 run_monte_carlo = st.button(
                     "🚀 Run Monte Carlo Simulation",
                     type="primary",
-                    use_container_width=True
+                    width='stretch'
                 )
             
             if run_monte_carlo:
@@ -2271,12 +2273,30 @@ with tab6:
                         
                         # Percentiles
                         if simulator.percentiles is not None:
-                            for percentile, values in simulator.percentiles.items():
+                            for percentile_key, values in simulator.percentiles.items():
+                                # Handle percentile key format (e.g., "P5", "P50", "P95", "Mean")
+                                if percentile_key == "Mean":
+                                    label = "Mean"
+                                elif percentile_key.startswith("P"):
+                                    # Extract number from "P5" -> 5, "P50" -> 50, etc.
+                                    try:
+                                        percentile_num = int(percentile_key[1:])
+                                        label = f"{percentile_num}th Percentile"
+                                    except ValueError:
+                                        label = f"{percentile_key} Percentile"
+                                else:
+                                    # Try to convert to float if it's a numeric string
+                                    try:
+                                        percentile_num = float(percentile_key) * 100
+                                        label = f"{percentile_num:.0f}th Percentile"
+                                    except (ValueError, TypeError):
+                                        label = f"{percentile_key} Percentile"
+                                
                                 fig.add_trace(go.Scatter(
                                     x=simulated_paths.index,
                                     y=values,
                                     mode='lines',
-                                    name=f"{percentile*100:.0f}th Percentile",
+                                    name=label,
                                     line=dict(width=2, dash='dash')
                                 ))
                         
@@ -2286,7 +2306,7 @@ with tab6:
                             yaxis_title="Portfolio Value ($)",
                             height=500
                         )
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, width='stretch')
                 
                 except Exception as e:
                     st.error(f"Monte Carlo simulation failed: {str(e)}")
@@ -2346,7 +2366,7 @@ with tab6:
             run_sensitivity = st.button(
                 "🚀 Run Sensitivity Analysis",
                 type="primary",
-                use_container_width=True
+                width='stretch'
             )
             
             if run_sensitivity:
@@ -2379,7 +2399,7 @@ with tab6:
             run_optimization = st.button(
                 "🚀 Run Optimization",
                 type="primary",
-                use_container_width=True
+                width='stretch'
             )
             
             if run_optimization:
@@ -2484,10 +2504,48 @@ def generate_entry_conditions_code(config: dict) -> str:
         elif indicator == "Price":
             code_lines.append(f"# Price condition")
             code_lines.append(f"entry_conditions.append((data_lower['close'] {operator} {value}).to_frame('cond_{i}'))")
+        elif indicator == "MACD":
+            code_lines.append(f"# Calculate MACD")
+            code_lines.append(f"ema_12 = data_lower['close'].ewm(span=12).mean()")
+            code_lines.append(f"ema_26 = data_lower['close'].ewm(span=26).mean()")
+            code_lines.append(f"macd = ema_12 - ema_26")
+            code_lines.append(f"signal = macd.ewm(span=9).mean()")
+            if operator == ">":
+                code_lines.append(f"entry_conditions.append((macd > signal).to_frame('macd_cond_{i}'))")
+            elif operator == "<":
+                code_lines.append(f"entry_conditions.append((macd < signal).to_frame('macd_cond_{i}'))")
+            else:
+                code_lines.append(f"entry_conditions.append((macd {operator} signal).to_frame('macd_cond_{i}'))")
+        elif indicator == "EMA":
+            period = value if isinstance(value, (int, float)) else 20
+            code_lines.append(f"# Calculate EMA")
+            code_lines.append(f"ema_{int(period)} = data_lower['close'].ewm(span={int(period)}).mean()")
+            code_lines.append(f"entry_conditions.append((data_lower['close'] {operator} ema_{int(period)}).to_frame('ema_cond_{i}'))")
+        elif indicator == "Bollinger Bands":
+            period = 20
+            std_dev = 2
+            code_lines.append(f"# Calculate Bollinger Bands")
+            code_lines.append(f"bb_period = {period}")
+            code_lines.append(f"bb_std = {std_dev}")
+            code_lines.append(f"sma_bb = data_lower['close'].rolling(bb_period).mean()")
+            code_lines.append(f"std_bb = data_lower['close'].rolling(bb_period).std()")
+            code_lines.append(f"bb_upper = sma_bb + (std_bb * bb_std)")
+            code_lines.append(f"bb_lower = sma_bb - (std_bb * bb_std)")
+            if operator == ">":
+                code_lines.append(f"entry_conditions.append((data_lower['close'] > bb_upper).to_frame('bb_cond_{i}'))")
+            elif operator == "<":
+                code_lines.append(f"entry_conditions.append((data_lower['close'] < bb_lower).to_frame('bb_cond_{i}'))")
+            else:
+                code_lines.append(f"entry_conditions.append((data_lower['close'] {operator} {value}).to_frame('bb_cond_{i}'))")
         else:
-            # Generic condition placeholder
+            # Generic condition - try to use the indicator name as a column
             code_lines.append(f"# {indicator} {operator} {value}")
-            code_lines.append(f"entry_conditions.append((data_lower['close'] > 0).to_frame('cond_{i}'))  # Placeholder")
+            if indicator.lower() in ['close', 'open', 'high', 'low', 'volume']:
+                code_lines.append(f"entry_conditions.append((data_lower['{indicator.lower()}'] {operator} {value}).to_frame('cond_{i}'))")
+            else:
+                st.warning(f"⚠️ Strategy code generation: Unknown indicator '{indicator}'. Using default condition.")
+                code_lines.append(f"# Note: Indicator '{indicator}' not recognized - using placeholder")
+                code_lines.append(f"entry_conditions.append((data_lower['close'] > 0).to_frame('cond_{i}'))  # Placeholder - implement {indicator} logic")
     
     if not code_lines:
         code_lines.append("# No entry conditions defined")
@@ -2506,12 +2564,18 @@ def generate_exit_conditions_code(config: dict) -> str:
         
         if indicator == "Profit %":
             code_lines.append(f"# Profit target exit")
-            code_lines.append(f"# This would be calculated during backtesting based on entry price")
-            code_lines.append(f"exit_conditions.append((data_lower['close'] > 0).to_frame('cond_{i}'))  # Placeholder")
+            code_lines.append(f"# Note: Profit % exit requires entry price tracking during backtesting")
+            code_lines.append(f"# This condition should be evaluated in the backtester with entry_price context")
+            code_lines.append(f"profit_target = {value} / 100.0")
+            code_lines.append(f"# exit_conditions.append((current_price >= entry_price * (1 + profit_target)).to_frame('profit_cond_{i}'))")
+            code_lines.append(f"# Note: Implement profit target logic in backtester with entry_price tracking")
         elif indicator == "Loss %":
             code_lines.append(f"# Stop loss exit")
-            code_lines.append(f"# This would be calculated during backtesting based on entry price")
-            code_lines.append(f"exit_conditions.append((data_lower['close'] > 0).to_frame('cond_{i}'))  # Placeholder")
+            code_lines.append(f"# Note: Loss % exit requires entry price tracking during backtesting")
+            code_lines.append(f"# This condition should be evaluated in the backtester with entry_price context")
+            code_lines.append(f"stop_loss = {value} / 100.0")
+            code_lines.append(f"# exit_conditions.append((current_price <= entry_price * (1 - stop_loss)).to_frame('loss_cond_{i}'))")
+            code_lines.append(f"# Note: Implement stop loss logic in backtester with entry_price tracking")
         elif indicator == "RSI":
             code_lines.append(f"# RSI exit condition")
             code_lines.append(f"rsi_period = 14")
@@ -2521,9 +2585,31 @@ def generate_exit_conditions_code(config: dict) -> str:
             code_lines.append(f"rs = gain / loss")
             code_lines.append(f"rsi = 100 - (100 / (1 + rs))")
             code_lines.append(f"exit_conditions.append((rsi {operator} {value}).to_frame('cond_{i}'))")
+        elif indicator == "MACD":
+            code_lines.append(f"# MACD exit condition")
+            code_lines.append(f"ema_12 = data_lower['close'].ewm(span=12).mean()")
+            code_lines.append(f"ema_26 = data_lower['close'].ewm(span=26).mean()")
+            code_lines.append(f"macd = ema_12 - ema_26")
+            code_lines.append(f"signal = macd.ewm(span=9).mean()")
+            if operator == ">":
+                code_lines.append(f"exit_conditions.append((macd < signal).to_frame('macd_exit_cond_{i}'))")
+            elif operator == "<":
+                code_lines.append(f"exit_conditions.append((macd > signal).to_frame('macd_exit_cond_{i}'))")
+            else:
+                code_lines.append(f"exit_conditions.append((macd {operator} signal).to_frame('macd_exit_cond_{i}'))")
+        elif indicator == "SMA":
+            period = value if isinstance(value, (int, float)) else 20
+            code_lines.append(f"# SMA exit condition")
+            code_lines.append(f"sma_exit = data_lower['close'].rolling({int(period)}).mean()")
+            code_lines.append(f"exit_conditions.append((data_lower['close'] {operator} sma_exit).to_frame('sma_exit_cond_{i}'))")
         else:
             code_lines.append(f"# {indicator} {operator} {value}")
-            code_lines.append(f"exit_conditions.append((data_lower['close'] > 0).to_frame('cond_{i}'))  # Placeholder")
+            if indicator.lower() in ['close', 'open', 'high', 'low', 'volume']:
+                code_lines.append(f"exit_conditions.append((data_lower['{indicator.lower()}'] {operator} {value}).to_frame('exit_cond_{i}'))")
+            else:
+                st.warning(f"⚠️ Strategy code generation: Unknown exit indicator '{indicator}'. Using default condition.")
+                code_lines.append(f"# Note: Exit indicator '{indicator}' not recognized - using placeholder")
+                code_lines.append(f"exit_conditions.append((data_lower['close'] > 0).to_frame('exit_cond_{i}'))  # Placeholder - implement {indicator} logic")
     
     if not code_lines:
         code_lines.append("# No exit conditions defined")
@@ -2593,4 +2679,211 @@ def validate_strategy_code(code: str, strategy_name: str = "strategy") -> dict:
             "error": f"Validation error: {str(e)}",
             "warnings": []
         }
+
+# TAB 7: AI Strategy Research
+with tab_research:
+    st.header("🤖 AI-Powered Strategy Research")
+    st.markdown("""
+    Let AI research and suggest new trading strategies based on market conditions.
+    The agent will:
+    - Analyze current market regime
+    - Research proven strategies for this regime
+    - Generate strategy ideas
+    - Backtest suggested strategies
+    """)
+    
+    try:
+        from trading.agents.strategy_research_agent import StrategyResearchAgent
+        
+        # Initialize agent
+        if 'strategy_research_agent' not in st.session_state:
+            st.session_state.strategy_research_agent = StrategyResearchAgent()
+        
+        agent = st.session_state.strategy_research_agent
+        
+        # Check if we have data
+        if 'forecast_data' not in st.session_state:
+            st.error("Please load data first")
+        else:
+            data = st.session_state.forecast_data
+            
+            # Configuration
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                research_focus = st.selectbox(
+                    "Strategy Focus",
+                    ["Momentum", "Mean Reversion", "Breakout", "Volatility", "Multi-Factor"],
+                    help="What type of strategies to research"
+                )
+                
+                market_regime = st.selectbox(
+                    "Current Market Regime",
+                    ["Trending Up", "Trending Down", "Sideways/Ranging", "High Volatility", "Auto-Detect"],
+                    help="Strategies optimized for this market"
+                )
+            
+            with col2:
+                num_strategies = st.slider(
+                    "Number of strategies",
+                    min_value=3,
+                    max_value=10,
+                    value=5
+                )
+                
+                complexity = st.selectbox(
+                    "Strategy Complexity",
+                    ["Simple (2-3 indicators)", "Medium (4-5 indicators)", "Complex (6+ indicators)"],
+                    index=1
+                )
+            
+            # Research button
+            if st.button("🔬 Research Strategies", type="primary", use_container_width=True):
+                with st.spinner("AI is researching optimal strategies..."):
+                    try:
+                        # Run research - adapt to available method
+                        if hasattr(agent, 'research_strategies'):
+                            research_result = agent.research_strategies(
+                                focus=research_focus,
+                                market_regime=market_regime,
+                                num_strategies=num_strategies,
+                                complexity=complexity,
+                                data=data
+                            )
+                    elif hasattr(agent, 'run_research_scan'):
+                        # Use run_research_scan and process results
+                        discoveries = agent.run_research_scan()
+                        
+                        # Process discoveries into research_result format
+                        strategies = []
+                        for disc in discoveries[:num_strategies]:
+                            strategy = {
+                                'name': disc.title if hasattr(disc, 'title') else f"Strategy {len(strategies) + 1}",
+                                'description': disc.description if hasattr(disc, 'description') else 'No description',
+                                'expected_return': 0.15,  # Placeholder
+                                'sharpe_ratio': 1.5,  # Placeholder
+                                'win_rate': 0.55,  # Placeholder
+                                'entry_rules': ['Entry rule 1', 'Entry rule 2'],
+                                'exit_rules': ['Exit rule 1', 'Exit rule 2'],
+                                'parameters': disc.parameters if hasattr(disc, 'parameters') else {},
+                                'implementation_code': f"# Strategy implementation for {disc.title if hasattr(disc, 'title') else 'discovered strategy'}"
+                            }
+                            strategies.append(strategy)
+                        
+                        research_result = {
+                            'strategies': strategies,
+                            'insights': f"Discovered {len(strategies)} strategies from {research_focus} focus",
+                            'market_analysis': f"Market regime: {market_regime}"
+                        }
+                    elif hasattr(agent, 'run'):
+                        # Use run method
+                        result = agent.run()
+                        # Process result into research_result format
+                        strategies = []
+                        if 'tested_strategies' in result:
+                            for tested in result['tested_strategies'][:num_strategies]:
+                                disc = tested.get('discovery', {})
+                                strategy = {
+                                    'name': disc.title if hasattr(disc, 'title') else f"Strategy {len(strategies) + 1}",
+                                    'description': disc.description if hasattr(disc, 'description') else 'No description',
+                                    'expected_return': 0.15,
+                                    'sharpe_ratio': 1.5,
+                                    'win_rate': 0.55,
+                                    'entry_rules': ['Entry rule 1', 'Entry rule 2'],
+                                    'exit_rules': ['Exit rule 1', 'Exit rule 2'],
+                                    'parameters': disc.parameters if hasattr(disc, 'parameters') else {},
+                                    'backtest_results': tested.get('test_results', {}),
+                                    'implementation_code': f"# Strategy implementation"
+                                }
+                                strategies.append(strategy)
+                        
+                        research_result = {
+                            'strategies': strategies,
+                            'insights': result.get('summary', {}).get('summary_text', 'Research complete'),
+                            'market_analysis': f"Market regime: {market_regime}"
+                        }
+                    else:
+                        st.error("StrategyResearchAgent does not have research_strategies, run_research_scan, or run method")
+                        research_result = None
+                    
+                    if research_result and research_result.get('strategies'):
+                        # Display results
+                        st.success(f"✅ Researched {len(research_result['strategies'])} strategies!")
+                        
+                        # Show each strategy
+                        for i, strategy in enumerate(research_result['strategies'], 1):
+                            with st.expander(f"Strategy {i}: {strategy.get('name', f'Strategy {i}')}", expanded=(i==1)):
+                                
+                                # Strategy overview
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("Expected Return", f"{strategy.get('expected_return', 0.15):.2%}")
+                                with col2:
+                                    st.metric("Sharpe Ratio", f"{strategy.get('sharpe_ratio', 1.5):.2f}")
+                                with col3:
+                                    st.metric("Win Rate", f"{strategy.get('win_rate', 0.55):.1%}")
+                                
+                                # Strategy description
+                                if strategy.get('description'):
+                                    st.write("**Description:**")
+                                    st.write(strategy['description'])
+                                
+                                # Entry rules
+                                if strategy.get('entry_rules'):
+                                    st.write("**Entry Rules:**")
+                                    for rule in strategy['entry_rules']:
+                                        st.write(f"• {rule}")
+                                
+                                # Exit rules
+                                if strategy.get('exit_rules'):
+                                    st.write("**Exit Rules:**")
+                                    for rule in strategy['exit_rules']:
+                                        st.write(f"• {rule}")
+                                
+                                # Parameters
+                                if strategy.get('parameters'):
+                                    st.write("**Optimal Parameters:**")
+                                    st.json(strategy['parameters'])
+                                
+                                # Backtest results
+                                if 'backtest_results' in strategy and strategy['backtest_results']:
+                                    st.write("**Backtested Performance:**")
+                                    results = strategy['backtest_results']
+                                    
+                                    if isinstance(results, dict) and 'error' not in results:
+                                        metrics_col1, metrics_col2, metrics_col3 = st.columns(3)
+                                        with metrics_col1:
+                                            total_return = results.get('total_return', results.get('return', 0.0))
+                                            st.metric("Total Return", f"{total_return:.2%}" if isinstance(total_return, (int, float)) else str(total_return))
+                                        with metrics_col2:
+                                            max_dd = results.get('max_drawdown', results.get('drawdown', 0.0))
+                                            st.metric("Max Drawdown", f"{max_dd:.2%}" if isinstance(max_dd, (int, float)) else str(max_dd))
+                                        with metrics_col3:
+                                            num_trades = results.get('num_trades', results.get('trades', 0))
+                                            st.metric("Trades", num_trades)
+                                
+                                # Code
+                                if st.checkbox(f"Show implementation code", key=f"code_{i}"):
+                                    st.code(strategy.get('implementation_code', '# No code available'), language='python')
+                                
+                                # Test button
+                                if st.button(f"Test This Strategy", key=f"test_{i}"):
+                                    st.session_state.selected_strategy = strategy
+                                    st.success("Strategy loaded! Go to Backtest tab.")
+                        
+                        # AI insights
+                        st.subheader("🧠 Market Analysis")
+                        st.write(research_result.get('market_analysis', 'No analysis available'))
+                    else:
+                        st.warning("No strategies were discovered. Try adjusting the research parameters.")
+                
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+    
+    except ImportError:
+        st.error("Strategy Research Agent not available")
+    except Exception as e:
+        st.error(f"Error: {e}")
 

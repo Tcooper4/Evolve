@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 # Backend imports
 from trading.data.data_loader import DataLoader, DataLoadRequest
 from trading.data.providers.yfinance_provider import YFinanceProvider
-from trading.models.lstm_model import LSTMModel
+from trading.models.lstm_model import LSTMForecaster
 from trading.models.xgboost_model import XGBoostModel
 from trading.models.prophet_model import ProphetModel
 from trading.models.arima_model import ARIMAModel
@@ -61,12 +61,13 @@ st.title("📈 Forecasting & Market Analysis")
 st.markdown("Advanced forecasting with AI model selection and comprehensive market analysis")
 
 # Create tabbed interface
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🚀 Quick Forecast",
     "⚙️ Advanced Forecasting", 
     "🤖 AI Model Selection",
     "📊 Model Comparison",
-    "📈 Market Analysis"
+    "📈 Market Analysis",
+    "🔗 Multi-Asset (GNN)"  # NEW TAB
 ])
 
 with tab1:
@@ -98,15 +99,7 @@ with tab1:
                 max_value=datetime.now()
             )
         
-        forecast_horizon = st.slider(
-            "Forecast Horizon (days)",
-            min_value=1,
-            max_value=30,
-            value=7,
-            help="Number of days to forecast into the future"
-        )
-        
-        submitted = st.form_submit_button("📊 Load Data", use_container_width=True)
+        submitted = st.form_submit_button("📊 Load Data", width='stretch')
     
     if submitted:
         # Validation
@@ -160,7 +153,8 @@ with tab1:
                             # Store in session state
                             st.session_state.forecast_data = data
                             st.session_state.symbol = symbol
-                            st.session_state.forecast_horizon = forecast_horizon
+                            # forecast_horizon is already in session_state (defaults to 7 if not set)
+                            # No need to reassign it here unless we want to update it
                             
                             st.success(f"✅ Loaded {len(data)} days of data for {symbol}")
                         
@@ -206,40 +200,77 @@ with tab1:
             height=400
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         # Data table (expandable)
         with st.expander("📋 View Full Data"):
-            st.dataframe(data.tail(50), use_container_width=True)
+            st.dataframe(data.tail(50), width='stretch')
         
         # Model Selection & Forecasting
         st.markdown("---")
         st.subheader("🎯 Generate Forecast")
+        
+        # Forecast horizon slider (outside form so it updates immediately)
+        forecast_horizon = st.slider(
+            "Forecast Horizon (days)",
+            min_value=1,
+            max_value=30,
+            value=st.session_state.forecast_horizon,
+            key="forecast_horizon_slider",
+            help="Number of days to forecast into the future"
+        )
+        # Update session state immediately
+        st.session_state.forecast_horizon = forecast_horizon
         
         col1, col2 = st.columns([1, 2])
         
         with col1:
             st.markdown("**Select Model**")
             
-            model_descriptions = {
-                "LSTM (Deep Learning)": "Neural network for time series. Best for complex patterns.",
-                "XGBoost (Gradient Boosting)": "Tree-based model. Fast and accurate for most data.",
-                "Prophet (Facebook)": "Handles seasonality well. Good for business data.",
-                "ARIMA (Statistical)": "Classic statistical model. Works well for stationary data."
-            }
-            
-            selected_model = st.radio(
-                "Choose model:",
-                list(model_descriptions.keys()),
-                help="Different models work better for different data patterns"
-            )
-            
-            st.info(model_descriptions[selected_model])
+            # Use model registry for dynamic model selection
+            try:
+                from trading.models.model_registry import get_registry
+                
+                registry = get_registry()
+                available_models = registry.list_models()
+                
+                if not available_models:
+                    st.warning("⚠️ No models available. Using default models.")
+                    available_models = ["LSTM", "XGBoost", "Prophet", "ARIMA"]
+                    selected_model = st.radio(
+                        "Choose model:",
+                        available_models,
+                        help="Different models work better for different data patterns"
+                    )
+                    model_info = {}
+                else:
+                    selected_model = st.radio(
+                        "Choose model:",
+                        available_models,
+                        help="Choose a forecasting model. LSTM and XGBoost are recommended for most use cases."
+                    )
+                    
+                    # Show model description
+                    model_info = registry.get_model_info(selected_model)
+                    if model_info.get('description'):
+                        description = model_info['description']
+                        if len(description) > 200:
+                            description = description[:200] + "..."
+                        st.info(f"ℹ️ {description}")
+            except Exception as e:
+                st.warning(f"⚠️ Could not load model registry: {e}. Using default models.")
+                available_models = ["LSTM", "XGBoost", "Prophet", "ARIMA"]
+                selected_model = st.radio(
+                    "Choose model:",
+                    available_models,
+                    help="Different models work better for different data patterns"
+                )
+                model_info = {}
             
             forecast_button = st.button(
                 "🚀 Generate Forecast",
                 type="primary",
-                use_container_width=True
+                width='stretch'
             )
         
         with col2:
@@ -254,39 +285,147 @@ with tab1:
                         if not isinstance(data.index, pd.DatetimeIndex):
                             data.index = pd.to_datetime(data.index)
                         
-                        # Initialize model with proper config
+                        # Initialize model with proper config using registry
                         model = None
-                        if "LSTM" in selected_model:
-                            config = {
-                                "target_column": "close",
-                                "sequence_length": 60,
-                                "hidden_dim": 64,
-                                "num_layers": 2,
-                                "dropout": 0.2,
-                                "learning_rate": 0.001
-                            }
-                            model = LSTMModel(config)
-                        elif "XGBoost" in selected_model:
-                            config = {
-                                "target_column": "close",
-                                "n_estimators": 100,
-                                "max_depth": 5,
-                                "learning_rate": 0.1
-                            }
-                            model = XGBoostModel(config)
-                        elif "Prophet" in selected_model:
-                            config = {
-                                "date_column": data.index.name if data.index.name else "ds",
-                                "target_column": "close",
-                                "prophet_params": {}
-                            }
-                            model = ProphetModel(config)
-                        elif "ARIMA" in selected_model:
-                            config = {
-                                "order": (5, 1, 0),
-                                "use_auto_arima": True
-                            }
-                            model = ARIMAModel(config)
+                        try:
+                            from trading.models.model_registry import get_registry
+                            registry = get_registry()
+                            ModelClass = registry.get(selected_model)
+                            
+                            if ModelClass is None:
+                                st.error(f"Model {selected_model} not available")
+                            else:
+                                # Model-specific initialization
+                                if selected_model == 'GARCH':
+                                    st.subheader("Volatility Forecasting with GARCH")
+                                    st.write("GARCH models are specialized for forecasting volatility and risk metrics.")
+                                    config = {
+                                        "p": 1,
+                                        "q": 1,
+                                        "target_column": "close"
+                                    }
+                                    model = ModelClass(config)
+                                    
+                                elif selected_model == 'Autoformer':
+                                    st.subheader("Advanced Transformer Forecasting")
+                                    st.write("Autoformer uses advanced attention mechanisms for complex time series patterns.")
+                                    config = {
+                                        "seq_len": 60,
+                                        "pred_len": horizon,
+                                        "d_model": 128,
+                                        "target_column": "close"
+                                    }
+                                    model = ModelClass(config)
+                                    
+                                elif selected_model == 'CatBoost':
+                                    st.subheader("CatBoost Gradient Boosting")
+                                    st.write("Alternative to XGBoost with better categorical feature handling.")
+                                    config = {
+                                        "target_column": "close",
+                                        "iterations": 500,
+                                        "depth": 6,
+                                        "learning_rate": 0.03
+                                    }
+                                    model = ModelClass(config)
+                                    
+                                elif selected_model == 'TCN':
+                                    st.subheader("Temporal Convolutional Network")
+                                    st.write("TCN uses dilated convolutions for efficient long-range dependencies.")
+                                    config = {
+                                        "target_column": "close",
+                                        "num_channels": [64, 128, 256],
+                                        "kernel_size": 3,
+                                        "dropout": 0.2
+                                    }
+                                    model = ModelClass(config)
+                                    
+                                elif selected_model == 'Ridge':
+                                    st.subheader("Ridge Regression Baseline")
+                                    st.write("Simple linear baseline with L2 regularization.")
+                                    config = {
+                                        "target_column": "close",
+                                        "alpha": 1.0
+                                    }
+                                    model = ModelClass(config)
+                                    
+                                elif "LSTM" in selected_model:
+                                    # LSTMForecaster uses config dictionary
+                                    config = {
+                                        "target_column": "close",
+                                        "sequence_length": 60,
+                                        "hidden_size": 64,
+                                        "num_layers": 2,
+                                        "dropout": 0.2,
+                                        "learning_rate": 0.001,
+                                        "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"],
+                                        "input_size": len(data.columns) if len(data.columns) > 0 else 1
+                                    }
+                                    model = ModelClass(config)
+                                elif "XGBoost" in selected_model:
+                                    config = {
+                                        "target_column": "close",
+                                        "n_estimators": 100,
+                                        "max_depth": 5,
+                                        "learning_rate": 0.1
+                                    }
+                                    model = ModelClass(config)
+                                elif "Prophet" in selected_model:
+                                    config = {
+                                        "date_column": data.index.name if data.index.name else "ds",
+                                        "target_column": "close",
+                                        "prophet_params": {}
+                                    }
+                                    model = ModelClass(config)
+                                elif "ARIMA" in selected_model:
+                                    config = {
+                                        "order": (5, 1, 0),
+                                        "use_auto_arima": True,
+                                        "target_column": "close"
+                                    }
+                                    model = ModelClass(config)
+                                else:
+                                    # Generic model initialization
+                                    config = {
+                                        "target_column": "close",
+                                        "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"]
+                                    }
+                                    model = ModelClass(config)
+                        except Exception as e:
+                            st.warning(f"Could not use model registry: {e}. Using direct imports.")
+                            # Fallback to direct imports
+                            if "LSTM" in selected_model:
+                                config = {
+                                    "target_column": "close",
+                                    "sequence_length": 60,
+                                    "hidden_size": 64,
+                                    "num_layers": 2,
+                                    "dropout": 0.2,
+                                    "learning_rate": 0.001,
+                                    "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"],
+                                    "input_size": len(data.columns) if len(data.columns) > 0 else 1
+                                }
+                                model = LSTMForecaster(config)
+                            elif "XGBoost" in selected_model:
+                                config = {
+                                    "target_column": "close",
+                                    "n_estimators": 100,
+                                    "max_depth": 5,
+                                    "learning_rate": 0.1
+                                }
+                                model = XGBoostModel(config)
+                            elif "Prophet" in selected_model:
+                                config = {
+                                    "date_column": data.index.name if data.index.name else "ds",
+                                    "target_column": "close",
+                                    "prophet_params": {}
+                                }
+                                model = ProphetModel(config)
+                            elif "ARIMA" in selected_model:
+                                config = {
+                                    "order": (5, 1, 0),
+                                    "use_auto_arima": True
+                                }
+                                model = ARIMAModel(config)
                         
                         if model is None:
                             st.error("Failed to initialize model")
@@ -306,8 +445,19 @@ with tab1:
                                 # LSTM and XGBoost use DataFrame
                                 fit_result = model.fit(data, data['close'])
                             
-                            # Generate forecast
-                            forecast_result = model.forecast(data, horizon=horizon)
+                            # Generate forecast - try with uncertainty if available
+                            forecast_result = None
+                            if hasattr(model, 'forecast_with_uncertainty'):
+                                try:
+                                    forecast_result = model.forecast_with_uncertainty(data, horizon=horizon, num_samples=100)
+                                except Exception as e:
+                                    st.warning(f"Could not generate forecast with uncertainty: {e}. Using standard forecast.")
+                                    forecast_result = model.forecast(data, horizon=horizon)
+                            else:
+                                forecast_result = model.forecast(data, horizon=horizon)
+                            
+                            # Store full forecast result for confidence intervals
+                            st.session_state.current_forecast_result = forecast_result
                             
                             # Extract forecast values
                             if isinstance(forecast_result, dict):
@@ -325,11 +475,34 @@ with tab1:
                                     freq='D'
                                 )
                             
+                            # Debug: Check what we got
+                            if forecast_values is None or len(forecast_values) == 0:
+                                st.warning(f"⚠️ Forecast returned empty values. Result type: {type(forecast_result)}")
+                                if isinstance(forecast_result, dict):
+                                    st.write("Forecast result keys:", list(forecast_result.keys()))
+                                # Use last known price as fallback
+                                last_price = data['close'].iloc[-1] if 'close' in data.columns else data.iloc[-1, 0]
+                                forecast_values = np.full(horizon, float(last_price))
+                            
                             # Ensure forecast_values is array-like
                             if isinstance(forecast_values, (list, np.ndarray)):
                                 forecast_values = np.array(forecast_values).flatten()
+                                # Check for NaN/None values
+                                if np.any(np.isnan(forecast_values)) or np.any(forecast_values == None):
+                                    st.warning("⚠️ Forecast contains NaN/None values. Replacing with last known price.")
+                                    last_price = float(data['close'].iloc[-1] if 'close' in data.columns else data.iloc[-1, 0])
+                                    forecast_values = np.where(
+                                        np.isnan(forecast_values) | (forecast_values == None),
+                                        last_price,
+                                        forecast_values
+                                    )
                             else:
-                                forecast_values = np.array([forecast_values] * horizon)
+                                # Single value case
+                                if forecast_values is None or (isinstance(forecast_values, float) and np.isnan(forecast_values)):
+                                    last_price = float(data['close'].iloc[-1] if 'close' in data.columns else data.iloc[-1, 0])
+                                    forecast_values = np.full(horizon, last_price)
+                                else:
+                                    forecast_values = np.array([float(forecast_values)] * horizon)
                             
                             # Create forecast DataFrame
                             forecast_df = pd.DataFrame({
@@ -339,6 +512,7 @@ with tab1:
                             # Store in session state
                             st.session_state.current_forecast = forecast_df
                             st.session_state.current_model = selected_model
+                            st.session_state.current_model_instance = model  # Store model instance for explainability
                             
                             st.success(f"✅ Forecast generated using {selected_model}")
                 
@@ -352,14 +526,14 @@ with tab1:
             if st.session_state.get('current_forecast') is not None:
                 st.markdown(f"**Forecast using {st.session_state.current_model}**")
                 
-                # Create combined chart
+                # Create combined chart with confidence intervals
                 fig = go.Figure()
                 
                 # Historical data
                 hist_data = st.session_state.forecast_data
                 fig.add_trace(go.Scatter(
                     x=hist_data.index,
-                    y=hist_data['close'],
+                    y=hist_data['close'] if 'close' in hist_data.columns else hist_data.iloc[:, 0],
                     mode='lines',
                     name='Historical',
                     line=dict(color='blue', width=2)
@@ -367,30 +541,101 @@ with tab1:
                 
                 # Forecast
                 forecast_df = st.session_state.current_forecast
+                forecast_dates = forecast_df.index
+                forecast_values = forecast_df['forecast'].values
+                
+                # Check if we have confidence intervals in session state
+                forecast_result = st.session_state.get('current_forecast_result', {})
+                
+                # Add confidence intervals if available
+                if isinstance(forecast_result, dict) and 'lower_bound' in forecast_result and 'upper_bound' in forecast_result:
+                    # Upper bound
+                    fig.add_trace(go.Scatter(
+                        x=forecast_dates,
+                        y=forecast_result['upper_bound'],
+                        name='Upper 95% CI',
+                        line=dict(width=0),
+                        showlegend=False,
+                        hoverinfo='skip'
+                    ))
+                    
+                    # Lower bound (filled area)
+                    fig.add_trace(go.Scatter(
+                        x=forecast_dates,
+                        y=forecast_result['lower_bound'],
+                        name='Lower 95% CI',
+                        fill='tonexty',
+                        fillcolor='rgba(255, 0, 0, 0.2)',
+                        line=dict(width=0),
+                        showlegend=True,
+                        hoverinfo='skip'
+                    ))
+                
+                # Forecast line
                 fig.add_trace(go.Scatter(
-                    x=forecast_df.index,
-                    y=forecast_df['forecast'],
+                    x=forecast_dates,
+                    y=forecast_values,
                     mode='lines+markers',
                     name='Forecast',
                     line=dict(color='red', width=2, dash='dash'),
                     marker=dict(size=8)
                 ))
                 
+                # If forecast_with_uncertainty was used, show confidence scores
+                if isinstance(forecast_result, dict) and 'confidence' in forecast_result:
+                    import numpy as np
+                    # Add confidence score annotation
+                    if isinstance(forecast_result['confidence'], (list, np.ndarray)):
+                        avg_confidence = np.mean(forecast_result['confidence'])
+                    else:
+                        avg_confidence = forecast_result['confidence']
+                    fig.add_annotation(
+                        text=f"Avg Confidence: {avg_confidence:.1%}",
+                        xref="paper", yref="paper",
+                        x=0.02, y=0.98,
+                        showarrow=False,
+                        bgcolor="rgba(255, 255, 255, 0.8)",
+                        bordercolor="gray",
+                        borderwidth=1
+                    )
+                
                 fig.update_layout(
-                    title=f"{st.session_state.symbol} - Historical & Forecast",
+                    title=f"{st.session_state.symbol} - Historical & Forecast" + (" (with Confidence Intervals)" if isinstance(forecast_result, dict) and 'lower_bound' in forecast_result else ""),
                     xaxis_title="Date",
                     yaxis_title="Price ($)",
                     hovermode='x unified',
                     height=500
                 )
                 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
+                
+                # Show confidence metrics if available
+                if isinstance(forecast_result, dict) and 'confidence' in forecast_result:
+                    import plotly.express as px
+                    confidence_data = forecast_result['confidence']
+                    if isinstance(confidence_data, (list, np.ndarray)):
+                        confidence_df = pd.DataFrame({
+                            'Days Ahead': range(1, len(confidence_data) + 1),
+                            'Confidence': confidence_data
+                        })
+                        
+                        st.write("**Prediction Confidence by Horizon:**")
+                        conf_fig = px.line(
+                            confidence_df,
+                            x='Days Ahead',
+                            y='Confidence',
+                            title='Forecast Confidence Over Time'
+                        )
+                        st.plotly_chart(conf_fig, width='stretch')
                 
                 # Forecast table
                 st.markdown("**Forecast Values:**")
                 display_df = forecast_df.copy()
-                display_df['forecast'] = display_df['forecast'].map('${:.2f}'.format)
-                st.dataframe(display_df, use_container_width=True)
+                # Format forecast values, handling None/NaN
+                display_df['forecast'] = display_df['forecast'].apply(
+                    lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
+                )
+                st.dataframe(display_df, width='stretch')
                 
                 # Download button
                 csv = forecast_df.to_csv()
@@ -400,6 +645,146 @@ with tab1:
                     file_name=f"{st.session_state.symbol}_forecast.csv",
                     mime="text/csv"
                 )
+                
+                # Add explainability section
+                st.markdown("---")
+                st.subheader("🔍 Model Explainability")
+                
+                with st.expander("View Feature Importance & Explanations", expanded=False):
+                    try:
+                        from trading.models.forecast_explainability import ForecastExplainability
+                        
+                        if st.button("Generate Explanation", key="generate_explanation"):
+                            with st.spinner("Analyzing model predictions..."):
+                                try:
+                                    explainer = ForecastExplainability()
+                                    model = st.session_state.get('current_model_instance')
+                                    forecast_result = st.session_state.get('current_forecast_result', {})
+                                    
+                                    # Extract forecast value
+                                    if isinstance(forecast_result, dict):
+                                        forecast_values = forecast_result.get('forecast', [])
+                                        forecast_value = float(forecast_values[0]) if len(forecast_values) > 0 else float(data['close'].iloc[-1])
+                                    else:
+                                        forecast_value = float(forecast_result) if isinstance(forecast_result, (int, float)) else float(data['close'].iloc[-1])
+                                    
+                                    # Prepare features
+                                    features = data.copy()
+                                    target_history = features['close'] if 'close' in features.columns else features.iloc[:, 0]
+                                    
+                                    # Generate explanation
+                                    explanation = explainer.explain_forecast(
+                                        forecast_id=f"forecast_{st.session_state.symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                                        symbol=st.session_state.symbol,
+                                        forecast_value=forecast_value,
+                                        model=model,
+                                        features=features,
+                                        target_history=target_history,
+                                        horizon=st.session_state.forecast_horizon
+                                    )
+                                    
+                                    # Display feature importance
+                                    if explanation.get('success') and 'explanation' in explanation:
+                                        expl_obj = explanation['explanation']
+                                        if hasattr(expl_obj, 'feature_importance') and expl_obj.feature_importance:
+                                            st.write("**Feature Importance:**")
+                                            importance_data = expl_obj.feature_importance
+                                            if isinstance(importance_data, dict):
+                                                importance_df = pd.DataFrame(
+                                                    list(importance_data.items()),
+                                                    columns=['Feature', 'Importance']
+                                                ).sort_values('Importance', ascending=False)
+                                                
+                                                import plotly.express as px
+                                                fig = px.bar(
+                                                    importance_df,
+                                                    x='Importance',
+                                                    y='Feature',
+                                                    orientation='h',
+                                                    title='Feature Importance (SHAP values)'
+                                                )
+                                                st.plotly_chart(fig, width='stretch')
+                                    
+                                    # Display explanation text
+                                    if explanation.get('success') and 'explanation' in explanation:
+                                        expl_obj = explanation['explanation']
+                                        if hasattr(expl_obj, 'explanation_text') and expl_obj.explanation_text:
+                                            st.write("**Explanation:**")
+                                            st.write(expl_obj.explanation_text)
+                                    
+                                    st.success("✅ Explanation generated")
+                                except Exception as e:
+                                    st.error(f"Error generating explanation: {e}")
+                                    import traceback
+                                    st.code(traceback.format_exc())
+                    
+                    except ImportError:
+                        st.warning("Forecast explainability requires SHAP library. Install with: pip install shap")
+                    except Exception as e:
+                        st.error(f"Error initializing explainability: {e}")
+                
+                # AI Commentary section
+                st.markdown("---")
+                st.subheader("🤖 AI Market Commentary")
+                
+                if st.button("Generate AI Commentary", key="generate_commentary"):
+                    try:
+                        from agents.llm.quant_gpt_commentary_agent import QuantGPTCommentaryAgent, CommentaryRequest, CommentaryType
+                        import asyncio
+                        
+                        agent = QuantGPTCommentaryAgent()
+                        
+                        if not agent.available:
+                            st.error("QuantGPT Commentary Agent not available. Check initialization.")
+                        else:
+                            with st.spinner("AI is analyzing the forecast..."):
+                                # Prepare commentary request
+                                request = CommentaryRequest(
+                                    request_type=CommentaryType.REGIME_ANALYSIS,
+                                    symbol=st.session_state.symbol,
+                                    timestamp=datetime.now(),
+                                    market_data=data,
+                                    model_data={
+                                        'model_type': st.session_state.current_model,
+                                        'forecast': forecast_result,
+                                        'horizon': st.session_state.forecast_horizon
+                                    }
+                                )
+                                
+                                # Generate commentary (handle async)
+                                try:
+                                    loop = asyncio.new_event_loop()
+                                    asyncio.set_event_loop(loop)
+                                    commentary = loop.run_until_complete(agent.generate_commentary(request))
+                                    loop.close()
+                                    
+                                    st.info(commentary.summary)
+                                    
+                                    with st.expander("📊 Detailed Analysis"):
+                                        st.write("**Technical Analysis:**")
+                                        st.write(commentary.detailed_analysis)
+                                        
+                                        if commentary.key_insights:
+                                            st.write("**Key Insights:**")
+                                            for insight in commentary.key_insights:
+                                                st.write(f"• {insight}")
+                                        
+                                        if commentary.recommendations:
+                                            st.write("**Recommendations:**")
+                                            for rec in commentary.recommendations:
+                                                st.write(f"• {rec}")
+                                        
+                                        if commentary.risk_warnings:
+                                            st.write("**Risk Factors:**")
+                                            for risk in commentary.risk_warnings:
+                                                st.warning(f"⚠️ {risk}")
+                                except Exception as e:
+                                    st.error(f"Error generating commentary: {e}")
+                    
+                    except ImportError:
+                        st.error("QuantGPT Commentary Agent not available")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
 
 with tab2:
     st.header("Advanced Forecasting")
@@ -413,11 +798,69 @@ with tab2:
         with col1:
             st.subheader("⚙️ Configuration")
             
-            # Model selection
-            model_type = st.selectbox(
-                "Model Type",
-                ["LSTM", "XGBoost", "Prophet", "ARIMA"]
-            )
+            # Model selection using registry
+            try:
+                from trading.models.model_registry import get_registry
+                
+                registry = get_registry()
+                
+                # Get all single-asset models (includes advanced ones, excludes GNN)
+                available_models = registry.get_advanced_models()
+                
+                if not available_models:
+                    st.warning("⚠️ No models available. Using default models.")
+                    available_models = ["LSTM", "XGBoost", "Prophet", "ARIMA"]
+                
+                # Create friendly names
+                model_display_names = {
+                    'LSTM': 'LSTM (Deep Learning)',
+                    'XGBoost': 'XGBoost (Gradient Boosting)',
+                    'Prophet': 'Prophet (Seasonality)',
+                    'ARIMA': 'ARIMA (Statistical)',
+                    'Ensemble': 'Ensemble (Multi-Model)',
+                    'TCN': 'TCN (Temporal Conv)',
+                    'GARCH': 'GARCH (Volatility)',
+                    'Autoformer': 'Autoformer (Advanced Transformer)',
+                    'CatBoost': 'CatBoost (Categorical Boosting)',
+                    'Ridge': 'Ridge (Linear Baseline)'
+                }
+                
+                display_names = [model_display_names.get(m, m) for m in available_models if m in model_display_names or m not in model_display_names]
+                
+                selected_display = st.selectbox(
+                    "Select Model Type",
+                    display_names if display_names else available_models,
+                    help="Advanced forecasting with all available models"
+                )
+                
+                # Convert back to model name
+                if display_names:
+                    model_type = [k for k, v in model_display_names.items() if v == selected_display]
+                    model_type = model_type[0] if model_type else selected_display
+                else:
+                    model_type = selected_display
+                
+                # Show model info
+                model_info = registry.get_model_info(model_type)
+                if model_info:
+                    st.info(f"ℹ️ {model_info.get('description', 'No description')}")
+                    
+                    # Show requirements
+                    reqs = []
+                    if model_info.get('requires_gpu'):
+                        reqs.append("🖥️ GPU recommended")
+                    if model_info.get('min_data_points'):
+                        reqs.append(f"📊 Min {model_info['min_data_points']} data points")
+                    
+                    if reqs:
+                        st.caption(" • ".join(reqs))
+            except Exception as e:
+                st.warning(f"⚠️ Could not load model registry: {e}. Using default models.")
+                model_type = st.selectbox(
+                    "Model Type",
+                    ["LSTM", "XGBoost", "Prophet", "ARIMA"]
+                )
+                model_info = {}
             
             st.markdown("---")
             st.markdown(f"**{model_type} Parameters**")
@@ -452,6 +895,33 @@ with tab2:
                 params['order'] = (p, d, q)
                 params['use_auto_arima'] = st.checkbox("Use Auto ARIMA", value=True)
             
+            elif model_type == "GARCH":
+                st.markdown("**GARCH Parameters:**")
+                params['p'] = st.slider("p (AR order)", 1, 5, 1, 1)
+                params['q'] = st.slider("q (MA order)", 1, 5, 1, 1)
+            
+            elif model_type == "Autoformer":
+                st.markdown("**Autoformer Parameters:**")
+                params['seq_len'] = st.slider("Sequence Length", 30, 120, 60, 10)
+                params['pred_len'] = st.session_state.forecast_horizon
+                params['d_model'] = st.slider("Model Dimension", 64, 512, 128, 32)
+            
+            elif model_type == "CatBoost":
+                st.markdown("**CatBoost Parameters:**")
+                params['iterations'] = st.slider("Iterations", 100, 1000, 500, 50)
+                params['depth'] = st.slider("Tree Depth", 3, 10, 6, 1)
+                params['learning_rate'] = st.slider("Learning Rate", 0.01, 0.1, 0.03, 0.01)
+            
+            elif model_type == "TCN":
+                st.markdown("**TCN Parameters:**")
+                params['num_channels'] = [64, 128, 256]  # Can be made configurable
+                params['kernel_size'] = st.slider("Kernel Size", 2, 5, 3, 1)
+                params['dropout'] = st.slider("Dropout Rate", 0.0, 0.5, 0.2, 0.05)
+            
+            elif model_type == "Ridge":
+                st.markdown("**Ridge Parameters:**")
+                params['alpha'] = st.slider("Regularization (alpha)", 0.01, 10.0, 1.0, 0.1)
+            
             st.markdown("---")
             st.subheader("🔧 Feature Engineering")
             
@@ -475,7 +945,7 @@ with tab2:
             
             normalize = st.checkbox("Normalize Data", value=True)
             
-            train_button = st.button("🚀 Train Model", type="primary", use_container_width=True)
+            train_button = st.button("🚀 Train Model", type="primary", width='stretch')
         
         with col2:
             st.subheader("📊 Results")
@@ -561,47 +1031,131 @@ with tab2:
                         status_text.text(f"Training {model_type}...")
                         progress_bar.progress(0.8)
                         
-                        # Create model config
-                        model_config = {
-                            "target_column": "close" if "close" in data.columns else "Close"
-                        }
-                        
-                        if model_type == "LSTM":
-                            model_config.update({
-                                "sequence_length": params.get('sequence_length', 60),
-                                "hidden_dim": params.get('hidden_dim', 64),
-                                "num_layers": params.get('num_layers', 2),
-                                "dropout": params.get('dropout', 0.2),
-                                "learning_rate": params.get('learning_rate', 0.001)
-                            })
-                            model = LSTMModel(model_config)
-                        elif model_type == "XGBoost":
-                            model_config.update({
-                                "n_estimators": params.get('n_estimators', 100),
-                                "max_depth": params.get('max_depth', 5),
-                                "learning_rate": params.get('learning_rate', 0.1),
-                                "subsample": params.get('subsample', 0.8),
-                                "colsample_bytree": params.get('colsample_bytree', 0.8)
-                            })
-                            model = XGBoostModel(model_config)
-                        elif model_type == "Prophet":
-                            model_config.update({
-                                "date_column": "ds",
-                                "target_column": "close" if "close" in data.columns else "Close",
-                                "prophet_params": {
-                                    "changepoint_prior_scale": params.get('changepoint_prior_scale', 0.05),
-                                    "seasonality_prior_scale": params.get('seasonality_prior_scale', 10.0),
-                                    "holidays_prior_scale": params.get('holidays_prior_scale', 10.0),
-                                    "seasonality_mode": params.get('seasonality_mode', 'additive')
+                        # Create model using registry
+                        try:
+                            from trading.models.model_registry import get_registry
+                            registry = get_registry()
+                            ModelClass = registry.get(model_type)
+                            
+                            if ModelClass is None:
+                                st.error(f"Model {model_type} not available")
+                                model = None
+                            else:
+                                # Create model config
+                                model_config = {
+                                    "target_column": "close" if "close" in data.columns else "Close",
+                                    "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"]
                                 }
-                            })
-                            model = ProphetModel(model_config)
-                        elif model_type == "ARIMA":
-                            model_config.update({
-                                "order": params.get('order', (5, 1, 0)),
-                                "use_auto_arima": params.get('use_auto_arima', True)
-                            })
-                            model = ARIMAModel(model_config)
+                                
+                                # Add model-specific parameters
+                                if model_type == "LSTM":
+                                    model_config.update({
+                                        "sequence_length": params.get('sequence_length', 60),
+                                        "hidden_size": params.get('hidden_dim', 64),
+                                        "num_layers": params.get('num_layers', 2),
+                                        "dropout": params.get('dropout', 0.2),
+                                        "learning_rate": params.get('learning_rate', 0.001),
+                                        "input_size": len(data.columns) if len(data.columns) > 0 else 1
+                                    })
+                                elif model_type == "XGBoost":
+                                    model_config.update({
+                                        "n_estimators": params.get('n_estimators', 100),
+                                        "max_depth": params.get('max_depth', 5),
+                                        "learning_rate": params.get('learning_rate', 0.1),
+                                        "subsample": params.get('subsample', 0.8),
+                                        "colsample_bytree": params.get('colsample_bytree', 0.8)
+                                    })
+                                elif model_type == "Prophet":
+                                    model_config.update({
+                                        "date_column": "ds",
+                                        "prophet_params": {
+                                            "changepoint_prior_scale": params.get('changepoint_prior_scale', 0.05),
+                                            "seasonality_prior_scale": params.get('seasonality_prior_scale', 10.0),
+                                            "holidays_prior_scale": params.get('holidays_prior_scale', 10.0),
+                                            "seasonality_mode": params.get('seasonality_mode', 'additive')
+                                        }
+                                    })
+                                elif model_type == "ARIMA":
+                                    model_config.update({
+                                        "order": params.get('order', (5, 1, 0)),
+                                        "use_auto_arima": params.get('use_auto_arima', True)
+                                    })
+                                elif model_type == "GARCH":
+                                    model_config.update({
+                                        "p": params.get('p', 1),
+                                        "q": params.get('q', 1)
+                                    })
+                                elif model_type == "Autoformer":
+                                    model_config.update({
+                                        "seq_len": params.get('seq_len', 60),
+                                        "pred_len": params.get('pred_len', st.session_state.forecast_horizon),
+                                        "d_model": params.get('d_model', 128)
+                                    })
+                                elif model_type == "CatBoost":
+                                    model_config.update({
+                                        "iterations": params.get('iterations', 500),
+                                        "depth": params.get('depth', 6),
+                                        "learning_rate": params.get('learning_rate', 0.03)
+                                    })
+                                elif model_type == "TCN":
+                                    model_config.update({
+                                        "num_channels": params.get('num_channels', [64, 128, 256]),
+                                        "kernel_size": params.get('kernel_size', 3),
+                                        "dropout": params.get('dropout', 0.2)
+                                    })
+                                elif model_type == "Ridge":
+                                    model_config.update({
+                                        "alpha": params.get('alpha', 1.0)
+                                    })
+                                
+                                model = ModelClass(model_config)
+                        except Exception as e:
+                            st.warning(f"Could not use model registry: {e}. Using direct imports.")
+                            # Fallback to direct imports
+                            model_config = {
+                                "target_column": "close" if "close" in data.columns else "Close"
+                            }
+                            
+                            if model_type == "LSTM":
+                                model_config.update({
+                                    "sequence_length": params.get('sequence_length', 60),
+                                    "hidden_size": params.get('hidden_dim', 64),
+                                    "num_layers": params.get('num_layers', 2),
+                                    "dropout": params.get('dropout', 0.2),
+                                    "learning_rate": params.get('learning_rate', 0.001),
+                                    "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"],
+                                    "input_size": len(data.columns) if len(data.columns) > 0 else 1
+                                })
+                                model = LSTMForecaster(model_config)
+                            elif model_type == "XGBoost":
+                                model_config.update({
+                                    "n_estimators": params.get('n_estimators', 100),
+                                    "max_depth": params.get('max_depth', 5),
+                                    "learning_rate": params.get('learning_rate', 0.1),
+                                    "subsample": params.get('subsample', 0.8),
+                                    "colsample_bytree": params.get('colsample_bytree', 0.8)
+                                })
+                                model = XGBoostModel(model_config)
+                            elif model_type == "Prophet":
+                                model_config.update({
+                                    "date_column": "ds",
+                                    "prophet_params": {
+                                        "changepoint_prior_scale": params.get('changepoint_prior_scale', 0.05),
+                                        "seasonality_prior_scale": params.get('seasonality_prior_scale', 10.0),
+                                        "holidays_prior_scale": params.get('holidays_prior_scale', 10.0),
+                                        "seasonality_mode": params.get('seasonality_mode', 'additive')
+                                    }
+                                })
+                                model = ProphetModel(model_config)
+                            elif model_type == "ARIMA":
+                                model_config.update({
+                                    "order": params.get('order', (5, 1, 0)),
+                                    "use_auto_arima": params.get('use_auto_arima', True)
+                                })
+                                model = ARIMAModel(model_config)
+                            else:
+                                st.error(f"Model {model_type} not available with direct imports. Please use model registry.")
+                                model = None
                         
                         # Train model
                         if model_type == "Prophet":
@@ -615,9 +1169,20 @@ with tab2:
                         else:
                             fit_result = model.fit(data, data[model_config["target_column"]])
                         
-                        # Generate forecast
+                        # Generate forecast - try with uncertainty if available
                         progress_bar.progress(0.9)
-                        forecast_result = model.forecast(data, horizon=st.session_state.forecast_horizon)
+                        if hasattr(model, 'forecast_with_uncertainty'):
+                            try:
+                                forecast_result = model.forecast_with_uncertainty(data, horizon=st.session_state.forecast_horizon, num_samples=100)
+                            except Exception as e:
+                                st.warning(f"Could not generate forecast with uncertainty: {e}. Using standard forecast.")
+                                forecast_result = model.forecast(data, horizon=st.session_state.forecast_horizon)
+                        else:
+                            forecast_result = model.forecast(data, horizon=st.session_state.forecast_horizon)
+                        
+                        # Store full forecast result for confidence intervals
+                        st.session_state.current_forecast_result = forecast_result
+                        st.session_state.current_model_instance = model  # Store model instance for explainability
                         
                         progress_bar.progress(1.0)
                         status_text.text("Complete!")
@@ -677,13 +1242,93 @@ with tab2:
                             hovermode='x unified',
                             height=500
                         )
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, width='stretch')
                         
                         # Display forecast table
                         st.markdown("**Forecast Values:**")
                         display_df = forecast_df.copy()
-                        display_df['forecast'] = display_df['forecast'].map('${:.2f}'.format)
-                        st.dataframe(display_df, use_container_width=True)
+                        display_df['forecast'] = display_df['forecast'].apply(
+                            lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
+                        )
+                        st.dataframe(display_df, width='stretch')
+                        
+                        # Add explainability section
+                        st.markdown("---")
+                        st.subheader("🔍 Model Explainability")
+                        
+                        with st.expander("📊 View Feature Importance & Explanations", expanded=False):
+                            st.write("Understand what drives the model's predictions")
+                            
+                            if st.button("Generate Explanation", key="explain_btn_tab2"):
+                                try:
+                                    with st.spinner("Analyzing model predictions..."):
+                                        from trading.models.forecast_explainability import ForecastExplainability
+                                        
+                                        # Initialize explainer
+                                        explainer = ForecastExplainability()
+                                        
+                                        # Extract forecast value and prepare features
+                                        forecast_value = forecast_result.get('forecast', [])
+                                        if isinstance(forecast_value, (list, np.ndarray)) and len(forecast_value) > 0:
+                                            forecast_value = float(forecast_value[0])
+                                        else:
+                                            forecast_value = float(forecast_value) if isinstance(forecast_value, (int, float)) else float(data[model_config["target_column"]].iloc[-1])
+                                        
+                                        # Prepare features DataFrame
+                                        features = data.copy()
+                                        if model_config["target_column"] in features.columns:
+                                            target_history = features[model_config["target_column"]]
+                                        else:
+                                            target_history = features.iloc[:, 0]
+                                        
+                                        explanation = explainer.explain_forecast(
+                                            forecast_id=f"forecast_{st.session_state.symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                                            symbol=st.session_state.symbol,
+                                            forecast_value=forecast_value,
+                                            model=model,
+                                            features=features,
+                                            target_history=target_history,
+                                            horizon=st.session_state.forecast_horizon
+                                        )
+                                        
+                                        # Display feature importance
+                                        if explanation.get('success') and 'explanation' in explanation:
+                                            expl_obj = explanation['explanation']
+                                            if hasattr(expl_obj, 'feature_importance') and expl_obj.feature_importance:
+                                                st.write("**📊 Feature Importance:**")
+                                                
+                                                importance_data = expl_obj.feature_importance
+                                                if isinstance(importance_data, dict):
+                                                    importance_df = pd.DataFrame(
+                                                        importance_data.items(),
+                                                        columns=['Feature', 'Importance']
+                                                    ).sort_values('Importance', ascending=False)
+                                                    
+                                                    # Bar chart
+                                                    fig_imp = px.bar(
+                                                        importance_df,
+                                                        x='Importance',
+                                                        y='Feature',
+                                                        orientation='h',
+                                                        title='What Drives the Predictions?',
+                                                        labels={'Importance': 'Impact on Prediction'}
+                                                    )
+                                                    st.plotly_chart(fig_imp, width='stretch')
+                                        
+                                        # Text explanation
+                                        if explanation.get('success') and 'explanation' in explanation:
+                                            expl_obj = explanation['explanation']
+                                            if hasattr(expl_obj, 'explanation_text') and expl_obj.explanation_text:
+                                                st.write("**💬 Plain English Explanation:**")
+                                                st.info(expl_obj.explanation_text)
+                                        
+                                        st.success("✅ Explanation generated successfully!")
+                                
+                                except ImportError:
+                                    st.warning("⚠️ Forecast explainability requires SHAP library")
+                                    st.code("pip install shap")
+                                except Exception as e:
+                                    st.error(f"Error generating explanation: {e}")
                 
                 except Exception as e:
                     st.error(f"Training failed: {str(e)}")
@@ -698,7 +1343,7 @@ with tab2:
                 st.markdown("---")
                 st.markdown(f"**Previous Forecast ({st.session_state.get('advanced_model', 'Unknown')})**")
                 prev_forecast = st.session_state.advanced_forecast
-                st.dataframe(prev_forecast.tail(10), use_container_width=True)
+                st.dataframe(prev_forecast.tail(10), width='stretch')
 
 with tab3:
     st.header("AI Model Selection")
@@ -723,7 +1368,7 @@ with tab3:
             analyze_button = st.button(
                 "🔍 Analyze Data & Recommend Model",
                 type="primary",
-                use_container_width=True
+                width='stretch'
             )
             
             if analyze_button:
@@ -856,13 +1501,13 @@ with tab3:
                 col_a, col_b = st.columns(2)
                 
                 with col_a:
-                    if st.button("✅ Use Recommended Model", use_container_width=True):
+                    if st.button("✅ Use Recommended Model", width='stretch'):
                         st.session_state.selected_model = rec['model_name']
                         st.success(f"Selected: {rec['model_name']}")
                         st.info("Go to Quick Forecast tab to generate forecast")
                 
                 with col_b:
-                    if st.button("🔄 Choose Different Model", use_container_width=True):
+                    if st.button("🔄 Choose Different Model", width='stretch'):
                         st.session_state.show_override = True
                 
                 if st.session_state.get('show_override'):
@@ -906,7 +1551,7 @@ with tab4:
             compare_button = st.button(
                 "🚀 Compare Models",
                 type="primary",
-                use_container_width=True,
+                width='stretch',
                 disabled=len(models_to_compare) < 2
             )
         
@@ -940,15 +1585,18 @@ with tab4:
                         try:
                             # Create model config
                             if model_name == "LSTM":
+                                # LSTMForecaster uses config dictionary
                                 config = {
                                     "target_column": "close" if "close" in data.columns else "Close",
                                     "sequence_length": 60,
-                                    "hidden_dim": 64,
+                                    "hidden_size": 64,
                                     "num_layers": 2,
                                     "dropout": 0.2,
-                                    "learning_rate": 0.001
+                                    "learning_rate": 0.001,
+                                    "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"],
+                                    "input_size": len(data.columns) if len(data.columns) > 0 else 1
                                 }
-                                model = LSTMModel(config)
+                                model = LSTMForecaster(config)
                             elif model_name == "XGBoost":
                                 config = {
                                     "target_column": "close" if "close" in data.columns else "Close",
@@ -1077,7 +1725,7 @@ with tab4:
                         height=600
                     )
                     
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                     
                     # Metrics table
                     st.markdown("---")
@@ -1111,7 +1759,7 @@ with tab4:
                     
                     if metrics_data:
                         metrics_df = pd.DataFrame(metrics_data)
-                        st.dataframe(metrics_df, use_container_width=True)
+                        st.dataframe(metrics_df, width='stretch')
                     
                     # Forecast table
                     st.markdown("---")
@@ -1129,9 +1777,11 @@ with tab4:
                     display_df = comparison_df.copy()
                     for col in display_df.columns:
                         if col != 'Date' and col in forecasts:
-                            display_df[col] = display_df[col].map('${:.2f}'.format)
+                            display_df[col] = display_df[col].apply(
+                                lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
+                            )
                     
-                    st.dataframe(display_df, use_container_width=True)
+                    st.dataframe(display_df, width='stretch')
                     
                     # Download button
                     csv = comparison_df.to_csv(index=False)
@@ -1174,7 +1824,7 @@ with tab5:
         with col3:
             show_trend = st.checkbox("Trend Analysis", value=True)
         
-        analyze_button = st.button("🔍 Run Analysis", type="primary", use_container_width=True)
+        analyze_button = st.button("🔍 Run Analysis", type="primary", width='stretch')
         
         if analyze_button:
             data = st.session_state.forecast_data.copy()
@@ -1366,11 +2016,11 @@ with tab5:
                     fig.update_yaxes(title_text="RSI", row=2, col=1)
                     fig.update_yaxes(title_text="MACD", row=3, col=1)
                     
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                     
                     # Indicators table
                     with st.expander("📋 View All Indicators"):
-                        st.dataframe(indicators_df.tail(50), use_container_width=True)
+                        st.dataframe(indicators_df.tail(50), width='stretch')
                 
                 except Exception as e:
                     st.error(f"Error calculating indicators: {str(e)}")
@@ -1513,7 +2163,7 @@ with tab5:
                         height=400
                     )
                     
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                 
                 except Exception as e:
                     st.error(f"Error analyzing trend: {str(e)}")
@@ -1547,5 +2197,290 @@ with tab5:
             
             if summary_data['Metric']:
                 summary_df = pd.DataFrame(summary_data)
-                st.dataframe(summary_df, use_container_width=True, hide_index=True)
+                st.dataframe(summary_df, width='stretch', hide_index=True)
+
+with tab6:
+    st.header("🔗 Multi-Asset Forecasting with Graph Neural Networks")
+    st.markdown("""
+    GNN models relationships between correlated assets. Perfect for:
+    - **Portfolio-level forecasting** - Predict entire portfolio together
+    - **Sector analysis** - Model how sector stocks move together
+    - **Market contagion** - Understand how shocks spread
+    - **Relationship-based predictions** - Use asset correlations for better forecasts
+    """)
+    
+    st.info("💡 GNN requires 3-20 correlated assets. It won't work with single tickers.")
+    
+    # Multi-ticker input
+    st.subheader("📊 Step 1: Select Multiple Assets")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        tickers_input = st.text_area(
+            "Enter ticker symbols (one per line)",
+            value="AAPL\nMSFT\nGOOGL\nAMZN\nMETA",
+            height=150,
+            help="Enter 3-20 correlated stocks. Tech stocks, bank stocks, etc."
+        )
+        
+        tickers = [t.strip().upper() for t in tickers_input.split('\n') if t.strip()]
+        
+        if len(tickers) < 3:
+            st.error("❌ GNN requires at least 3 assets")
+        elif len(tickers) > 20:
+            st.warning("⚠️ Too many assets (max 20). Performance may be slow.")
+        else:
+            st.success(f"✅ {len(tickers)} assets selected")
+    
+    with col2:
+        st.write("**Settings:**")
+        
+        correlation_threshold = st.slider(
+            "Correlation Threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.5,
+            step=0.05,
+            help="Assets with correlation > this will be connected in graph"
+        )
+        
+        gnn_horizon = st.slider(
+            "Forecast Days",
+            min_value=1,
+            max_value=30,
+            value=7
+        )
+        
+        gnn_epochs = st.slider(
+            "Training Epochs",
+            min_value=20,
+            max_value=100,
+            value=50,
+            help="More epochs = better accuracy but slower"
+        )
+    
+    # Load multi-asset data
+    if st.button("📥 Load Multi-Asset Data", type="primary", use_container_width=True):
+        if len(tickers) < 3:
+            st.error("Please select at least 3 assets")
+        elif len(tickers) > 20:
+            st.error("Please limit to 20 assets for performance")
+        else:
+            try:
+                with st.spinner(f"Loading data for {len(tickers)} assets..."):
+                    from trading.data.data_loader import DataLoader, DataLoadRequest
+                    from datetime import datetime, timedelta
+                    
+                    loader = DataLoader()
+                    
+                    # Load data for each ticker
+                    multi_asset_data = {}
+                    failed_tickers = []
+                    
+                    progress_bar = st.progress(0)
+                    
+                    for i, ticker in enumerate(tickers):
+                        try:
+                            request = DataLoadRequest(
+                                ticker=ticker,
+                                start_date=(datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d"),
+                                end_date=datetime.now().strftime("%Y-%m-%d"),
+                                interval="1d"
+                            )
+                            response = loader.load_market_data(request)
+                            
+                            if response.success and response.data is not None:
+                                # Get close prices
+                                data = response.data
+                                if 'close' in data.columns:
+                                    multi_asset_data[ticker] = data['close']
+                                elif 'Close' in data.columns:
+                                    multi_asset_data[ticker] = data['Close']
+                            else:
+                                failed_tickers.append(ticker)
+                        except Exception as e:
+                            logger.error(f"Error loading {ticker}: {e}")
+                            failed_tickers.append(ticker)
+                        
+                        progress_bar.progress((i + 1) / len(tickers))
+                    
+                    progress_bar.empty()
+                    
+                    if len(multi_asset_data) < 3:
+                        st.error(f"Could not load enough assets. Failed: {', '.join(failed_tickers)}")
+                    else:
+                        # Combine into DataFrame
+                        multi_df = pd.DataFrame(multi_asset_data)
+                        
+                        # Align dates (drop rows with any NaN)
+                        multi_df = multi_df.dropna()
+                        
+                        if len(multi_df) < 100:
+                            st.error("Insufficient overlapping data. Try different tickers or longer date range.")
+                        else:
+                            st.session_state.gnn_data = multi_df
+                            st.session_state.gnn_tickers = list(multi_df.columns)
+                            
+                            st.success(f"✅ Loaded {len(multi_df)} days of data for {len(multi_df.columns)} assets")
+                            
+                            if failed_tickers:
+                                st.warning(f"⚠️ Could not load: {', '.join(failed_tickers)}")
+            
+            except Exception as e:
+                st.error(f"Error loading data: {e}")
+                import traceback
+                st.code(traceback.format_exc())
+    
+    # Display correlation matrix and train GNN
+    if 'gnn_data' in st.session_state and st.session_state.gnn_data is not None:
+        st.markdown("---")
+        st.subheader("📊 Step 2: View Asset Correlations")
+        
+        multi_df = st.session_state.gnn_data
+        
+        # Calculate correlation matrix
+        corr_matrix = multi_df.corr()
+        
+        # Plot heatmap
+        fig_corr = px.imshow(
+            corr_matrix,
+            labels=dict(color="Correlation"),
+            x=corr_matrix.columns,
+            y=corr_matrix.columns,
+            color_continuous_scale='RdBu_r',
+            zmin=-1,
+            zmax=1,
+            title=f"Asset Correlation Matrix ({len(multi_df.columns)} assets)"
+        )
+        
+        fig_corr.update_layout(height=500)
+        st.plotly_chart(fig_corr, width='stretch')
+        
+        # Show graph connections
+        num_connections = (corr_matrix.abs() > correlation_threshold).sum().sum() - len(multi_df.columns)
+        st.info(f"🔗 Graph will have {num_connections // 2} edges (connections) based on {correlation_threshold:.0%} threshold")
+        
+        # Generate forecast
+        st.markdown("---")
+        st.subheader("🚀 Step 3: Generate GNN Forecast")
+        
+        target_asset = st.selectbox(
+            "Select primary asset to forecast",
+            options=st.session_state.gnn_tickers,
+            help="GNN will forecast this asset using all connected assets"
+        )
+        
+        if st.button("🔮 Train GNN & Generate Forecast", type="primary", use_container_width=True):
+            try:
+                with st.spinner(f"Training Graph Neural Network on {len(multi_df.columns)} assets..."):
+                    from trading.models.advanced.gnn.gnn_model import GNNForecaster
+                    
+                    # Progress indicator
+                    progress_text = st.empty()
+                    
+                    # Initialize GNN
+                    progress_text.text("Initializing GNN model...")
+                    gnn = GNNForecaster(
+                        num_assets=len(multi_df.columns),
+                        hidden_size=64,
+                        num_layers=2,
+                        seq_length=30,
+                        correlation_threshold=correlation_threshold
+                    )
+                    
+                    # Train
+                    progress_text.text(f"Training for {gnn_epochs} epochs...")
+                    gnn.fit(multi_df, epochs=gnn_epochs, batch_size=32)
+                    
+                    # Generate forecast
+                    progress_text.text("Generating forecast...")
+                    forecast_result = gnn.forecast(
+                        multi_df,
+                        horizon=gnn_horizon,
+                        target_asset=target_asset
+                    )
+                    
+                    progress_text.empty()
+                    st.success("✅ GNN forecast generated!")
+                    
+                    # Display forecast chart
+                    st.subheader(f"📈 {target_asset} Forecast")
+                    
+                    fig = go.Figure()
+                    
+                    # Historical data
+                    fig.add_trace(go.Scatter(
+                        x=multi_df.index,
+                        y=multi_df[target_asset],
+                        name='Historical',
+                        line=dict(color='blue', width=2)
+                    ))
+                    
+                    # Forecast
+                    fig.add_trace(go.Scatter(
+                        x=forecast_result['dates'],
+                        y=forecast_result['forecast'],
+                        name='GNN Forecast',
+                        line=dict(color='red', width=2, dash='dash')
+                    ))
+                    
+                    fig.update_layout(
+                        title=f"GNN Multi-Asset Forecast for {target_asset}",
+                        xaxis_title="Date",
+                        yaxis_title="Price ($)",
+                        hovermode='x unified',
+                        height=500
+                    )
+                    
+                    st.plotly_chart(fig, width='stretch')
+                    
+                    # Metrics
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("Forecast Horizon", f"{gnn_horizon} days")
+                    with col2:
+                        st.metric("Assets Used", len(multi_df.columns))
+                    with col3:
+                        avg_conf = forecast_result['confidence'].mean()
+                        st.metric("Avg Confidence", f"{avg_conf:.1%}")
+                    with col4:
+                        last_price = multi_df[target_asset].iloc[-1]
+                        forecast_return = ((forecast_result['forecast'][-1] / last_price) - 1) * 100
+                        st.metric("Forecast Return", f"{forecast_return:+.2f}%")
+                    
+                    # Show relationship matrix
+                    st.markdown("---")
+                    st.subheader("🔗 Learned Asset Relationships")
+                    
+                    relationship_matrix = gnn.get_relationship_matrix()
+                    
+                    fig_rel = px.imshow(
+                        relationship_matrix,
+                        labels=dict(color="Connection Strength"),
+                        x=multi_df.columns,
+                        y=multi_df.columns,
+                        color_continuous_scale='Viridis',
+                        title="GNN Asset Relationship Graph (1 = connected, 0 = not connected)"
+                    )
+                    
+                    fig_rel.update_layout(height=500)
+                    st.plotly_chart(fig_rel, width='stretch')
+                    
+                    # Forecast table
+                    with st.expander("📋 View Forecast Data"):
+                        forecast_df = pd.DataFrame({
+                            'Date': forecast_result['dates'],
+                            'Forecast': forecast_result['forecast'],
+                            'Confidence': forecast_result['confidence']
+                        })
+                        st.dataframe(forecast_df, width='stretch')
+            
+            except ImportError:
+                st.error("❌ GNN model not available. Make sure it has been recreated using the prompts.")
+            except Exception as e:
+                st.error(f"Error generating GNN forecast: {e}")
+                import traceback
+                st.code(traceback.format_exc())
 

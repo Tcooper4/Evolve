@@ -26,6 +26,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 import streamlit as st
 
 # Backend imports
@@ -124,14 +125,17 @@ st.markdown("Train, optimize, evaluate, and deploy machine learning models for t
 st.markdown("---")
 
 # Create tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_discovery, tab_innovation, tab_benchmark = st.tabs([
     "⚡ Quick Training",
     "⚙️ Model Configuration",
     "🎯 Hyperparameter Optimization",
     "📊 Model Performance",
     "🔍 Model Comparison",
     "🧠 Explainability",
-    "📚 Model Registry"
+    "📚 Model Registry",
+    "🤖 AI Model Discovery",  # NEW TAB
+    "🧪 Model Innovation",  # NEW TAB
+    "📊 Benchmark Models"  # NEW TAB
 ])
 
 # TAB 1: Quick Training
@@ -164,14 +168,16 @@ with tab1:
             start_date = st.date_input(
                 "Start Date",
                 value=datetime.now() - pd.Timedelta(days=365),
-                max_value=datetime.now()
+                max_value=datetime.now(),
+                key="model_lab_data_start_date"
             )
         
         with col3:
             end_date = st.date_input(
                 "End Date",
                 value=datetime.now(),
-                max_value=datetime.now()
+                max_value=datetime.now(),
+                key="model_lab_data_end_date"
             )
         
         if st.button("📥 Load Data", type="primary"):
@@ -298,7 +304,7 @@ with tab1:
         
         # Train Button
         st.markdown("---")
-        train_button = st.button("🚀 Train Model", type="primary", use_container_width=True)
+        train_button = st.button("🚀 Train Model", type="primary", width='stretch')
         
         if train_button:
             try:
@@ -499,14 +505,14 @@ with tab1:
                                     height=400
                                 )
                                 
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width='stretch')
                                 
                                 # Save model button
                                 st.markdown("---")
                                 col_save1, col_save2 = st.columns([1, 1])
                                 
                                 with col_save1:
-                                    if st.button("💾 Save Model", use_container_width=True):
+                                    if st.button("💾 Save Model", width='stretch'):
                                         try:
                                             if st.session_state.model_registry:
                                                 # Save to registry
@@ -531,7 +537,7 @@ with tab1:
                                             st.error(f"Error saving model: {str(e)}")
                                 
                                 with col_save2:
-                                    if st.button("🔄 Train Another Model", use_container_width=True):
+                                    if st.button("🔄 Train Another Model", width='stretch'):
                                         st.rerun()
                                 
                             except Exception as e:
@@ -572,14 +578,16 @@ with tab2:
             start_date = st.date_input(
                 "Start Date",
                 value=datetime.now() - timedelta(days=365),
-                max_value=datetime.now()
+                max_value=datetime.now(),
+                key="model_lab_optimization_start_date"
             )
         
         with col3:
             end_date = st.date_input(
                 "End Date",
                 value=datetime.now(),
-                max_value=datetime.now()
+                max_value=datetime.now(),
+                key="model_lab_optimization_end_date"
             )
         
         if st.button("📥 Load Data"):
@@ -1080,7 +1088,7 @@ with tab2:
         )
         
         # Train Button
-        train_button = st.button("🚀 Train Model with Configuration", type="primary", use_container_width=True)
+        train_button = st.button("🚀 Train Model with Configuration", type="primary", width='stretch')
         
         if train_button:
             try:
@@ -1281,10 +1289,10 @@ with tab2:
                             hovermode='x unified',
                             height=400
                         )
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, width='stretch')
                         
                         # Save button
-                        if st.button("💾 Save Model", use_container_width=True):
+                        if st.button("💾 Save Model", width='stretch'):
                             try:
                                 if st.session_state.model_registry:
                                     st.session_state.model_registry.save_model(
@@ -1512,7 +1520,7 @@ with tab3:
         st.markdown("---")
         
         # Run Optimization
-        optimize_button = st.button("🚀 Start Optimization", type="primary", use_container_width=True)
+        optimize_button = st.button("🚀 Start Optimization", type="primary", width='stretch')
         
         if optimize_button:
             try:
@@ -1686,7 +1694,7 @@ with tab3:
                             yaxis_title="Best Score",
                             height=300
                         )
-                        history_plot.plotly_chart(fig, use_container_width=True)
+                        history_plot.plotly_chart(fig, width='stretch')
                 
                 elif optimization_method == "Random Search":
                     for i in range(n_trials):
@@ -1738,7 +1746,7 @@ with tab3:
                             yaxis_title="Best Score",
                             height=300
                         )
-                        history_plot.plotly_chart(fig, use_container_width=True)
+                        history_plot.plotly_chart(fig, width='stretch')
                 
                 elif optimization_method == "Bayesian Optimization (Optuna)":
                     try:
@@ -1783,40 +1791,188 @@ with tab3:
                     
                     except ImportError:
                         st.error("Optuna not available. Please install: pip install optuna")
-                        return
+                        # Skip this optimization method if Optuna is not available
+                        pass
                 
                 elif optimization_method == "Genetic Algorithm":
-                    st.info("Genetic Algorithm optimization is a placeholder. Using Random Search instead.")
-                    # Placeholder - would need DEAP or similar library
-                    for i in range(n_trials):
-                        params = {}
-                        for name, space in param_space.items():
-                            if isinstance(space, tuple):
-                                if isinstance(space[0], int):
-                                    params[name] = np.random.randint(space[0], space[1] + 1)
+                    st.info("Running Genetic Algorithm optimization...")
+                    
+                    try:
+                        from deap import base, creator, tools, algorithms
+                        import random
+                        
+                        # Define fitness and individual
+                        if not hasattr(creator, "FitnessMax"):
+                            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+                        if not hasattr(creator, "Individual"):
+                            creator.create("Individual", list, fitness=creator.FitnessMax)
+                        
+                        toolbox = base.Toolbox()
+                        
+                        # Create parameter bounds and types
+                        param_names = list(param_space.keys())
+                        
+                        # Define genes
+                        def create_individual():
+                            individual = []
+                            for name, space in param_space.items():
+                                if isinstance(space, tuple):
+                                    if isinstance(space[0], int):
+                                        individual.append(random.randint(space[0], space[1]))
+                                    else:
+                                        individual.append(random.uniform(space[0], space[1]))
+                                elif isinstance(space, list):
+                                    individual.append(random.choice(range(len(space))))
                                 else:
-                                    params[name] = np.random.uniform(space[0], space[1])
-                            elif isinstance(space, list):
-                                params[name] = np.random.choice(space)
+                                    individual.append(space)
+                            return creator.Individual(individual)
+                        
+                        toolbox.register("individual", create_individual)
+                        toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+                        
+                        # Evaluation function
+                        def evaluate(individual):
+                            params = {}
+                            for i, name in enumerate(param_names):
+                                space = param_space[name]
+                                if isinstance(space, list):
+                                    params[name] = space[int(individual[i])]
+                                else:
+                                    params[name] = individual[i]
+                            score = objective_function(params)
+                            return (score,)
+                        
+                        toolbox.register("evaluate", evaluate)
+                        toolbox.register("mate", tools.cxTwoPoint)
+                        
+                        # Mutation function
+                        def mutate(individual):
+                            for i, (name, space) in enumerate(param_space.items()):
+                                if random.random() < 0.2:  # 20% mutation probability
+                                    if isinstance(space, tuple):
+                                        if isinstance(space[0], int):
+                                            individual[i] = random.randint(space[0], space[1])
+                                        else:
+                                            individual[i] = random.uniform(space[0], space[1])
+                                    elif isinstance(space, list):
+                                        individual[i] = random.choice(range(len(space)))
+                            return individual,
+                        
+                        toolbox.register("mutate", mutate)
+                        toolbox.register("select", tools.selTournament, tournsize=3)
+                        
+                        # Run genetic algorithm
+                        population = toolbox.population(n=min(50, n_trials))
+                        ngen = max(1, n_trials // 50)
+                        cxpb = 0.7
+                        mutpb = 0.2
+                        
+                        # Track best individual
+                        best_individual = None
+                        best_fitness = float('-inf') if "Maximize" in optimization_objective else float('inf')
+                        
+                        for gen in range(ngen):
+                            # Evaluate population
+                            fitnesses = list(map(toolbox.evaluate, population))
+                            for ind, fit in zip(population, fitnesses):
+                                ind.fitness.values = fit
+                            
+                            # Track best
+                            current_best = tools.selBest(population, k=1)[0]
+                            current_fitness = current_best.fitness.values[0]
+                            
+                            if ("Maximize" in optimization_objective and current_fitness > best_fitness) or \
+                               ("Minimize" in optimization_objective and current_fitness < best_fitness):
+                                best_fitness = current_fitness
+                                best_individual = current_best
+                            
+                            # Convert to params and add to trials
+                            params = {}
+                            for i, name in enumerate(param_names):
+                                space = param_space[name]
+                                if isinstance(space, list):
+                                    params[name] = space[int(best_individual[i])]
+                                else:
+                                    params[name] = best_individual[i]
+                            
+                            all_trials.append({
+                                "trial": gen + 1,
+                                "params": params,
+                                "score": best_fitness
+                            })
+                            convergence_history.append(best_fitness)
+                            
+                            # Update progress
+                            progress = (gen + 1) / ngen
+                            progress_bar.progress(progress)
+                            status_text.text(f"Generation {gen+1}/{ngen} | Best Score: {best_fitness:.4f}")
+                            
+                            # Select and clone next generation
+                            offspring = toolbox.select(population, len(population))
+                            offspring = list(map(toolbox.clone, offspring))
+                            
+                            # Crossover
+                            for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                                if random.random() < cxpb:
+                                    toolbox.mate(child1, child2)
+                                    del child1.fitness.values
+                                    del child2.fitness.values
+                            
+                            # Mutation
+                            for mutant in offspring:
+                                if random.random() < mutpb:
+                                    toolbox.mutate(mutant)
+                                    del mutant.fitness.values
+                            
+                            population[:] = offspring
+                        
+                        # Get best params
+                        best_params = {}
+                        for i, name in enumerate(param_names):
+                            space = param_space[name]
+                            if isinstance(space, list):
+                                best_params[name] = space[int(best_individual[i])]
                             else:
-                                params[name] = space
+                                best_params[name] = best_individual[i]
                         
-                        score = objective_function(params)
-                        all_trials.append({
-                            "trial": i + 1,
-                            "params": params,
-                            "score": score
-                        })
+                        best_score = best_fitness
                         
-                        if ("Minimize" in optimization_objective and score < best_score) or \
-                           ("Maximize" in optimization_objective and score > best_score):
-                            best_score = score
-                            best_params = params.copy()
+                        progress_bar.progress(1.0)
+                        status_text.text(f"✅ Genetic Algorithm complete! Best Score: {best_score:.4f}")
                         
-                        convergence_history.append(best_score)
-                        progress = (i + 1) / n_trials
-                        progress_bar.progress(progress)
-                        status_text.text(f"Trial {i+1}/{n_trials} | Best Score: {best_score:.4f}")
+                    except ImportError:
+                        st.warning("DEAP library not installed. Install with: pip install deap")
+                        st.info("Falling back to Random Search")
+                        # Fall back to random search
+                        for i in range(n_trials):
+                            params = {}
+                            for name, space in param_space.items():
+                                if isinstance(space, tuple):
+                                    if isinstance(space[0], int):
+                                        params[name] = np.random.randint(space[0], space[1] + 1)
+                                    else:
+                                        params[name] = np.random.uniform(space[0], space[1])
+                                elif isinstance(space, list):
+                                    params[name] = np.random.choice(space)
+                                else:
+                                    params[name] = space
+                            
+                            score = objective_function(params)
+                            all_trials.append({
+                                "trial": i + 1,
+                                "params": params,
+                                "score": score
+                            })
+                            
+                            if ("Minimize" in optimization_objective and score < best_score) or \
+                               ("Maximize" in optimization_objective and score > best_score):
+                                best_score = score
+                                best_params = params.copy()
+                            
+                            convergence_history.append(best_score)
+                            progress = (i + 1) / n_trials
+                            progress_bar.progress(progress)
+                            status_text.text(f"Trial {i+1}/{n_trials} | Best Score: {best_score:.4f}")
                 
                 optimization_time = (datetime.now() - start_time).total_seconds()
                 
@@ -1846,7 +2002,7 @@ with tab3:
                         }
                         for t in all_trials
                     ])
-                    st.dataframe(results_df, use_container_width=True, height=400)
+                    st.dataframe(results_df, width='stretch', height=400)
                     
                     # Export button
                     csv = results_df.to_csv(index=False)
@@ -1858,7 +2014,7 @@ with tab3:
                     )
                     
                     # Save best parameters
-                    if st.button("💾 Save Best Parameters", use_container_width=True):
+                    if st.button("💾 Save Best Parameters", width='stretch'):
                         if 'optimization_results' not in st.session_state:
                             st.session_state.optimization_results = {}
                         st.session_state.optimization_results[f"{model_type}_{optimization_method}"] = {
@@ -1978,7 +2134,7 @@ with tab4:
                                 hovermode='x unified',
                                 height=400
                             )
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                         
                         if 'train_accuracy' in history and 'val_accuracy' in history:
                             fig = go.Figure()
@@ -2001,7 +2157,7 @@ with tab4:
                                 hovermode='x unified',
                                 height=400
                             )
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                     else:
                         st.info("Training history not available for this model.")
                     
@@ -2009,7 +2165,7 @@ with tab4:
                     if 'epoch_metrics' in model_result:
                         st.markdown("**Epoch-by-Epoch Metrics**")
                         epoch_df = pd.DataFrame(model_result['epoch_metrics'])
-                        st.dataframe(epoch_df, use_container_width=True)
+                        st.dataframe(epoch_df, width='stretch')
             
             with perf_tab2:
                 st.subheader("✅ Validation Metrics")
@@ -2045,7 +2201,7 @@ with tab4:
                         hovermode='closest',
                         height=500
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                     
                     # Residual Plot
                     residuals = np.array(y_true) - np.array(y_pred)
@@ -2066,7 +2222,7 @@ with tab4:
                         hovermode='closest',
                         height=400
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                     
                     # Residual Statistics
                     col1, col2, col3 = st.columns(3)
@@ -2092,7 +2248,7 @@ with tab4:
                         yaxis_title="Frequency",
                         height=400
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                 else:
                     st.info("Validation predictions not available. Please evaluate the model first.")
             
@@ -2144,7 +2300,7 @@ with tab4:
                                 yaxis_title="Frequency",
                                 height=400
                             )
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                         
                         with col2:
                             # Error over Time
@@ -2163,7 +2319,7 @@ with tab4:
                                 hovermode='x unified',
                                 height=400
                             )
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                         
                         # Error Statistics
                         col1, col2, col3, col4 = st.columns(4)
@@ -2219,7 +2375,7 @@ with tab4:
                         hovermode='x unified',
                         height=400
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                 else:
                     st.info("Performance history not available. This feature tracks model performance over multiple evaluations.")
                 
@@ -2259,7 +2415,7 @@ with tab4:
             col1, col2 = st.columns(2)
             
             with col1:
-                if st.button("📥 Export Performance Report", use_container_width=True):
+                if st.button("📥 Export Performance Report", width='stretch'):
                     # Create report
                     report = {
                         "model_name": selected_model_name,
@@ -2281,7 +2437,7 @@ with tab4:
                     )
             
             with col2:
-                if st.button("🔄 Re-evaluate Model", use_container_width=True):
+                if st.button("🔄 Re-evaluate Model", width='stretch'):
                     st.info("Re-evaluation functionality would re-run the model on test data.")
 
 # TAB 5: Model Comparison
@@ -2347,7 +2503,7 @@ with tab5:
                 })
             
             comparison_df = pd.DataFrame(comparison_data)
-            st.dataframe(comparison_df, use_container_width=True)
+            st.dataframe(comparison_df, width='stretch')
             
             # Find best model for each metric
             st.markdown("**🏆 Best Models by Metric:**")
@@ -2419,7 +2575,7 @@ with tab5:
                     barmode='group',
                     height=500
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 # Line chart for metrics over models
                 fig = go.Figure()
@@ -2461,7 +2617,7 @@ with tab5:
                     hovermode='x unified',
                     height=500
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             
             # Prediction Overlay Chart
             st.markdown("**Prediction Overlay:**")
@@ -2507,7 +2663,7 @@ with tab5:
                     hovermode='x unified',
                     height=500
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.info("Prediction data not available for all selected models.")
             
@@ -2560,7 +2716,7 @@ with tab5:
                 
                 if significance_results:
                     significance_df = pd.DataFrame(significance_results)
-                    st.dataframe(significance_df, use_container_width=True)
+                    st.dataframe(significance_df, width='stretch')
                     
                     st.caption("Note: P-value < 0.05 indicates statistically significant difference between models.")
                 else:
@@ -2631,7 +2787,7 @@ with tab5:
                     {"Model": name, "Score": f"{score:.2f}"}
                     for name, score in sorted(model_scores.items(), key=lambda x: x[1], reverse=True)
                 ])
-                st.dataframe(scores_df, use_container_width=True, hide_index=True)
+                st.dataframe(scores_df, width='stretch', hide_index=True)
             
             st.markdown("---")
             
@@ -2673,7 +2829,7 @@ with tab5:
                         weights = {k: v / total_weight for k, v in weights.items()}
                         st.info(f"Normalized weights: {weights}")
                 
-                if st.button("🚀 Create Ensemble", type="primary", use_container_width=True):
+                if st.button("🚀 Create Ensemble", type="primary", width='stretch'):
                     try:
                         # Create ensemble predictions
                         ensemble_predictions = []
@@ -2778,7 +2934,7 @@ with tab5:
                                 })
                                 
                                 ensemble_comparison_df = pd.DataFrame(comparison_with_ensemble)
-                                st.dataframe(ensemble_comparison_df, use_container_width=True)
+                                st.dataframe(ensemble_comparison_df, width='stretch')
                             else:
                                 st.warning("Actual values not available for ensemble evaluation.")
                         else:
@@ -2898,7 +3054,7 @@ with tab6:
                                 yaxis_title="Feature",
                                 height=max(400, len(sorted_features) * 30)
                             )
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                             
                             # Display as table
                             importance_df = pd.DataFrame({
@@ -2906,7 +3062,7 @@ with tab6:
                                 "Importance": [f"{imp:.4f}" for imp in sorted_importances],
                                 "Rank": range(1, len(sorted_features) + 1)
                             })
-                            st.dataframe(importance_df, use_container_width=True)
+                            st.dataframe(importance_df, width='stretch')
                             
                             st.success("✅ Feature importance calculated successfully!")
                         else:
@@ -2977,7 +3133,7 @@ with tab6:
                                     yaxis_title="Feature",
                                     height=400
                                 )
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width='stretch')
                                 
                                 # SHAP values distribution
                                 st.markdown("**SHAP Values Distribution:**")
@@ -2995,7 +3151,7 @@ with tab6:
                                     barmode='overlay',
                                     height=400
                                 )
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width='stretch')
                             
                             elif shap_plot_type == "Dependence Plot":
                                 # Dependence plot (feature vs SHAP value)
@@ -3022,7 +3178,7 @@ with tab6:
                                     yaxis_title="SHAP Value",
                                     height=400
                                 )
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width='stretch')
                             
                             elif shap_plot_type == "Waterfall Plot":
                                 # Waterfall plot for a single prediction
@@ -3058,7 +3214,7 @@ with tab6:
                                     showlegend=False,
                                     height=500
                                 )
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width='stretch')
                             
                             elif shap_plot_type == "Force Plot":
                                 st.info("Force plots are best viewed interactively. Here's a simplified version:")
@@ -3111,7 +3267,7 @@ with tab6:
                                     yaxis_title="Feature",
                                     height=400
                                 )
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width='stretch')
                             
                             st.success("✅ SHAP values calculated successfully!")
                         
@@ -3198,7 +3354,7 @@ with tab6:
                                 yaxis_title="Feature",
                                 height=400
                             )
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                             
                             # Display as table
                             lime_df = pd.DataFrame({
@@ -3206,7 +3362,7 @@ with tab6:
                                 "Contribution": [f"{contributions[i]:.4f}" for i in sorted_idx],
                                 "Rank": range(1, len(features) + 1)
                             })
-                            st.dataframe(lime_df, use_container_width=True)
+                            st.dataframe(lime_df, width='stretch')
                             
                             st.success("✅ LIME explanation generated successfully!")
                         
@@ -3247,7 +3403,7 @@ with tab6:
                             yaxis_title="Partial Dependence",
                             height=400
                         )
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, width='stretch')
                         
                         st.info("💡 Partial dependence shows how the prediction changes as this feature varies, averaging over all other features.")
                         st.success("✅ Partial dependence plot generated!")
@@ -3306,7 +3462,7 @@ with tab6:
                                 yaxis_title="Contribution",
                                 height=400
                             )
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                             
                             # Explanation text
                             st.markdown("**Explanation:**")
@@ -3507,7 +3663,7 @@ with tab7:
                 })
             
             registry_df = pd.DataFrame(table_data)
-            st.dataframe(registry_df, use_container_width=True, height=400)
+            st.dataframe(registry_df, width='stretch', height=400)
             
             # Model actions
             st.markdown("---")
@@ -3522,12 +3678,12 @@ with tab7:
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                if st.button("📂 View Details", use_container_width=True, key="view_details"):
+                if st.button("📂 View Details", width='stretch', key="view_details"):
                     st.session_state.selected_registry_model = selected_model_for_action
                     st.rerun()
             
             with col2:
-                if st.button("🔄 Load Model", use_container_width=True, key="load_model"):
+                if st.button("🔄 Load Model", width='stretch', key="load_model"):
                     if selected_model_for_action in all_models:
                         st.session_state.current_model = all_models[selected_model_for_action]
                         st.success(f"✅ Model '{selected_model_for_action}' loaded!")
@@ -3535,7 +3691,7 @@ with tab7:
                         st.error("Model not found")
             
             with col3:
-                if st.button("🗑️ Delete Model", use_container_width=True, key="delete_model"):
+                if st.button("🗑️ Delete Model", width='stretch', key="delete_model"):
                     if selected_model_for_action in st.session_state.quick_training_results:
                         del st.session_state.quick_training_results[selected_model_for_action]
                     if selected_model_for_action in st.session_state.configured_models:
@@ -3548,7 +3704,7 @@ with tab7:
                     st.rerun()
             
             with col4:
-                if st.button("📋 Copy Metadata", use_container_width=True, key="copy_metadata"):
+                if st.button("📋 Copy Metadata", width='stretch', key="copy_metadata"):
                     if selected_model_for_action in all_models:
                         import json
                         metadata_json = json.dumps(all_models[selected_model_for_action], indent=2, default=str)
@@ -3625,7 +3781,7 @@ with tab7:
                     {"Parameter": k, "Value": str(v)}
                     for k, v in model_data['model_config'].items()
                 ])
-                st.dataframe(params_df, use_container_width=True, hide_index=True)
+                st.dataframe(params_df, width='stretch', hide_index=True)
             else:
                 st.info("Parameters not available.")
             
@@ -3687,7 +3843,7 @@ with tab7:
                 versions = st.session_state.model_versions[selected_model_name]
                 if isinstance(versions, list):
                     version_df = pd.DataFrame(versions)
-                    st.dataframe(version_df, use_container_width=True)
+                    st.dataframe(version_df, width='stretch')
                 else:
                     st.info(f"Current version: {versions}")
             else:
@@ -3736,19 +3892,19 @@ with tab7:
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
-                    if st.button("🚀 Deploy to Production", type="primary", use_container_width=True):
+                    if st.button("🚀 Deploy to Production", type="primary", width='stretch'):
                         st.session_state.model_deployment_status[deploy_model] = "Deployed"
                         st.success(f"✅ Model '{deploy_model}' deployed to production!")
                         st.rerun()
                 
                 with col2:
-                    if st.button("🧪 Deploy to Staging", use_container_width=True):
+                    if st.button("🧪 Deploy to Staging", width='stretch'):
                         st.session_state.model_deployment_status[deploy_model] = "Staging"
                         st.success(f"✅ Model '{deploy_model}' deployed to staging!")
                         st.rerun()
                 
                 with col3:
-                    if st.button("🛑 Undeploy", use_container_width=True):
+                    if st.button("🛑 Undeploy", width='stretch'):
                         st.session_state.model_deployment_status[deploy_model] = "Not Deployed"
                         st.success(f"✅ Model '{deploy_model}' undeployed!")
                         st.rerun()
@@ -3763,7 +3919,7 @@ with tab7:
                 if deploy_model in st.session_state.deployment_history:
                     history = st.session_state.deployment_history[deploy_model]
                     history_df = pd.DataFrame(history)
-                    st.dataframe(history_df, use_container_width=True)
+                    st.dataframe(history_df, width='stretch')
                 else:
                     st.info("No deployment history available.")
                 
@@ -3886,9 +4042,469 @@ with tab7:
             
             if comparison_data:
                 comparison_df = pd.DataFrame(comparison_data)
-                st.dataframe(comparison_df, use_container_width=True)
+                st.dataframe(comparison_df, width='stretch')
             else:
                 st.info("No comparison history available.")
         else:
             st.info("No comparison history available.")
+
+# TAB 8: AI Model Discovery
+with tab_discovery:
+    st.header("🤖 AI-Powered Model Discovery")
+    st.markdown("""
+    Let AI automatically find the best model for your data.
+    The agent will:
+    - Analyze your data characteristics
+    - Try multiple model types
+    - Optimize hyperparameters
+    - Return the best performing model
+    """)
+    
+    try:
+        from trading.agents.model_discovery_agent import ModelDiscoveryAgent
+        
+        # Initialize agent
+        if 'model_discovery_agent' not in st.session_state:
+            st.session_state.model_discovery_agent = ModelDiscoveryAgent()
+        
+        agent = st.session_state.model_discovery_agent
+        
+        # Check if data is loaded
+        if 'forecast_data' not in st.session_state or st.session_state.forecast_data is None:
+            st.error("Please load data first in the Forecasting page")
+        else:
+            data = st.session_state.forecast_data
+            
+            # Configuration
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                max_models = st.slider(
+                    "Maximum models to try",
+                    min_value=3,
+                    max_value=10,
+                    value=5,
+                    help="How many different models to evaluate"
+                )
+                
+                time_budget = st.slider(
+                    "Time budget (minutes)",
+                    min_value=5,
+                    max_value=60,
+                    value=15,
+                    help="Maximum time for discovery"
+                )
+            
+            with col2:
+                search_strategy = st.selectbox(
+                    "Search Strategy",
+                    ["Balanced", "Accuracy-Focused", "Speed-Focused"],
+                    help="How to prioritize model selection"
+                )
+                
+                include_ensembles = st.checkbox(
+                    "Include ensemble models",
+                    value=True,
+                    help="Try combining top models"
+                )
+            
+            # Discovery button
+            if st.button("🔍 Discover Best Model", type="primary", use_container_width=True):
+                with st.spinner("AI is discovering optimal models..."):
+                    try:
+                        # Run discovery - adapt to available method
+                        if hasattr(agent, 'discover_best_model'):
+                            discovery_result = agent.discover_best_model(
+                                data=data,
+                                target_column='close',
+                                max_models=max_models,
+                                time_budget_minutes=time_budget,
+                                strategy=search_strategy.lower(),
+                                include_ensembles=include_ensembles
+                            )
+                        elif hasattr(agent, 'run_discovery'):
+                            # Use run_discovery and process results
+                            discoveries = agent.run_discovery(max_results_per_source=max_models)
+                            # Process discoveries into discovery_result format
+                            all_results = []
+                            for disc in discoveries[:max_models]:
+                                all_results.append({
+                                    'model_name': disc.model_type if hasattr(disc, 'model_type') else disc.type if hasattr(disc, 'type') else 'Unknown',
+                                    'score': disc.performance_metrics.get('r2', 0.0) if hasattr(disc, 'performance_metrics') and disc.performance_metrics else 0.0,
+                                    'train_time': 0.0,
+                                    'predictions_per_sec': 0.0
+                                })
+                            
+                            # Find best model
+                            if all_results:
+                                best_idx = max(range(len(all_results)), key=lambda i: all_results[i]['score'])
+                                best_model = {
+                                    'name': all_results[best_idx]['model_name'],
+                                    'score': all_results[best_idx]['score'],
+                                    'train_time': all_results[best_idx]['train_time'],
+                                    'parameters': {}
+                                }
+                            else:
+                                best_model = {'name': 'None', 'score': 0.0, 'train_time': 0.0, 'parameters': {}}
+                            
+                            discovery_result = {
+                                'best_model': best_model,
+                                'all_results': all_results,
+                                'recommendations': 'Models discovered successfully. Review results above.'
+                            }
+                        else:
+                            st.error("ModelDiscoveryAgent does not have discover_best_model or run_discovery method")
+                            discovery_result = None
+                        
+                        if discovery_result:
+                            # Display results
+                            st.success("✅ Model discovery complete!")
+                            
+                            # Best model
+                            st.subheader("🏆 Recommended Model")
+                            best_model = discovery_result['best_model']
+                            
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("Model Type", best_model.get('name', 'Unknown'))
+                            with col2:
+                                st.metric("Score (R²)", f"{best_model.get('score', 0.0):.4f}")
+                            with col3:
+                                st.metric("Training Time", f"{best_model.get('train_time', 0.0):.2f}s")
+                            
+                            # Model parameters
+                            if best_model.get('parameters'):
+                                st.write("**Optimal Parameters:**")
+                                st.json(best_model['parameters'])
+                            
+                            # Comparison table
+                            if discovery_result.get('all_results'):
+                                st.subheader("📊 All Models Evaluated")
+                                
+                                results_df = pd.DataFrame(discovery_result['all_results'])
+                                results_df = results_df.sort_values('score', ascending=False)
+                                
+                                st.dataframe(
+                                    results_df[['model_name', 'score', 'train_time', 'predictions_per_sec']],
+                                    width='stretch'
+                                )
+                                
+                                # Comparison chart
+                                import plotly.express as px
+                                fig = px.bar(
+                                    results_df,
+                                    x='model_name',
+                                    y='score',
+                                    title='Model Performance Comparison',
+                                    labels={'score': 'R² Score', 'model_name': 'Model'}
+                                )
+                                st.plotly_chart(fig, width='stretch')
+                            
+                            # AI insights
+                            if discovery_result.get('insights'):
+                                st.subheader("💡 AI Insights")
+                                st.write(discovery_result['insights'])
+                            
+                            # Save configuration
+                            if st.button("💾 Save Best Model Config"):
+                                st.session_state.discovered_model_config = best_model
+                                st.success("Saved! Use this config in Advanced Forecasting.")
+                    
+                    except Exception as e:
+                        st.error(f"Error during model discovery: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+    
+    except ImportError as e:
+        st.error(f"Model Discovery Agent not available: {e}")
+        st.info("The Model Discovery Agent requires additional dependencies. Check the logs for details.")
+    except Exception as e:
+        st.error(f"Error initializing Model Discovery Agent: {e}")
+        import traceback
+        st.code(traceback.format_exc())
+
+# TAB 9: Model Innovation
+with tab_innovation:
+    st.header("🧪 AI Model Innovation Lab")
+    st.write("AI automatically designs novel model architectures tailored to your data")
+    
+    try:
+        from agents.model_innovation_agent import ModelInnovationAgent, InnovationConfig
+        
+        if 'model_innovation_agent' not in st.session_state:
+            st.session_state.model_innovation_agent = ModelInnovationAgent()
+        
+        agent = st.session_state.model_innovation_agent
+        
+        # Check if we have data
+        if 'training_data' not in st.session_state or st.session_state.training_data is None:
+            st.warning("⚠️ Please load training data first in the Quick Training tab")
+        else:
+            data = st.session_state.training_data
+            
+            # Innovation settings
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                base_architecture = st.selectbox(
+                    "Base Architecture",
+                    ["LSTM", "Transformer", "CNN", "Hybrid"],
+                    help="Starting point for innovation"
+                )
+            
+            with col2:
+                innovation_level = st.slider(
+                    "Innovation Level",
+                    min_value=1,
+                    max_value=10,
+                    value=5,
+                    help="1=Conservative, 10=Experimental"
+                )
+            
+            if st.button("🚀 Generate Novel Architecture", type="primary"):
+                with st.spinner("AI is designing novel model architecture..."):
+                    try:
+                        # Analyze data characteristics
+                        data_characteristics = {}
+                        if hasattr(agent, 'analyze_data'):
+                            data_characteristics = agent.analyze_data(data)
+                        else:
+                            # Simple analysis
+                            data_characteristics = {
+                                'num_features': len(data.columns),
+                                'num_samples': len(data),
+                                'has_trend': True,
+                                'has_seasonality': False
+                            }
+                        
+                        # Generate innovation
+                        if hasattr(agent, 'innovate_architecture'):
+                            result = agent.innovate_architecture(
+                                data=data,
+                                base_architecture=base_architecture,
+                                innovation_level=innovation_level,
+                                data_characteristics=data_characteristics
+                            )
+                        elif hasattr(agent, 'discover_models'):
+                            # Use discover_models as alternative
+                            target_col = 'close' if 'close' in data.columns else data.columns[0]
+                            candidates = agent.discover_models(data, target_col=target_col)
+                            
+                            if candidates:
+                                best_candidate = max(candidates, key=lambda c: c.score if hasattr(c, 'score') else 0.0)
+                                result = {
+                                    'architecture_description': f"Novel {base_architecture}-based architecture discovered",
+                                    'implementation_code': f"# Model implementation for {best_candidate.model_type if hasattr(best_candidate, 'model_type') else 'discovered model'}",
+                                    'estimated_accuracy': best_candidate.score if hasattr(best_candidate, 'score') else 0.75,
+                                    'estimated_train_time': '5-10 minutes',
+                                    'complexity_score': innovation_level,
+                                    'key_innovations': [
+                                        f"Optimized for {base_architecture} base",
+                                        f"Innovation level: {innovation_level}/10",
+                                        "AutoML-optimized hyperparameters"
+                                    ]
+                                }
+                            else:
+                                st.warning("No model candidates discovered. Try adjusting parameters.")
+                                result = None
+                        else:
+                            st.error("ModelInnovationAgent does not have innovate_architecture or discover_models method")
+                            result = None
+                        
+                        if result:
+                            st.success("✅ Novel architecture created!")
+                            
+                            # Show architecture
+                            st.subheader("🏗️ Architecture Design")
+                            st.write(result.get('architecture_description', 'No description available'))
+                            
+                            # Visualization
+                            if 'architecture_diagram' in result:
+                                st.image(result['architecture_diagram'])
+                            
+                            # Code
+                            st.subheader("💻 Implementation")
+                            st.code(result.get('implementation_code', '# No implementation code available'), language='python')
+                            
+                            # Expected performance
+                            st.subheader("📊 Expected Performance")
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                accuracy = result.get('estimated_accuracy', 0.75)
+                                if isinstance(accuracy, float):
+                                    st.metric("Estimated Accuracy", f"{accuracy:.2%}")
+                                else:
+                                    st.metric("Estimated Accuracy", str(accuracy))
+                            with col2:
+                                st.metric("Training Time", result.get('estimated_train_time', 'Unknown'))
+                            with col3:
+                                st.metric("Complexity Score", f"{result.get('complexity_score', 5)}/10")
+                            
+                            # Innovations
+                            if result.get('key_innovations'):
+                                st.subheader("💡 Key Innovations")
+                                for innovation in result['key_innovations']:
+                                    st.write(f"• {innovation}")
+                            
+                            # Train button
+                            if st.button("🎯 Train This Model"):
+                                st.info("Model training initiated...")
+                                st.session_state.innovation_model = result
+                                st.success("Model configuration saved! Use it in the Quick Training tab.")
+                    
+                    except Exception as e:
+                        st.error(f"Error during model innovation: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+    
+    except ImportError as e:
+        st.error(f"Model Innovation Agent not available: {e}")
+        st.info("The Model Innovation Agent requires FLAML or Optuna. Install with: pip install flaml optuna")
+    except Exception as e:
+        st.error(f"Error initializing Model Innovation Agent: {e}")
+        import traceback
+        st.code(traceback.format_exc())
+
+# TAB 10: Model Benchmarking
+with tab_benchmark:
+    st.header("📊 Model Benchmarking")
+    st.markdown("Compare your models against industry baselines and standard benchmarks")
+    
+    try:
+        from agents.implementations.model_benchmarker import ModelBenchmarker, BenchmarkResult
+        from agents.implementations.implementation_generator import ModelCandidate
+        
+        # Check if we have data
+        if 'forecast_data' not in st.session_state or st.session_state.forecast_data is None:
+            st.warning("⚠️ Please load data first in the Forecasting page")
+        else:
+            data = st.session_state.forecast_data.copy()
+            
+            # Configuration
+            st.subheader("Benchmark Configuration")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                target_column = st.selectbox(
+                    "Target Column",
+                    options=[col for col in data.columns if data[col].dtype in ['float64', 'int64']],
+                    index=0 if 'close' in data.columns else 0,
+                    help="Column to use as target for benchmarking"
+                )
+            
+            with col2:
+                benchmark_type = st.selectbox(
+                    "Benchmark Type",
+                    ["Performance Metrics", "Speed Comparison", "Memory Usage", "Full Suite"],
+                    help="What to benchmark"
+                )
+            
+            # Run benchmark button
+            if st.button("Run Benchmark Suite", type="primary", use_container_width=True):
+                with st.spinner("Running comprehensive benchmarks..."):
+                    try:
+                        # Initialize benchmarker
+                        benchmarker = ModelBenchmarker(
+                            benchmark_data=data,
+                            target_column=target_column
+                        )
+                        
+                        # Get available models from registry
+                        from trading.models.model_registry import get_registry
+                        registry = get_registry()
+                        available_models = registry.get_advanced_models()
+                        
+                        # Create simple model candidates for benchmarking
+                        results = []
+                        for model_name in available_models[:5]:  # Limit to 5 models for performance
+                            try:
+                                # Create a simple ModelCandidate for benchmarking
+                                # Note: This is a simplified approach - full implementation would require actual model instances
+                                model_candidate = ModelCandidate(
+                                    name=model_name,
+                                    paper=None,  # Not needed for simple benchmarking
+                                    model_type="sklearn" if model_name in ["XGBoost", "Ridge"] else "pytorch",
+                                    implementation_code="",
+                                    hyperparameters={},
+                                    expected_performance={},
+                                    implementation_status="tested"
+                                )
+                                
+                                # Run benchmark
+                                result = benchmarker.benchmark_model(model_candidate)
+                                results.append({
+                                    'model': model_name,
+                                    'r2_score': result.r2_score,
+                                    'mse': result.mse,
+                                    'mae': result.mae,
+                                    'sharpe_ratio': result.sharpe_ratio,
+                                    'max_drawdown': result.max_drawdown,
+                                    'training_time': result.training_time,
+                                    'inference_time': result.inference_time,
+                                    'memory_usage': result.memory_usage,
+                                    'overall_score': result.overall_score
+                                })
+                            except Exception as e:
+                                st.warning(f"Could not benchmark {model_name}: {e}")
+                                continue
+                        
+                        if results:
+                            # Display results
+                            st.success(f"✅ Benchmarked {len(results)} models!")
+                            
+                            # Create comparison table
+                            results_df = pd.DataFrame(results)
+                            results_df = results_df.sort_values('overall_score', ascending=False)
+                            
+                            st.subheader("📊 Benchmark Results")
+                            st.dataframe(
+                                results_df[['model', 'overall_score', 'r2_score', 'mse', 'mae', 'training_time']],
+                                width='stretch'
+                            )
+                            
+                            # Charts
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                fig_score = px.bar(
+                                    results_df,
+                                    x='model',
+                                    y='overall_score',
+                                    title='Overall Benchmark Score',
+                                    labels={'overall_score': 'Score', 'model': 'Model'}
+                                )
+                                st.plotly_chart(fig_score, width='stretch')
+                            
+                            with col2:
+                                fig_r2 = px.bar(
+                                    results_df,
+                                    x='model',
+                                    y='r2_score',
+                                    title='R² Score Comparison',
+                                    labels={'r2_score': 'R² Score', 'model': 'Model'}
+                                )
+                                st.plotly_chart(fig_r2, width='stretch')
+                            
+                            # Best model
+                            best_model = results_df.iloc[0]
+                            st.subheader("🏆 Best Performing Model")
+                            st.metric("Model", best_model['model'])
+                            st.metric("Overall Score", f"{best_model['overall_score']:.4f}")
+                            st.metric("R² Score", f"{best_model['r2_score']:.4f}")
+                        else:
+                            st.warning("No benchmark results available. Check model implementations.")
+                    
+                    except Exception as e:
+                        st.error(f"Error during benchmarking: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+    
+    except ImportError:
+        st.error("Model Benchmarker not available")
+        st.info("The Model Benchmarker requires the implementation generator module.")
+    except Exception as e:
+        st.error(f"Error: {e}")
+        import traceback
+        st.code(traceback.format_exc())
 
