@@ -25,8 +25,8 @@ try:
 
     ARXIV_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ arxiv not available. Disabling Arxiv model discovery.")
-    print(f"   Missing: {e}")
+    logger.warning("⚠️ arxiv not available. Disabling Arxiv model discovery.")
+    logger.warning(f"   Missing: {e}")
     arxiv = None
     ARXIV_AVAILABLE = False
 
@@ -36,8 +36,8 @@ try:
 
     HUGGINGFACE_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ huggingface_hub not available. Disabling HuggingFace model discovery.")
-    print(f"   Missing: {e}")
+    logger.warning("⚠️ huggingface_hub not available. Disabling HuggingFace model discovery.")
+    logger.warning(f"   Missing: {e}")
     HfApi = None
     HUGGINGFACE_AVAILABLE = False
 
@@ -47,8 +47,8 @@ try:
 
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling PyTorch model creation.")
-    print(f"   Missing: {e}")
+    logger.warning("⚠️ PyTorch not available. Disabling PyTorch model creation.")
+    logger.warning(f"   Missing: {e}")
     nn = None
     TORCH_AVAILABLE = False
 

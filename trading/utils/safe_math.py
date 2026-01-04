@@ -91,10 +91,16 @@ def safe_rsi(
     period: int = 14
 ) -> Union[np.ndarray, pd.Series]:
     """
-    Calculate Relative Strength Index with safe division.
+    Calculate Relative Strength Index using Wilder's smoothing (CORRECT METHOD).
     
-    This function eliminates the division-by-zero bug found in 12+ files
-    throughout the codebase where rs = gain / loss causes crashes.
+    This implements the original J. Welles Wilder RSI formula from 
+    "New Concepts in Technical Trading Systems" (1978).
+    
+    Formula:
+    1. First average = SMA of gains/losses over period
+    2. Subsequent averages = (Previous Avg × (period-1) + Current Value) / period
+    3. RS = Average Gain / Average Loss
+    4. RSI = 100 - (100 / (1 + RS))
     
     Args:
         prices: Price series
@@ -102,19 +108,21 @@ def safe_rsi(
     
     Returns:
         RSI values (0-100 scale)
-        Returns 50.0 (neutral) when loss is zero
+        Returns 50.0 (neutral) when insufficient data or edge cases
         
     Examples:
-        >>> prices = pd.Series([100, 102, 101, 103, 105])
+        >>> prices = pd.Series([44, 44.34, 44.09, 43.61, 44.33, 44.83])
         >>> rsi = safe_rsi(prices, period=14)
     """
     # Convert to pandas Series for easier handling
-    if isinstance(prices, np.ndarray):
+    is_numpy = isinstance(prices, np.ndarray)
+    if is_numpy:
         prices = pd.Series(prices)
     
     if len(prices) < period + 1:
         # Return neutral RSI if insufficient data
-        return pd.Series(50.0, index=prices.index) if isinstance(prices, pd.Series) else np.full(len(prices), 50.0)
+        result = pd.Series(50.0, index=prices.index)
+        return result.values if is_numpy else result
     
     # Calculate price changes
     delta = prices.diff()
@@ -123,28 +131,53 @@ def safe_rsi(
     gains = delta.where(delta > 0, 0.0)
     losses = -delta.where(delta < 0, 0.0)
     
-    # Calculate average gains and losses
-    avg_gains = gains.rolling(window=period, min_periods=1).mean()
-    avg_losses = losses.rolling(window=period, min_periods=1).mean()
+    # Initialize result series
+    rsi = pd.Series(index=prices.index, dtype=float)
     
-    # Use safe_divide for rs = gain / loss
-    rs = safe_divide(avg_gains, avg_losses, default=0.0)
+    # Calculate initial averages using SMA for first 'period' values
+    first_avg_gain = gains.iloc[1:period+1].mean()  # Skip first NaN
+    first_avg_loss = losses.iloc[1:period+1].mean()
     
-    # Calculate RSI: 100 - (100 / (1 + rs))
-    # Handle case where rs might be very large (infinite gain)
-    rs = np.clip(rs, 0, 1e10)  # Cap to prevent overflow
-    rsi = 100 - (100 / (1 + rs))
+    # Handle edge case: no gains or losses in initial period
+    if first_avg_loss < 1e-10:  # Essentially zero
+        if first_avg_gain < 1e-10:
+            rsi.iloc[:period+1] = 50.0  # No movement = neutral
+        else:
+            rsi.iloc[:period+1] = 100.0  # All gains = overbought
+    else:
+        rs = first_avg_gain / first_avg_loss
+        rsi.iloc[period] = 100 - (100 / (1 + rs))
+    
+    # Fill first 'period' values with NaN (not enough data yet)
+    rsi.iloc[:period] = np.nan
+    
+    # Calculate subsequent values using Wilder's smoothing
+    avg_gain = first_avg_gain
+    avg_loss = first_avg_loss
+    
+    for i in range(period + 1, len(prices)):
+        # Wilder's smoothing: (Previous Avg × 13 + Current Value) / 14
+        avg_gain = (avg_gain * (period - 1) + gains.iloc[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses.iloc[i]) / period
+        
+        # Calculate RS and RSI
+        if avg_loss < 1e-10:  # Avoid division by zero
+            if avg_gain < 1e-10:
+                rsi.iloc[i] = 50.0  # No movement
+            else:
+                rsi.iloc[i] = 100.0  # All gains
+        else:
+            rs = avg_gain / avg_loss
+            rsi.iloc[i] = 100 - (100 / (1 + rs))
     
     # Ensure RSI is in valid range
     rsi = np.clip(rsi, 0, 100)
     
-    # Fill NaN values with neutral RSI
-    if isinstance(rsi, pd.Series):
-        rsi = rsi.fillna(50.0)
-    else:
-        rsi = np.where(np.isnan(rsi), 50.0, rsi)
+    # Fill any remaining NaN values with neutral RSI
+    rsi = rsi.fillna(50.0)
     
-    return rsi
+    # Return numpy array if input was numpy
+    return rsi.values if is_numpy else rsi
 
 
 def safe_returns(

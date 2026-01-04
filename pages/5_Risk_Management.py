@@ -2488,7 +2488,8 @@ with tab5:
                                         'portfolio_value': portfolio_value if 'portfolio_value' in locals() else 100000,
                                         'returns': returns if 'returns' in locals() else pd.Series()
                                     }
-                            except:
+                            except Exception as e:
+                                logger.warning(f"Risk calculation error: {e}")
                                 pass
                     
                     if portfolio_data is not None:

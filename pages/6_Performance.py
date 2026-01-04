@@ -987,7 +987,8 @@ with tab3:
                     estimated_drawdown = min(-0.05, -abs(row['total_return']) * 0.5) if row['total_return'] < 0 else -0.10
                 else:
                     estimated_drawdown = -0.10
-            except:
+            except Exception as e:
+                logger.warning(f"Performance metric error: {e}")
                 estimated_drawdown = -0.10
             
             perf_data = {
@@ -1118,7 +1119,8 @@ with tab3:
                         historical_perf = recent_perf * 1.1  # Default estimate
                     else:
                         historical_perf = recent_perf * 1.1
-                except:
+                except Exception as e:
+                    logger.warning(f"Performance metric error: {e}")
                     historical_perf = recent_perf * 1.1
                 degradation = detect_performance_degradation(selected_strategy, recent_perf, historical_perf)
                 
@@ -1154,7 +1156,8 @@ with tab3:
                             drawdown = 0.05  # Conservative estimate for positive returns
                     else:
                         drawdown = 0.05
-                except:
+                except Exception as e:
+                    logger.warning(f"Performance metric error: {e}")
                     drawdown = 0.05
                 
                 if drawdown < 0.05:
@@ -1196,7 +1199,8 @@ with tab3:
                             slippage = 0.001  # Default estimate
                     else:
                         slippage = 0.001  # Default estimate
-                except:
+                except Exception as e:
+                    logger.warning(f"Performance metric error: {e}")
                     slippage = 0.001  # Default estimate
                 
                 if slippage < 0.001:

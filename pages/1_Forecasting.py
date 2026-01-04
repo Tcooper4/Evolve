@@ -14,6 +14,7 @@ Features:
 - Market analysis with technical indicators
 """
 
+import logging
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -21,6 +22,8 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 # Backend imports
 from trading.data.data_loader import DataLoader, DataLoadRequest
@@ -343,7 +346,8 @@ with tab1:
                             if len(description) > 200:
                                 description = description[:200] + "..."
                             st.info(f"ℹ️ {description}")
-                    except:
+                    except Exception as e:
+                        logger.warning(f"Forecasting error: {e}")
                         pass
             except ImportError:
                 # Fallback to original code
@@ -358,7 +362,8 @@ with tab1:
                         available_models,
                         help="Choose a forecasting model"
                     )
-                except:
+                except Exception as e:
+                    logger.warning(f"Forecasting error: {e}")
                     available_models = ["LSTM", "XGBoost", "Prophet", "ARIMA"]
                     selected_model = st.radio(
                         "Choose model:",

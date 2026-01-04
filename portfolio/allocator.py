@@ -13,6 +13,7 @@ This module implements various portfolio allocation strategies:
 Supports dynamic rebalancing and risk-adjusted optimization.
 """
 
+import logging
 import warnings
 from dataclasses import dataclass
 from enum import Enum
@@ -24,16 +25,18 @@ from utils.common_helpers import load_config
 
 warnings.filterwarnings("ignore")
 
+logger = logging.getLogger(__name__)
+
 # Try to import scipy
 try:
     from scipy.optimize import minimize
 
     SCIPY_AVAILABLE = True
 except ImportError as e:
-    print(
+    logger.warning(
         "âš ï¸ scipy not available. Disabling optimization-based portfolio allocation."
     )
-    print(f"   Missing: {e}")
+    logger.warning(f"   Missing: {e}")
     minimize = None
     SCIPY_AVAILABLE = False
 
@@ -705,7 +708,7 @@ class PortfolioAllocator:
                 result = self.allocate_portfolio(assets, strategy)
                 results[strategy.value] = result
             except Exception as e:
-                print(f"Failed to allocate using {strategy.value}: {e}")
+                logger.error(f"Failed to allocate using {strategy.value}: {e}")
 
         return results
 
@@ -806,29 +809,29 @@ if __name__ == "__main__":
     for strategy in strategies:
         try:
             result = allocator.allocate_portfolio(assets, strategy)
-            print(f"\n{strategy.value.upper()} Allocation:")
-            print(f"  Expected Return: {result.expected_return:.3f}")
-            print(f"  Expected Volatility: {result.expected_volatility:.3f}")
-            print(f"  Sharpe Ratio: {result.sharpe_ratio:.3f}")
-            print(f"  Weights: {result.weights}")
+            logger.info(f"\n{strategy.value.upper()} Allocation:")
+            logger.info(f"  Expected Return: {result.expected_return:.3f}")
+            logger.info(f"  Expected Volatility: {result.expected_volatility:.3f}")
+            logger.info(f"  Sharpe Ratio: {result.sharpe_ratio:.3f}")
+            logger.debug(f"  Weights: {result.weights}")
         except Exception as e:
-            print(f"Failed {strategy.value}: {e}")
+            logger.error(f"Failed {strategy.value}: {e}")
 
     # Compare all strategies
-    print("\n" + "=" * 50)
-    print("STRATEGY COMPARISON")
-    print("=" * 50)
+    logger.info("\n" + "=" * 50)
+    logger.info("STRATEGY COMPARISON")
+    logger.info("=" * 50)
 
     comparison = allocator.compare_strategies(assets)
 
     for strategy_name, result in comparison.items():
-        print(f"\n{strategy_name.upper()}:")
-        print(f"  Return: {result.expected_return:.3f}")
-        print(f"  Volatility: {result.expected_volatility:.3f}")
-        print(f"  Sharpe: {result.sharpe_ratio:.3f}")
-        print(f"  Diversification: {result.diversification_ratio:.3f}")
+        logger.info(f"\n{strategy_name.upper()}:")
+        logger.info(f"  Return: {result.expected_return:.3f}")
+        logger.info(f"  Volatility: {result.expected_volatility:.3f}")
+        logger.info(f"  Sharpe: {result.sharpe_ratio:.3f}")
+        logger.info(f"  Diversification: {result.diversification_ratio:.3f}")
 
     # Find optimal strategy
     optimal_strategy, optimal_result = allocator.get_optimal_strategy(assets, "sharpe")
-    print(f"\nOptimal Strategy (Sharpe): {optimal_strategy.value}")
-    print(f"Optimal Sharpe Ratio: {optimal_result.sharpe_ratio:.3f}")
+    logger.info(f"\nOptimal Strategy (Sharpe): {optimal_strategy.value}")
+    logger.info(f"Optimal Sharpe Ratio: {optimal_result.sharpe_ratio:.3f}")

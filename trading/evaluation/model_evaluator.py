@@ -21,8 +21,8 @@ try:
 
     MATPLOTLIB_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ matplotlib not available. Disabling plotting capabilities.")
-    print(f"   Missing: {e}")
+    logger.info("âš ï¸ matplotlib not available. Disabling plotting capabilities.")
+    logger.info(f"   Missing: {e}")
     plt = None
     MATPLOTLIB_AVAILABLE = False
 
@@ -32,8 +32,8 @@ try:
 
     SEABORN_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ seaborn not available. Disabling advanced plotting capabilities.")
-    print(f"   Missing: {e}")
+    logger.info("âš ï¸ seaborn not available. Disabling advanced plotting capabilities.")
+    logger.info(f"   Missing: {e}")
     sns = None
     SEABORN_AVAILABLE = False
 
@@ -43,8 +43,8 @@ try:
 
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ scikit-learn not available. Disabling evaluation metrics.")
-    print(f"   Missing: {e}")
+    logger.info("âš ï¸ scikit-learn not available. Disabling evaluation metrics.")
+    logger.info(f"   Missing: {e}")
     mean_absolute_error = None
     mean_squared_error = None
     r2_score = None

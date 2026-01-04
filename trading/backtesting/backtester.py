@@ -293,6 +293,14 @@ class Backtester:
                 # Debit cash account
                 self.cash_account -= total_cost
                 # Credit equity account (position value)
+                # Note: We add trade_value here, not total_cost
+                # trade_value = price × quantity (market value of position)
+                # total_cost = trade_value + fees + slippage (what we paid)
+                # The equity_account tracks POSITION VALUE, not cash spent
+                # Example: Buy $100k of stock for $101k (with $1k fees)
+                #   - cash_account decreases by $101k (total_cost)
+                #   - equity_account increases by $100k (trade_value/position value)
+                #   - Net worth = cash + equity = starts at same place
                 self.equity_account += trade_value
                 # Update leverage
                 if self.enable_leverage:
@@ -443,8 +451,13 @@ class Backtester:
                     signals_df = signals_df.ffill()
                     self.logger.info("Filled NaN values using forward fill")
                 elif fill_method == "bfill":
-                    signals_df = signals_df.bfill()
-                    self.logger.info("Filled NaN values using backward fill")
+                    # CRITICAL: Backward fill creates look-ahead bias in backtesting!
+                    # Using future data to fill past values invalidates backtest results.
+                    self.logger.error(
+                        "❌ BACKWARD FILL NOT ALLOWED IN BACKTESTING - creates look-ahead bias! "
+                        "Using forward fill instead."
+                    )
+                    signals_df = signals_df.ffill()
                 elif fill_method == "drop":
                     signals_df = signals_df.dropna()
                     self.logger.info("Dropped rows with NaN values")
@@ -643,19 +656,27 @@ class Backtester:
             # You may need to adapt this for your strategy/model interface
             test_df = test_data.copy()
             test_df["pred"] = preds
-            # Simulate simple returns as example
-            test_df["returns"] = test_df["Close"].pct_change().shift(-1) * np.sign(
-                test_df["pred"].diff()
-            )
+            
+            # CRITICAL FIX: Remove look-ahead bias
+            # Don't use shift(-1) which accesses tomorrow's return today!
+            # Instead: today's signal affects today's return (or next period's return properly)
+            test_df["signal"] = np.sign(test_df["pred"].diff())
+            test_df["returns"] = test_df["Close"].pct_change()
+
+            # Apply signal from PREVIOUS period (can't act on today's close until tomorrow)
+            # This is the correct way: yesterday's signal determines today's position
+            test_df["strategy_returns"] = test_df["returns"] * test_df["signal"].shift(1)
+
+            # Use strategy_returns for evaluation (not "returns")
             perf = {
                 "window_start": test_data.index[0],
                 "window_end": test_data.index[-1],
-                "mean_return": test_df["returns"].mean(),
-                "sharpe": test_df["returns"].mean() / (test_df["returns"].std() + 1e-9),
+                "mean_return": test_df["strategy_returns"].mean(),
+                "sharpe": test_df["strategy_returns"].mean() / (test_df["strategy_returns"].std() + 1e-9),
                 "drawdown": (
-                    test_df["returns"].cumsum().cummax() - test_df["returns"].cumsum()
+                    test_df["strategy_returns"].cumsum().cummax() - test_df["strategy_returns"].cumsum()
                 ).max(),
-                "win_rate": (test_df["returns"] > 0).mean(),
+                "win_rate": (test_df["strategy_returns"] > 0).mean(),
             }
             results.append(perf)
         results_df = pd.DataFrame(results)

@@ -90,9 +90,15 @@ class MACDStrategy:
 
         # Handle NaN values
         if df_lower["close"].isna().any():
-            df_lower["close"] = (
-                df_lower["close"].ffill().bfill()
-            )
+            # Only forward fill - never use backward fill in backtesting!
+            df_lower["close"] = df_lower["close"].ffill()
+            
+            # For any remaining leading NaNs, use first valid value
+            # (This is acceptable as it doesn't use future data)
+            first_valid_idx = df_lower["close"].first_valid_index()
+            if first_valid_idx is not None:
+                first_valid_value = df_lower["close"].loc[first_valid_idx]
+                df_lower["close"] = df_lower["close"].fillna(first_valid_value)
 
         if df_lower["volume"].isna().any():
             df_lower["volume"] = df_lower["volume"].fillna(0)

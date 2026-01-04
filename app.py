@@ -531,17 +531,6 @@ logger.info("="*80)
 logger.info("Phase 1-8 initialization complete")
 logger.info("="*80)
 
-# Try to initialize (but don't fail if it doesn't work)
-try:
-    init_task_orchestrator()
-except Exception as e:
-    logger.debug(f"Task Orchestrator initialization deferred: {e}")
-
-try:
-    init_agent_controller()
-except Exception as e:
-    logger.debug(f"Agent Controller initialization deferred: {e}")
-
 # Enhanced ChatGPT-like styling
 st.markdown(
     """
