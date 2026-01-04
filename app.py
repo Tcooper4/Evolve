@@ -377,11 +377,10 @@ except Exception as e:
 # Add Commentary Service
 try:
     from trading.services.commentary_service import CommentaryService
-    from trading.services.commentary_generator import CommentaryGenerator
     
     # Initialize commentary system
-    commentary_generator = CommentaryGenerator()
-    commentary_service = CommentaryService(generator=commentary_generator)
+    # CommentaryService creates its own CommentaryEngine internally
+    commentary_service = CommentaryService()
     
     if 'commentary_service' not in st.session_state:
         st.session_state.commentary_service = commentary_service
@@ -463,12 +462,10 @@ except Exception as e:
 
 try:
     from trading.nlp.sentiment_classifier import SentimentClassifier
-    from trading.commentary.commentary_engine import CommentaryEngine
     from trading.signals.sentiment_signals import SentimentSignals
     
     if 'sentiment_classifier' not in st.session_state:
         st.session_state.sentiment_classifier = SentimentClassifier()
-        st.session_state.commentary_engine = CommentaryEngine()
         st.session_state.sentiment_signals = SentimentSignals()
     
     logger.info("✅ NLP & sentiment initialized")

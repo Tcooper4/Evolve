@@ -42,7 +42,14 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
     ProphetModel = None
-from trading.models.autoformer_model import AutoformerModel
+
+# Try to import Autoformer from NeuralForecast
+try:
+    from trading.models.neuralforecast_models import AutoformerModel, NEURALFORECAST_AVAILABLE
+    AUTOFORMER_AVAILABLE = NEURALFORECAST_AVAILABLE
+except ImportError:
+    AUTOFORMER_AVAILABLE = False
+    AutoformerModel = None
 
 # Try to import Transformer model
 try:
@@ -136,8 +143,11 @@ class ForecastRouter:
             "lstm": LSTMModel,
             "xgboost": XGBoostModel,
             "xgb": XGBoostModel,  # Alias
-            "autoformer": AutoformerModel,
         }
+
+        # Add Autoformer if available
+        if AUTOFORMER_AVAILABLE and AutoformerModel is not None:
+            default_models["autoformer"] = AutoformerModel
 
         # Add Transformer if available
         if TRANSFORMER_AVAILABLE:

@@ -129,18 +129,7 @@ class ModelRegistry:
         except ImportError as e:
             logger.warning(f"GARCH model not available: {e}")
         
-        try:
-            from trading.models.autoformer_model import AutoformerModel
-            self.register('Autoformer', AutoformerModel, {
-                'type': 'single_asset',
-                'complexity': 'high',
-                'description': 'Advanced transformer for time series',
-                'use_case': 'general',
-                'requires_gpu': True,
-                'min_data_points': 200
-            })
-        except ImportError as e:
-            logger.warning(f"Autoformer model not available: {e}")
+        # Old Autoformer removed - now using NeuralForecast version below
         
         try:
             from trading.models.advanced.transformer.time_series_transformer import TimeSeriesTransformer
@@ -210,6 +199,104 @@ class ModelRegistry:
             })
         except ImportError as e:
             logger.warning(f"GNN model not available: {e}")
+        
+        # ============================================================================
+        # NEURALFORECAST MODELS (State-of-the-Art)
+        # ============================================================================
+        
+        logger.info("Registering NeuralForecast models...")
+        
+        try:
+            from trading.models.neuralforecast_models import (
+                AutoformerModel,
+                InformerModel,
+                TFTModel,
+                NBEATSModel,
+                PatchTSTModel,
+                NHITSModel,
+                NEURALFORECAST_AVAILABLE
+            )
+            
+            if NEURALFORECAST_AVAILABLE:
+                # Autoformer - Decomposition transformer
+                self.register('Autoformer', AutoformerModel, {
+                    'type': 'single_asset',
+                    'complexity': 'high',
+                    'description': 'Decomposition-based transformer (SOTA)',
+                    'use_case': 'general',
+                    'requires_gpu': False,  # Can use CPU
+                    'min_data_points': 100,
+                    'best_for': 'Long-term forecasting with trend/seasonality'
+                })
+                logger.info("✅ Registered: Autoformer (NeuralForecast)")
+                
+                # Informer - Efficient transformer
+                self.register('Informer', InformerModel, {
+                    'type': 'single_asset',
+                    'complexity': 'high',
+                    'description': 'Efficient transformer for long sequences',
+                    'use_case': 'general',
+                    'requires_gpu': False,
+                    'min_data_points': 100,
+                    'best_for': 'Very long-term forecasting (100+ days)'
+                })
+                logger.info("✅ Registered: Informer")
+                
+                # TFT - Temporal Fusion Transformer
+                self.register('TFT', TFTModel, {
+                    'type': 'single_asset',
+                    'complexity': 'high',
+                    'description': 'Temporal Fusion Transformer',
+                    'use_case': 'general',
+                    'requires_gpu': False,
+                    'min_data_points': 100,
+                    'best_for': 'Multi-horizon with interpretability'
+                })
+                logger.info("✅ Registered: TFT")
+                
+                # N-BEATS - Neural basis expansion
+                self.register('N-BEATS', NBEATSModel, {
+                    'type': 'single_asset',
+                    'complexity': 'high',
+                    'description': 'Neural basis expansion (interpretable)',
+                    'use_case': 'general',
+                    'requires_gpu': False,
+                    'min_data_points': 100,
+                    'best_for': 'Interpretable trend/seasonality'
+                })
+                logger.info("✅ Registered: N-BEATS")
+                
+                # PatchTST - Latest SOTA
+                self.register('PatchTST', PatchTSTModel, {
+                    'type': 'single_asset',
+                    'complexity': 'high',
+                    'description': 'Patch-based transformer (Latest SOTA)',
+                    'use_case': 'general',
+                    'requires_gpu': False,
+                    'min_data_points': 100,
+                    'best_for': 'Best overall performance, long-term'
+                })
+                logger.info("✅ Registered: PatchTST (Latest SOTA)")
+                
+                # N-HiTS - Fast and accurate
+                self.register('N-HiTS', NHITSModel, {
+                    'type': 'single_asset',
+                    'complexity': 'medium',
+                    'description': 'Hierarchical interpolation (fast)',
+                    'use_case': 'general',
+                    'requires_gpu': False,
+                    'min_data_points': 100,
+                    'best_for': 'Fast training, good accuracy'
+                })
+                logger.info("✅ Registered: N-HiTS")
+                
+                logger.info("✅ All NeuralForecast models registered successfully")
+            else:
+                logger.warning("⚠️  NeuralForecast not available - models not registered")
+                
+        except ImportError as e:
+            logger.warning(f"⚠️  Could not register NeuralForecast models: {e}")
+            logger.info("Install with: pip install neuralforecast")
         
         logger.info(f"✅ Registered {len(self._models)} models")
     
