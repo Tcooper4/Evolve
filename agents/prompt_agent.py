@@ -522,8 +522,8 @@ class PromptAgent:
         except Exception as e:
             logger.error(f"Failed to initialize PromptAgent: {e}")
             self.available = False
-            print("âš ï¸ PromptAgent unavailable due to initialization failure")
-            print(f"   Error: {e}")
+            logger.warning("âš ï¸ PromptAgent unavailable due to initialization failure")
+            logger.warning(f"   Error: {e}")
 
     def _initialize_providers(self):
         """Initialize LLM providers."""
@@ -564,8 +564,8 @@ class PromptAgent:
         except Exception as e:
             logger.error(f"Failed to initialize HuggingFace models: {e}")
             self.use_huggingface_first = False
-            print("âš ï¸ HuggingFace models unavailable due to model load failure")
-            print(f"   Error: {e}")
+            logger.warning("âš ï¸ HuggingFace models unavailable due to model load failure")
+            logger.warning(f"   Error: {e}")
 
     def _initialize_classification_labels(self):
         """Initialize classification labels for intent detection."""
@@ -668,7 +668,7 @@ class PromptAgent:
             ProcessedPrompt: Processed prompt information
         """
         if not self.available:
-            print("âš ï¸ PromptAgent unavailable due to initialization failure")
+            logger.warning("âš ï¸ PromptAgent unavailable due to initialization failure")
             return ProcessedPrompt(
                 original_prompt=prompt,
                 request_type=RequestType.UNKNOWN,
@@ -1452,7 +1452,7 @@ Return only the JSON object, no additional text."""
             Dictionary with routing decision and processing results
         """
         if not self.available:
-            print("âš ï¸ PromptAgent unavailable due to initialization failure")
+            logger.warning("âš ï¸ PromptAgent unavailable due to initialization failure")
             return {
                 "success": False,
                 "error": "PromptAgent unavailable due to initialization failure",

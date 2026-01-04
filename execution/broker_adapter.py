@@ -17,6 +17,8 @@ Features:
 
 import asyncio
 import logging
+
+logger = logging.getLogger(__name__)
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -261,8 +263,8 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
             try:
                 from alpaca.trading.client import TradingClient
             except ImportError as e:
-                print("âš ï¸ alpaca-py not available. Cannot connect to Alpaca.")
-                print(f"   Missing: {e}")
+                logger.warning("âš ï¸ alpaca-py not available. Cannot connect to Alpaca.")
+                logger.warning(f"   Missing: {e}")
                 self.is_connected = False
                 return False
 
@@ -306,8 +308,8 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
                     StopOrderRequest,
                 )
             except ImportError as e:
-                print("âš ï¸ alpaca-py not available. Cannot submit order.")
-                print(f"   Missing: {e}")
+                logger.warning("âš ï¸ alpaca-py not available. Cannot submit order.")
+                logger.warning(f"   Missing: {e}")
                 raise Exception("alpaca-py not available")
 
             # Convert order side
@@ -1223,7 +1225,7 @@ if __name__ == "__main__":
 
         # Get market data
         market_data = await adapter.get_market_data("AAPL")
-        print(f"AAPL Market Data: {market_data}")
+        logger.warning(f"AAPL Market Data: {market_data}")
 
         # Submit order
         order = OrderRequest(
@@ -1235,7 +1237,7 @@ if __name__ == "__main__":
         )
 
         execution = await adapter.submit_order(order)
-        print(f"Order Execution: {execution}")
+        logger.warning(f"Order Execution: {execution}")
 
         await adapter.disconnect()
 

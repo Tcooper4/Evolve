@@ -381,7 +381,15 @@ class CustomStrategyHandler:
                 "SMA signals: NaN values found in close column, filling with forward fill"
             )
             data = data.copy()
-            data["close"] = data["close"].ffill().bfill()
+            # Only forward fill - never use backward fill in backtesting!
+            data["close"] = data["close"].ffill()
+            
+            # For any remaining leading NaNs, use first valid value
+            # (This is acceptable as it doesn't use future data)
+            first_valid_idx = data["close"].first_valid_index()
+            if first_valid_idx is not None:
+                first_valid_value = data["close"].loc[first_valid_idx]
+                data["close"] = data["close"].fillna(first_valid_value)
 
         sma = data["close"].rolling(period).mean()
         signals = pd.Series(0, index=data.index)
@@ -434,7 +442,15 @@ class CustomStrategyHandler:
                 "Bollinger signals: NaN values found in close column, filling with forward fill"
             )
             data = data.copy()
-            data["close"] = data["close"].ffill().bfill()
+            # Only forward fill - never use backward fill in backtesting!
+            data["close"] = data["close"].ffill()
+            
+            # For any remaining leading NaNs, use first valid value
+            # (This is acceptable as it doesn't use future data)
+            first_valid_idx = data["close"].first_valid_index()
+            if first_valid_idx is not None:
+                first_valid_value = data["close"].loc[first_valid_idx]
+                data["close"] = data["close"].fillna(first_valid_value)
 
         sma = data["close"].rolling(period).mean()
         std = data["close"].rolling(period).std()

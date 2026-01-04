@@ -746,7 +746,8 @@ class StreamingPipeline:
                         # Send ping to keep connection alive
                         try:
                             await provider.websocket.ping()
-                        except:
+                        except Exception as e:
+                            logger.warning(f"Error in streaming pipeline: {e}")
                             break  # Connection lost, will reconnect
                         continue
                     except json.JSONDecodeError as e:
@@ -941,7 +942,8 @@ class StreamingPipeline:
                 
                 try:
                     timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
-                except:
+                except Exception as e:
+                    logger.warning(f"Error in streaming pipeline: {e}")
                     timestamp = datetime.now()
                 
                 return MarketData(
@@ -967,7 +969,8 @@ class StreamingPipeline:
                 
                 try:
                     timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
-                except:
+                except Exception as e:
+                    logger.warning(f"Error in streaming pipeline: {e}")
                     timestamp = datetime.now()
                 
                 return MarketData(

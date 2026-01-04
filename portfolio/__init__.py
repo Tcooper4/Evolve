@@ -15,6 +15,10 @@ Main Components:
 # NOTE: Flake8 compliance changes applied.
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Import main classes from allocator
 from .allocator import (
     AllocationResult,
@@ -144,8 +148,8 @@ def example_usage():
     """
     Example usage of the portfolio management module
     """
-    print("Portfolio Management Module Example")
-    print("=" * 50)
+    logger.info("Portfolio Management Module Example")
+    logger.info("=" * 50)
 
     # Create sample assets
     assets = [
@@ -187,20 +191,20 @@ def example_usage():
     # Quick analysis
     results = analyze_portfolio(assets, "maximum_sharpe")
 
-    print("Portfolio Analysis Results:")
-    print(f"Strategy: {results['allocation'].strategy.value}")
-    print(f"Weights: {results['allocation'].weights}")
-    print(f"Expected Return: {results['allocation'].expected_return:.2%}")
-    print(f"Expected Volatility: {results['allocation'].expected_volatility:.2%}")
-    print(f"Sharpe Ratio: {results['allocation'].sharpe_ratio:.3f}")
+    logger.info("Portfolio Analysis Results:")
+    logger.info(f"Strategy: {results['allocation'].strategy.value}")
+    logger.info(f"Weights: {results['allocation'].weights}")
+    logger.info(f"Expected Return: {results['allocation'].expected_return:.2%}")
+    logger.info(f"Expected Volatility: {results['allocation'].expected_volatility:.2%}")
+    logger.info(f"Sharpe Ratio: {results['allocation'].sharpe_ratio:.3f}")
 
-    print("\nRisk Metrics:")
+    logger.info("\nRisk Metrics:")
     for metric, value in results["risk_metrics"].items():
-        print(f"  {metric}: {value:.4f}")
+        logger.info(f"  {metric}: {value:.4f}")
 
-    print("\nRecommendations:")
+    logger.info("\nRecommendations:")
     for rec in results["recommendations"]:
-        print(f"  - {rec}")
+        logger.info(f"  - {rec}")
 
 
 if __name__ == "__main__":

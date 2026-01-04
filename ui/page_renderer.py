@@ -828,7 +828,8 @@ def render_risk_management_page():
                         st.metric("Avg Correlation", f"{avg_corr:.2f}", corr_status)
                     else:
                         st.metric("Correlation", "N/A", "No data")
-                except:
+                except Exception as e:
+                    logger.warning(f"Page rendering error: {e}")
                     st.metric("Correlation", "N/A", "Calculating...")
             else:
                 st.metric("Correlation", "N/A", "Not available")

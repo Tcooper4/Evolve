@@ -1620,7 +1620,8 @@ class LSTMForecaster(BaseModel):
                     last_value = float(data["Close"].iloc[-1])
                 else:
                     last_value = float(data.iloc[-1, 0])
-            except:
+            except Exception as e:
+                logger.warning(f"LSTM model error: {e}")
                 last_value = 100.0
             
             fallback_forecast = np.full(horizon, last_value)

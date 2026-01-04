@@ -13,8 +13,8 @@ try:
 
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ scikit-learn not available. Disabling Ridge regression fallback.")
-    print(f"   Missing: {e}")
+    logger.info("âš ï¸ scikit-learn not available. Disabling Ridge regression fallback.")
+    logger.info(f"   Missing: {e}")
     Ridge = None
     SKLEARN_AVAILABLE = False
 
@@ -24,8 +24,8 @@ try:
 
     PROPHET_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ Prophet model not available. Disabling Prophet fallback.")
-    print(f"   Missing: {e}")
+    logger.info("âš ï¸ Prophet model not available. Disabling Prophet fallback.")
+    logger.info(f"   Missing: {e}")
     ProphetModel = None
     PROPHET_AVAILABLE = False
 
@@ -40,8 +40,8 @@ try:
 
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ PyTorch not available. Disabling transformer models.")
-    print(f"   Missing: {e}")
+    logger.info("âš ï¸ PyTorch not available. Disabling transformer models.")
+    logger.info(f"   Missing: {e}")
     torch = None
     nn = None
     TORCH_AVAILABLE = False

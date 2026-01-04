@@ -29,14 +29,16 @@ from utils.common_helpers import load_config, safe_json_save
 
 warnings.filterwarnings("ignore")
 
+logger = logging.getLogger(__name__)
+
 # Sentiment analysis libraries
 try:
     from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
     VADER_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ vaderSentiment not available. Disabling VADER sentiment analysis.")
-    print(f"   Missing: {e}")
+    logger.warning("âš ï¸ vaderSentiment not available. Disabling VADER sentiment analysis.")
+    logger.warning(f"   Missing: {e}")
     SentimentIntensityAnalyzer = None
     VADER_AVAILABLE = False
 
@@ -46,10 +48,10 @@ try:
 
     BERT_AVAILABLE = True
 except ImportError as e:
-    print(
+    logger.warning(
         "âš ï¸ HuggingFace libraries not available. Disabling BERT sentiment analysis."
     )
-    print(f"   Missing: {e}")
+    logger.warning(f"   Missing: {e}")
     torch = None
     pipeline = None
     AutoTokenizer = None
@@ -596,32 +598,32 @@ if __name__ == "__main__":
     features = analyzer.generate_sentiment_features(ticker, hours_back=24)
 
     if not features.empty:
-        print(f"Generated {len(features)} sentiment features for {ticker}")
-        print(f"Columns: {features.columns.tolist()}")
-        print(f"Latest sentiment: {features['vader_compound_mean'].iloc[-1]:.3f}")
+        logger.info(f"Generated {len(features)} sentiment features for {ticker}")
+        logger.debug(f"Columns: {features.columns.tolist()}")
+        logger.info(f"Latest sentiment: {features['vader_compound_mean'].iloc[-1]:.3f}")
 
         # Create trading signal
         signal = analyzer.create_sentiment_signal(features)
-        print(f"Latest signal: {signal.iloc[-1]:.3f}")
+        logger.info(f"Latest signal: {signal.iloc[-1]:.3f}")
 
         # Save features
         analyzer.save_features({ticker: features})
     else:
-        print(f"No sentiment features generated for {ticker}")
+        logger.warning(f"No sentiment features generated for {ticker}")
 
     # Multi-ticker analysis
     tickers = ["AAPL", "TSLA", "NVDA"]
     multi_features = analyzer.generate_multi_ticker_features(tickers, hours_back=24)
 
-    print(f"\nMulti-ticker analysis:")
+    logger.info(f"\nMulti-ticker analysis:")
     for ticker, ticker_features in multi_features.items():
-        print(f"  {ticker}: {len(ticker_features)} features")
+        logger.info(f"  {ticker}: {len(ticker_features)} features")
 
     # Correlation analysis
     if len(multi_features) > 1:
         correlation = analyzer.get_sentiment_correlation(multi_features)
-        print(f"\nSentiment correlation matrix:\n{correlation}")
+        logger.info(f"\nSentiment correlation matrix:\n{correlation}")
 
     # Summary
     summary = analyzer.get_sentiment_summary(multi_features)
-    print(f"\nSummary: {json.dumps(summary, indent=2)}")
+    logger.info(f"\nSummary: {json.dumps(summary, indent=2)}")

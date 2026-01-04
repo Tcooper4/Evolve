@@ -19,8 +19,8 @@ try:
 
     TRANSFORMERS_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ transformers not available. Disabling advanced NLP features.")
-    print(f"   Missing: {e}")
+    logger.warning("⚠️ transformers not available. Disabling advanced NLP features.")
+    logger.warning(f"   Missing: {e}")
     pipeline = None
     TRANSFORMERS_AVAILABLE = False
 
@@ -33,8 +33,8 @@ try:
 
     NLTK_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ NLTK not available. Disabling NLTK-based features.")
-    print(f"   Missing: {e}")
+    logger.warning("⚠️ NLTK not available. Disabling NLTK-based features.")
+    logger.warning(f"   Missing: {e}")
     nltk = None
     stopwords = None
     WordNetLemmatizer = None
@@ -48,8 +48,8 @@ try:
 
     SPACY_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ spaCy not available. Disabling spaCy-based features.")
-    print(f"   Missing: {e}")
+    logger.warning("⚠️ spaCy not available. Disabling spaCy-based features.")
+    logger.warning(f"   Missing: {e}")
     spacy = None
     SPACY_AVAILABLE = False
 

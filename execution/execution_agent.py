@@ -12,6 +12,8 @@ This module provides realistic trade execution simulation and live trading capab
 import asyncio
 import json
 import logging
+
+logger = logging.getLogger(__name__)
 import time
 import uuid
 from dataclasses import asdict, dataclass
@@ -860,18 +862,18 @@ if __name__ == "__main__":
         await asyncio.sleep(2)
 
         # Check results
-        print("Order Status:")
-        print(f"  {order_id1}: {agent.get_order_status(order_id1).status.value}")
-        print(f"  {order_id2}: {agent.get_order_status(order_id2).status.value}")
+        logger.info("Order Status:")
+        logger.info(f"  {order_id1}: {agent.get_order_status(order_id1).status.value}")
+        logger.info(f"  {order_id2}: {agent.get_order_status(order_id2).status.value}")
 
-        print("\nPositions:")
+        logger.info("\nPositions:")
         for ticker, position in agent.get_all_positions().items():
-            print(f"  {ticker}: {position.quantity} @ {position.average_price:.2f}")
+            logger.info(f"  {ticker}: {position.quantity} @ {position.average_price:.2f}")
 
-        print("\nPerformance:")
+        logger.info("\nPerformance:")
         metrics = agent.get_performance_metrics()
         for key, value in metrics.items():
-            print(f"  {key}: {value}")
+            logger.info(f"  {key}: {value}")
 
         await agent.stop()
 

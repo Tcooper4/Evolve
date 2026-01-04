@@ -82,7 +82,7 @@ def align_signals_with_index(
             aligned_signals[col] = (
                 aligned_signals[col]
                 .ffill()
-                .bfill()
+                .ffill()
                 .fillna(0)
             )
 

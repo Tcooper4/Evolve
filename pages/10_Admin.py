@@ -907,7 +907,8 @@ curl -X POST http://localhost:8000/forecast \\
                 else:
                     st.warning("⚠️ Connection lost. Click Connect to reconnect.")
                     st.session_state.ws_connected = False
-            except:
+            except Exception as e:
+                logger.warning(f"Connection check failed: {e}")
                 st.warning("⚠️ Connection status unknown")
                 st.session_state.ws_connected = False
         else:
@@ -959,7 +960,8 @@ curl -X POST http://localhost:8000/forecast \\
                         asyncio.set_event_loop(loop)
                         try:
                             loop.run_until_complete(st.session_state.ws_client.disconnect())
-                        except:
+                        except Exception as e:
+                            logger.debug(f"Suppressed error during disconnect: {e}")
                             pass
                     
                     thread = threading.Thread(target=disconnect_ws, daemon=True)
@@ -969,7 +971,8 @@ curl -X POST http://localhost:8000/forecast \\
                     st.session_state.ws_connected = False
                     st.success("Disconnected!")
                     st.rerun()
-                except:
+                except Exception as e:
+                    logger.warning(f"Connection check failed: {e}")
                     st.session_state.ws_connected = False
                     st.rerun()
     
@@ -1097,8 +1100,9 @@ curl -X POST http://localhost:8000/forecast \\
             st.session_state.ws_client.on('forecast_complete', on_forecast_complete)
             st.session_state.ws_client.on('trade_execution', on_trade_execution)
             st.session_state.ws_client.on('risk_alert', on_risk_alert)
-        except:
-            pass  # Callbacks may not be registered if connection is lost
+        except Exception as e:
+            logger.debug(f"Suppressed error: {e}")  # Callbacks may not be registered if connection is lost
+            pass
         
         # Display recent events
         if st.session_state.recent_events:
@@ -2824,7 +2828,8 @@ with tab5:
                     st.metric("Total Audit Entries", total_entries)
                 else:
                     st.metric("Total Audit Entries", 0)
-            except:
+            except Exception as e:
+                logger.warning(f"Connection check failed: {e}")
                 st.metric("Total Audit Entries", "N/A")
         
         with col2:

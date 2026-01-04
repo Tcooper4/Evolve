@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+logger = logging.getLogger(__name__)
+
 from trading.llm.llm_interface import LLMInterface
 from trading.market.market_analyzer import MarketAnalyzer
 from trading.memory.agent_memory import AgentMemory
@@ -95,26 +97,26 @@ class QuantGPTCommentaryAgent:
             except Exception as e:
                 self.logger.error(f"Failed to initialize LLM interface: {e}")
                 self.llm_interface = None
-                print("âš ï¸ LLM interface unavailable due to initialization failure")
-                print(f"   Error: {e}")
+                logger.warning("âš ï¸ LLM interface unavailable due to initialization failure")
+                logger.warning(f"   Error: {e}")
 
             try:
                 self.market_analyzer = MarketAnalyzer()
             except Exception as e:
                 self.logger.error(f"Failed to initialize market analyzer: {e}")
                 self.market_analyzer = None
-                print(
+                logger.warning(
                     "âš ï¸ Market analyzer unavailable due to initialization failure"
                 )
-                print(f"   Error: {e}")
+                logger.warning(f"   Error: {e}")
 
             try:
                 self.memory = AgentMemory()
             except Exception as e:
                 self.logger.error(f"Failed to initialize agent memory: {e}")
                 self.memory = None
-                print("âš ï¸ Agent memory unavailable due to initialization failure")
-                print(f"   Error: {e}")
+                logger.warning("âš ï¸ Agent memory unavailable due to initialization failure")
+                logger.warning(f"   Error: {e}")
 
             # Configuration
             self.max_context_length = self.config.get("max_context_length", 4000)
@@ -137,10 +139,10 @@ class QuantGPTCommentaryAgent:
         except Exception as e:
             self.logger.error(f"Failed to initialize QuantGPTCommentaryAgent: {e}")
             self.available = False
-            print(
+            logger.warning(
                 "âš ï¸ QuantGPTCommentaryAgent unavailable due to initialization failure"
             )
-            print(f"   Error: {e}")
+            logger.warning(f"   Error: {e}")
             # Don't raise exception, just mark as unavailable
 
     async def generate_commentary(
@@ -156,7 +158,7 @@ class QuantGPTCommentaryAgent:
             Commentary response with analysis and insights
         """
         if not self.available:
-            print(
+            logger.warning(
                 "âš ï¸ QuantGPTCommentaryAgent unavailable due to initialization failure"
             )
             return self._create_error_response(
