@@ -125,7 +125,7 @@ st.markdown("Train, optimize, evaluate, and deploy machine learning models for t
 st.markdown("---")
 
 # Create tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_discovery, tab_innovation, tab_benchmark = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_monitoring, tab_discovery, tab_innovation, tab_benchmark = st.tabs([
     "⚡ Quick Training",
     "⚙️ Model Configuration",
     "🎯 Hyperparameter Optimization",
@@ -133,6 +133,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_discovery, tab_innovation, tab_ben
     "🔍 Model Comparison",
     "🧠 Explainability",
     "📚 Model Registry",
+    "📊 Model Monitoring",  # NEW TAB
     "🤖 AI Model Discovery",  # NEW TAB
     "🧪 Model Innovation",  # NEW TAB
     "📊 Benchmark Models"  # NEW TAB
@@ -451,6 +452,34 @@ with tab1:
                                 }
                                 
                                 st.session_state.quick_training_results[model_name] = training_result
+                                
+                                # Log model performance
+                                if 'model_log' in st.session_state and 'perf_logger' in st.session_state:
+                                    try:
+                                        import time
+                                        train_time = time.time() - time.time()  # Placeholder - would need actual timing
+                                        
+                                        st.session_state.model_log.log_training(
+                                            model_name=model_type,
+                                            model_version='1.0',
+                                            training_data_size=len(train_data),
+                                            training_time=train_time,
+                                            parameters=model_config,
+                                            metrics={
+                                                'r2_score': r2,
+                                                'rmse': rmse,
+                                                'mae': mae
+                                            }
+                                        )
+                                        
+                                        st.session_state.perf_logger.log_performance(
+                                            model_name=model_type,
+                                            metric_name='accuracy',
+                                            metric_value=r2,
+                                            timestamp=datetime.now()
+                                        )
+                                    except Exception as e:
+                                        logger.warning(f"Could not log model performance: {e}")
                                 
                                 # Display results
                                 st.success("✅ Model trained successfully!")
@@ -2531,6 +2560,137 @@ with tab5:
             
             st.markdown("---")
             
+            # Advanced Model Scoring
+            st.subheader("📊 Advanced Model Scoring")
+            
+            st.write("""
+            Comprehensive scoring evaluates models across multiple dimensions:
+            accuracy, reliability, robustness, and efficiency.
+            """)
+            
+            if st.button("Calculate Comprehensive Scores", key="calculate_comprehensive_scores"):
+                try:
+                    from trading.utils.metrics.scorer import ModelScorer
+                    
+                    scorer = ModelScorer()
+                    
+                    # Get models to score (use selected models from comparison)
+                    models_to_score = selected_models if len(selected_models) >= 2 else list(available_models.keys())[:3]
+                    
+                    if models_to_score:
+                        with st.spinner("Calculating comprehensive scores..."):
+                            scores_list = []
+                            
+                            for model_name in models_to_score:
+                                # Get model predictions from available models
+                                model_result = available_models.get(model_name)
+                                
+                                if model_result:
+                                    # Try to get predictions and actuals
+                                    predictions = model_result.get('predictions')
+                                    actuals = model_result.get('actuals')
+                                    
+                                    # If not directly available, try to extract from test results
+                                    if predictions is None and 'test_results' in model_result:
+                                        test_results = model_result['test_results']
+                                        predictions = test_results.get('predictions')
+                                        actuals = test_results.get('actuals')
+                                    
+                                    # If still not available, use metrics to estimate
+                                    if predictions is None or actuals is None:
+                                        # Use placeholder - in real implementation, would need actual predictions
+                                        st.warning(f"⚠️ Predictions not available for {model_name}. Skipping comprehensive scoring.")
+                                        continue
+                                    
+                                    try:
+                                        scores = scorer.calculate_comprehensive_score(
+                                            predictions=predictions,
+                                            actuals=actuals,
+                                            model_name=model_name
+                                        )
+                                        
+                                        scores_list.append({
+                                            'Model': model_name,
+                                            'Overall Score': scores.get('overall_score', 0),
+                                            'Accuracy': scores.get('accuracy_score', 0),
+                                            'Reliability': scores.get('reliability_score', 0),
+                                            'Robustness': scores.get('robustness_score', 0),
+                                            'Efficiency': scores.get('efficiency_score', 0)
+                                        })
+                                    except Exception as e:
+                                        st.warning(f"Could not score {model_name}: {e}")
+                                        continue
+                            
+                            if scores_list:
+                                scores_df = pd.DataFrame(scores_list)
+                                scores_df = scores_df.sort_values('Overall Score', ascending=False)
+                                
+                                # Display scores table
+                                st.dataframe(scores_df, use_container_width=True, hide_index=True)
+                                
+                                # Radar chart for top 3 models
+                                if len(scores_df) >= 1:
+                                    top_models = scores_df.head(min(3, len(scores_df)))
+                                    
+                                    fig = go.Figure()
+                                    
+                                    metrics = ['Accuracy', 'Reliability', 'Robustness', 'Efficiency']
+                                    
+                                    for _, row in top_models.iterrows():
+                                        fig.add_trace(go.Scatterpolar(
+                                            r=[row[m] for m in metrics],
+                                            theta=metrics,
+                                            fill='toself',
+                                            name=row['Model']
+                                        ))
+                                    
+                                    fig.update_layout(
+                                        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+                                        title='Model Comparison (Multi-dimensional)',
+                                        height=500
+                                    )
+                                    
+                                    st.plotly_chart(fig, use_container_width=True)
+                                    
+                                    # Recommendations
+                                    st.subheader("💡 Recommendations")
+                                    
+                                    best_model = scores_df.iloc[0]
+                                    st.success(f"**Recommended Model:** {best_model['Model']}")
+                                    st.write(f"Overall Score: {best_model['Overall Score']:.3f}")
+                                    st.write("This model offers the best balance across all evaluation criteria.")
+                                    
+                                    # Show strengths of best model
+                                    with st.expander("📊 Model Strengths", expanded=False):
+                                        st.write(f"**{best_model['Model']} excels in:**")
+                                        
+                                        strengths = []
+                                        if best_model['Accuracy'] >= 0.7:
+                                            strengths.append(f"Accuracy ({best_model['Accuracy']:.2f})")
+                                        if best_model['Reliability'] >= 0.7:
+                                            strengths.append(f"Reliability ({best_model['Reliability']:.2f})")
+                                        if best_model['Robustness'] >= 0.7:
+                                            strengths.append(f"Robustness ({best_model['Robustness']:.2f})")
+                                        if best_model['Efficiency'] >= 0.7:
+                                            strengths.append(f"Efficiency ({best_model['Efficiency']:.2f})")
+                                        
+                                        if strengths:
+                                            for strength in strengths:
+                                                st.write(f"• {strength}")
+                                        else:
+                                            st.info("Model shows balanced performance across all dimensions")
+                            else:
+                                st.warning("No models could be scored. Ensure models have predictions and actuals available.")
+                    
+                except ImportError:
+                    st.error("Model scorer not available. Make sure trading.utils.metrics.scorer is installed.")
+                except Exception as e:
+                    st.error(f"Error calculating scores: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+            
+            st.markdown("---")
+            
             # Performance Charts Overlay
             st.subheader("📊 Performance Charts Overlay")
             
@@ -3515,6 +3675,82 @@ with tab6:
                 - **Feature Sensitivity:** {'High' if model_type == 'XGBoost' else 'Medium'}
                 - **Non-linearity:** {'High' if model_type in ['LSTM', 'XGBoost'] else 'Low'}
                 """)
+
+# TAB 8: Model Monitoring
+with tab_monitoring:
+    st.header("📊 Model Performance Monitoring")
+    
+    if 'model_monitor' in st.session_state:
+        monitor = st.session_state.model_monitor
+        
+        # Model drift detection
+        st.subheader("🔍 Model Drift Detection")
+        
+        try:
+            drift_status = monitor.check_drift()
+            
+            if drift_status.get('drift_detected', False):
+                st.warning("⚠️ Model drift detected!")
+                st.write(f"Drift score: {drift_status.get('drift_score', 0):.2f}")
+                st.write(f"Recommendation: {drift_status.get('recommendation', 'Review model performance')}")
+            else:
+                st.success("✅ No significant drift detected")
+        except Exception as e:
+            st.info(f"Drift detection not available: {e}")
+        
+        # Performance trends
+        st.subheader("📈 Performance Trends")
+        
+        if 'model_log' in st.session_state:
+            try:
+                logs = st.session_state.model_log.get_recent_logs(limit=100)
+                
+                if logs:
+                    logs_df = pd.DataFrame(logs)
+                    
+                    # Performance over time chart
+                    if 'r2_score' in logs_df.columns and 'timestamp' in logs_df.columns:
+                        fig = px.line(
+                            logs_df,
+                            x='timestamp',
+                            y='r2_score',
+                            color='model_name',
+                            title='Model Accuracy Over Time'
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Model comparison
+                    st.subheader("🏆 Model Comparison")
+                    
+                    if 'model_name' in logs_df.columns:
+                        comparison = logs_df.groupby('model_name').agg({
+                            'r2_score': 'mean' if 'r2_score' in logs_df.columns else 'count',
+                            'rmse': 'mean' if 'rmse' in logs_df.columns else 'count',
+                            'training_time': 'mean' if 'training_time' in logs_df.columns else 'count'
+                        }).round(4)
+                        
+                        st.dataframe(comparison, use_container_width=True)
+            except Exception as e:
+                st.info(f"Performance trends not available: {e}")
+        else:
+            st.info("Model log not available")
+        
+        # Alerts
+        try:
+            alerts = monitor.get_active_alerts()
+            
+            if alerts:
+                st.subheader("🚨 Model Alerts")
+                for alert in alerts:
+                    if isinstance(alert, dict):
+                        st.warning(f"⚠️ {alert.get('message', 'Unknown alert')}")
+                    else:
+                        st.warning(f"⚠️ {alert}")
+        except Exception as e:
+            pass  # Silently fail if alerts not available
+    
+    else:
+        st.warning("Model monitoring not available")
 
 # TAB 7: Model Registry
 with tab7:

@@ -143,6 +143,19 @@ class ModelRegistry:
             logger.warning(f"Autoformer model not available: {e}")
         
         try:
+            from trading.models.advanced.transformer.time_series_transformer import TimeSeriesTransformer
+            self.register('Transformer', TimeSeriesTransformer, {
+                'type': 'single_asset',
+                'complexity': 'high',
+                'description': 'Advanced transformer with attention mechanism',
+                'use_case': 'general',
+                'requires_gpu': True,
+                'min_data_points': 200
+            })
+        except ImportError as e:
+            logger.warning(f"Transformer model not available: {e}")
+        
+        try:
             from trading.models.catboost_model import CatBoostModel
             self.register('CatBoost', CatBoostModel, {
                 'type': 'single_asset',
@@ -167,6 +180,19 @@ class ModelRegistry:
             })
         except ImportError as e:
             logger.warning(f"Ridge model not available: {e}")
+        
+        try:
+            from trading.forecasting.hybrid_model import HybridModel
+            self.register('Hybrid', HybridModel, {
+                'type': 'single_asset',
+                'complexity': 'high',
+                'description': 'Combines statistical and ML approaches',
+                'use_case': 'general',
+                'requires_gpu': False,
+                'min_data_points': 150
+            })
+        except ImportError as e:
+            logger.warning(f"Hybrid model not available: {e}")
         
         # === MULTI-ASSET MODELS (NOT for quick forecast!) ===
         

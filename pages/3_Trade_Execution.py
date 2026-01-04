@@ -453,6 +453,135 @@ with col2:
                             st.session_state.active_orders.append(order_info)
                             st.session_state.order_history.append(order_info)
                             
+                            # Generate trade commentary
+                            if 'commentary_service' in st.session_state:
+                                try:
+                                    commentary_service = st.session_state.commentary_service
+                                    
+                                    # Get current position and portfolio value (if available)
+                                    current_position = 0  # Placeholder - would need portfolio manager
+                                    portfolio_value = 10000  # Placeholder - would need portfolio manager
+                                    
+                                    # Get execution price
+                                    execution_price = limit_price if limit_price else get_current_price(symbol) or 0.0
+                                    
+                                    trade_commentary = commentary_service.generate_trade_commentary(
+                                        symbol=symbol,
+                                        action=side.lower(),
+                                        quantity=float(quantity),
+                                        price=float(execution_price),
+                                        current_position=current_position,
+                                        portfolio_value=portfolio_value
+                                    )
+                                    
+                                    st.info(f"💬 {trade_commentary}")
+                                except Exception as e:
+                                    logger.warning(f"Failed to generate trade commentary: {e}")
+                                    # Don't fail the trade if commentary generation fails
+                            
+                            # Send WebSocket update for trade execution
+                            if 'ws_client' in st.session_state and st.session_state.get('ws_connected', False):
+                                try:
+                                    import asyncio
+                                    from utils.websocket_client import WebSocketClient
+                                    
+                                    ws_client = st.session_state.ws_client
+                                    
+                                    # Get execution price (use limit price or current market price)
+                                    execution_price = limit_price if limit_price else get_current_price(symbol) or 0.0
+                                    
+                                    # Send trade execution event
+                                    async def send_trade_update():
+                                        try:
+                                            await ws_client.send('trade_execution', {
+                                                'symbol': symbol,
+                                                'action': side.lower(),
+                                                'quantity': float(quantity),
+                                                'price': float(execution_price),
+                                                'order_id': order_id,
+                                                'order_type': order_type_str,
+                                                'timestamp': datetime.now().isoformat()
+                                            })
+                                        except Exception as e:
+                                            logger.warning(f"Failed to send WebSocket trade update: {e}")
+                                    
+                                    # Run async function
+                                    try:
+                                        loop = asyncio.get_event_loop()
+                                    except RuntimeError:
+                                        loop = asyncio.new_event_loop()
+                                        asyncio.set_event_loop(loop)
+                                    
+                                    loop.run_until_complete(send_trade_update())
+                                except Exception as e:
+                                    logger.warning(f"WebSocket update failed: {e}")
+                                    # Don't fail the trade if WebSocket update fails
+                            
+                            # Send notifications
+                            if 'notification_service' in st.session_state:
+                                try:
+                                    import asyncio
+                                    from system.infra.agents.notifications.notification_service import NotificationChannel, NotificationType, NotificationPriority
+                                    
+                                    notif = st.session_state.notification_service
+                                    settings = st.session_state.get('notification_settings', {})
+                                    
+                                    # Email notification
+                                    if settings.get('email_enabled') and 'Trade executions' in settings.get('email_events', []):
+                                        async def send_email():
+                                            await notif.send_notification(
+                                                title=f"Trade Executed: {symbol}",
+                                                message=f"Executed {side} {quantity} shares of {symbol} at ${limit_price}",
+                                                type=NotificationType.SUCCESS,
+                                                priority=NotificationPriority.MEDIUM,
+                                                channel=NotificationChannel.EMAIL,
+                                                recipient=settings.get('email_address', '')
+                                            )
+                                        
+                                        loop = asyncio.new_event_loop()
+                                        asyncio.set_event_loop(loop)
+                                        loop.run_until_complete(send_email())
+                                        loop.close()
+                                    
+                                    # Slack notification
+                                    if settings.get('slack_enabled') and 'Trade executions' in settings.get('slack_events', []):
+                                        async def send_slack():
+                                            await notif.send_notification(
+                                                title="Trade Execution",
+                                                message=f"🔔 Trade: {side} {quantity} {symbol} @ ${limit_price}",
+                                                type=NotificationType.SUCCESS,
+                                                priority=NotificationPriority.MEDIUM,
+                                                channel=NotificationChannel.SLACK,
+                                                recipient=settings.get('slack_webhook', '')
+                                            )
+                                        
+                                        loop = asyncio.new_event_loop()
+                                        asyncio.set_event_loop(loop)
+                                        loop.run_until_complete(send_slack())
+                                        loop.close()
+                                except Exception as e:
+                                    logger.warning(f"Failed to send trade notification: {e}")
+                            
+                            # Log to audit trail
+                            if 'audit_logger' in st.session_state:
+                                try:
+                                    from datetime import datetime
+                                    audit_logger = st.session_state.audit_logger
+                                    audit_logger.log_strategy(
+                                        strategy_name=f"Trade Execution - {symbol}",
+                                        action="order_submitted",
+                                        metadata={
+                                            "order_id": order_id,
+                                            "symbol": symbol,
+                                            "side": side,
+                                            "quantity": quantity,
+                                            "price": limit_price,
+                                            "order_type": order_type_str
+                                        }
+                                    )
+                                except Exception as e:
+                                    logger.warning(f"Failed to log trade to audit trail: {e}")
+                            
                             # Reset confirmation
                             st.session_state.confirm_trade = False
                             st.rerun()
@@ -479,6 +608,215 @@ with col2:
             display_cols = ["order_id", "symbol", "side", "order_type", "quantity", "status", "timestamp"]
             available_cols = [col for col in display_cols if col in orders_df.columns]
             st.dataframe(orders_df[available_cols], use_container_width=True, hide_index=True)
+
+st.markdown("---")
+
+# Section 1.5: Advanced Execution Engine
+st.header("⚙️ Advanced Execution Settings")
+
+st.write("""
+Use sophisticated execution algorithms to minimize market impact and optimize fill prices.
+Choose from TWAP, VWAP, Iceberg, or AI-optimized execution strategies.
+""")
+
+# Import advanced execution engine
+try:
+    from trading.execution.execution_engine import AdvancedExecutionEngine
+    
+    if 'execution_engine' not in st.session_state:
+        st.session_state.execution_engine = AdvancedExecutionEngine()
+    
+    engine = st.session_state.execution_engine
+    
+    st.write("**Execution Algorithms:**")
+    
+    algo = st.selectbox(
+        "Select execution algorithm",
+        [
+            "Market Order - Immediate execution",
+            "TWAP - Time-Weighted Average Price",
+            "VWAP - Volume-Weighted Average Price",
+            "Iceberg - Hide order size",
+            "Smart - AI-optimized execution"
+        ],
+        key="execution_algo"
+    )
+    
+    algo_type = algo.split(' -')[0].strip()
+    
+    # Algorithm-specific settings
+    algo_params = {}
+    
+    if algo_type == "TWAP":
+        st.write("Splits order evenly over time period")
+        duration = st.slider("Duration (minutes)", 5, 120, 30, key="twap_duration")
+        num_slices = st.slider("Number of slices", 5, 50, 10, key="twap_slices")
+        algo_params = {
+            'duration_minutes': duration,
+            'num_slices': num_slices
+        }
+        
+    elif algo_type == "VWAP":
+        st.write("Matches historical volume patterns")
+        participation_rate = st.slider("Participation rate (%)", 1, 50, 10, key="vwap_participation")
+        algo_params = {
+            'participation_rate': participation_rate / 100
+        }
+        
+    elif algo_type == "Iceberg":
+        st.write("Shows only part of order at a time")
+        visible_qty = st.slider("Visible quantity (%)", 5, 50, 20, key="iceberg_visible")
+        algo_params = {
+            'visible_quantity_pct': visible_qty / 100
+        }
+        
+    elif algo_type == "Smart":
+        st.write("AI determines optimal execution strategy")
+        urgency = st.select_slider("Urgency", ["Low", "Medium", "High"], value="Medium", key="smart_urgency")
+        algo_params = {
+            'urgency': urgency.lower()
+        }
+    
+    # Enhanced order entry
+    st.subheader("📝 Order Entry")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        exec_symbol = st.text_input("Symbol", value="AAPL", key="exec_symbol").upper().strip()
+        exec_action = st.selectbox("Action", ["BUY", "SELL"], key="exec_action")
+        exec_quantity = st.number_input("Quantity", min_value=1, value=100, key="exec_quantity")
+    
+    with col2:
+        exec_order_type = st.selectbox(
+            "Order Type",
+            ["Market", "Limit", "Stop", "Stop-Limit"],
+            key="exec_order_type"
+        )
+        
+        exec_limit_price = None
+        exec_stop_price = None
+        
+        if exec_order_type in ["Limit", "Stop-Limit"]:
+            default_limit = get_current_price(exec_symbol) if exec_symbol else 100.0
+            exec_limit_price = st.number_input("Limit Price", min_value=0.01, value=float(default_limit) if default_limit else 100.0, step=0.01, key="exec_limit_price")
+        
+        if exec_order_type in ["Stop", "Stop-Limit"]:
+            default_stop = get_current_price(exec_symbol) if exec_symbol else 100.0
+            exec_stop_price = st.number_input("Stop Price", min_value=0.01, value=float(default_stop) if default_stop else 100.0, step=0.01, key="exec_stop_price")
+    
+    # Execute with advanced engine
+    if st.button("🚀 Execute Order", type="primary", key="execute_advanced_order"):
+        if exec_symbol and exec_quantity > 0:
+            with st.spinner("Executing order..."):
+                # Build order config
+                order_config = {
+                    'symbol': exec_symbol,
+                    'action': exec_action,
+                    'quantity': exec_quantity,
+                    'order_type': exec_order_type,
+                    'algorithm': algo_type,
+                    'algorithm_params': algo_params
+                }
+                
+                if exec_order_type in ["Limit", "Stop-Limit"]:
+                    order_config['limit_price'] = exec_limit_price
+                if exec_order_type in ["Stop", "Stop-Limit"]:
+                    order_config['stop_price'] = exec_stop_price
+                
+                try:
+                    # Execute
+                    result = engine.execute_order(order_config)
+                    
+                    if result.get('success', False):
+                        st.success(f"✅ Order executed successfully!")
+                        
+                        # Show execution details
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            avg_price = result.get('avg_price', 0)
+                            st.metric("Avg Fill Price", f"${avg_price:.2f}")
+                        with col2:
+                            filled_qty = result.get('filled_quantity', 0)
+                            st.metric("Total Filled", filled_qty)
+                        with col3:
+                            expected_price = result.get('expected_price', avg_price)
+                            if expected_price > 0:
+                                slippage = ((avg_price - expected_price) / expected_price) * 100
+                                st.metric("Slippage", f"{slippage:+.2f}%")
+                            else:
+                                st.metric("Slippage", "N/A")
+                        
+                        # Execution timeline
+                        if 'execution_timeline' in result and result['execution_timeline']:
+                            st.subheader("⏱️ Execution Timeline")
+                            
+                            timeline_df = pd.DataFrame(result['execution_timeline'])
+                            
+                            fig = go.Figure()
+                            
+                            fig.add_trace(go.Scatter(
+                                x=timeline_df['timestamp'],
+                                y=timeline_df['price'],
+                                mode='lines+markers',
+                                name='Fill Price',
+                                line=dict(color='blue', width=2),
+                                marker=dict(size=8)
+                            ))
+                            
+                            # Add expected price line if available
+                            if 'expected_price' in result and result['expected_price']:
+                                fig.add_hline(
+                                    y=result['expected_price'],
+                                    line_dash="dash",
+                                    line_color="gray",
+                                    annotation_text="Expected Price"
+                                )
+                            
+                            fig.update_layout(
+                                title='Order Execution Timeline',
+                                xaxis_title='Time',
+                                yaxis_title='Price ($)',
+                                height=400
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                        
+                        # Store order in history
+                        order_info = {
+                            "order_id": result.get('order_id', f"ADV_{datetime.now().strftime('%Y%m%d%H%M%S')}"),
+                            "symbol": exec_symbol,
+                            "side": exec_action,
+                            "order_type": exec_order_type,
+                            "quantity": exec_quantity,
+                            "filled_quantity": result.get('filled_quantity', 0),
+                            "avg_price": result.get('avg_price', 0),
+                            "algorithm": algo_type,
+                            "slippage": result.get('slippage', 0),
+                            "timestamp": datetime.now().isoformat(),
+                            "status": "filled"
+                        }
+                        
+                        st.session_state.active_orders.append(order_info)
+                        st.session_state.order_history.append(order_info)
+                    else:
+                        error_msg = result.get('error', 'Unknown error')
+                        st.error(f"❌ Order failed: {error_msg}")
+                
+                except Exception as e:
+                    st.error(f"❌ Error executing order: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+        else:
+            st.warning("Please fill in all required fields")
+
+except ImportError:
+    st.error("Advanced Execution Engine not available. Make sure trading.execution.execution_engine is available.")
+except Exception as e:
+    st.error(f"Error initializing execution engine: {e}")
+    import traceback
+    st.code(traceback.format_exc())
 
 st.markdown("---")
 

@@ -14,13 +14,14 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 from uuid import uuid4
 
-from trading.agents.alpha import (
-    AlphaGenAgent,
-    AlphaRegistry,
-    RiskValidator,
-    SentimentIngestion,
-    SignalTester,
-)
+# Alpha agents removed - were stub implementations
+# from trading.agents.alpha import (
+#     AlphaGenAgent,
+#     AlphaRegistry,
+#     RiskValidator,
+#     SentimentIngestion,
+#     SignalTester,
+# )
 from trading.agents.base_agent_interface import AgentConfig, AgentResult
 from trading.agents.regime_detection_agent import RegimeDetectionAgent
 from trading.agents.walk_forward_agent import WalkForwardAgent
@@ -85,11 +86,12 @@ class SwarmOrchestrator:
         self.running_tasks: Set[str] = set()
         self.completed_tasks: Dict[str, SwarmTask] = {}
         self.agent_registry: Dict[AgentType, type] = {
-            AgentType.ALPHA_GEN: AlphaGenAgent,
-            AgentType.SIGNAL_TESTER: SignalTester,
-            AgentType.RISK_VALIDATOR: RiskValidator,
-            AgentType.SENTIMENT: SentimentIngestion,
-            AgentType.ALPHA_REGISTRY: AlphaRegistry,
+            # Alpha agents removed - were stub implementations
+            # AgentType.ALPHA_GEN: AlphaGenAgent,
+            # AgentType.SIGNAL_TESTER: SignalTester,
+            # AgentType.RISK_VALIDATOR: RiskValidator,
+            # AgentType.SENTIMENT: SentimentIngestion,
+            # AgentType.ALPHA_REGISTRY: AlphaRegistry,
             AgentType.WALK_FORWARD: WalkForwardAgent,
             AgentType.REGIME_DETECTION: RegimeDetectionAgent,
         }

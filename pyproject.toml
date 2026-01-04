@@ -66,6 +66,12 @@ dependencies = [
     # Optional dependencies (with fallbacks in code)
     "flaml>=2.0.0",
     "autoformer-pytorch>=0.1.0",
+    # API dependencies
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "pydantic>=2.4.0",
+    # WebSocket dependencies
+    "websockets>=11.0",
 ]
 
 [project.optional-dependencies]

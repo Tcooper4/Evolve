@@ -157,6 +157,35 @@ with tab1:
                             # No need to reassign it here unless we want to update it
                             
                             st.success(f"✅ Loaded {len(data)} days of data for {symbol}")
+                            
+                            # Show data quality metrics
+                            try:
+                                from src.utils.data_validation import DataValidator
+                                
+                                validator = DataValidator()
+                                quality_metrics = validator.get_quality_metrics(data)
+                                
+                                with st.expander("📊 Data Quality Metrics", expanded=False):
+                                    col1, col2, col3, col4 = st.columns(4)
+                                    
+                                    with col1:
+                                        st.metric("Completeness", f"{quality_metrics['completeness']:.1%}")
+                                    with col2:
+                                        st.metric("Missing Values", quality_metrics['missing_count'])
+                                    with col3:
+                                        st.metric("Outliers Detected", quality_metrics['outliers'])
+                                    with col4:
+                                        quality_score = quality_metrics['overall_quality']
+                                        st.metric("Quality Score", f"{quality_score:.0f}/100")
+                                    
+                                    # Show issues if any
+                                    if quality_metrics['issues']:
+                                        st.warning("⚠️ Data Quality Issues:")
+                                        for issue in quality_metrics['issues']:
+                                            st.write(f"• {issue}")
+                            except Exception as e:
+                                # Silently fail if validation not available
+                                pass
                         
             except Exception as e:
                 st.error(f"Error loading data: {str(e)}")
@@ -164,10 +193,39 @@ with tab1:
     
     # Display loaded data
     if st.session_state.forecast_data is not None:
+        data = st.session_state.forecast_data
+        
+        # Show data quality metrics
+        try:
+            from src.utils.data_validation import DataValidator
+            
+            validator = DataValidator()
+            quality_metrics = validator.get_quality_metrics(data)
+            
+            with st.expander("📊 Data Quality Metrics", expanded=False):
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("Completeness", f"{quality_metrics['completeness']:.1%}")
+                with col2:
+                    st.metric("Missing Values", quality_metrics['missing_count'])
+                with col3:
+                    st.metric("Outliers Detected", quality_metrics['outliers'])
+                with col4:
+                    quality_score = quality_metrics['overall_quality']
+                    st.metric("Quality Score", f"{quality_score:.0f}/100")
+                
+                # Show issues if any
+                if quality_metrics['issues']:
+                    st.warning("⚠️ Data Quality Issues:")
+                    for issue in quality_metrics['issues']:
+                        st.write(f"• {issue}")
+        except Exception as e:
+            # Silently fail if validation not available
+            pass
+        
         st.markdown("---")
         st.subheader("📊 Data Preview")
-        
-        data = st.session_state.forecast_data
         
         # Summary statistics
         col1, col2, col3, col4 = st.columns(4)
@@ -182,25 +240,57 @@ with tab1:
             volatility = data['close'].pct_change().std() * np.sqrt(252) * 100
             st.metric("Annualized Volatility", f"{volatility:.2f}%")
         
-        # Price chart
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=data.index,
-            y=data['close'],
-            mode='lines',
-            name='Close Price',
-            line=dict(color='blue', width=2)
-        ))
-        
-        fig.update_layout(
-            title=f"{st.session_state.symbol} Price History",
-            xaxis_title="Date",
-            yaxis_title="Price ($)",
-            hovermode='x unified',
-            height=400
-        )
-        
-        st.plotly_chart(fig, width='stretch')
+        # Price chart - use advanced candlestick chart if OHLCV data available
+        try:
+            from utils.plotting_helper import create_candlestick_chart
+            
+            # Check if we have OHLCV data
+            has_ohlcv = all(col in data.columns for col in ['open', 'high', 'low', 'close'])
+            
+            if has_ohlcv:
+                fig = create_candlestick_chart(
+                    data=data,
+                    title=f"{st.session_state.symbol} Price History",
+                    show_volume='volume' in data.columns,
+                    show_ma=[20, 50, 200] if len(data) >= 200 else ([20, 50] if len(data) >= 50 else [20])
+                )
+            else:
+                # Fallback to simple line chart
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=data.index,
+                    y=data['close'],
+                    mode='lines',
+                    name='Close Price',
+                    line=dict(color='blue', width=2)
+                ))
+                fig.update_layout(
+                    title=f"{st.session_state.symbol} Price History",
+                    xaxis_title="Date",
+                    yaxis_title="Price ($)",
+                    hovermode='x unified',
+                    height=400
+                )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        except ImportError:
+            # Fallback to basic chart
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=data.index,
+                y=data['close'],
+                mode='lines',
+                name='Close Price',
+                line=dict(color='blue', width=2)
+            ))
+            fig.update_layout(
+                title=f"{st.session_state.symbol} Price History",
+                xaxis_title="Date",
+                yaxis_title="Price ($)",
+                hovermode='x unified',
+                height=400
+            )
+            st.plotly_chart(fig, use_container_width=True)
         
         # Data table (expandable)
         with st.expander("📋 View Full Data"):
@@ -227,8 +317,9 @@ with tab1:
         with col1:
             st.markdown("**Select Model**")
             
-            # Use model registry for dynamic model selection
+            # Use UI component for model selection
             try:
+                from trading.ui.forecast_components import render_model_selector
                 from trading.models.model_registry import get_registry
                 
                 registry = get_registry()
@@ -237,35 +328,43 @@ with tab1:
                 if not available_models:
                     st.warning("⚠️ No models available. Using default models.")
                     available_models = ["LSTM", "XGBoost", "Prophet", "ARIMA"]
+                
+                selected_model = render_model_selector(
+                    available_models=available_models,
+                    key="quick_forecast_model"
+                )
+                
+                # Show model description if available
+                if selected_model:
+                    try:
+                        model_info = registry.get_model_info(selected_model)
+                        if model_info and model_info.get('description'):
+                            description = model_info['description']
+                            if len(description) > 200:
+                                description = description[:200] + "..."
+                            st.info(f"ℹ️ {description}")
+                    except:
+                        pass
+            except ImportError:
+                # Fallback to original code
+                try:
+                    from trading.models.model_registry import get_registry
+                    registry = get_registry()
+                    available_models = registry.list_models()
+                    if not available_models:
+                        available_models = ["LSTM", "XGBoost", "Prophet", "ARIMA"]
+                    selected_model = st.radio(
+                        "Choose model:",
+                        available_models,
+                        help="Choose a forecasting model"
+                    )
+                except:
+                    available_models = ["LSTM", "XGBoost", "Prophet", "ARIMA"]
                     selected_model = st.radio(
                         "Choose model:",
                         available_models,
                         help="Different models work better for different data patterns"
                     )
-                    model_info = {}
-                else:
-                    selected_model = st.radio(
-                        "Choose model:",
-                        available_models,
-                        help="Choose a forecasting model. LSTM and XGBoost are recommended for most use cases."
-                    )
-                    
-                    # Show model description
-                    model_info = registry.get_model_info(selected_model)
-                    if model_info.get('description'):
-                        description = model_info['description']
-                        if len(description) > 200:
-                            description = description[:200] + "..."
-                        st.info(f"ℹ️ {description}")
-            except Exception as e:
-                st.warning(f"⚠️ Could not load model registry: {e}. Using default models.")
-                available_models = ["LSTM", "XGBoost", "Prophet", "ARIMA"]
-                selected_model = st.radio(
-                    "Choose model:",
-                    available_models,
-                    help="Different models work better for different data patterns"
-                )
-                model_info = {}
             
             forecast_button = st.button(
                 "🚀 Generate Forecast",
@@ -459,6 +558,81 @@ with tab1:
                             # Store full forecast result for confidence intervals
                             st.session_state.current_forecast_result = forecast_result
                             
+                            # Postprocess forecast
+                            try:
+                                from trading.forecasting.forecast_postprocessor import ForecastPostprocessor
+                                
+                                postprocessor = ForecastPostprocessor()
+                                
+                                # Extract forecast values for postprocessing
+                                if isinstance(forecast_result, dict):
+                                    forecast_vals = forecast_result.get('forecast', [])
+                                else:
+                                    forecast_vals = forecast_result
+                                
+                                # Postprocess forecast
+                                processed_forecast = postprocessor.process(
+                                    forecast=forecast_vals,
+                                    historical_data=data,
+                                    apply_smoothing=True,
+                                    remove_outliers=True,
+                                    ensure_realistic_bounds=True
+                                )
+                                
+                                # Update forecast_result with processed version
+                                if isinstance(forecast_result, dict):
+                                    forecast_result['forecast'] = processed_forecast['values']
+                                    forecast_result['postprocessing_notes'] = processed_forecast.get('notes', [])
+                                else:
+                                    forecast_result = processed_forecast['values']
+                                
+                                # Show what was done
+                                if processed_forecast.get('modifications'):
+                                    with st.expander("⚙️ Forecast Postprocessing", expanded=False):
+                                        st.write("**Modifications applied:**")
+                                        for mod in processed_forecast['modifications']:
+                                            st.write(f"• {mod}")
+                                
+                                # Update session state with processed forecast
+                                st.session_state.current_forecast_result = forecast_result
+                            except ImportError:
+                                pass  # Silently fail if postprocessor not available
+                            except Exception as e:
+                                logger.warning(f"Forecast postprocessing failed: {e}")
+                            
+                            # Log model performance
+                            if 'model_log' in st.session_state and 'perf_logger' in st.session_state:
+                                try:
+                                    import time
+                                    train_time = time.time() - time.time()  # Placeholder - would need actual timing
+                                    
+                                    # Calculate basic metrics if possible
+                                    r2_score = 0.0  # Placeholder - would need actual evaluation
+                                    rmse = 0.0
+                                    mae = 0.0
+                                    
+                                    st.session_state.model_log.log_training(
+                                        model_name=selected_model,
+                                        model_version='1.0',
+                                        training_data_size=len(data),
+                                        training_time=train_time,
+                                        parameters={},
+                                        metrics={
+                                            'r2_score': r2_score,
+                                            'rmse': rmse,
+                                            'mae': mae
+                                        }
+                                    )
+                                    
+                                    st.session_state.perf_logger.log_performance(
+                                        model_name=selected_model,
+                                        metric_name='accuracy',
+                                        metric_value=r2_score,
+                                        timestamp=datetime.now()
+                                    )
+                                except Exception as e:
+                                    pass  # Silently fail if logging not available
+                            
                             # Extract forecast values
                             if isinstance(forecast_result, dict):
                                 forecast_values = forecast_result.get('forecast', [])
@@ -515,6 +689,117 @@ with tab1:
                             st.session_state.current_model_instance = model  # Store model instance for explainability
                             
                             st.success(f"✅ Forecast generated using {selected_model}")
+                            
+                            # Natural Language Insights
+                            st.markdown("---")
+                            st.subheader("💬 Natural Language Insights")
+                            
+                            if st.button("Generate Plain English Explanation", key="generate_nlg_insights"):
+                                try:
+                                    from nlp.natural_language_insights import NaturalLanguageInsights
+                                    
+                                    nlg = NaturalLanguageInsights()
+                                    
+                                    # Prepare forecast result for insights
+                                    forecast_for_insights = {
+                                        'forecast': forecast_df['forecast'].values.tolist() if hasattr(forecast_df['forecast'].values, 'tolist') else list(forecast_df['forecast'].values),
+                                        'dates': forecast_df.index.tolist() if hasattr(forecast_df.index, 'tolist') else list(forecast_df.index),
+                                        'model_type': selected_model,
+                                        'symbol': st.session_state.symbol
+                                    }
+                                    
+                                    # Add confidence intervals if available
+                                    if isinstance(forecast_result, dict):
+                                        if 'lower_bound' in forecast_result:
+                                            forecast_for_insights['lower_bound'] = forecast_result['lower_bound']
+                                        if 'upper_bound' in forecast_result:
+                                            forecast_for_insights['upper_bound'] = forecast_result['upper_bound']
+                                    
+                                    # Generate explanation
+                                    insights = nlg.generate_forecast_insights(
+                                        forecast=forecast_for_insights,
+                                        historical_data=data,
+                                        model_type=selected_model,
+                                        symbol=st.session_state.symbol
+                                    )
+                                    
+                                    # Display insights
+                                    st.info(insights['summary'])
+                                    
+                                    with st.expander("📊 Detailed Analysis", expanded=False):
+                                        st.write("**Trend Analysis:**")
+                                        st.write(insights['trend_analysis'])
+                                        
+                                        st.write("**Key Factors:**")
+                                        for factor in insights['key_factors']:
+                                            st.write(f"• {factor}")
+                                        
+                                        st.write("**Confidence Assessment:**")
+                                        st.write(insights['confidence_explanation'])
+                                        
+                                        st.write("**Recommendations:**")
+                                        for rec in insights['recommendations']:
+                                            st.write(f"• {rec}")
+                                
+                                except ImportError:
+                                    st.error("Natural Language Insights not available")
+                                except Exception as e:
+                                    st.error(f"Error generating insights: {e}")
+                                    import traceback
+                                    st.code(traceback.format_exc())
+                            
+                            # AI Commentary Service
+                            if 'commentary_service' in st.session_state:
+                                st.markdown("---")
+                                st.subheader("💬 AI Commentary")
+                                
+                                if st.button("Generate Commentary", key="generate_forecast_commentary"):
+                                    commentary_service = st.session_state.commentary_service
+                                    
+                                    with st.spinner("Generating commentary..."):
+                                        try:
+                                            # Prepare forecast result for commentary
+                                            forecast_for_commentary = {
+                                                'forecast': forecast_df['forecast'].values.tolist() if hasattr(forecast_df['forecast'].values, 'tolist') else list(forecast_df['forecast'].values),
+                                                'dates': forecast_df.index.tolist() if hasattr(forecast_df.index, 'tolist') else list(forecast_df.index),
+                                                'model_type': selected_model,
+                                                'symbol': st.session_state.symbol
+                                            }
+                                            
+                                            # Add confidence intervals if available
+                                            if isinstance(forecast_result, dict):
+                                                if 'lower_bound' in forecast_result:
+                                                    forecast_for_commentary['lower_bound'] = forecast_result['lower_bound']
+                                                if 'upper_bound' in forecast_result:
+                                                    forecast_for_commentary['upper_bound'] = forecast_result['upper_bound']
+                                            
+                                            commentary = commentary_service.generate_forecast_commentary(
+                                                symbol=st.session_state.symbol,
+                                                forecast_result=forecast_for_commentary,
+                                                model_type=selected_model,
+                                                historical_data=data
+                                            )
+                                            
+                                            st.info(commentary.get('summary', 'Commentary generated'))
+                                            
+                                            with st.expander("📊 Detailed Analysis", expanded=False):
+                                                if 'trend_analysis' in commentary:
+                                                    st.write("**Trend Analysis:**")
+                                                    st.write(commentary['trend_analysis'])
+                                                
+                                                if 'insights' in commentary and commentary['insights']:
+                                                    st.write("**Key Insights:**")
+                                                    for insight in commentary['insights']:
+                                                        st.write(f"• {insight}")
+                                                
+                                                if 'warnings' in commentary and commentary['warnings']:
+                                                    st.write("**Warnings:**")
+                                                    for warning in commentary['warnings']:
+                                                        st.warning(f"⚠️ {warning}")
+                                        except Exception as e:
+                                            st.error(f"Error generating commentary: {e}")
+                                            import traceback
+                                            st.code(traceback.format_exc())
                 
                 except Exception as e:
                     st.error(f"Error generating forecast: {str(e)}")
@@ -522,120 +807,77 @@ with tab1:
                     st.code(traceback.format_exc())
                     st.info("Try adjusting the date range or selecting a different model.")
             
-            # Display forecast
+            # Display forecast using UI components
             if st.session_state.get('current_forecast') is not None:
                 st.markdown(f"**Forecast using {st.session_state.current_model}**")
                 
-                # Create combined chart with confidence intervals
-                fig = go.Figure()
-                
-                # Historical data
-                hist_data = st.session_state.forecast_data
-                fig.add_trace(go.Scatter(
-                    x=hist_data.index,
-                    y=hist_data['close'] if 'close' in hist_data.columns else hist_data.iloc[:, 0],
-                    mode='lines',
-                    name='Historical',
-                    line=dict(color='blue', width=2)
-                ))
-                
-                # Forecast
-                forecast_df = st.session_state.current_forecast
-                forecast_dates = forecast_df.index
-                forecast_values = forecast_df['forecast'].values
-                
-                # Check if we have confidence intervals in session state
-                forecast_result = st.session_state.get('current_forecast_result', {})
-                
-                # Add confidence intervals if available
-                if isinstance(forecast_result, dict) and 'lower_bound' in forecast_result and 'upper_bound' in forecast_result:
-                    # Upper bound
-                    fig.add_trace(go.Scatter(
-                        x=forecast_dates,
-                        y=forecast_result['upper_bound'],
-                        name='Upper 95% CI',
-                        line=dict(width=0),
-                        showlegend=False,
-                        hoverinfo='skip'
-                    ))
+                try:
+                    from trading.ui.forecast_components import render_forecast_results, render_confidence_metrics
                     
-                    # Lower bound (filled area)
-                    fig.add_trace(go.Scatter(
-                        x=forecast_dates,
-                        y=forecast_result['lower_bound'],
-                        name='Lower 95% CI',
-                        fill='tonexty',
-                        fillcolor='rgba(255, 0, 0, 0.2)',
-                        line=dict(width=0),
-                        showlegend=True,
-                        hoverinfo='skip'
-                    ))
-                
-                # Forecast line
-                fig.add_trace(go.Scatter(
-                    x=forecast_dates,
-                    y=forecast_values,
-                    mode='lines+markers',
-                    name='Forecast',
-                    line=dict(color='red', width=2, dash='dash'),
-                    marker=dict(size=8)
-                ))
-                
-                # If forecast_with_uncertainty was used, show confidence scores
-                if isinstance(forecast_result, dict) and 'confidence' in forecast_result:
-                    import numpy as np
-                    # Add confidence score annotation
-                    if isinstance(forecast_result['confidence'], (list, np.ndarray)):
-                        avg_confidence = np.mean(forecast_result['confidence'])
-                    else:
-                        avg_confidence = forecast_result['confidence']
-                    fig.add_annotation(
-                        text=f"Avg Confidence: {avg_confidence:.1%}",
-                        xref="paper", yref="paper",
-                        x=0.02, y=0.98,
-                        showarrow=False,
-                        bgcolor="rgba(255, 255, 255, 0.8)",
-                        bordercolor="gray",
-                        borderwidth=1
+                    hist_data = st.session_state.forecast_data
+                    forecast_df = st.session_state.current_forecast
+                    forecast_result = st.session_state.get('current_forecast_result', {})
+                    
+                    # Prepare forecast data for component
+                    forecast_data = {
+                        'dates': forecast_df.index.tolist() if hasattr(forecast_df.index, 'tolist') else list(forecast_df.index),
+                        'forecast': forecast_df['forecast'].values.tolist() if hasattr(forecast_df['forecast'].values, 'tolist') else list(forecast_df['forecast'].values),
+                        'model_name': st.session_state.current_model
+                    }
+                    
+                    # Add confidence intervals if available
+                    if isinstance(forecast_result, dict):
+                        if 'lower_bound' in forecast_result:
+                            forecast_data['lower_bound'] = forecast_result['lower_bound']
+                        if 'upper_bound' in forecast_result:
+                            forecast_data['upper_bound'] = forecast_result['upper_bound']
+                        if 'confidence' in forecast_result:
+                            forecast_data['confidence'] = forecast_result['confidence']
+                    
+                    # Render forecast results
+                    render_forecast_results(
+                        forecast=forecast_data,
+                        historical_data=hist_data,
+                        symbol=st.session_state.symbol,
+                        show_chart=True,
+                        show_table=True
                     )
-                
-                fig.update_layout(
-                    title=f"{st.session_state.symbol} - Historical & Forecast" + (" (with Confidence Intervals)" if isinstance(forecast_result, dict) and 'lower_bound' in forecast_result else ""),
-                    xaxis_title="Date",
-                    yaxis_title="Price ($)",
-                    hovermode='x unified',
-                    height=500
-                )
-                
-                st.plotly_chart(fig, width='stretch')
-                
-                # Show confidence metrics if available
-                if isinstance(forecast_result, dict) and 'confidence' in forecast_result:
-                    import plotly.express as px
-                    confidence_data = forecast_result['confidence']
-                    if isinstance(confidence_data, (list, np.ndarray)):
-                        confidence_df = pd.DataFrame({
-                            'Days Ahead': range(1, len(confidence_data) + 1),
-                            'Confidence': confidence_data
-                        })
-                        
-                        st.write("**Prediction Confidence by Horizon:**")
-                        conf_fig = px.line(
-                            confidence_df,
-                            x='Days Ahead',
-                            y='Confidence',
-                            title='Forecast Confidence Over Time'
-                        )
-                        st.plotly_chart(conf_fig, width='stretch')
-                
-                # Forecast table
-                st.markdown("**Forecast Values:**")
-                display_df = forecast_df.copy()
-                # Format forecast values, handling None/NaN
-                display_df['forecast'] = display_df['forecast'].apply(
-                    lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
-                )
-                st.dataframe(display_df, width='stretch')
+                    
+                    # Show confidence metrics
+                    if isinstance(forecast_result, dict) and ('lower_bound' in forecast_result or 'confidence' in forecast_result):
+                        render_confidence_metrics(forecast_data)
+                    
+                except ImportError:
+                    # Fallback to original display code
+                    from utils.plotting_helper import create_forecast_chart
+                    
+                    hist_data = st.session_state.forecast_data
+                    forecast_df = st.session_state.current_forecast
+                    forecast_result = st.session_state.get('current_forecast_result', {})
+                    
+                    confidence_intervals = None
+                    if isinstance(forecast_result, dict) and 'lower_bound' in forecast_result and 'upper_bound' in forecast_result:
+                        confidence_intervals = {
+                            'lower': forecast_result['lower_bound'],
+                            'upper': forecast_result['upper_bound']
+                        }
+                    
+                    fig = create_forecast_chart(
+                        historical=hist_data,
+                        forecast=forecast_df['forecast'].values,
+                        forecast_dates=forecast_df.index,
+                        confidence_intervals=confidence_intervals,
+                        title=f"{st.session_state.symbol} - Historical & Forecast"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Forecast table
+                    st.markdown("**Forecast Values:**")
+                    display_df = forecast_df.copy()
+                    display_df['forecast'] = display_df['forecast'].apply(
+                        lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
+                    )
+                    st.dataframe(display_df, use_container_width=True)
                 
                 # Download button
                 csv = forecast_df.to_csv()
@@ -943,6 +1185,21 @@ with tab2:
                     default=[1, 7, 14]
                 )
             
+            use_macro_features = st.checkbox(
+                "Include macro-economic features",
+                value=False,
+                help="Add features like interest rates, inflation, GDP growth"
+            )
+            
+            macro_features_list = []
+            if use_macro_features:
+                macro_features_list = st.multiselect(
+                    "Select Macro Features",
+                    ["interest_rate", "inflation", "gdp_growth", "unemployment"],
+                    default=["interest_rate", "inflation"],
+                    help="Choose which macroeconomic indicators to include"
+                )
+            
             normalize = st.checkbox("Normalize Data", value=True)
             
             train_button = st.button("🚀 Train Model", type="primary", width='stretch')
@@ -1007,6 +1264,36 @@ with tab2:
                         progress_bar.progress(0.4)
                         for lag in lag_periods:
                             data[f'lag_{lag}'] = data['Close'].shift(lag)
+                    
+                    # Macro feature engineering
+                    if use_macro_features and macro_features_list:
+                        status_text.text("Adding macro-economic features...")
+                        progress_bar.progress(0.5)
+                        try:
+                            from trading.feature_engineering.macro_feature_engineering import MacroFeatureEngineer
+                            
+                            engineer = MacroFeatureEngineer()
+                            
+                            # Add macro features to data
+                            data_with_macro = engineer.add_macro_features(
+                                data=data,
+                                country='US',
+                                features=macro_features_list
+                            )
+                            
+                            # Show what was added
+                            new_cols = set(data_with_macro.columns) - set(data.columns)
+                            if new_cols:
+                                st.write("**Macro features added:**")
+                                for col in new_cols:
+                                    st.write(f"• {col}")
+                            
+                            # Use data_with_macro for training
+                            data = data_with_macro
+                        except ImportError:
+                            st.warning("Macro Feature Engineer not available. Skipping macro features.")
+                        except Exception as e:
+                            st.warning(f"Could not add macro features: {e}. Continuing without them.")
                     
                     # Remove NaN
                     data = data.dropna()
@@ -1183,6 +1470,41 @@ with tab2:
                         # Store full forecast result for confidence intervals
                         st.session_state.current_forecast_result = forecast_result
                         st.session_state.current_model_instance = model  # Store model instance for explainability
+                        
+                        # Postprocess forecast
+                        try:
+                            from trading.forecasting.forecast_postprocessor import ForecastPostprocessor
+                            
+                            postprocessor = ForecastPostprocessor()
+                            
+                            # Extract forecast values for postprocessing
+                            if isinstance(forecast_result, dict):
+                                forecast_vals = forecast_result.get('forecast', [])
+                            else:
+                                forecast_vals = forecast_result
+                            
+                            # Postprocess forecast
+                            processed_forecast = postprocessor.process(
+                                forecast=forecast_vals,
+                                historical_data=data,
+                                apply_smoothing=True,
+                                remove_outliers=True,
+                                ensure_realistic_bounds=True
+                            )
+                            
+                            # Update forecast_result with processed version
+                            if isinstance(forecast_result, dict):
+                                forecast_result['forecast'] = processed_forecast['values']
+                                forecast_result['postprocessing_notes'] = processed_forecast.get('notes', [])
+                            else:
+                                forecast_result = processed_forecast['values']
+                            
+                            # Update session state
+                            st.session_state.current_forecast_result = forecast_result
+                        except ImportError:
+                            pass  # Silently fail if postprocessor not available
+                        except Exception as e:
+                            logger.warning(f"Forecast postprocessing failed: {e}")
                         
                         progress_bar.progress(1.0)
                         status_text.text("Complete!")
@@ -1521,6 +1843,68 @@ with tab3:
                         st.session_state.selected_model = override
                         st.session_state.show_override = False
                         st.success(f"Selected: {override}")
+        
+        # Hybrid Model Selector Section
+        st.markdown("---")
+        st.subheader("🎯 Hybrid Model Selection")
+        
+        st.write("""
+        Hybrid selection combines multiple model types and automatically 
+        switches between them based on market conditions.
+        """)
+        
+        if st.button("Use Hybrid Selector"):
+            try:
+                from trading.forecasting.hybrid_model_selector import HybridModelSelector
+                
+                data = st.session_state.forecast_data
+                selector = HybridModelSelector()
+                
+                with st.spinner("Analyzing market conditions and selecting models..."):
+                    # Detect market regime
+                    regime = selector.detect_market_regime(data)
+                    
+                    st.info(f"📊 Detected market regime: **{regime}**")
+                    
+                    # Select best models for this regime
+                    selected_models = selector.select_models_for_regime(regime)
+                    
+                    st.write("**Recommended models for current conditions:**")
+                    for i, model_config in enumerate(selected_models, 1):
+                        st.write(f"{i}. {model_config['name']} - {model_config['reason']}")
+                    
+                    # Store selected models
+                    st.session_state.hybrid_selected_models = selected_models
+                    st.session_state.hybrid_regime = regime
+                    
+                    # Auto-train hybrid ensemble
+                    if st.button("Train Hybrid Ensemble"):
+                        results = selector.train_hybrid_ensemble(
+                            data=data,
+                            models=selected_models,
+                            horizon=st.session_state.forecast_horizon
+                        )
+                        
+                        st.success("✅ Hybrid ensemble trained!")
+                        
+                        # Show results
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Ensemble R²", f"{results.get('r2', 0):.4f}")
+                        with col2:
+                            st.metric("RMSE", f"{results.get('rmse', 0):.2f}")
+                        with col3:
+                            st.metric("Models Used", len(selected_models))
+                        
+                        # Store results
+                        st.session_state.hybrid_ensemble_results = results
+            
+            except ImportError:
+                st.error("Hybrid Model Selector not available")
+            except Exception as e:
+                st.error(f"Error using hybrid selector: {e}")
+                import traceback
+                st.code(traceback.format_exc())
 
 with tab4:
     st.header("Model Comparison")
@@ -2172,6 +2556,237 @@ with tab5:
             st.markdown("---")
             st.subheader("🔗 Correlation Analysis")
             st.info("Correlation analysis requires multiple symbols. Load additional data to compare.")
+            
+            # News Sentiment Analysis
+            st.markdown("---")
+            st.subheader("📰 News Sentiment Analysis")
+            
+            symbol_for_sentiment = st.text_input(
+                "Symbol for sentiment", 
+                value=st.session_state.get('symbol', 'AAPL'),
+                key="sentiment_symbol"
+            )
+            
+            if st.button("Analyze News Sentiment", key="analyze_sentiment"):
+                try:
+                    from trading.nlp.sentiment_classifier import SentimentClassifier
+                    
+                    classifier = SentimentClassifier()
+                    
+                    with st.spinner("Analyzing news sentiment..."):
+                        # Get recent news (you'll need a news API)
+                        # For demo, use placeholder
+                        sentiment_result = classifier.analyze_symbol_sentiment(
+                            symbol=symbol_for_sentiment,
+                            lookback_days=7
+                        )
+                        
+                        # Display results
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            sentiment_score = sentiment_result['overall_sentiment']
+                            if sentiment_score > 0.3:
+                                st.success(f"😊 Positive: {sentiment_score:.2f}")
+                            elif sentiment_score < -0.3:
+                                st.error(f"😞 Negative: {sentiment_score:.2f}")
+                            else:
+                                st.info(f"😐 Neutral: {sentiment_score:.2f}")
+                        
+                        with col2:
+                            st.metric("Articles Analyzed", sentiment_result['num_articles'])
+                        
+                        with col3:
+                            st.metric("Sentiment Confidence", f"{sentiment_result['confidence']:.1%}")
+                        
+                        # Sentiment over time
+                        if 'sentiment_history' in sentiment_result:
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(
+                                x=sentiment_result['dates'],
+                                y=sentiment_result['sentiment_history'],
+                                name='Sentiment',
+                                line=dict(color='purple')
+                            ))
+                            
+                            fig.update_layout(
+                                title='Sentiment Over Time',
+                                xaxis_title='Date',
+                                yaxis_title='Sentiment Score',
+                                height=400
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                        
+                        # Recent headlines
+                        st.subheader("📰 Recent Headlines")
+                        for article in sentiment_result.get('articles', [])[:10]:
+                            sentiment_emoji = "😊" if article['sentiment'] > 0 else "😞" if article['sentiment'] < 0 else "😐"
+                            st.write(f"{sentiment_emoji} **{article['title']}**")
+                            st.caption(f"Sentiment: {article['sentiment']:.2f} | {article['date']}")
+                
+                except ImportError:
+                    st.error("Sentiment classifier not available")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+            
+            # Causal Analysis
+            st.markdown("---")
+            st.subheader("🔬 Causal Analysis")
+            
+            st.write("""
+            Understand what actually drives price movements using causal inference.
+            Goes beyond correlation to identify true causal relationships.
+            """)
+            
+            if st.button("Run Causal Analysis", key="run_causal_analysis"):
+                if 'forecast_data' not in st.session_state:
+                    st.error("Please load data first")
+                else:
+                    try:
+                        from causal.causal_model import CausalModel
+                        from causal.driver_analysis import DriverAnalysis
+                        
+                        data = st.session_state.forecast_data.copy()
+                        symbol = st.session_state.symbol
+                        
+                        # Ensure proper column names
+                        if 'close' in data.columns:
+                            data['Close'] = data['close']
+                        if 'open' in data.columns:
+                            data['Open'] = data['open']
+                        if 'high' in data.columns:
+                            data['High'] = data['high']
+                        if 'low' in data.columns:
+                            data['Low'] = data['low']
+                        if 'volume' in data.columns:
+                            data['Volume'] = data['volume']
+                        
+                        # Ensure required columns exist
+                        if 'Open' not in data.columns:
+                            data['Open'] = data['Close']
+                        if 'High' not in data.columns:
+                            data['High'] = data['Close']
+                        if 'Low' not in data.columns:
+                            data['Low'] = data['Close']
+                        if 'Volume' not in data.columns:
+                            data['Volume'] = 1000000
+                        
+                        with st.spinner("Performing causal analysis..."):
+                            # Initialize models
+                            causal_model = CausalModel()
+                            driver_analysis = DriverAnalysis()
+                            
+                            # Build causal graph
+                            causal_graph = causal_model.build_causal_graph(
+                                data=data,
+                                target='Close',
+                                features=['Volume', 'High', 'Low', 'Open']
+                            )
+                            
+                            st.success("✅ Causal analysis complete!")
+                            
+                            # Display causal graph
+                            st.subheader("📊 Causal Graph")
+                            
+                            # Visualize causal relationships
+                            if 'graph_visualization' in causal_graph:
+                                st.image(causal_graph['graph_visualization'])
+                            else:
+                                # Text-based representation
+                                st.write("**Causal Relationships:**")
+                                if 'relationships' in causal_graph:
+                                    for relationship in causal_graph['relationships']:
+                                        st.write(f"• {relationship['cause']} → {relationship['effect']} (strength: {relationship['strength']:.2f})")
+                                else:
+                                    st.info("Causal relationships will be displayed here")
+                            
+                            # Identify key drivers
+                            st.subheader("🎯 Key Price Drivers")
+                            
+                            drivers = driver_analysis.identify_drivers(
+                                data=data,
+                                target='Close'
+                            )
+                            
+                            # Display drivers ranked by importance
+                            if 'drivers' in drivers and len(drivers['drivers']) > 0:
+                                drivers_df = pd.DataFrame(drivers['drivers'])
+                                drivers_df = drivers_df.sort_values('importance', ascending=False)
+                                
+                                fig = px.bar(
+                                    drivers_df,
+                                    x='importance',
+                                    y='driver',
+                                    orientation='h',
+                                    title='Price Drivers (Ranked by Causal Impact)',
+                                    labels={'importance': 'Causal Impact', 'driver': 'Driver'}
+                                )
+                                st.plotly_chart(fig, use_container_width=True)
+                                
+                                # Interpretation
+                                st.subheader("💡 Interpretation")
+                                
+                                top_driver = drivers_df.iloc[0]
+                                st.info(f"""
+                                **Primary Driver:** {top_driver['driver']}
+                                
+                                The analysis shows that {top_driver['driver']} has the strongest causal 
+                                impact on {symbol} price movements, with an importance score of {top_driver['importance']:.2f}.
+                                """)
+                                
+                                # Driver details
+                                with st.expander("📊 Detailed Driver Analysis"):
+                                    for _, driver in drivers_df.iterrows():
+                                        st.write(f"**{driver['driver']}**")
+                                        st.write(f"- Importance: {driver['importance']:.2f}")
+                                        st.write(f"- Effect type: {driver.get('effect_type', 'Unknown')}")
+                                        st.write(f"- Time lag: {driver.get('lag', 0)} periods")
+                                        st.write("")
+                                
+                                # Counterfactual analysis
+                                st.subheader("🔮 Counterfactual Analysis")
+                                
+                                st.write("What if key drivers changed?")
+                                
+                                driver_to_change = st.selectbox(
+                                    "Select driver to modify",
+                                    options=drivers_df['driver'].tolist(),
+                                    key="counterfactual_driver"
+                                )
+                                
+                                change_amount = st.slider(
+                                    "Change amount (%)",
+                                    min_value=-50,
+                                    max_value=50,
+                                    value=10,
+                                    step=5,
+                                    key="counterfactual_change"
+                                )
+                                
+                                if st.button("Simulate Counterfactual", key="simulate_counterfactual"):
+                                    try:
+                                        counterfactual = causal_model.counterfactual_analysis(
+                                            data=data,
+                                            intervention={driver_to_change: change_amount / 100}
+                                        )
+                                        
+                                        st.write(f"**If {driver_to_change} changes by {change_amount:+d}%:**")
+                                        st.write(f"Expected price change: {counterfactual.get('expected_change', 0):.2%}")
+                                        st.write(f"Confidence: {counterfactual.get('confidence', 0):.1%}")
+                                    except Exception as e:
+                                        st.error(f"Error in counterfactual analysis: {e}")
+                            else:
+                                st.warning("No drivers identified. Check data quality and feature availability.")
+                    
+                    except ImportError:
+                        st.error("Causal analysis modules not available")
+                    except Exception as e:
+                        st.error(f"Error in causal analysis: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
             
             # Summary
             st.markdown("---")

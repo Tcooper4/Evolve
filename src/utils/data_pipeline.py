@@ -436,6 +436,91 @@ class DataPipeline:
 
         return stats
 
+    def clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Clean market data by handling missing values and removing outliers.
+
+        Args:
+            data: Market data DataFrame
+
+        Returns:
+            Cleaned DataFrame
+        """
+        logger.info("🧹 Starting data cleaning...")
+        
+        if data is None or data.empty:
+            logger.warning("⚠️ No data to clean")
+            return data
+        
+        df_cleaned = data.copy()
+        
+        # Handle missing data
+        if self.validator:
+            df_cleaned = self.validator.handle_missing_data(df_cleaned, method="ffill")
+        else:
+            df_cleaned = df_cleaned.fillna(method="ffill")
+        
+        # Remove outliers from price columns
+        price_columns = [col for col in ["open", "high", "low", "close"] if col in df_cleaned.columns]
+        if price_columns and self.validator:
+            df_cleaned = self.validator.remove_outliers(df_cleaned, price_columns, n_std=3.0)
+            # Fill any NaN values created by outlier removal
+            df_cleaned = df_cleaned.fillna(method="ffill")
+        
+        logger.info(f"✅ Data cleaning completed. Shape: {df_cleaned.shape}")
+        return df_cleaned
+
+    def process_market_data(
+        self,
+        data: pd.DataFrame,
+        remove_outliers: bool = True,
+        fill_missing: bool = True,
+        normalize: bool = False
+    ) -> pd.DataFrame:
+        """
+        Process market data through the pipeline.
+
+        Args:
+            data: Market data DataFrame
+            remove_outliers: Whether to remove outliers
+            fill_missing: Whether to fill missing values
+            normalize: Whether to normalize the data
+
+        Returns:
+            Processed DataFrame
+        """
+        logger.info("⚙️ Processing market data...")
+        
+        if data is None or data.empty:
+            logger.warning("⚠️ No data to process")
+            return data
+        
+        df_processed = data.copy()
+        
+        # Fill missing values
+        if fill_missing:
+            if self.validator:
+                df_processed = self.validator.handle_missing_data(df_processed, method="ffill")
+            else:
+                df_processed = df_processed.fillna(method="ffill")
+        
+        # Remove outliers
+        if remove_outliers:
+            price_columns = [col for col in ["open", "high", "low", "close"] if col in df_processed.columns]
+            if price_columns and self.validator:
+                df_processed = self.validator.remove_outliers(df_processed, price_columns, n_std=3.0)
+                # Fill any NaN values created by outlier removal
+                df_processed = df_processed.fillna(method="ffill")
+        
+        # Normalize if requested
+        if normalize:
+            numeric_cols = df_processed.select_dtypes(include=[np.number]).columns.tolist()
+            if numeric_cols and self.validator:
+                df_processed = self.validator.normalize_data(df_processed, numeric_cols, method="zscore")
+        
+        logger.info(f"✅ Market data processing completed. Shape: {df_processed.shape}")
+        return df_processed
+
 
 def run_data_pipeline(
     file_path: Union[str, Path], config: Optional[Dict] = None, **kwargs

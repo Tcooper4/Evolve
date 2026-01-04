@@ -1436,6 +1436,188 @@ with tab4:
 # TAB 5: Notification Settings
 with tab5:
     st.header("⚙️ Notification Settings")
+    st.markdown("Configure notification channels and preferences")
+    
+    # Check if notification service is available
+    if 'notification_service' in st.session_state:
+        notification_service = st.session_state.notification_service
+        
+        st.subheader("📧 Configure Notifications")
+        
+        # Email notifications
+        with st.expander("📧 Email Notifications", expanded=True):
+            email_enabled = st.checkbox("Enable email notifications", value=True)
+            
+            if email_enabled:
+                email_address = st.text_input(
+                    "Email address",
+                    placeholder="you@example.com",
+                    value=st.session_state.get('notification_settings', {}).get('email_address', '')
+                )
+                
+                email_events = st.multiselect(
+                    "Send emails for:",
+                    ["Price alerts", "Strategy signals", "Risk warnings", "Daily summary", "Trade executions"],
+                    default=st.session_state.get('notification_settings', {}).get('email_events', ["Price alerts", "Risk warnings"])
+                )
+                
+                if st.button("Test Email Notification"):
+                    try:
+                        import asyncio
+                        from system.infra.agents.notifications.notification_service import NotificationChannel, NotificationType, NotificationPriority
+                        
+                        # Create async wrapper
+                        async def send_test_email():
+                            await notification_service.send_notification(
+                                title="Test Notification from Trading System",
+                                message="This is a test notification. Your email alerts are working!",
+                                type=NotificationType.INFO,
+                                priority=NotificationPriority.MEDIUM,
+                                channel=NotificationChannel.EMAIL,
+                                recipient=email_address
+                            )
+                        
+                        # Run async function
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        loop.run_until_complete(send_test_email())
+                        loop.close()
+                        
+                        st.success("✅ Test email sent!")
+                    except Exception as e:
+                        st.error(f"Failed to send email: {e}")
+        
+        # Slack notifications
+        with st.expander("💬 Slack Notifications"):
+            slack_enabled = st.checkbox("Enable Slack notifications")
+            
+            if slack_enabled:
+                slack_webhook = st.text_input(
+                    "Slack webhook URL",
+                    type="password",
+                    placeholder="https://hooks.slack.com/services/...",
+                    value=st.session_state.get('notification_settings', {}).get('slack_webhook', '')
+                )
+                
+                slack_events = st.multiselect(
+                    "Send to Slack for:",
+                    ["Price alerts", "Strategy signals", "Risk warnings", "Trade executions"],
+                    default=st.session_state.get('notification_settings', {}).get('slack_events', ["Trade executions"])
+                )
+                
+                if st.button("Test Slack Notification"):
+                    try:
+                        import asyncio
+                        from system.infra.agents.notifications.notification_service import NotificationChannel, NotificationType, NotificationPriority
+                        
+                        # Create async wrapper
+                        async def send_test_slack():
+                            await notification_service.send_notification(
+                                title="Test Notification",
+                                message="Test notification from Trading System! 🚀",
+                                type=NotificationType.INFO,
+                                priority=NotificationPriority.MEDIUM,
+                                channel=NotificationChannel.SLACK,
+                                recipient=slack_webhook
+                            )
+                        
+                        # Run async function
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        loop.run_until_complete(send_test_slack())
+                        loop.close()
+                        
+                        st.success("✅ Test Slack message sent!")
+                    except Exception as e:
+                        st.error(f"Failed to send Slack message: {e}")
+        
+        # SMS notifications
+        with st.expander("📱 SMS Notifications"):
+            sms_enabled = st.checkbox("Enable SMS notifications")
+            
+            if sms_enabled:
+                st.info("⚠️ SMS requires Twilio credentials")
+                
+                phone_number = st.text_input(
+                    "Phone number",
+                    placeholder="+1234567890",
+                    value=st.session_state.get('notification_settings', {}).get('phone_number', '')
+                )
+                
+                sms_events = st.multiselect(
+                    "Send SMS for:",
+                    ["Critical price alerts", "Major risk warnings"],
+                    default=st.session_state.get('notification_settings', {}).get('sms_events', ["Critical price alerts"])
+                )
+        
+        # Save settings
+        if st.button("💾 Save Notification Settings", type="primary", use_container_width=True):
+            settings = {
+                'email_enabled': email_enabled,
+                'email_address': email_address if email_enabled else None,
+                'email_events': email_events if email_enabled else [],
+                'slack_enabled': slack_enabled,
+                'slack_webhook': slack_webhook if slack_enabled else None,
+                'slack_events': slack_events if slack_enabled else [],
+                'sms_enabled': sms_enabled,
+                'phone_number': phone_number if sms_enabled else None,
+                'sms_events': sms_events if sms_enabled else []
+            }
+            
+            st.session_state.notification_settings = settings
+            st.success("✅ Notification settings saved!")
+        
+        # Notification history
+        st.markdown("---")
+        st.subheader("📜 Notification History")
+        
+        if st.button("Load Notification History"):
+            try:
+                from system.infra.agents.services.notification_cleanup import NotificationCleanupService
+                import asyncio
+                
+                # Note: NotificationCleanupService also requires many dependencies
+                # For now, we'll show a simplified version
+                st.info("📋 Notification history feature requires full notification cleanup service setup")
+                st.info("Recent notifications will be displayed here once the service is fully configured")
+                
+                # Try to get notifications from the service if available
+                if hasattr(notification_service, 'get_notifications'):
+                    async def get_notifications():
+                        return await notification_service.get_notifications()
+                    
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    notifications = loop.run_until_complete(get_notifications())
+                    loop.close()
+                    
+                    if notifications:
+                        # Convert to DataFrame
+                        notif_data = []
+                        for n in notifications[:50]:  # Last 50
+                            notif_data.append({
+                                'ID': n.id,
+                                'Title': n.title,
+                                'Channel': n.channel.value,
+                                'Status': n.status,
+                                'Created': n.created_at.strftime('%Y-%m-%d %H:%M:%S') if n.created_at else 'N/A'
+                            })
+                        
+                        if notif_data:
+                            history_df = pd.DataFrame(notif_data)
+                            st.dataframe(history_df, width='stretch')
+                        else:
+                            st.info("No notification history available")
+                    else:
+                        st.info("No notification history available")
+            except Exception as e:
+                st.error(f"Error loading history: {e}")
+    
+    else:
+        st.warning("⚠️ Notification service not available. Enable in app.py first.")
+    
+    # Keep existing notification settings UI below
+    st.markdown("---")
     st.markdown("Configure notification channels and global notification rules.")
     
     # Initialize notification settings if not exists

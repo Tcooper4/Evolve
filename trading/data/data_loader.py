@@ -21,6 +21,18 @@ import pandas as pd
 
 from trading.utils.safe_math import safe_divide
 
+# Try to import validation and pipeline utilities
+try:
+    from src.utils.data_validation import DataValidator as UtilsDataValidator
+    from src.utils.data_pipeline import DataPipeline
+    VALIDATION_AVAILABLE = True
+except ImportError as e:
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Data validation/pipeline utilities not available: {e}")
+    UtilsDataValidator = None
+    DataPipeline = None
+    VALIDATION_AVAILABLE = False
+
 # Try to import yfinance
 try:
     import yfinance as yf
@@ -447,6 +459,20 @@ class DataLoader:
 
         # Thread safety for cache operations
         self._cache_lock = threading.Lock()
+        
+        # Initialize enhanced validation and pipeline if available
+        if VALIDATION_AVAILABLE:
+            try:
+                self.utils_validator = UtilsDataValidator()
+                self.pipeline = DataPipeline()
+                logger.info("✅ Enhanced data validation and pipeline initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize enhanced validation/pipeline: {e}")
+                self.utils_validator = None
+                self.pipeline = None
+        else:
+            self.utils_validator = None
+            self.pipeline = None
 
     def load_market_data(self, request: DataLoadRequest) -> DataLoadResponse:
         """Load market data for a single ticker.
@@ -495,16 +521,47 @@ class DataLoader:
             if not data.empty:
                 data.columns = data.columns.str.lower()
 
-            # Validate data
-            is_valid, error_msg = self.validator.validate_market_data(
-                data, request.ticker
-            )
-            if not is_valid:
-                return DataLoadResponse(
-                    success=False,
-                    message=f"Data validation failed: {error_msg}",
-                    ticker=request.ticker,
+            # NEW: Enhanced validation with utils DataValidator
+            if self.utils_validator and self.pipeline:
+                validation_result = self.utils_validator.validate_market_data(data)
+                
+                if not validation_result.is_valid:
+                    logger.warning(f"Data validation issues: {validation_result.errors}")
+                    
+                    # Try to fix issues automatically
+                    data = self.pipeline.clean_data(data)
+                    
+                    # Re-validate
+                    validation_result = self.utils_validator.validate_market_data(data)
+                    
+                    if not validation_result.is_valid:
+                        return DataLoadResponse(
+                            success=False,
+                            message=f"Data validation failed: {validation_result.errors}",
+                            data=None,
+                            ticker=request.ticker,
+                        )
+                
+                # NEW: Process through pipeline
+                data = self.pipeline.process_market_data(
+                    data=data,
+                    remove_outliers=True,
+                    fill_missing=True,
+                    normalize=False  # Don't normalize raw price data
                 )
+                
+                logger.info(f"✅ Data validated and processed: {len(data)} rows")
+            else:
+                # Fallback to original validation
+                is_valid, error_msg = self.validator.validate_market_data(
+                    data, request.ticker
+                )
+                if not is_valid:
+                    return DataLoadResponse(
+                        success=False,
+                        message=f"Data validation failed: {error_msg}",
+                        ticker=request.ticker,
+                    )
 
             # Create response
             response = DataLoadResponse(
