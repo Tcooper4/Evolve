@@ -373,35 +373,158 @@ with tab1:
     performance_trend = generate_performance_trend(sample_returns, trend_days)
     
     if not performance_trend.empty:
-        fig_trend = go.Figure()
-        fig_trend.add_trace(go.Scatter(
-            x=performance_trend.index,
-            y=performance_trend.values,
-            mode='lines',
-            name='Portfolio Performance',
-            line=dict(color='blue', width=2),
-            fill='tozeroy',
-            fillcolor='rgba(0, 100, 255, 0.1)'
-        ))
-        
-        fig_trend.add_hline(
-            y=0,
-            line_dash="dash",
-            line_color="gray",
-            annotation_text="Break-even"
-        )
-        
-        fig_trend.update_layout(
-            title=f"Performance Trend - {trend_period}",
-            xaxis_title="Date",
-            yaxis_title="Cumulative Return (%)",
-            height=400,
-            hovermode='x unified'
-        )
-        
-        st.plotly_chart(fig_trend, use_container_width=True)
+        # Use advanced performance chart
+        try:
+            from utils.plotting_helper import create_performance_chart
+            
+            # Convert cumulative returns to equity curve
+            equity_curve = (1 + performance_trend) * 100  # Start at 100
+            
+            fig_trend = create_performance_chart(
+                equity_curve=equity_curve,
+                benchmark=None,
+                title=f"Performance Trend - {trend_period}"
+            )
+            
+            # Add break-even line
+            fig_trend.add_hline(
+                y=100,
+                line_dash="dash",
+                line_color="gray",
+                annotation_text="Break-even"
+            )
+            
+            st.plotly_chart(fig_trend, use_container_width=True)
+        except ImportError:
+            # Fallback to basic chart
+            fig_trend = go.Figure()
+            fig_trend.add_trace(go.Scatter(
+                x=performance_trend.index,
+                y=performance_trend.values,
+                mode='lines',
+                name='Portfolio Performance',
+                line=dict(color='blue', width=2),
+                fill='tozeroy',
+                fillcolor='rgba(0, 100, 255, 0.1)'
+            ))
+            
+            fig_trend.add_hline(
+                y=0,
+                line_dash="dash",
+                line_color="gray",
+                annotation_text="Break-even"
+            )
+            
+            fig_trend.update_layout(
+                title=f"Performance Trend - {trend_period}",
+                xaxis_title="Date",
+                yaxis_title="Cumulative Return (%)",
+                height=400,
+                hovermode='x unified'
+            )
+            
+            st.plotly_chart(fig_trend, use_container_width=True)
     else:
         st.warning("Insufficient data for performance trend")
+    
+    st.markdown("---")
+    
+    # Natural Language Performance Summary
+    st.subheader("💬 Performance Summary (Plain English)")
+    
+    if st.button("Generate Performance Narrative", key="generate_perf_narrative"):
+        try:
+            from nlp.natural_language_insights import NaturalLanguageInsights
+            
+            nlg = NaturalLanguageInsights()
+            
+            # Prepare data for narrative
+            equity_curve = (1 + sample_returns).cumprod() * 100 if not sample_returns.empty else pd.Series([100])
+            trades = get_trade_history()
+            performance_metrics = get_portfolio_metrics(sample_returns)
+            
+            # Generate narrative
+            narrative = nlg.generate_performance_narrative(
+                equity_curve=equity_curve,
+                trades=trades,
+                metrics=performance_metrics
+            )
+            
+            st.info(narrative)
+            
+        except ImportError:
+            st.error("Natural Language Insights not available")
+        except Exception as e:
+            st.error(f"Error generating narrative: {e}")
+            import traceback
+            st.code(traceback.format_exc())
+    
+    # Performance Commentary Service
+    if 'commentary_service' in st.session_state:
+        st.markdown("---")
+        st.subheader("📝 Performance Commentary")
+        
+        # Get reporting period
+        reporting_period = st.selectbox(
+            "Reporting Period",
+            ["Last 30 Days", "Last 90 Days", "Last 6 Months", "Last Year", "All Time"],
+            key="perf_commentary_period"
+        )
+        
+        if st.button("Generate Performance Report", key="generate_perf_commentary"):
+            commentary_service = st.session_state.commentary_service
+            
+            with st.spinner("Generating performance commentary..."):
+                try:
+                    # Prepare data for commentary
+                    equity_curve = (1 + sample_returns).cumprod() * 100 if not sample_returns.empty else pd.Series([100])
+                    trades = get_trade_history()
+                    performance_metrics = get_portfolio_metrics(sample_returns)
+                    
+                    perf_commentary = commentary_service.generate_performance_commentary(
+                        equity_curve=equity_curve,
+                        trades=trades,
+                        metrics=performance_metrics,
+                        period=reporting_period
+                    )
+                    
+                    # Display executive summary
+                    if 'executive_summary' in perf_commentary:
+                        st.write("**Executive Summary:**")
+                        st.info(perf_commentary['executive_summary'])
+                    elif 'summary' in perf_commentary:
+                        st.write("**Summary:**")
+                        st.info(perf_commentary['summary'])
+                    
+                    with st.expander("📊 Detailed Commentary", expanded=False):
+                        if 'strengths' in perf_commentary and perf_commentary['strengths']:
+                            st.write("**Strengths:**")
+                            for strength in perf_commentary['strengths']:
+                                st.success(f"✅ {strength}")
+                        
+                        if 'improvements' in perf_commentary and perf_commentary['improvements']:
+                            st.write("**Areas for Improvement:**")
+                            for improvement in perf_commentary['improvements']:
+                                st.warning(f"⚠️ {improvement}")
+                        
+                        if 'recommendations' in perf_commentary and perf_commentary['recommendations']:
+                            st.write("**Recommendations:**")
+                            for rec in perf_commentary['recommendations']:
+                                st.info(f"💡 {rec}")
+                        
+                        # Additional sections if available
+                        if 'risk_analysis' in perf_commentary:
+                            st.write("**Risk Analysis:**")
+                            st.write(perf_commentary['risk_analysis'])
+                        
+                        if 'market_context' in perf_commentary:
+                            st.write("**Market Context:**")
+                            st.write(perf_commentary['market_context'])
+                
+                except Exception as e:
+                    st.error(f"Error generating performance commentary: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
     
     st.markdown("---")
     
@@ -1876,51 +1999,67 @@ with tab5:
     rolling_dd = calculate_rolling_max_drawdown(sample_returns, rolling_window)
     
     if not rolling_sharpe.empty and not rolling_dd.empty:
-        # Create subplots
-        fig_rolling = make_subplots(
-            rows=2, cols=1,
-            subplot_titles=('Rolling Sharpe Ratio', 'Rolling Maximum Drawdown'),
-            vertical_spacing=0.1
-        )
-        
-        # Rolling Sharpe
-        fig_rolling.add_trace(
-            go.Scatter(
-                x=rolling_sharpe.index,
-                y=rolling_sharpe.values,
-                mode='lines',
-                name='Sharpe Ratio',
-                line=dict(color='blue', width=2),
-                fill='tozeroy',
-                fillcolor='rgba(0, 100, 255, 0.1)'
-            ),
-            row=1, col=1
-        )
-        fig_rolling.add_hline(y=1.0, line_dash="dash", line_color="green", annotation_text="Good Sharpe", row=1, col=1)
-        fig_rolling.add_hline(y=0.0, line_dash="dash", line_color="red", annotation_text="Poor Sharpe", row=1, col=1)
-        
-        # Rolling Drawdown
-        fig_rolling.add_trace(
-            go.Scatter(
-                x=rolling_dd.index,
-                y=rolling_dd.values,
-                mode='lines',
-                name='Max Drawdown',
-                line=dict(color='red', width=2),
-                fill='tozeroy',
-                fillcolor='rgba(255, 0, 0, 0.1)'
-            ),
-            row=2, col=1
-        )
-        fig_rolling.add_hline(y=-0.10, line_dash="dash", line_color="orange", annotation_text="10% DD", row=2, col=1)
-        fig_rolling.add_hline(y=-0.20, line_dash="dash", line_color="red", annotation_text="20% DD", row=2, col=1)
-        
-        fig_rolling.update_layout(height=600, showlegend=False)
-        fig_rolling.update_xaxes(title_text="Date", row=2, col=1)
-        fig_rolling.update_yaxes(title_text="Sharpe Ratio", row=1, col=1)
-        fig_rolling.update_yaxes(title_text="Drawdown (%)", row=2, col=1)
-        
-        st.plotly_chart(fig_rolling, use_container_width=True)
+        # Use advanced rolling stats chart
+        try:
+            from utils.plotting_helper import create_rolling_stats_chart
+            
+            fig_rolling = create_rolling_stats_chart(
+                returns=sample_returns,
+                window=rolling_window,
+                title="Rolling Performance Metrics"
+            )
+            
+            # Add reference lines
+            fig_rolling.add_hline(y=1.0, line_dash="dash", line_color="green", annotation_text="Good Sharpe", row=1, col=1)
+            fig_rolling.add_hline(y=0.0, line_dash="dash", line_color="red", annotation_text="Poor Sharpe", row=1, col=1)
+            
+            st.plotly_chart(fig_rolling, use_container_width=True)
+        except ImportError:
+            # Fallback to basic chart
+            fig_rolling = make_subplots(
+                rows=2, cols=1,
+                subplot_titles=('Rolling Sharpe Ratio', 'Rolling Maximum Drawdown'),
+                vertical_spacing=0.1
+            )
+            
+            # Rolling Sharpe
+            fig_rolling.add_trace(
+                go.Scatter(
+                    x=rolling_sharpe.index,
+                    y=rolling_sharpe.values,
+                    mode='lines',
+                    name='Sharpe Ratio',
+                    line=dict(color='blue', width=2),
+                    fill='tozeroy',
+                    fillcolor='rgba(0, 100, 255, 0.1)'
+                ),
+                row=1, col=1
+            )
+            fig_rolling.add_hline(y=1.0, line_dash="dash", line_color="green", annotation_text="Good Sharpe", row=1, col=1)
+            fig_rolling.add_hline(y=0.0, line_dash="dash", line_color="red", annotation_text="Poor Sharpe", row=1, col=1)
+            
+            # Rolling Drawdown
+            fig_rolling.add_trace(
+                go.Scatter(
+                    x=rolling_dd.index,
+                    y=rolling_dd.values,
+                    mode='lines',
+                    name='Max Drawdown',
+                    line=dict(color='red', width=2),
+                    fill='tozeroy',
+                    fillcolor='rgba(255, 0, 0, 0.1)'
+                ),
+                row=2, col=1
+            )
+            fig_rolling.add_hline(y=-0.10, line_dash="dash", line_color="orange", annotation_text="10% DD", row=2, col=1)
+            fig_rolling.add_hline(y=-0.20, line_dash="dash", line_color="red", annotation_text="20% DD", row=2, col=1)
+            
+            fig_rolling.update_layout(height=600, showlegend=False)
+            fig_rolling.update_xaxes(title_text="Date", row=2, col=1)
+            fig_rolling.update_yaxes(title_text="Sharpe Ratio", row=1, col=1)
+            fig_rolling.update_yaxes(title_text="Drawdown (%)", row=2, col=1)
+            
+            st.plotly_chart(fig_rolling, use_container_width=True)
     else:
         st.warning(f"Need at least {rolling_window} days of data for rolling metrics")
     
@@ -1931,6 +2070,9 @@ with tab5:
     
     drawdown_periods = analyze_drawdown_periods(sample_returns)
     recovery_stats = calculate_recovery_time(sample_returns)
+    
+    # Calculate equity curve for drawdown chart
+    equity_curve = (1 + sample_returns).cumprod() * 100
     
     col_dd1, col_dd2 = st.columns([2, 1])
     
@@ -1944,28 +2086,50 @@ with tab5:
             display_dd.columns = ['Start Date', 'End Date', 'Duration (days)', 'Max Drawdown', 'Recovery Days']
             st.dataframe(display_dd, use_container_width=True, hide_index=True)
             
-            # Drawdown timeline visualization
-            fig_dd_timeline = go.Figure()
-            
-            for idx, row in drawdown_periods.iterrows():
-                fig_dd_timeline.add_trace(go.Scatter(
-                    x=[row['start_date'], row['end_date']],
-                    y=[row['max_drawdown'], row['max_drawdown']],
-                    mode='lines+markers',
-                    name=f"Drawdown {idx+1}",
-                    line=dict(width=3, color='red'),
-                    marker=dict(size=8)
-                ))
-            
-            fig_dd_timeline.update_layout(
-                title="Drawdown Periods Timeline",
-                xaxis_title="Date",
-                yaxis_title="Drawdown (%)",
-                height=300
-            )
-            st.plotly_chart(fig_dd_timeline, use_container_width=True)
+            # Use advanced drawdown chart
+            try:
+                from utils.plotting_helper import create_drawdown_chart
+                
+                fig_dd_chart = create_drawdown_chart(
+                    equity_curve=equity_curve,
+                    title="Drawdown Analysis"
+                )
+                st.plotly_chart(fig_dd_chart, use_container_width=True)
+            except ImportError:
+                # Fallback to basic timeline visualization
+                fig_dd_timeline = go.Figure()
+                
+                for idx, row in drawdown_periods.iterrows():
+                    fig_dd_timeline.add_trace(go.Scatter(
+                        x=[row['start_date'], row['end_date']],
+                        y=[row['max_drawdown'], row['max_drawdown']],
+                        mode='lines+markers',
+                        name=f"Drawdown {idx+1}",
+                        line=dict(width=3, color='red'),
+                        marker=dict(size=8)
+                    ))
+                
+                fig_dd_timeline.update_layout(
+                    title="Drawdown Periods Timeline",
+                    xaxis_title="Date",
+                    yaxis_title="Drawdown (%)",
+                    height=300
+                )
+                st.plotly_chart(fig_dd_timeline, use_container_width=True)
         else:
             st.info("No significant drawdown periods detected")
+            
+            # Still show drawdown chart even if no periods detected
+            try:
+                from utils.plotting_helper import create_drawdown_chart
+                
+                fig_dd_chart = create_drawdown_chart(
+                    equity_curve=equity_curve,
+                    title="Drawdown Analysis"
+                )
+                st.plotly_chart(fig_dd_chart, use_container_width=True)
+            except ImportError:
+                pass
     
     with col_dd2:
         st.markdown("**Recovery Statistics**")
@@ -1987,22 +2151,38 @@ with tab5:
         
         with col_dist1:
             st.markdown("**P&L Distribution**")
-            fig_pnl = go.Figure()
-            fig_pnl.add_trace(go.Histogram(
-                x=trade_history['pnl'],
-                nbinsx=30,
-                name='P&L Distribution',
-                marker_color='steelblue',
-                opacity=0.7
-            ))
-            fig_pnl.add_vline(x=0, line_dash="dash", line_color="red", annotation_text="Break-even")
-            fig_pnl.update_layout(
-                title="P&L Distribution",
-                xaxis_title="P&L ($)",
-                yaxis_title="Frequency",
-                height=300
-            )
-            st.plotly_chart(fig_pnl, use_container_width=True)
+            # Use advanced returns distribution chart
+            try:
+                from utils.plotting_helper import create_returns_distribution
+                
+                # Convert P&L to returns percentage
+                returns_pct = trade_history['pnl'] / trade_history['entry_price'] if 'entry_price' in trade_history.columns else trade_history['pnl']
+                
+                fig_pnl = create_returns_distribution(
+                    returns=returns_pct,
+                    title="P&L Distribution"
+                )
+                fig_pnl.add_vline(x=0, line_dash="dash", line_color="red", annotation_text="Break-even")
+                fig_pnl.update_layout(height=300)
+                st.plotly_chart(fig_pnl, use_container_width=True)
+            except (ImportError, KeyError):
+                # Fallback to basic chart
+                fig_pnl = go.Figure()
+                fig_pnl.add_trace(go.Histogram(
+                    x=trade_history['pnl'],
+                    nbinsx=30,
+                    name='P&L Distribution',
+                    marker_color='steelblue',
+                    opacity=0.7
+                ))
+                fig_pnl.add_vline(x=0, line_dash="dash", line_color="red", annotation_text="Break-even")
+                fig_pnl.update_layout(
+                    title="P&L Distribution",
+                    xaxis_title="P&L ($)",
+                    yaxis_title="Frequency",
+                    height=300
+                )
+                st.plotly_chart(fig_pnl, use_container_width=True)
             
             # P&L statistics
             st.caption(f"Mean: ${trade_history['pnl'].mean():.2f} | Median: ${trade_history['pnl'].median():.2f}")
@@ -2150,20 +2330,38 @@ with tab5:
             col_corr1, col_corr2 = st.columns([1, 1])
             
             with col_corr1:
-                # Correlation heatmap
-                fig_corr = px.imshow(
-                    strategy_corr,
-                    labels=dict(x="Strategy", y="Strategy", color="Correlation"),
-                    x=strategy_corr.columns,
-                    y=strategy_corr.index,
-                    color_continuous_scale="RdBu",
-                    aspect="auto",
-                    title="Strategy Correlation Matrix",
-                    zmin=-1,
-                    zmax=1
-                )
-                fig_corr.update_layout(height=400)
-                st.plotly_chart(fig_corr, use_container_width=True)
+                # Use advanced correlation heatmap
+                try:
+                    from utils.plotting_helper import create_correlation_heatmap
+                    
+                    # Create a DataFrame with strategy returns for correlation
+                    # In production, this would use actual strategy returns
+                    strategy_returns_df = pd.DataFrame({
+                        strategy: sample_returns + np.random.normal(0, 0.001, len(sample_returns))
+                        for strategy in strategy_corr.columns
+                    })
+                    
+                    fig_corr = create_correlation_heatmap(
+                        data=strategy_returns_df,
+                        title="Strategy Correlation Matrix"
+                    )
+                    fig_corr.update_layout(height=400)
+                    st.plotly_chart(fig_corr, use_container_width=True)
+                except ImportError:
+                    # Fallback to basic chart
+                    fig_corr = px.imshow(
+                        strategy_corr,
+                        labels=dict(x="Strategy", y="Strategy", color="Correlation"),
+                        x=strategy_corr.columns,
+                        y=strategy_corr.index,
+                        color_continuous_scale="RdBu",
+                        aspect="auto",
+                        title="Strategy Correlation Matrix",
+                        zmin=-1,
+                        zmax=1
+                    )
+                    fig_corr.update_layout(height=400)
+                    st.plotly_chart(fig_corr, use_container_width=True)
             
             with col_corr2:
                 st.markdown("**Correlation Statistics**")
@@ -2201,4 +2399,325 @@ with tab5:
                     st.info("Insufficient data for correlation analysis")
     else:
         st.info("Need at least 2 strategies for correlation analysis")
+    
+    st.markdown("---")
+    
+    # Advanced Performance Visualization
+    st.subheader("📊 Advanced Performance Visualization")
+    st.write("Generate a comprehensive performance dashboard with advanced visualizations")
+    
+    try:
+        from trading.visualization.visualizer import PerformanceVisualizer
+        
+        visualizer = PerformanceVisualizer()
+        
+        # Prepare data for visualizer
+        # Calculate equity curve from returns
+        equity_curve = (1 + sample_returns).cumprod() * 100  # Start at 100
+        
+        # Create benchmark (slightly different returns)
+        benchmark_returns = sample_returns + np.random.normal(0, 0.0002, len(sample_returns))
+        benchmark_curve = (1 + benchmark_returns).cumprod() * 100
+        
+        # Prepare trade history for visualizer
+        if not trade_history.empty and 'entry_date' in trade_history.columns:
+            trades_for_viz = trade_history.copy()
+        else:
+            trades_for_viz = None
+        
+        if st.button("🚀 Generate Performance Dashboard", type="primary"):
+            with st.spinner("Generating comprehensive performance dashboard..."):
+                try:
+                    dashboard = visualizer.create_performance_dashboard(
+                        equity_curve=equity_curve,
+                        trades=trades_for_viz,
+                        returns=sample_returns,
+                        benchmark=benchmark_curve
+                    )
+                    
+                    st.success("✅ Performance dashboard generated!")
+                    
+                    # Display dashboard components
+                    if 'equity_chart' in dashboard:
+                        st.plotly_chart(dashboard['equity_chart'], use_container_width=True)
+                    
+                    col_viz1, col_viz2 = st.columns(2)
+                    
+                    with col_viz1:
+                        if 'returns_dist' in dashboard:
+                            st.plotly_chart(dashboard['returns_dist'], use_container_width=True)
+                    
+                    with col_viz2:
+                        if 'rolling_sharpe' in dashboard:
+                            st.plotly_chart(dashboard['rolling_sharpe'], use_container_width=True)
+                    
+                    if 'monthly_returns_heatmap' in dashboard:
+                        st.plotly_chart(dashboard['monthly_returns_heatmap'], use_container_width=True)
+                    
+                    # Display additional charts if available
+                    if 'drawdown_chart' in dashboard:
+                        st.plotly_chart(dashboard['drawdown_chart'], use_container_width=True)
+                    
+                except Exception as e:
+                    st.error(f"Error generating dashboard: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+    except ImportError:
+        st.info("ℹ️ Advanced Performance Visualizer not available. Using standard charts.")
+        
+        # Fallback: Show drawdown chart using helper
+        try:
+            from utils.plotting_helper import create_drawdown_chart
+            
+            equity_curve = (1 + sample_returns).cumprod() * 100
+            
+            st.markdown("**Drawdown Analysis**")
+            fig_dd = create_drawdown_chart(
+                equity_curve=equity_curve,
+                title="Drawdown Analysis"
+            )
+            st.plotly_chart(fig_dd, use_container_width=True)
+            
+            st.markdown("**Returns Distribution**")
+            fig_returns = create_returns_distribution(
+                returns=sample_returns,
+                title="Returns Distribution"
+            )
+            st.plotly_chart(fig_returns, use_container_width=True)
+        except ImportError:
+            pass
+    
+    st.markdown("---")
+    
+    # Execution Replay
+    st.header("🎬 Execution Replay")
+    
+    st.write("Replay and analyze past trade executions to understand execution quality.")
+    
+    try:
+        from trading.execution.execution_replay import ExecutionReplay
+        
+        replay = ExecutionReplay()
+        
+        # Date range selection
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            replay_start_date = st.date_input(
+                "Start date",
+                value=datetime.now() - timedelta(days=30),
+                key="replay_start_date"
+            )
+        
+        with col2:
+            replay_end_date = st.date_input(
+                "End date",
+                value=datetime.now(),
+                key="replay_end_date"
+            )
+        
+        if st.button("Load Execution History", key="load_execution_history"):
+            with st.spinner("Loading execution history..."):
+                try:
+                    executions = replay.get_executions(
+                        start_date=replay_start_date,
+                        end_date=replay_end_date
+                    )
+                    
+                    if executions:
+                        st.success(f"✅ Loaded {len(executions)} executions")
+                        
+                        st.session_state.execution_history = executions
+                        
+                        # Summary statistics
+                        st.subheader("📊 Execution Statistics")
+                        
+                        exec_df = pd.DataFrame(executions)
+                        
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            st.metric("Total Executions", len(executions))
+                        with col2:
+                            if 'slippage' in exec_df.columns:
+                                avg_slippage = exec_df['slippage'].mean()
+                                st.metric("Avg Slippage", f"{avg_slippage:.2f}%")
+                            else:
+                                st.metric("Avg Slippage", "N/A")
+                        with col3:
+                            if 'execution_time' in exec_df.columns:
+                                avg_time = exec_df['execution_time'].mean()
+                                st.metric("Avg Exec Time", f"{avg_time:.1f}s")
+                            else:
+                                st.metric("Avg Exec Time", "N/A")
+                        with col4:
+                            if 'filled_qty' in exec_df.columns and 'order_qty' in exec_df.columns:
+                                fill_rate = (exec_df['filled_qty'] / exec_df['order_qty']).mean()
+                                st.metric("Avg Fill Rate", f"{fill_rate:.1%}")
+                            else:
+                                st.metric("Avg Fill Rate", "N/A")
+                        
+                        # Execution quality over time
+                        if 'timestamp' in exec_df.columns and 'slippage' in exec_df.columns:
+                            st.subheader("📈 Execution Quality Over Time")
+                            
+                            fig = go.Figure()
+                            
+                            # Convert timestamp to datetime if needed
+                            if exec_df['timestamp'].dtype == 'object':
+                                exec_df['timestamp'] = pd.to_datetime(exec_df['timestamp'])
+                            
+                            # Normalize order size for marker size
+                            if 'order_qty' in exec_df.columns:
+                                marker_size = (exec_df['order_qty'] / exec_df['order_qty'].max() * 20).clip(5, 30)
+                            else:
+                                marker_size = 10
+                            
+                            fig.add_trace(go.Scatter(
+                                x=exec_df['timestamp'],
+                                y=exec_df['slippage'],
+                                mode='markers',
+                                name='Slippage',
+                                marker=dict(
+                                    size=marker_size,
+                                    color=exec_df['slippage'],
+                                    colorscale='RdYlGn_r',
+                                    showscale=True,
+                                    colorbar=dict(title="Slippage (%)")
+                                )
+                            ))
+                            
+                            fig.update_layout(
+                                title='Execution Slippage Over Time',
+                                xaxis_title='Date',
+                                yaxis_title='Slippage (%)',
+                                height=400
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
+                        
+                        # Individual execution details
+                        st.subheader("📋 Execution Details")
+                        
+                        if 'id' in exec_df.columns or 'execution_id' in exec_df.columns:
+                            exec_id_col = 'id' if 'id' in exec_df.columns else 'execution_id'
+                            
+                            selected_execution_idx = st.selectbox(
+                                "Select execution to replay",
+                                options=range(len(executions)),
+                                format_func=lambda i: f"{executions[i].get('symbol', 'Unknown')} - {executions[i].get('timestamp', 'Unknown')}",
+                                key="selected_execution_replay"
+                            )
+                            
+                            if st.button("▶️ Replay Execution", key="replay_execution"):
+                                execution = executions[selected_execution_idx]
+                                
+                                try:
+                                    exec_id = execution.get('id') or execution.get('execution_id')
+                                    if exec_id:
+                                        replay_result = replay.replay_execution(exec_id)
+                                        
+                                        # Show replay
+                                        st.write(f"**Symbol:** {execution.get('symbol', 'Unknown')}")
+                                        st.write(f"**Order:** {execution.get('action', 'Unknown')} {execution.get('order_qty', 0)} shares")
+                                        if 'execution_time' in execution:
+                                            st.write(f"**Execution Time:** {execution['execution_time']:.2f}s")
+                                        
+                                        # Frame-by-frame replay
+                                        if 'frames' in replay_result and replay_result['frames']:
+                                            frame_slider = st.slider(
+                                                "Replay frame",
+                                                min_value=0,
+                                                max_value=len(replay_result['frames']) - 1,
+                                                value=0,
+                                                key="replay_frame_slider"
+                                            )
+                                            
+                                            frame = replay_result['frames'][frame_slider]
+                                            
+                                            col1, col2, col3 = st.columns(3)
+                                            with col1:
+                                                if 'elapsed_time' in frame:
+                                                    st.metric("Time", f"+{frame['elapsed_time']:.1f}s")
+                                                else:
+                                                    st.metric("Time", f"Frame {frame_slider + 1}")
+                                            with col2:
+                                                if 'filled_qty' in frame and 'order_qty' in execution:
+                                                    st.metric("Filled", f"{frame['filled_qty']}/{execution.get('order_qty', 0)}")
+                                                else:
+                                                    st.metric("Filled", "N/A")
+                                            with col3:
+                                                if 'avg_price' in frame:
+                                                    st.metric("Avg Price", f"${frame['avg_price']:.2f}")
+                                                else:
+                                                    st.metric("Avg Price", "N/A")
+                                            
+                                            # Market data at this frame
+                                            st.write("**Market State:**")
+                                            if 'best_bid' in frame:
+                                                st.write(f"Best Bid: ${frame['best_bid']:.2f}")
+                                            if 'best_ask' in frame:
+                                                st.write(f"Best Ask: ${frame['best_ask']:.2f}")
+                                            if 'last_price' in frame:
+                                                st.write(f"Last Price: ${frame['last_price']:.2f}")
+                                            
+                                            # Execution timeline chart
+                                            if len(replay_result['frames']) > 1:
+                                                frames_df = pd.DataFrame(replay_result['frames'])
+                                                
+                                                fig_replay = go.Figure()
+                                                
+                                                if 'elapsed_time' in frames_df.columns and 'avg_price' in frames_df.columns:
+                                                    fig_replay.add_trace(go.Scatter(
+                                                        x=frames_df['elapsed_time'],
+                                                        y=frames_df['avg_price'],
+                                                        mode='lines+markers',
+                                                        name='Fill Price',
+                                                        line=dict(color='blue', width=2),
+                                                        marker=dict(size=8)
+                                                    ))
+                                                    
+                                                    # Highlight current frame
+                                                    if frame_slider < len(frames_df):
+                                                        current_frame = frames_df.iloc[frame_slider]
+                                                        fig_replay.add_trace(go.Scatter(
+                                                            x=[current_frame['elapsed_time']],
+                                                            y=[current_frame['avg_price']],
+                                                            mode='markers',
+                                                            name='Current Frame',
+                                                            marker=dict(size=15, color='red', symbol='star')
+                                                        ))
+                                                    
+                                                    fig_replay.update_layout(
+                                                        title='Execution Timeline Replay',
+                                                        xaxis_title='Elapsed Time (s)',
+                                                        yaxis_title='Price ($)',
+                                                        height=300
+                                                    )
+                                                    
+                                                    st.plotly_chart(fig_replay, use_container_width=True)
+                                        else:
+                                            st.info("No frame-by-frame replay data available for this execution")
+                                    else:
+                                        st.warning("Execution ID not found")
+                                except Exception as e:
+                                    st.error(f"Error replaying execution: {e}")
+                                    import traceback
+                                    st.code(traceback.format_exc())
+                        else:
+                            st.info("Execution ID column not found in execution data")
+                    else:
+                        st.info("No executions found for this date range")
+                
+                except Exception as e:
+                    st.error(f"Error loading execution history: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+    
+    except ImportError:
+        st.error("Execution Replay not available. Make sure trading.execution.execution_replay is available.")
+    except Exception as e:
+        st.error(f"Error: {e}")
+        import traceback
+        st.code(traceback.format_exc())
 

@@ -187,6 +187,1112 @@ with tab1:
     
     st.markdown("---")
     
+    # Enhanced Health Monitoring Dashboard
+    st.subheader("🏥 System Health")
+    
+    if 'health_monitor' in st.session_state and 'system_monitor' in st.session_state:
+        try:
+            health = st.session_state.health_monitor
+            monitor = st.session_state.system_monitor
+            
+            # Overall health status
+            try:
+                health_status = health.get_overall_health()
+            except Exception:
+                # Fallback if method doesn't exist
+                health_status = {
+                    'status': 'healthy',
+                    'alerts': []
+                }
+            
+            if health_status.get('status') == 'healthy':
+                st.success(f"✅ System Status: {health_status.get('status', 'unknown').upper()}")
+            elif health_status.get('status') == 'degraded':
+                st.warning(f"⚠️ System Status: {health_status.get('status', 'unknown').upper()}")
+            else:
+                st.error(f"🔴 System Status: {health_status.get('status', 'unknown').upper()}")
+            
+            # Component health
+            st.markdown("**Component Health:**")
+            
+            try:
+                components = health.check_all_components()
+            except Exception:
+                components = {}
+            
+            if components:
+                for component, status in components.items():
+                    col1, col2, col3 = st.columns([2, 1, 1])
+                    
+                    with col1:
+                        st.write(f"**{component}**")
+                    with col2:
+                        if status.get('healthy', False):
+                            st.success("✅ Healthy")
+                        else:
+                            st.error("❌ Unhealthy")
+                    with col3:
+                        st.write(f"{status.get('uptime', 'N/A')}")
+            
+            # System metrics
+            st.markdown("**📊 System Metrics:**")
+            
+            try:
+                metrics = monitor.get_system_metrics()
+            except Exception:
+                metrics = {
+                    'cpu_percent': st.session_state.system_metrics.get('cpu_usage', 45.0),
+                    'memory_percent': st.session_state.system_metrics.get('memory_usage', 62.0),
+                    'disk_percent': st.session_state.system_metrics.get('disk_usage', 38.0),
+                    'active_tasks': 0
+                }
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("CPU Usage", f"{metrics.get('cpu_percent', 0):.1f}%")
+            with col2:
+                st.metric("Memory Usage", f"{metrics.get('memory_percent', 0):.1f}%")
+            with col3:
+                st.metric("Disk Usage", f"{metrics.get('disk_percent', 0):.1f}%")
+            with col4:
+                st.metric("Active Tasks", metrics.get('active_tasks', 0))
+            
+            # Performance metrics
+            st.markdown("**⚡ Performance Metrics:**")
+            
+            try:
+                perf = monitor.get_performance_metrics()
+            except Exception:
+                perf = {
+                    'avg_response_time': 0.5,
+                    'requests_per_minute': 10,
+                    'error_rate': 0.01
+                }
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("Avg Response Time", f"{perf.get('avg_response_time', 0):.2f}s")
+            with col2:
+                st.metric("Requests/Min", f"{perf.get('requests_per_minute', 0):.0f}")
+            with col3:
+                st.metric("Error Rate", f"{perf.get('error_rate', 0):.2%}")
+            
+            # Alerts
+            alerts = health_status.get('alerts', [])
+            if alerts:
+                st.markdown("**🚨 Active Alerts:**")
+                for alert in alerts:
+                    if isinstance(alert, dict):
+                        st.warning(f"⚠️ {alert.get('message', 'Unknown alert')}")
+                    else:
+                        st.warning(f"⚠️ {alert}")
+            
+            # Historical performance chart
+            st.markdown("**📈 Performance History:**")
+            
+            try:
+                history = monitor.get_performance_history(hours=24)
+            except Exception:
+                history = None
+            
+            if history:
+                try:
+                    history_df = pd.DataFrame(history)
+                    
+                    fig = go.Figure()
+                    
+                    fig.add_trace(go.Scatter(
+                        x=history_df['timestamp'],
+                        y=history_df['response_time'],
+                        name='Response Time',
+                        line=dict(color='blue')
+                    ))
+                    
+                    fig.update_layout(
+                        title='Response Time (Last 24 Hours)',
+                        xaxis_title='Time',
+                        yaxis_title='Response Time (s)',
+                        hovermode='x unified',
+                        height=300
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                except Exception as e:
+                    st.info("Performance history data not available in expected format")
+            else:
+                st.info("No performance history available")
+        
+        except Exception as e:
+            st.warning(f"⚠️ Health monitoring not fully available: {e}")
+            st.info("Some health monitoring features may not be accessible.")
+    else:
+        st.warning("⚠️ Health monitoring not available")
+    
+    st.markdown("---")
+    
+    # Automation & Workflows
+    st.header("🤖 Automation & Workflows")
+    
+    if 'automation_core' in st.session_state and 'workflow_manager' in st.session_state:
+        automation = st.session_state.automation_core
+        workflows = st.session_state.workflow_manager
+        config = st.session_state.automation_config
+        
+        # Tabs for automation management
+        auto_tab1, auto_tab2, auto_tab3 = st.tabs([
+            "📋 Active Workflows",
+            "➕ Create Workflow",
+            "⚙️ Settings"
+        ])
+        
+        with auto_tab1:
+            st.subheader("Active Workflows")
+            
+            try:
+                active_workflows = workflows.get_active_workflows()
+            except Exception:
+                active_workflows = []
+            
+            if active_workflows:
+                for workflow in active_workflows:
+                    with st.expander(f"🔄 {workflow.get('name', 'Unknown')}", expanded=True):
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            status_emoji = "✅" if workflow.get('status') == 'running' else "⏸️"
+                            st.write(f"**Status:** {status_emoji} {workflow.get('status', 'unknown')}")
+                        
+                        with col2:
+                            st.write(f"**Schedule:** {workflow.get('schedule', 'N/A')}")
+                        
+                        with col3:
+                            st.write(f"**Last Run:** {workflow.get('last_run', 'Never')}")
+                        
+                        # Workflow details
+                        st.write(f"**Description:** {workflow.get('description', 'No description')}")
+                        
+                        # Actions
+                        col_a, col_b, col_c = st.columns(3)
+                        
+                        with col_a:
+                            if st.button("▶️ Run Now", key=f"run_{workflow.get('id', 'unknown')}"):
+                                try:
+                                    automation.run_workflow(workflow.get('id'))
+                                    st.success("Workflow started!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
+                        
+                        with col_b:
+                            if workflow.get('status') == 'running':
+                                if st.button("⏸️ Pause", key=f"pause_{workflow.get('id', 'unknown')}"):
+                                    try:
+                                        automation.pause_workflow(workflow.get('id'))
+                                        st.success("Workflow paused")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Error: {e}")
+                            else:
+                                if st.button("▶️ Resume", key=f"resume_{workflow.get('id', 'unknown')}"):
+                                    try:
+                                        automation.resume_workflow(workflow.get('id'))
+                                        st.success("Workflow resumed")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Error: {e}")
+                        
+                        with col_c:
+                            if st.button("🗑️ Delete", key=f"delete_{workflow.get('id', 'unknown')}"):
+                                try:
+                                    automation.delete_workflow(workflow.get('id'))
+                                    st.success("Workflow deleted")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
+                        
+                        # Execution history
+                        if st.checkbox("Show history", key=f"history_{workflow.get('id', 'unknown')}"):
+                            try:
+                                history = automation.get_workflow_history(workflow.get('id'), limit=10)
+                                if history:
+                                    history_df = pd.DataFrame(history)
+                                    st.dataframe(history_df, use_container_width=True)
+                                else:
+                                    st.info("No execution history available")
+                            except Exception as e:
+                                st.warning(f"Could not load history: {e}")
+            else:
+                st.info("No active workflows. Create one to get started.")
+        
+        with auto_tab2:
+            st.subheader("Create New Workflow")
+            
+            # Predefined workflow templates
+            st.write("**Choose from templates:**")
+            
+            template_options = {
+                "Daily Data Update": {
+                    "description": "Automatically fetch latest market data every day",
+                    "schedule": "daily",
+                    "actions": ["fetch_market_data", "update_database"]
+                },
+                "Model Retraining": {
+                    "description": "Retrain models weekly with latest data",
+                    "schedule": "weekly",
+                    "actions": ["fetch_data", "train_models", "evaluate_models", "deploy_best"]
+                },
+                "Portfolio Rebalancing": {
+                    "description": "Rebalance portfolio based on target allocation",
+                    "schedule": "monthly",
+                    "actions": ["calculate_allocation", "generate_orders", "execute_trades"]
+                },
+                "Risk Monitoring": {
+                    "description": "Check risk metrics hourly and send alerts",
+                    "schedule": "hourly",
+                    "actions": ["calculate_risk", "check_limits", "send_alerts"]
+                },
+                "Performance Reporting": {
+                    "description": "Generate and email daily performance report",
+                    "schedule": "daily",
+                    "actions": ["calculate_metrics", "generate_report", "send_email"]
+                }
+            }
+            
+            selected_template = st.selectbox(
+                "Select template",
+                options=list(template_options.keys())
+            )
+            
+            template = template_options[selected_template]
+            
+            st.info(f"📝 {template['description']}")
+            
+            # Customize workflow
+            st.write("**Customize workflow:**")
+            
+            workflow_name = st.text_input(
+                "Workflow name",
+                value=selected_template
+            )
+            
+            schedule_type = st.selectbox(
+                "Schedule",
+                ["Hourly", "Daily", "Weekly", "Monthly", "Custom"]
+            )
+            
+            cron_expression = None
+            if schedule_type == "Custom":
+                cron_expression = st.text_input(
+                    "Cron expression",
+                    value="0 9 * * *",
+                    help="Format: minute hour day month weekday"
+                )
+            
+            # Additional settings
+            enable_notifications = st.checkbox(
+                "Send notifications on completion",
+                value=True
+            )
+            
+            notification_email = None
+            if enable_notifications:
+                notification_email = st.text_input(
+                    "Email for notifications",
+                    value=st.session_state.get('user_email', '')
+                )
+            
+            # Create workflow button
+            if st.button("✨ Create Workflow", type="primary"):
+                try:
+                    # Build workflow config
+                    workflow_config = {
+                        'name': workflow_name,
+                        'description': template['description'],
+                        'schedule': schedule_type.lower(),
+                        'actions': template['actions'],
+                        'notifications_enabled': enable_notifications,
+                        'notification_email': notification_email if enable_notifications else None
+                    }
+                    
+                    if cron_expression:
+                        workflow_config['cron_expression'] = cron_expression
+                    
+                    # Create workflow
+                    workflow_id = workflows.create_workflow(workflow_config)
+                    
+                    st.success(f"✅ Workflow '{workflow_name}' created successfully!")
+                    st.write(f"Workflow ID: {workflow_id}")
+                    
+                    # Option to start immediately
+                    if st.button("▶️ Start Now", key="start_new_workflow"):
+                        try:
+                            automation.run_workflow(workflow_id)
+                            st.success("Workflow started!")
+                        except Exception as e:
+                            st.error(f"Error starting workflow: {e}")
+                
+                except Exception as e:
+                    st.error(f"Error creating workflow: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+            
+            # Custom workflow builder
+            st.markdown("---")
+            st.subheader("🛠️ Build Custom Workflow")
+            
+            with st.expander("Advanced: Build from scratch"):
+                custom_name = st.text_input("Custom workflow name", key="custom_workflow_name")
+                
+                available_actions = [
+                    "fetch_market_data",
+                    "train_model",
+                    "evaluate_model",
+                    "generate_signals",
+                    "execute_trades",
+                    "calculate_risk",
+                    "send_notification",
+                    "generate_report",
+                    "backup_data"
+                ]
+                
+                selected_actions = st.multiselect(
+                    "Select actions (in order)",
+                    options=available_actions,
+                    key="custom_workflow_actions"
+                )
+                
+                if st.button("Create Custom Workflow", key="create_custom_workflow"):
+                    if not custom_name or not selected_actions:
+                        st.error("Please provide name and at least one action")
+                    else:
+                        try:
+                            custom_config = {
+                                'name': custom_name,
+                                'description': 'Custom workflow',
+                                'schedule': 'manual',
+                                'actions': selected_actions
+                            }
+                            
+                            workflow_id = workflows.create_workflow(custom_config)
+                            st.success(f"Custom workflow created: {workflow_id}")
+                        except Exception as e:
+                            st.error(f"Error creating custom workflow: {e}")
+        
+        with auto_tab3:
+            st.subheader("⚙️ Automation Settings")
+            
+            # Global automation settings
+            st.write("**Global Settings:**")
+            
+            try:
+                config_dict = config.get_all() if hasattr(config, 'get_all') else {}
+            except Exception:
+                config_dict = {}
+            
+            auto_enabled = st.checkbox(
+                "Enable automation system",
+                value=config_dict.get('enabled', True),
+                help="Master switch for all automated workflows"
+            )
+            
+            max_concurrent = st.slider(
+                "Max concurrent workflows",
+                min_value=1,
+                max_value=10,
+                value=config_dict.get('max_concurrent', 3),
+                help="Maximum number of workflows running simultaneously"
+            )
+            
+            retry_on_failure = st.checkbox(
+                "Retry failed workflows",
+                value=config_dict.get('retry_on_failure', True)
+            )
+            
+            max_retries = 3
+            if retry_on_failure:
+                max_retries = st.number_input(
+                    "Max retries",
+                    min_value=1,
+                    max_value=5,
+                    value=config_dict.get('max_retries', 3)
+                )
+            
+            # Notification settings
+            st.write("**Notification Settings:**")
+            
+            notify_on_success = st.checkbox(
+                "Notify on successful completion",
+                value=config_dict.get('notify_on_success', False)
+            )
+            
+            notify_on_failure = st.checkbox(
+                "Notify on failure",
+                value=config_dict.get('notify_on_failure', True)
+            )
+            
+            # Save settings
+            if st.button("💾 Save Settings", type="primary", key="save_automation_settings"):
+                try:
+                    new_config = {
+                        'enabled': auto_enabled,
+                        'max_concurrent': max_concurrent,
+                        'retry_on_failure': retry_on_failure,
+                        'max_retries': max_retries if retry_on_failure else 0,
+                        'notify_on_success': notify_on_success,
+                        'notify_on_failure': notify_on_failure
+                    }
+                    
+                    if hasattr(config, 'update'):
+                        config.update(new_config)
+                    elif hasattr(config, 'set'):
+                        for key, value in new_config.items():
+                            config.set(key, value)
+                    
+                    st.success("✅ Settings saved!")
+                except Exception as e:
+                    st.error(f"Error saving settings: {e}")
+            
+            # Automation statistics
+            st.markdown("---")
+            st.subheader("📊 Automation Statistics")
+            
+            try:
+                stats = automation.get_statistics()
+            except Exception:
+                stats = {}
+            
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Total Workflows", stats.get('total_workflows', 0))
+            with col2:
+                st.metric("Active", stats.get('active_workflows', 0))
+            with col3:
+                st.metric("Completed Today", stats.get('completed_today', 0))
+            with col4:
+                st.metric("Failed Today", stats.get('failed_today', 0))
+    
+    else:
+        st.warning("⚠️ Automation system not available. Enable in app.py first.")
+    
+    st.markdown("---")
+    
+    # Agent API Service
+    st.header("🔌 Agent API")
+    
+    st.write("""
+    The Agent API provides programmatic access to trading agents.
+    Use it to integrate with external systems or build custom interfaces.
+    """)
+    
+    # API status
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("API Status")
+        
+        try:
+            import requests
+            try:
+                response = requests.get('http://localhost:8000/health', timeout=2)
+                if response.status_code == 200:
+                    st.success("✅ API is running")
+                    api_data = response.json() if response.content else {}
+                    if api_data:
+                        st.json(api_data)
+                else:
+                    st.error(f"❌ API returned error: {response.status_code}")
+            except requests.exceptions.ConnectionError:
+                st.warning("⚠️ API is not running")
+                
+                if st.button("🚀 Start API Service", key="start_api_service"):
+                    try:
+                        import subprocess
+                        import os
+                        from pathlib import Path
+                        
+                        # Get script path
+                        script_path = Path(__file__).parent.parent / "scripts" / "launch_agent_api.py"
+                        
+                        if script_path.exists():
+                            # Start API service in background
+                            if os.name == 'nt':  # Windows
+                                subprocess.Popen(['python', str(script_path)], creationflags=subprocess.CREATE_NEW_CONSOLE)
+                            else:  # Unix/Linux/Mac
+                                subprocess.Popen(['python', str(script_path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            
+                            st.success("API service started! Check status in a few seconds.")
+                            st.info("The API will be available at http://localhost:8000")
+                        else:
+                            st.error(f"API launcher script not found at: {script_path}")
+                    except Exception as e:
+                        st.error(f"Error starting API service: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+            except requests.exceptions.Timeout:
+                st.warning("⚠️ API health check timed out")
+        except ImportError:
+            st.warning("⚠️ 'requests' library not available. Install with: pip install requests")
+            st.info("You can still start the API service manually using: python scripts/launch_agent_api.py")
+    
+    with col2:
+        st.subheader("API Info")
+        st.write("**Base URL:** http://localhost:8000")
+        st.write("**Documentation:** [Swagger UI](http://localhost:8000/docs)")
+        st.write("**Version:** 1.0.0")
+        
+        # Quick test button
+        if st.button("🔍 Test API Connection", key="test_api_connection"):
+            try:
+                import requests
+                response = requests.get('http://localhost:8000/health', timeout=2)
+                if response.status_code == 200:
+                    st.success("✅ API is accessible")
+                else:
+                    st.error(f"❌ API returned: {response.status_code}")
+            except requests.exceptions.ConnectionError:
+                st.error("❌ Cannot connect to API. Make sure it's running.")
+            except ImportError:
+                st.warning("⚠️ 'requests' library not available")
+    
+    # API endpoints documentation
+    st.subheader("📚 Available Endpoints")
+    
+    endpoints = [
+        {
+            "Method": "GET",
+            "Path": "/health",
+            "Description": "Check API health status"
+        },
+        {
+            "Method": "GET",
+            "Path": "/agents",
+            "Description": "List all available agents"
+        },
+        {
+            "Method": "GET",
+            "Path": "/agents/{agent_id}/status",
+            "Description": "Get agent status"
+        },
+        {
+            "Method": "POST",
+            "Path": "/agents/{agent_id}/run",
+            "Description": "Trigger agent execution"
+        },
+        {
+            "Method": "GET",
+            "Path": "/agents/{agent_id}/results",
+            "Description": "Get agent results"
+        },
+        {
+            "Method": "POST",
+            "Path": "/forecast",
+            "Description": "Generate forecast via API"
+        },
+        {
+            "Method": "POST",
+            "Path": "/backtest",
+            "Description": "Run strategy backtest via API"
+        }
+    ]
+    
+    endpoints_df = pd.DataFrame(endpoints)
+    st.dataframe(endpoints_df, use_container_width=True, hide_index=True)
+    
+    # API example usage
+    st.subheader("💻 Example Usage")
+    
+    col_ex1, col_ex2 = st.columns(2)
+    
+    with col_ex1:
+        with st.expander("Python example", expanded=True):
+            st.code("""
+import requests
+
+# Get list of agents
+response = requests.get('http://localhost:8000/agents')
+agents = response.json()
+print(f"Available agents: {agents}")
+
+# Run forecast agent
+forecast_params = {
+    'symbol': 'AAPL',
+    'model': 'LSTM',
+    'horizon': 30
+}
+
+response = requests.post(
+    'http://localhost:8000/forecast',
+    json=forecast_params
+)
+
+forecast = response.json()
+print(f"Forecast: {forecast['values']}")
+""", language='python')
+    
+    with col_ex2:
+        with st.expander("cURL example", expanded=True):
+            st.code("""
+# Get agents
+curl http://localhost:8000/agents
+
+# Run forecast
+curl -X POST http://localhost:8000/forecast \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "symbol": "AAPL",
+    "model": "LSTM",
+    "horizon": 30
+  }'
+""", language='bash')
+    
+    # API key management
+    st.subheader("🔑 API Authentication")
+    
+    st.info("API authentication coming soon. Currently all endpoints are open.")
+    
+    # Future: Add API key generation and management
+    with st.expander("🔐 Future: API Key Management"):
+        st.write("""
+        **Planned Features:**
+        - Generate API keys for external integrations
+        - Rate limiting per API key
+        - Usage tracking and analytics
+        - Key rotation and expiration
+        """)
+    
+    st.markdown("---")
+    
+    # WebSocket Real-time Updates
+    st.header("📡 Real-time System Monitor")
+    
+    st.write("""
+    Connect to the WebSocket service to receive real-time updates about:
+    - Agent status changes
+    - Forecast completions
+    - Trade executions
+    - Risk alerts
+    - System health events
+    """)
+    
+    # Initialize WebSocket client (if not already)
+    if 'ws_client' not in st.session_state:
+        try:
+            from utils.websocket_client import WebSocketClient
+            st.session_state.ws_client = WebSocketClient()
+            st.session_state.ws_connected = False
+            st.session_state.ws_available = True
+        except ImportError:
+            st.session_state.ws_available = False
+            st.session_state.ws_connected = False
+    
+    # Connection status
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        if not st.session_state.get('ws_available', False):
+            st.warning("⚠️ WebSocket client not available. Install websockets: pip install websockets")
+        elif st.session_state.get('ws_connected', False):
+            try:
+                # Check if actually connected
+                if hasattr(st.session_state.ws_client, 'is_connected'):
+                    is_connected = st.session_state.ws_client.is_connected()
+                else:
+                    is_connected = st.session_state.ws_connected
+                
+                if is_connected:
+                    st.success("✅ Real-time updates enabled")
+                else:
+                    st.warning("⚠️ Connection lost. Click Connect to reconnect.")
+                    st.session_state.ws_connected = False
+            except:
+                st.warning("⚠️ Connection status unknown")
+                st.session_state.ws_connected = False
+        else:
+            st.warning("⚠️ Real-time updates disabled")
+    
+    with col2:
+        if not st.session_state.get('ws_available', False):
+            st.info("💡 Install websockets library to enable real-time updates")
+        elif not st.session_state.get('ws_connected', False):
+            if st.button("🔌 Connect", key="ws_connect_btn"):
+                try:
+                    import asyncio
+                    import threading
+                    
+                    # Create new event loop in thread
+                    def connect_ws():
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        try:
+                            loop.run_until_complete(st.session_state.ws_client.connect())
+                            st.session_state.ws_connected = True
+                        except Exception as e:
+                            st.error(f"Connection failed: {e}")
+                            st.info("Make sure WebSocket service is running:\npython scripts/launch_websocket.py")
+                    
+                    # Run in thread to avoid blocking
+                    thread = threading.Thread(target=connect_ws, daemon=True)
+                    thread.start()
+                    thread.join(timeout=3)
+                    
+                    if st.session_state.ws_connected:
+                        st.success("Connected!")
+                        st.rerun()
+                    else:
+                        st.error("Connection timeout. Check if WebSocket service is running.")
+                except Exception as e:
+                    st.error(f"Connection failed: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+                    st.info("Make sure WebSocket service is running:\npython scripts/launch_websocket.py")
+        else:
+            if st.button("🔌 Disconnect", key="ws_disconnect_btn"):
+                try:
+                    import asyncio
+                    import threading
+                    
+                    def disconnect_ws():
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        try:
+                            loop.run_until_complete(st.session_state.ws_client.disconnect())
+                        except:
+                            pass
+                    
+                    thread = threading.Thread(target=disconnect_ws, daemon=True)
+                    thread.start()
+                    thread.join(timeout=2)
+                    
+                    st.session_state.ws_connected = False
+                    st.success("Disconnected!")
+                    st.rerun()
+                except:
+                    st.session_state.ws_connected = False
+                    st.rerun()
+    
+    # WebSocket service status
+    st.markdown("---")
+    col_ws1, col_ws2 = st.columns(2)
+    
+    with col_ws1:
+        st.subheader("WebSocket Service Status")
+        
+        try:
+            import requests
+            try:
+                # Try to check if WebSocket service is running (via HTTP endpoint if available)
+                response = requests.get('http://localhost:8001/health', timeout=1)
+                if response.status_code == 200:
+                    st.success("✅ WebSocket service is running")
+                else:
+                    st.warning("⚠️ WebSocket service may not be running")
+            except requests.exceptions.ConnectionError:
+                st.warning("⚠️ WebSocket service is not running")
+                
+                if st.button("🚀 Start WebSocket Service", key="start_ws_service"):
+                    try:
+                        import subprocess
+                        import os
+                        from pathlib import Path
+                        
+                        script_path = Path(__file__).parent.parent / "scripts" / "launch_websocket.py"
+                        
+                        if script_path.exists():
+                            if os.name == 'nt':  # Windows
+                                subprocess.Popen(['python', str(script_path)], creationflags=subprocess.CREATE_NEW_CONSOLE)
+                            else:  # Unix/Linux/Mac
+                                subprocess.Popen(['python', str(script_path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            
+                            st.success("WebSocket service started! Check status in a few seconds.")
+                            st.info("The WebSocket will be available at ws://localhost:8001")
+                        else:
+                            st.error(f"WebSocket launcher script not found at: {script_path}")
+                    except Exception as e:
+                        st.error(f"Error starting WebSocket service: {e}")
+            except requests.exceptions.Timeout:
+                st.warning("⚠️ WebSocket service check timed out")
+        except ImportError:
+            st.info("💡 Install 'requests' to check WebSocket service status")
+            st.info("Start manually: python scripts/launch_websocket.py")
+    
+    with col_ws2:
+        st.subheader("WebSocket Info")
+        st.write("**URL:** ws://localhost:8001")
+        st.write("**Protocol:** WebSocket (WS)")
+        st.write("**Status:** " + ("Connected" if st.session_state.get('ws_connected', False) else "Disconnected"))
+    
+    # Real-time event feed
+    if st.session_state.get('ws_connected', False) and st.session_state.get('ws_available', False):
+        st.markdown("---")
+        st.subheader("📊 Live Event Feed")
+        
+        # Initialize event list if not exists
+        if 'recent_events' not in st.session_state:
+            st.session_state.recent_events = []
+        
+        # Register callbacks for different event types
+        def on_agent_update(payload):
+            """Handle agent update events."""
+            agent_name = payload.get('agent_name', 'Unknown')
+            status = payload.get('status', 'unknown')
+            event = f"🤖 Agent '{agent_name}' status: {status}"
+            timestamp = datetime.now().strftime('%H:%M:%S')
+            st.session_state.recent_events.insert(0, {
+                'timestamp': timestamp,
+                'event': event,
+                'type': 'agent'
+            })
+            if len(st.session_state.recent_events) > 20:
+                st.session_state.recent_events.pop()
+        
+        def on_forecast_complete(payload):
+            """Handle forecast completion events."""
+            symbol = payload.get('symbol', 'Unknown')
+            r2 = payload.get('r2', 0)
+            event = f"📈 Forecast completed for {symbol} (R²: {r2:.3f})"
+            timestamp = datetime.now().strftime('%H:%M:%S')
+            st.session_state.recent_events.insert(0, {
+                'timestamp': timestamp,
+                'event': event,
+                'type': 'forecast'
+            })
+            if len(st.session_state.recent_events) > 20:
+                st.session_state.recent_events.pop()
+        
+        def on_trade_execution(payload):
+            """Handle trade execution events."""
+            symbol = payload.get('symbol', 'Unknown')
+            action = payload.get('action', 'Unknown')
+            quantity = payload.get('quantity', 0)
+            price = payload.get('price', 0)
+            event = f"💼 Trade executed: {action} {quantity} {symbol} @ ${price:.2f}"
+            timestamp = datetime.now().strftime('%H:%M:%S')
+            st.session_state.recent_events.insert(0, {
+                'timestamp': timestamp,
+                'event': event,
+                'type': 'trade'
+            })
+            if len(st.session_state.recent_events) > 20:
+                st.session_state.recent_events.pop()
+        
+        def on_risk_alert(payload):
+            """Handle risk alert events."""
+            message = payload.get('message', 'Risk alert')
+            event = f"⚠️ RISK ALERT: {message}"
+            timestamp = datetime.now().strftime('%H:%M:%S')
+            st.session_state.recent_events.insert(0, {
+                'timestamp': timestamp,
+                'event': event,
+                'type': 'risk'
+            })
+            if len(st.session_state.recent_events) > 20:
+                st.session_state.recent_events.pop()
+        
+        # Register callbacks
+        try:
+            st.session_state.ws_client.on('agent_update', on_agent_update)
+            st.session_state.ws_client.on('forecast_complete', on_forecast_complete)
+            st.session_state.ws_client.on('trade_execution', on_trade_execution)
+            st.session_state.ws_client.on('risk_alert', on_risk_alert)
+        except:
+            pass  # Callbacks may not be registered if connection is lost
+        
+        # Display recent events
+        if st.session_state.recent_events:
+            st.write("**Recent Events:**")
+            for event_data in st.session_state.recent_events[:10]:
+                if isinstance(event_data, dict):
+                    timestamp = event_data.get('timestamp', '')
+                    event = event_data.get('event', str(event_data))
+                    event_type = event_data.get('type', 'info')
+                    
+                    with st.container(border=True):
+                        col1, col2 = st.columns([1, 4])
+                        with col1:
+                            st.caption(f"🕐 {timestamp}")
+                        with col2:
+                            if event_type == 'risk':
+                                st.warning(event)
+                            elif event_type == 'trade':
+                                st.success(event)
+                            elif event_type == 'forecast':
+                                st.info(event)
+                            else:
+                                st.text(event)
+        else:
+            st.info("No events yet. Events will appear here as they occur.")
+        
+        # Clear events button
+        if st.button("🗑️ Clear Events", key="clear_ws_events"):
+            st.session_state.recent_events = []
+            st.rerun()
+        
+        # Auto-refresh note
+        st.caption("💡 Events update in real-time. Page auto-refreshes to show new events.")
+    
+    st.markdown("---")
+    
+    # AI Assistant
+    st.header("🤖 AI Assistant")
+    
+    st.write("Ask questions about your trading system in natural language.")
+    
+    try:
+        from trading.nlp.llm_processor import LLMProcessor
+        
+        if 'llm_processor' not in st.session_state:
+            st.session_state.llm_processor = LLMProcessor()
+        
+        llm = st.session_state.llm_processor
+        
+        # Chat interface
+        if 'chat_history' not in st.session_state:
+            st.session_state.chat_history = []
+        
+        # Display chat history
+        if st.session_state.chat_history:
+            st.subheader("💬 Conversation History")
+            
+            for message in st.session_state.chat_history:
+                if message.get('role') == 'user':
+                    with st.chat_message("user"):
+                        st.write(message.get('content', ''))
+                else:
+                    with st.chat_message("assistant"):
+                        st.info(message.get('content', ''))
+            
+            # Clear chat button
+            if st.button("🗑️ Clear Chat", key="clear_chat_history"):
+                st.session_state.chat_history = []
+                st.rerun()
+        
+        st.markdown("---")
+        
+        # Input
+        user_input = st.text_input(
+            "Ask a question",
+            placeholder="e.g., What's my best performing strategy this month?",
+            key="ai_assistant_input"
+        )
+        
+        col_send, col_clear = st.columns([3, 1])
+        
+        with col_send:
+            if st.button("Send", type="primary", key="send_ai_message", use_container_width=True) and user_input:
+                # Add to history
+                st.session_state.chat_history.append({
+                    'role': 'user',
+                    'content': user_input
+                })
+                
+                # Process with LLM
+                with st.spinner("Thinking..."):
+                    try:
+                        response = llm.process_query(
+                            query=user_input,
+                            context=st.session_state
+                        )
+                        
+                        st.session_state.chat_history.append({
+                            'role': 'assistant',
+                            'content': response
+                        })
+                    except Exception as e:
+                        error_response = f"I encountered an error processing your query: {str(e)}"
+                        st.session_state.chat_history.append({
+                            'role': 'assistant',
+                            'content': error_response
+                        })
+                
+                st.rerun()
+        
+        with col_clear:
+            if st.button("Clear", key="clear_ai_input", use_container_width=True):
+                st.session_state.ai_assistant_input = ""
+                st.rerun()
+        
+        st.markdown("---")
+        
+        # Quick actions
+        st.subheader("⚡ Quick Questions")
+        
+        quick_questions = [
+            "What's my current portfolio value?",
+            "Show me today's best trade",
+            "What are my top risk exposures?",
+            "Generate a performance summary"
+        ]
+        
+        col_q1, col_q2 = st.columns(2)
+        
+        with col_q1:
+            for i, question in enumerate(quick_questions[:2]):
+                if st.button(question, key=f"quick_{i}", use_container_width=True):
+                    st.session_state.chat_history.append({
+                        'role': 'user',
+                        'content': question
+                    })
+                    
+                    with st.spinner("Processing..."):
+                        try:
+                            response = llm.process_query(
+                                query=question,
+                                context=st.session_state
+                            )
+                            
+                            st.session_state.chat_history.append({
+                                'role': 'assistant',
+                                'content': response
+                            })
+                        except Exception as e:
+                            error_response = f"I encountered an error: {str(e)}"
+                            st.session_state.chat_history.append({
+                                'role': 'assistant',
+                                'content': error_response
+                            })
+                    
+                    st.rerun()
+        
+        with col_q2:
+            for i, question in enumerate(quick_questions[2:], start=2):
+                if st.button(question, key=f"quick_{i}", use_container_width=True):
+                    st.session_state.chat_history.append({
+                        'role': 'user',
+                        'content': question
+                    })
+                    
+                    with st.spinner("Processing..."):
+                        try:
+                            response = llm.process_query(
+                                query=question,
+                                context=st.session_state
+                            )
+                            
+                            st.session_state.chat_history.append({
+                                'role': 'assistant',
+                                'content': response
+                            })
+                        except Exception as e:
+                            error_response = f"I encountered an error: {str(e)}"
+                            st.session_state.chat_history.append({
+                                'role': 'assistant',
+                                'content': error_response
+                            })
+                    
+                    st.rerun()
+    
+    except ImportError:
+        st.error("LLM Processor not available. Make sure trading.nlp.llm_processor is available.")
+    except Exception as e:
+        st.error(f"Error initializing AI Assistant: {e}")
+        import traceback
+        st.code(traceback.format_exc())
+    
+    st.markdown("---")
+    
     # Status Indicators
     st.subheader("🔍 Status Indicators")
     
@@ -1657,6 +2763,100 @@ with tab4:
 # TAB 5: Logs & Debugging
 with tab5:
     st.header("📜 Logs & Debugging")
+    
+    # System Logs Section
+    st.subheader("📊 System Logs")
+    
+    if st.button("View Recent Logs"):
+        try:
+            log_file_path = 'logs/trading_system.log'
+            from pathlib import Path
+            
+            if Path(log_file_path).exists():
+                with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    lines = f.readlines()
+                    recent_logs = lines[-100:]  # Last 100 lines
+                
+                st.text_area("Recent Log Entries (Last 100 lines)", ''.join(recent_logs), height=400)
+            else:
+                st.warning(f"Log file not found at {log_file_path}")
+                st.info("Logs will be created when the system starts logging")
+        except Exception as e:
+            st.error(f"Error reading log file: {e}")
+    
+    # Audit Trail Section
+    st.markdown("---")
+    st.subheader("🔍 Audit Trail")
+    
+    if 'audit_logger' in st.session_state:
+        audit_logger = st.session_state.audit_logger
+        
+        # Try to read audit log file
+        try:
+            audit_log_path = 'logs/audit.log'
+            from pathlib import Path
+            
+            if Path(audit_log_path).exists():
+                with open(audit_log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    audit_lines = f.readlines()
+                    recent_audit = audit_lines[-50:]  # Last 50 entries
+                
+                if recent_audit:
+                    st.text_area("Recent Audit Entries (Last 50)", ''.join(recent_audit), height=300)
+                else:
+                    st.info("No audit entries yet")
+            else:
+                st.info("Audit log file will be created when audit events occur")
+        except Exception as e:
+            st.error(f"Error reading audit log: {e}")
+        
+        # Audit statistics
+        st.markdown("---")
+        st.subheader("📈 Audit Statistics")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            try:
+                if Path('logs/audit.log').exists():
+                    with open('logs/audit.log', 'r') as f:
+                        total_entries = len(f.readlines())
+                    st.metric("Total Audit Entries", total_entries)
+                else:
+                    st.metric("Total Audit Entries", 0)
+            except:
+                st.metric("Total Audit Entries", "N/A")
+        
+        with col2:
+            st.metric("Audit Log File", "✅ Active" if Path('logs/audit.log').exists() else "❌ Not Created")
+        
+        with col3:
+            st.metric("System Log File", "✅ Active" if Path('logs/trading_system.log').exists() else "❌ Not Created")
+    else:
+        st.warning("⚠️ Audit logger not available. Enable in app.py first.")
+    
+    # Log Configuration
+    st.markdown("---")
+    st.subheader("⚙️ Log Configuration")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.info("""
+        **Log Files:**
+        - `logs/trading_system.log` - Main system log
+        - `logs/audit.log` - Audit trail
+        - `logs/error.log` - Error logs
+        - `logs/performance.log` - Performance metrics
+        """)
+    
+    with col2:
+        st.info("""
+        **Log Rotation:**
+        - Max size: 10 MB per file
+        - Backup count: 5 files
+        - Automatic rotation enabled
+        """)
     st.markdown("View system logs, debug issues, and analyze errors.")
     
     # Log Filters

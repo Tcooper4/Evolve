@@ -2454,4 +2454,105 @@ with tab5:
                 st.warning("Unable to calculate rolling metrics")
         else:
             st.warning(f"Need at least {window_size} days of data. Current: {len(returns)} days")
+        
+        st.markdown("---")
+        
+        # Risk Driver Analysis
+        st.subheader("🔬 Risk Driver Analysis")
+        
+        st.write("""
+        Identify the key drivers of portfolio risk using causal analysis.
+        Understand what factors contribute most to VaR and overall risk exposure.
+        """)
+        
+        if st.button("Analyze Risk Drivers", key="analyze_risk_drivers"):
+            try:
+                from causal.driver_analysis import DriverAnalysis
+                
+                driver_analysis = DriverAnalysis()
+                
+                with st.spinner("Analyzing risk drivers..."):
+                    # Get portfolio data
+                    portfolio_data = st.session_state.get('portfolio_data')
+                    
+                    # If portfolio_data not available, try to construct from positions
+                    if portfolio_data is None:
+                        # Try to get positions from portfolio manager
+                        if st.session_state.portfolio_manager is not None:
+                            try:
+                                positions = st.session_state.portfolio_manager.get_positions()
+                                if positions:
+                                    # Construct portfolio data from positions
+                                    portfolio_data = {
+                                        'positions': positions,
+                                        'portfolio_value': portfolio_value if 'portfolio_value' in locals() else 100000,
+                                        'returns': returns if 'returns' in locals() else pd.Series()
+                                    }
+                            except:
+                                pass
+                    
+                    if portfolio_data is not None:
+                        try:
+                            risk_drivers = driver_analysis.identify_risk_drivers(
+                                portfolio_data=portfolio_data
+                            )
+                            
+                            if risk_drivers and len(risk_drivers) > 0:
+                                st.write("**Top Risk Drivers:**")
+                                
+                                # Display top 5 drivers
+                                for i, driver in enumerate(risk_drivers[:5], 1):
+                                    st.write(f"{i}. **{driver.get('name', 'Unknown')}**")
+                                    st.write(f"   - Impact on VaR: {driver.get('var_impact', 0):.2%}")
+                                    st.write(f"   - Contribution to risk: {driver.get('risk_contribution', 0):.2%}")
+                                    if 'description' in driver:
+                                        st.caption(f"   {driver['description']}")
+                                    st.write("")
+                                
+                                # Visualize risk decomposition
+                                if len(risk_drivers) >= 2:
+                                    fig = px.pie(
+                                        values=[d.get('risk_contribution', 0) for d in risk_drivers[:5]],
+                                        names=[d.get('name', 'Unknown') for d in risk_drivers[:5]],
+                                        title='Risk Decomposition - Top 5 Drivers'
+                                    )
+                                    st.plotly_chart(fig, use_container_width=True)
+                                
+                                # Detailed driver analysis
+                                with st.expander("📊 Detailed Risk Driver Analysis", expanded=False):
+                                    drivers_df = pd.DataFrame(risk_drivers)
+                                    if not drivers_df.empty:
+                                        # Sort by risk contribution
+                                        drivers_df = drivers_df.sort_values('risk_contribution', ascending=False)
+                                        
+                                        # Display table
+                                        display_cols = ['name', 'risk_contribution', 'var_impact']
+                                        available_cols = [col for col in display_cols if col in drivers_df.columns]
+                                        
+                                        if available_cols:
+                                            display_df = drivers_df[available_cols].copy()
+                                            display_df.columns = [col.replace('_', ' ').title() for col in display_df.columns]
+                                            display_df['Risk Contribution'] = display_df['Risk Contribution'].apply(lambda x: f"{x:.2%}")
+                                            display_df['Var Impact'] = display_df['Var Impact'].apply(lambda x: f"{x:.2%}")
+                                            st.dataframe(display_df, use_container_width=True, hide_index=True)
+                            else:
+                                st.warning("No risk drivers identified. Check portfolio data availability.")
+                        except Exception as e:
+                            st.error(f"Error analyzing risk drivers: {e}")
+                            import traceback
+                            st.code(traceback.format_exc())
+                    else:
+                        st.warning("⚠️ Portfolio data not available. Please load portfolio positions first.")
+                        st.info("""
+                        To use risk driver analysis:
+                        1. Load portfolio positions in the Risk Dashboard tab
+                        2. Or configure portfolio data in session state
+                        """)
+            
+            except ImportError:
+                st.error("Driver analysis not available. Make sure causal analysis modules are installed.")
+            except Exception as e:
+                st.error(f"Error: {e}")
+                import traceback
+                st.code(traceback.format_exc())
 

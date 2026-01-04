@@ -911,6 +911,88 @@ with tab1:
 
     # Display position table
     st.dataframe(positions_df, use_container_width=True)
+    
+    st.markdown("---")
+    
+    # Position Consolidation
+    st.subheader("🔄 Position Consolidation")
+    
+    st.write("""
+    Consolidate positions by eliminating small positions and merging similar ones.
+    Helps maintain a focused portfolio with meaningful position sizes.
+    """)
+    
+    if st.button("Consolidate Positions", key="consolidate_positions"):
+        try:
+            from trading.optimization.utils.consolidator import PositionConsolidator
+            
+            consolidator = PositionConsolidator()
+            
+            with st.spinner("Consolidating positions..."):
+                # Get current positions from portfolio
+                positions = portfolio.state.open_positions
+                
+                # Convert positions to list format for consolidator
+                positions_list = []
+                for pos in positions:
+                    positions_list.append({
+                        'symbol': pos.symbol,
+                        'size': pos.size,
+                        'entry_price': pos.entry_price,
+                        'direction': pos.direction.value,
+                        'strategy': pos.strategy,
+                        'value': pos.size * pos.entry_price
+                    })
+                
+                if positions_list:
+                    consolidated = consolidator.consolidate_positions(
+                        positions=positions_list,
+                        min_position_size=100,  # Minimum $100 position
+                        max_positions=20  # Max 20 holdings
+                    )
+                    
+                    st.success("✅ Positions consolidated!")
+                    
+                    # Show changes
+                    st.write("**Changes:**")
+                    st.write(f"- Before: {len(positions_list)} positions")
+                    st.write(f"- After: {len(consolidated.get('positions', []))} positions")
+                    st.write(f"- Eliminated: {consolidated.get('eliminated_count', 0)} small positions")
+                    st.write(f"- Merged: {consolidated.get('merged_count', 0)} similar positions")
+                    
+                    # Display consolidated positions
+                    if 'positions' in consolidated and len(consolidated['positions']) > 0:
+                        consolidated_df = pd.DataFrame(consolidated['positions'])
+                        st.dataframe(consolidated_df, use_container_width=True)
+                        
+                        # Show consolidation details
+                        if 'consolidation_details' in consolidated:
+                            with st.expander("📊 Consolidation Details", expanded=False):
+                                st.write("**Eliminated Positions:**")
+                                if 'eliminated' in consolidated['consolidation_details']:
+                                    for pos in consolidated['consolidation_details']['eliminated']:
+                                        st.write(f"• {pos.get('symbol', 'Unknown')}: ${pos.get('value', 0):.2f} (below minimum)")
+                                
+                                st.write("**Merged Positions:**")
+                                if 'merged' in consolidated['consolidation_details']:
+                                    for merge_group in consolidated['consolidation_details']['merged']:
+                                        st.write(f"• Merged {len(merge_group)} positions into one")
+                        
+                        if st.button("Apply Consolidation", key="apply_consolidation"):
+                            st.info("💡 Consolidation application would update portfolio positions. This is a preview.")
+                            st.session_state.consolidated_positions = consolidated['positions']
+                            st.success("Consolidation preview saved! Apply changes in portfolio manager.")
+                    else:
+                        st.info("No positions to consolidate or all positions meet criteria.")
+                else:
+                    st.info("No open positions to consolidate.")
+        
+        except ImportError:
+            st.error("Consolidator not available. Make sure trading.optimization.utils.consolidator is available.")
+        except Exception as e:
+            st.error(f"Error consolidating positions: {e}")
+            import traceback
+            st.code(traceback.format_exc())
 
     st.markdown("---")
 

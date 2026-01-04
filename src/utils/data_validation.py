@@ -387,6 +387,100 @@ class DataValidator:
         logger.info("✅ Data normalization completed")
         return df_normalized
 
+    def validate_market_data(self, data: pd.DataFrame) -> Any:
+        """
+        Validate market data and return a validation result object.
+
+        Args:
+            data: Market data DataFrame
+
+        Returns:
+            Validation result object with is_valid and errors attributes
+        """
+        is_valid, error_message = self.validate_dataframe(data)
+        
+        # Create a simple result object
+        class ValidationResult:
+            def __init__(self, is_valid: bool, errors: List[str]):
+                self.is_valid = is_valid
+                self.errors = errors
+        
+        errors = [error_message] if not is_valid and error_message else []
+        if not is_valid:
+            errors.extend(self.validation_results.get("errors", []))
+        
+        return ValidationResult(is_valid, errors)
+
+    def get_quality_metrics(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Get data quality metrics for UI display.
+
+        Args:
+            data: Market data DataFrame
+
+        Returns:
+            Dictionary with quality metrics
+        """
+        if data is None or data.empty:
+            return {
+                "completeness": 0.0,
+                "missing_count": 0,
+                "outliers": 0,
+                "overall_quality": 0,
+                "issues": ["Data is empty"]
+            }
+        
+        # Calculate completeness
+        total_cells = len(data) * len(data.columns)
+        missing_cells = data.isna().sum().sum()
+        completeness = 1.0 - (missing_cells / total_cells) if total_cells > 0 else 0.0
+        
+        # Count missing values
+        missing_count = int(missing_cells)
+        
+        # Detect outliers (using IQR method for numeric columns)
+        outliers = 0
+        numeric_cols = data.select_dtypes(include=[np.number]).columns
+        for col in numeric_cols:
+            Q1 = data[col].quantile(0.25)
+            Q3 = data[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+            col_outliers = ((data[col] < lower_bound) | (data[col] > upper_bound)).sum()
+            outliers += int(col_outliers)
+        
+        # Calculate overall quality score (0-100)
+        quality_score = completeness * 100
+        if missing_count > 0:
+            quality_score -= min(20, missing_count * 0.1)
+        if outliers > len(data) * 0.1:  # More than 10% outliers
+            quality_score -= 10
+        
+        quality_score = max(0, min(100, quality_score))
+        
+        # Collect issues
+        issues = []
+        if completeness < 0.95:
+            issues.append(f"Low completeness: {completeness:.1%}")
+        if missing_count > 0:
+            issues.append(f"Missing values: {missing_count}")
+        if outliers > len(data) * 0.1:
+            issues.append(f"High outlier count: {outliers}")
+        
+        # Validate data structure
+        is_valid, error_msg = self.validate_dataframe(data)
+        if not is_valid:
+            issues.append(f"Validation error: {error_msg}")
+        
+        return {
+            "completeness": completeness,
+            "missing_count": missing_count,
+            "outliers": outliers,
+            "overall_quality": quality_score,
+            "issues": issues
+        }
+
 
 def validate_data_for_training(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any]]:
     """

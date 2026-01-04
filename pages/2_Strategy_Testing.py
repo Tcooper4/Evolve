@@ -31,7 +31,7 @@ from trading.strategies.custom_strategy_handler import CustomStrategyHandler
 from trading.strategies.ensemble import WeightedEnsembleStrategy, EnsembleConfig
 from trading.strategies.ensemble import create_ensemble_strategy
 from trading.backtesting.monte_carlo import MonteCarloSimulator, MonteCarloConfig
-from trading.backtesting.evaluator import ModelEvaluator
+from trading.backtesting.evaluator import BacktestEvaluator
 
 st.set_page_config(
     page_title="Strategy Development & Testing",
@@ -56,13 +56,14 @@ st.title("🔄 Strategy Development & Testing")
 st.markdown("Comprehensive strategy development, testing, and optimization tools")
 
 # Create tabbed interface
-tab1, tab2, tab3, tab4, tab5, tab6, tab_research = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab_rl, tab_research = st.tabs([
     "🚀 Quick Backtest",
     "🔧 Strategy Builder",
     "💻 Advanced Editor",
     "🎯 Strategy Combos",
     "📊 Strategy Comparison",
     "🔬 Advanced Analysis",
+    "🤖 RL Training",  # NEW TAB
     "🤖 AI Strategy Research"  # NEW TAB
 ])
 
@@ -185,19 +186,47 @@ with tab1:
                 import traceback
                 st.code(traceback.format_exc())
         
-        # Strategy selection
+        # Strategy selection using UI component
         run_backtest = False  # Initialize before use
         if st.session_state.loaded_data is not None:
             st.markdown("---")
             st.subheader("🎯 Strategy Selection")
             
-            strategy_name = st.selectbox(
-                "Select Strategy",
-                list(STRATEGY_REGISTRY.keys())
-            )
-            
-            strategy_info = STRATEGY_REGISTRY[strategy_name]
-            st.info(strategy_info["description"])
+            try:
+                from trading.ui.strategy_components import render_strategy_selector
+                
+                strategy_name = render_strategy_selector(key="quick_backtest_strategy")
+                
+                if strategy_name:
+                    strategy_info = STRATEGY_REGISTRY.get(strategy_name, {})
+                    if strategy_info:
+                        st.info(strategy_info.get("description", "No description available"))
+                    else:
+                        # Fallback if strategy not in registry
+                        strategy_name = st.selectbox(
+                            "Select Strategy",
+                            list(STRATEGY_REGISTRY.keys()),
+                            key="fallback_strategy"
+                        )
+                        strategy_info = STRATEGY_REGISTRY[strategy_name]
+                        st.info(strategy_info["description"])
+                else:
+                    # Fallback if component returns None
+                    strategy_name = st.selectbox(
+                        "Select Strategy",
+                        list(STRATEGY_REGISTRY.keys()),
+                        key="fallback_strategy"
+                    )
+                    strategy_info = STRATEGY_REGISTRY[strategy_name]
+                    st.info(strategy_info["description"])
+            except ImportError:
+                # Fallback to original code
+                strategy_name = st.selectbox(
+                    "Select Strategy",
+                    list(STRATEGY_REGISTRY.keys())
+                )
+                strategy_info = STRATEGY_REGISTRY[strategy_name]
+                st.info(strategy_info["description"])
             
             # Dynamic parameter inputs
             st.markdown("**Parameters:**")
@@ -211,6 +240,81 @@ with tab1:
                         value=param_config["default"],
                         step=param_config.get("step", 1)
                     )
+            
+            # Sentiment-Based Strategy
+            st.markdown("---")
+            st.subheader("📰 Sentiment-Based Strategy")
+            
+            use_sentiment = st.checkbox("Include sentiment signals", key="use_sentiment_signals")
+            
+            sentiment_threshold = 0.3
+            sentiment_signals_data = None
+            
+            if use_sentiment:
+                try:
+                    from trading.signals.sentiment_signals import SentimentSignals
+                    
+                    sentiment_threshold = st.slider(
+                        "Sentiment Threshold",
+                        min_value=0.1,
+                        max_value=0.9,
+                        value=0.3,
+                        step=0.1,
+                        help="Minimum sentiment score to trigger a signal"
+                    )
+                    
+                    if st.button("Generate Sentiment Signals", key="generate_sentiment_signals"):
+                        with st.spinner("Generating sentiment signals..."):
+                            sentiment_signals = SentimentSignals()
+                            
+                            # Get symbol from session state or use default
+                            symbol = st.session_state.get('backtest_symbol', 'AAPL')
+                            data = st.session_state.loaded_data.copy()
+                            
+                            # Generate signals
+                            signals = sentiment_signals.generate_signals(
+                                symbol=symbol,
+                                price_data=data,
+                                sentiment_threshold=sentiment_threshold
+                            )
+                            
+                            sentiment_signals_data = signals
+                            
+                            st.success("✅ Sentiment signals generated!")
+                            
+                            # Display signal summary
+                            col_sig1, col_sig2 = st.columns(2)
+                            
+                            with col_sig1:
+                                st.metric("Buy Signals", signals.get('buy_count', 0))
+                            with col_sig2:
+                                st.metric("Sell Signals", signals.get('sell_count', 0))
+                            
+                            # Show recent signals
+                            if 'signal_history' in signals and len(signals['signal_history']) > 0:
+                                st.markdown("**Recent Signals:**")
+                                recent_signals = signals['signal_history'][-10:]
+                                signals_df = pd.DataFrame(recent_signals)
+                                
+                                # Format the dataframe for display
+                                if not signals_df.empty:
+                                    # Ensure date column is formatted
+                                    if 'date' in signals_df.columns:
+                                        signals_df['date'] = pd.to_datetime(signals_df['date']).dt.strftime('%Y-%m-%d')
+                                    elif 'timestamp' in signals_df.columns:
+                                        signals_df['timestamp'] = pd.to_datetime(signals_df['timestamp']).dt.strftime('%Y-%m-%d')
+                                    
+                                    st.dataframe(signals_df, use_container_width=True)
+                            
+                            # Store in session state for use in backtest
+                            st.session_state.sentiment_signals = signals
+                
+                except ImportError:
+                    st.warning("⚠️ Sentiment signals not available. Install required dependencies.")
+                except Exception as e:
+                    st.error(f"Error generating sentiment signals: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
             
             # Backtest settings
             st.markdown("---")
@@ -322,62 +426,317 @@ with tab1:
                 import traceback
                 st.code(traceback.format_exc())
         
-        # Display results
+        # Display results using UI components
         if st.session_state.get('backtest_results'):
             results = st.session_state.backtest_results
             
-            # Metrics
-            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-            
-            with col_m1:
-                total_return = results.get('total_return', 0) * 100
-                st.metric("Total Return", f"{total_return:.2f}%")
-            
-            with col_m2:
-                sharpe = results.get('sharpe_ratio', 0)
-                st.metric("Sharpe Ratio", f"{sharpe:.2f}")
-            
-            with col_m3:
-                max_dd = results.get('max_drawdown', 0) * 100
-                st.metric("Max Drawdown", f"{max_dd:.2f}%")
-            
-            with col_m4:
-                win_rate = results.get('win_rate', 0) * 100
-                st.metric("Win Rate", f"{win_rate:.1f}%")
-            
-            # Equity curve
-            if 'equity_curve' in results and not results['equity_curve'].empty:
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=results['equity_curve'].index,
-                    y=results['equity_curve']['equity'],
-                    mode='lines',
-                    name='Portfolio Value',
-                    line=dict(color='green', width=2)
-                ))
+            try:
+                from trading.ui.strategy_components import render_backtest_results, render_strategy_metrics, render_trade_list
                 
-                fig.update_layout(
-                    title="Equity Curve",
-                    xaxis_title="Date",
-                    yaxis_title="Portfolio Value ($)",
-                    height=400
-                )
-                st.plotly_chart(fig, width='stretch')
-            
-            # Trade list
-            if 'trades' in results and len(results['trades']) > 0:
-                st.markdown("**Trade History:**")
-                trades_df = pd.DataFrame(results['trades'])
-                st.dataframe(trades_df, width='stretch')
+                # Prepare backtest results for component
+                backtest_data = {
+                    'equity_curve': results.get('equity_curve', pd.DataFrame()),
+                    'returns': results.get('returns', None),
+                    'drawdown': results.get('drawdown', None),
+                    'strategy_name': st.session_state.get('backtest_strategy', 'Strategy'),
+                    'dates': results['equity_curve'].index if 'equity_curve' in results and not results['equity_curve'].empty else None
+                }
                 
-                # Download trades
-                csv = trades_df.to_csv(index=False)
-                st.download_button(
-                    "📥 Download Trades",
-                    data=csv,
-                    file_name=f"{st.session_state.get('backtest_symbol', 'symbol')}_{st.session_state.get('backtest_strategy', 'strategy')}_trades.csv",
-                    mime="text/csv"
-                )
+                # Render backtest results (chart)
+                render_backtest_results(backtest_data)
+                
+                # Prepare strategy stats
+                strategy_stats = {
+                    'total_return': results.get('total_return', 0),
+                    'sharpe_ratio': results.get('sharpe_ratio', 0),
+                    'max_drawdown': results.get('max_drawdown', 0),
+                    'win_rate': results.get('win_rate', 0),
+                    'total_trades': len(results.get('trades', [])),
+                    'volatility': results.get('volatility', 0)
+                }
+                
+                # Render strategy metrics
+                render_strategy_metrics(strategy_stats)
+                
+                # Render trade list
+                if 'trades' in results and len(results['trades']) > 0:
+                    trades_df = pd.DataFrame(results['trades'])
+                    render_trade_list(trades_df)
+                    
+                    # Download button
+                    csv = trades_df.to_csv(index=False)
+                    st.download_button(
+                        "📥 Download Trades",
+                        data=csv,
+                        file_name=f"{st.session_state.get('backtest_symbol', 'symbol')}_{st.session_state.get('backtest_strategy', 'strategy')}_trades.csv",
+                        mime="text/csv"
+                    )
+                    
+            except ImportError:
+                # Fallback to original display code
+                col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+                
+                with col_m1:
+                    total_return = results.get('total_return', 0) * 100
+                    st.metric("Total Return", f"{total_return:.2f}%")
+                
+                with col_m2:
+                    sharpe = results.get('sharpe_ratio', 0)
+                    st.metric("Sharpe Ratio", f"{sharpe:.2f}")
+                
+                with col_m3:
+                    max_dd = results.get('max_drawdown', 0) * 100
+                    st.metric("Max Drawdown", f"{max_dd:.2f}%")
+                
+                with col_m4:
+                    win_rate = results.get('win_rate', 0) * 100
+                    st.metric("Win Rate", f"{win_rate:.1f}%")
+                
+                # Equity curve
+                if 'equity_curve' in results and not results['equity_curve'].empty:
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(
+                        x=results['equity_curve'].index,
+                        y=results['equity_curve']['equity'],
+                        mode='lines',
+                        name='Portfolio Value',
+                        line=dict(color='green', width=2)
+                    ))
+                    
+                    fig.update_layout(
+                        title="Equity Curve",
+                        xaxis_title="Date",
+                        yaxis_title="Portfolio Value ($)",
+                        height=400
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                # Trade list
+                if 'trades' in results and len(results['trades']) > 0:
+                    st.markdown("**Trade History:**")
+                    trades_df = pd.DataFrame(results['trades'])
+                    st.dataframe(trades_df, use_container_width=True)
+                    
+                    csv = trades_df.to_csv(index=False)
+                    st.download_button(
+                        "📥 Download Trades",
+                        data=csv,
+                        file_name=f"{st.session_state.get('backtest_symbol', 'symbol')}_{st.session_state.get('backtest_strategy', 'strategy')}_trades.csv",
+                        mime="text/csv"
+                    )
+            
+            # Walk-Forward Analysis
+            st.markdown("---")
+            st.subheader("🚶 Walk-Forward Analysis")
+            
+            st.write("""
+            Walk-forward analysis tests strategy robustness by repeatedly retraining 
+            on expanding windows and testing on out-of-sample data.
+            """)
+            
+            enable_walk_forward = st.checkbox("Enable walk-forward validation", key="enable_walk_forward")
+            
+            if enable_walk_forward:
+                if st.session_state.loaded_data is None:
+                    st.warning("⚠️ Please load data first to run walk-forward analysis")
+                else:
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        train_window = st.slider(
+                            "Training window (days)",
+                            min_value=30,
+                            max_value=365,
+                            value=180,
+                            key="wf_train_window"
+                        )
+                        
+                        test_window = st.slider(
+                            "Test window (days)",
+                            min_value=7,
+                            max_value=90,
+                            value=30,
+                            key="wf_test_window"
+                        )
+                    
+                    with col2:
+                        step_size = st.slider(
+                            "Step size (days)",
+                            min_value=7,
+                            max_value=90,
+                            value=30,
+                            help="How far to move window each iteration",
+                            key="wf_step_size"
+                        )
+                        
+                        num_iterations = st.number_input(
+                            "Number of iterations",
+                            min_value=3,
+                            max_value=20,
+                            value=6,
+                            key="wf_num_iterations"
+                        )
+                    
+                    if st.button("Run Walk-Forward Analysis", key="run_walk_forward", type="primary"):
+                        try:
+                            from trading.validation.walk_forward_utils import WalkForwardValidator
+                            
+                            validator = WalkForwardValidator()
+                            
+                            # Get strategy and data
+                            data = st.session_state.loaded_data.copy()
+                            
+                            # Get selected strategy
+                            if 'selected_strategy' in st.session_state and st.session_state.selected_strategy:
+                                selected_strategy_name = st.session_state.selected_strategy
+                            elif 'backtest_strategy' in st.session_state:
+                                selected_strategy_name = st.session_state.backtest_strategy
+                            else:
+                                selected_strategy_name = strategy_name if 'strategy_name' in locals() else None
+                            
+                            if selected_strategy_name is None:
+                                st.error("Please select a strategy first")
+                            else:
+                                # Get strategy class
+                                try:
+                                    from trading.strategies.registry import get_strategy_registry
+                                    registry = get_strategy_registry()
+                                    strategy_info = registry.get_strategy(selected_strategy_name)
+                                    
+                                    if strategy_info:
+                                        strategy_class = strategy_info.get("class")
+                                        
+                                        # Initialize strategy with default params
+                                        if strategy_class:
+                                            # Try to get params from session state or use defaults
+                                            strategy_params = st.session_state.get(f'{selected_strategy_name}_params', {})
+                                            config_class = strategy_info.get("config_class")
+                                            
+                                            if config_class:
+                                                config = config_class(**strategy_params)
+                                                selected_strategy = strategy_class(config)
+                                            else:
+                                                selected_strategy = strategy_class(**strategy_params)
+                                        else:
+                                            st.error("Could not initialize strategy class")
+                                            selected_strategy = None
+                                    else:
+                                        st.error(f"Strategy '{selected_strategy_name}' not found in registry")
+                                        selected_strategy = None
+                                except Exception as e:
+                                    st.error(f"Error initializing strategy: {e}")
+                                    selected_strategy = None
+                                
+                                if selected_strategy:
+                                    with st.spinner("Running walk-forward validation..."):
+                                        # Progress bar
+                                        progress_bar = st.progress(0)
+                                        status_text = st.empty()
+                                        
+                                        # Progress callback
+                                        def progress_callback(iteration, total):
+                                            progress_bar.progress(iteration / total)
+                                            status_text.text(f"Iteration {iteration}/{total}")
+                                        
+                                        try:
+                                            results = validator.walk_forward_test(
+                                                strategy=selected_strategy,
+                                                data=data,
+                                                train_window=train_window,
+                                                test_window=test_window,
+                                                step_size=step_size,
+                                                num_iterations=num_iterations,
+                                                progress_callback=progress_callback
+                                            )
+                                            
+                                            progress_bar.empty()
+                                            status_text.empty()
+                                            
+                                            st.success("✅ Walk-forward analysis complete!")
+                                            
+                                            # Display results
+                                            st.subheader("📊 Walk-Forward Results")
+                                            
+                                            # Summary metrics
+                                            col1, col2, col3, col4 = st.columns(4)
+                                            
+                                            with col1:
+                                                avg_return = results.get('avg_return', 0)
+                                                st.metric("Avg Return", f"{avg_return:.2%}")
+                                            
+                                            with col2:
+                                                consistency = results.get('consistency_score', 0)
+                                                st.metric("Consistency", f"{consistency:.1%}")
+                                            
+                                            with col3:
+                                                win_rate = results.get('win_rate', 0)
+                                                st.metric("Win Rate", f"{win_rate:.1%}")
+                                            
+                                            with col4:
+                                                num_iter = len(results.get('iterations', []))
+                                                st.metric("Iterations", num_iter)
+                                            
+                                            # Iteration results
+                                            if 'iterations' in results and len(results['iterations']) > 0:
+                                                iterations_df = pd.DataFrame(results['iterations'])
+                                                
+                                                # Chart of returns by iteration
+                                                fig = go.Figure()
+                                                
+                                                fig.add_trace(go.Bar(
+                                                    x=iterations_df['iteration'] if 'iteration' in iterations_df.columns else range(len(iterations_df)),
+                                                    y=iterations_df['return'] if 'return' in iterations_df.columns else iterations_df.iloc[:, 0],
+                                                    name='Return',
+                                                    marker_color=['green' if r > 0 else 'red' for r in (iterations_df['return'] if 'return' in iterations_df.columns else iterations_df.iloc[:, 0])]
+                                                ))
+                                                
+                                                fig.update_layout(
+                                                    title='Returns by Walk-Forward Iteration',
+                                                    xaxis_title='Iteration',
+                                                    yaxis_title='Return',
+                                                    yaxis_tickformat='.2%',
+                                                    height=400
+                                                )
+                                                
+                                                st.plotly_chart(fig, use_container_width=True)
+                                                
+                                                # Detailed results table
+                                                with st.expander("📋 Detailed Results", expanded=False):
+                                                    st.dataframe(iterations_df, use_container_width=True)
+                                            
+                                            # Interpretation
+                                            st.subheader("💡 Interpretation")
+                                            
+                                            consistency = results.get('consistency_score', 0)
+                                            avg_return = results.get('avg_return', 0)
+                                            
+                                            if consistency > 0.7:
+                                                st.success(f"✅ Strategy shows good consistency ({consistency:.1%})")
+                                            elif consistency > 0.5:
+                                                st.warning(f"⚠️ Strategy shows moderate consistency ({consistency:.1%})")
+                                            else:
+                                                st.error(f"❌ Strategy shows poor consistency ({consistency:.1%})")
+                                            
+                                            if avg_return > 0:
+                                                st.info(f"Average return across all iterations: {avg_return:.2%}")
+                                            else:
+                                                st.warning(f"Negative average return: {avg_return:.2%}")
+                                        
+                                        except Exception as e:
+                                            progress_bar.empty()
+                                            status_text.empty()
+                                            st.error(f"Error in walk-forward test: {e}")
+                                            import traceback
+                                            st.code(traceback.format_exc())
+                                else:
+                                    st.error("Could not initialize strategy for walk-forward analysis")
+                        
+                        except ImportError:
+                            st.error("Walk-forward validator not available. Make sure trading.validation.walk_forward_utils is available.")
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+                            import traceback
+                            st.code(traceback.format_exc())
 
 with tab2:
     st.header("Strategy Builder")
@@ -2062,7 +2421,7 @@ with tab6:
                             strategy = SMAStrategy(SMAConfig())
                         
                         # Run walk-forward analysis
-                        evaluator = ModelEvaluator(data, initial_cash=initial_capital)
+                        evaluator = BacktestEvaluator(data, initial_cash=initial_capital)
                         
                         # Simple walk-forward implementation
                         total_days = len(data)
@@ -2886,4 +3245,194 @@ with tab_research:
         st.error("Strategy Research Agent not available")
     except Exception as e:
         st.error(f"Error: {e}")
+
+# Tab RL: Reinforcement Learning Training
+with tab_rl:
+    st.header("🤖 Reinforcement Learning Strategy")
+    st.write("Train an AI agent to learn optimal trading strategies")
+    
+    # RL configuration
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        episodes = st.slider("Training Episodes", 100, 5000, 1000)
+        learning_rate = st.select_slider(
+            "Learning Rate",
+            options=[0.0001, 0.001, 0.01, 0.1],
+            value=0.001
+        )
+    
+    with col2:
+        reward_type = st.selectbox(
+            "Reward Function",
+            ["Sharpe Ratio", "Total Return", "Risk-Adjusted Return"]
+        )
+        
+        gamma = st.slider("Discount Factor (γ)", 0.9, 0.99, 0.95, 0.01)
+    
+    if st.button("🚀 Train RL Agent", type="primary"):
+        if 'forecast_data' not in st.session_state and 'loaded_data' not in st.session_state:
+            st.error("Please load data first")
+        else:
+            try:
+                from rl.rl_trader import RLTrader
+                
+                # Use forecast_data if available, otherwise use loaded_data
+                if 'forecast_data' in st.session_state:
+                    data = st.session_state.forecast_data
+                else:
+                    data = st.session_state.loaded_data
+                
+                if data is None:
+                    st.error("No data available. Please load data first.")
+                else:
+                    with st.spinner("Training RL agent..."):
+                        # Progress bar
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+                        
+                        # Initialize RL agent
+                        agent = RLTrader(
+                            learning_rate=learning_rate,
+                            gamma=gamma,
+                            reward_function=reward_type.lower().replace(' ', '_')
+                        )
+                        
+                        # Training loop
+                        rewards_history = []
+                        
+                        for episode in range(episodes):
+                            # Train one episode
+                            reward = agent.train_episode(data)
+                            rewards_history.append(reward)
+                            
+                            # Update progress
+                            if episode % 10 == 0:
+                                progress_bar.progress((episode + 1) / episodes)
+                                status_text.text(f"Episode {episode+1}/{episodes} - Reward: {reward:.2f}")
+                        
+                        progress_bar.empty()
+                        status_text.empty()
+                        
+                        st.success("✅ RL agent training complete!")
+                        
+                        # Show results
+                        st.subheader("📊 Training Results")
+                        
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            st.metric("Final Reward", f"{rewards_history[-1]:.2f}")
+                        with col2:
+                            avg_reward = np.mean(rewards_history[-100:]) if len(rewards_history) >= 100 else np.mean(rewards_history)
+                            st.metric("Avg Reward (last 100)", f"{avg_reward:.2f}")
+                        with col3:
+                            if len(rewards_history) > 0 and rewards_history[0] != 0:
+                                improvement = ((rewards_history[-1] / rewards_history[0]) - 1) * 100
+                                st.metric("Improvement", f"{improvement:+.1f}%")
+                            else:
+                                st.metric("Improvement", "N/A")
+                        
+                        # Reward curve
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(
+                            y=rewards_history,
+                            name='Episode Reward',
+                            line=dict(color='blue', width=1)
+                        ))
+                        
+                        # Add moving average
+                        window = 50
+                        if len(rewards_history) >= window:
+                            moving_avg = pd.Series(rewards_history).rolling(window).mean()
+                            fig.add_trace(go.Scatter(
+                                y=moving_avg,
+                                name=f'MA({window})',
+                                line=dict(color='red', width=2)
+                            ))
+                        
+                        fig.update_layout(
+                            title='Training Progress',
+                            xaxis_title='Episode',
+                            yaxis_title='Reward'
+                        )
+                        
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+                        # Store agent in session state
+                        st.session_state.rl_agent = agent
+                        st.session_state.rl_rewards_history = rewards_history
+                        
+                        # Test the trained agent
+                        st.subheader("🧪 Test Trained Agent")
+                        
+                        if st.button("Run Backtest with RL Agent"):
+                            try:
+                                test_results = agent.backtest(data)
+                                
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("Total Return", f"{test_results.get('total_return', 0):.2%}")
+                                with col2:
+                                    st.metric("Sharpe Ratio", f"{test_results.get('sharpe_ratio', 0):.2f}")
+                                with col3:
+                                    st.metric("Max Drawdown", f"{test_results.get('max_drawdown', 0):.2%}")
+                                
+                                # Equity curve
+                                if 'dates' in test_results and 'equity_curve' in test_results:
+                                    fig_equity = go.Figure()
+                                    fig_equity.add_trace(go.Scatter(
+                                        x=test_results['dates'],
+                                        y=test_results['equity_curve'],
+                                        name='RL Agent',
+                                        line=dict(color='green')
+                                    ))
+                                    
+                                    fig_equity.update_layout(
+                                        title='RL Agent Performance',
+                                        xaxis_title='Date',
+                                        yaxis_title='Portfolio Value'
+                                    )
+                                    
+                                    st.plotly_chart(fig_equity, use_container_width=True)
+                                
+                                st.session_state.rl_backtest_results = test_results
+                            except Exception as e:
+                                st.error(f"Error running backtest: {e}")
+                                import traceback
+                                st.code(traceback.format_exc())
+                        
+                        # Save model
+                        if st.button("💾 Save RL Agent"):
+                            try:
+                                agent.save_model('rl_agent.pkl')
+                                st.success("Agent saved!")
+                            except Exception as e:
+                                st.error(f"Error saving agent: {e}")
+            
+            except ImportError:
+                st.error("RL Trader not available. Please ensure the rl module is properly installed.")
+            except Exception as e:
+                st.error(f"Error: {e}")
+                import traceback
+                st.code(traceback.format_exc())
+    
+    # Display saved agent info if available
+    if 'rl_agent' in st.session_state:
+        st.markdown("---")
+        st.subheader("💾 Saved RL Agent")
+        st.info("RL Agent is loaded and ready to use. You can run backtests or continue training.")
+        
+        if 'rl_backtest_results' in st.session_state:
+            st.markdown("**Last Backtest Results:**")
+            results = st.session_state.rl_backtest_results
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Return", f"{results.get('total_return', 0):.2%}")
+            with col2:
+                st.metric("Sharpe Ratio", f"{results.get('sharpe_ratio', 0):.2f}")
+            with col3:
+                st.metric("Max Drawdown", f"{results.get('max_drawdown', 0):.2%}")
+            with col4:
+                st.metric("Win Rate", f"{results.get('win_rate', 0):.2%}")
 

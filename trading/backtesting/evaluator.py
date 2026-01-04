@@ -23,7 +23,7 @@ from utils.math_utils import calculate_sharpe_ratio
 logger = logging.getLogger(__name__)
 
 
-class ModelEvaluator:
+class BacktestEvaluator:
     """
     Advanced model evaluator with walk-forward backtesting capabilities.
 

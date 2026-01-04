@@ -26,7 +26,7 @@ except ImportError as e:
 logger = logging.getLogger(__name__)
 
 
-class ModelEvaluator:
+class ModelEvaluationUtils:
     """Model evaluation utility class."""
 
     def __init__(self):
