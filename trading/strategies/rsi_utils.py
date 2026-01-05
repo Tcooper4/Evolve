@@ -143,10 +143,11 @@ def calculate_rsi(
             return constant_rsi
 
         # Calculate RSI
-        if PANDAS_TA_AVAILABLE:
-            rsi = ta.rsi(prices, length=period)
-        else:
-            rsi = calculate_rsi_fallback(prices, period)
+        # ALWAYS use our corrected implementation for consistency
+        # pandas_ta has compatibility issues, so use safe_rsi directly
+        from trading.utils.safe_math import safe_rsi
+        logger.info("Using corrected Wilder's smoothing RSI implementation")
+        rsi = safe_rsi(prices, period)
 
         # Normalize RSI values
         rsi = rsi.apply(normalize_rsi_value)
@@ -166,8 +167,9 @@ def calculate_rsi(
 
 
 def calculate_rsi_fallback(prices: pd.Series, period: int = 14) -> pd.Series:
-    """Calculate RSI using manual implementation when pandas_ta is not available.
-    Enhanced with edge case handling.
+    """Calculate RSI using Wilder's smoothing when pandas_ta is not available.
+    
+    This is now just a wrapper around safe_rsi() which implements the correct formula.
 
     Args:
         prices: Price series
@@ -177,31 +179,12 @@ def calculate_rsi_fallback(prices: pd.Series, period: int = 14) -> pd.Series:
         RSI values as pandas Series
     """
     try:
-        # Calculate price differences
-        delta = prices.diff()
-
-        # Handle case where all differences are zero
-        if delta.abs().sum() == 0:
-            logger.warning("No price changes detected, returning neutral RSI")
-            return pd.Series(50.0, index=prices.index)
-
-        # Separate gains and losses
-        gains = delta.where(delta > 0, 0)
-        losses = -delta.where(delta < 0, 0)
-
-        # Calculate average gains and losses
-        avg_gains = gains.rolling(window=period, min_periods=1).mean()
-        avg_losses = losses.rolling(window=period, min_periods=1).mean()
-
-        # Calculate RS and RSI with division by zero protection
-        rs = avg_gains / avg_losses.replace(0, np.nan)
-        rsi = 100 - (100 / (1 + rs))
-
-        # Handle division by zero cases
-        rsi = rsi.fillna(50.0)  # Neutral value for division by zero
-
-        return rsi
-
+        # Import the corrected safe_rsi function
+        from trading.utils.safe_math import safe_rsi
+        
+        logger.info("Using corrected Wilder's smoothing for RSI calculation")
+        return safe_rsi(prices, period)
+        
     except Exception as e:
         logger.error(f"Error in RSI fallback calculation: {e}")
         return pd.Series(50.0, index=prices.index)

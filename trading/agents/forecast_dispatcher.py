@@ -17,7 +17,7 @@ import pandas as pd
 
 from trading.agents.base_agent_interface import AgentConfig, AgentResult, BaseAgent
 from trading.models.arima_model import ARIMAModel
-from trading.models.ensemble_model import EnsembleForecaster
+from trading.models.ensemble_model import EnsembleModel as EnsembleForecaster
 from trading.models.lstm_model import LSTMForecaster
 from trading.models.prophet_model import ProphetForecaster
 from trading.models.xgboost_model import XGBoostForecaster

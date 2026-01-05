@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 from .base_strategy import BaseStrategy
 from .registry import StrategyRegistry
 
@@ -391,9 +393,13 @@ class AsyncStrategyRunner:
         if len(signals_list) == 1:
             return signals_list[0]
 
-        # Normalize weights
+        # Normalize weights - Safely calculate with division-by-zero protection
         total_weight = sum(weights)
-        normalized_weights = [w / total_weight for w in weights]
+        if total_weight > 1e-10:
+            normalized_weights = [w / total_weight for w in weights]
+        else:
+            # Equal weights if total is zero
+            normalized_weights = [1.0 / len(weights) for _ in weights] if len(weights) > 0 else []
 
         # Combine signals
         combined = signals_list[0].copy()
@@ -430,7 +436,7 @@ class AsyncStrategyRunner:
         for signals in signals_list[1:]:
             combined = combined.add(signals, fill_value=0)
 
-        combined = combined / len(signals_list)
+        combined = safe_divide(combined, len(signals_list), default=0.0)
         return combined
 
     def _calculate_performance_metrics(

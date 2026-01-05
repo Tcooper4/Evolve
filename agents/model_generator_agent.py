@@ -1148,7 +1148,7 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
 
                     # Register model in ModelRegistry
                     try:
-                        from trading.models.registry import get_model_registry
+                        from trading.models.model_registry import get_registry as get_model_registry
                         import importlib.util
                         
                         registry = get_model_registry()
@@ -1325,4 +1325,4 @@ def run_model_evolution_sync(
         )
     except Exception as e:
         logger.error(f"Error in model evolution: {e}")
-        return {"error": str(e)}
+        self._config = {"error": str(e)}

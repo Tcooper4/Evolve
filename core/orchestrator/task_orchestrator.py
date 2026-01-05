@@ -18,7 +18,19 @@ import yaml
 # Local imports
 try:
     from utils.cache_utils import cache_result
+except ImportError:
+    def cache_result(func):
+        return func
+
+try:
     from utils.common_helpers import load_config, safe_json_save
+    # Adjust load_config to match expected signature (returns dict directly, not wrapped)
+    def load_config_wrapper(config_path: str) -> Dict[str, Any]:
+        result = load_config(config_path)
+        if isinstance(result, dict) and "result" in result:
+            return result["result"] if result.get("success") else {}
+        return result if isinstance(result, dict) else {}
+    load_config = load_config_wrapper
 except ImportError:
     # Fallback implementations if utils not available
     def safe_json_save(file_path: str, data: Any):
@@ -30,9 +42,6 @@ except ImportError:
             with open(config_path, "r") as f:
                 return yaml.safe_load(f)
         return {}
-
-    def cache_result(func):
-        return func
 
 
 from .task_conditions import TaskConditions

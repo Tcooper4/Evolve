@@ -237,3 +237,94 @@ def retry_on_failure(max_attempts: int = 3, delay: float = 1.0):
         return wrapper
 
     return decorator
+
+
+def load_config(config_file: str) -> Dict[str, Any]:
+    """Load configuration from file.
+    
+    Args:
+        config_file: Path to configuration file
+        
+    Returns:
+        Configuration dictionary with success status
+    """
+    import json
+    from datetime import datetime
+    
+    try:
+        config_path = Path(config_file)
+        
+        if not config_path.exists():
+            return {
+                "success": False,
+                "error": f"Config file not found: {config_file}",
+                "timestamp": datetime.now().isoformat(),
+            }
+        
+        suffix = config_path.suffix.lower()
+        
+        with open(config_path, "r", encoding="utf-8") as f:
+            if suffix == ".json":
+                config = json.load(f)
+            elif suffix in [".yaml", ".yml"]:
+                try:
+                    import yaml
+                except ImportError:
+                    logger.error("PyYAML not installed. Cannot load YAML config.")
+                    return {
+                        "success": False,
+                        "error": "PyYAML not installed",
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                config = yaml.safe_load(f)
+            else:
+                return {
+                    "success": False,
+                    "error": f"Unsupported config format: {suffix}",
+                    "timestamp": datetime.now().isoformat(),
+                }
+        
+        logger.info(f"Config loaded from {config_file}")
+        
+        return {
+            "success": True,
+            "result": config,
+            "message": "Config loaded successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
+        
+    except Exception as e:
+        logger.error(f"Error loading config {config_file}: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
+
+
+def safe_json_save(data: Dict[str, Any], filepath: str) -> bool:
+    """Safely save data to JSON file.
+    
+    Args:
+        data: Data to save
+        filepath: Path to save file
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    import json
+    
+    try:
+        ensure_directory(str(Path(filepath).parent))
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        logger.info(f"Data saved to {filepath}")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving JSON to {filepath}: {e}")
+        return False
+
+
+def safe_json_saver(data: Dict[str, Any], filepath: str) -> bool:
+    """Alias for safe_json_save for backward compatibility."""
+    return safe_json_save(data, filepath)

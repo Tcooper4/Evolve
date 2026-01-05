@@ -147,7 +147,7 @@ class ForecastPostprocessor:
                 pd.Series(forecast_array)
                 .rolling(window=self.config.window_size)
                 .std()
-                .fillna(method="bfill")
+                .bfill()
             )
             volatility = rolling_vol.iloc[-1]
         else:

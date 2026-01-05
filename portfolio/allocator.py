@@ -13,6 +13,7 @@ This module implements various portfolio allocation strategies:
 Supports dynamic rebalancing and risk-adjusted optimization.
 """
 
+import logging
 import warnings
 from dataclasses import dataclass
 from enum import Enum
@@ -24,16 +25,18 @@ from utils.common_helpers import load_config
 
 warnings.filterwarnings("ignore")
 
+logger = logging.getLogger(__name__)
+
 # Try to import scipy
 try:
     from scipy.optimize import minimize
 
     SCIPY_AVAILABLE = True
 except ImportError as e:
-    print(
+    logger.warning(
         "âš ï¸ scipy not available. Disabling optimization-based portfolio allocation."
     )
-    print(f"   Missing: {e}")
+    logger.warning(f"   Missing: {e}")
     minimize = None
     SCIPY_AVAILABLE = False
 
@@ -261,9 +264,13 @@ class PortfolioAllocator:
             def objective(weights):
                 portfolio_return = np.sum(weights * expected_returns)
                 portfolio_volatility = np.sqrt(weights.T @ covariance_matrix @ weights)
-                sharpe_ratio = (
-                    portfolio_return - self.risk_free_rate
-                ) / portfolio_volatility
+                # Avoid division by zero when volatility is zero
+                if portfolio_volatility < 1e-10:
+                    sharpe_ratio = 0.0
+                else:
+                    sharpe_ratio = (
+                        portfolio_return - self.risk_free_rate
+                    ) / portfolio_volatility
                 return -sharpe_ratio  # Minimize negative Sharpe ratio
 
             def constraint_sum(weights):
@@ -368,17 +375,22 @@ class PortfolioAllocator:
 
             if volatility > 0:
                 # Kelly fraction based on Sharpe ratio
-                sharpe_ratio = (expected_return - self.risk_free_rate) / volatility
+                # Avoid division by zero when volatility is zero
+                if volatility < 1e-10:
+                    sharpe_ratio = 0.0
+                else:
+                    sharpe_ratio = (expected_return - self.risk_free_rate) / volatility
                 kelly_fraction = max(0, sharpe_ratio) * self.kelly_fraction
 
                 # Cap at maximum Kelly weight
                 kelly_weights[i] = min(kelly_fraction, self.max_kelly_weight)
 
-        # Normalize weights
-        if np.sum(kelly_weights) > 0:
-            kelly_weights = kelly_weights / np.sum(kelly_weights)
+        # Normalize weights, fallback to equal weights if sum is zero
+        total_weight = np.sum(kelly_weights)
+        if total_weight > 1e-10:
+            kelly_weights = kelly_weights / total_weight
         else:
-            # Fallback to equal weights if no positive Kelly weights
+            # Fallback to equal weights if all kelly weights are zero/negative
             kelly_weights = np.ones(n_assets) / n_assets
 
         return kelly_weights
@@ -391,7 +403,12 @@ class PortfolioAllocator:
 
         # Market equilibrium returns (simplified)
         market_caps = np.array([asset.market_cap or 1.0 for asset in assets])
-        market_caps / np.sum(market_caps)
+        total_cap = np.sum(market_caps)
+        if total_cap > 1e-10:
+            return market_caps / total_cap
+        else:
+            # Fallback to equal weights if market cap data missing
+            return np.ones(len(assets)) / len(assets)
 
         # Equilibrium returns (simplified)
         equilibrium_returns = np.array([asset.expected_return for asset in assets])
@@ -607,7 +624,7 @@ class PortfolioAllocator:
     def _normalize_weights(self, weights: np.ndarray) -> np.ndarray:
         """Normalize weights to sum to 1"""
         total_weight = np.sum(weights)
-        if total_weight > 0:
+        if total_weight > 1e-10:
             return weights / total_weight
         else:
             return np.ones(len(weights)) / len(weights)
@@ -622,16 +639,18 @@ class PortfolioAllocator:
         portfolio_return = np.sum(weights * expected_returns)
         portfolio_variance = weights.T @ covariance_matrix @ weights
         portfolio_volatility = np.sqrt(portfolio_variance)
-        sharpe_ratio = (
-            (portfolio_return - self.risk_free_rate) / portfolio_volatility
-            if portfolio_volatility > 0
-            else 0
-        )
+        # Avoid division by zero when volatility is zero
+        if portfolio_volatility < 1e-10:
+            portfolio_sharpe = 0.0
+        else:
+            portfolio_sharpe = (
+                portfolio_return - self.risk_free_rate
+            ) / portfolio_volatility
 
         return {
             "expected_return": portfolio_return,
             "expected_volatility": portfolio_volatility,
-            "sharpe_ratio": sharpe_ratio,
+            "sharpe_ratio": portfolio_sharpe,
             "variance": portfolio_variance,
         }
 
@@ -689,7 +708,7 @@ class PortfolioAllocator:
                 result = self.allocate_portfolio(assets, strategy)
                 results[strategy.value] = result
             except Exception as e:
-                print(f"Failed to allocate using {strategy.value}: {e}")
+                logger.error(f"Failed to allocate using {strategy.value}: {e}")
 
         return results
 
@@ -790,29 +809,29 @@ if __name__ == "__main__":
     for strategy in strategies:
         try:
             result = allocator.allocate_portfolio(assets, strategy)
-            print(f"\n{strategy.value.upper()} Allocation:")
-            print(f"  Expected Return: {result.expected_return:.3f}")
-            print(f"  Expected Volatility: {result.expected_volatility:.3f}")
-            print(f"  Sharpe Ratio: {result.sharpe_ratio:.3f}")
-            print(f"  Weights: {result.weights}")
+            logger.info(f"\n{strategy.value.upper()} Allocation:")
+            logger.info(f"  Expected Return: {result.expected_return:.3f}")
+            logger.info(f"  Expected Volatility: {result.expected_volatility:.3f}")
+            logger.info(f"  Sharpe Ratio: {result.sharpe_ratio:.3f}")
+            logger.debug(f"  Weights: {result.weights}")
         except Exception as e:
-            print(f"Failed {strategy.value}: {e}")
+            logger.error(f"Failed {strategy.value}: {e}")
 
     # Compare all strategies
-    print("\n" + "=" * 50)
-    print("STRATEGY COMPARISON")
-    print("=" * 50)
+    logger.info("\n" + "=" * 50)
+    logger.info("STRATEGY COMPARISON")
+    logger.info("=" * 50)
 
     comparison = allocator.compare_strategies(assets)
 
     for strategy_name, result in comparison.items():
-        print(f"\n{strategy_name.upper()}:")
-        print(f"  Return: {result.expected_return:.3f}")
-        print(f"  Volatility: {result.expected_volatility:.3f}")
-        print(f"  Sharpe: {result.sharpe_ratio:.3f}")
-        print(f"  Diversification: {result.diversification_ratio:.3f}")
+        logger.info(f"\n{strategy_name.upper()}:")
+        logger.info(f"  Return: {result.expected_return:.3f}")
+        logger.info(f"  Volatility: {result.expected_volatility:.3f}")
+        logger.info(f"  Sharpe: {result.sharpe_ratio:.3f}")
+        logger.info(f"  Diversification: {result.diversification_ratio:.3f}")
 
     # Find optimal strategy
     optimal_strategy, optimal_result = allocator.get_optimal_strategy(assets, "sharpe")
-    print(f"\nOptimal Strategy (Sharpe): {optimal_strategy.value}")
-    print(f"Optimal Sharpe Ratio: {optimal_result.sharpe_ratio:.3f}")
+    logger.info(f"\nOptimal Strategy (Sharpe): {optimal_strategy.value}")
+    logger.info(f"Optimal Sharpe Ratio: {optimal_result.sharpe_ratio:.3f}")

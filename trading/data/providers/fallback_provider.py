@@ -91,19 +91,9 @@ class FallbackDataProvider(BaseDataProvider):
         except Exception as e:
             self.logger.warning(f"Failed to initialize Alpha Vantage provider: {e}")
 
-        # Add mock provider as final fallback
-        mock_config = ProviderConfig(
-            name="mock_fallback",
-            enabled=True,
-            priority=3,
-            rate_limit_per_minute=1000,
-            timeout_seconds=1,
-            retry_attempts=1,
-            custom_config=self.config.custom_config.get("mock", {}),
-        )
-        mock_provider = MockDataProvider(mock_config)
-        self.providers.append(("mock", mock_provider))
-        self.logger.info("Mock provider initialized as final fallback")
+        # Mock provider removed - system will fail if all real providers fail
+        # This ensures we only use real market data
+        self.logger.info("Mock provider disabled - using only real data sources")
 
     def fetch(self, symbol: str, interval: str = "1d", **kwargs) -> pd.DataFrame:
         """Fetch data for a given symbol and interval with fallback logic.
@@ -149,17 +139,15 @@ class FallbackDataProvider(BaseDataProvider):
                 self._log_failure(provider_name, symbol, str(e))
                 continue
 
-        # If all providers fail, return mock data
-        self.logger.error(f"All providers failed for {symbol}, using mock data")
-        mock_provider = self.providers[-1][1]  # Last provider is mock
-        try:
-            data = mock_provider.fetch(symbol, interval, **kwargs)
-            self._update_status_on_success()
-            return data
-        except Exception as e:
-            error_msg = f"All providers including mock failed for {symbol}: {e}"
-            self._update_status_on_failure(error_msg)
-            raise RuntimeError(error_msg)
+        # If all providers fail, raise an error (mock data disabled)
+        error_msg = (
+            f"All real data providers failed for {symbol}. "
+            "Mock data generation has been disabled. "
+            "Please ensure at least one valid data provider (yfinance, Alpha Vantage, etc.) is configured and working."
+        )
+        self.logger.error(error_msg)
+        self._update_status_on_failure(error_msg)
+        raise RuntimeError(error_msg)
 
     def fetch_multiple(
         self, symbols: List[str], interval: str = "1d", **kwargs
@@ -247,8 +235,12 @@ class FallbackDataProvider(BaseDataProvider):
         self.logger.error(
             f"All providers failed for live price of {symbol}, using mock price"
         )
-        mock_provider = self.providers[-1][1]
-        return mock_provider.get_live_price(symbol)
+        # Mock data disabled - raise error if all providers fail
+        raise RuntimeError(
+            f"All real data providers failed to get live price for {symbol}. "
+            "Mock data generation has been disabled. "
+            "Please ensure at least one valid data provider is configured."
+        )
 
     def get_market_data(self, symbols: List[str]) -> Dict[str, Dict[str, Any]]:
         """Get market data for multiple symbols with fallback logic.

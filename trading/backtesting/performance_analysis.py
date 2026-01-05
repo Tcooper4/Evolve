@@ -90,9 +90,14 @@ class PerformanceAnalyzer:
         metrics = {}
 
         if "equity_curve" in df.columns:
-            metrics["total_return"] = (
-                df["equity_curve"].iloc[-1] / df["equity_curve"].iloc[0]
-            ) - 1
+            # Safely calculate total return with division-by-zero protection
+            initial_equity = df["equity_curve"].iloc[0]
+            if initial_equity > 1e-10:
+                metrics["total_return"] = (
+                    df["equity_curve"].iloc[-1] / initial_equity
+                ) - 1
+            else:
+                metrics["total_return"] = 0.0
         else:
             metrics["total_return"] = np.nan
 
@@ -477,10 +482,10 @@ class PerformanceAnalyzer:
         return metrics
 
     def _max_drawdown(self, equity_curve: pd.Series) -> float:
-        """Calculate maximum drawdown from equity curve."""
-        running_max = equity_curve.cummax()
-        drawdown = (equity_curve - running_max) / running_max
-        return drawdown.min()
+        """Calculate maximum drawdown from equity curve using safe division."""
+        from trading.utils.safe_math import safe_drawdown
+        drawdown = safe_drawdown(equity_curve)
+        return float(drawdown.min())
 
     def combine_metrics(self, metrics_list: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Combine multiple metrics dictionaries into a summary."""

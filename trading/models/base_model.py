@@ -498,9 +498,17 @@ class BaseModel(ABC):
                         loss = compute_loss(self.criterion, output, target)
                         val_loss += loss.item()
 
-                # Calculate average losses
-                avg_train_loss = train_loss / len(train_loader)
-                avg_val_loss = val_loss / len(val_loader)
+                # Calculate average losses - Safely calculate with division-by-zero protection
+                avg_train_loss = (
+                    train_loss / len(train_loader)
+                    if len(train_loader) > 0
+                    else 0.0
+                )
+                avg_val_loss = (
+                    val_loss / len(val_loader)
+                    if len(val_loader) > 0
+                    else 0.0
+                )
 
                 # Store losses
                 self.train_losses.append(avg_train_loss)
@@ -571,8 +579,12 @@ class BaseModel(ABC):
                     predictions.append(output.cpu().numpy())
                     targets.append(target.cpu().numpy())
 
-            # Calculate metrics
-            avg_test_loss = test_loss / len(test_loader)
+            # Calculate metrics - Safely calculate with division-by-zero protection
+            avg_test_loss = (
+                test_loss / len(test_loader)
+                if len(test_loader) > 0
+                else 0.0
+            )
             predictions = np.concatenate(predictions).flatten()
             targets = np.concatenate(targets).flatten()
 

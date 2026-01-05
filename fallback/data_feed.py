@@ -88,15 +88,24 @@ class FallbackDataFeed:
                 except Exception as e:
                     logger.warning(f"yfinance fallback failed for {symbol}: {e}")
             else:
-                logger.info("yfinance not available, using mock data")
+                logger.error("yfinance not available and no other data sources configured")
+                raise RuntimeError(
+                    f"Cannot fetch data for {symbol}: yfinance not available. "
+                    "Please install yfinance or configure another data provider."
+                )
 
-            # Generate mock data if yfinance fails
-            logger.info(f"Generating mock data for {symbol}")
-            return self._generate_mock_data(symbol, start_date, end_date, interval)
+            # Do not generate mock data - fail if real data is unavailable
+            raise RuntimeError(
+                f"Failed to fetch real market data for {symbol} from {start_date} to {end_date}. "
+                "Mock data generation has been disabled. Please ensure a valid data provider is configured."
+            )
 
         except Exception as e:
             logger.error(f"Error getting historical data for {symbol}: {e}")
-            return self._generate_mock_data(symbol, start_date, end_date, interval)
+            raise RuntimeError(
+                f"Failed to fetch real market data for {symbol}: {e}. "
+                "Mock data generation has been disabled."
+            ) from e
 
     def _get_yfinance_data(
         self, symbol: str, start_date: str, end_date: str, interval: str

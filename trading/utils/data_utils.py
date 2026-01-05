@@ -297,12 +297,9 @@ def calculate_technical_indicators(
             df[f"ema_{window}"] = df["close"].ewm(span=window).mean()
 
         elif indicator == "rsi":
+            from trading.utils.safe_math import safe_rsi
             window = params["rsi"]["window"]
-            delta = df["close"].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-            rs = gain / loss
-            df[f"rsi_{window}"] = 100 - (100 / (1 + rs))
+            df[f"rsi_{window}"] = safe_rsi(df["close"], period=window)
 
         elif indicator == "macd":
             fast = params["macd"]["fast"]
@@ -376,7 +373,7 @@ def prepare_forecast_data(data: pd.DataFrame) -> pd.DataFrame:
                 df.index = pd.date_range(start="2020-01-01", periods=len(df), freq="D")
 
     # Handle missing values
-    df = df.fillna(method="ffill").fillna(method="bfill")
+    df = df.ffill().bfill()
 
     # Ensure numeric columns
     numeric_cols = df.select_dtypes(include=[np.number]).columns

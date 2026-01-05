@@ -8,6 +8,7 @@ from typing import List, Union
 
 import numpy as np
 import pandas as pd
+from trading.utils.safe_math import safe_normalize
 
 logger = logging.getLogger(__name__)
 
@@ -26,15 +27,17 @@ def normalize_features(
         Normalized data
     """
     try:
-        if method == "zscore":
-            return (data - data.mean()) / data.std()
-        elif method == "minmax":
-            return (data - data.min()) / (data.max() - data.min())
-        elif method == "robust":
-            return (data - data.median()) / (data.quantile(0.75) - data.quantile(0.25))
+        # Use safe_normalize to handle division by zero
+        if isinstance(data, pd.DataFrame):
+            # Normalize each column
+            result = data.copy()
+            for col in result.columns:
+                if result[col].dtype in [np.number]:
+                    result[col] = safe_normalize(result[col], method=method)
+            return result
         else:
-            logger.warning(f"Unknown normalization method: {method}. Using zscore.")
-            return (data - data.mean()) / data.std()
+            # For Series or array
+            return safe_normalize(data, method=method)
     except Exception as e:
         logger.error(f"Error normalizing features: {e}")
         return data
@@ -94,7 +97,10 @@ def remove_outliers(
                 upper_bound = Q3 + threshold * IQR
                 mask = (data[col] >= lower_bound) & (data[col] <= upper_bound)
             elif method == "zscore":
-                z_scores = np.abs((data[col] - data[col].mean()) / data[col].std())
+                from trading.utils.safe_math import safe_divide
+                mean = data[col].mean()
+                std = data[col].std()
+                z_scores = np.abs(safe_divide(data[col] - mean, std, default=0.0))
                 mask = z_scores < threshold
             else:
                 logger.warning(f"Unknown outlier method: {method}. Using IQR.")

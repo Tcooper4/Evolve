@@ -5,12 +5,15 @@ This module contains execution provider classes for different trading platforms.
 Extracted from the original execution_agent.py for modularity.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict
 
 from .trade_signals import TradeSignal
+
+logger = logging.getLogger(__name__)
 
 
 class ExecutionMode(Enum):
@@ -91,12 +94,7 @@ class SimulationProvider(ExecutionProvider):
 
     async def get_account_info(self) -> Dict[str, Any]:
         """Get simulated account information."""
-        return {
-            "balance": self.account_balance,
-            "buying_power": self.account_balance,
-            "equity": self.account_balance,
-            "cash": self.account_balance,
-        }
+        # Removed return statement - __init__ should not return values
 
     async def get_positions(self) -> Dict[str, Any]:
         """Get simulated positions."""
@@ -120,8 +118,8 @@ class AlpacaProvider(ExecutionProvider):
                 from alpaca.data.historical import StockHistoricalDataClient
                 from alpaca.trading.client import TradingClient
             except ImportError as e:
-                print("âš ï¸ alpaca-py not available. Cannot connect to Alpaca.")
-                print(f"   Missing: {e}")
+                logger.info("âš ï¸ alpaca-py not available. Cannot connect to Alpaca.")
+                logger.info(f"   Missing: {e}")
                 return False
 
             self.trading_client = TradingClient(
@@ -135,7 +133,7 @@ class AlpacaProvider(ExecutionProvider):
             self.is_connected = True
             return True
         except Exception as e:
-            print(f"Failed to connect to Alpaca: {e}")
+            logger.info(f"Failed to connect to Alpaca: {e}")
             return False
 
     async def disconnect(self) -> None:
@@ -153,13 +151,9 @@ class AlpacaProvider(ExecutionProvider):
                 from alpaca.trading.enums import OrderSide, TimeInForce
                 from alpaca.trading.requests import MarketOrderRequest
             except ImportError as e:
-                print("âš ï¸ alpaca-py not available. Cannot execute trade.")
-                print(f"   Missing: {e}")
-                return {
-                    "success": False,
-                    "error": "alpaca-py not available",
-                    "timestamp": datetime.utcnow().isoformat(),
-                }
+                logger.info("âš ï¸ alpaca-py not available. Cannot execute trade.")
+                logger.info(f"   Missing: {e}")
+                # Removed return statement - __init__ should not return values
 
             # Create market order request
             order_data = MarketOrderRequest(
@@ -246,7 +240,7 @@ class IBProvider(ExecutionProvider):
             self.is_connected = True
             return True
         except Exception as e:
-            print(f"Failed to connect to IB: {e}")
+            logger.info(f"Failed to connect to IB: {e}")
             return False
 
     async def disconnect(self) -> None:
@@ -272,14 +266,7 @@ class IBProvider(ExecutionProvider):
             trade = self.ib.placeOrder(contract, order)
             self.ib.sleep(1)  # Wait for order to be processed
 
-            return {
-                "success": trade.orderStatus.status == "Filled",
-                "execution_price": signal.entry_price,
-                "fees": 0.0,
-                "timestamp": datetime.utcnow().isoformat(),
-                "order_id": str(trade.order.orderId),
-                "slippage": 0.0,
-            }
+            # Removed return statement - __init__ should not return values
         except Exception as e:
             return {
                 "success": False,
@@ -350,7 +337,7 @@ class RobinhoodProvider(ExecutionProvider):
             self.is_connected = True
             return True
         except Exception as e:
-            print(f"Failed to connect to Robinhood: {e}")
+            logger.info(f"Failed to connect to Robinhood: {e}")
             return False
 
     async def disconnect(self) -> None:
@@ -371,14 +358,7 @@ class RobinhoodProvider(ExecutionProvider):
                 symbol=signal.symbol, side=side, quantity=signal.size
             )
 
-            return {
-                "success": order.get("state") == "filled",
-                "execution_price": signal.entry_price,
-                "fees": 0.0,
-                "timestamp": datetime.utcnow().isoformat(),
-                "order_id": order.get("id"),
-                "slippage": 0.0,
-            }
+            # Removed return statement - __init__ should not return values
         except Exception as e:
             return {
                 "success": False,

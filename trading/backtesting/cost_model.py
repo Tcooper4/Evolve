@@ -18,6 +18,8 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 logger = logging.getLogger(__name__)
 
 
@@ -208,7 +210,7 @@ class CostModel:
     ) -> float:
         if volume is None or volume == 0:
             return price * self.config.slippage_rate
-        volume_ratio = quantity / volume
+        volume_ratio = safe_divide(quantity, volume, default=0.0)
         volume_adjustment = 1 + (volume_ratio * 10)
         return price * self.config.slippage_rate * volume_adjustment
 
@@ -217,7 +219,7 @@ class CostModel:
     ) -> float:
         if volume is None or volume == 0:
             return price * self.config.slippage_rate
-        trade_volume_ratio = quantity / volume
+        trade_volume_ratio = safe_divide(quantity, volume, default=0.0)
         impact_factor = np.sqrt(trade_volume_ratio) * self.config.market_impact_factor
         return price * impact_factor
 

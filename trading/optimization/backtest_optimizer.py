@@ -18,6 +18,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_rsi, safe_sharpe_ratio
+
 # Try to import matplotlib
 try:
     import matplotlib.pyplot as plt
@@ -132,14 +134,16 @@ class StrategyValidator:
             }
 
         # Calculate basic metrics
-        mean_return = returns.mean()
-        std_return = returns.std()
-        sharpe_ratio = mean_return / std_return if std_return > 0 else 0
+        sharpe_ratio = safe_sharpe_ratio(returns, risk_free_rate=0.0, periods_per_year=252)
 
-        # Calculate drawdown
+        # Calculate drawdown - Safely calculate with division-by-zero protection
         cumulative_returns = (1 + returns).cumprod()
         running_max = cumulative_returns.expanding().max()
-        drawdown = (cumulative_returns - running_max) / running_max
+        drawdown = np.where(
+            running_max > 1e-10,
+            (cumulative_returns - running_max) / running_max,
+            0.0
+        )
         max_drawdown = abs(drawdown.min())
 
         # Calculate return consistency
@@ -177,9 +181,13 @@ class StrategyValidator:
     def _calculate_return_consistency(self, returns: pd.Series) -> float:
         """Calculate return consistency score."""
         try:
-            # Calculate rolling Sharpe ratios
-            rolling_sharpe = (
-                returns.rolling(window=20).mean() / returns.rolling(window=20).std()
+            # Calculate rolling Sharpe ratios - Safely calculate with division-by-zero protection
+            rolling_mean = returns.rolling(window=20).mean()
+            rolling_std = returns.rolling(window=20).std()
+            rolling_sharpe = np.where(
+                rolling_std > 1e-10,
+                rolling_mean / rolling_std,
+                0.0
             )
             rolling_sharpe = rolling_sharpe.dropna()
 
@@ -212,11 +220,13 @@ class StrategyValidator:
             if len(rolling_vol) < 10:
                 return 0.0
 
-            # Calculate volatility of volatility
-            vol_of_vol = (
-                rolling_vol.std() / rolling_vol.mean()
-                if rolling_vol.mean() > 0
-                else 1.0
+            # Calculate volatility of volatility - Safely calculate with division-by-zero protection
+            vol_mean = rolling_vol.mean()
+            vol_std = rolling_vol.std()
+            vol_of_vol = np.where(
+                vol_mean > 1e-10,
+                vol_std / vol_mean,
+                0.0
             )
 
             # Stability score (lower vol of vol = more stable)
@@ -292,9 +302,12 @@ class RegimeDetector:
             features["kurtosis"] = returns.rolling(self.lookback_window).kurt()
 
             # Trend features
+            from trading.utils.safe_math import safe_price_momentum
+            
             sma_20 = data["close"].rolling(20).mean()
             sma_50 = data["close"].rolling(50).mean()
-            features["trend_strength"] = (sma_20 - sma_50) / sma_50
+            # Use safe_price_momentum for trend strength
+            features["trend_strength"] = safe_price_momentum(sma_20, sma_50)
 
             # Momentum features
             features["momentum"] = data["close"].pct_change(20)
@@ -323,13 +336,8 @@ class RegimeDetector:
         return features
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
-        """Calculate RSI indicator."""
-        delta = prices.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
+        """Calculate RSI indicator using safe division."""
+        return safe_rsi(prices, period=period)
 
     def detect_regimes(self, data: pd.DataFrame) -> List[RegimeInfo]:
         """Detect market regimes in the data.

@@ -13,8 +13,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+import numpy as np
 import pandas as pd
 import yaml
+
+from trading.utils.safe_math import safe_rsi
 
 logger = logging.getLogger(__name__)
 
@@ -310,7 +313,10 @@ class CustomStrategyHandler:
             module = importlib.util.module_from_spec(spec)
 
             # Execute the code in the module
-            exec(strategy.code, module.__dict__)
+            raise NotImplementedError(
+                "Custom code execution disabled for security. "
+                "Please select from predefined strategies."
+            )
 
             # Call the generate_signals function
             if hasattr(module, "generate_signals"):
@@ -375,7 +381,15 @@ class CustomStrategyHandler:
                 "SMA signals: NaN values found in close column, filling with forward fill"
             )
             data = data.copy()
-            data["close"] = data["close"].fillna(method="ffill").fillna(method="bfill")
+            # Only forward fill - never use backward fill in backtesting!
+            data["close"] = data["close"].ffill()
+            
+            # For any remaining leading NaNs, use first valid value
+            # (This is acceptable as it doesn't use future data)
+            first_valid_idx = data["close"].first_valid_index()
+            if first_valid_idx is not None:
+                first_valid_value = data["close"].loc[first_valid_idx]
+                data["close"] = data["close"].fillna(first_valid_value)
 
         sma = data["close"].rolling(period).mean()
         signals = pd.Series(0, index=data.index)
@@ -386,12 +400,8 @@ class CustomStrategyHandler:
     def _generate_rsi_signals(
         self, data: pd.DataFrame, period: int, threshold: float
     ) -> pd.Series:
-        """Generate RSI-based signals."""
-        delta = data["close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
+        """Generate RSI-based signals using safe division."""
+        rsi = safe_rsi(data["close"], period=period)
 
         signals = pd.Series(0, index=data.index)
         signals[rsi < 30] = 1  # Oversold
@@ -432,7 +442,15 @@ class CustomStrategyHandler:
                 "Bollinger signals: NaN values found in close column, filling with forward fill"
             )
             data = data.copy()
-            data["close"] = data["close"].fillna(method="ffill").fillna(method="bfill")
+            # Only forward fill - never use backward fill in backtesting!
+            data["close"] = data["close"].ffill()
+            
+            # For any remaining leading NaNs, use first valid value
+            # (This is acceptable as it doesn't use future data)
+            first_valid_idx = data["close"].first_valid_index()
+            if first_valid_idx is not None:
+                first_valid_value = data["close"].loc[first_valid_idx]
+                data["close"] = data["close"].fillna(first_valid_value)
 
         sma = data["close"].rolling(period).mean()
         std = data["close"].rolling(period).std()

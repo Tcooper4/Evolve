@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 logger = logging.getLogger(__name__)
 
 
@@ -356,7 +358,7 @@ class ModelScorer:
 
         # Normalize weights
         weights = np.array(weights)
-        weights = weights / np.sum(weights)
+        weights = safe_divide(weights, np.sum(weights), default=1.0 / len(weights))
 
         # Get all unique metrics
         all_metrics = set()

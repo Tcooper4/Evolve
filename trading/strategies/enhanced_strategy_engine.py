@@ -19,6 +19,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_drawdown
+
 logger = logging.getLogger(__name__)
 
 
@@ -795,8 +797,7 @@ class EnhancedStrategyEngine:
 
             # Calculate max drawdown
             cumulative_returns = (1 + strategy_returns).cumprod()
-            running_max = cumulative_returns.expanding().max()
-            drawdown = (cumulative_returns - running_max) / running_max
+            drawdown = safe_drawdown(cumulative_returns)
             max_drawdown = drawdown.min()
 
             # Calculate win rate
@@ -847,12 +848,7 @@ class EnhancedStrategyEngine:
         )
 
         # Clamp to [0, 1]
-        return {
-            "success": True,
-            "result": max(0.0, min(1.0, adjusted_confidence)),
-            "message": "Operation completed successfully",
-            "timestamp": datetime.now().isoformat(),
-        }
+        return max(0.0, min(1.0, adjusted_confidence))
 
     def _log_strategy_performance(
         self, combined_result: StrategyResult, strategy_results: List[Dict[str, Any]]

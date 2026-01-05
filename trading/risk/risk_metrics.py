@@ -48,25 +48,39 @@ def calculate_rolling_metrics(
     # Rolling volatility
     metrics["volatility"] = returns.rolling(window).std() * np.sqrt(252)
 
-    # Rolling Sharpe
+    # Rolling Sharpe - Safely calculate with division-by-zero protection
     excess_returns = returns - risk_free_rate / 252
-    metrics["sharpe_ratio"] = (
-        excess_returns.rolling(window).mean() / returns.rolling(window).std()
-    ) * np.sqrt(252)
+    returns_std = returns.rolling(window).std()
+    metrics["sharpe_ratio"] = np.where(
+        returns_std > 1e-10,
+        (excess_returns.rolling(window).mean() / returns_std) * np.sqrt(252),
+        0.0
+    )
 
-    # Rolling Sortino
+    # Rolling Sortino - Safely calculate with division-by-zero protection
     downside_returns = returns[returns < 0]
-    metrics["sortino_ratio"] = (
-        excess_returns.rolling(window).mean() / downside_returns.rolling(window).std()
-    ) * np.sqrt(252)
+    downside_std = downside_returns.rolling(window).std()
+    metrics["sortino_ratio"] = np.where(
+        downside_std > 1e-10,
+        (excess_returns.rolling(window).mean() / downside_std) * np.sqrt(252),
+        0.0
+    )
 
-    # Rolling Calmar
+    # Rolling Calmar - Safely calculate drawdown with division-by-zero protection
     cum_returns = (1 + returns).cumprod()
     rolling_max = cum_returns.rolling(window).max()
-    drawdown = (cum_returns - rolling_max) / rolling_max
-    metrics["calmar_ratio"] = (
-        excess_returns.rolling(window).mean() / drawdown.rolling(window).min().abs()
-    ) * np.sqrt(252)
+    drawdown = np.where(
+        rolling_max > 1e-10,
+        (cum_returns - rolling_max) / rolling_max,
+        0.0
+    )
+    # Safely calculate Calmar ratio with division-by-zero protection
+    min_drawdown_abs = drawdown.rolling(window).min().abs()
+    metrics["calmar_ratio"] = np.where(
+        min_drawdown_abs > 1e-10,
+        (excess_returns.rolling(window).mean() / min_drawdown_abs) * np.sqrt(252),
+        0.0
+    )
 
     # Rolling max drawdown
     metrics["max_drawdown"] = drawdown.rolling(window).min()

@@ -29,6 +29,7 @@ from trading.exceptions import (
     ModelPredictionError,
     ModelTrainingError,
 )
+from trading.utils.safe_math import safe_rsi
 from utils.forecast_helpers import safe_forecast
 from utils.model_cache import cache_model_operation
 
@@ -317,7 +318,12 @@ class XGBoostModel(BaseModel):
             if "volume" in data.columns:
                 # Volume indicators
                 data["volume_ma"] = data["volume"].rolling(window=20).mean()
-                data["volume_ratio"] = data["volume"] / data["volume_ma"]
+                # Safely calculate volume ratio with division-by-zero protection
+                data["volume_ratio"] = np.where(
+                    data["volume_ma"] > 1e-10,
+                    data["volume"] / data["volume_ma"],
+                    1.0  # Neutral ratio if no volume MA
+                )
 
             return data
 
@@ -327,14 +333,9 @@ class XGBoostModel(BaseModel):
             return data
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
-        """Calculate RSI with error handling."""
+        """Calculate RSI with error handling using safe division."""
         try:
-            delta = prices.diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-            rs = gain / loss
-            rsi = 100 - (100 / (1 + rs))
-            return rsi
+            return safe_rsi(prices, period=period)
         except Exception as e:
             logger.error(f"RSI calculation failed: {e}")
             return pd.Series(50.0, index=prices.index)  # Neutral RSI
@@ -403,7 +404,7 @@ class XGBoostModel(BaseModel):
                 raise ValueError("Data must contain 'close' column")
 
             # Handle NaN values
-            data = data.fillna(method="ffill").fillna(method="bfill")
+            data = data.ffill().bfill()
 
             # Create features
             features = self._create_lag_features(data)

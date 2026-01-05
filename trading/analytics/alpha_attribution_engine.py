@@ -166,11 +166,7 @@ class AlphaAttributionEngine:
 
         self.logger.info("Alpha Attribution Engine initialized")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def _initialize_factor_registry(self) -> Dict[str, Dict[str, Any]]:
         """Initialize factor registry for attribution analysis."""
@@ -248,7 +244,8 @@ class AlphaAttributionEngine:
             returns = data["Close"].pct_change()
             volatility_5 = returns.rolling(5).std()
             volatility_20 = returns.rolling(20).std()
-            volatility_factor = volatility_5 / volatility_20 - 1
+            from trading.utils.safe_math import safe_divide
+            volatility_factor = safe_divide(volatility_5, volatility_20, default=1.0) - 1
             return volatility_factor
         except Exception as e:
             self.logger.error(f"Error calculating volatility factor: {e}")
@@ -266,7 +263,11 @@ class AlphaAttributionEngine:
                 return pd.Series(index=data.index, data=0.0)
 
             volume_ma = data["Volume"].rolling(20).mean()
-            volume_factor = (data["Volume"] - volume_ma) / volume_ma
+            volume_factor = np.where(
+                volume_ma > 1e-10,
+                (data["Volume"] - volume_ma) / volume_ma,
+                0.0
+            )
             return volume_factor
         except Exception as e:
             self.logger.error(f"Error calculating volume factor: {e}")
@@ -285,8 +286,13 @@ class AlphaAttributionEngine:
             upper_band = sma + (2 * std)
             lower_band = sma - (2 * std)
 
-            # Position within Bollinger Bands
-            position = (data["Close"] - lower_band) / (upper_band - lower_band)
+            # Position within Bollinger Bands - Safe division
+            bb_range = upper_band - lower_band
+            position = np.where(
+                bb_range > 1e-10,
+                (data["Close"] - lower_band) / bb_range,
+                0.5  # Neutral position if no range
+            )
             mean_reversion_factor = 0.5 - position  # Distance from center
             return mean_reversion_factor
         except Exception as e:
@@ -305,10 +311,12 @@ class AlphaAttributionEngine:
             sma_50 = data["Close"].rolling(50).mean()
             sma_200 = data["Close"].rolling(200).mean()
 
-            # Trend strength based on moving average alignment
-            trend_short = (data["Close"] - sma_20) / sma_20
-            trend_medium = (sma_20 - sma_50) / sma_50
-            trend_long = (sma_50 - sma_200) / sma_200
+            # Trend strength based on moving average alignment - Safe calculations
+            from trading.utils.safe_math import safe_price_momentum
+            
+            trend_short = safe_price_momentum(data["Close"], sma_20)
+            trend_medium = safe_price_momentum(sma_20, sma_50)
+            trend_long = safe_price_momentum(sma_50, sma_200)
 
             trend_factor = (trend_short + trend_medium + trend_long) / 3
             return trend_factor

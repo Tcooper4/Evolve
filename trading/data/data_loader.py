@@ -19,6 +19,20 @@ from typing import Any, Dict, List, Optional
 import joblib
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
+# Try to import validation and pipeline utilities
+try:
+    from src.utils.data_validation import DataValidator as UtilsDataValidator
+    from src.utils.data_pipeline import DataPipeline
+    VALIDATION_AVAILABLE = True
+except ImportError as e:
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Data validation/pipeline utilities not available: {e}")
+    UtilsDataValidator = None
+    DataPipeline = None
+    VALIDATION_AVAILABLE = False
+
 # Try to import yfinance
 try:
     import yfinance as yf
@@ -276,7 +290,7 @@ class ParallelProcessor:
                     success=success,
                     completed=self._completed_count,
                     total=self._total_count,
-                    progress=self._completed_count / self._total_count,
+                    progress=safe_divide(self._completed_count, self._total_count, default=0.0),
                 )
 
     def _load_single_ticker_with_retry(
@@ -445,6 +459,20 @@ class DataLoader:
 
         # Thread safety for cache operations
         self._cache_lock = threading.Lock()
+        
+        # Initialize enhanced validation and pipeline if available
+        if VALIDATION_AVAILABLE:
+            try:
+                self.utils_validator = UtilsDataValidator()
+                self.pipeline = DataPipeline()
+                logger.info("✅ Enhanced data validation and pipeline initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize enhanced validation/pipeline: {e}")
+                self.utils_validator = None
+                self.pipeline = None
+        else:
+            self.utils_validator = None
+            self.pipeline = None
 
     def load_market_data(self, request: DataLoadRequest) -> DataLoadResponse:
         """Load market data for a single ticker.
@@ -480,9 +508,6 @@ class DataLoader:
                     interval=request.interval,
                     auto_adjust=request.auto_adjust,
                     prepost=request.prepost,
-                    threads=request.threads,
-                    proxy=request.proxy,
-                    progress=request.progress,
                 )
             else:
                 data = ticker_obj.history(
@@ -490,21 +515,53 @@ class DataLoader:
                     interval=request.interval,
                     auto_adjust=request.auto_adjust,
                     prepost=request.prepost,
-                    threads=request.threads,
-                    proxy=request.proxy,
-                    progress=request.progress,
                 )
 
-            # Validate data
-            is_valid, error_msg = self.validator.validate_market_data(
-                data, request.ticker
-            )
-            if not is_valid:
-                return DataLoadResponse(
-                    success=False,
-                    message=f"Data validation failed: {error_msg}",
-                    ticker=request.ticker,
+            # Normalize column names to lowercase (yfinance returns capitalized)
+            if not data.empty:
+                data.columns = data.columns.str.lower()
+
+            # NEW: Enhanced validation with utils DataValidator
+            if self.utils_validator and self.pipeline:
+                validation_result = self.utils_validator.validate_market_data(data)
+                
+                if not validation_result.is_valid:
+                    logger.warning(f"Data validation issues: {validation_result.errors}")
+                    
+                    # Try to fix issues automatically
+                    data = self.pipeline.clean_data(data)
+                    
+                    # Re-validate
+                    validation_result = self.utils_validator.validate_market_data(data)
+                    
+                    if not validation_result.is_valid:
+                        return DataLoadResponse(
+                            success=False,
+                            message=f"Data validation failed: {validation_result.errors}",
+                            data=None,
+                            ticker=request.ticker,
+                        )
+                
+                # NEW: Process through pipeline
+                data = self.pipeline.process_market_data(
+                    data=data,
+                    remove_outliers=True,
+                    fill_missing=True,
+                    normalize=False  # Don't normalize raw price data
                 )
+                
+                logger.info(f"✅ Data validated and processed: {len(data)} rows")
+            else:
+                # Fallback to original validation
+                is_valid, error_msg = self.validator.validate_market_data(
+                    data, request.ticker
+                )
+                if not is_valid:
+                    return DataLoadResponse(
+                        success=False,
+                        message=f"Data validation failed: {error_msg}",
+                        ticker=request.ticker,
+                    )
 
             # Create response
             response = DataLoadResponse(
@@ -580,7 +637,7 @@ class DataLoader:
                             success=True,
                             completed=i,
                             total=len(requests),
-                            progress=i / len(requests),
+                            progress=safe_divide(i, len(requests), default=0.0),
                         )
 
                     response = self.load_market_data(request)
@@ -592,7 +649,7 @@ class DataLoader:
                             success=response.success,
                             completed=i + 1,
                             total=len(requests),
-                            progress=(i + 1) / len(requests),
+                            progress=safe_divide(i + 1, len(requests), default=0.0),
                         )
 
                 return results
@@ -635,7 +692,9 @@ class DataLoader:
                 # Fallback to history
                 hist = ticker_obj.history(period="1d")
                 if not hist.empty:
-                    current_price = hist["Close"].iloc[-1]
+                    # Normalize column names to lowercase (yfinance returns capitalized)
+                    hist.columns = hist.columns.str.lower()
+                    current_price = hist["close"].iloc[-1]
                 else:
                     return PriceResponse(
                         success=False,

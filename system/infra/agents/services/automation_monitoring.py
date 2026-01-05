@@ -10,8 +10,16 @@ from pydantic import BaseModel, Field
 from ratelimit import limits, sleep_and_retry
 
 from trading.automation_core import AutomationCore
-from trading.automation_tasks import AutomationTasks
-from trading.automation_workflows import AutomationWorkflows
+# AutomationTasks and AutomationWorkflows may not exist - make optional
+try:
+    from trading.automation_tasks import AutomationTasks
+except ImportError:
+    AutomationTasks = None
+
+try:
+    from trading.automation_workflows import AutomationWorkflows
+except ImportError:
+    AutomationWorkflows = None
 from utils.launch_utils import setup_logging
 
 logger = logging.getLogger(__name__)

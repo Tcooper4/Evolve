@@ -92,34 +92,16 @@ class MetaStrategyAgent(BaseAgent):
 
     async def _create_meta_strategy(self) -> AgentResult:
         """Create a new meta-strategy."""
-        try:
-            # Placeholder implementation
-            result = MetaStrategyResult(
-                success=True,
-                strategy_name="new_meta_strategy",
-                operation_type="create",
-                result_data={"status": "created"},
-            )
-
-            return AgentResult(success=True, data=result)
-
-        except Exception as e:
-            logger.error(f"Error creating meta-strategy: {str(e)}")
-            return AgentResult(success=False, error_message=str(e))
+        raise NotImplementedError(
+            "Meta-strategy creation requires custom implementation based on your strategy framework. "
+            "Please implement this method with your specific strategy creation logic. "
+            "Example: Combine component strategies with specified weights."
+        )
 
     async def _update_meta_strategy(self) -> AgentResult:
         """Update an existing meta-strategy."""
-        try:
-            # Placeholder implementation
-            result = MetaStrategyResult(
-                success=True,
-                strategy_name="updated_meta_strategy",
-                operation_type="update",
-                result_data={"status": "updated"},
-            )
-
-            return AgentResult(success=True, data=result)
-
-        except Exception as e:
-            logger.error(f"Error updating meta-strategy: {str(e)}")
-            return AgentResult(success=False, error_message=str(e))
+        raise NotImplementedError(
+            "Meta-strategy updating requires custom implementation based on your strategy framework. "
+            "Please implement this method with your specific strategy update logic. "
+            "Example: Update component strategy weights or add/remove components."
+        )

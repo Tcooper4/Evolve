@@ -22,6 +22,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_rsi, safe_drawdown
+
 warnings.filterwarnings("ignore")
 
 logger = logging.getLogger(__name__)
@@ -172,12 +174,8 @@ class RegimeClassifier:
 
     def _calculate_momentum(self, data: pd.DataFrame) -> float:
         """Calculate momentum indicator."""
-        # RSI-based momentum
-        delta = data["Close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
+        # RSI-based momentum using safe division
+        rsi = safe_rsi(data["Close"], period=14)
 
         # MACD-based momentum
         exp1 = data["Close"].ewm(span=12).mean()
@@ -185,10 +183,14 @@ class RegimeClassifier:
         macd = exp1 - exp2
         signal = macd.ewm(span=9).mean()
 
-        # Combine momentum indicators
-        momentum = (rsi.iloc[-1] - 50) / 50 + (macd.iloc[-1] - signal.iloc[-1]) / data[
-            "Close"
-        ].iloc[-1]
+        # Combine momentum indicators - Calculate MACD component with division-by-zero protection
+        close_price = data["Close"].iloc[-1]
+        macd_component = np.where(
+            np.abs(close_price) > 1e-10,
+            (macd.iloc[-1] - signal.iloc[-1]) / close_price,
+            0.0
+        )
+        momentum = (rsi.iloc[-1] - 50) / 50 + macd_component
         return momentum
 
     def _calculate_trend_strength(self, data: pd.DataFrame) -> float:
@@ -212,10 +214,24 @@ class RegimeClassifier:
             (low.shift() - low) > (high - high.shift()), 0
         )
 
-        # Calculate ADX
-        di_plus = 100 * (dm_plus.rolling(window=14).mean() / atr)
-        di_minus = 100 * (dm_minus.rolling(window=14).mean() / atr)
-        dx = 100 * abs(di_plus - di_minus) / (di_plus + di_minus)
+        # Calculate ADX - Safely calculate DI+ and DI- with division-by-zero protection
+        di_plus = np.where(
+            atr > 1e-10,
+            100 * (dm_plus.rolling(window=14).mean() / atr),
+            0.0
+        )
+        di_minus = np.where(
+            atr > 1e-10,
+            100 * (dm_minus.rolling(window=14).mean() / atr),
+            0.0
+        )
+        # Safely calculate DX with division-by-zero protection
+        di_sum = di_plus + di_minus
+        dx = np.where(
+            di_sum > 1e-10,
+            100 * abs(di_plus - di_minus) / di_sum,
+            0.0
+        )
         adx = dx.rolling(window=14).mean()
 
         return adx.iloc[-1] / 100  # Normalize to 0-1
@@ -434,7 +450,7 @@ class StrategyGatekeeper:
             total_return = (1 + strategy_returns).prod() - 1
             win_rate = self._calculate_win_rate(strategy_returns)
             profit_factor = self._calculate_profit_factor(strategy_returns)
-            calmar_ratio = total_return / max_drawdown if max_drawdown > 0 else 0
+            calmar_ratio = safe_divide(total_return, max_drawdown, default=0.0)
             sortino_ratio = self._calculate_sortino_ratio(strategy_returns)
 
             # Calculate regime-specific performance
@@ -489,8 +505,7 @@ class StrategyGatekeeper:
     def _calculate_max_drawdown(self, returns: pd.Series) -> float:
         """Calculate maximum drawdown."""
         cumulative = (1 + returns).cumprod()
-        running_max = cumulative.expanding().max()
-        drawdown = (cumulative - running_max) / running_max
+        drawdown = safe_drawdown(cumulative)
         return abs(drawdown.min())
 
     def _calculate_win_rate(self, returns: pd.Series) -> float:

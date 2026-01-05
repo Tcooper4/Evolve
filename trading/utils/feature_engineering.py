@@ -45,14 +45,39 @@ class FeatureEngineer:
             result["price_change"] = data["close"].pct_change()
             result["price_change_abs"] = data["close"].pct_change().abs()
 
-            # Price ranges
-            result["high_low_ratio"] = data["high"] / data["low"]
-            result["open_close_ratio"] = data["open"] / data["close"]
+            # Price ranges with safe division
+            result["high_low_ratio"] = np.where(
+                data["low"] > 1e-10,
+                data["high"] / data["low"],
+                1.0
+            )
+            result["open_close_ratio"] = np.where(
+                data["close"] > 1e-10,
+                data["open"] / data["close"],
+                1.0
+            )
 
-            # Price momentum
-            result["momentum_5"] = data["close"] / data["close"].shift(5) - 1
-            result["momentum_10"] = data["close"] / data["close"].shift(10) - 1
-            result["momentum_20"] = data["close"] / data["close"].shift(20) - 1
+            # Price momentum with safe division
+            close_shifted_5 = data["close"].shift(5)
+            result["momentum_5"] = np.where(
+                close_shifted_5 > 1e-10,
+                data["close"] / close_shifted_5 - 1,
+                0.0
+            )
+
+            close_shifted_10 = data["close"].shift(10)
+            result["momentum_10"] = np.where(
+                close_shifted_10 > 1e-10,
+                data["close"] / close_shifted_10 - 1,
+                0.0
+            )
+
+            close_shifted_20 = data["close"].shift(20)
+            result["momentum_20"] = np.where(
+                close_shifted_20 > 1e-10,
+                data["close"] / close_shifted_20 - 1,
+                0.0
+            )
 
             # Price acceleration
             result["acceleration"] = result["momentum_5"].diff()
@@ -63,7 +88,7 @@ class FeatureEngineer:
             result["volatility_20"] = data["close"].rolling(window=20).std()
 
             # Clean up NaN values after lag/rolling operations
-            result.fillna(method="bfill", inplace=True)
+            result.bfill(inplace=True)
 
             return result
         except Exception as e:
@@ -84,17 +109,40 @@ class FeatureEngineer:
             result["volume_sma_10"] = data["volume"].rolling(window=10).mean()
             result["volume_sma_20"] = data["volume"].rolling(window=20).mean()
 
-            # Volume ratios
-            result["volume_ratio_5"] = data["volume"] / result["volume_sma_5"]
-            result["volume_ratio_10"] = data["volume"] / result["volume_sma_10"]
-            result["volume_ratio_20"] = data["volume"] / result["volume_sma_20"]
+            # Volume ratios with safe division
+            result["volume_ratio_5"] = np.where(
+                result["volume_sma_5"] > 1e-10,
+                data["volume"] / result["volume_sma_5"],
+                1.0
+            )
+            result["volume_ratio_10"] = np.where(
+                result["volume_sma_10"] > 1e-10,
+                data["volume"] / result["volume_sma_10"],
+                1.0
+            )
+            result["volume_ratio_20"] = np.where(
+                result["volume_sma_20"] > 1e-10,
+                data["volume"] / result["volume_sma_20"],
+                1.0
+            )
 
-            # Volume momentum
-            result["volume_momentum_5"] = data["volume"] / data["volume"].shift(5) - 1
-            result["volume_momentum_10"] = data["volume"] / data["volume"].shift(10) - 1
+            # Volume momentum with safe division
+            volume_shifted_5 = data["volume"].shift(5)
+            result["volume_momentum_5"] = np.where(
+                volume_shifted_5 > 1e-10,
+                data["volume"] / volume_shifted_5 - 1,
+                0.0
+            )
+
+            volume_shifted_10 = data["volume"].shift(10)
+            result["volume_momentum_10"] = np.where(
+                volume_shifted_10 > 1e-10,
+                data["volume"] / volume_shifted_10 - 1,
+                0.0
+            )
 
             # Clean up NaN values after lag/rolling operations
-            result.fillna(method="bfill", inplace=True)
+            result.bfill(inplace=True)
 
             return result
         except Exception as e:
@@ -127,12 +175,23 @@ class FeatureEngineer:
             if all(
                 col in data.columns for col in ["bb_upper", "bb_middle", "bb_lower"]
             ):
-                result["bb_position"] = (data["close"] - data["bb_lower"]) / (
-                    data["bb_upper"] - data["bb_lower"]
+                # Safe Bollinger Band calculations using safe_divide
+                from trading.utils.safe_math import safe_divide
+                
+                bb_range = data["bb_upper"] - data["bb_lower"]
+                result["bb_position"] = safe_divide(
+                    data["close"] - data["bb_lower"],
+                    bb_range,
+                    default=0.5
                 )
-                result["bb_squeeze"] = (data["bb_upper"] - data["bb_lower"]) / data[
-                    "bb_middle"
-                ]
+                # Clamp to [0, 1] range
+                result["bb_position"] = result["bb_position"].clip(0.0, 1.0)
+
+                result["bb_squeeze"] = np.where(
+                    data["bb_middle"] > 1e-10,
+                    bb_range / data["bb_middle"],
+                    0.0
+                )
                 result["bb_breakout_up"] = (data["close"] > data["bb_upper"]).astype(
                     int
                 )
@@ -143,12 +202,15 @@ class FeatureEngineer:
             # Moving average features
             if "sma_20" in data.columns and "sma_50" in data.columns:
                 result["sma_cross"] = (data["sma_20"] > data["sma_50"]).astype(int)
-                result["sma_distance"] = (data["sma_20"] - data["sma_50"]) / data[
-                    "sma_50"
-                ]
+                # Safe SMA distance calculation
+                result["sma_distance"] = np.where(
+                    data["sma_50"] > 1e-10,
+                    (data["sma_20"] - data["sma_50"]) / data["sma_50"],
+                    0.0
+                )
 
             # Clean up NaN values after lag/rolling operations
-            result.fillna(method="bfill", inplace=True)
+            result.bfill(inplace=True)
 
             return result
         except Exception as e:
@@ -196,7 +258,7 @@ class FeatureEngineer:
                         result[f"{column}_lag_{lag}"] = data[column].shift(lag)
 
             # Clean up NaN values after lag/rolling operations
-            result.fillna(method="bfill", inplace=True)
+            result.bfill(inplace=True)
 
             return result
         except Exception as e:
@@ -240,7 +302,7 @@ class FeatureEngineer:
                                 )
 
             # Clean up NaN values after lag/rolling operations
-            result.fillna(method="bfill", inplace=True)
+            result.bfill(inplace=True)
 
             return result
         except Exception as e:

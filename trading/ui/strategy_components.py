@@ -15,6 +15,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from trading.utils.safe_math import safe_sharpe_ratio
+
 from trading.ui.components import (
     create_asset_selector,
     create_date_range_selector,
@@ -172,7 +174,7 @@ def create_performance_metrics(
         # Calculate return metrics
         total_return = (data["equity"].iloc[-1] / data["equity"].iloc[0] - 1) * 100
         annual_return = total_return * (252 / len(data))
-        sharpe_ratio = np.sqrt(252) * data["returns"].mean() / data["returns"].std()
+        sharpe_ratio = safe_sharpe_ratio(data["returns"], risk_free_rate=0.0, periods_per_year=252)
         max_drawdown = data["drawdown"].min() * 100
 
         metrics = {
@@ -334,3 +336,157 @@ def create_strategy_export(
             "timestamp": datetime.now().isoformat(),
         }
 
+
+# Wrapper functions for easier integration
+def render_strategy_selector(key: str = "strategy_selector") -> Optional[str]:
+    """Render a strategy selector component.
+    
+    Args:
+        key: Streamlit key for the component
+    
+    Returns:
+        Selected strategy name or None
+    """
+    try:
+        return create_strategy_selector(
+            default_strategy=None,
+            key=key
+        )
+    except Exception as e:
+        logger.warning(f"Error rendering strategy selector: {e}")
+        # Fallback to simple selectbox
+        strategies = ["Bollinger Bands", "Moving Average Crossover", "RSI Mean Reversion", "MACD Momentum"]
+        return st.selectbox(
+            "Select Strategy",
+            strategies,
+            key=key
+        )
+
+
+def render_backtest_results(backtest_results: Dict[str, Any]) -> None:
+    """Render backtest results with performance chart and metrics.
+    
+    Args:
+        backtest_results: Dictionary containing backtest results
+    """
+    try:
+        # Extract data
+        equity_curve = backtest_results.get('equity_curve', backtest_results.get('equity', None))
+        returns = backtest_results.get('returns', None)
+        benchmark = backtest_results.get('benchmark', None)
+        drawdown = backtest_results.get('drawdown', None)
+        
+        # Create performance DataFrame
+        if equity_curve is not None:
+            if isinstance(equity_curve, (list, np.ndarray)):
+                dates = backtest_results.get('dates', pd.date_range(end=datetime.now(), periods=len(equity_curve), freq='D'))
+                perf_df = pd.DataFrame({
+                    'equity': equity_curve,
+                    'returns': returns if returns is not None else np.diff(equity_curve) / equity_curve[:-1],
+                    'drawdown': drawdown if drawdown is not None else None,
+                    'benchmark': benchmark if benchmark is not None else None
+                }, index=dates[:len(equity_curve)])
+            else:
+                perf_df = pd.DataFrame({'equity': equity_curve})
+                if returns is not None:
+                    perf_df['returns'] = returns
+                if drawdown is not None:
+                    perf_df['drawdown'] = drawdown
+                if benchmark is not None:
+                    perf_df['benchmark'] = benchmark
+        else:
+            st.warning("No equity curve data available")
+            return
+        
+        # Get strategy config (simplified)
+        from .config.registry import StrategyConfig
+        strategy_config = StrategyConfig(
+            name=backtest_results.get('strategy_name', 'Unknown'),
+            parameters={}
+        )
+        
+        # Show performance chart
+        fig = create_performance_chart(
+            data=perf_df,
+            strategy_config=strategy_config,
+            show_benchmark=benchmark is not None
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+    except Exception as e:
+        logger.error(f"Error rendering backtest results: {e}")
+        st.error(f"Error displaying backtest results: {e}")
+
+
+def render_strategy_metrics(strategy_stats: Dict[str, Any]) -> None:
+    """Render strategy performance metrics.
+    
+    Args:
+        strategy_stats: Dictionary containing strategy statistics
+    """
+    try:
+        st.subheader("📊 Strategy Metrics")
+        
+        # Display key metrics
+        metrics_to_show = [
+            'total_return', 'sharpe_ratio', 'max_drawdown', 'win_rate',
+            'total_trades', 'avg_trade_return', 'volatility'
+        ]
+        
+        # Group metrics into columns
+        num_cols = 4
+        cols = st.columns(num_cols)
+        
+        metric_idx = 0
+        for metric_name in metrics_to_show:
+            if metric_name in strategy_stats:
+                with cols[metric_idx % num_cols]:
+                    value = strategy_stats[metric_name]
+                    # Format based on metric type
+                    if 'return' in metric_name or 'drawdown' in metric_name:
+                        st.metric(metric_name.replace('_', ' ').title(), f"{value:.2%}")
+                    elif 'ratio' in metric_name:
+                        st.metric(metric_name.replace('_', ' ').title(), f"{value:.2f}")
+                    elif 'rate' in metric_name:
+                        st.metric(metric_name.replace('_', ' ').title(), f"{value:.1%}")
+                    else:
+                        st.metric(metric_name.replace('_', ' ').title(), f"{value:.2f}")
+                metric_idx += 1
+        
+        # Show additional metrics if available
+        if 'additional_metrics' in strategy_stats:
+            with st.expander("Additional Metrics"):
+                for key, value in strategy_stats['additional_metrics'].items():
+                    st.write(f"**{key}**: {value}")
+                    
+    except Exception as e:
+        logger.error(f"Error rendering strategy metrics: {e}")
+        st.warning("Could not display strategy metrics")
+
+
+def render_trade_list(trades: pd.DataFrame) -> None:
+    """Render a list of trades.
+    
+    Args:
+        trades: DataFrame containing trade data
+    """
+    try:
+        if trades is None or trades.empty:
+            st.info("No trades available")
+            return
+        
+        st.subheader("📋 Trade List")
+        
+        # Get strategy config (simplified)
+        from .config.registry import StrategyConfig
+        strategy_config = StrategyConfig(
+            name="Strategy",
+            parameters={}
+        )
+        
+        # Use existing function
+        create_trade_list(trades, strategy_config)
+        
+    except Exception as e:
+        logger.error(f"Error rendering trade list: {e}")
+        st.error(f"Error displaying trade list: {e}")

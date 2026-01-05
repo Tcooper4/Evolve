@@ -15,6 +15,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_drawdown
+
 logger = logging.getLogger(__name__)
 
 
@@ -495,8 +497,7 @@ class TradeJournal:
             return 0.0
 
         cumulative = np.cumprod(1 + np.array(returns))
-        running_max = np.maximum.accumulate(cumulative)
-        drawdown = (cumulative - running_max) / running_max
+        drawdown = safe_drawdown(cumulative)
 
         return abs(np.min(drawdown))
 

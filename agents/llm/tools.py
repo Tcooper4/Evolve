@@ -129,11 +129,7 @@ class ToolRegistry:
         if self.tools_dir:
             self._load_tools_from_dir()
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def _load_tools_from_dir(self) -> None:
         """Load tools from the tools directory."""

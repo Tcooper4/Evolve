@@ -134,9 +134,9 @@ class BacktestCommon:
 
         # Fill missing values
         if fill_method == "ffill":
-            processed_data.fillna(method="ffill", inplace=True)
+            processed_data.ffill(inplace=True)
         elif fill_method == "bfill":
-            processed_data.fillna(method="bfill", inplace=True)
+            processed_data.bfill(inplace=True)
         elif fill_method == "interpolate":
             processed_data.interpolate(method="linear", inplace=True)
 
@@ -278,18 +278,11 @@ class BacktestCommon:
             frequency
         )
 
-        # Calculate Sharpe ratio
-        mean_excess_return = excess_returns.mean()
-        std_excess_return = excess_returns.std()
-
-        if std_excess_return == 0:
-            return 0.0
-
-        sharpe_ratio = mean_excess_return / std_excess_return
-
-        # Annualize
+        # Calculate Sharpe ratio using safe division utility
+        from trading.utils.safe_math import safe_sharpe_ratio
         annualization_factor = self._get_annualization_factor(frequency)
-        return sharpe_ratio * np.sqrt(annualization_factor)
+        periods_per_year = int(annualization_factor)
+        return safe_sharpe_ratio(returns, risk_free_rate=risk_free_rate, periods_per_year=periods_per_year)
 
     def calculate_max_drawdown(
         self, prices: pd.Series
@@ -442,7 +435,8 @@ class BacktestCommon:
 
         # Calculate Sortino ratio
         mean_excess_return = excess_returns.mean()
-        sortino_ratio = mean_excess_return / downside_deviation
+        from trading.utils.safe_math import safe_divide
+        sortino_ratio = safe_divide(mean_excess_return, downside_deviation, default=0.0)
 
         # Annualize
         annualization_factor = self._get_annualization_factor(frequency)

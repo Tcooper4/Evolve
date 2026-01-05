@@ -103,11 +103,7 @@ class InstitutionalGradeSystem:
 
         logger.info("Institutional-Grade Trading System initialized")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def _load_config(self) -> Dict[str, Any]:
         """Load system configuration."""

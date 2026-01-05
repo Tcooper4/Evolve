@@ -559,13 +559,13 @@ def track_model_performance(model_name: str, task_type: TaskType, **metrics) -> 
 if __name__ == "__main__":
     # Demo usage
     async def demo():
-        print("ðŸ“Š Model Registry Demo")
-        print("=" * 50)
+        logger.info("📊 Model Registry Demo")
+        logger.info("=" * 50)
 
         registry = ModelRegistry()
 
         # Register some example models
-        print("\nðŸ”§ Registering example models...")
+        logger.info("\n🔧 Registering example models...")
 
         # Example model classes (these would be actual model classes in practice)
         class ExampleLSTM:
@@ -594,7 +594,7 @@ if __name__ == "__main__":
         )
 
         # Track performance
-        print("\nðŸ“ˆ Tracking performance...")
+        logger.info("\n📈 Tracking performance...")
         registry.track_performance(
             "lstm_forecaster",
             TaskType.FORECASTING,
@@ -618,15 +618,15 @@ if __name__ == "__main__":
         best_forecaster = registry.get_best_model(TaskType.FORECASTING)
         best_classifier = registry.get_best_model(TaskType.CLASSIFICATION)
 
-        print(f"Best forecaster: {best_forecaster}")
-        print(f"Best classifier: {best_classifier}")
+        logger.info(f"Best forecaster: {best_forecaster}")
+        logger.info(f"Best classifier: {best_classifier}")
 
         # Get registry summary
-        print("\nðŸ“‹ Registry summary...")
+        logger.info("\n📋 Registry summary...")
         summary = registry.get_registry_summary()
-        print(f"Total models: {summary['total_models']}")
-        print(f"Task type distribution: {summary['task_type_distribution']}")
+        logger.info(f"Total models: {summary['total_models']}")
+        logger.info(f"Task type distribution: {summary['task_type_distribution']}")
 
-        print("\nâœ… Demo completed!")
+        logger.info("\n✅ Demo completed!")
 
     asyncio.run(demo())

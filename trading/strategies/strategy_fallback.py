@@ -9,7 +9,10 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
+
+from trading.utils.safe_math import safe_divide
 
 logger = logging.getLogger(__name__)
 
@@ -568,7 +571,7 @@ class StrategyFallback:
             # Calculate metrics
             wins = sum(1 for trade in strategy_trades if trade.get("pnl", 0) > 0)
             total_trades = len(strategy_trades)
-            win_rate = wins / total_trades if total_trades > 0 else 0.0
+            win_rate = safe_divide(wins, total_trades, default=0.0)
 
             pnls = [trade.get("pnl", 0) for trade in strategy_trades]
             avg_return = sum(pnls) / len(pnls) if pnls else 0.0
@@ -606,13 +609,9 @@ class StrategyFallback:
         return summary
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
-        """Calculate RSI indicator."""
-        delta = prices.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
+        """Calculate RSI indicator using safe division."""
+        from trading.utils.safe_math import safe_rsi
+        return safe_rsi(prices, period=period)
 
     def _calculate_macd(
         self, prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9

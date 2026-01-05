@@ -56,12 +56,18 @@ class DataLoader:
                 self.logger.info(f"Loaded {len(data)} records for {symbol}")
                 return data
             else:
-                self.logger.warning(f"No data returned for {symbol}, using sample data")
-                return self._create_sample_data(symbol, start_date, end_date)
+                self.logger.error(f"No data returned for {symbol}")
+                raise RuntimeError(
+                    f"No data returned for {symbol} from {start_date} to {end_date}. "
+                    "Sample data generation has been disabled. Please check your data provider configuration."
+                )
 
         except Exception as e:
             self.logger.error(f"Error loading historical data for {symbol}: {e}")
-            return self._create_sample_data(symbol, start_date, end_date)
+            raise RuntimeError(
+                f"Failed to load real market data for {symbol} from {start_date} to {end_date}. "
+                "Sample data generation has been disabled. Please ensure a valid data provider is configured."
+            ) from e
 
     def _create_sample_data(
         self, symbol: str, start_date: str, end_date: str

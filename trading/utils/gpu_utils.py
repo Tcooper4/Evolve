@@ -19,14 +19,9 @@ except ImportError:
     TORCH_AVAILABLE = False
     torch = None
 
-# Try to import TensorFlow
-try:
-    import tensorflow as tf
-
-    TENSORFLOW_AVAILABLE = True
-except ImportError:
-    TENSORFLOW_AVAILABLE = False
-    tf = None
+# TensorFlow support removed - using PyTorch only
+TENSORFLOW_AVAILABLE = False
+tf = None
 
 
 def get_device(device_preference: Optional[str] = None) -> str:
@@ -161,35 +156,76 @@ def get_xgboost_device() -> dict:
     return config
 
 
+def setup_pytorch_gpu(device_id: Optional[int] = None, allow_growth: bool = True) -> bool:
+    """
+    Setup PyTorch GPU configuration with proper memory management.
+    
+    This function configures PyTorch to use GPU efficiently:
+    - Sets CUDA device if available
+    - Configures memory management
+    - Enables optimizations for GPU computation
+    
+    Args:
+        device_id: Specific GPU device ID to use (None for default)
+        allow_growth: If True, allows memory growth (recommended)
+    
+    Returns:
+        True if GPU was successfully configured, False otherwise
+    """
+    if not TORCH_AVAILABLE:
+        logger.warning("PyTorch not available - cannot setup GPU")
+        return False
+    
+    if not torch.cuda.is_available():
+        logger.debug("CUDA not available - GPU setup skipped")
+        return False
+    
+    try:
+        # Set device if specified
+        if device_id is not None:
+            torch.cuda.set_device(device_id)
+        
+        # Get current device info
+        current_device = torch.cuda.current_device()
+        device_name = torch.cuda.get_device_name(current_device)
+        
+        # Configure memory management
+        if allow_growth:
+            # PyTorch doesn't have the same memory growth setting as TensorFlow,
+            # but we can set memory fraction to allow growth
+            # Note: PyTorch handles memory more dynamically by default
+            logger.info(f"PyTorch GPU configured: {device_name} (device {current_device})")
+        
+        # Set memory fraction if needed (optional - PyTorch handles this well by default)
+        # torch.cuda.set_per_process_memory_fraction(0.9)  # Use 90% of GPU memory
+        
+        # Enable optimizations
+        torch.backends.cudnn.benchmark = True  # Optimize for consistent input sizes
+        torch.backends.cudnn.deterministic = False  # Allow non-deterministic for speed
+        
+        logger.info(f"PyTorch GPU setup complete: {device_name}")
+        logger.info(f"  Device: {current_device}")
+        logger.info(f"  Memory: {torch.cuda.get_device_properties(current_device).total_memory / 1024**3:.2f} GB")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"PyTorch GPU setup failed: {e}")
+        return False
+
+
 def setup_tensorflow_gpu():
     """
-    Setup TensorFlow GPU configuration if available.
+    TensorFlow GPU setup removed - PyTorch only.
+    
+    This function is kept for backward compatibility. It redirects to PyTorch GPU setup.
+    Use setup_pytorch_gpu() directly for better control.
 
     Returns:
-        True if GPU is configured, False otherwise
+        True if PyTorch GPU was configured, False otherwise
     """
-    if not TENSORFLOW_AVAILABLE:
-        return False
-
-    try:
-        # Enable memory growth to avoid allocating all GPU memory
-        gpus = tf.config.experimental.list_physical_devices("GPU")
-        if gpus:
-            try:
-                for gpu in gpus:
-                    tf.config.experimental.set_memory_growth(gpu, True)
-                logger.info(f"TensorFlow GPU configured: {len(gpus)} GPU(s) available")
-                return True
-            except RuntimeError as e:
-                logger.warning(f"TensorFlow GPU configuration error: {e}")
-        else:
-            logger.debug("No TensorFlow GPU devices found")
-            return False
-    except Exception as e:
-        logger.warning(f"TensorFlow GPU setup failed: {e}")
-        return False
-
-    return False
+    logger.info("TensorFlow GPU setup called - redirecting to PyTorch GPU setup")
+    return setup_pytorch_gpu()
 
 
 def get_device_memory_info(device: Optional[str] = None) -> dict:

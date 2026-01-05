@@ -428,6 +428,21 @@ def get_data_loader() -> DataLoader:
     return _data_loader
 
 
+def get_data_provider(name: Optional[str] = None) -> Optional[BaseDataProvider]:
+    """Get a data provider instance (backward compatibility function).
+
+    Args:
+        name: Optional provider name. If None, returns the fallback provider.
+
+    Returns:
+        Provider instance or None if not available
+    """
+    if name:
+        return _provider_manager.get_provider(name)
+    # Return fallback provider by default
+    return _provider_manager.get_provider("fallback")
+
+
 # --- Exports ---
 __all__ = [
     # Core classes
@@ -447,6 +462,7 @@ __all__ = [
     "get_provider_status",
     "get_provider_manager",
     "get_data_loader",
+    "get_data_provider",
 ]
 
 __version__ = "1.0.0"

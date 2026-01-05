@@ -12,14 +12,76 @@ All triggered from a single input with professional styling.
 
 import logging
 import os
+import sys
 import warnings
 from datetime import datetime
+from pathlib import Path
+
+# Suppress TensorFlow/keras warnings from dependencies
+# Note: This codebase uses PyTorch only, but some dependencies (like transformers, stable-baselines3)
+# may have keras/tf_keras as optional dependencies that trigger warnings
+os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '3')  # Suppress all TensorFlow messages (ERROR and above only)
+
+# Suppress TensorFlow logging at the module level
+try:
+    import tensorflow as tf
+    tf.get_logger().setLevel('ERROR')
+    # Suppress all TensorFlow warnings
+    import logging
+    logging.getLogger('tensorflow').setLevel(logging.ERROR)
+    logging.getLogger('tf_keras').setLevel(logging.ERROR)
+    logging.getLogger('keras').setLevel(logging.ERROR)
+except ImportError:
+    pass  # TensorFlow not installed, which is fine
+
+# Suppress warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='tensorflow')
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='tf_keras')
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='keras')
+warnings.filterwarnings('ignore', message='.*tf.losses.sparse_softmax_cross_entropy.*')
+warnings.filterwarnings('ignore', message='.*tf.reset_default_graph.*')
+warnings.filterwarnings('ignore', message='.*The name tf.*is deprecated.*')
+warnings.filterwarnings('ignore', message='.*From.*tf_keras.*')
+warnings.filterwarnings('ignore', message='.*From.*keras.*')
 
 import streamlit as st
 
-# Configure logging first
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Add project root to Python path for imports
+# This ensures modules can be imported correctly in Streamlit
+project_root = Path(__file__).parent.absolute()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# Configure advanced logging first
+try:
+    from config.logging_config import setup_logging, get_logger
+    
+    # Setup advanced logging
+    logging_config = setup_logging(
+        config={
+            'level': 'INFO',  # Use string, not logging.INFO constant
+            'file': 'logs/trading_system.log',
+            'max_size': 10*1024*1024,  # 10 MB
+            'backup_count': 5,
+            'console': True,
+            'log_rotation': True
+        }
+    )
+    logger = get_logger(__name__)
+    
+    logger.info("="*80)
+    logger.info("Trading System Starting Up")
+    logger.info("="*80)
+except ImportError:
+    # Fallback to basic logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    logger.warning("Advanced logging not available, using basic logging")
+except Exception as e:
+    # Fallback to basic logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    logger.error(f"Error setting up advanced logging: {e}, using basic logging")
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -47,17 +109,17 @@ finnhub_key = os.getenv("FINNHUB_API_KEY")
 polygon_key = os.getenv("POLYGON_API_KEY")
 
 if alpha_vantage_key:
-    logger.info(f"✅ ALPHA_VANTAGE_API_KEY loaded: {alpha_vantage_key[:10]}...")
+    logger.info("✅ ALPHA_VANTAGE_API_KEY loaded successfully")
 else:
     logger.warning("❌ ALPHA_VANTAGE_API_KEY not found")
 
 if finnhub_key:
-    logger.info(f"✅ FINNHUB_API_KEY loaded: {finnhub_key[:10]}...")
+    logger.info("✅ FINNHUB_API_KEY loaded successfully")
 else:
     logger.warning("❌ FINNHUB_API_KEY not found")
 
 if polygon_key:
-    logger.info(f"✅ POLYGON_API_KEY loaded: {polygon_key[:10]}...")
+    logger.info("✅ POLYGON_API_KEY loaded successfully")
 else:
     logger.warning("❌ POLYGON_API_KEY not found")
 
@@ -160,24 +222,357 @@ except Exception as e:
     logger.warning(f"Some modules not available: {e}")
     CORE_COMPONENTS_AVAILABLE = False
 
-# Add Task Orchestrator integration after the existing imports
+# Add Task Orchestrator integration
 try:
-    pass
-
+    # Ensure project root is in path
+    import sys
+    project_root = Path(__file__).parent.absolute()
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    
+    from core.orchestrator.task_orchestrator import TaskOrchestrator
+    from core.orchestrator.task_scheduler import TaskScheduler
+    from core.orchestrator.task_monitor import TaskMonitor
+    
+    # Initialize orchestrator components
+    task_orchestrator = TaskOrchestrator()
+    task_scheduler = TaskScheduler(orchestrator=task_orchestrator)
+    task_monitor = TaskMonitor(orchestrator=task_orchestrator)
+    
+    # Store in session state for access across pages
+    if 'task_orchestrator' not in st.session_state:
+        st.session_state.task_orchestrator = task_orchestrator
+    if 'task_scheduler' not in st.session_state:
+        st.session_state.task_scheduler = task_scheduler
+    if 'task_monitor' not in st.session_state:
+        st.session_state.task_monitor = task_monitor
+    
     ORCHESTRATOR_AVAILABLE = True
+    logger.info("✅ Task Orchestrator initialized successfully")
+    
 except ImportError as e:
     logger.warning(f"Task Orchestrator not available: {e}")
+    ORCHESTRATOR_AVAILABLE = False
+except Exception as e:
+    logger.error(f"Error initializing Task Orchestrator: {e}")
     ORCHESTRATOR_AVAILABLE = False
 
 # Add Agent Controller integration
 try:
-    pass
-
+    from agents.agent_controller import AgentController
+    from agents.task_router import TaskRouter
+    from agents.registry import AgentRegistry
+    
+    # Initialize agent infrastructure
+    agent_registry = AgentRegistry()
+    task_router = TaskRouter(registry=agent_registry)
+    agent_controller = AgentController(
+        registry=agent_registry,
+        router=task_router
+    )
+    
+    # Store in session state
+    if 'agent_controller' not in st.session_state:
+        st.session_state.agent_controller = agent_controller
+    if 'agent_registry' not in st.session_state:
+        st.session_state.agent_registry = agent_registry
+    if 'task_router' not in st.session_state:
+        st.session_state.task_router = task_router
+    
     AGENT_CONTROLLER_AVAILABLE = True
     logger.info("✅ Agent Controller initialized successfully")
+    
 except ImportError as e:
     logger.warning(f"Agent Controller not available: {e}")
     AGENT_CONTROLLER_AVAILABLE = False
+except Exception as e:
+    logger.error(f"Error initializing Agent Controller: {e}")
+    AGENT_CONTROLLER_AVAILABLE = False
+
+# Add Notification Service
+try:
+    from system.infra.agents.notifications.notification_service import NotificationService
+    
+    # Initialize notification system
+    notification_service = NotificationService()
+    
+    if 'notification_service' not in st.session_state:
+        st.session_state.notification_service = notification_service
+    
+    NOTIFICATION_SERVICE_AVAILABLE = True
+    logger.info("✅ Notification Service initialized successfully")
+    
+except ImportError as e:
+    logger.warning(f"Notification Service not available: {e}")
+    NOTIFICATION_SERVICE_AVAILABLE = False
+except Exception as e:
+    logger.error(f"Error initializing Notification Service: {e}")
+    NOTIFICATION_SERVICE_AVAILABLE = False
+
+# Add Audit Logger
+try:
+    from trading.logs.audit_logger import AuditLogger
+    
+    # Initialize audit logger
+    if 'audit_logger' not in st.session_state:
+        st.session_state.audit_logger = AuditLogger()
+    
+    AUDIT_LOGGER_AVAILABLE = True
+    logger.info("✅ Audit Logger initialized successfully")
+    
+except ImportError as e:
+    logger.warning(f"Audit Logger not available: {e}")
+    AUDIT_LOGGER_AVAILABLE = False
+except Exception as e:
+    logger.error(f"Error initializing Audit Logger: {e}")
+    AUDIT_LOGGER_AVAILABLE = False
+
+# Add System Health Monitoring
+try:
+    from system.infra.agents.services.automation_health import AutomationHealthService as HealthMonitor
+    from system.infra.agents.services.automation_monitoring import AutomationMonitoringService
+    
+    # Initialize monitoring
+    health_monitor = HealthMonitor()
+    system_monitor = AutomationMonitoringService()
+    
+    if 'health_monitor' not in st.session_state:
+        st.session_state.health_monitor = health_monitor
+    if 'system_monitor' not in st.session_state:
+        st.session_state.system_monitor = system_monitor
+    
+    MONITORING_AVAILABLE = True
+    logger.info("✅ System monitoring initialized")
+    
+except ImportError as e:
+    logger.warning(f"Monitoring not available: {e}")
+    MONITORING_AVAILABLE = False
+except Exception as e:
+    logger.error(f"Error initializing monitoring: {e}")
+    MONITORING_AVAILABLE = False
+
+# Add Automation Core & Workflows
+try:
+    from system.infra.agents.services.automation_core import (
+        AutomationCoreService as AutomationCore,
+        AutomationConfig,
+    )
+    from system.infra.agents.services.automation_workflows import AutomationWorkflowsService
+    
+    # Initialize automation system
+    automation_config = AutomationConfig()  # Uses default values from Pydantic model
+    # AutomationCoreService now properly accepts config parameter
+    automation_core = AutomationCore(config=automation_config)
+    workflow_manager = AutomationWorkflowsService()  # WorkflowManager is AutomationWorkflowsService
+    
+    # Store in session state
+    if 'automation_core' not in st.session_state:
+        st.session_state.automation_core = automation_core
+    if 'workflow_manager' not in st.session_state:
+        st.session_state.workflow_manager = workflow_manager
+    if 'automation_config' not in st.session_state:
+        st.session_state.automation_config = automation_config
+    
+    AUTOMATION_AVAILABLE = True
+    logger.info("✅ Automation system initialized successfully")
+    
+except ImportError as e:
+    logger.warning(f"Automation system not available: {e}")
+    AUTOMATION_AVAILABLE = False
+except Exception as e:
+    logger.error(f"Error initializing automation: {e}")
+    AUTOMATION_AVAILABLE = False
+
+# Add Model Performance Monitoring
+try:
+    from trading.memory.model_log import ModelLog
+    from trading.memory.performance_logger import ModelScoreTracker
+    from trading.memory.model_monitor import ModelMonitor
+    
+    model_log = ModelLog()
+    perf_logger = ModelScoreTracker()  # Use ModelScoreTracker instead of PerformanceLogger
+    model_monitor = ModelMonitor()
+    
+    if 'model_log' not in st.session_state:
+        st.session_state.model_log = model_log
+    if 'perf_logger' not in st.session_state:
+        st.session_state.perf_logger = perf_logger
+    if 'model_monitor' not in st.session_state:
+        st.session_state.model_monitor = model_monitor
+    
+    MODEL_MONITORING_AVAILABLE = True
+    logger.info("✅ Model monitoring initialized")
+    
+except ImportError as e:
+    MODEL_MONITORING_AVAILABLE = False
+    logger.warning(f"Model monitoring not available: {e}")
+except Exception as e:
+    MODEL_MONITORING_AVAILABLE = False
+    logger.warning(f"Error initializing model monitoring: {e}")
+
+# Add Commentary Service
+try:
+    from trading.services.commentary_service import CommentaryService
+    
+    # Initialize commentary system
+    # CommentaryService creates its own CommentaryEngine internally
+    commentary_service = CommentaryService()
+    
+    if 'commentary_service' not in st.session_state:
+        st.session_state.commentary_service = commentary_service
+    
+    COMMENTARY_SERVICE_AVAILABLE = True
+    logger.info("✅ Commentary service initialized")
+    
+except ImportError as e:
+    logger.warning(f"Commentary service not available: {e}")
+    COMMENTARY_SERVICE_AVAILABLE = False
+except Exception as e:
+    logger.warning(f"Error initializing commentary service: {e}")
+    COMMENTARY_SERVICE_AVAILABLE = False
+
+# ============================================================================
+# PHASE 1-8: COMPREHENSIVE FEATURE INITIALIZATION
+# ============================================================================
+
+logger.info("="*80)
+logger.info("Initializing Phase 1-8 features...")
+logger.info("="*80)
+
+# ----------------------------------------------------------------------------
+# PHASE 1: DATA VALIDATION & PIPELINE
+# ----------------------------------------------------------------------------
+
+try:
+    from src.utils.data_validation import DataValidator
+    from src.utils.data_pipeline import DataPipeline
+    
+    if 'data_validator' not in st.session_state:
+        st.session_state.data_validator = DataValidator()
+        st.session_state.data_pipeline = DataPipeline()
+    
+    logger.info("✅ Data validation & pipeline initialized")
+except Exception as e:
+    logger.warning(f"⚠️  Data validation: {e}")
+
+# ----------------------------------------------------------------------------
+# PHASE 2: ADVANCED MODELS (Ready for registration)
+# ----------------------------------------------------------------------------
+
+try:
+    from trading.models.advanced.transformer.time_series_transformer import TransformerForecaster as TimeSeriesTransformer
+    from trading.forecasting.hybrid_model import HybridModel
+    from trading.forecasting.hybrid_model_selector import HybridModelSelector
+    from trading.forecasting.forecast_postprocessor import ForecastPostprocessor
+    from trading.feature_engineering.macro_feature_engineering import MacroFeatureEngineer
+    
+    # Store for later use
+    if 'hybrid_model_selector' not in st.session_state:
+        st.session_state.hybrid_model_selector = HybridModelSelector()
+    if 'forecast_postprocessor' not in st.session_state:
+        st.session_state.forecast_postprocessor = ForecastPostprocessor()
+    if 'macro_feature_engineer' not in st.session_state:
+        st.session_state.macro_feature_engineer = MacroFeatureEngineer()
+    
+    logger.info("✅ Phase 2 models loaded (ready for registration)")
+except Exception as e:
+    logger.warning(f"⚠️  Phase 2 models: {e}")
+
+# ----------------------------------------------------------------------------
+# PHASE 3: VISUALIZATION
+# ----------------------------------------------------------------------------
+
+try:
+    from trading.core.performance import PerformanceVisualizer
+    
+    if 'performance_visualizer' not in st.session_state:
+        st.session_state.performance_visualizer = PerformanceVisualizer()
+    
+    logger.info("✅ Visualization tools initialized")
+except Exception as e:
+    logger.warning(f"⚠️  Visualization: {e}")
+
+# ----------------------------------------------------------------------------
+# PHASE 4: NLP & SENTIMENT
+# ----------------------------------------------------------------------------
+
+try:
+    from trading.nlp.sentiment_classifier import SentimentClassifier
+    from trading.signals.sentiment_signals import SentimentSignals
+    
+    if 'sentiment_classifier' not in st.session_state:
+        st.session_state.sentiment_classifier = SentimentClassifier()
+        # Pass API keys explicitly - support both NEWSAPI_KEY and NEWS_API_KEY
+        newsapi_key = os.getenv("NEWSAPI_KEY") or os.getenv("NEWS_API_KEY")
+        sentiment_signals = SentimentSignals(
+            reddit_client_id=os.getenv("REDDIT_CLIENT_ID"),
+            reddit_client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
+            newsapi_key=newsapi_key
+        )
+        st.session_state.sentiment_signals = sentiment_signals
+    
+    logger.info("✅ NLP & sentiment initialized")
+except Exception as e:
+    logger.warning(f"⚠️  NLP & sentiment: {e}")
+
+# ----------------------------------------------------------------------------
+# PHASE 5: SERVICES (already initialized above, but ensuring completeness)
+# ----------------------------------------------------------------------------
+
+# Commentary service already initialized above
+
+# ----------------------------------------------------------------------------
+# PHASE 6: ANALYTICS
+# ----------------------------------------------------------------------------
+
+try:
+    from trading.utils.metrics.scorer import ModelScorer
+    from trading.validation.walk_forward_utils import WalkForwardValidator
+    from trading.optimization.utils.consolidator import PositionConsolidator
+    
+    if 'analytics_tools' not in st.session_state:
+        st.session_state.model_scorer = ModelScorer()
+        st.session_state.walk_forward_validator = WalkForwardValidator()
+        st.session_state.position_consolidator = PositionConsolidator()
+    
+    logger.info("✅ Analytics initialized")
+except Exception as e:
+    logger.warning(f"⚠️  Analytics: {e}")
+
+# Try to import causal analysis (may not be available)
+try:
+    from causal.causal_model import CausalModel
+    from causal.driver_analysis import DriverAnalysis
+    
+    if 'causal_model' not in st.session_state:
+        st.session_state.causal_model = CausalModel()
+        st.session_state.driver_analysis = DriverAnalysis()
+    
+    logger.info("✅ Causal analysis initialized")
+except Exception as e:
+    logger.debug(f"Causal analysis not available: {e}")
+
+# ----------------------------------------------------------------------------
+# PHASE 7: ADVANCED EXECUTION
+# ----------------------------------------------------------------------------
+
+try:
+    from trading.execution.execution_engine import ExecutionEngine as AdvancedExecutionEngine
+    from trading.execution.execution_replay import ExecutionReplay
+    from trading.nlp.llm_processor import LLMProcessor
+    
+    if 'execution_tools' not in st.session_state:
+        st.session_state.execution_engine = AdvancedExecutionEngine()
+        st.session_state.execution_replay = ExecutionReplay()
+        st.session_state.llm_processor = LLMProcessor()
+    
+    logger.info("✅ Execution tools initialized")
+except Exception as e:
+    logger.warning(f"⚠️  Execution tools: {e}")
+
+logger.info("="*80)
+logger.info("Phase 1-8 initialization complete")
+logger.info("="*80)
 
 # Enhanced ChatGPT-like styling
 st.markdown(

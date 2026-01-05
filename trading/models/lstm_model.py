@@ -33,13 +33,14 @@ except ImportError as e:
 
 # Try to import scikit-learn
 try:
-    from sklearn.preprocessing import StandardScaler
+    from sklearn.preprocessing import StandardScaler, RobustScaler
 
     SKLEARN_AVAILABLE = True
 except ImportError as e:
     print("âš ï¸ scikit-learn not available. Disabling data preprocessing.")
     print(f"   Missing: {e}")
     StandardScaler = None
+    RobustScaler = None
     SKLEARN_AVAILABLE = False
 
 import joblib
@@ -189,15 +190,15 @@ class LSTMModel(nn.Module):
             optimizer = Adam(self.parameters(), lr=learning_rate)
             criterion = nn.MSELoss()
             scheduler = ReduceLROnPlateau(
-                optimizer, mode="min", factor=0.5, patience=5, verbose=True
+                optimizer, mode="min", factor=0.5, patience=5
             )
 
             # Setup checkpoint directory
             os.makedirs(checkpoint_dir, exist_ok=True)
 
             # Scale the data
-            X_scaled = self.scaler.fit_transform(X)
-            y_scaled = self.scaler.fit_transform(y.values.reshape(-1, 1))
+            X_scaled = self.X_scaler.fit_transform(X)
+            y_scaled = self.y_scaler.fit_transform(y.values.reshape(-1, 1))
 
             # Convert to tensors
             X_tensor = torch.FloatTensor(X_scaled)
@@ -240,8 +241,12 @@ class LSTMModel(nn.Module):
 
                         epoch_loss += loss.item()
 
-                    # Calculate average epoch loss
-                    avg_epoch_loss = epoch_loss / len(dataloader)
+                    # Calculate average epoch loss - Safely calculate with division-by-zero protection
+                    avg_epoch_loss = (
+                        epoch_loss / len(dataloader)
+                        if len(dataloader) > 0
+                        else 0.0
+                    )
                     history["train_loss"].append(avg_epoch_loss)
 
                     # Update learning rate scheduler
@@ -304,10 +309,10 @@ class LSTMModel(nn.Module):
                 logger.warning(
                     "Input data contains NaN values, filling with forward fill"
                 )
-                data = data.fillna(method="ffill").fillna(method="bfill")
+                data = data.ffill().bfill()
 
             # Perform prediction
-            X_scaled = self.scaler.transform(data)
+            X_scaled = self.X_scaler.transform(data)
             X_tensor = torch.FloatTensor(X_scaled)
             X_seq = self._create_sequences(X_tensor)
 
@@ -404,13 +409,30 @@ class LSTMForecaster(BaseModel):
 
             # Initialize components
             self.model = None
-            self.scaler = StandardScaler()
+            # Use RobustScaler for better handling of outliers
+            use_robust_scaler = self.config.get("use_robust_scaler", True)
+            if use_robust_scaler and RobustScaler is not None:
+                self.X_scaler = RobustScaler()
+                self.y_scaler = RobustScaler()
+            else:
+                self.X_scaler = StandardScaler()
+                self.y_scaler = StandardScaler()
             self.is_trained = False
             self.training_history = {"loss": [], "val_loss": []}
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            
+            # Initialize caching attributes
+            self.last_input_hash = None
+            self.compiled_model = None
 
             # Initialize fallback model
             self.fallback_model = FallbackModel()
+            
+            # Store accuracy optimization parameters
+            self.sequence_damping = self.config.get("sequence_damping", 0.05)  # Reduced from 0.2
+            self.forecast_damping = self.config.get("forecast_damping", 0.0)  # No forecast blending by default
+            self.use_volatility_bounds = self.config.get("use_volatility_bounds", True)
+            self.max_volatility_multiplier = self.config.get("max_volatility_multiplier", 3.0)  # 3-sigma rule
 
             # Build model with error handling
             try:
@@ -478,9 +500,12 @@ class LSTMForecaster(BaseModel):
 
         try:
             input_size = len(self.config["feature_columns"])
-            hidden_size = self.config["hidden_size"]
-            num_layers = self.config.get("num_layers", 1)
-            dropout = self.config["dropout"]
+            # Enhanced defaults for better accuracy
+            hidden_size = self.config.get("hidden_size", 128)  # Increased from default
+            num_layers = self.config.get("num_layers", 3)  # Increased from default
+            dropout = self.config.get("dropout", 0.3)  # Increased from default
+            bidirectional = self.config.get("bidirectional", True)  # Enable by default
+            use_attention = self.config.get("use_attention", True)  # Enable by default
             use_batch_norm = self.config.get("use_batch_norm", False)
             use_layer_norm = self.config.get("use_layer_norm", False)
             additional_dropout = self.config.get("additional_dropout", 0)
@@ -492,36 +517,66 @@ class LSTMForecaster(BaseModel):
                     hidden_size,
                     num_layers,
                     dropout,
+                    bidirectional,
+                    use_attention,
                     use_batch_norm,
                     use_layer_norm,
                     additional_dropout,
                 ):
                     super().__init__()
+                    self.bidirectional = bidirectional
+                    self.use_attention = use_attention
+                    
                     self.lstm = nn.LSTM(
                         input_size,
                         hidden_size,
                         num_layers=num_layers,
                         batch_first=True,
                         dropout=dropout if num_layers > 1 else 0,
+                        bidirectional=bidirectional,
                     )
+
+                    # Calculate LSTM output size (doubled if bidirectional)
+                    lstm_output_size = hidden_size * 2 if bidirectional else hidden_size
+                    
+                    # Add attention mechanism for better long-term dependencies
+                    if use_attention:
+                        self.attention = nn.MultiheadAttention(
+                            embed_dim=lstm_output_size,
+                            num_heads=4,
+                            dropout=dropout,
+                            batch_first=False  # MultiheadAttention expects (seq_len, batch, embed_dim)
+                        )
 
                     # Additional layers for enhanced functionality
                     self.batch_norm = (
-                        nn.BatchNorm1d(hidden_size) if use_batch_norm else None
+                        nn.BatchNorm1d(lstm_output_size) if use_batch_norm else None
                     )
                     self.layer_norm = (
-                        nn.LayerNorm(hidden_size) if use_layer_norm else None
+                        nn.LayerNorm(lstm_output_size) if use_layer_norm else None
                     )
                     self.dropout_layer = nn.Dropout(additional_dropout)
-                    self.fc = nn.Linear(hidden_size, 1)
+                    self.fc = nn.Linear(lstm_output_size, 1)
 
                 def forward(self, x):
                     try:
                         # LSTM forward pass
-                        lstm_out, _ = self.lstm(x)
+                        lstm_out, _ = self.lstm(x)  # Shape: (batch, seq_len, hidden_size * 2 if bidirectional)
 
-                        # Use only the final timestep's output
-                        final_output = lstm_out[:, -1, :]
+                        # Apply attention if enabled
+                        if self.use_attention:
+                            # MultiheadAttention expects (seq_len, batch, embed_dim)
+                            lstm_out_transposed = lstm_out.transpose(0, 1)  # (seq_len, batch, hidden_size)
+                            attn_out, _ = self.attention(
+                                lstm_out_transposed,
+                                lstm_out_transposed,
+                                lstm_out_transposed
+                            )
+                            # Use last timestep from attention output
+                            final_output = attn_out[-1, :, :]  # (batch, hidden_size)
+                        else:
+                            # Use last timestep from LSTM
+                            final_output = lstm_out[:, -1, :]  # (batch, hidden_size)
 
                         # Apply normalization if enabled
                         if self.batch_norm is not None:
@@ -544,6 +599,8 @@ class LSTMForecaster(BaseModel):
                 hidden_size,
                 num_layers,
                 dropout,
+                bidirectional,
+                use_attention,
                 use_batch_norm,
                 use_layer_norm,
                 additional_dropout,
@@ -689,18 +746,23 @@ class LSTMForecaster(BaseModel):
                 logger.warning(
                     "Input data contains NaN values, filling with forward fill"
                 )
-                data = data.fillna(method="ffill").fillna(method="bfill")
+                data = data.ffill().bfill()
 
             # Normalize data
             if is_training:
-                self.scaler = StandardScaler()
-                normalized_data = self.scaler.fit_transform(
+                # Use RobustScaler if configured (better with outliers)
+                use_robust = self.config.get("use_robust_scaler", True)
+                if use_robust and RobustScaler is not None:
+                    self.X_scaler = RobustScaler()
+                else:
+                    self.X_scaler = StandardScaler()
+                normalized_data = self.X_scaler.fit_transform(
                     data[self.config["feature_columns"]]
                 )
             else:
-                if not hasattr(self, "scaler"):
+                if not hasattr(self, "X_scaler"):
                     raise ValueError("Model must be trained before prediction")
-                normalized_data = self.scaler.transform(
+                normalized_data = self.X_scaler.transform(
                     data[self.config["feature_columns"]]
                 )
 
@@ -803,8 +865,11 @@ class LSTMForecaster(BaseModel):
         y: pd.Series,
         epochs: int = 100,
         batch_size: int = 32,
-        learning_rate: float = 0.001,
+        learning_rate: float = 0.0001,  # Reduced for stability
         validation_split: float = 0.2,
+        patience: int = 15,  # Early stopping patience
+        min_delta: float = 1e-4,  # Minimum improvement
+        **kwargs
     ) -> Dict[str, List[float]]:
         """Train the model with robust error handling and input validation."""
         if not self.available:
@@ -860,14 +925,43 @@ class LSTMForecaster(BaseModel):
             except Exception as e:
                 logger.warning(f"Failed to calculate data statistics: {e}")
 
+            # Scale the data FIRST before creating sequences
+            # This is critical - sequences must be created from scaled data
+            try:
+                # Fit scalers on the training data
+                if not hasattr(self, 'X_scaler') or self.X_scaler is None:
+                    use_robust = self.config.get("use_robust_scaler", True)
+                    if use_robust and RobustScaler is not None:
+                        self.X_scaler = RobustScaler()
+                    else:
+                        self.X_scaler = StandardScaler()
+                if not hasattr(self, 'y_scaler') or self.y_scaler is None:
+                    use_robust = self.config.get("use_robust_scaler", True)
+                    if use_robust and RobustScaler is not None:
+                        self.y_scaler = RobustScaler()
+                    else:
+                        self.y_scaler = StandardScaler()
+                
+                # Scale X and y
+                X_scaled = self.X_scaler.fit_transform(X[self.config.get("feature_columns", list(X.columns))])
+                y_scaled = self.y_scaler.fit_transform(y.values.reshape(-1, 1)).flatten()
+                
+                # Convert to DataFrame/Series for easier indexing
+                X_scaled_df = pd.DataFrame(X_scaled, index=X.index, columns=X.columns)
+                y_scaled_series = pd.Series(y_scaled, index=y.index)
+            except Exception as e:
+                logger.error(f"Failed to scale data: {e}")
+                raise ModelTrainingError(f"Data scaling failed: {str(e)}")
+
             # Prepare data for LSTM (reshape to [samples, timesteps, features])
+            # Now create sequences from SCALED data
             try:
                 seq_len = self.config["sequence_length"]
                 X_seq = []
                 y_seq = []
-                for i in range(len(X) - seq_len):
-                    X_seq.append(X.iloc[i : i + seq_len].values)
-                    y_seq.append(y.iloc[i + seq_len])
+                for i in range(len(X_scaled_df) - seq_len):
+                    X_seq.append(X_scaled_df.iloc[i : i + seq_len].values)
+                    y_seq.append(y_scaled_series.iloc[i + seq_len])
                 X_seq = np.array(X_seq)
                 y_seq = np.array(y_seq)
             except Exception as e:
@@ -909,17 +1003,32 @@ class LSTMForecaster(BaseModel):
 
             # Setup training
             try:
-                optimizer = Adam(self.model.parameters(), lr=learning_rate)
+                # Optimizer with weight decay for regularization
+                optimizer = Adam(
+                    self.model.parameters(),
+                    lr=learning_rate,
+                    weight_decay=1e-5  # L2 regularization
+                )
                 criterion = nn.MSELoss()
+                # Learning rate scheduler with better parameters
                 scheduler = ReduceLROnPlateau(
-                    optimizer, mode="min", factor=0.5, patience=5, verbose=True
+                    optimizer,
+                    mode='min',
+                    factor=0.5,  # Reduce LR by 50% when plateaued
+                    patience=5,
+                    min_lr=1e-6
                 )
             except Exception as e:
                 logger.error(f"Failed to setup training components: {e}")
                 raise ModelTrainingError(f"Training setup failed: {str(e)}")
 
             # Training history
-            history = {"train_loss": [], "val_loss": []}
+            history = {"train_loss": [], "val_loss": [], "learning_rate": []}
+            
+            # Early stopping variables
+            best_val_loss = float('inf')
+            patience_counter = 0
+            best_model_state = None
 
             # Training loop with error handling
             try:
@@ -936,6 +1045,10 @@ class LSTMForecaster(BaseModel):
                             outputs = self.model(batch_X)
                             loss = criterion(outputs, batch_y)
                             loss.backward()
+                            
+                            # Gradient clipping to prevent exploding gradients
+                            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                            
                             optimizer.step()
 
                             train_loss += loss.item()
@@ -952,22 +1065,50 @@ class LSTMForecaster(BaseModel):
                                 loss = criterion(outputs, batch_y)
                                 val_loss += loss.item()
 
-                        # Calculate average losses
-                        avg_train_loss = train_loss / len(train_loader)
-                        avg_val_loss = val_loss / len(val_loader)
+                        # Calculate average losses - Safely calculate with division-by-zero protection
+                        avg_train_loss = (
+                            train_loss / len(train_loader)
+                            if len(train_loader) > 0
+                            else 0.0
+                        )
+                        avg_val_loss = (
+                            val_loss / len(val_loader)
+                            if len(val_loader) > 0
+                            else 0.0
+                        )
 
-                        # Update scheduler
+                        # Update scheduler based on validation loss
                         scheduler.step(avg_val_loss)
+                        current_lr = optimizer.param_groups[0]['lr']
 
                         # Store history
                         history["train_loss"].append(avg_train_loss)
                         history["val_loss"].append(avg_val_loss)
+                        history["learning_rate"].append(current_lr)
 
                         # Log progress
                         if (epoch + 1) % 10 == 0:
                             self.logger.info(
-                                f"Epoch [{epoch + 1}/{epochs}], Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}"
+                                f"Epoch [{epoch + 1}/{epochs}], Train Loss: {avg_train_loss:.6f}, "
+                                f"Val Loss: {avg_val_loss:.6f}, LR: {current_lr:.6f}"
                             )
+                        
+                        # Early stopping check
+                        if avg_val_loss < (best_val_loss - min_delta):
+                            best_val_loss = avg_val_loss
+                            patience_counter = 0
+                            # Save best model weights
+                            best_model_state = self.model.state_dict().copy()
+                        else:
+                            patience_counter += 1
+                        
+                        # Early stopping
+                        if patience_counter >= patience:
+                            self.logger.info(f"Early stopping triggered at epoch {epoch + 1}")
+                            # Restore best weights
+                            if best_model_state is not None:
+                                self.model.load_state_dict(best_model_state)
+                            break
 
                     except Exception as e:
                         logger.error(f"Training failed at epoch {epoch + 1}: {e}")
@@ -980,6 +1121,29 @@ class LSTMForecaster(BaseModel):
                 logger.error(f"Training loop failed: {e}")
                 raise ModelTrainingError(f"Training loop failed: {str(e)}")
 
+            # Mark model as trained and ensure scalers are set
+            self.is_trained = True
+            # Ensure X_scaler and y_scaler are properly set after training
+            if not hasattr(self, 'X_scaler') or self.X_scaler is None:
+                # If scalers weren't set during training, create them
+                use_robust = self.config.get("use_robust_scaler", True)
+                if use_robust and RobustScaler is not None:
+                    self.X_scaler = RobustScaler()
+                    self.y_scaler = RobustScaler()
+                else:
+                    self.X_scaler = StandardScaler()
+                    self.y_scaler = StandardScaler()
+                # Fit them on the training data
+                self.X_scaler.fit(X)
+                self.y_scaler.fit(y.values.reshape(-1, 1))
+            
+            # Store training history and validation score
+            self.training_history = history
+            self.validation_score = 1 / (1 + best_val_loss)  # Higher is better
+            
+            logger.info(f"Training complete. Best validation loss: {best_val_loss:.6f}")
+            logger.info(f"Model confidence score: {self.validation_score:.4f}")
+            
             # Cache the compiled model
             try:
                 self.compiled_model = self.model
@@ -1103,7 +1267,8 @@ class LSTMForecaster(BaseModel):
                 {
                     "model_state_dict": self.model.state_dict(),
                     "config": self.config,
-                    "scaler": self.scaler,
+                    "X_scaler": self.X_scaler,
+                    "y_scaler": self.y_scaler,
                     "device": self.device,
                 },
                 path,
@@ -1137,9 +1302,15 @@ class LSTMForecaster(BaseModel):
             if "model_state_dict" in checkpoint:
                 self.model.load_state_dict(checkpoint["model_state_dict"])
 
-            # Load scaler
-            if "scaler" in checkpoint:
-                self.scaler = checkpoint["scaler"]
+            # Load scalers
+            if "X_scaler" in checkpoint:
+                self.X_scaler = checkpoint["X_scaler"]
+            if "y_scaler" in checkpoint:
+                self.y_scaler = checkpoint["y_scaler"]
+            # Backward compatibility: if old format with single scaler, use it for both
+            if "scaler" in checkpoint and "X_scaler" not in checkpoint:
+                self.X_scaler = checkpoint["scaler"]
+                self.y_scaler = checkpoint["scaler"]
 
             self.logger.info(f"Model loaded successfully from {path}")
 
@@ -1148,8 +1319,6 @@ class LSTMForecaster(BaseModel):
             logger.error(traceback.format_exc())
             raise ModelPredictionError(f"Model load failed: {str(e)}")
 
-    @cache_model_operation
-    @safe_forecast(max_retries=2, retry_delay=0.5, log_errors=True)
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.
 
@@ -1181,6 +1350,23 @@ class LSTMForecaster(BaseModel):
             }
 
         try:
+            # Simple caching: check if we have a cached result for this exact input
+            import hashlib
+            cache_key_data = {
+                'data_hash': hashlib.md5(data.to_string().encode()).hexdigest()[:16],
+                'horizon': horizon,
+                'model_state': self.is_trained
+            }
+            cache_key = hashlib.md5(str(cache_key_data).encode()).hexdigest()
+            
+            # Check cache (simple in-memory cache)
+            if not hasattr(self, '_forecast_cache'):
+                self._forecast_cache = {}
+            
+            if cache_key in self._forecast_cache:
+                logger.debug("Using cached forecast result")
+                return self._forecast_cache[cache_key]
+            
             # Validate inputs
             if data.empty:
                 raise ModelPredictionError("Input data is empty")
@@ -1192,7 +1378,7 @@ class LSTMForecaster(BaseModel):
                 logger.warning(f"Large forecast horizon ({horizon}) may be unreliable")
 
             # Check if model is trained
-            if not hasattr(self, "scaler") or self.scaler is None:
+            if not hasattr(self, "X_scaler") or self.X_scaler is None:
                 raise ModelPredictionError("Model must be trained before forecasting")
 
             # Prepare data
@@ -1211,22 +1397,147 @@ class LSTMForecaster(BaseModel):
                 current_sequence = X_seq[-1:].clone()
 
                 with torch.no_grad():
-                    for _ in range(horizon):
-                        # Make prediction
+                    num_features = current_sequence.shape[2]
+                    seq_length = current_sequence.shape[1]
+                    
+                    # Debug: Log initial sequence values
+                    logger.debug(f"Starting forecast: sequence shape {current_sequence.shape}, first prediction from sequence ending at: {current_sequence[0, -1, :].tolist()}")
+                    
+                    for step in range(horizon):
+                        # Make prediction (pred is in scaled space)
                         pred = self.model(current_sequence.to(self.device))
-                        forecasts.append(pred.cpu().numpy())
+                        
+                        # Extract prediction value (still in scaled space)
+                        if pred.dim() > 1:
+                            pred_scaled_value = float(pred[0, 0].item())
+                        elif pred.dim() == 1:
+                            pred_scaled_value = float(pred[0].item())
+                        else:
+                            pred_scaled_value = float(pred.item())
+                        
+                        # Store scaled value for inverse transform later
+                        forecasts.append(pred_scaled_value)
+                        
+                        # Debug: Log prediction
+                        if step < 3 or step == horizon - 1:
+                            logger.debug(f"Step {step}: prediction = {pred_scaled_value:.6f}, last timestep before update = {current_sequence[0, -1, :].tolist()}")
 
-                        # Update sequence for next prediction (simple approach)
-                        # In a more sophisticated implementation, you might want to use the prediction
-                        # to update the sequence properly
+                        # CRITICAL: Update sequence for next prediction
+                        # The sequence shape is (batch=1, seq_len, features)
+                        # Strategy: Roll left, then replace last timestep with new prediction
+                        
+                        # Save the current last timestep before rolling (for multi-feature case)
+                        if num_features > 1:
+                            prev_last = current_sequence[0, -1, :].clone()
+                        
+                        # Roll sequence left: [t0, t1, ..., t_{n-1}] -> [t1, t2, ..., t_{n-1}, t0]
                         current_sequence = torch.roll(current_sequence, -1, dims=1)
-                        current_sequence[:, -1, :] = pred[0, 0]
+                        
+                        # Now update the last timestep (position -1) with the new prediction
+                        # Apply configurable damping to prevent sequence drift
+                        # Default is 0.05 (95% model, 5% stability) - much less aggressive than before
+                        prev_value = current_sequence[0, -1, 0].item()
+                        damped_pred = (1 - self.sequence_damping) * pred_scaled_value + self.sequence_damping * prev_value
+                        
+                        logger.debug(f"Sequence damping: {self.sequence_damping:.2%}, " 
+                                    f"Original: {pred_scaled_value:.4f}, Damped: {damped_pred:.4f}")
+                        
+                        if num_features == 1:
+                            # Single feature: directly update with damped prediction
+                            current_sequence[0, -1, 0] = damped_pred
+                        else:
+                            # Multi-feature: update first feature with damped prediction
+                            current_sequence[0, -1, 0] = damped_pred
+                            # For other features, if we have enough history, use trend
+                            if seq_length > 1:
+                                # The previous last timestep is now at -2 after roll
+                                # Use a small trend from the difference
+                                if step > 0:
+                                    trend = (current_sequence[0, -1, 1:] - current_sequence[0, -2, 1:]) * 0.1
+                                    current_sequence[0, -1, 1:] = current_sequence[0, -2, 1:] + trend
+                                else:
+                                    # First step: keep other features from previous last
+                                    current_sequence[0, -1, 1:] = prev_last[1:]
+                            
+                        # Debug: Verify sequence changed
+                        if step < 3:
+                            logger.debug(f"Step {step}: after update, last timestep = {current_sequence[0, -1, :].tolist()}")
 
-                forecasts = np.concatenate(forecasts, axis=0).flatten()
+                # Convert list to numpy array
+                forecasts = np.array(forecasts)
 
-                # Inverse transform forecasts
-                if hasattr(self, "scaler") and self.scaler is not None:
-                    forecasts = self.scaler.inverse_transform(forecasts.reshape(-1, 1))
+                # Get the last known price for validation and fallback
+                last_price = float(data['close'].iloc[-1] if 'close' in data.columns else data.iloc[-1, 0])
+                
+                # Inverse transform forecasts using y_scaler
+                if hasattr(self, "y_scaler") and self.y_scaler is not None:
+                    try:
+                        forecasts_transformed = self.y_scaler.inverse_transform(forecasts.reshape(-1, 1))
+                        # Ensure we get a 1D array
+                        forecasts = forecasts_transformed.flatten()
+                    except Exception as e:
+                        logger.warning(f"Inverse transform failed: {e}. Using raw forecasts.")
+                        # If inverse transform fails, forecasts might already be in the right scale
+                        forecasts = forecasts.flatten()
+                else:
+                    # No scaler, ensure forecasts are 1D
+                    forecasts = forecasts.flatten()
+                
+                # Ensure forecasts are valid (not NaN/Inf)
+                if np.any(np.isnan(forecasts)) or np.any(np.isinf(forecasts)):
+                    logger.warning("Forecasts contain NaN/Inf values. Replacing with last known value.")
+                    forecasts = np.where(
+                        np.isnan(forecasts) | np.isinf(forecasts),
+                        last_price,
+                        forecasts
+                    )
+                
+                # Calculate historical volatility for intelligent bounds
+                if self.use_volatility_bounds:
+                    # Calculate daily returns volatility
+                    if 'close' in data.columns:
+                        returns = data['close'].pct_change().dropna()
+                    elif 'Close' in data.columns:
+                        returns = data['Close'].pct_change().dropna()
+                    else:
+                        # Use first column as price
+                        price_col = data.iloc[:, 0]
+                        returns = price_col.pct_change().dropna()
+                    
+                    daily_volatility = returns.std()
+                    
+                    # Cap at reasonable maximum (e.g., 20% daily volatility for volatile stocks)
+                    daily_volatility = min(daily_volatility, 0.20)
+                    
+                    logger.info(f"Historical daily volatility: {daily_volatility:.4f}")
+                else:
+                    # Fallback to conservative estimate if not using volatility
+                    daily_volatility = 0.02  # 2% default
+
+                # Apply intelligent bounds based on forecast horizon
+                for i in range(len(forecasts)):
+                    # Expected volatility increases with sqrt(time)
+                    horizon_days = i + 1
+                    expected_volatility = daily_volatility * np.sqrt(horizon_days)
+                    
+                    # Use 3-sigma bounds (99.7% confidence interval)
+                    max_change = self.max_volatility_multiplier * expected_volatility
+                    
+                    # Calculate bounds
+                    reference_price = forecasts[i-1] if i > 0 else last_price
+                    min_bound = reference_price * (1 - max_change)
+                    max_bound = reference_price * (1 + max_change)
+                    
+                    # Clip to bounds
+                    forecasts[i] = np.clip(forecasts[i], min_bound, max_bound)
+                    
+                    # Optional: Very light damping ONLY if configured (default is 0.0 = none)
+                    if self.forecast_damping > 0 and i == 0:
+                        # Only damp first prediction, and only slightly
+                        forecasts[i] = (1 - self.forecast_damping) * forecasts[i] + self.forecast_damping * last_price
+
+                # Final sanity check: prevent negative prices
+                forecasts = np.maximum(forecasts, last_price * 0.1)
 
                 # Create forecast dates
                 last_date = (
@@ -1238,13 +1549,24 @@ class LSTMForecaster(BaseModel):
                     start=last_date, periods=horizon + 1, freq="D"
                 )[1:]
 
-                return {
+                result = {
                     "forecast": forecasts,
                     "dates": forecast_dates,
                     "confidence": np.full(horizon, 0.8),  # Placeholder confidence
                     "model_type": "LSTM",
                     "horizon": horizon,
                 }
+                
+                # Cache the result
+                if hasattr(self, '_forecast_cache'):
+                    self._forecast_cache[cache_key] = result
+                    # Limit cache size to prevent memory issues
+                    if len(self._forecast_cache) > 10:
+                        # Remove oldest entry (simple FIFO)
+                        oldest_key = next(iter(self._forecast_cache))
+                        del self._forecast_cache[oldest_key]
+                
+                return result
 
             except Exception as e:
                 logger.error(f"Forecast generation failed: {e}")
@@ -1270,21 +1592,54 @@ class LSTMForecaster(BaseModel):
                     start=last_date, periods=horizon + 1, freq="D"
                 )[1:]
 
-                return {
-                    "forecast": fallback_forecast,
+                result = {
+                    "forecast": np.array(fallback_forecast),
                     "dates": forecast_dates,
-                    "confidence": np.full(
-                        horizon, 0.5
-                    ),  # Lower confidence for fallback
+                    "confidence": np.full(horizon, 0.5),  # Lower confidence for fallback
                     "model_type": "LSTM_Fallback",
                     "horizon": horizon,
+                    "error": str(e),
                 }
+                
+                # Cache the fallback result too
+                if hasattr(self, '_forecast_cache'):
+                    if cache_key not in self._forecast_cache:
+                        self._forecast_cache[cache_key] = result
+                
+                return result
 
         except Exception as e:
             logger.error(f"LSTM forecast failed: {e}")
             logger.error(traceback.format_exc())
 
-            # Return simple fallback
+            # Return simple fallback forecast
+            try:
+                if "close" in data.columns:
+                    last_value = float(data["close"].iloc[-1])
+                elif "Close" in data.columns:
+                    last_value = float(data["Close"].iloc[-1])
+                else:
+                    last_value = float(data.iloc[-1, 0])
+            except Exception as e:
+                logger.warning(f"LSTM model error: {e}")
+                last_value = 100.0
+            
+            fallback_forecast = np.full(horizon, last_value)
+            last_date = (
+                data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()
+            )
+            forecast_dates = pd.date_range(
+                start=last_date, periods=horizon + 1, freq="D"
+            )[1:]
+
+            return {
+                "forecast": fallback_forecast,
+                "dates": forecast_dates,
+                "confidence": np.full(horizon, 0.1),
+                "model_type": "LSTM_Error",
+                "horizon": horizon,
+                "error": str(e),
+            }
             logger.info("Using simple fallback forecast")
             fallback_forecast = np.full(horizon, 1000)
             last_date = (
@@ -1300,6 +1655,204 @@ class LSTMForecaster(BaseModel):
                 "confidence": np.full(horizon, 0.3),  # Very low confidence
                 "model_type": "LSTM_Simple_Fallback",
                 "horizon": horizon,
+            }
+
+    def _generate_single_forecast(self, data: pd.DataFrame, horizon: int) -> np.ndarray:
+        """Generate a single forecast (helper for Monte Carlo sampling).
+        
+        Args:
+            data: Historical data DataFrame
+            horizon: Forecast horizon in days
+            
+        Returns:
+            Forecast array
+        """
+        result = self.forecast(data, horizon)
+        return result['forecast']
+    
+    def forecast_with_uncertainty(
+        self, 
+        data: pd.DataFrame, 
+        horizon: int = 30,
+        num_samples: int = 100
+    ) -> Dict[str, Any]:
+        """Generate forecasts with confidence intervals using Monte Carlo dropout.
+        
+        Args:
+            data: Historical data
+            horizon: Forecast horizon in days
+            num_samples: Number of Monte Carlo samples for uncertainty estimation
+        
+        Returns:
+            Dictionary with mean forecast, lower/upper bounds, and confidence
+        """
+        if not self.available:
+            print("⚠️ LSTMForecaster unavailable due to initialization failure")
+            return {
+                'forecast': np.full(horizon, 1000.0),
+                'lower_bound': np.full(horizon, 900.0),
+                'upper_bound': np.full(horizon, 1100.0),
+                'confidence': np.full(horizon, 0.1),
+                'std': np.full(horizon, 100.0),
+                'dates': pd.date_range(start=pd.Timestamp.now(), periods=horizon + 1, freq="D")[1:],
+                'num_samples': num_samples,
+                'model_type': 'LSTM with uncertainty',
+                'horizon': horizon,
+                'error': 'LSTMForecaster unavailable'
+            }
+        
+        try:
+            # Get multiple forecast samples with dropout enabled
+            forecast_samples = []
+            
+            for _ in range(num_samples):
+                # Enable dropout during inference (Monte Carlo dropout)
+                self.model.train()  # Keep dropout active
+                
+                # Generate forecast
+                with torch.no_grad():
+                    forecast = self._generate_single_forecast(data, horizon)
+                
+                forecast_samples.append(forecast)
+            
+            # Convert to numpy array
+            forecast_samples = np.array(forecast_samples)  # Shape: (num_samples, horizon)
+            
+            # Calculate statistics
+            forecast_mean = np.mean(forecast_samples, axis=0)
+            forecast_std = np.std(forecast_samples, axis=0)
+            
+            # Calculate confidence intervals (95%)
+            lower_bound = forecast_mean - 1.96 * forecast_std
+            upper_bound = forecast_mean + 1.96 * forecast_std
+            
+            # Calculate confidence score (higher std = lower confidence)
+            # Avoid division by zero
+            confidence = np.where(
+                forecast_mean != 0,
+                1 / (1 + forecast_std / np.abs(forecast_mean)),
+                np.full(horizon, 0.5)
+            )
+            
+            # Create forecast dates
+            last_date = (
+                data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()
+            )
+            forecast_dates = pd.date_range(start=last_date, periods=horizon + 1, freq="D")[1:]
+            
+            return {
+                'forecast': forecast_mean,
+                'lower_bound': lower_bound,
+                'upper_bound': upper_bound,
+                'confidence': confidence,
+                'std': forecast_std,
+                'dates': forecast_dates,
+                'num_samples': num_samples,
+                'model_type': 'LSTM with uncertainty',
+                'horizon': horizon
+            }
+        except Exception as e:
+            logger.error(f"Forecast with uncertainty failed: {e}")
+            logger.error(traceback.format_exc())
+            # Return fallback
+            last_date = (
+                data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()
+            )
+            forecast_dates = pd.date_range(start=last_date, periods=horizon + 1, freq="D")[1:]
+            return {
+                'forecast': np.full(horizon, 1000.0),
+                'lower_bound': np.full(horizon, 900.0),
+                'upper_bound': np.full(horizon, 1100.0),
+                'confidence': np.full(horizon, 0.1),
+                'std': np.full(horizon, 100.0),
+                'dates': forecast_dates,
+                'num_samples': num_samples,
+                'model_type': 'LSTM with uncertainty',
+                'horizon': horizon,
+                'error': str(e)
+            }
+    
+    def evaluate(self, X_test: pd.DataFrame, y_test: pd.Series) -> Dict[str, float]:
+        """Evaluate model performance on test data.
+        
+        Args:
+            X_test: Test features
+            y_test: Test targets
+            
+        Returns:
+            Dictionary of evaluation metrics
+        """
+        if not self.available:
+            logger.warning("LSTMForecaster unavailable, cannot evaluate")
+            return {
+                'mse': float('inf'),
+                'rmse': float('inf'),
+                'mae': float('inf'),
+                'r2': -float('inf'),
+                'mape': float('inf'),
+                'directional_accuracy': 0.0
+            }
+        
+        try:
+            from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+            
+            # Generate predictions
+            predictions = self.predict(X_test)
+            
+            # Ensure predictions and y_test have same length
+            min_len = min(len(predictions), len(y_test))
+            predictions = predictions[:min_len]
+            y_test = y_test.iloc[:min_len] if isinstance(y_test, pd.Series) else y_test[:min_len]
+            
+            # Calculate metrics
+            mse = mean_squared_error(y_test, predictions)
+            rmse = np.sqrt(mse)
+            mae = mean_absolute_error(y_test, predictions)
+            r2 = r2_score(y_test, predictions)
+            
+            # Calculate MAPE (Mean Absolute Percentage Error)
+            # Avoid division by zero
+            mape = np.mean(np.abs((y_test - predictions) / (y_test + 1e-8))) * 100
+            
+            # Directional accuracy (did we predict the right direction?)
+            if len(y_test) > 1 and len(predictions) > 1:
+                y_test_diff = np.diff(y_test)
+                pred_diff = np.diff(predictions)
+                directional_accuracy = np.mean((y_test_diff * pred_diff) > 0) * 100
+            else:
+                directional_accuracy = 0.0
+            
+            metrics = {
+                'mse': mse,
+                'rmse': rmse,
+                'mae': mae,
+                'r2': r2,
+                'mape': mape,
+                'directional_accuracy': directional_accuracy
+            }
+            
+            # Store metrics
+            self.evaluation_metrics = metrics
+            
+            logger.info("Model Evaluation Metrics:")
+            logger.info(f"  RMSE: {rmse:.4f}")
+            logger.info(f"  MAE: {mae:.4f}")
+            logger.info(f"  R²: {r2:.4f}")
+            logger.info(f"  MAPE: {mape:.2f}%")
+            logger.info(f"  Directional Accuracy: {directional_accuracy:.2f}%")
+            
+            return metrics
+        except Exception as e:
+            logger.error(f"Model evaluation failed: {e}")
+            logger.error(traceback.format_exc())
+            return {
+                'mse': float('inf'),
+                'rmse': float('inf'),
+                'mae': float('inf'),
+                'r2': -float('inf'),
+                'mape': float('inf'),
+                'directional_accuracy': 0.0,
+                'error': str(e)
             }
 
     def plot_results(self, data: pd.DataFrame, predictions: np.ndarray = None) -> None:

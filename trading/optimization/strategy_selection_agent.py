@@ -141,12 +141,6 @@ class StrategySelectionAgent:
 
         logger.info("Initialized StrategySelectionAgent")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
-
     def select_strategy(
         self, data: pd.DataFrame, available_strategies: List[str]
     ) -> Tuple[str, float, str]:

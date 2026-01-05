@@ -614,11 +614,25 @@ class TFTForecaster:
             ),
         ]
 
-        # Initialize trainer (tensorboard logging removed)
+        # Initialize trainer with PyTorch Lightning's TensorBoard logger
+        # PyTorch Lightning uses PyTorch's native TensorBoard integration
+        try:
+            from pytorch_lightning.loggers import TensorBoardLogger
+            
+            tb_logger = TensorBoardLogger(
+                save_dir=str(self.output_dir),
+                name="tft_logs",
+            )
+            logger_available = True
+        except ImportError:
+            logger.warning("TensorBoard logger not available, training without logging")
+            tb_logger = None
+            logger_available = False
+        
         self.trainer = pl.Trainer(
             max_epochs=max_epochs,
             callbacks=callbacks,
-            logger=None,  # TensorBoard logging removed
+            logger=tb_logger if logger_available else None,
             accelerator="auto",
             devices=1,
             gradient_clip_val=0.5,

@@ -229,7 +229,7 @@ class ARIMAModel(BaseModel):
                                                 best_model = model
                                                 best_params = (p, d, q, P, D, Q)
 
-                                        except BaseException:
+                                        except Exception:
                                             continue
                         else:
                             # Non-seasonal model
@@ -244,7 +244,7 @@ class ARIMAModel(BaseModel):
                                 best_model = model
                                 best_params = (p, d, q)
 
-                    except BaseException:
+                    except Exception:
                         continue
 
         if best_model is None:

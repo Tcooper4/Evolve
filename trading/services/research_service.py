@@ -40,10 +40,7 @@ class ResearchService(BaseService):
             self.memory = AgentMemory()
 
             logger.info("ResearchService initialized")
-            return {
-                "status": "success",
-                "message": "ResearchService initialized successfully",
-            }
+            # Removed return statement - __init__ should not return values
         except Exception as e:
             logger.error(f"Error initializing ResearchService: {e}")
             return {
@@ -304,4 +301,4 @@ class ResearchService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {"error": str(e)}
+            self._config = {"error": str(e)}

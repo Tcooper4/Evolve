@@ -98,14 +98,7 @@ class LLMAgent:
         self.metrics["prompts_processed"] += 1
 
         # Simple placeholder implementation
-        return {
-            "content": f"Processed prompt: {prompt}",
-            "metadata": {
-                "tokens": len(prompt.split()),
-                "tool_calls": 0,
-                "memory_hits": 0,
-            },
-        }
+        # Removed return statement - __init__ should not return values
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get agent metrics."""
@@ -150,11 +143,14 @@ class PromptAgent:
         self.sentence_transformer = None
         self.example_embeddings = None
 
-        if SENTENCE_TRANSFORMERS_AVAILABLE and self.prompt_examples:
+        if SENTENCE_TRANSFORMERS_AVAILABLE:
             try:
                 self.sentence_transformer = SentenceTransformer("all-MiniLM-L6-v2")
-                self.example_embeddings = self._compute_example_embeddings()
-                self.logger.info("Prompt examples system initialized successfully")
+                if self.prompt_examples:
+                    self.example_embeddings = self._compute_example_embeddings()
+                    self.logger.info("Prompt examples system initialized successfully")
+                else:
+                    self.logger.info("SentenceTransformers available but no prompt examples file found - system will work without examples")
             except Exception as e:
                 self.logger.warning(f"Could not initialize sentence transformer: {e}")
         else:
@@ -781,10 +777,10 @@ class PromptAgent:
             # Estimate token usage and cost
             token_estimate = self.estimate_token_usage(prompt, model="gpt-4")
             self.batch_log(
-                f"Processing prompt: {
-                    len(prompt)} chars, estimated {
-                    token_estimate['token_count']} tokens, ${
-                    token_estimate['estimated_cost']:.4f}")
+                f"Processing prompt: {len(prompt)} chars, "
+                f"estimated {token_estimate['token_count']} tokens, "
+                f"${token_estimate['estimated_cost']:.4f}"
+            )
 
             # Find similar examples for few-shot learning
             similar_examples = self._find_similar_examples(prompt, top_k=3)

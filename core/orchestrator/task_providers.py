@@ -50,9 +50,16 @@ class AgentTaskProvider(TaskProvider):
     def _initialize_model_innovation_agent(self) -> None:
         """Initialize ModelInnovationAgent."""
         try:
-            from trading.agents.model_innovation_agent import (
-                create_model_innovation_agent,
-            )
+            # Try agents package first (correct location)
+            try:
+                from agents.model_innovation_agent import (
+                    create_model_innovation_agent,
+                )
+            except ImportError:
+                # Fallback to trading.agents if that's where it is
+                from trading.agents.model_innovation_agent import (
+                    create_model_innovation_agent,
+                )
 
             self.agents["model_innovation"] = create_model_innovation_agent()
             self.logger.info("Initialized ModelInnovationAgent")
@@ -62,9 +69,23 @@ class AgentTaskProvider(TaskProvider):
     def _initialize_strategy_research_agent(self) -> None:
         """Initialize StrategyResearchAgent."""
         try:
-            from trading.agents.strategy_research_agent import (
-                create_strategy_research_agent,
-            )
+            # Try agents package first (correct location)
+            try:
+                from agents.strategy_research_agent import StrategyResearchAgent
+                # StrategyResearchAgent needs to be instantiated with config
+                def create_strategy_research_agent():
+                    try:
+                        return StrategyResearchAgent()
+                    except TypeError:
+                        # If it needs config, create with default
+                        from trading.agents.base_agent_interface import AgentConfig
+                        config = AgentConfig()
+                        return StrategyResearchAgent(config=config)
+            except ImportError:
+                # Fallback to trading.agents if that's where it is
+                from trading.agents.strategy_research_agent import (
+                    create_strategy_research_agent,
+                )
 
             self.agents["strategy_research"] = create_strategy_research_agent()
             self.logger.info("Initialized StrategyResearchAgent")
@@ -74,7 +95,15 @@ class AgentTaskProvider(TaskProvider):
     def _initialize_sentiment_fetcher(self) -> None:
         """Initialize SentimentFetcher."""
         try:
-            from trading.agents.sentiment_fetcher import create_sentiment_fetcher
+            # Try data.sentiment package first (correct location)
+            try:
+                from data.sentiment.sentiment_fetcher import (
+                    create_sentiment_fetcher,
+                    SentimentFetcher,
+                )
+            except ImportError:
+                # Fallback to trading.agents if that's where it is
+                from trading.agents.sentiment_fetcher import create_sentiment_fetcher
 
             self.agents["sentiment_fetch"] = create_sentiment_fetcher()
             self.logger.info("Initialized SentimentFetcher")
@@ -84,7 +113,12 @@ class AgentTaskProvider(TaskProvider):
     def _initialize_meta_controller(self) -> None:
         """Initialize MetaController."""
         try:
-            from trading.agents.meta_controller import create_meta_controller
+            # Try meta package first (correct location)
+            try:
+                from meta.meta_controller import create_meta_controller
+            except ImportError:
+                # Fallback to trading.agents if that's where it is
+                from trading.agents.meta_controller import create_meta_controller
 
             self.agents["meta_control"] = create_meta_controller()
             self.logger.info("Initialized MetaController")
@@ -94,7 +128,20 @@ class AgentTaskProvider(TaskProvider):
     def _initialize_risk_manager(self) -> None:
         """Initialize RiskManager."""
         try:
-            from trading.agents.risk_manager import create_risk_manager
+            # Try portfolio package first (correct location)
+            try:
+                from portfolio.risk_manager import PortfolioRiskManager
+                def create_risk_manager():
+                    return PortfolioRiskManager()
+            except ImportError:
+                # Try trading.risk
+                try:
+                    from trading.risk.risk_manager import RiskManager
+                    def create_risk_manager():
+                        return RiskManager()
+                except ImportError:
+                    # Fallback to trading.agents
+                    from trading.agents.risk_manager import create_risk_manager
 
             self.agents["risk_management"] = create_risk_manager()
             self.logger.info("Initialized RiskManager")
@@ -104,8 +151,15 @@ class AgentTaskProvider(TaskProvider):
     def _initialize_execution_agent(self) -> None:
         """Initialize ExecutionAgent."""
         try:
-            from trading.agents.execution import create_execution_agent
-
+            # Try multiple import paths for execution agent
+            try:
+                from trading.agents.execution import create_execution_agent
+            except ImportError:
+                # Fallback: try execution module directly
+                from execution.execution_agent import ExecutionAgent
+                def create_execution_agent():
+                    return ExecutionAgent()
+            
             self.agents["execution"] = create_execution_agent()
             self.logger.info("Initialized ExecutionAgent")
         except Exception as e:
@@ -114,7 +168,17 @@ class AgentTaskProvider(TaskProvider):
     def _initialize_explainer_agent(self) -> None:
         """Initialize ExplainerAgent."""
         try:
-            from trading.agents.explainer_agent import create_explainer_agent
+            # Try agents package first
+            try:
+                from agents.explainer_agent import create_explainer_agent
+            except ImportError:
+                # Try trading.agents
+                try:
+                    from trading.agents.explainer_agent import create_explainer_agent
+                except ImportError:
+                    # Agent doesn't exist - skip it
+                    self.logger.debug("ExplainerAgent not found, skipping")
+                    return
 
             self.agents["explanation"] = create_explainer_agent()
             self.logger.info("Initialized ExplainerAgent")

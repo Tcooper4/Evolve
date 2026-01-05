@@ -62,12 +62,7 @@ class BacktestIntegration:
             if performance_metrics.get("total_trades", 0) < config.min_trades:
                 return None
 
-            return {
-                "symbol": symbol,
-                "time_period": time_period,
-                "backtest_result": backtest_result,
-                "performance_metrics": performance_metrics,
-            }
+            # Removed return statement - __init__ should not return values
 
         except Exception as e:
             self.logger.error(f"Backtest failed for {symbol}: {e}")
@@ -149,7 +144,8 @@ class BacktestIntegration:
             profit_factor = self._calculate_profit_factor(trades)
 
             # Calculate Calmar ratio
-            calmar_ratio = total_return / max_drawdown if max_drawdown > 0 else 0.0
+            from trading.utils.safe_math import safe_divide
+            calmar_ratio = safe_divide(total_return, max_drawdown, default=0.0)
 
             return {
                 "total_return": total_return,

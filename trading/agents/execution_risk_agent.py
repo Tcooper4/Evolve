@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 
 warnings.filterwarnings("ignore")
@@ -577,9 +579,8 @@ class ExecutionRiskAgent(BaseAgent):
         try:
             # Simplified leverage calculation
             total_exposure = self.portfolio_state["total_exposure"] + size
-            leverage = total_exposure / max(
-                1.0, total_exposure - size
-            )  # Avoid division by zero
+            denominator = max(1.0, total_exposure - size)
+            leverage = safe_divide(total_exposure, denominator, default=1.0)  # Avoid division by zero
 
             threshold = self.risk_limits["max_leverage"]
             passed = leverage <= threshold
@@ -734,7 +735,7 @@ class ExecutionRiskAgent(BaseAgent):
             total_exposure = self.portfolio_state["total_exposure"] + size
 
             if total_exposure > 0:
-                concentration = new_position / total_exposure
+                concentration = safe_divide(new_position, total_exposure, default=0.0)
                 threshold = self.risk_thresholds["concentration_threshold"]
                 passed = concentration <= threshold
 

@@ -28,11 +28,11 @@ class PerformanceMetrics:
     def calculate_sharpe_ratio(
         self, returns: pd.Series, risk_free_rate: float = 0.02
     ) -> float:
-        """Calculate Sharpe ratio."""
+        """Calculate Sharpe ratio using safe division."""
         try:
-            excess_returns = returns - risk_free_rate / 252  # Daily risk-free rate
-            return np.sqrt(252) * excess_returns.mean() / excess_returns.std()
-        except BaseException:
+            from trading.utils.safe_math import safe_sharpe_ratio
+            return safe_sharpe_ratio(returns, risk_free_rate=risk_free_rate, periods_per_year=252)
+        except Exception:
             return 0.0
 
     def calculate_sortino_ratio(
@@ -43,20 +43,25 @@ class PerformanceMetrics:
             excess_returns = returns - risk_free_rate / 252
             downside_returns = excess_returns[excess_returns < 0]
             downside_std = np.sqrt(np.mean(downside_returns**2))
-            return np.sqrt(252) * excess_returns.mean() / downside_std
-        except BaseException:
+            
+            if downside_std > 1e-10:
+                return np.sqrt(252) * excess_returns.mean() / downside_std
+            else:
+                return 0.0
+        except Exception:
             return 0.0
 
     def calculate_max_drawdown(
         self, cumulative_returns: pd.Series
     ) -> Tuple[float, pd.Timestamp, pd.Timestamp]:
-        """Calculate maximum drawdown and its period."""
+        """Calculate maximum drawdown and its period using safe division."""
         try:
-            rolling_max = cumulative_returns.expanding().max()
-            drawdown = cumulative_returns - rolling_max
-            max_dd = drawdown.min()
+            from trading.utils.safe_math import safe_drawdown
+            drawdown = safe_drawdown(cumulative_returns)
+            max_dd = float(drawdown.min())
 
             # Find the peak and trough dates
+            rolling_max = cumulative_returns.expanding().max()
             peak_idx = rolling_max.idxmax()
             trough_idx = drawdown.idxmin()
 
@@ -67,11 +72,10 @@ class PerformanceMetrics:
     def calculate_calmar_ratio(
         self, returns: pd.Series, cumulative_returns: pd.Series
     ) -> float:
-        """Calculate Calmar ratio."""
+        """Calculate Calmar ratio using safe division."""
         try:
-            max_dd, _, _ = self.calculate_max_drawdown(cumulative_returns)
-            annual_return = returns.mean() * 252
-            return annual_return / abs(max_dd) if max_dd != 0 else 0
+            from trading.utils.safe_math import safe_calmar_ratio
+            return safe_calmar_ratio(returns, periods_per_year=252)
         except BaseException:
             return 0.0
 
@@ -192,9 +196,16 @@ class RiskMetrics:
         """Calculate Ulcer Index."""
         try:
             rolling_max = cumulative_returns.expanding().max()
-            drawdown = (cumulative_returns - rolling_max) / rolling_max
+            
+            # Safe drawdown calculation
+            drawdown = np.where(
+                rolling_max > 1e-10,
+                (cumulative_returns - rolling_max) / rolling_max,
+                0.0
+            )
+            
             return np.sqrt(np.mean(drawdown**2))
-        except BaseException:
+        except Exception:
             return 0.0
 
     def calculate_gain_to_pain_ratio(self, returns: pd.Series) -> float:

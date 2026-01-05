@@ -10,6 +10,7 @@ This module implements comprehensive risk management for portfolios:
 - Stress testing and scenario analysis
 """
 
+import logging
 import warnings
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -23,6 +24,8 @@ import pandas as pd
 from utils.common_helpers import load_config, safe_json_save
 
 warnings.filterwarnings("ignore")
+
+logger = logging.getLogger(__name__)
 
 
 # Local imports
@@ -137,7 +140,7 @@ class PortfolioRiskManager:
         # Sector classifications
         self.sector_classifications = self._load_sector_classifications()
 
-        print(
+        logger.info(
             "Risk management system initialized. Portfolio risk controls "
             "are now active."
         )
@@ -778,20 +781,20 @@ if __name__ == "__main__":
     # Calculate risk metrics
     risk_metrics = risk_manager.calculate_portfolio_risk(positions, market_data)
 
-    print("Portfolio Risk Metrics:")
+    logger.info("Portfolio Risk Metrics:")
     for metric, value in risk_metrics.items():
-        print(f"  {metric}: {value:.4f}")
+        logger.info(f"  {metric}: {value:.4f}")
 
     # Check risk limits
     violations = risk_manager.check_risk_limits(positions, risk_metrics)
 
-    print(f"\nRisk Violations: {len(violations)}")
+    logger.info(f"\nRisk Violations: {len(violations)}")
     for violation in violations:
-        print(
+        logger.warning(
             f"  {violation.risk_metric.value}: {violation.current_value:.4f} > {violation.limit_value:.4f}"
         )
-        print(f"    Severity: {violation.severity}")
-        print(f"    Action: {violation.action_required}")
+        logger.warning(f"    Severity: {violation.severity}")
+        logger.warning(f"    Action: {violation.action_required}")
 
     # Generate rebalancing actions
     target_positions = {"AAPL": 0.25, "TSLA": 0.25, "NVDA": 0.25, "MSFT": 0.25}
@@ -799,24 +802,24 @@ if __name__ == "__main__":
         positions, target_positions, violations
     )
 
-    print(f"\nRebalancing Actions: {len(actions)}")
+    logger.info(f"\nRebalancing Actions: {len(actions)}")
     for action in actions:
-        print(
+        logger.info(
             f"  {action.action_type.upper()} {action.ticker}: "
             f"{action.current_weight:.3f} → {action.target_weight:.3f}"
         )
-        print(f"    Priority: {action.priority}, Reason: {action.reason}")
+        logger.info(f"    Priority: {action.priority}, Reason: {action.reason}")
 
     # Simulate portfolio returns
     simulation = risk_manager.simulate_portfolio_returns(
         positions, market_data, "monthly"
     )
 
-    print(f"\nSimulation Results:")
-    print(f"  Final Portfolio Value: {simulation['portfolio_value'].iloc[-1]:.4f}")
-    print(f"  Total Return: {simulation['cumulative_return'].iloc[-1]:.4f}")
-    print(f"  Max Drawdown: {simulation['drawdown'].min():.4f}")
+    logger.info(f"\nSimulation Results:")
+    logger.info(f"  Final Portfolio Value: {simulation['portfolio_value'].iloc[-1]:.4f}")
+    logger.info(f"  Total Return: {simulation['cumulative_return'].iloc[-1]:.4f}")
+    logger.info(f"  Max Drawdown: {simulation['drawdown'].min():.4f}")
 
     # Generate risk report
     report = risk_manager.get_risk_report(positions, risk_metrics, violations)
-    print(f"\nRisk Report Generated: {len(report)} sections")
+    logger.info(f"\nRisk Report Generated: {len(report)} sections")

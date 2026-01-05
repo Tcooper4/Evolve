@@ -977,9 +977,16 @@ class AgentController:
     and managing the overall agent orchestration process.
     """
 
-    def __init__(self):
-        """Initialize the agent controller."""
+    def __init__(self, registry=None, router=None):
+        """Initialize the agent controller.
+        
+        Args:
+            registry: Optional AgentRegistry instance
+            router: Optional TaskRouter instance
+        """
         self.logger = logging.getLogger(__name__)
+        self.registry = registry
+        self.router = router
 
         # Initialize workflow orchestrators
         self.builder = BuilderWorkflow()

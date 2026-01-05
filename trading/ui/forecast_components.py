@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from trading.utils.safe_math import safe_mape
 
 from trading.ui.components import (
     create_asset_selector,
@@ -204,10 +205,7 @@ def create_forecast_metrics(
         # Calculate error metrics
         mae = np.mean(np.abs(data["actual"] - data["prediction"]))
         rmse = np.sqrt(np.mean((data["actual"] - data["prediction"]) ** 2))
-        mape = (
-            np.mean(np.abs((data["actual"] - data["prediction"]) / data["actual"]))
-            * 100
-        )
+        mape = safe_mape(data["actual"].values, data["prediction"].values)
 
         metrics = {"MAE": mae, "RMSE": rmse, "MAPE": mape}
 
@@ -374,3 +372,171 @@ def create_forecast_table(forecast_data: Dict[str, Any]) -> Dict[str, Any]:
             "timestamp": datetime.now().isoformat(),
         }
 
+
+# Wrapper functions for easier integration
+def render_model_selector(available_models: list, key: str = "model_selector") -> Optional[str]:
+    """Render a model selector component.
+    
+    Args:
+        available_models: List of available model names
+        key: Streamlit key for the component
+    
+    Returns:
+        Selected model name or None
+    """
+    try:
+        return create_model_selector(
+            category="forecasting",
+            default_model=None,
+            key=key
+        )
+    except Exception as e:
+        logger.warning(f"Error rendering model selector: {e}")
+        # Fallback to simple selectbox
+        return st.selectbox(
+            "Select Model",
+            available_models,
+            key=key
+        )
+
+
+def render_forecast_results(
+    forecast: Dict[str, Any],
+    historical_data: pd.DataFrame,
+    symbol: str,
+    show_chart: bool = True,
+    show_table: bool = True
+) -> None:
+    """Render forecast results with chart and table.
+    
+    Args:
+        forecast: Dictionary containing forecast results
+        historical_data: Historical data DataFrame
+        symbol: Symbol name
+        show_chart: Whether to show forecast chart
+        show_table: Whether to show forecast table
+    """
+    try:
+        # Prepare forecast data
+        forecast_dates = forecast.get('dates', forecast.get('forecast_dates', []))
+        forecast_values = forecast.get('forecast', forecast.get('values', []))
+        lower_bound = forecast.get('lower_bound', None)
+        upper_bound = forecast.get('upper_bound', None)
+        
+        # Create DataFrame for chart
+        if isinstance(forecast_values, (list, np.ndarray)):
+            forecast_df = pd.DataFrame({
+                'prediction': forecast_values,
+                'date': forecast_dates
+            })
+            if forecast_dates and len(forecast_dates) > 0:
+                forecast_df.index = pd.to_datetime(forecast_dates)
+        else:
+            forecast_df = pd.DataFrame({'prediction': forecast_values})
+        
+        # Add confidence intervals if available
+        if lower_bound is not None and upper_bound is not None:
+            if isinstance(lower_bound, (list, np.ndarray)) and isinstance(upper_bound, (list, np.ndarray)):
+                forecast_df['std_error'] = (np.array(upper_bound) - np.array(lower_bound)) / (2 * 1.96)
+        
+        # Get model config (simplified)
+        from .config.registry import ModelConfig
+        model_config = ModelConfig(
+            name=forecast.get('model_name', 'Unknown'),
+            confidence_available=lower_bound is not None,
+            benchmark_support=False
+        )
+        
+        # Show chart
+        if show_chart:
+            fig = create_forecast_chart(
+                data=forecast_df,
+                model_config=model_config,
+                show_confidence=lower_bound is not None,
+                show_benchmark=False
+            )
+            fig.update_layout(title=f"{symbol} Forecast")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Show table
+        if show_table:
+            forecast_table_data = {
+                'forecast_dates': forecast_dates,
+                'forecast': forecast_values,
+                'lower_bound': lower_bound if lower_bound is not None else [None] * len(forecast_values),
+                'upper_bound': upper_bound if upper_bound is not None else [None] * len(forecast_values)
+            }
+            create_forecast_table(forecast_table_data)
+    except Exception as e:
+        logger.error(f"Error rendering forecast results: {e}")
+        st.error(f"Error displaying forecast results: {e}")
+
+
+def render_confidence_metrics(forecast_result: Dict[str, Any]) -> None:
+    """Render confidence metrics for forecast.
+    
+    Args:
+        forecast_result: Dictionary containing forecast results with confidence intervals
+    """
+    try:
+        st.subheader("📊 Confidence Metrics")
+        
+        # Extract confidence data
+        forecast_values = forecast_result.get('forecast', forecast_result.get('values', []))
+        lower_bound = forecast_result.get('lower_bound', None)
+        upper_bound = forecast_result.get('upper_bound', None)
+        confidence = forecast_result.get('confidence', None)
+        
+        if lower_bound is not None and upper_bound is not None:
+            # Calculate confidence interval width
+            if isinstance(lower_bound, (list, np.ndarray)) and isinstance(upper_bound, (list, np.ndarray)):
+                ci_width = np.mean(np.array(upper_bound) - np.array(lower_bound))
+                ci_width_pct = (ci_width / np.mean(forecast_values)) * 100 if len(forecast_values) > 0 else 0
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Avg CI Width", f"{ci_width:.2f}")
+                with col2:
+                    st.metric("CI Width %", f"{ci_width_pct:.2f}%")
+                with col3:
+                    if confidence is not None:
+                        avg_confidence = np.mean(confidence) if isinstance(confidence, (list, np.ndarray)) else confidence
+                        st.metric("Avg Confidence", f"{avg_confidence:.1%}")
+                    else:
+                        st.metric("Confidence Level", "95%")
+        else:
+            st.info("No confidence intervals available for this forecast")
+    except Exception as e:
+        logger.error(f"Error rendering confidence metrics: {e}")
+        st.warning("Could not display confidence metrics")
+
+
+def render_model_comparison(comparison_results: Dict[str, Any]) -> None:
+    """Render model comparison results.
+    
+    Args:
+        comparison_results: Dictionary containing comparison results
+    """
+    try:
+        st.subheader("🔍 Model Comparison")
+        
+        if 'models' in comparison_results:
+            # Create comparison DataFrame
+            models_data = []
+            for model_name, metrics in comparison_results['models'].items():
+                models_data.append({
+                    'Model': model_name,
+                    **metrics
+                })
+            
+            comparison_df = pd.DataFrame(models_data)
+            st.dataframe(comparison_df, use_container_width=True)
+            
+            # Show best model
+            if 'best_model' in comparison_results:
+                st.success(f"🏆 Best Model: **{comparison_results['best_model']}**")
+        else:
+            st.info("No model comparison data available")
+    except Exception as e:
+        logger.error(f"Error rendering model comparison: {e}")
+        st.warning("Could not display model comparison")

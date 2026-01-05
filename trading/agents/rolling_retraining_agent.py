@@ -19,6 +19,7 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import TimeSeriesSplit
 
+from trading.utils.safe_math import safe_rsi
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 
 warnings.filterwarnings("ignore")
@@ -203,25 +204,51 @@ class RollingRetrainingAgent(BaseAgent):
         try:
             features = pd.DataFrame(index=data.index)
 
-            # Price-based features
+            # Price-based features with safe division
             features["returns"] = data["Close"].pct_change()
-            features["log_returns"] = np.log(data["Close"] / data["Close"].shift(1))
-            features["price_momentum"] = data["Close"] / data["Close"].shift(5) - 1
+
+            close_shifted_1 = data["Close"].shift(1)
+            features["log_returns"] = np.where(
+                close_shifted_1 > 1e-10,
+                np.log(data["Close"] / close_shifted_1),
+                0.0
+            )
+
+            close_shifted_5 = data["Close"].shift(5)
+            features["price_momentum"] = np.where(
+                close_shifted_5 > 1e-10,
+                data["Close"] / close_shifted_5 - 1,
+                0.0
+            )
             features["price_acceleration"] = features["price_momentum"].diff()
 
             # Volatility features
             features["volatility_5d"] = features["returns"].rolling(5).std()
             features["volatility_20d"] = features["returns"].rolling(20).std()
-            features["volatility_ratio"] = (
-                features["volatility_5d"] / features["volatility_20d"]
+            
+            # Volatility ratio with safe division
+            features["volatility_ratio"] = np.where(
+                features["volatility_20d"] > 1e-10,
+                features["volatility_5d"] / features["volatility_20d"],
+                1.0
             )
 
             # Moving averages
             features["sma_5"] = data["Close"].rolling(5).mean()
             features["sma_20"] = data["Close"].rolling(20).mean()
             features["sma_50"] = data["Close"].rolling(50).mean()
-            features["ma_ratio_5_20"] = features["sma_5"] / features["sma_20"]
-            features["ma_ratio_20_50"] = features["sma_20"] / features["sma_50"]
+            
+            # Moving average ratios with safe division
+            features["ma_ratio_5_20"] = np.where(
+                features["sma_20"] > 1e-10,
+                features["sma_5"] / features["sma_20"],
+                1.0
+            )
+            features["ma_ratio_20_50"] = np.where(
+                features["sma_50"] > 1e-10,
+                features["sma_20"] / features["sma_50"],
+                1.0
+            )
 
             # Volume features
             if "Volume" in data.columns:
@@ -255,15 +282,10 @@ class RollingRetrainingAgent(BaseAgent):
             return pd.DataFrame()
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
-        """Calculate RSI indicator."""
+        """Calculate RSI indicator using safe division."""
         try:
-            delta = prices.diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-            rs = gain / loss
-            rsi = 100 - (100 / (1 + rs))
-            return rsi
-        except (ValueError, TypeError, ZeroDivisionError) as e:
+            return safe_rsi(prices, period=period)
+        except Exception as e:
             logger.warning(f"Error calculating RSI: {e}")
             return pd.Series(index=prices.index, data=50)
 
@@ -285,11 +307,20 @@ class RollingRetrainingAgent(BaseAgent):
     ) -> pd.Series:
         """Calculate position within Bollinger Bands."""
         try:
+            from trading.utils.safe_math import safe_divide
+            
             sma = prices.rolling(period).mean()
             std = prices.rolling(period).std()
             upper_band = sma + (2 * std)
             lower_band = sma - (2 * std)
-            position = (prices - lower_band) / (upper_band - lower_band)
+            
+            # Use safe_divide for Bollinger position: (price - lower) / (upper - lower)
+            band_range = upper_band - lower_band
+            position = safe_divide(prices - lower_band, band_range, default=0.5)
+            
+            # Clamp to [0, 1] range
+            position = position.clip(0.0, 1.0)
+            
             return position
         except (ValueError, TypeError, ZeroDivisionError) as e:
             logger.warning(f"Error calculating Bollinger position: {e}")

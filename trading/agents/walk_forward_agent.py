@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
+from trading.utils.safe_math import safe_drawdown
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +75,9 @@ class WalkForwardAgent(BaseAgent):
                 retry_attempts=3,
                 custom_config={},
             )
-        super().__init__(config)
-
-        # Extract config from custom_config or use defaults
+        
+        # Initialize walk_forward_config BEFORE calling super().__init__()
+        # This ensures it's available when _setup() is called
         custom_config = config.custom_config or {}
         self.walk_forward_config = RollingRetrainConfig(
             train_window_days=custom_config.get("train_window_days", 252),
@@ -94,11 +95,23 @@ class WalkForwardAgent(BaseAgent):
         self.results_history = []
         self.model_history = []
         self.performance_tracker = {}
+        
+        # Now call super().__init__() which will call _setup()
+        super().__init__(config)
 
         logger.info("Walk-Forward Agent initialized")
 
-    def _setup(self):
-        pass
+    def _setup(self) -> None:
+        """Setup method called during initialization."""
+        try:
+            # Validate configuration now that walk_forward_config is initialized
+            if not self.validate_config():
+                raise ValueError("Invalid configuration for WalkForwardAgent")
+            
+            self.logger.info("WalkForwardAgent setup completed successfully")
+        except Exception as e:
+            self.logger.error(f"Error during setup: {e}")
+            raise
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the walk-forward validation logic.
@@ -460,8 +473,7 @@ class WalkForwardAgent(BaseAgent):
         """
         try:
             cumulative = (1 + returns).cumprod()
-            running_max = cumulative.expanding().max()
-            drawdown = (cumulative - running_max) / running_max
+            drawdown = safe_drawdown(cumulative)
             return drawdown.min()
         except (ValueError, TypeError, AttributeError) as e:
             logger.warning(f"Error calculating max drawdown: {e}")
@@ -611,6 +623,229 @@ class WalkForwardAgent(BaseAgent):
         except Exception as e:
             logger.error(f"Error exporting results: {e}")
             return False
+
+    def validate_input(self, **kwargs) -> bool:
+        """
+        Validate input parameters before execution.
+
+        Args:
+            **kwargs: Input parameters to validate
+
+        Returns:
+            bool: True if input is valid, False otherwise
+        """
+        try:
+            action = kwargs.get("action", "run_walk_forward_validation")
+            
+            if action == "run_walk_forward_validation":
+                # Check required parameters
+                required_params = ["data", "target_column", "feature_columns", "model_factory"]
+                for param in required_params:
+                    if param not in kwargs or kwargs[param] is None:
+                        self.logger.error(f"Missing required parameter: {param}")
+                        return False
+                
+                # Validate data
+                data = kwargs.get("data")
+                if not isinstance(data, pd.DataFrame):
+                    self.logger.error("data must be a pandas DataFrame")
+                    return False
+                
+                if data.empty:
+                    self.logger.error("data DataFrame is empty")
+                    return False
+                
+                # Validate target_column
+                target_column = kwargs.get("target_column")
+                if not isinstance(target_column, str) or target_column not in data.columns:
+                    self.logger.error(f"target_column '{target_column}' not found in data")
+                    return False
+                
+                # Validate feature_columns
+                feature_columns = kwargs.get("feature_columns")
+                if not isinstance(feature_columns, list) or len(feature_columns) == 0:
+                    self.logger.error("feature_columns must be a non-empty list")
+                    return False
+                
+                for col in feature_columns:
+                    if col not in data.columns:
+                        self.logger.error(f"feature_column '{col}' not found in data")
+                        return False
+                
+                # Validate model_factory
+                model_factory = kwargs.get("model_factory")
+                if not callable(model_factory):
+                    self.logger.error("model_factory must be callable")
+                    return False
+                
+            elif action == "should_retrain":
+                if "current_performance" not in kwargs:
+                    self.logger.error("Missing required parameter: current_performance")
+                    return False
+                
+                current_performance = kwargs.get("current_performance")
+                if not isinstance(current_performance, dict):
+                    self.logger.error("current_performance must be a dictionary")
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error validating input: {e}")
+            return False
+
+    def validate_config(self) -> bool:
+        """
+        Validate the agent's configuration.
+
+        Returns:
+            bool: True if configuration is valid, False otherwise
+        """
+        try:
+            # Check basic configuration
+            if not self.config.name:
+                self.logger.error("Agent name is required")
+                return False
+            
+            if self.config.timeout_seconds <= 0:
+                self.logger.error("Timeout must be positive")
+                return False
+            
+            if self.config.max_concurrent_runs <= 0:
+                self.logger.error("Max concurrent runs must be positive")
+                return False
+            
+            # Validate walk_forward_config
+            if not hasattr(self, "walk_forward_config"):
+                self.logger.error("walk_forward_config not initialized")
+                return False
+            
+            # Validate window sizes
+            if self.walk_forward_config.train_window_days <= 0:
+                self.logger.error("train_window_days must be positive")
+                return False
+            
+            if self.walk_forward_config.test_window_days <= 0:
+                self.logger.error("test_window_days must be positive")
+                return False
+            
+            if self.walk_forward_config.step_size_days <= 0:
+                self.logger.error("step_size_days must be positive")
+                return False
+            
+            if self.walk_forward_config.train_window_days <= self.walk_forward_config.test_window_days:
+                self.logger.warning("train_window_days should be larger than test_window_days")
+            
+            # Validate validation_split
+            if not 0 < self.walk_forward_config.validation_split < 1:
+                self.logger.error("validation_split must be between 0 and 1")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error validating configuration: {e}")
+            return False
+
+    def handle_error(self, error: Exception) -> AgentResult:
+        """
+        Handle errors during execution.
+
+        Args:
+            error: Exception that occurred during execution
+
+        Returns:
+            AgentResult: Error result with appropriate error information
+        """
+        import traceback
+        
+        error_type = type(error).__name__
+        error_message = str(error)
+        error_traceback = traceback.format_exc()
+        
+        # Categorize errors
+        if isinstance(error, ValueError):
+            error_category = "validation"
+            user_message = f"Invalid input: {error_message}"
+        elif isinstance(error, KeyError):
+            error_category = "data"
+            user_message = f"Missing required data: {error_message}"
+        elif isinstance(error, pd.errors.EmptyDataError):
+            error_category = "data"
+            user_message = "Data is empty or invalid"
+        elif isinstance(error, MemoryError):
+            error_category = "resource"
+            user_message = "Insufficient memory for walk-forward validation"
+        else:
+            error_category = "unknown"
+            user_message = f"Unexpected error during walk-forward validation: {error_message}"
+        
+        # Log error details
+        self.logger.error(f"WalkForwardAgent error ({error_category}): {error_message}")
+        self.logger.debug(f"Error traceback: {error_traceback}")
+        
+        # Update status
+        self.status.failed_runs += 1
+        self.status.current_error = user_message
+        self.status.is_running = False
+        self.status.last_failure = datetime.now()
+        
+        return AgentResult(
+            success=False,
+            error_message=user_message,
+            error_type=error_type,
+            metadata={
+                "error_category": error_category,
+                "traceback": error_traceback,
+                "agent_name": self.config.name,
+            },
+        )
+
+    def get_capabilities(self) -> List[str]:
+        """
+        Get the agent's capabilities.
+
+        Returns:
+            List[str]: List of capability names
+        """
+        return [
+            "walk_forward_validation",
+            "rolling_retraining",
+            "performance_tracking",
+            "model_evaluation",
+            "time_series_validation",
+            "out_of_sample_testing",
+        ]
+
+    def get_requirements(self) -> Dict[str, Any]:
+        """
+        Get the agent's requirements.
+
+        Returns:
+            Dict[str, Any]: Dictionary of requirements
+        """
+        return {
+            "dependencies": [
+                "pandas",
+                "numpy",
+                "scikit-learn",
+            ],
+            "data_requirements": {
+                "min_samples": self.walk_forward_config.min_train_samples,
+                "required_columns": ["target_column", "feature_columns"],
+                "time_indexed": True,
+            },
+            "system_requirements": {
+                "memory": "moderate",  # Depends on data size
+                "cpu": "moderate",
+            },
+            "config_requirements": {
+                "train_window_days": "positive integer",
+                "test_window_days": "positive integer",
+                "step_size_days": "positive integer",
+                "validation_split": "float between 0 and 1",
+            },
+        }
 
 
 # Global walk-forward agent instance

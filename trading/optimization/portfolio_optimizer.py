@@ -30,6 +30,7 @@ except ImportError:
     logging.warning("CVXOPT not available. Install with: pip install cvxopt")
 
 from trading.utils.logging_utils import setup_logger
+from trading.utils.safe_math import safe_divide
 
 logger = setup_logger(__name__)
 
@@ -256,7 +257,7 @@ class PortfolioOptimizer:
                     risk_contrib.append(w[i] * marginal_risk)
 
                 # Objective: minimize sum of squared differences in risk contributions
-                target_risk_contrib = portfolio_vol / n_assets
+                target_risk_contrib = safe_divide(portfolio_vol, n_assets, default=0.0)
                 objective = cp.Minimize(
                     cp.sum_squares(cp.hstack(risk_contrib) - target_risk_contrib)
                 )
@@ -572,7 +573,7 @@ class PortfolioOptimizer:
                     risk_contrib.append(weights[i] * marginal_risk)
 
                 risk_contrib = np.array(risk_contrib)
-                target_contrib = portfolio_vol / n_assets
+                target_contrib = safe_divide(portfolio_vol, n_assets, default=0.0)
 
                 # Check convergence
                 if np.max(np.abs(risk_contrib - target_contrib)) < tolerance:
@@ -584,7 +585,7 @@ class PortfolioOptimizer:
                         weights[i] *= target_contrib / risk_contrib[i]
 
                 # Normalize weights
-                weights = weights / np.sum(weights)
+                weights = safe_divide(weights, np.sum(weights), default=1.0 / len(weights))
 
             # Calculate portfolio metrics
             portfolio_return = returns.mean() @ weights

@@ -120,7 +120,15 @@ class RSIStrategy:
                 raise ValueError("Data must contain 'Close' column")
 
             # Handle NaN values
-            close_prices = data["Close"].fillna(method="ffill").fillna(method="bfill")
+            # Only forward fill - never use backward fill in backtesting!
+            close_prices = data["Close"].ffill()
+            
+            # For any remaining leading NaNs, use first valid value
+            # (This is acceptable as it doesn't use future data)
+            first_valid_idx = close_prices.first_valid_index()
+            if first_valid_idx is not None:
+                first_valid_value = close_prices.loc[first_valid_idx]
+                close_prices = close_prices.fillna(first_valid_value)
 
             if len(close_prices) < self.rsi_period + 1:
                 raise ValueError(
@@ -242,9 +250,15 @@ class RSIStrategy:
                 logger.warning(
                     "Input data contains NaN values, filling with forward fill"
                 )
-                df_lower["close"] = (
-                    df_lower["close"].fillna(method="ffill").fillna(method="bfill")
-                )
+                # Only forward fill - never use backward fill in backtesting!
+                df_lower["close"] = df_lower["close"].ffill()
+                
+                # For any remaining leading NaNs, use first valid value
+                # (This is acceptable as it doesn't use future data)
+                first_valid_idx = df_lower["close"].first_valid_index()
+                if first_valid_idx is not None:
+                    first_valid_value = df_lower["close"].loc[first_valid_idx]
+                    df_lower["close"] = df_lower["close"].fillna(first_valid_value)
 
             # Update parameters with kwargs if provided
             _unused_var = rsi_period  # Placeholder, flake8 ignore: F841

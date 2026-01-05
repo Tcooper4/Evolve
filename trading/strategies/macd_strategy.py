@@ -90,9 +90,15 @@ class MACDStrategy:
 
         # Handle NaN values
         if df_lower["close"].isna().any():
-            df_lower["close"] = (
-                df_lower["close"].fillna(method="ffill").fillna(method="bfill")
-            )
+            # Only forward fill - never use backward fill in backtesting!
+            df_lower["close"] = df_lower["close"].ffill()
+            
+            # For any remaining leading NaNs, use first valid value
+            # (This is acceptable as it doesn't use future data)
+            first_valid_idx = df_lower["close"].first_valid_index()
+            if first_valid_idx is not None:
+                first_valid_value = df_lower["close"].loc[first_valid_idx]
+                df_lower["close"] = df_lower["close"].fillna(first_valid_value)
 
         if df_lower["volume"].isna().any():
             df_lower["volume"] = df_lower["volume"].fillna(0)
@@ -144,9 +150,9 @@ class MACDStrategy:
                 )
 
             # Drop duplicate consecutive signals to avoid over-trading
-            signals["signal"] = signals["signal"].loc[
-                ~(signals["signal"] == signals["signal"].shift(1))
-            ]
+            signals["signal"] = signals["signal"].where(
+                signals["signal"] != signals["signal"].shift(1), 0
+            )
 
             # Add MACD components to signals
             signals["macd_line"] = macd_line

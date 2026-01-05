@@ -42,7 +42,14 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
     ProphetModel = None
-from trading.models.autoformer_model import AutoformerModel
+
+# Try to import Autoformer from NeuralForecast
+try:
+    from trading.models.neuralforecast_models import AutoformerModel, NEURALFORECAST_AVAILABLE
+    AUTOFORMER_AVAILABLE = NEURALFORECAST_AVAILABLE
+except ImportError:
+    AUTOFORMER_AVAILABLE = False
+    AutoformerModel = None
 
 # Try to import Transformer model
 try:
@@ -101,7 +108,7 @@ class ForecastRouter:
                 self._load_models_from_config(config_models)
             else:
                 # Use dynamic registry
-                from trading.models.registry import get_model_registry
+                from trading.models.model_registry import get_registry as get_model_registry
 
                 registry = get_model_registry()
                 self.model_registry = registry.registry
@@ -136,8 +143,11 @@ class ForecastRouter:
             "lstm": LSTMModel,
             "xgboost": XGBoostModel,
             "xgb": XGBoostModel,  # Alias
-            "autoformer": AutoformerModel,
         }
+
+        # Add Autoformer if available
+        if AUTOFORMER_AVAILABLE and AutoformerModel is not None:
+            default_models["autoformer"] = AutoformerModel
 
         # Add Transformer if available
         if TRANSFORMER_AVAILABLE:

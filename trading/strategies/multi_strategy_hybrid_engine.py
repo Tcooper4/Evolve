@@ -16,6 +16,8 @@ from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 # Try to import scikit-learn
 try:
     from sklearn.ensemble import VotingRegressor
@@ -119,12 +121,7 @@ class MultiStrategyHybridEngine:
         self._initialize_ensemble_model()
 
         logger.info("Multi-Strategy Hybrid Engine initialized successfully")
-
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # __init__ should not return anything
 
     def _initialize_default_strategies(self):
         """Initialize default trading strategies."""
@@ -136,12 +133,7 @@ class MultiStrategyHybridEngine:
                 "trend_following": self._trend_following_strategy,
                 "volume_price": self._volume_price_strategy,
             }
-
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Helper method should not return anything
 
     def _initialize_ensemble_model(self):
         """Initialize the ensemble model."""
@@ -168,12 +160,7 @@ class MultiStrategyHybridEngine:
 
         except Exception as e:
             logger.error(f"Error initializing ensemble model: {e}")
-
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Helper method should not return anything
 
     def _momentum_strategy(self, data: pd.DataFrame) -> StrategySignal:
         """Momentum-based strategy."""
@@ -240,8 +227,12 @@ class MultiStrategyHybridEngine:
             current_sma = sma.iloc[-1]
 
             # Position within bands
-            band_position = (current_price - lower_band.iloc[-1]) / (
-                upper_band.iloc[-1] - lower_band.iloc[-1]
+            # Safely calculate band position with division-by-zero protection
+            band_width = upper_band.iloc[-1] - lower_band.iloc[-1]
+            band_position = np.where(
+                band_width > 1e-10,
+                (current_price - lower_band.iloc[-1]) / band_width,
+                0.5  # Default to middle if bands collapse
             )
 
             # Signal generation
@@ -293,7 +284,7 @@ class MultiStrategyHybridEngine:
             historical_vol = returns.rolling(20).std().iloc[-1]
 
             # Volatility ratio
-            vol_ratio = current_vol / historical_vol
+            vol_ratio = safe_divide(current_vol, max(historical_vol, 1e-10), default=1.0)
 
             # Price action
             current_return = returns.iloc[-1]
@@ -352,7 +343,12 @@ class MultiStrategyHybridEngine:
             current_sma_200 = sma_200.iloc[-1]
 
             # Trend strength
-            trend_strength = (current_sma_20 - current_sma_200) / current_sma_200
+            # Safely calculate trend strength with division-by-zero protection
+            trend_strength = np.where(
+                current_sma_200 > 1e-10,
+                (current_sma_20 - current_sma_200) / current_sma_200,
+                0.0
+            )
 
             # Signal generation
             if current_price > current_sma_20 > current_sma_50 > current_sma_200:
@@ -412,7 +408,7 @@ class MultiStrategyHybridEngine:
             # Calculate volume indicators
             volume_ma = data["Volume"].rolling(20).mean()
             current_volume = data["Volume"].iloc[-1]
-            volume_ratio = current_volume / volume_ma.iloc[-1]
+            volume_ratio = safe_divide(current_volume, max(volume_ma.iloc[-1], 1e-10), default=1.0)
 
             # Price action
             returns = data["Close"].pct_change()
@@ -559,9 +555,9 @@ class MultiStrategyHybridEngine:
                 total_weight += weight
 
             if total_weight > 0:
-                avg_return = weighted_return / total_weight
-                avg_confidence = weighted_confidence / total_weight
-                avg_risk = weighted_risk / total_weight
+            avg_return = safe_divide(weighted_return, total_weight, default=0.0)
+            avg_confidence = safe_divide(weighted_confidence, total_weight, default=0.0)
+            avg_risk = safe_divide(weighted_risk, total_weight, default=0.0)
             else:
                 avg_return = 0.0
                 avg_confidence = 0.5

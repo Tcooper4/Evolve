@@ -10,6 +10,8 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
+from trading.utils.safe_math import safe_drawdown
+
 logger = logging.getLogger(__name__)
 
 
@@ -77,9 +79,8 @@ class RiskControl:
         if len(equity_curve) < 2:
             return False
 
-        # Calculate running maximum
-        running_max = equity_curve.expanding().max()
-        drawdown = (equity_curve - running_max) / running_max
+        # Calculate drawdown
+        drawdown = safe_drawdown(equity_curve)
         max_drawdown = drawdown.min()
 
         is_high_risk = abs(max_drawdown) > self.max_drawdown_threshold

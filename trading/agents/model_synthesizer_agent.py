@@ -545,13 +545,19 @@ class ModelSynthesizerAgent:
         self, architecture: ModelArchitecture, request: SynthesisRequest
     ) -> float:
         """Score an architecture based on multiple criteria."""
-        # Performance score (40%)
-        performance_score = (
-            architecture.expected_performance / request.target_performance
-        )
+        # Performance score (40%) with safe division
+        if request.target_performance > 1e-10:
+            performance_score = (
+                architecture.expected_performance / request.target_performance
+            )
+        else:
+            performance_score = 0.0
 
         # Complexity score (30%) - lower is better
-        complexity_score = 1 - (architecture.complexity_score / request.max_complexity)
+        if request.max_complexity > 1e-10:
+            complexity_score = 1 - (architecture.complexity_score / request.max_complexity)
+        else:
+            complexity_score = 0.0
 
         # Training time score (20%) - faster is better
         time_score = 1 - min(

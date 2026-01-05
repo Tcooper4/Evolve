@@ -55,11 +55,7 @@ class ReturnStatementAuditor:
             "*.exe",
         ]
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def should_exclude_file(self, file_path: Path) -> bool:
         """Check if file should be excluded from audit."""

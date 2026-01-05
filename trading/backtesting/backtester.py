@@ -29,6 +29,7 @@ from trading.backtesting.risk_metrics import RiskMetricsEngine
 # Local imports
 from trading.backtesting.trade_models import Trade, TradeType
 from trading.backtesting.visualization import BacktestVisualizer
+from trading.utils.safe_math import safe_divide
 
 # Constants
 TRADING_DAYS_PER_YEAR = 252
@@ -292,13 +293,24 @@ class Backtester:
                 # Debit cash account
                 self.cash_account -= total_cost
                 # Credit equity account (position value)
+                # Note: We add trade_value here, not total_cost
+                # trade_value = price × quantity (market value of position)
+                # total_cost = trade_value + fees + slippage (what we paid)
+                # The equity_account tracks POSITION VALUE, not cash spent
+                # Example: Buy $100k of stock for $101k (with $1k fees)
+                #   - cash_account decreases by $101k (total_cost)
+                #   - equity_account increases by $100k (trade_value/position value)
+                #   - Net worth = cash + equity = starts at same place
                 self.equity_account += trade_value
                 # Update leverage
                 if self.enable_leverage:
-                    self.leverage_used = min(
-                        self.max_leverage,
-                        (self.equity_account - self.cash_account) / self.cash_account,
+                    # Safely calculate leverage with division-by-zero protection
+                    leverage_ratio = (
+                        (self.equity_account - self.cash_account) / self.cash_account
+                        if self.cash_account > 1e-10
+                        else 0.0
                     )
+                    self.leverage_used = min(self.max_leverage, leverage_ratio)
             else:  # SELL
                 # Credit cash account
                 self.cash_account += total_cost
@@ -306,9 +318,13 @@ class Backtester:
                 self.equity_account -= trade_value
                 # Update leverage
                 if self.enable_leverage:
-                    self.leverage_used = max(
-                        0, (self.equity_account - self.cash_account) / self.cash_account
+                    # Safely calculate leverage with division-by-zero protection
+                    leverage_ratio = (
+                        (self.equity_account - self.cash_account) / self.cash_account
+                        if self.cash_account > 1e-10
+                        else 0.0
                     )
+                    self.leverage_used = max(0, leverage_ratio)
 
             # Record account state
             account_state = {
@@ -432,11 +448,16 @@ class Backtester:
 
                 # Handle NaN values based on method
                 if fill_method == "ffill":
-                    signals_df = signals_df.fillna(method="ffill")
+                    signals_df = signals_df.ffill()
                     self.logger.info("Filled NaN values using forward fill")
                 elif fill_method == "bfill":
-                    signals_df = signals_df.fillna(method="bfill")
-                    self.logger.info("Filled NaN values using backward fill")
+                    # CRITICAL: Backward fill creates look-ahead bias in backtesting!
+                    # Using future data to fill past values invalidates backtest results.
+                    self.logger.error(
+                        "❌ BACKWARD FILL NOT ALLOWED IN BACKTESTING - creates look-ahead bias! "
+                        "Using forward fill instead."
+                    )
+                    signals_df = signals_df.ffill()
                 elif fill_method == "drop":
                     signals_df = signals_df.dropna()
                     self.logger.info("Dropped rows with NaN values")
@@ -447,7 +468,7 @@ class Backtester:
                     self.logger.warning(
                         f"Unknown fill method: {fill_method}, using forward fill"
                     )
-                    signals_df = signals_df.fillna(method="ffill")
+                    signals_df = signals_df.ffill()
 
             # Check for infinite values
             inf_count = (
@@ -458,7 +479,7 @@ class Backtester:
                     f"Found {inf_count} infinite values in signals DataFrame"
                 )
                 signals_df = signals_df.replace([np.inf, -np.inf], np.nan)
-                signals_df = signals_df.fillna(method="ffill")
+                signals_df = signals_df.ffill()
 
             # Validate final DataFrame
             if signals_df.isna().any().any():
@@ -530,7 +551,7 @@ class Backtester:
         losing_trades = len([t for t in self.trades if t.pnl and t.pnl < 0])
 
         total_pnl = sum([t.pnl or 0 for t in self.trades])
-        avg_pnl = total_pnl / total_trades if total_trades > 0 else 0
+        avg_pnl = safe_divide(total_pnl, total_trades, default=0.0)
 
         return {
             "total_trades": total_trades,
@@ -635,19 +656,27 @@ class Backtester:
             # You may need to adapt this for your strategy/model interface
             test_df = test_data.copy()
             test_df["pred"] = preds
-            # Simulate simple returns as example
-            test_df["returns"] = test_df["Close"].pct_change().shift(-1) * np.sign(
-                test_df["pred"].diff()
-            )
+            
+            # CRITICAL FIX: Remove look-ahead bias
+            # Don't use shift(-1) which accesses tomorrow's return today!
+            # Instead: today's signal affects today's return (or next period's return properly)
+            test_df["signal"] = np.sign(test_df["pred"].diff())
+            test_df["returns"] = test_df["Close"].pct_change()
+
+            # Apply signal from PREVIOUS period (can't act on today's close until tomorrow)
+            # This is the correct way: yesterday's signal determines today's position
+            test_df["strategy_returns"] = test_df["returns"] * test_df["signal"].shift(1)
+
+            # Use strategy_returns for evaluation (not "returns")
             perf = {
                 "window_start": test_data.index[0],
                 "window_end": test_data.index[-1],
-                "mean_return": test_df["returns"].mean(),
-                "sharpe": test_df["returns"].mean() / (test_df["returns"].std() + 1e-9),
+                "mean_return": test_df["strategy_returns"].mean(),
+                "sharpe": test_df["strategy_returns"].mean() / (test_df["strategy_returns"].std() + 1e-9),
                 "drawdown": (
-                    test_df["returns"].cumsum().cummax() - test_df["returns"].cumsum()
+                    test_df["strategy_returns"].cumsum().cummax() - test_df["strategy_returns"].cumsum()
                 ).max(),
-                "win_rate": (test_df["returns"] > 0).mean(),
+                "win_rate": (test_df["strategy_returns"] > 0).mean(),
             }
             results.append(perf)
         results_df = pd.DataFrame(results)
@@ -671,24 +700,97 @@ class Backtester:
 
 
 def run_backtest(
-    strategy: Union[str, List[str]], plot: bool = True
+    strategy: Union[str, List[str]], 
+    plot: bool = True,
+    start_date: str = None,
+    end_date: str = None,
+    initial_capital: float = 100000.0,
+    data: pd.DataFrame = None,
+    **kwargs
 ) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, Any]]:
     """Run a backtest with the given strategy.
-
+    
     Args:
         strategy: Strategy name or list of strategy names
         plot: Whether to plot results
-
+        start_date: Backtest start date (YYYY-MM-DD)
+        end_date: Backtest end date (YYYY-MM-DD)
+        initial_capital: Starting capital
+        data: Price data DataFrame (if None, will need to be loaded)
+        **kwargs: Additional arguments passed to Backtester
+        
     Returns:
-        Tuple of (equity_curve, trade_log, metrics)
+        Tuple of (trades_df, equity_curve_df, metrics_dict)
     """
-    # This is a placeholder - actual implementation would depend on strategy definitions
-    print(
-        "Warning: run_backtest function is a placeholder - use Backtester class directly"
+    from datetime import timedelta
+    
+    # Set default dates if not provided
+    if not end_date:
+        end_date = datetime.now().strftime('%Y-%m-%d')
+    if not start_date:
+        start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+    
+    # If no data provided, try to load it
+    if data is None:
+        try:
+            from trading.data.data_loader import DataLoader, DataLoadRequest
+            data_loader = DataLoader()
+            # This is a simplified example - in practice you'd need to specify symbols
+            # For now, return empty results with a warning
+            logging.warning("run_backtest: Data not provided and cannot auto-load. Please provide data parameter or use Backtester class directly.")
+            empty_df = pd.DataFrame()
+            empty_metrics = {}
+            return empty_df, empty_df, empty_metrics
+        except ImportError:
+            logging.warning("run_backtest: Cannot load data. Please provide data parameter.")
+            empty_df = pd.DataFrame()
+            empty_metrics = {}
+            return empty_df, empty_df, empty_metrics
+    
+    # Create backtester instance
+    backtester = Backtester(
+        data=data,
+        initial_cash=initial_capital,
+        **kwargs
     )
-
-    # Return empty results
-    empty_df = pd.DataFrame()
-    empty_metrics = {}
-
-    return empty_df, empty_df, empty_metrics
+    
+    # Load strategy
+    if isinstance(strategy, str):
+        strategy = [strategy]
+    
+    # Note: Strategy loading would depend on your strategy framework
+    # This is a placeholder - you'd need to implement strategy loading
+    # For example: backtester.add_strategy(strat_name) or similar
+    
+    # Run backtest
+    try:
+        results = backtester.run()
+        
+        # Extract results
+        trades_df = results.get('trades', pd.DataFrame())
+        equity_curve = results.get('equity_curve', pd.DataFrame())
+        metrics = results.get('metrics', {})
+        
+        # Plot if requested
+        if plot and not equity_curve.empty:
+            try:
+                import matplotlib.pyplot as plt
+                plt.figure(figsize=(12, 6))
+                if 'equity' in equity_curve.columns:
+                    plt.plot(equity_curve.index, equity_curve['equity'])
+                elif len(equity_curve.columns) > 0:
+                    plt.plot(equity_curve.index, equity_curve.iloc[:, 0])
+                plt.title(f"Backtest: {', '.join(strategy)}")
+                plt.xlabel("Date")
+                plt.ylabel("Portfolio Value")
+                plt.grid(True)
+                plt.show()
+            except ImportError:
+                logging.warning("matplotlib not available for plotting")
+        
+        return trades_df, equity_curve, metrics
+    except Exception as e:
+        logging.error(f"Error running backtest: {e}")
+        empty_df = pd.DataFrame()
+        empty_metrics = {}
+        return empty_df, empty_df, empty_metrics

@@ -28,11 +28,7 @@ class CodeRepair:
         self.duplicate_files: List[Tuple[Path, Path]] = []
         self.broken_imports: Dict[Path, List[str]] = {}
         self.missing_packages: Set[str] = set()
-        return {
-            "success": True,
-            "message": "CodeRepair initialized successfully",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def scan_imports(self) -> Dict[str, Any]:
         """Scan all Python files for imports."""

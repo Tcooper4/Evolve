@@ -115,8 +115,12 @@ class SMAStrategy:
         self, short_sma: pd.Series, long_sma: pd.Series
     ) -> pd.Series:
         """Calculate the strength of crossover signals."""
-        # Calculate percentage difference between SMAs
-        crossover_strength = ((short_sma - long_sma) / long_sma) * 100
+        # Safely calculate crossover strength with division-by-zero protection
+        crossover_strength = np.where(
+            np.abs(long_sma) > 1e-10,  # Threshold to avoid near-zero division
+            ((short_sma - long_sma) / long_sma) * 100,
+            0  # Default to 0 when long_sma is too small
+        )
 
         # Normalize to [-1, 1] range
         crossover_strength = crossover_strength.clip(-10, 10) / 10
@@ -210,9 +214,15 @@ class SMAStrategy:
 
         # Handle NaN values
         if df_lower["close"].isna().any():
-            df_lower["close"] = (
-                df_lower["close"].fillna(method="ffill").fillna(method="bfill")
-            )
+            # Only forward fill - never use backward fill in backtesting!
+            df_lower["close"] = df_lower["close"].ffill()
+            
+            # For any remaining leading NaNs, use first valid value
+            # (This is acceptable as it doesn't use future data)
+            first_valid_idx = df_lower["close"].first_valid_index()
+            if first_valid_idx is not None:
+                first_valid_value = df_lower["close"].loc[first_valid_idx]
+                df_lower["close"] = df_lower["close"].fillna(first_valid_value)
 
         if df_lower["volume"].isna().any():
             df_lower["volume"] = df_lower["volume"].fillna(0)

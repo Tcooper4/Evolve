@@ -50,25 +50,29 @@ def calculate_ema(data: pd.Series, window: int) -> pd.Series:
 
 def calculate_rsi(data: pd.Series, window: int = 14) -> pd.Series:
     """
-    Calculate RSI over a specified period.
-
+    Calculate RSI using Wilder's smoothing (CORRECT METHOD).
+    
+    This is a wrapper around safe_rsi() to ensure consistent calculation
+    across the entire codebase.
+    
     Args:
         data (pd.Series): Price series.
         window (int): Period for RSI calculation.
 
     Returns:
-        pd.Series: RSI values.
+        pd.Series: RSI values using Wilder's smoothing.
     """
     try:
-        delta = data.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
+        # Import the corrected safe_rsi function
+        from trading.utils.safe_math import safe_rsi
+        
+        logger.info(f"Calculating RSI with period={window} using Wilder's smoothing")
+        return safe_rsi(data, window)
+        
     except Exception as e:
         logger.error(f"Error calculating RSI: {e}")
-        return pd.Series(dtype=float)
+        # Return neutral RSI values on error
+        return pd.Series(50.0, index=data.index)
 
 
 def calculate_macd(
@@ -107,13 +111,38 @@ def calculate_bollinger_bands(
 def calculate_stochastic(
     data: pd.DataFrame, k_window: int = 14, d_window: int = 3
 ) -> Tuple[pd.Series, pd.Series]:
-    """Calculate Stochastic Oscillator."""
+    """
+    Calculate Stochastic Oscillator with safe division.
+    
+    Handles edge case where high == low (no price range) by returning
+    neutral 50% value instead of crashing.
+    
+    Args:
+        data (pd.DataFrame): DataFrame with High, Low, Close columns
+        k_window (int): Period for %K calculation
+        d_window (int): Period for %D smoothing
+        
+    Returns:
+        Tuple[pd.Series, pd.Series]: %K and %D values
+    """
     try:
+        from trading.utils.safe_math import safe_divide
+        
         low_min = data["Low"].rolling(window=k_window).min()
         high_max = data["High"].rolling(window=k_window).max()
-        k_percent = 100 * ((data["Close"] - low_min) / (high_max - low_min))
+        
+        # Safe division to handle case where high == low (no range)
+        # When range is zero, return 50 (neutral value)
+        k_percent = 100 * safe_divide(
+            data["Close"] - low_min,
+            high_max - low_min,
+            default=0.5  # 50% when divided by 100
+        )
+        
         d_percent = calculate_sma(k_percent, d_window)
+        
         return k_percent, d_percent
+        
     except Exception as e:
         logger.error(f"Error calculating Stochastic: {e}")
         empty_series = pd.Series(dtype=float)
@@ -121,14 +150,41 @@ def calculate_stochastic(
 
 
 def calculate_atr(data: pd.DataFrame, window: int = 14) -> pd.Series:
-    """Calculate Average True Range."""
+    """
+    Calculate Average True Range using Wilder's smoothing (CORRECT METHOD).
+    
+    ATR was invented by J. Welles Wilder (same as RSI) and uses the same
+    Wilder's smoothing formula, NOT simple moving average.
+    
+    Formula:
+    - First ATR = SMA of True Range over period
+    - Subsequent ATR = (Previous ATR × (period-1) + Current TR) / period
+    
+    This is mathematically equivalent to EWM with alpha=1/period
+    
+    Args:
+        data (pd.DataFrame): DataFrame with High, Low, Close columns
+        window (int): ATR period (default: 14)
+        
+    Returns:
+        pd.Series: ATR values using Wilder's smoothing
+    """
     try:
+        # Calculate True Range components
         high_low = data["High"] - data["Low"]
         high_close = np.abs(data["High"] - data["Close"].shift())
         low_close = np.abs(data["Low"] - data["Close"].shift())
+        
+        # True Range is the maximum of the three
         true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-        atr = calculate_sma(true_range, window)
+        
+        # Use Wilder's smoothing (equivalent to EWM with alpha=1/window)
+        # This is the CORRECT formula for ATR
+        atr = true_range.ewm(alpha=1/window, adjust=False).mean()
+        
+        logger.debug(f"Calculated ATR with period={window} using Wilder's smoothing")
         return atr
+        
     except Exception as e:
         logger.error(f"Error calculating ATR: {e}")
         return pd.Series(dtype=float)
@@ -144,9 +200,30 @@ def calculate_volume_sma(volume: pd.Series, window: int = 20) -> pd.Series:
 
 
 def calculate_price_momentum(data: pd.Series, period: int = 10) -> pd.Series:
-    """Calculate Price Momentum."""
+    """
+    Calculate Price Momentum with safe division.
+    
+    Handles edge case where historical price is zero to prevent crashes.
+    
+    Formula: (Current Price / Price N periods ago) - 1
+    
+    Args:
+        data (pd.Series): Price series
+        period (int): Lookback period
+        
+    Returns:
+        pd.Series: Momentum values (fractional change)
+    """
     try:
-        return data / data.shift(period) - 1
+        from trading.utils.safe_math import safe_divide
+        
+        shifted = data.shift(period)
+        
+        # Safe division to handle zero prices
+        momentum = safe_divide(data, shifted, default=0.0) - 1
+        
+        return momentum
+        
     except Exception as e:
         logger.error(f"Error calculating Price Momentum: {e}")
         return pd.Series(dtype=float)

@@ -458,13 +458,14 @@ class PerformanceCriticAgent(BaseAgent):
         downside_returns = actual_returns[actual_returns < 0]
         downside_deviation = downside_returns.std() if len(downside_returns) > 0 else 0
 
-        # Calculate Sortino ratio
+        # Calculate Sortino ratio with safe division
         risk_free_rate = self.config.get("risk_free_rate", 0.02) / 252
-        sortino_ratio = (
-            (actual_returns.mean() - risk_free_rate) / downside_deviation
-            if downside_deviation > 0
-            else 0
-        )
+        if downside_deviation > 1e-10:
+            sortino_ratio = (
+                (actual_returns.mean() - risk_free_rate) / downside_deviation
+            ) * np.sqrt(252)
+        else:
+            sortino_ratio = 0.0
 
         return {
             "max_drawdown": max_drawdown,

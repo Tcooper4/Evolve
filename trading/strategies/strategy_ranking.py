@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
+from trading.utils.safe_math import safe_divide
+
 logger = logging.getLogger(__name__)
 
 
@@ -153,9 +155,15 @@ class StrategyRanker:
             if stats["usage_count"] < self.min_usage_count:
                 continue
 
-            # Calculate metrics
-            success_rate = stats["success_count"] / stats["usage_count"]
-            avg_confidence = stats["total_confidence"] / stats["usage_count"]
+            # Calculate metrics with division-by-zero protection
+            usage_count = stats["usage_count"]
+            if usage_count > 0:
+                success_rate = stats["success_count"] / usage_count
+                avg_confidence = stats["total_confidence"] / usage_count
+            else:
+                logger.warning(f"Strategy {strategy_name} has zero usage_count")
+                success_rate = 0.0
+                avg_confidence = 0.0
             usage_frequency = self._calculate_usage_frequency(strategy_name)
             recent_performance = self._calculate_recent_performance(strategy_name)
 
@@ -243,7 +251,7 @@ class StrategyRanker:
                     recent_usage += 1
 
         # Normalize by time window
-        frequency = recent_usage / self.history_window
+        frequency = safe_divide(recent_usage, self.history_window, default=0.0)
 
         return min(1.0, frequency)  # Cap at 1.0
 
@@ -299,7 +307,7 @@ class StrategyRanker:
             # Calculate relevance score
             if prompt_words and strategy_words:
                 overlap = len(prompt_words.intersection(strategy_words))
-                relevance_score = overlap / len(prompt_words)
+                relevance_score = safe_divide(overlap, len(prompt_words), default=0.0)
                 if relevance_score > 0.1:  # At least 10% overlap
                     relevant_strategies.append(strategy)
 

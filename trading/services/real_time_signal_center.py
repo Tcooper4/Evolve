@@ -128,11 +128,7 @@ class RealTimeSignalCenter:
 
         logger.info("Real-Time Signal Center initialized successfully")
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def _initialize_default_alerts(self):
         """Initialize default alert configurations."""
@@ -206,7 +202,27 @@ class RealTimeSignalCenter:
 
             # Stop WebSocket server
             if self.websocket_server:
-                asyncio.run(self.websocket_server.close())
+                # Handle async close safely - check if we're in an async context
+                try:
+                    # Try to get running loop - will raise RuntimeError if no loop
+                    loop = asyncio.get_running_loop()
+                    # If we're in an async context, we can't use asyncio.run()
+                    # Schedule the close on the existing loop
+                    if loop.is_running():
+                        # Use call_soon_threadsafe to schedule the coroutine
+                        future = asyncio.run_coroutine_threadsafe(self.websocket_server.close(), loop)
+                        # Wait briefly for completion (non-blocking check)
+                        try:
+                            future.result(timeout=0.1)
+                        except Exception:
+                            # If it takes longer, let it run in background
+                            pass
+                    else:
+                        # Loop exists but not running, use run_until_complete
+                        loop.run_until_complete(self.websocket_server.close())
+                except RuntimeError:
+                    # No running loop, safe to use asyncio.run()
+                    asyncio.run(self.websocket_server.close())
 
             logger.info("Real-Time Signal Center stopped")
             return {

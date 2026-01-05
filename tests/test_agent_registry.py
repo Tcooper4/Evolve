@@ -39,12 +39,7 @@ class MockAgent(BaseAgent):
 
     async def execute(self, *args, **kwargs):
         self.execution_count += 1
-        return {
-            "success": True,
-            "data": {"mock_result": "test"},
-            "message": "Mock agent executed successfully",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
 
 class TestAgentRegistry:

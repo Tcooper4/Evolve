@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide
+
 
 class SizingStrategy(Enum):
     """Position sizing strategy enum."""
@@ -178,11 +180,7 @@ class PositionSizer:
             f"PositionSizer initialized with strategy: {self.config['default_strategy'].value}"
         )
 
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # Removed return statement - __init__ should not return values
 
     def calculate_position_size(
         self,
@@ -234,18 +232,22 @@ class PositionSizer:
                 adjusted_size, portfolio_context, params
             )
 
+            # Create sizing details using safe division
+            from trading.utils.safe_math import safe_divide
+            
+            risk_amount = abs(entry_price - stop_loss_price) * final_size
+            position_value = entry_price * final_size
+            
             # Create sizing details
             sizing_details = {
                 "strategy": params.strategy.value,
                 "base_size": base_size,
                 "adjusted_size": adjusted_size,
                 "final_size": final_size,
-                "risk_amount": abs(entry_price - stop_loss_price) * final_size,
-                "risk_percentage": (abs(entry_price - stop_loss_price) * final_size)
-                / portfolio_context.total_capital,
-                "position_value": entry_price * final_size,
-                "position_percentage": (entry_price * final_size)
-                / portfolio_context.total_capital,
+                "risk_amount": risk_amount,
+                "risk_percentage": safe_divide(risk_amount, portfolio_context.total_capital, default=0.0),
+                "position_value": position_value,
+                "position_percentage": safe_divide(position_value, portfolio_context.total_capital, default=0.0),
                 "market_context": market_context.to_dict(),
                 "signal_context": signal_context.to_dict(),
                 "portfolio_context": portfolio_context.to_dict(),
@@ -381,20 +383,31 @@ class PositionSizer:
         if avg_loss == 0 or win_rate <= 0 or win_rate >= 1:
             return params.base_position_size
 
-        # Calculate Kelly fraction
-        b = avg_win / avg_loss  # odds received
+        # Calculate Kelly fraction with division-by-zero protection
+        b = safe_divide(avg_win, avg_loss, default=0.0)  # odds received
+        if b <= 1e-10:
+            # If no losses or invalid ratio, use conservative estimate
+            return params.base_position_size
+            
         p = win_rate
         q = 1 - win_rate
 
-        kelly_fraction = (b * p - q) / b
+        if b > 1e-10:
+            kelly_fraction = (b * p - q) / b
+        else:
+            kelly_fraction = 0.0
 
         # Apply conservative Kelly fraction
         kelly_fraction *= params.kelly_fraction
 
-        # Convert to position size
-        position_size = (
-            kelly_fraction * portfolio_context.total_capital / risk_per_share
-        )
+        # Convert to position size with division-by-zero protection
+        if risk_per_share > 1e-10:
+            position_size = (
+                kelly_fraction * portfolio_context.total_capital / risk_per_share
+            )
+        else:
+            self.logger.warning(f"Invalid risk_per_share {risk_per_share}")
+            return 0.0
 
         return max(0, min(position_size, params.max_position_size))
 

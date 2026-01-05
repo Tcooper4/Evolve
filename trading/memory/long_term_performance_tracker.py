@@ -229,9 +229,14 @@ class LongTermPerformanceTracker:
             if len(metrics) < 2:
                 return
 
-            # Calculate returns
-            values = [m.value for m in metrics]
-            returns = np.diff(values) / values[:-1]
+            # Calculate returns with safe division
+            values = np.array([m.value for m in metrics])
+
+            if len(values) < 2:
+                return
+
+            from trading.utils.safe_math import safe_returns
+            returns = safe_returns(values, method='simple')
 
             if len(returns) == 0:
                 return

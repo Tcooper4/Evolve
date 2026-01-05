@@ -11,6 +11,8 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_divide, safe_rsi, safe_price_momentum
+
 # Try to import scipy
 try:
     from scipy.optimize import minimize
@@ -190,7 +192,13 @@ class PositionSizingEngine:
             )
 
         # Risk-based sizing: risk_per_trade / volatility
-        position_size = self.risk_per_trade / volatility
+        if volatility > 1e-10:
+            position_size = self.risk_per_trade / volatility
+        else:
+            # Use equal-weighted sizing if volatility is zero
+            return self._calculate_equal_weighted_size(
+                asset, price, strategy, signal, data, positions
+            )
         return min(position_size, MAX_POSITION_SIZE)
 
     def _calculate_kelly_size(
@@ -233,13 +241,9 @@ class PositionSizingEngine:
                 asset, price, strategy, signal, data, positions
             )
 
-        # Kelly formula: f = (bp - q) / b
-        # where b = avg_win/avg_loss, p = win_rate, q = 1-p
-        b = avg_win / avg_loss
-        p = win_rate
-        q = 1 - p
-
-        kelly_fraction = (b * p - q) / b
+        # Kelly formula using safe division utility
+        from trading.utils.safe_math import safe_kelly_fraction
+        kelly_fraction = safe_kelly_fraction(avg_win, avg_loss, win_rate)
 
         # Apply signal strength
         position_size = kelly_fraction * abs(signal)
@@ -379,7 +383,7 @@ class PositionSizingEngine:
             )
 
         # Calculate target weights
-        target_weights = risk_contrib / total_risk
+        target_weights = safe_divide(risk_contrib, total_risk, default=1.0 / len(risk_contrib))
 
         # Calculate position size for new asset
         if asset in target_weights:
@@ -546,7 +550,7 @@ class PositionSizingEngine:
             avg_loss = abs(window_returns[window_returns < 0].mean())
 
             if avg_loss > 0 and avg_win > 0:
-                b = avg_win / avg_loss
+                b = safe_divide(avg_win, avg_loss, default=0.0)
                 p = win_rate
                 q = 1 - p
                 kelly = (b * p - q) / b
@@ -996,12 +1000,15 @@ class PositionSizingEngine:
         recent_vol = returns.tail(20).std()
         long_term_vol = returns.tail(252).std()
 
-        if long_term_vol == 0:
-            return self._calculate_equal_weighted_size(
-                asset, price, strategy, signal, data, positions
-            )
-
-        vol_ratio = recent_vol / long_term_vol
+        # Safely calculate vol_ratio with division-by-zero protection
+        vol_ratio = safe_divide(recent_vol, long_term_vol, default=1.0)
+        if vol_ratio <= 1e-10:
+            # Default to neutral if no long-term volatility, or use equal-weighted sizing
+            if recent_vol == 0:
+                return self._calculate_equal_weighted_size(
+                    asset, price, strategy, signal, data, positions
+                )
+            vol_ratio = 1.0  # Default to neutral if no long-term volatility
 
         # Calculate trend regime
         recent_return = returns.tail(20).mean()
@@ -1120,10 +1127,10 @@ class PositionSizingEngine:
         sma_20 = data[asset].rolling(window=20).mean().iloc[-1]
         sma_60 = data[asset].rolling(window=60).mean().iloc[-1]
 
-        if sma_20 > 0 and sma_60 > 0:
-            value_factor = sma_60 / sma_20
-        else:
-            value_factor = 1.0
+        # Use safe_price_momentum for ratio calculation
+        # Note: safe_price_momentum calculates (current - reference) / reference
+        # For sma_60/sma_20 ratio, we use: 1 + safe_price_momentum(sma_60, sma_20)
+        value_factor = 1.0 + safe_price_momentum(sma_60, sma_20)
 
         # Momentum factor
         momentum_factor = returns.rolling(window=20).mean().iloc[-1]
@@ -1232,7 +1239,7 @@ class PositionSizingEngine:
             )
 
     def _calculate_rsi(self, returns: pd.Series, period: int = 14) -> float:
-        """Calculate RSI indicator."""
+        """Calculate RSI indicator using safe division."""
         if len(returns) < period:
             return 50.0
 
@@ -1242,13 +1249,13 @@ class PositionSizingEngine:
         avg_gain = gains.rolling(window=period).mean().iloc[-1]
         avg_loss = losses.rolling(window=period).mean().iloc[-1]
 
-        if avg_loss == 0:
-            return 100.0
+        # Use safe_divide to handle zero avg_loss
+        rs = safe_divide(avg_gain, avg_loss, default=0.0)
+        # Use safe_divide for final RSI calculation to handle edge case where rs = -1
+        denominator = 1 + rs
+        rsi = 100 - safe_divide(100, denominator, default=50.0)
 
-        rs = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
-
-        return rsi if not np.isnan(rsi) else 50.0
+        return rsi if not np.isnan(rsi) and np.isfinite(rsi) else 50.0
 
     def add_trade(self, trade_data: Dict[str, Any]) -> None:
         """Add trade to history for position sizing calculations."""

@@ -106,7 +106,9 @@ __all__ = [
     "get_system_health",
 ]
 
-logger = logging.getLogger(__name__)
+# Use standard library logging, not utils.logging
+import logging as std_logging
+logger = std_logging.getLogger(__name__)
 
 
 def get_system_info() -> Dict[str, Any]:

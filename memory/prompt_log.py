@@ -370,12 +370,8 @@ class PromptMemory:
             history = await self.get_prompt_history(user_id, n=1000)
 
             if not history:
-                return {
-                    "total_prompts": 0,
-                    "successful_prompts": 0,
-                    "average_execution_time": 0.0,
-                    "most_common_agent": None,
-                }
+                # Return empty statistics if no history
+                return {}
 
             total_prompts = len(history)
             successful_prompts = sum(1 for entry in history if entry.success)

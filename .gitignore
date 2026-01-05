@@ -94,8 +94,19 @@ dev/notebooks/
 
 # Cache
 .cache/
+cache/
+*.cache
 .mypy_cache/
 .ruff_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
 
 # Temporary files
 tmp/
@@ -104,6 +115,12 @@ temp/
 *.bak
 *.swp
 *~
+*.joblib
+*.pkl
+*.h5
+*.pt
+*.pth
+*.model
 
 # Security
 *.pem
