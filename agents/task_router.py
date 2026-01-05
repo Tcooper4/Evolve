@@ -20,7 +20,13 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 
-from dataclasses_json import dataclass_json
+try:
+    from dataclasses_json import dataclass_json
+except ImportError:
+    # Fallback if dataclasses_json not available
+    def dataclass_json(cls):
+        """Dummy decorator if dataclasses_json not available."""
+        return cls
 
 logger = logging.getLogger(__name__)
 

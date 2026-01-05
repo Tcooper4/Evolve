@@ -17,6 +17,33 @@ import warnings
 from datetime import datetime
 from pathlib import Path
 
+# Suppress TensorFlow/keras warnings from dependencies
+# Note: This codebase uses PyTorch only, but some dependencies (like transformers, stable-baselines3)
+# may have keras/tf_keras as optional dependencies that trigger warnings
+os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '3')  # Suppress all TensorFlow messages (ERROR and above only)
+
+# Suppress TensorFlow logging at the module level
+try:
+    import tensorflow as tf
+    tf.get_logger().setLevel('ERROR')
+    # Suppress all TensorFlow warnings
+    import logging
+    logging.getLogger('tensorflow').setLevel(logging.ERROR)
+    logging.getLogger('tf_keras').setLevel(logging.ERROR)
+    logging.getLogger('keras').setLevel(logging.ERROR)
+except ImportError:
+    pass  # TensorFlow not installed, which is fine
+
+# Suppress warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='tensorflow')
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='tf_keras')
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='keras')
+warnings.filterwarnings('ignore', message='.*tf.losses.sparse_softmax_cross_entropy.*')
+warnings.filterwarnings('ignore', message='.*tf.reset_default_graph.*')
+warnings.filterwarnings('ignore', message='.*The name tf.*is deprecated.*')
+warnings.filterwarnings('ignore', message='.*From.*tf_keras.*')
+warnings.filterwarnings('ignore', message='.*From.*keras.*')
+
 import streamlit as st
 
 # Add project root to Python path for imports
@@ -32,7 +59,7 @@ try:
     # Setup advanced logging
     logging_config = setup_logging(
         config={
-            'level': logging.INFO,
+            'level': 'INFO',  # Use string, not logging.INFO constant
             'file': 'logs/trading_system.log',
             'max_size': 10*1024*1024,  # 10 MB
             'backup_count': 5,
@@ -197,6 +224,12 @@ except Exception as e:
 
 # Add Task Orchestrator integration
 try:
+    # Ensure project root is in path
+    import sys
+    project_root = Path(__file__).parent.absolute()
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    
     from core.orchestrator.task_orchestrator import TaskOrchestrator
     from core.orchestrator.task_scheduler import TaskScheduler
     from core.orchestrator.task_monitor import TaskMonitor
@@ -296,12 +329,12 @@ except Exception as e:
 
 # Add System Health Monitoring
 try:
-    from system.infra.agents.services.automation_health import HealthMonitor
-    from system.infra.agents.services.automation_monitoring import SystemMonitor
+    from system.infra.agents.services.automation_health import AutomationHealthService as HealthMonitor
+    from system.infra.agents.services.automation_monitoring import AutomationMonitoringService
     
     # Initialize monitoring
     health_monitor = HealthMonitor()
-    system_monitor = SystemMonitor()
+    system_monitor = AutomationMonitoringService()
     
     if 'health_monitor' not in st.session_state:
         st.session_state.health_monitor = health_monitor
@@ -320,14 +353,17 @@ except Exception as e:
 
 # Add Automation Core & Workflows
 try:
-    from system.infra.agents.services.automation_core import AutomationCore
-    from system.infra.agents.services.automation_workflows import WorkflowManager
-    from system.infra.agents.services.automation_config import AutomationConfig
+    from system.infra.agents.services.automation_core import (
+        AutomationCoreService as AutomationCore,
+        AutomationConfig,
+    )
+    from system.infra.agents.services.automation_workflows import AutomationWorkflowsService
     
     # Initialize automation system
-    automation_config = AutomationConfig()
+    automation_config = AutomationConfig()  # Uses default values from Pydantic model
+    # AutomationCoreService now properly accepts config parameter
     automation_core = AutomationCore(config=automation_config)
-    workflow_manager = WorkflowManager(automation_core=automation_core)
+    workflow_manager = AutomationWorkflowsService()  # WorkflowManager is AutomationWorkflowsService
     
     # Store in session state
     if 'automation_core' not in st.session_state:
@@ -350,11 +386,11 @@ except Exception as e:
 # Add Model Performance Monitoring
 try:
     from trading.memory.model_log import ModelLog
-    from trading.memory.performance_logger import PerformanceLogger
+    from trading.memory.performance_logger import ModelScoreTracker
     from trading.memory.model_monitor import ModelMonitor
     
     model_log = ModelLog()
-    perf_logger = PerformanceLogger()
+    perf_logger = ModelScoreTracker()  # Use ModelScoreTracker instead of PerformanceLogger
     model_monitor = ModelMonitor()
     
     if 'model_log' not in st.session_state:
@@ -367,9 +403,9 @@ try:
     MODEL_MONITORING_AVAILABLE = True
     logger.info("✅ Model monitoring initialized")
     
-except ImportError:
+except ImportError as e:
     MODEL_MONITORING_AVAILABLE = False
-    logger.warning("Model monitoring not available")
+    logger.warning(f"Model monitoring not available: {e}")
 except Exception as e:
     MODEL_MONITORING_AVAILABLE = False
     logger.warning(f"Error initializing model monitoring: {e}")
@@ -424,7 +460,7 @@ except Exception as e:
 # ----------------------------------------------------------------------------
 
 try:
-    from trading.models.advanced.transformer.time_series_transformer import TimeSeriesTransformer
+    from trading.models.advanced.transformer.time_series_transformer import TransformerForecaster as TimeSeriesTransformer
     from trading.forecasting.hybrid_model import HybridModel
     from trading.forecasting.hybrid_model_selector import HybridModelSelector
     from trading.forecasting.forecast_postprocessor import ForecastPostprocessor
@@ -447,7 +483,7 @@ except Exception as e:
 # ----------------------------------------------------------------------------
 
 try:
-    from trading.visualization.visualizer import PerformanceVisualizer
+    from trading.core.performance import PerformanceVisualizer
     
     if 'performance_visualizer' not in st.session_state:
         st.session_state.performance_visualizer = PerformanceVisualizer()
@@ -466,7 +502,14 @@ try:
     
     if 'sentiment_classifier' not in st.session_state:
         st.session_state.sentiment_classifier = SentimentClassifier()
-        st.session_state.sentiment_signals = SentimentSignals()
+        # Pass API keys explicitly - support both NEWSAPI_KEY and NEWS_API_KEY
+        newsapi_key = os.getenv("NEWSAPI_KEY") or os.getenv("NEWS_API_KEY")
+        sentiment_signals = SentimentSignals(
+            reddit_client_id=os.getenv("REDDIT_CLIENT_ID"),
+            reddit_client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
+            newsapi_key=newsapi_key
+        )
+        st.session_state.sentiment_signals = sentiment_signals
     
     logger.info("✅ NLP & sentiment initialized")
 except Exception as e:
@@ -514,7 +557,7 @@ except Exception as e:
 # ----------------------------------------------------------------------------
 
 try:
-    from trading.execution.execution_engine import AdvancedExecutionEngine
+    from trading.execution.execution_engine import ExecutionEngine as AdvancedExecutionEngine
     from trading.execution.execution_replay import ExecutionReplay
     from trading.nlp.llm_processor import LLMProcessor
     

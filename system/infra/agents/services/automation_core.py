@@ -6,14 +6,32 @@ import redis
 from pydantic import BaseModel, Field
 from ratelimit import limits, sleep_and_retry
 
-from system.infra.agents.core.models.task import (
-    Task,
-    TaskPriority,
-    TaskStatus,
-    TaskType,
-)
-from system.infra.agents.core.orchestrator import Orchestrator
-from system.infra.agents.core.task_manager import TaskManager
+# Try to import from system.infra.agents.core, fallback if not available
+try:
+    from system.infra.agents.core.models.task import (
+        Task,
+        TaskPriority,
+        TaskStatus,
+        TaskType,
+    )
+    from system.infra.agents.core.orchestrator import Orchestrator
+    from system.infra.agents.core.task_manager import TaskManager
+    CORE_AVAILABLE = True
+except ImportError:
+    # Create dummy classes if core modules not available
+    class Task:
+        pass
+    class TaskPriority:
+        pass
+    class TaskStatus:
+        pass
+    class TaskType:
+        pass
+    class Orchestrator:
+        pass
+    class TaskManager:
+        pass
+    CORE_AVAILABLE = False
 from utils.launch_utils import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -34,9 +52,23 @@ class AutomationConfig(BaseModel):
 
 
 class AutomationCoreService:
-    def __init__(self):
+    def __init__(self, config: Optional[AutomationConfig] = None):
+        """
+        Initialize AutomationCoreService.
+        
+        Args:
+            config: Optional AutomationConfig instance. If None, uses default config.
+        """
+        self.config = config or AutomationConfig()
         self.setup_logging()
         self.logger = logging.getLogger("automation")
+        
+        # Initialize components
+        self.redis = None
+        self.task_manager = None
+        self.orchestrator = None
+        self.cache = {}
+        self.lock = asyncio.Lock()
 
     def setup_logging(self):
         return setup_logging(service_name="service")

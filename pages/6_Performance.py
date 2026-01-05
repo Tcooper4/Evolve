@@ -2411,7 +2411,7 @@ with tab5:
     st.write("Generate a comprehensive performance dashboard with advanced visualizations")
     
     try:
-        from trading.visualization.visualizer import PerformanceVisualizer
+        from trading.core.performance import PerformanceVisualizer
         
         visualizer = PerformanceVisualizer()
         

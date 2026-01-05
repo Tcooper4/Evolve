@@ -71,3 +71,66 @@ def get_walk_forward_agent() -> WalkForwardAgent:
         custom_config={},
     )
     return WalkForwardAgent(config)
+
+
+class WalkForwardValidator:
+    """Wrapper class for walk-forward validation functionality."""
+    
+    def __init__(self):
+        """Initialize the walk-forward validator."""
+        self.agent = get_walk_forward_agent()
+        self.logger = logging.getLogger(__name__)
+    
+    def validate(
+        self,
+        data: pd.DataFrame,
+        target_column: str,
+        feature_columns: List[str],
+        model_factory: Any,
+        test_window_days: int = 63,
+        step_size_days: int = 21,
+    ) -> Dict[str, Any]:
+        """
+        Run walk-forward validation.
+        
+        Args:
+            data: Input data with datetime index
+            target_column: Target variable column
+            feature_columns: Feature columns
+            model_factory: Function to create model instances
+            test_window_days: Test window size in days
+            step_size_days: Step size for walk-forward in days
+            
+        Returns:
+            Dictionary with validation results
+        """
+        try:
+            # Use the agent to run validation
+            import asyncio
+            result = asyncio.run(
+                self.agent.execute(
+                    action="run_walk_forward_validation",
+                    data=data,
+                    target_column=target_column,
+                    feature_columns=feature_columns,
+                    model_factory=model_factory,
+                )
+            )
+            
+            if result.success:
+                return {
+                    "success": True,
+                    "results": result.data.get("walk_forward_results", []),
+                    "performance_summary": result.data.get("performance_summary", {}),
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.error_message,
+                }
+        except Exception as e:
+            self.logger.error(f"Error in walk-forward validation: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+            }

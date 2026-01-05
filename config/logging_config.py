@@ -108,15 +108,26 @@ class LoggingConfig:
         Returns:
             Log level integer
         """
-        level_str = self.config.get("level", "INFO").upper()
-        level_map = {
-            "DEBUG": logging.DEBUG,
-            "INFO": logging.INFO,
-            "WARNING": logging.WARNING,
-            "ERROR": logging.ERROR,
-            "CRITICAL": logging.CRITICAL,
-        }
-        return level_map.get(level_str, logging.INFO)
+        level = self.config.get("level", "INFO")
+        
+        # Handle both string and integer log levels
+        if isinstance(level, int):
+            # Already an integer (logging constant), return as-is
+            return level
+        elif isinstance(level, str):
+            # String, convert to logging constant
+            level_str = level.upper()
+            level_map = {
+                "DEBUG": logging.DEBUG,
+                "INFO": logging.INFO,
+                "WARNING": logging.WARNING,
+                "ERROR": logging.ERROR,
+                "CRITICAL": logging.CRITICAL,
+            }
+            return level_map.get(level_str, logging.INFO)
+        else:
+            # Fallback to INFO
+            return logging.INFO
 
     def _create_console_handler(self) -> logging.StreamHandler:
         """

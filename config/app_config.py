@@ -9,7 +9,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Type, Union
 
 import yaml
 
@@ -275,8 +275,7 @@ class AppConfig:
             self.models.forecast_horizon = int(forecast_horizon_env)
         except (ValueError, AttributeError) as e:
             logger.warning(
-                f"Invalid FORECAST_HORIZON value '{forecast_horizon_env}', using default {
-                    self.models.forecast_horizon}: {e}")
+                f"Invalid FORECAST_HORIZON value '{forecast_horizon_env}', using default {self.models.forecast_horizon}: {e}")
 
         confidence_interval_env = os.getenv(
             "CONFIDENCE_INTERVAL", str(self.models.confidence_interval)
@@ -291,8 +290,7 @@ class AppConfig:
             self.models.confidence_interval = float(confidence_interval_env)
         except (ValueError, AttributeError) as e:
             logger.warning(
-                f"Invalid CONFIDENCE_INTERVAL value '{confidence_interval_env}', using default {
-                    self.models.confidence_interval}: {e}")
+                f"Invalid CONFIDENCE_INTERVAL value '{confidence_interval_env}', using default {self.models.confidence_interval}: {e}")
 
         # Strategy settings
         position_size_env = os.getenv(
@@ -361,8 +359,7 @@ class AppConfig:
             self.nlp.confidence_threshold = float(nlp_confidence_env)
         except (ValueError, AttributeError) as e:
             logger.warning(
-                f"Invalid NLP_CONFIDENCE_THRESHOLD value '{nlp_confidence_env}', using default {
-                    self.nlp.confidence_threshold}: {e}")
+                f"Invalid NLP_CONFIDENCE_THRESHOLD value '{nlp_confidence_env}', using default {self.nlp.confidence_threshold}: {e}")
 
         nlp_tokens_env = os.getenv("NLP_MAX_TOKENS", str(self.nlp.max_tokens))
         try:
@@ -449,6 +446,65 @@ class AppConfig:
             logger.error(f"Error loading configuration from {config_path}: {e}")
             return cls()
 
+    @staticmethod
+    def _parse_docker_var(value: Any, default: Any, var_type: Type = str) -> Any:
+        """
+        Parse Docker-style environment variable substitution: ${VAR:-default}
+        
+        Args:
+            value: The value from config (may be a string like "${VAR:-default}")
+            default: Default value to use if parsing fails
+            var_type: Type to convert to (int, float, str, bool)
+            
+        Returns:
+            Parsed value of the specified type
+        """
+        if not isinstance(value, str):
+            # Not a string, try to convert directly
+            try:
+                return var_type(value)
+            except (ValueError, TypeError):
+                return default
+        
+        # Handle Docker-style variable substitution: ${VAR:-default}
+        if value.startswith("${") and value.endswith("}"):
+            # Check for default value syntax: ${VAR:-default}
+            if ":-" in value:
+                # Extract default value after ":-"
+                default_str = value.split(":-", 1)[1].rstrip("}")
+                # Try to get from environment first
+                var_name = value[2:value.index(":-")]
+                env_value = os.getenv(var_name)
+                if env_value is not None:
+                    value = env_value
+                else:
+                    value = default_str
+            else:
+                # Simple ${VAR} format without default
+                var_name = value[2:-1]
+                env_value = os.getenv(var_name)
+                if env_value is not None:
+                    value = env_value
+                else:
+                    # No default provided, use the provided default
+                    value = str(default)
+        
+        # Convert to requested type
+        try:
+            if var_type == bool:
+                # Handle boolean strings
+                if isinstance(value, str):
+                    return value.lower() in ("true", "1", "yes", "on")
+                return bool(value)
+            elif var_type == int:
+                return int(value)
+            elif var_type == float:
+                return float(value)
+            else:
+                return str(value)
+        except (ValueError, TypeError):
+            return default
+
     def _update_from_dict(self, config_data: Dict[str, Any]):
         """Update configuration from dictionary."""
         try:
@@ -456,14 +512,55 @@ class AppConfig:
             if "server" in config_data:
                 server_data = config_data["server"]
                 self.server.host = server_data.get("host", self.server.host)
-                self.server.port = int(server_data.get("port", self.server.port))
+                
+                # Handle port with Docker-style variable substitution
+                port_value = server_data.get("port", self.server.port)
+                try:
+                    # Handle Docker-style variable substitution like ${PORT:-8501}
+                    if isinstance(port_value, str) and port_value.startswith("${") and ":-" in port_value:
+                        # Extract the default value after :-
+                        default_value = port_value.split(":-")[-1].rstrip("}")
+                        port_value = default_value
+                    # Try to get from environment variable if it's a simple ${VAR} format
+                    elif isinstance(port_value, str) and port_value.startswith("${") and port_value.endswith("}"):
+                        var_name = port_value[2:-1]
+                        port_value = os.getenv(var_name, str(self.server.port))
+                    self.server.port = int(port_value)
+                except (ValueError, AttributeError) as e:
+                    logger.warning(
+                        f"Invalid port value '{port_value}', using default {self.server.port}: {e}"
+                    )
                 self.server.debug = server_data.get("debug", self.server.debug)
-                self.server.workers = int(
-                    server_data.get("workers", self.server.workers)
-                )
-                self.server.timeout = int(
-                    server_data.get("timeout", self.server.timeout)
-                )
+                
+                # Handle workers with Docker-style variable substitution
+                workers_value = server_data.get("workers", self.server.workers)
+                try:
+                    if isinstance(workers_value, str) and workers_value.startswith("${") and ":-" in workers_value:
+                        default_value = workers_value.split(":-")[-1].rstrip("}")
+                        workers_value = default_value
+                    elif isinstance(workers_value, str) and workers_value.startswith("${") and workers_value.endswith("}"):
+                        var_name = workers_value[2:-1]
+                        workers_value = os.getenv(var_name, str(self.server.workers))
+                    self.server.workers = int(workers_value)
+                except (ValueError, AttributeError) as e:
+                    logger.warning(
+                        f"Invalid workers value '{workers_value}', using default {self.server.workers}: {e}"
+                    )
+                
+                # Handle timeout with Docker-style variable substitution
+                timeout_value = server_data.get("timeout", self.server.timeout)
+                try:
+                    if isinstance(timeout_value, str) and timeout_value.startswith("${") and ":-" in timeout_value:
+                        default_value = timeout_value.split(":-")[-1].rstrip("}")
+                        timeout_value = default_value
+                    elif isinstance(timeout_value, str) and timeout_value.startswith("${") and timeout_value.endswith("}"):
+                        var_name = timeout_value[2:-1]
+                        timeout_value = os.getenv(var_name, str(self.server.timeout))
+                    self.server.timeout = int(timeout_value)
+                except (ValueError, AttributeError) as e:
+                    logger.warning(
+                        f"Invalid timeout value '{timeout_value}', using default {self.server.timeout}: {e}"
+                    )
                 self.server.reload = server_data.get("reload", self.server.reload)
                 self.server.access_log = server_data.get(
                     "access_log", self.server.access_log
@@ -474,13 +571,52 @@ class AppConfig:
                 logging_data = config_data["logging"]
                 self.logging.level = logging_data.get("level", self.logging.level)
                 self.logging.format = logging_data.get("format", self.logging.format)
-                self.logging.file = logging_data.get("file", self.logging.file)
-                self.logging.max_size = int(
-                    logging_data.get("max_size", self.logging.max_size)
-                )
-                self.logging.backup_count = int(
-                    logging_data.get("backup_count", self.logging.backup_count)
-                )
+                
+                # Handle file path with Docker-style variable substitution
+                file_value = logging_data.get("file", self.logging.file)
+                if isinstance(file_value, str):
+                    if file_value.startswith("${") and ":-" in file_value and file_value.endswith("}"):
+                        # Extract the default value after ":-"
+                        # Use rsplit to handle paths that might contain colons
+                        parts = file_value.rsplit(":-", 1)
+                        if len(parts) == 2:
+                            default_value = parts[1].rstrip("}")
+                            file_value = default_value
+                    elif file_value.startswith("${") and file_value.endswith("}"):
+                        # Simple ${VAR} format without default
+                        var_name = file_value[2:-1]
+                        file_value = os.getenv(var_name, self.logging.file)
+                self.logging.file = file_value
+                
+                # Handle max_size with Docker-style variable substitution
+                max_size_value = logging_data.get("max_size", self.logging.max_size)
+                try:
+                    if isinstance(max_size_value, str) and max_size_value.startswith("${") and ":-" in max_size_value:
+                        default_value = max_size_value.split(":-")[-1].rstrip("}")
+                        max_size_value = default_value
+                    elif isinstance(max_size_value, str) and max_size_value.startswith("${") and max_size_value.endswith("}"):
+                        var_name = max_size_value[2:-1]
+                        max_size_value = os.getenv(var_name, str(self.logging.max_size))
+                    self.logging.max_size = int(max_size_value)
+                except (ValueError, AttributeError) as e:
+                    logger.warning(
+                        f"Invalid max_size value '{max_size_value}', using default {self.logging.max_size}: {e}"
+                    )
+                
+                # Handle backup_count with Docker-style variable substitution
+                backup_count_value = logging_data.get("backup_count", self.logging.backup_count)
+                try:
+                    if isinstance(backup_count_value, str) and backup_count_value.startswith("${") and ":-" in backup_count_value:
+                        default_value = backup_count_value.split(":-")[-1].rstrip("}")
+                        backup_count_value = default_value
+                    elif isinstance(backup_count_value, str) and backup_count_value.startswith("${") and backup_count_value.endswith("}"):
+                        var_name = backup_count_value[2:-1]
+                        backup_count_value = os.getenv(var_name, str(self.logging.backup_count))
+                    self.logging.backup_count = int(backup_count_value)
+                except (ValueError, AttributeError) as e:
+                    logger.warning(
+                        f"Invalid backup_count value '{backup_count_value}', using default {self.logging.backup_count}: {e}"
+                    )
                 self.logging.console = logging_data.get("console", self.logging.console)
                 self.logging.json_format = logging_data.get(
                     "json_format", self.logging.json_format
@@ -494,31 +630,87 @@ class AppConfig:
                     self.database.redis_host = redis_data.get(
                         "host", self.database.redis_host
                     )
-                    self.database.redis_port = int(
-                        redis_data.get("port", self.database.redis_port)
-                    )
-                    self.database.redis_db = int(
-                        redis_data.get("db", self.database.redis_db)
-                    )
+                    
+                    # Handle redis_port with Docker-style variable substitution
+                    redis_port_value = redis_data.get("port", self.database.redis_port)
+                    try:
+                        if isinstance(redis_port_value, str) and redis_port_value.startswith("${") and ":-" in redis_port_value:
+                            default_value = redis_port_value.split(":-")[-1].rstrip("}")
+                            redis_port_value = default_value
+                        elif isinstance(redis_port_value, str) and redis_port_value.startswith("${") and redis_port_value.endswith("}"):
+                            var_name = redis_port_value[2:-1]
+                            redis_port_value = os.getenv(var_name, str(self.database.redis_port))
+                        self.database.redis_port = int(redis_port_value)
+                    except (ValueError, AttributeError) as e:
+                        logger.warning(
+                            f"Invalid redis_port value '{redis_port_value}', using default {self.database.redis_port}: {e}"
+                        )
+                    # Handle redis_db with Docker-style variable substitution
+                    redis_db_value = redis_data.get("db", self.database.redis_db)
+                    try:
+                        if isinstance(redis_db_value, str) and redis_db_value.startswith("${") and ":-" in redis_db_value:
+                            default_value = redis_db_value.split(":-")[-1].rstrip("}")
+                            redis_db_value = default_value
+                        elif isinstance(redis_db_value, str) and redis_db_value.startswith("${") and redis_db_value.endswith("}"):
+                            var_name = redis_db_value[2:-1]
+                            redis_db_value = os.getenv(var_name, str(self.database.redis_db))
+                        self.database.redis_db = int(redis_db_value)
+                    except (ValueError, AttributeError) as e:
+                        logger.warning(
+                            f"Invalid redis_db value '{redis_db_value}', using default {self.database.redis_db}: {e}"
+                        )
                     self.database.redis_password = redis_data.get("password") or None
                     self.database.redis_ssl = redis_data.get(
                         "ssl", self.database.redis_ssl
                     )
-                    self.database.redis_pool_size = int(
-                        redis_data.get("pool_size", self.database.redis_pool_size)
-                    )
+                    # Handle redis_pool_size with Docker-style variable substitution
+                    pool_size_value = redis_data.get("pool_size", self.database.redis_pool_size)
+                    try:
+                        if isinstance(pool_size_value, str) and pool_size_value.startswith("${") and ":-" in pool_size_value:
+                            default_value = pool_size_value.split(":-")[-1].rstrip("}")
+                            pool_size_value = default_value
+                        elif isinstance(pool_size_value, str) and pool_size_value.startswith("${") and pool_size_value.endswith("}"):
+                            var_name = pool_size_value[2:-1]
+                            pool_size_value = os.getenv(var_name, str(self.database.redis_pool_size))
+                        self.database.redis_pool_size = int(pool_size_value)
+                    except (ValueError, AttributeError) as e:
+                        logger.warning(
+                            f"Invalid redis_pool_size value '{pool_size_value}', using default {self.database.redis_pool_size}: {e}"
+                        )
                     self.database.redis_retry_timeout = redis_data.get(
                         "retry_on_timeout", self.database.redis_retry_timeout
                     )
 
                 if "sqlite" in db_data:
                     sqlite_data = db_data["sqlite"]
-                    self.database.sqlite_path = sqlite_data.get(
-                        "path", self.database.sqlite_path
-                    )
-                    self.database.sqlite_timeout = int(
-                        sqlite_data.get("timeout", self.database.sqlite_timeout)
-                    )
+                    
+                    # Handle sqlite_path with Docker-style variable substitution
+                    sqlite_path_value = sqlite_data.get("path", self.database.sqlite_path)
+                    if isinstance(sqlite_path_value, str):
+                        if sqlite_path_value.startswith("${") and ":-" in sqlite_path_value and sqlite_path_value.endswith("}"):
+                            parts = sqlite_path_value.rsplit(":-", 1)
+                            if len(parts) == 2:
+                                default_value = parts[1].rstrip("}")
+                                sqlite_path_value = default_value
+                        elif sqlite_path_value.startswith("${") and sqlite_path_value.endswith("}"):
+                            var_name = sqlite_path_value[2:-1]
+                            sqlite_path_value = os.getenv(var_name, self.database.sqlite_path)
+                    self.database.sqlite_path = sqlite_path_value
+                    
+                    # Handle sqlite_timeout with Docker-style variable substitution
+                    sqlite_timeout_value = sqlite_data.get("timeout", self.database.sqlite_timeout)
+                    try:
+                        if isinstance(sqlite_timeout_value, str) and sqlite_timeout_value.startswith("${") and ":-" in sqlite_timeout_value:
+                            default_value = sqlite_timeout_value.split(":-")[-1].rstrip("}")
+                            sqlite_timeout_value = default_value
+                        elif isinstance(sqlite_timeout_value, str) and sqlite_timeout_value.startswith("${") and sqlite_timeout_value.endswith("}"):
+                            var_name = sqlite_timeout_value[2:-1]
+                            sqlite_timeout_value = os.getenv(var_name, str(self.database.sqlite_timeout))
+                        self.database.sqlite_timeout = int(sqlite_timeout_value)
+                    except (ValueError, AttributeError) as e:
+                        logger.warning(
+                            f"Invalid sqlite_timeout value '{sqlite_timeout_value}', using default {self.database.sqlite_timeout}: {e}"
+                        )
 
             # Market data settings
             if "market_data" in config_data:
@@ -529,15 +721,51 @@ class AppConfig:
                 self.market_data.default_assets = md_data.get(
                     "default_assets", self.market_data.default_assets
                 )
-                self.market_data.cache_ttl = int(
-                    md_data.get("cache_ttl", self.market_data.cache_ttl)
-                )
-                self.market_data.max_retries = int(
-                    md_data.get("max_retries", self.market_data.max_retries)
-                )
-                self.market_data.retry_delay = int(
-                    md_data.get("retry_delay", self.market_data.retry_delay)
-                )
+                
+                # Handle cache_ttl with Docker-style variable substitution
+                md_cache_ttl_value = md_data.get("cache_ttl", self.market_data.cache_ttl)
+                try:
+                    if isinstance(md_cache_ttl_value, str) and md_cache_ttl_value.startswith("${") and ":-" in md_cache_ttl_value:
+                        default_value = md_cache_ttl_value.split(":-")[-1].rstrip("}")
+                        md_cache_ttl_value = default_value
+                    elif isinstance(md_cache_ttl_value, str) and md_cache_ttl_value.startswith("${") and md_cache_ttl_value.endswith("}"):
+                        var_name = md_cache_ttl_value[2:-1]
+                        md_cache_ttl_value = os.getenv(var_name, str(self.market_data.cache_ttl))
+                    self.market_data.cache_ttl = int(md_cache_ttl_value)
+                except (ValueError, AttributeError) as e:
+                    logger.warning(
+                        f"Invalid market_data cache_ttl value '{md_cache_ttl_value}', using default {self.market_data.cache_ttl}: {e}"
+                    )
+                
+                # Handle max_retries with Docker-style variable substitution
+                max_retries_value = md_data.get("max_retries", self.market_data.max_retries)
+                try:
+                    if isinstance(max_retries_value, str) and max_retries_value.startswith("${") and ":-" in max_retries_value:
+                        default_value = max_retries_value.split(":-")[-1].rstrip("}")
+                        max_retries_value = default_value
+                    elif isinstance(max_retries_value, str) and max_retries_value.startswith("${") and max_retries_value.endswith("}"):
+                        var_name = max_retries_value[2:-1]
+                        max_retries_value = os.getenv(var_name, str(self.market_data.max_retries))
+                    self.market_data.max_retries = int(max_retries_value)
+                except (ValueError, AttributeError) as e:
+                    logger.warning(
+                        f"Invalid market_data max_retries value '{max_retries_value}', using default {self.market_data.max_retries}: {e}"
+                    )
+                
+                # Handle retry_delay with Docker-style variable substitution
+                retry_delay_value = md_data.get("retry_delay", self.market_data.retry_delay)
+                try:
+                    if isinstance(retry_delay_value, str) and retry_delay_value.startswith("${") and ":-" in retry_delay_value:
+                        default_value = retry_delay_value.split(":-")[-1].rstrip("}")
+                        retry_delay_value = default_value
+                    elif isinstance(retry_delay_value, str) and retry_delay_value.startswith("${") and retry_delay_value.endswith("}"):
+                        var_name = retry_delay_value[2:-1]
+                        retry_delay_value = os.getenv(var_name, str(self.market_data.retry_delay))
+                    self.market_data.retry_delay = int(retry_delay_value)
+                except (ValueError, AttributeError) as e:
+                    logger.warning(
+                        f"Invalid market_data retry_delay value '{retry_delay_value}', using default {self.market_data.retry_delay}: {e}"
+                    )
                 self.market_data.providers = md_data.get(
                     "providers", self.market_data.providers
                 )
@@ -547,31 +775,35 @@ class AppConfig:
                 models_data = config_data["models"]
                 if "forecast" in models_data:
                     forecast_data = models_data["forecast"]
-                    self.models.forecast_horizon = int(
-                        forecast_data.get("horizon", self.models.forecast_horizon)
+                    self.models.forecast_horizon = self._parse_docker_var(
+                        forecast_data.get("horizon", self.models.forecast_horizon),
+                        self.models.forecast_horizon,
+                        int
                     )
-                    self.models.confidence_interval = float(
-                        forecast_data.get(
-                            "confidence_interval", self.models.confidence_interval
-                        )
+                    self.models.confidence_interval = self._parse_docker_var(
+                        forecast_data.get("confidence_interval", self.models.confidence_interval),
+                        self.models.confidence_interval,
+                        float
                     )
-                    self.models.min_training_samples = int(
-                        forecast_data.get(
-                            "min_training_samples", self.models.min_training_samples
-                        )
+                    self.models.min_training_samples = self._parse_docker_var(
+                        forecast_data.get("min_training_samples", self.models.min_training_samples),
+                        self.models.min_training_samples,
+                        int
                     )
-                    self.models.update_frequency = int(
-                        forecast_data.get(
-                            "update_frequency", self.models.update_frequency
-                        )
+                    self.models.update_frequency = self._parse_docker_var(
+                        forecast_data.get("update_frequency", self.models.update_frequency),
+                        self.models.update_frequency,
+                        int
                     )
-                    self.models.ensemble_size = int(
-                        forecast_data.get("ensemble_size", self.models.ensemble_size)
+                    self.models.ensemble_size = self._parse_docker_var(
+                        forecast_data.get("ensemble_size", self.models.ensemble_size),
+                        self.models.ensemble_size,
+                        int
                     )
-                    self.models.validation_split = float(
-                        forecast_data.get(
-                            "validation_split", self.models.validation_split
-                        )
+                    self.models.validation_split = self._parse_docker_var(
+                        forecast_data.get("validation_split", self.models.validation_split),
+                        self.models.validation_split,
+                        float
                     )
 
                 if "technical" in models_data:
@@ -585,64 +817,97 @@ class AppConfig:
                 strategies_data = config_data["strategies"]
                 if "default" in strategies_data:
                     default_data = strategies_data["default"]
-                    self.strategies.position_size = float(
-                        default_data.get("position_size", self.strategies.position_size)
+                    self.strategies.position_size = self._parse_docker_var(
+                        default_data.get("position_size", self.strategies.position_size),
+                        self.strategies.position_size,
+                        float
                     )
-                    self.strategies.stop_loss = float(
-                        default_data.get("stop_loss", self.strategies.stop_loss)
+                    self.strategies.stop_loss = self._parse_docker_var(
+                        default_data.get("stop_loss", self.strategies.stop_loss),
+                        self.strategies.stop_loss,
+                        float
                     )
-                    self.strategies.take_profit = float(
-                        default_data.get("take_profit", self.strategies.take_profit)
+                    self.strategies.take_profit = self._parse_docker_var(
+                        default_data.get("take_profit", self.strategies.take_profit),
+                        self.strategies.take_profit,
+                        float
                     )
-                    self.strategies.max_positions = int(
-                        default_data.get("max_positions", self.strategies.max_positions)
+                    self.strategies.max_positions = self._parse_docker_var(
+                        default_data.get("max_positions", self.strategies.max_positions),
+                        self.strategies.max_positions,
+                        int
                     )
-                    self.strategies.rebalance_frequency = default_data.get(
-                        "rebalance_frequency", self.strategies.rebalance_frequency
+                    self.strategies.rebalance_frequency = self._parse_docker_var(
+                        default_data.get("rebalance_frequency", self.strategies.rebalance_frequency),
+                        self.strategies.rebalance_frequency,
+                        str
                     )
 
                 if "optimization" in strategies_data:
                     opt_data = strategies_data["optimization"]
-                    self.strategies.optimization_method = opt_data.get(
-                        "method", self.strategies.optimization_method
+                    self.strategies.optimization_method = self._parse_docker_var(
+                        opt_data.get("method", self.strategies.optimization_method),
+                        self.strategies.optimization_method,
+                        str
                     )
-                    self.strategies.n_trials = int(
-                        opt_data.get("n_trials", self.strategies.n_trials)
+                    self.strategies.n_trials = self._parse_docker_var(
+                        opt_data.get("n_trials", self.strategies.n_trials),
+                        self.strategies.n_trials,
+                        int
                     )
-                    self.strategies.cv_folds = int(
-                        opt_data.get("cv_folds", self.strategies.cv_folds)
+                    self.strategies.cv_folds = self._parse_docker_var(
+                        opt_data.get("cv_folds", self.strategies.cv_folds),
+                        self.strategies.cv_folds,
+                        int
                     )
-                    self.strategies.optimization_timeout = int(
-                        opt_data.get("timeout", self.strategies.optimization_timeout)
+                    self.strategies.optimization_timeout = self._parse_docker_var(
+                        opt_data.get("timeout", self.strategies.optimization_timeout),
+                        self.strategies.optimization_timeout,
+                        int
                     )
-                    self.strategies.parallel_jobs = int(
-                        opt_data.get("parallel_jobs", self.strategies.parallel_jobs)
+                    self.strategies.parallel_jobs = self._parse_docker_var(
+                        opt_data.get("parallel_jobs", self.strategies.parallel_jobs),
+                        self.strategies.parallel_jobs,
+                        int
                     )
 
             # Risk settings
             if "risk" in config_data:
                 risk_data = config_data["risk"]
-                self.risk.max_drawdown = float(
-                    risk_data.get("max_drawdown", self.risk.max_drawdown)
+                self.risk.max_drawdown = self._parse_docker_var(
+                    risk_data.get("max_drawdown", self.risk.max_drawdown),
+                    self.risk.max_drawdown,
+                    float
                 )
-                self.risk.max_leverage = float(
-                    risk_data.get("max_leverage", self.risk.max_leverage)
+                self.risk.max_leverage = self._parse_docker_var(
+                    risk_data.get("max_leverage", self.risk.max_leverage),
+                    self.risk.max_leverage,
+                    float
                 )
-                self.risk.position_limits = risk_data.get(
-                    "position_limits", self.risk.position_limits
+                # Position limits might be a dict, handle it carefully
+                position_limits_raw = risk_data.get("position_limits", self.risk.position_limits)
+                if isinstance(position_limits_raw, dict):
+                    # Parse each limit value
+                    parsed_limits = {}
+                    for key, val in position_limits_raw.items():
+                        parsed_limits[key] = self._parse_docker_var(val, 0.1, float)
+                    self.risk.position_limits = parsed_limits
+                else:
+                    self.risk.position_limits = position_limits_raw
+                self.risk.correlation_threshold = self._parse_docker_var(
+                    risk_data.get("correlation_threshold", self.risk.correlation_threshold),
+                    self.risk.correlation_threshold,
+                    float
                 )
-                self.risk.correlation_threshold = float(
-                    risk_data.get(
-                        "correlation_threshold", self.risk.correlation_threshold
-                    )
+                self.risk.var_confidence = self._parse_docker_var(
+                    risk_data.get("var_confidence", self.risk.var_confidence),
+                    self.risk.var_confidence,
+                    float
                 )
-                self.risk.var_confidence = float(
-                    risk_data.get("var_confidence", self.risk.var_confidence)
-                )
-                self.risk.stress_test_scenarios = int(
-                    risk_data.get(
-                        "stress_test_scenarios", self.risk.stress_test_scenarios
-                    )
+                self.risk.stress_test_scenarios = self._parse_docker_var(
+                    risk_data.get("stress_test_scenarios", self.risk.stress_test_scenarios),
+                    self.risk.stress_test_scenarios,
+                    int
                 )
 
             # Agent settings
@@ -653,13 +918,15 @@ class AppConfig:
                     self.agents.goal_planner_enabled = gp_data.get(
                         "enabled", self.agents.goal_planner_enabled
                     )
-                    self.agents.goal_update_frequency = int(
-                        gp_data.get(
-                            "update_frequency", self.agents.goal_update_frequency
-                        )
+                    self.agents.goal_update_frequency = self._parse_docker_var(
+                        gp_data.get("update_frequency", self.agents.goal_update_frequency),
+                        self.agents.goal_update_frequency,
+                        int
                     )
-                    self.agents.max_goals = int(
-                        gp_data.get("max_goals", self.agents.max_goals)
+                    self.agents.max_goals = self._parse_docker_var(
+                        gp_data.get("max_goals", self.agents.max_goals),
+                        self.agents.max_goals,
+                        int
                     )
 
                 if "router" in agents_data:
@@ -667,10 +934,10 @@ class AppConfig:
                     self.agents.router_enabled = router_data.get(
                         "enabled", self.agents.router_enabled
                     )
-                    self.agents.router_confidence = float(
-                        router_data.get(
-                            "confidence_threshold", self.agents.router_confidence
-                        )
+                    self.agents.router_confidence = self._parse_docker_var(
+                        router_data.get("confidence_threshold", self.agents.router_confidence),
+                        self.agents.router_confidence,
+                        float
                     )
                     self.agents.fallback_agent = router_data.get(
                         "fallback_agent", self.agents.fallback_agent
@@ -681,10 +948,10 @@ class AppConfig:
                     self.agents.self_improving_enabled = si_data.get(
                         "enabled", self.agents.self_improving_enabled
                     )
-                    self.agents.improvement_interval = int(
-                        si_data.get(
-                            "improvement_interval", self.agents.improvement_interval
-                        )
+                    self.agents.improvement_interval = self._parse_docker_var(
+                        si_data.get("improvement_interval", self.agents.improvement_interval),
+                        self.agents.improvement_interval,
+                        int
                     )
                     self.agents.performance_thresholds = si_data.get(
                         "performance_thresholds", self.agents.performance_thresholds
@@ -693,30 +960,52 @@ class AppConfig:
             # NLP settings
             if "nlp" in config_data:
                 nlp_data = config_data["nlp"]
-                self.nlp.confidence_threshold = float(
-                    nlp_data.get("confidence_threshold", self.nlp.confidence_threshold)
+                self.nlp.confidence_threshold = self._parse_docker_var(
+                    nlp_data.get("confidence_threshold", self.nlp.confidence_threshold),
+                    self.nlp.confidence_threshold,
+                    float
                 )
-                self.nlp.max_tokens = int(
-                    nlp_data.get("max_tokens", self.nlp.max_tokens)
+                self.nlp.max_tokens = self._parse_docker_var(
+                    nlp_data.get("max_tokens", self.nlp.max_tokens),
+                    self.nlp.max_tokens,
+                    int
                 )
-                self.nlp.temperature = float(
-                    nlp_data.get("temperature", self.nlp.temperature)
+                self.nlp.temperature = self._parse_docker_var(
+                    nlp_data.get("temperature", self.nlp.temperature),
+                    self.nlp.temperature,
+                    float
                 )
-                self.nlp.cache_ttl = int(nlp_data.get("cache_ttl", self.nlp.cache_ttl))
+                self.nlp.cache_ttl = self._parse_docker_var(
+                    nlp_data.get("cache_ttl", self.nlp.cache_ttl),
+                    self.nlp.cache_ttl,
+                    int
+                )
                 self.nlp.models = nlp_data.get("models", self.nlp.models)
                 self.nlp.templates = nlp_data.get("templates", self.nlp.templates)
 
             # API settings
             if "api" in config_data:
                 api_data = config_data["api"]
-                self.api.rate_limit = int(
-                    api_data.get("rate_limit", self.api.rate_limit)
+                self.api.rate_limit = self._parse_docker_var(
+                    api_data.get("rate_limit", self.api.rate_limit),
+                    self.api.rate_limit,
+                    int
                 )
-                self.api.timeout = int(api_data.get("timeout", self.api.timeout))
-                self.api.max_retries = int(
-                    api_data.get("max_retries", self.api.max_retries)
+                self.api.timeout = self._parse_docker_var(
+                    api_data.get("timeout", self.api.timeout),
+                    self.api.timeout,
+                    int
                 )
-                self.api.cache_ttl = int(api_data.get("cache_ttl", self.api.cache_ttl))
+                self.api.max_retries = self._parse_docker_var(
+                    api_data.get("max_retries", self.api.max_retries),
+                    self.api.max_retries,
+                    int
+                )
+                self.api.cache_ttl = self._parse_docker_var(
+                    api_data.get("cache_ttl", self.api.cache_ttl),
+                    self.api.cache_ttl,
+                    int
+                )
                 self.api.version = api_data.get("version", self.api.version)
                 self.api.documentation = api_data.get(
                     "documentation", self.api.documentation
@@ -745,13 +1034,15 @@ class AppConfig:
                     self.monitoring.dashboard_enabled = dashboard_data.get(
                         "enabled", self.monitoring.dashboard_enabled
                     )
-                    self.monitoring.dashboard_port = int(
-                        dashboard_data.get("port", self.monitoring.dashboard_port)
+                    self.monitoring.dashboard_port = self._parse_docker_var(
+                        dashboard_data.get("port", self.monitoring.dashboard_port),
+                        self.monitoring.dashboard_port,
+                        int
                     )
-                    self.monitoring.dashboard_refresh = int(
-                        dashboard_data.get(
-                            "refresh_interval", self.monitoring.dashboard_refresh
-                        )
+                    self.monitoring.dashboard_refresh = self._parse_docker_var(
+                        dashboard_data.get("refresh_interval", self.monitoring.dashboard_refresh),
+                        self.monitoring.dashboard_refresh,
+                        int
                     )
 
             # Security settings
@@ -782,13 +1073,15 @@ class AppConfig:
                     self.security.rate_limiting_enabled = rate_data.get(
                         "enabled", self.security.rate_limiting_enabled
                     )
-                    self.security.rate_limiting_window = int(
-                        rate_data.get("window", self.security.rate_limiting_window)
+                    self.security.rate_limiting_window = self._parse_docker_var(
+                        rate_data.get("window", self.security.rate_limiting_window),
+                        self.security.rate_limiting_window,
+                        int
                     )
-                    self.security.rate_limiting_max_requests = int(
-                        rate_data.get(
-                            "max_requests", self.security.rate_limiting_max_requests
-                        )
+                    self.security.rate_limiting_max_requests = self._parse_docker_var(
+                        rate_data.get("max_requests", self.security.rate_limiting_max_requests),
+                        self.security.rate_limiting_max_requests,
+                        int
                     )
 
                 if "authentication" in security_data:
@@ -797,8 +1090,10 @@ class AppConfig:
                         "enabled", self.security.auth_enabled
                     )
                     self.security.jwt_secret = auth_data.get("jwt_secret")
-                    self.security.token_expiry = int(
-                        auth_data.get("token_expiry", self.security.token_expiry)
+                    self.security.token_expiry = self._parse_docker_var(
+                        auth_data.get("token_expiry", self.security.token_expiry),
+                        self.security.token_expiry,
+                        int
                     )
 
             # Development settings

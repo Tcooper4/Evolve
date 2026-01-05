@@ -18,6 +18,73 @@ logger = logging.getLogger(__name__)
 class OptimizerConsolidator:
     """Class for consolidating optimizer files and managing optimizer organization."""
 
+
+class PositionConsolidator:
+    """Class for consolidating trading positions and managing position organization."""
+    
+    def __init__(self, root_dir: Optional[str] = None):
+        """
+        Initialize the position consolidator.
+        
+        Args:
+            root_dir: Root directory for the project (defaults to current directory)
+        """
+        self.root_dir = Path(root_dir) if root_dir else Path(".")
+        logger.info("PositionConsolidator initialized")
+    
+    def consolidate_positions(self, positions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Consolidate duplicate or overlapping positions.
+        
+        Args:
+            positions: List of position dictionaries
+            
+        Returns:
+            Dictionary with consolidated positions
+        """
+        try:
+            # Group positions by symbol
+            positions_by_symbol = {}
+            for pos in positions:
+                symbol = pos.get("symbol", "UNKNOWN")
+                if symbol not in positions_by_symbol:
+                    positions_by_symbol[symbol] = []
+                positions_by_symbol[symbol].append(pos)
+            
+            # Consolidate positions for each symbol
+            consolidated = {}
+            for symbol, symbol_positions in positions_by_symbol.items():
+                if len(symbol_positions) == 1:
+                    consolidated[symbol] = symbol_positions[0]
+                else:
+                    # Merge multiple positions for the same symbol
+                    total_quantity = sum(p.get("quantity", 0) for p in symbol_positions)
+                    avg_price = sum(
+                        p.get("price", 0) * p.get("quantity", 0) 
+                        for p in symbol_positions
+                    ) / total_quantity if total_quantity > 0 else 0
+                    
+                    consolidated[symbol] = {
+                        "symbol": symbol,
+                        "quantity": total_quantity,
+                        "price": avg_price,
+                        "positions_merged": len(symbol_positions),
+                    }
+            
+            return {
+                "success": True,
+                "original_count": len(positions),
+                "consolidated_count": len(consolidated),
+                "positions": consolidated,
+            }
+        except Exception as e:
+            logger.error(f"Error consolidating positions: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "positions": positions,
+            }
+
     def __init__(self, root_dir: Optional[str] = None):
         """
         Initialize the consolidator.

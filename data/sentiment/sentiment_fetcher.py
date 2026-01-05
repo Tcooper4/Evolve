@@ -56,9 +56,11 @@ class SentimentFetcher:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
 
-        # API Keys
-        self.newsapi_key = os.getenv("NEWSAPI_KEY") or self.sentiment_config.get(
-            "newsapi_key"
+        # API Keys - support both NEWSAPI_KEY and NEWS_API_KEY
+        self.newsapi_key = (
+            os.getenv("NEWSAPI_KEY") or 
+            os.getenv("NEWS_API_KEY") or 
+            self.sentiment_config.get("newsapi_key")
         )
         self.finnhub_key = os.getenv("FINNHUB_API_KEY") or os.getenv("FINNHUB_KEY") or self.sentiment_config.get(
             "finnhub_key"

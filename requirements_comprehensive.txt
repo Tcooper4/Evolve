@@ -217,7 +217,7 @@ huggingface-hub>=0.17.0
 # ============================================================================
 # VECTOR DATABASES
 # ============================================================================
-pinecone-client>=2.2.0
+pinecone>=2.2.0  # Note: package renamed from pinecone-client to pinecone
 faiss-cpu>=1.7.4  # Use faiss-gpu if you have GPU
 
 # ============================================================================

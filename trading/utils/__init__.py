@@ -36,7 +36,12 @@ from .logging import (
     log_event,
     setup_logging,
 )
-from .model_evaluation import ModelEvaluator, ModelValidator
+from .model_evaluation import ModelValidator
+try:
+    from trading.evaluation.model_evaluator import ModelEvaluator
+except ImportError:
+    # Fallback if evaluation module not available
+    ModelEvaluator = None
 from .model_monitoring import ModelMonitor
 from .performance_metrics import PerformanceMetrics, RiskMetrics, TradingMetrics
 from .safe_math import (

@@ -353,7 +353,8 @@ class RLTrainer:
             # Create callback
             callback = TrainingCallback()
 
-            # Create PPO model
+            # Create PPO model with PyTorch-compatible TensorBoard logging
+            # stable-baselines3 uses PyTorch internally and tensorboard_log works with PyTorch's TensorBoard
             model = PPO(
                 "MlpPolicy",
                 vec_env,
@@ -365,6 +366,7 @@ class RLTrainer:
                 gae_lambda=gae_lambda,
                 clip_range=clip_range,
                 verbose=verbose,
+                tensorboard_log=str(self.log_dir),  # Uses PyTorch-compatible TensorBoard
             )
 
             # Train the model
@@ -467,7 +469,8 @@ class RLTrainer:
             # Create callback
             callback = TrainingCallback()
 
-            # Create A2C model
+            # Create A2C model with PyTorch-compatible TensorBoard logging
+            # stable-baselines3 uses PyTorch internally and tensorboard_log works with PyTorch's TensorBoard
             model = A2C(
                 "MlpPolicy",
                 vec_env,
@@ -479,7 +482,7 @@ class RLTrainer:
                 vf_coef=vf_coef,
                 max_grad_norm=max_grad_norm,
                 verbose=verbose,
-                tensorboard_log=str(self.log_dir),
+                tensorboard_log=str(self.log_dir),  # Uses PyTorch-compatible TensorBoard
             )
 
             # Train the model

@@ -37,12 +37,8 @@ try:
 except ImportError:
     XGBOOST_AVAILABLE = False
 
-try:
-    from tensorflow import keras
-
-    TENSORFLOW_AVAILABLE = True
-except ImportError:
-    TENSORFLOW_AVAILABLE = False
+# TensorFlow support removed - using PyTorch only
+TENSORFLOW_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -256,7 +252,7 @@ class AsyncModelLoader:
             ),
             "lstm-forecast": ModelConfig(
                 name="lstm-forecast",
-                provider="tensorflow",
+                provider="pytorch",  # Changed from tensorflow - PyTorch only
                 model_type="lstm",
                 priority=1,
                 preload=True,
@@ -359,7 +355,10 @@ class AsyncModelLoader:
                 elif config.provider == "huggingface":
                     await self._load_huggingface_model_async(config)
                 elif config.provider == "tensorflow":
-                    await self._load_tensorflow_model_async(config)
+                    raise ValueError(
+                        "TensorFlow models are not supported. This codebase uses PyTorch only. "
+                        "Please use 'pytorch', 'huggingface', or 'xgboost' as the provider."
+                    )
                 elif config.provider == "xgboost":
                     await self._load_xgboost_model_async(config)
                 elif config.provider == "claude":
@@ -441,8 +440,8 @@ class AsyncModelLoader:
                     return False
 
             elif config.provider == "tensorflow":
-                if not TENSORFLOW_AVAILABLE:
-                    return False
+                # TensorFlow not supported - PyTorch only
+                return False
 
             elif config.provider == "xgboost":
                 if not XGBOOST_AVAILABLE:
@@ -508,84 +507,15 @@ class AsyncModelLoader:
             raise
 
     async def _load_tensorflow_model_async(self, config: ModelConfig) -> None:
-        """Load a TensorFlow model asynchronously.
+        """TensorFlow model loading removed - PyTorch only.
         
-        Supports multiple TensorFlow model formats:
-        - SavedModel format (directory)
-        - H5 format (.h5 file)
-        - Keras model (.keras file)
+        This method is kept for backward compatibility but raises an error.
+        Use PyTorch models instead.
         """
-        if not TENSORFLOW_AVAILABLE:
-            raise ImportError("TensorFlow not available. Install with: pip install tensorflow")
-
-        try:
-            import os
-            import tensorflow as tf
-            from pathlib import Path
-            
-            loop = asyncio.get_event_loop()
-            model_path = Path(config.name)
-            
-            # Determine model format and load accordingly
-            def load_model():
-                if model_path.is_dir():
-                    # SavedModel format
-                    model = tf.saved_model.load(str(model_path))
-                    logger.info(f"Loaded TensorFlow SavedModel from {config.name}")
-                elif model_path.suffix == '.h5':
-                    # H5 format
-                    model = keras.models.load_model(str(model_path))
-                    logger.info(f"Loaded TensorFlow H5 model from {config.name}")
-                elif model_path.suffix == '.keras':
-                    # Keras format
-                    model = keras.models.load_model(str(model_path))
-                    logger.info(f"Loaded TensorFlow Keras model from {config.name}")
-                else:
-                    # Try default keras load_model (handles various formats)
-                    model = keras.models.load_model(str(model_path))
-                    logger.info(f"Loaded TensorFlow model from {config.name}")
-                
-                return model
-
-            # Load model in thread pool
-            model = await loop.run_in_executor(self.executor, load_model)
-
-            # Estimate memory usage (rough estimate)
-            try:
-                # Get model size in bytes
-                model_size = 0
-                if hasattr(model, 'count_params'):
-                    # For Keras models
-                    param_count = model.count_params()
-                    # Rough estimate: 4 bytes per float32 parameter
-                    model_size = param_count * 4 / (1024 * 1024)  # Convert to MB
-                else:
-                    # For SavedModel, estimate based on file size
-                    if model_path.exists():
-                        if model_path.is_file():
-                            model_size = model_path.stat().st_size / (1024 * 1024)
-                        else:
-                            # Directory - sum all files
-                            model_size = sum(
-                                f.stat().st_size for f in model_path.rglob('*') if f.is_file()
-                            ) / (1024 * 1024)
-                
-                self.memory_usage[config.name] = model_size
-            except Exception as e:
-                logger.warning(f"Could not estimate TensorFlow model memory usage: {e}")
-                self.memory_usage[config.name] = 100.0  # Default estimate
-
-            self.models[config.name] = {
-                "provider": "tensorflow",
-                "config": config,
-                "model": model,
-            }
-            
-            logger.info(f"Successfully loaded TensorFlow model: {config.name}")
-
-        except Exception as e:
-            logger.error(f"Failed to load TensorFlow model {config.name}: {e}")
-            raise
+        raise ValueError(
+            "TensorFlow models are not supported. This codebase uses PyTorch only. "
+            "Please convert your model to PyTorch format or use a PyTorch-compatible provider."
+        )
 
     async def _load_xgboost_model_async(self, config: ModelConfig) -> None:
         """Load an XGBoost model asynchronously."""
@@ -718,33 +648,9 @@ class AsyncModelLoader:
                         _ = model(**test_input)
 
             elif model_info["provider"] == "tensorflow":
-                # Check if TensorFlow model is accessible
-                model = model_info["model"]
-                try:
-                    # For Keras models
-                    if hasattr(model, "predict"):
-                        # Create a dummy input based on model input shape
-                        if hasattr(model, "input_shape") and model.input_shape:
-                            import numpy as np
-                            # Get input shape (excluding batch dimension)
-                            input_shape = model.input_shape[1:] if len(model.input_shape) > 1 else model.input_shape
-                            # Create dummy input
-                            dummy_input = np.random.randn(1, *input_shape).astype(np.float32)
-                            # Try prediction
-                            _ = model.predict(dummy_input, verbose=0)
-                        else:
-                            # Model exists and is callable
-                            logger.debug(f"TensorFlow model {model_name} health check passed (no input shape info)")
-                    # For SavedModel format
-                    elif hasattr(model, "signatures"):
-                        # SavedModel has signatures - model is loaded correctly
-                        logger.debug(f"TensorFlow SavedModel {model_name} health check passed")
-                    else:
-                        # Unknown format, but model object exists
-                        logger.debug(f"TensorFlow model {model_name} health check passed (unknown format)")
-                except Exception as e:
-                    logger.warning(f"TensorFlow model {model_name} health check failed: {e}")
-                    return False
+                # TensorFlow not supported - PyTorch only
+                logger.warning(f"TensorFlow model {model_name} not supported - PyTorch only")
+                return False
             elif model_info["provider"] == "xgboost":
                 # Check if XGBoost model is accessible
                 model = model_info["model"]

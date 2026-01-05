@@ -1549,6 +1549,8 @@ with tab2:
     
     # Initialize configuration if not exists
     if 'system_config' not in st.session_state:
+        import os
+        # Load existing API keys from environment if available
         st.session_state.system_config = {
             "general": {
                 "system_name": "EVOLVE Trading System",
@@ -1558,10 +1560,13 @@ with tab2:
                 "trading_hours_end": "16:00"
             },
             "api_keys": {
-                "alpha_vantage": "",
-                "finnhub": "",
-                "polygon": "",
-                "openai": ""
+                "alpha_vantage": os.getenv("ALPHA_VANTAGE_API_KEY", ""),
+                "finnhub": os.getenv("FINNHUB_API_KEY", ""),
+                "polygon": os.getenv("POLYGON_API_KEY", ""),
+                "openai": os.getenv("OPENAI_API_KEY", ""),
+                "newsapi": os.getenv("NEWSAPI_KEY") or os.getenv("NEWS_API_KEY", ""),
+                "reddit_client_id": os.getenv("REDDIT_CLIENT_ID", ""),
+                "reddit_client_secret": os.getenv("REDDIT_CLIENT_SECRET", "")
             },
             "brokers": {
                 "alpaca_paper": {"enabled": False, "api_key": "", "api_secret": "", "status": "disconnected"},
@@ -1712,6 +1717,60 @@ with tab2:
         with col2:
             if st.button("👁️ Reveal", key="reveal_openai"):
                 st.text_input("OpenAI API Key (Visible)", value=config["api_keys"]["openai"], key="openai_visible", disabled=True)
+        
+        # NewsAPI
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            newsapi_key = st.text_input(
+                "NewsAPI Key",
+                value=config["api_keys"]["newsapi"],
+                type="password",
+                help="NewsAPI key for news sentiment analysis"
+            )
+            if newsapi_key:
+                config["api_keys"]["newsapi"] = newsapi_key
+        
+        with col2:
+            if st.button("👁️ Reveal", key="reveal_newsapi"):
+                st.text_input("NewsAPI Key (Visible)", value=config["api_keys"]["newsapi"], key="newsapi_visible", disabled=True)
+        
+        # Reddit API Credentials
+        st.markdown("**Reddit API (for sentiment analysis):**")
+        col1, col2 = st.columns(2)
+        with col1:
+            reddit_client_id = st.text_input(
+                "Reddit Client ID",
+                value=config["api_keys"]["reddit_client_id"],
+                type="password",
+                help="Reddit API client ID"
+            )
+            if reddit_client_id:
+                config["api_keys"]["reddit_client_id"] = reddit_client_id
+        
+        with col2:
+            reddit_client_secret = st.text_input(
+                "Reddit Client Secret",
+                value=config["api_keys"]["reddit_client_secret"],
+                type="password",
+                help="Reddit API client secret"
+            )
+            if reddit_client_secret:
+                config["api_keys"]["reddit_client_secret"] = reddit_client_secret
+        
+        # Save button for API keys
+        if st.button("💾 Save API Keys", key="save_api_keys"):
+            # Update environment variables (optional - could also save to .env file)
+            import os
+            if config["api_keys"]["newsapi"]:
+                os.environ["NEWSAPI_KEY"] = config["api_keys"]["newsapi"]
+                os.environ["NEWS_API_KEY"] = config["api_keys"]["newsapi"]  # Support both
+            if config["api_keys"]["reddit_client_id"]:
+                os.environ["REDDIT_CLIENT_ID"] = config["api_keys"]["reddit_client_id"]
+            if config["api_keys"]["reddit_client_secret"]:
+                os.environ["REDDIT_CLIENT_SECRET"] = config["api_keys"]["reddit_client_secret"]
+            
+            st.success("✅ API keys saved to session. Restart app to apply to services.")
+            st.info("💡 Tip: To persist across restarts, also add these to your .env file")
     
     st.markdown("---")
     

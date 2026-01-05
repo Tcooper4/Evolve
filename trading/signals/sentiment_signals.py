@@ -73,12 +73,56 @@ class SentimentSignals:
             reddit_user_agent: Reddit user agent string
             newsapi_key: NewsAPI key
         """
-        self.reddit_client_id = reddit_client_id or os.getenv("REDDIT_CLIENT_ID")
-        self.reddit_client_secret = reddit_client_secret or os.getenv(
-            "REDDIT_CLIENT_SECRET"
-        )
+        # Check session state first (for admin tab), then environment variables
+        # Support both NEWSAPI_KEY and NEWS_API_KEY for compatibility
+        if newsapi_key:
+            self.newsapi_key = newsapi_key
+        else:
+            # Try session state first (from admin tab)
+            try:
+                import streamlit as st
+                if hasattr(st, 'session_state') and 'system_config' in st.session_state:
+                    admin_keys = st.session_state.get('system_config', {}).get('api_keys', {})
+                    self.newsapi_key = admin_keys.get('newsapi') or admin_keys.get('news_api')
+            except:
+                pass
+            
+            # Fall back to environment variables (support both naming conventions)
+            self.newsapi_key = (
+                os.getenv("NEWSAPI_KEY") or 
+                os.getenv("NEWS_API_KEY") or 
+                self.newsapi_key
+            )
+        
+        # Same for Reddit credentials - initialize first
+        self.reddit_client_id = None
+        self.reddit_client_secret = None
+        
+        if reddit_client_id:
+            self.reddit_client_id = reddit_client_id
+        if reddit_client_secret:
+            self.reddit_client_secret = reddit_client_secret
+        
+        # Try session state first (from admin tab)
+        if not self.reddit_client_id or not self.reddit_client_secret:
+            try:
+                import streamlit as st
+                if hasattr(st, 'session_state') and 'system_config' in st.session_state:
+                    admin_keys = st.session_state.get('system_config', {}).get('api_keys', {})
+                    if not self.reddit_client_id:
+                        self.reddit_client_id = admin_keys.get('reddit_client_id')
+                    if not self.reddit_client_secret:
+                        self.reddit_client_secret = admin_keys.get('reddit_client_secret')
+            except:
+                pass
+        
+        # Fall back to environment variables
+        if not self.reddit_client_id:
+            self.reddit_client_id = os.getenv("REDDIT_CLIENT_ID")
+        if not self.reddit_client_secret:
+            self.reddit_client_secret = os.getenv("REDDIT_CLIENT_SECRET")
+        
         self.reddit_user_agent = reddit_user_agent
-        self.newsapi_key = newsapi_key or os.getenv("NEWSAPI_KEY")
 
         self.cache_dir = Path("cache/sentiment_signals")
         self.cache_dir.mkdir(parents=True, exist_ok=True)

@@ -383,6 +383,11 @@ class ModelRegistry:
     def list_all_info(self) -> List[Dict]:
         """Get information about all registered models."""
         return [self.get_model_info(name) for name in sorted(self._models.keys())]
+    
+    @property
+    def registry(self) -> Dict[str, Type]:
+        """Get the model registry dictionary."""
+        return self._models
 
 
 # Global registry instance

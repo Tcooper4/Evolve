@@ -507,6 +507,9 @@ class EnhancedModelCreatorAgent:
         self.creation_history = []
         self.model_registry = {}
         self.framework_registry = self._initialize_framework_registry()
+        
+        # Initialize logger
+        self.logger = logging.getLogger(f"{__name__}.EnhancedModelCreatorAgent")
 
         # Initialize components
         self.validator = ModelValidator()

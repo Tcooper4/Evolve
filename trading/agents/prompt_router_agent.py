@@ -126,6 +126,11 @@ class PromptRouterAgent(BaseAgent):
                 retry_attempts=3,
                 custom_config={},
             )
+        
+        # Initialize available_agents BEFORE calling super().__init__() 
+        # because BaseAgent.__init__ calls _setup() which may access it
+        self.available_agents: Dict[str, AgentInfo] = {}
+        
         super().__init__(config)
 
         self.logger = logging.getLogger(__name__)
@@ -165,9 +170,6 @@ class PromptRouterAgent(BaseAgent):
                 r"\b(restart|stop|start|configure|setup)\b",
             ],
         }
-
-        # Available agents and their capabilities
-        self.available_agents: Dict[str, AgentInfo] = {}
 
         # Routing history for learning
         self.routing_history: List[RoutingDecision] = []
@@ -767,6 +769,62 @@ class PromptRouterAgent(BaseAgent):
                 error_message=f"Error processing prompt: {str(e)}",
                 error_type="PromptProcessingError",
             )
+    
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters before execution."""
+        user_request = kwargs.get("user_request", "")
+        if not user_request or not isinstance(user_request, str):
+            return False
+        if len(user_request.strip()) == 0:
+            return False
+        return True
+    
+    def validate_config(self) -> bool:
+        """Validate the agent's configuration."""
+        if not self.config:
+            return False
+        if not hasattr(self.config, 'enabled'):
+            return False
+        return True
+    
+    def handle_error(self, error: Exception) -> AgentResult:
+        """Handle errors during execution."""
+        self.logger.error(f"Error in PromptRouterAgent: {error}", exc_info=True)
+        return AgentResult(
+            success=False,
+            error_message=str(error),
+            error_type=type(error).__name__,
+        )
+    
+    def _setup(self) -> None:
+        """Setup method called during initialization."""
+        # Initialize agent registry if available_agents exists
+        # (it should be initialized before super().__init__ calls this)
+        if hasattr(self, 'available_agents'):
+            self._initialize_agent_registry()
+        else:
+            # Fallback: initialize it now if somehow it wasn't initialized
+            self.available_agents: Dict[str, AgentInfo] = {}
+            self._initialize_agent_registry()
+        self.logger.info("PromptRouterAgent setup completed")
+    
+    def get_capabilities(self) -> List[str]:
+        """Get the agent's capabilities."""
+        return [
+            "prompt_routing",
+            "request_classification",
+            "agent_selection",
+            "intelligent_routing",
+            "performance_tracking",
+        ]
+    
+    def get_requirements(self) -> Dict[str, Any]:
+        """Get the agent's requirements."""
+        return {
+            "dependencies": ["numpy", "re"],
+            "system_requirements": {},
+            "optional_dependencies": [],
+        }
 
 
 # Convenience function for creating router agent
