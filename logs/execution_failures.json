@@ -16,3 +16,5 @@
 {"timestamp": "2025-12-30T00:05:58.036754", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
 {"timestamp": "2025-12-30T00:08:50.813901", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
 {"timestamp": "2025-12-30T00:24:55.115086", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-12-31T04:20:18.184155", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
+{"timestamp": "2025-12-31T14:04:08.489287", "failure_type": "broker_init", "symbol": "binance", "reason": "'NoneType' object has no attribute 'binance'", "execution_mode": "simulation", "brokers_available": []}
