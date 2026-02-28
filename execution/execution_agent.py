@@ -20,12 +20,19 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
 # Local imports
+from execution.models import (
+    OrderExecution,
+    OrderRequest,
+    OrderSide,
+    OrderStatus,
+    OrderType,
+)
 from utils.common_helpers import load_config, safe_json_save
 
 
@@ -37,68 +44,17 @@ class ExecutionMode(Enum):
     PAPER = "paper"
 
 
-class OrderType(Enum):
-    """Order types"""
+class OrderRejectedError(Exception):
+    """Raised when an order is rejected so callers can distinguish from filled.
 
-    MARKET = "market"
-    LIMIT = "limit"
-    STOP = "stop"
-    STOP_LIMIT = "stop_limit"
-    TRAILING_STOP = "trailing_stop"
+    Safety fix: Failed executions are not returned as success; this exception
+    forces callers to handle rejection. execution attribute holds the failed
+    OrderExecution (status=REJECTED) for logging or inspection.
+    """
 
-
-class OrderSide(Enum):
-    """Order sides"""
-
-    BUY = "buy"
-    SELL = "sell"
-
-
-class OrderStatus(Enum):
-    """Order statuses"""
-
-    PENDING = "pending"
-    SUBMITTED = "submitted"
-    PARTIAL = "partial"
-    FILLED = "filled"
-    CANCELLED = "cancelled"
-    REJECTED = "rejected"
-    EXPIRED = "expired"
-
-
-@dataclass
-class OrderRequest:
-    """Order request structure"""
-
-    order_id: str
-    ticker: str
-    side: OrderSide
-    order_type: OrderType
-    quantity: float
-    price: Optional[float] = None
-    stop_price: Optional[float] = None
-    time_in_force: str = "day"
-    client_order_id: Optional[str] = None
-    timestamp: str = None
-
-
-@dataclass
-class OrderExecution:
-    """Order execution result"""
-
-    order_id: str
-    ticker: str
-    side: OrderSide
-    order_type: OrderType
-    quantity: float
-    price: float
-    executed_quantity: float
-    average_price: float
-    commission: float
-    timestamp: str
-    status: OrderStatus
-    fills: List[Dict[str, Any]]
-    metadata: Dict[str, Any]
+    def __init__(self, message: str, execution: OrderExecution):
+        super().__init__(message)
+        self.execution = execution
 
 
 @dataclass
@@ -186,6 +142,14 @@ class ExecutionAgent:
         self.order_queue = asyncio.Queue()
         self.execution_thread = None
         self.is_running = False
+        # P2 fix: Optional callback to notify callers when an order completes (success or failure)
+        self._on_order_done: Optional[Callable[[str, OrderExecution], None]] = None
+
+        # AGENT_MEMORY_LAYER: Persist every filled/rejected order to central MemoryStore
+        try:
+            self.register_order_done_callback(self._record_order_done_memory)
+        except Exception as e:
+            self.logger.debug(f"Could not register memory callback: {e}")
 
         # Market simulation parameters
         self.market_volatility = self.execution_config.get("market_volatility", 0.02)
@@ -195,6 +159,37 @@ class ExecutionAgent:
 
         # Load historical data for simulation
         self._load_historical_data()
+
+    def _record_order_done_memory(self, order_id: str, execution: OrderExecution) -> None:
+        """Record completed orders into long-term centralized memory (filled or rejected)."""
+        try:
+            from trading.memory import get_memory_store
+            from trading.memory.memory_store import MemoryType
+
+            get_memory_store().add(
+                MemoryType.LONG_TERM,
+                namespace="ExecutionAgent",
+                category="order_execution",
+                key=order_id,
+                value={
+                    "order_id": execution.order_id,
+                    "symbol": execution.symbol,
+                    "side": getattr(execution.side, "value", str(execution.side)),
+                    "order_type": getattr(execution.order_type, "value", str(execution.order_type)),
+                    "quantity": execution.quantity,
+                    "price": execution.price,
+                    "executed_quantity": execution.executed_quantity,
+                    "average_price": execution.average_price,
+                    "commission": execution.commission,
+                    "timestamp": execution.timestamp,
+                    "status": getattr(execution.status, "value", str(execution.status)),
+                    "metadata": execution.metadata,
+                },
+                metadata={"source": "execution/execution_agent.py order_done_callback"},
+            )
+        except Exception as e:
+            # Never break order processing if memory fails.
+            self.logger.debug(f"MemoryStore order record failed: {e}")
 
     def _initialize_broker_adapter(self):
         """Initialize broker adapter for live trading"""
@@ -320,7 +315,7 @@ class ExecutionAgent:
     def _simulate_order_execution(self, order: OrderRequest) -> OrderExecution:
         """Simulate realistic order execution"""
         # Get current market data
-        market_data = self._get_current_market_data(order.ticker)
+        market_data = self._get_current_market_data(order.symbol)
 
         # Calculate execution parameters
         if order.order_type == OrderType.MARKET:
@@ -371,7 +366,7 @@ class ExecutionAgent:
         # Create execution result
         execution = OrderExecution(
             order_id=order.order_id,
-            ticker=order.ticker,
+            symbol=order.symbol,
             side=order.side,
             order_type=order.order_type,
             quantity=order.quantity,
@@ -394,7 +389,7 @@ class ExecutionAgent:
 
     def _update_position(self, execution: OrderExecution):
         """Update position after order execution"""
-        ticker = execution.ticker
+        ticker = execution.symbol
 
         if ticker not in self.positions:
             self.positions[ticker] = Position(
@@ -531,7 +526,7 @@ class ExecutionAgent:
             return False, f"Daily trade limit exceeded: {self.max_daily_trades}"
 
         # Check order size limit
-        market_data = self._get_current_market_data(order.ticker)
+        market_data = self._get_current_market_data(order.symbol)
         order_value = order.quantity * market_data.last
 
         if order_value > self.max_order_size:
@@ -542,9 +537,9 @@ class ExecutionAgent:
 
         # Check position size limit
         current_position = self.positions.get(
-            order.ticker,
+            order.symbol,
             Position(
-                ticker=order.ticker,
+                symbol=order.symbol,
                 quantity=0,
                 average_price=0,
                 market_value=0,
@@ -599,7 +594,7 @@ class ExecutionAgent:
         # Create order request
         order = OrderRequest(
             order_id=order_id,
-            ticker=ticker,
+            symbol=ticker,
             side=side,
             order_type=order_type,
             quantity=quantity,
@@ -667,10 +662,11 @@ class ExecutionAgent:
         except Exception as e:
             self.logger.error(f"Order execution failed: {order.order_id} - {e}")
 
-            # Create failed execution record
+            # Safety fix: Store failed execution so get_order_status() returns REJECTED,
+            # then raise so callers cannot treat rejection as success.
             failed_execution = OrderExecution(
                 order_id=order.order_id,
-                ticker=order.ticker,
+                symbol=order.symbol,
                 side=order.side,
                 order_type=order.order_type,
                 quantity=order.quantity,
@@ -683,8 +679,18 @@ class ExecutionAgent:
                 fills=[],
                 metadata={"error": str(e)},
             )
+            self.executed_orders[order.order_id] = failed_execution
+            raise OrderRejectedError(
+                f"Order {order.order_id} rejected: {e}", failed_execution
+            )
 
-            return failed_execution
+    def register_order_done_callback(
+        self, callback: Callable[[str, OrderExecution], None]
+    ) -> None:
+        """Register a callback to be invoked when an order completes (filled or rejected).
+        P2 fix: Enables callers to be notified of failed orders instead of only polling.
+        """
+        self._on_order_done = callback
 
     async def _execution_worker(self):
         """Background worker for order execution"""
@@ -693,16 +699,56 @@ class ExecutionAgent:
                 # Get order from queue
                 order = await asyncio.wait_for(self.order_queue.get(), timeout=1.0)
 
-                # Execute order
-                await self._execute_order(order)
+                # Execute order (raises OrderRejectedError on failure; caller can
+                # check get_order_status(order_id).status == OrderStatus.REJECTED)
+                execution = await self._execute_order(order)
+                if self._on_order_done:
+                    try:
+                        self._on_order_done(order.order_id, execution)
+                    except Exception as cb_e:
+                        self.logger.warning("Order-done callback error: %s", cb_e)
 
                 # Mark task as done
                 self.order_queue.task_done()
 
             except asyncio.TimeoutError:
                 continue
+            except OrderRejectedError as e:
+                # P2 fix: Notify callers via callback; failed execution already in executed_orders.
+                if self._on_order_done:
+                    try:
+                        self._on_order_done(order.order_id, e.execution)
+                    except Exception as cb_e:
+                        self.logger.warning("Order-done callback error: %s", cb_e)
+                self.logger.warning(
+                    "Order rejected (see get_order_status for details): %s", e
+                )
+                self.order_queue.task_done()
             except Exception as e:
                 self.logger.error(f"Execution worker error: {e}")
+                # Mark order as failed and notify so queue progresses and callers can see failure
+                failed_execution = OrderExecution(
+                    order_id=order.order_id,
+                    symbol=order.symbol,
+                    side=order.side,
+                    order_type=order.order_type,
+                    quantity=order.quantity,
+                    price=order.price or 0.0,
+                    executed_quantity=0.0,
+                    average_price=0.0,
+                    commission=0.0,
+                    timestamp=datetime.now().isoformat(),
+                    status=OrderStatus.REJECTED,
+                    fills=[],
+                    metadata={"error": str(e)},
+                )
+                self.executed_orders[order.order_id] = failed_execution
+                if self._on_order_done:
+                    try:
+                        self._on_order_done(order.order_id, failed_execution)
+                    except Exception as cb_e:
+                        self.logger.warning("Order-done callback error: %s", cb_e)
+                self.order_queue.task_done()
 
     async def start(self):
         """Start the execution agent"""
@@ -753,7 +799,7 @@ class ExecutionAgent:
         executions = list(self.executed_orders.values())
 
         if ticker:
-            executions = [e for e in executions if e.ticker == ticker]
+            executions = [e for e in executions if e.symbol == ticker]
 
         return sorted(executions, key=lambda x: x.timestamp)
 

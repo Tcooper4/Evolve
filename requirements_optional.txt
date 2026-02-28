@@ -1,0 +1,107 @@
+# Optional dependencies — install by feature tier. See INSTALL_GUIDE.md for order and usage.
+# Install after requirements_core.txt: pip install -r requirements_optional.txt
+# Or install individual sections to unlock specific features.
+
+# --- Core AI / LLM (briefing, Chat, local models) ---
+# Enables: Claude briefing, Chat, local HuggingFace pipeline, advanced NLP intent
+anthropic>=0.7.0
+python-dotenv>=1.0.0
+# sentence-transformers>=2.2.0
+# transformers>=4.35.0
+# tiktoken>=0.5.0
+
+# --- Scheduling and orchestration ---
+# Enables: Task Orchestrator, Agent Controller, scheduled jobs
+schedule>=1.2.0
+
+# --- Market data ---
+# Enables: Yahoo Finance and retry logic; required for most data-driven pages
+yfinance>=0.2.28
+tenacity>=8.2.0
+# Alpha Vantage (optional second source)
+# alpha-vantage>=3.0.0
+# Live trading and Alpaca data (use alpaca-py, not alpaca-trade-api)
+# alpaca-py>=0.15.0
+
+# --- Macro / economic data ---
+# Enables: FRED and World Bank in feature engineering
+# fredapi>=0.5.1
+# wbdata>=1.0.0
+
+# --- Time series and forecasting ---
+# Enables: Prophet, NeuralForecast, ARIMA, GARCH
+# prophet>=1.1.4
+# neuralforecast>=3.1.2
+# pmdarima>=2.0.3
+# arch>=6.0.0
+# statsmodels>=0.14.0
+# holidays>=0.31
+
+# --- Deep learning (PyTorch) ---
+# Enables: LSTM, TCN, Transformer, GNN, TFT, RL, PyTorch-based sentiment
+# Install torch first; then pytorch_lightning if you need TFT.
+# torch>=2.0.0
+# pytorch-lightning>=2.0.0
+
+# --- Classical ML and optimization ---
+# Enables: preprocessing, ensemble, tuning, XGBoost
+scikit-learn>=1.3.0
+scipy>=1.10.0
+# xgboost>=1.7.0
+# optuna>=3.2.0
+# scikit-optimize>=0.9.0
+# flaml>=2.3.6
+
+# --- Portfolio and convex optimization ---
+# Enables: mean-variance and advanced portfolio optimization (note: cvxpy can be tricky on Windows)
+# cvxpy>=1.3.0
+
+# --- NLP and sentiment ---
+# Enables: readability, VADER, TextBlob, Reddit/NewsAPI sentiment
+# textstat>=0.7.3
+# vaderSentiment>=3.3.2
+# textblob>=0.17.0
+# praw>=7.7.0
+# newsapi-python>=0.2.7
+# nltk>=3.8.0
+# spacy>=3.6.0
+
+# --- Reporting and PDF ---
+# Enables: PDF export and chart generation in reports
+# reportlab>=4.0.0
+# matplotlib>=3.7.0
+# seaborn>=0.12.0
+
+# --- Visualization ---
+# Enables: interactive charts in backtest, risk, UI
+# plotly>=5.15.0
+
+# --- Reinforcement learning ---
+# Enables: RL trainer, gym environments, PPO/DQN/A2C (requires torch)
+# gymnasium>=0.29.0
+# stable-baselines3>=2.7.0
+
+# --- Automation and monitoring ---
+# Enables: rate limiting and Elasticsearch health checks in automation services
+# ratelimit>=2.2.1
+# elasticsearch>=8.8.0
+
+# --- Explainability ---
+# Enables: SHAP-based explainability
+# shap>=0.42.0
+
+# --- Technical indicators ---
+# Enables: pandas_ta-based RSI and indicators (fallback exists without it)
+# pandas-ta>=0.3.14b
+
+# --- Utilities ---
+# Enables: system metrics, Redis cache, WebSockets
+# psutil>=5.9.0
+# redis>=4.6.0
+# websockets>=11.0
+# requests>=2.31.0
+
+# --- Audio / voice (optional; some code in _dead_code) ---
+# librosa>=0.10.0
+# SpeechRecognition>=3.10.0
+# pyttsx3>=2.90

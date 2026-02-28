@@ -551,6 +551,30 @@ DATA_PROVIDER_TIMEOUT=30
     return template
 
 
+# Optional Settings class for code that expects Settings(config_path).get(...)
+class Settings:
+    """Minimal config object for UpgraderAgent: takes path (ignored), provides .get(key, default)."""
+
+    def __init__(self, config_path: str = "") -> None:
+        self._path = config_path
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return get_config_value(key, default)
+
+
+# Namespace object for "from trading.config.settings import settings" (used by trading.config)
+class _SettingsNamespace:
+    """Attribute-style access to config values."""
+
+    def __init__(self) -> None:
+        for name, value in list(globals().items()):
+            if name.isupper() and not name.startswith("_") and name != "logger":
+                setattr(self, name, value)
+
+
+settings = _SettingsNamespace()
+
+
 # Validate configuration on import
 try:
     validate_config()

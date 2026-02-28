@@ -7,6 +7,7 @@ into clean, modular page renderer functions.
 """
 
 from typing import Any, Dict
+import importlib
 import logging
 
 import numpy as np
@@ -73,6 +74,16 @@ def render_sidebar():
 
         # System Status - Simplified
         st.markdown("### ðŸŸ¢ Status")
+
+        # Active LLM indicator (global selector from Admin)
+        try:
+            from config.llm_config import get_active_llm, PROVIDER_DISPLAY_NAMES
+            _provider, _model, _ = get_active_llm()
+            _display = PROVIDER_DISPLAY_NAMES.get(_provider, _provider)
+            _short = (_model.split("/")[-1][:12] if _model else "")
+            st.caption(f"**AI:** {_display}" + (f" {_short}" if _short else ""))
+        except Exception:
+            st.caption("**AI:** Claude")
 
         # Status indicators - compact
         status_items = [
@@ -390,57 +401,23 @@ def render_agent_logs():
 
 
 def render_home_page():
-    """Render the home page with chat interface."""
-    st.markdown("### AI Trading Assistant")
-
-    # Display conversation history with better styling
-    if st.session_state.get("conversation_history"):
-        st.markdown("#### Recent Conversations")
-        for i, conv in enumerate(reversed(st.session_state.conversation_history[-5:])):
-            with st.expander(f"{conv['prompt'][:50]}...", expanded=False):
-                st.markdown(
-                    f"""
-                <div class="conversation-item">
-                    <div class="conversation-prompt">Your Question:</div>
-                    <div style="margin-bottom: 1rem;">{conv['prompt']}</div>
-                    <div class="conversation-prompt">AI Response:</div>
-                    <div class="conversation-response">{conv['response'].get('message', 'No response available.')}</div>
-                </div>
-                """,
-                    unsafe_allow_html=True,
-                )
-
-                if conv["response"].get("data"):
-                    with st.expander("Detailed Data", expanded=False):
-                        st.json(conv["response"]["data"])
-    else:
-        st.markdown(
-            """
-        <div class="result-card">
-            <h3>Welcome to Evolve AI Trading</h3>
-            <p>Start by asking me anything about trading! I can help you with:</p>
-            <ul>
-                <li><strong>Forecasting:</strong> "Show me the best forecast for AAPL"</li>
-                <li><strong>Strategy Analysis:</strong> "Switch to RSI strategy and optimize it"</li>
-                <li><strong>Model Building:</strong> "Create a new model for cryptocurrency trading"</li>
-                <li><strong>Reports:</strong> "Generate a performance report for my portfolio"</li>
-                <li><strong>Market Analysis:</strong> "What's the current market sentiment?"</li>
-            </ul>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
+    """Render the Home page (personalized morning briefing)."""
+    try:
+        importlib.import_module("pages.0_Home")
+    except ImportError as e:
+        st.error(f"Home page not available: {e}")
+        st.info("Please ensure the 0_Home.py page exists in the pages directory")
+    except Exception as e:
+        st.error(f"Error loading Home page: {e}")
 
 
 def render_forecasting_page():
     """Render the forecasting page."""
     try:
-        from pages.Forecasting import main as forecasting_main
-
-        forecasting_main()
+        importlib.import_module("pages.2_Forecasting")
     except ImportError as e:
         st.error(f"Forecasting page not available: {e}")
-        st.info("Please ensure the Forecasting.py page exists in the pages directory")
+        st.info("Please ensure the 2_Forecasting.py page exists in the pages directory")
     except Exception as e:
         st.error(f"Error loading Forecasting page: {e}")
 
@@ -448,12 +425,10 @@ def render_forecasting_page():
 def render_strategy_page():
     """Render the strategy lab page."""
     try:
-        from pages.Strategy_Lab import main as strategy_lab_main
-
-        strategy_lab_main()
+        importlib.import_module("pages.3_Strategy_Testing")
     except ImportError as e:
         st.error(f"Strategy Lab page not available: {e}")
-        st.info("Please ensure the Strategy_Lab.py page exists in the pages directory")
+        st.info("Please ensure the 3_Strategy_Testing.py page exists in the pages directory")
     except Exception as e:
         st.error(f"Error loading Strategy Lab page: {e}")
 
@@ -461,12 +436,10 @@ def render_strategy_page():
 def render_model_page():
     """Render the model lab page."""
     try:
-        from pages.Model_Lab import main as model_lab_main
-
-        model_lab_main()
+        importlib.import_module("pages.8_Model_Lab")
     except ImportError as e:
         st.error(f"Model Lab page not available: {e}")
-        st.info("Please ensure the Model_Lab.py page exists in the pages directory")
+        st.info("Please ensure the 8_Model_Lab.py page exists in the pages directory")
     except Exception as e:
         st.error(f"Error loading Model Lab page: {e}")
 
@@ -474,12 +447,10 @@ def render_model_page():
 def render_reports_page():
     """Render the reports page."""
     try:
-        from pages.Reports import main as reports_main
-
-        reports_main()
+        importlib.import_module("pages.9_Reports")
     except ImportError as e:
         st.error(f"Reports page not available: {e}")
-        st.info("Please ensure the Reports.py page exists in the pages directory")
+        st.info("Please ensure the 9_Reports.py page exists in the pages directory")
     except Exception as e:
         st.error(f"Error loading Reports page: {e}")
 

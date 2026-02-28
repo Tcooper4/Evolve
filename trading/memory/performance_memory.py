@@ -236,6 +236,26 @@ class PerformanceMemory:
 
             save_result = self.save(data)
             if save_result["success"]:
+                # AGENT_MEMORY_LAYER: Persist model performance to centralized long-term store
+                try:
+                    from trading.memory import get_memory_store
+                    from trading.memory.memory_store import MemoryType
+
+                    get_memory_store().add(
+                        MemoryType.LONG_TERM,
+                        namespace="PerformanceMemory",
+                        category="model_performance",
+                        key=f"{ticker}:{model}:{enhanced_metrics.get('timestamp')}",
+                        value={
+                            "ticker": ticker,
+                            "model": model,
+                            "metrics": enhanced_metrics,
+                        },
+                        metadata={"source": "PerformanceMemory.update"},
+                    )
+                except Exception as e:
+                    logger.debug(f"MemoryStore performance record failed: {e}")
+
                 return {
                     "success": True,
                     "message": f"Metrics updated for {ticker}/{model}",

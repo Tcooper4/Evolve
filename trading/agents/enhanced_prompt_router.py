@@ -1,10 +1,9 @@
 """
 Enhanced PromptRouterAgent: Smart prompt router with comprehensive fallback logic.
 - Detects user intent (forecasting, backtesting, tuning, research)
-- Parses arguments using OpenAI, HuggingFace, or regex fallback
+- Parses arguments using Claude (primary), OpenAI, or regex fallback
 - Routes to the correct agent automatically
-- Always returns a usable parsed intent
-- Enhanced with named intent templates and JSON spec debugging
+- Evolve-specific intents; AGENT_UPGRADE: Claude first
 """
 
 import json
@@ -58,7 +57,7 @@ class ParsedIntent:
     intent: str
     confidence: float
     args: Dict[str, Any]
-    provider: str  # 'openai', 'huggingface', 'regex'
+    provider: str  # 'claude', 'openai', 'huggingface', 'regex'
     raw_response: str
     error: Optional[str] = None
     json_spec: Optional[Dict[str, Any]] = None  # Full JSON spec for debugging
@@ -68,20 +67,23 @@ class EnhancedPromptRouterAgent:
     def __init__(
         self,
         openai_api_key: Optional[str] = None,
+        anthropic_api_key: Optional[str] = None,
         huggingface_model: str = "gpt2",
         huggingface_api_key: Optional[str] = None,
         enable_debug_mode: bool = False,
     ):
         """
         Initialize the enhanced prompt router agent.
-
-        Args:
-            openai_api_key: OpenAI API key
-            huggingface_model: HuggingFace model name
-            huggingface_api_key: HuggingFace API key
-            enable_debug_mode: Enable JSON spec return for debugging
+        AGENT_UPGRADE: Uses centralized config for API keys when not passed.
         """
-        self.openai_api_key = openai_api_key
+        try:
+            from config.llm_config import get_llm_config
+            llm = get_llm_config()
+            self.openai_api_key = openai_api_key or llm.openai_api_key
+            self.anthropic_api_key = anthropic_api_key or llm.anthropic_api_key
+        except Exception:
+            self.openai_api_key = openai_api_key
+            self.anthropic_api_key = anthropic_api_key
         self.huggingface_model = huggingface_model
         self.huggingface_api_key = huggingface_api_key
         self.hf_pipeline = None
@@ -344,6 +346,71 @@ class EnhancedPromptRouterAgent:
             logger.warning(f"OpenAI parsing failed: {e}")
             return None
 
+    def parse_intent_claude(self, prompt: str) -> Optional[ParsedIntent]:
+        """Parse intent using Claude API (Evolve-specific intents). AGENT_UPGRADE."""
+        if not getattr(self, "anthropic_api_key", None):
+            return None
+        try:
+            import anthropic
+            from config.llm_config import get_llm_config, CLAUDE_PRIMARY_MODEL
+            llm = get_llm_config()
+            api_key = self.anthropic_api_key or llm.anthropic_api_key
+            if not api_key:
+                return None
+            client = anthropic.Anthropic(api_key=api_key)
+            model = getattr(llm, "primary_model", CLAUDE_PRIMARY_MODEL)
+            system = (
+                "You are an intent classifier for the Evolve trading system. "
+                "Respond with ONLY a single JSON object (no markdown) with: intent, confidence (0-1), args (object). "
+                "Valid intents: forecasting, backtesting, tuning, research, portfolio, risk, sentiment, "
+                "compare_strategies, optimize_model, debug_forecast, unknown. "
+                "Extract args such as symbol, timeframe, model, strategy, period from the user message."
+            )
+            resp = client.messages.create(
+                model=model,
+                max_tokens=512,
+                temperature=0.0,
+                system=system,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = resp.content[0].text.strip()
+            if text.startswith("```"):
+                lines = text.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                text = "\n".join(lines)
+            parsed = json.loads(text)
+            intent = (parsed.get("intent") or "unknown").lower()
+            args = parsed.get("args") or {}
+            if not isinstance(args, dict):
+                args = self._extract_args_regex(prompt)
+            else:
+                args = {k: v for k, v in args.items()}
+                if not args:
+                    args = self._extract_args_regex(prompt)
+            json_spec = None
+            if self.enable_debug_mode:
+                json_spec = {
+                    "raw_response": text,
+                    "parsed_json": parsed,
+                    "provider": "claude",
+                    "model": model,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            return ParsedIntent(
+                intent=intent,
+                confidence=float(parsed.get("confidence", 0.85)),
+                args=args,
+                provider="claude",
+                raw_response=text,
+                json_spec=json_spec,
+            )
+        except Exception as e:
+            logger.warning(f"Claude parsing failed: {e}")
+            return None
+
     def parse_intent_huggingface(self, prompt: str) -> Optional[ParsedIntent]:
         """Parse intent using HuggingFace model with caching."""
         if not self.hf_pipeline:
@@ -525,31 +592,25 @@ class EnhancedPromptRouterAgent:
 
     def parse_intent(self, prompt: str) -> ParsedIntent:
         """
-        Parse intent with enhanced fallback logic and debugging support.
-
-        Args:
-            prompt: User prompt to parse
-
-        Returns:
-            ParsedIntent object with intent, confidence, arguments, and optional JSON spec
+        Parse intent with enhanced fallback logic: Claude (primary) -> OpenAI -> regex.
+        Evolve-specific intents. AGENT_UPGRADE.
         """
         logger.info(f"Parsing intent for prompt: {prompt[:100]}...")
 
-        # Try OpenAI first
+        # Try Claude first (AGENT_UPGRADE)
+        result = self.parse_intent_claude(prompt)
+        if result and result.intent != "unknown":
+            logger.info(
+                f"✅ Claude parsed intent: {result.intent} (confidence: {result.confidence})"
+            )
+            return result
+
+        # Try OpenAI second
         if openai and self.openai_api_key:
             result = self.parse_intent_openai(prompt)
             if result and result.intent != "unknown":
                 logger.info(
                     f"✅ OpenAI parsed intent: {result.intent} (confidence: {result.confidence})"
-                )
-                return result
-
-        # Try HuggingFace second
-        if self.hf_pipeline:
-            result = self.parse_intent_huggingface(prompt)
-            if result and result.intent != "unknown":
-                logger.info(
-                    f"✅ HuggingFace parsed intent: {result.intent} (confidence: {result.confidence})"
                 )
                 return result
 
@@ -618,6 +679,7 @@ class EnhancedPromptRouterAgent:
         return {
             "cache_size": len(self.hf_cache),
             "available_providers": {
+                "claude": bool(getattr(self, "anthropic_api_key", None)),
                 "openai": openai is not None and self.openai_api_key is not None,
                 "huggingface": self.hf_pipeline is not None,
                 "regex": True,

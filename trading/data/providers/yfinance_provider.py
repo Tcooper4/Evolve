@@ -2,6 +2,7 @@
 
 import logging
 import pickle
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
@@ -57,7 +58,14 @@ if not logger.hasHandlers():
 # Cache configuration
 CACHE_DIR = Path("memory/cache/yfinance")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
-CACHE_EXPIRY = 3600  # 1 hour in seconds
+CACHE_EXPIRY = 300  # 5 minutes TTL to reduce 429 rate limit risk
+
+# In-memory cache (symbol -> (data, expiry_ts)) for same-session reuse
+_memory_cache: Dict[str, tuple] = {}
+# Throttle: min seconds between requests per symbol (and global if many symbols)
+_last_request_time: Dict[str, float] = {}
+_min_interval = 2.0  # seconds between requests for same symbol
+_cache_lock = threading.Lock()
 
 
 def log_data_request(symbol: str, success: bool, error: Optional[str] = None) -> None:
@@ -83,7 +91,7 @@ def log_data_request(symbol: str, success: bool, error: Optional[str] = None) ->
 
 
 def get_cached_data(symbol: str) -> Optional[pd.DataFrame]:
-    """Get cached data if available and not expired.
+    """Get cached data if available and not expired (memory first, then file).
 
     Args:
         symbol: Stock symbol
@@ -91,6 +99,15 @@ def get_cached_data(symbol: str) -> Optional[pd.DataFrame]:
     Returns:
         Cached DataFrame or None if not available/expired
     """
+    sym = symbol.upper()
+    with _cache_lock:
+        if sym in _memory_cache:
+            data, expiry = _memory_cache[sym]
+            if time.time() < expiry:
+                logger.info(f"Using in-memory cache for {symbol}")
+                return data
+            del _memory_cache[sym]
+
     cache_path = CACHE_DIR / f"{symbol}.pkl"
     if not cache_path.exists():
         return None
@@ -103,26 +120,32 @@ def get_cached_data(symbol: str) -> Optional[pd.DataFrame]:
             logger.info(f"Cache expired for {symbol}")
             return None
 
-        logger.info(f"Using cached data for {symbol}")
-        return cache_data["data"]
+        logger.info(f"Using file cache for {symbol}")
+        df = cache_data["data"]
+        # Populate memory cache for next time
+        with _cache_lock:
+            _memory_cache[sym] = (df, time.time() + CACHE_EXPIRY)
+        return df
     except Exception as e:
         logger.error(f"Error reading cache for {symbol}: {e}")
         return None
 
 
 def cache_data(symbol: str, data: pd.DataFrame) -> None:
-    """Cache data with timestamp.
+    """Cache data with timestamp (memory + file).
 
     Args:
         symbol: Stock symbol
         data: DataFrame to cache
     """
+    sym = symbol.upper()
+    with _cache_lock:
+        _memory_cache[sym] = (data.copy(), time.time() + CACHE_EXPIRY)
     try:
-        cache_data = {"timestamp": time.time(), "data": data}
-
+        payload = {"timestamp": time.time(), "data": data}
         cache_path = CACHE_DIR / f"{symbol}.pkl"
         with open(cache_path, "wb") as f:
-            pickle.dump(cache_data, f)
+            pickle.dump(payload, f)
 
         logger.info(f"Cached data for {symbol}")
     except Exception as e:
@@ -216,12 +239,20 @@ class YFinanceProvider(BaseDataProvider):
         try:
             self._update_status_on_request()
 
-            # Check cache first
+            # Check cache first (memory + file)
             cached_data = get_cached_data(symbol)
             if cached_data is not None:
                 self._update_status_on_success()
                 log_data_request(symbol, True)
                 return cached_data
+
+            # Throttle: wait if we requested this symbol too recently
+            with _cache_lock:
+                last = _last_request_time.get(symbol, 0)
+                elapsed = time.time() - last
+                if elapsed < _min_interval:
+                    time.sleep(_min_interval - elapsed)
+                _last_request_time[symbol] = time.time()
 
             # Create Ticker object
             ticker = yf.Ticker(symbol)
@@ -245,6 +276,13 @@ class YFinanceProvider(BaseDataProvider):
             cache_data(symbol, data)
             self._update_status_on_success()
             log_data_request(symbol, True)
+
+            # Optional: run data quality check and write recommendations to MemoryStore
+            try:
+                from trading.services.monitoring_tools import check_data_quality
+                check_data_quality(symbol, data)
+            except Exception as eq:
+                logger.debug("Data quality check skipped or failed: %s", eq)
 
             # Add delay between requests
             time.sleep(self.delay)

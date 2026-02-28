@@ -10,7 +10,11 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
-from trading.agents.meta_tuner_agent import MetaTunerAgent
+try:
+    from trading.agents.meta_tuner_agent import MetaTunerAgent
+except ImportError:
+    MetaTunerAgent = None  # Agent rationalized to _dead_code
+
 from trading.memory.agent_memory import AgentMemory
 from trading.services.base_service import BaseService
 
@@ -34,11 +38,14 @@ class MetaTunerService(BaseService):
         """Initialize the MetaTunerService."""
         super().__init__("meta_tuner", redis_host, redis_port, redis_db)
 
-        # Initialize the agent
-        self.agent = MetaTunerAgent()
+        # Initialize the agent (None if moved to _dead_code)
+        self.agent = MetaTunerAgent() if MetaTunerAgent else None
         self.memory = AgentMemory()
 
-        logger.info("MetaTunerService initialized")
+        if self.agent is None:
+            logger.warning("MetaTunerAgent not available (rationalized). MetaTunerService will return unavailable.")
+        else:
+            logger.info("MetaTunerService initialized")
 
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -50,6 +57,8 @@ class MetaTunerService(BaseService):
         Returns:
             Response with tuning results or error
         """
+        if self.agent is None:
+            return {"type": "error", "error": "Meta tuner agent is not available.", "original_message": data}
         try:
             message_type = data.get("type", "")
 

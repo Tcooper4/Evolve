@@ -10,7 +10,11 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
-from trading.agents.prompt_router_agent import PromptRouterAgent
+try:
+    from trading.agents.prompt_router_agent import PromptRouterAgent
+except ImportError:
+    PromptRouterAgent = None  # Agent rationalized to _dead_code
+
 from trading.memory.agent_memory import AgentMemory
 from trading.services.base_service import BaseService
 
@@ -34,11 +38,14 @@ class PromptRouterService(BaseService):
         """Initialize the PromptRouterService."""
         super().__init__("prompt_router", redis_host, redis_port, redis_db)
 
-        # Initialize the agent
-        self.agent = PromptRouterAgent()
+        # Initialize the agent (None if moved to _dead_code)
+        self.agent = PromptRouterAgent() if PromptRouterAgent else None
         self.memory = AgentMemory()
 
-        logger.info("PromptRouterService initialized")
+        if self.agent is None:
+            logger.warning("PromptRouterAgent not available (rationalized). PromptRouterService will return unavailable.")
+        else:
+            logger.info("PromptRouterService initialized")
 
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -50,6 +57,8 @@ class PromptRouterService(BaseService):
         Returns:
             Response with routing results or error
         """
+        if self.agent is None:
+            return {"type": "error", "error": "Prompt router agent is not available.", "original_message": data}
         try:
             message_type = data.get("type", "")
 

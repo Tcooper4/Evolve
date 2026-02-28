@@ -299,3 +299,10 @@ def calculate_win_rate(returns: np.ndarray) -> float:
     if len(returns) == 0:
         return 0.0
     return float(np.sum(returns > 0) / len(returns))
+
+
+# Re-export for pages (e.g. 6_Performance) that expect PerformanceMetrics from evaluation.metrics
+try:
+    from trading.utils.performance_metrics import PerformanceMetrics
+except ImportError:
+    PerformanceMetrics = None  # type: ignore[misc, assignment]

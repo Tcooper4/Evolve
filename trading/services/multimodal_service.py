@@ -10,7 +10,11 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
-from trading.agents.multimodal_agent import MultimodalAgent
+try:
+    from trading.agents.multimodal_agent import MultimodalAgent
+except ImportError:
+    MultimodalAgent = None  # Agent rationalized to _dead_code
+
 from trading.memory.agent_memory import AgentMemory
 from trading.services.base_service import BaseService
 
@@ -34,11 +38,14 @@ class MultimodalService(BaseService):
         """Initialize the MultimodalService."""
         super().__init__("multimodal", redis_host, redis_port, redis_db)
 
-        # Initialize the agent
-        self.agent = MultimodalAgent()
+        # Initialize the agent (None if moved to _dead_code)
+        self.agent = MultimodalAgent() if MultimodalAgent else None
         self.memory = AgentMemory()
 
-        logger.info("MultimodalService initialized")
+        if self.agent is None:
+            logger.warning("MultimodalAgent not available (rationalized). MultimodalService will return unavailable.")
+        else:
+            logger.info("MultimodalService initialized")
 
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -50,6 +57,8 @@ class MultimodalService(BaseService):
         Returns:
             Response with analysis results or error
         """
+        if self.agent is None:
+            return {"type": "error", "error": "Multimodal agent is not available.", "original_message": data}
         try:
             message_type = data.get("type", "")
 

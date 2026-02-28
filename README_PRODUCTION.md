@@ -2,36 +2,16 @@
 
 ## 🚀 Overview
 
-Evolve is a comprehensive, production-ready agentic forecasting and trading strategy platform designed for institutional deployment. The system combines advanced machine learning models, intelligent agent orchestration, and robust risk management to deliver automated trading insights and execution capabilities.
+Evolve is a **Streamlit-based**, production-ready agentic forecasting and trading platform. The UI is started with **`streamlit run app.py`**; pages include Home, Chat, Forecasting, Strategy Testing, Trade Execution, Portfolio, Risk, Performance, Model Lab, Reports, Alerts, Admin, and Memory. LLM selection is configured in **Admin → Configuration → AI Model Settings** (stored in MemoryStore). See root **README.md** for full feature list and quick start.
 
-## 🏗️ Architecture
+## 🏗️ Architecture (Summary)
 
-### Core Components
-
-1. **Agent System** (`/agents/`)
-   - Consolidated prompt routing with fallback chain
-   - Intelligent request classification and routing
-   - Performance tracking and load balancing
-
-2. **Forecasting Engine** (`/forecasting/`)
-   - Multi-model ensemble forecasting
-   - Cached model operations for performance
-   - Hybrid weight optimization
-
-3. **Strategy Engine** (`/strategies/`)
-   - Standardized strategy interfaces
-   - Real-time signal generation
-   - Risk management and position sizing
-
-4. **Cache Management** (`/utils/cache_utils.py`)
-   - Centralized model operation caching
-   - Performance optimization
-   - Automatic cache cleanup
-
-5. **Weight Registry** (`/utils/weight_registry.py`)
-   - Hybrid model weight management
-   - Performance history tracking
-   - Automated weight optimization
+- **App:** `app.py` + `pages/` (Streamlit).
+- **Config:** `config/app_config`, `config/llm_config`; trading overrides in `trading.config`. See `config/CONFIG_README.md`.
+- **Agents:** Prompt routing, intent parsing, research/commentary/execution agents; see `agents/`, `trading/agents/`.
+- **Forecasting:** Multi-model ensemble, caching, weight optimization; see `trading/models/`, forecasting pages.
+- **Strategy & backtest:** `trading/strategies/`, `trading/backtesting/`. Execution (paper/live): `execution/` — see `docs/EXECUTION_AND_BACKTEST_FLOW.md`.
+- **Memory:** `trading.memory` (MemoryStore) for preferences (e.g. active LLM) and performance memory.
 
 ## 🔄 Agent Workflow
 

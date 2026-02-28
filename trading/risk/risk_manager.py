@@ -46,6 +46,9 @@ try:
 except ImportError:
     GARCH_AVAILABLE = False
 
+# P4.3: Use safe division like backtester to avoid division-by-zero in risk metrics
+from trading.utils.safe_math import safe_divide
+
 
 class VolatilityModel(Enum):
     """Volatility model types."""
@@ -444,32 +447,42 @@ class RiskManager:
 
         # Calculate Tail Risk (probability of extreme losses)
         tail_threshold = np.percentile(self.returns, 1)
-        tail_risk = len(self.returns[self.returns <= tail_threshold]) / len(
-            self.returns
+        tail_risk = safe_divide(
+            len(self.returns[self.returns <= tail_threshold]),
+            len(self.returns),
+            default=0.0,
         )
 
         # Calculate higher moments
         skewness = self.returns.skew()
         kurtosis = self.returns.kurtosis()
 
-        # Calculate maximum drawdown
+        # Calculate maximum drawdown (P4.3: safe division)
         cum_returns = (1 + self.returns).cumprod()
         rolling_max = cum_returns.expanding().max()
-        drawdowns = (cum_returns - rolling_max) / rolling_max
+        drawdowns = safe_divide(
+            cum_returns - rolling_max, rolling_max, default=0.0
+        )
         max_drawdown = drawdowns.min()
 
-        # Calculate beta and correlation
+        # Calculate beta and correlation (P4.3: safe division for var)
         if self.benchmark_returns is not None and not self.benchmark_returns.empty:
-            beta = (
-                self.returns.cov(self.benchmark_returns) / self.benchmark_returns.var()
+            bvar = self.benchmark_returns.var()
+            beta = safe_divide(
+                self.returns.cov(self.benchmark_returns),
+                bvar,
+                default=1.0,
             )
             correlation = self.returns.corr(self.benchmark_returns)
         else:
             beta = 1.0
             correlation = 0.0
 
-        # Calculate Kelly fraction
-        win_rate = len(self.returns[self.returns > 0]) / len(self.returns)
+        # Calculate Kelly fraction (P4.3: safe division)
+        n_ret = len(self.returns)
+        win_rate = safe_divide(
+            len(self.returns[self.returns > 0]), n_ret, default=0.0
+        )
         avg_win = (
             self.returns[self.returns > 0].mean()
             if len(self.returns[self.returns > 0]) > 0
@@ -480,10 +493,10 @@ class RiskManager:
             if len(self.returns[self.returns < 0]) > 0
             else 0
         )
-        kelly_fraction = (
-            (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
-            if avg_win != 0
-            else 0
+        kelly_fraction = safe_divide(
+            (win_rate * avg_win - (1 - win_rate) * avg_loss),
+            avg_win if avg_win != 0 else 1e-10,
+            default=0.0,
         )
 
         # Create metrics object
@@ -640,19 +653,21 @@ class RiskManager:
             portfolio_return = stressed_returns.mean() * 252
             portfolio_value_change = portfolio_value * portfolio_return
 
-            # Calculate drawdown change
+            # Calculate drawdown change (P4.3: safe division)
             cum_returns = (1 + stressed_returns).cumprod()
             rolling_max = cum_returns.expanding().max()
-            drawdowns = (cum_returns - rolling_max) / rolling_max
+            drawdowns = safe_divide(
+                cum_returns - rolling_max, rolling_max, default=0.0
+            )
             stressed_max_drawdown = drawdowns.min()
 
-            # Calculate Sharpe ratio change
+            # Calculate Sharpe ratio change (P4.3: safe division)
             risk_free_rate = self.config.get("risk_free_rate", 0.02)
             excess_returns = stressed_returns - (risk_free_rate / 252)
-            stressed_sharpe = (
-                np.sqrt(252) * excess_returns.mean() / stressed_volatility
-                if stressed_volatility != 0
-                else 0
+            stressed_sharpe = safe_divide(
+                np.sqrt(252) * excess_returns.mean(),
+                stressed_volatility,
+                default=0.0,
             )
 
             result = StressTestResult(
@@ -737,7 +752,11 @@ class RiskManager:
     ) -> pd.Series:
         if not SCIPY_AVAILABLE:
             self.logger.warning("scipy not available. Using equal position sizes.")
-            return pd.Series(1.0 / len(expected_returns), index=expected_returns.index)
+            n = len(expected_returns)
+            return pd.Series(
+                safe_divide(1.0, n, default=0.0),
+                index=expected_returns.index,
+            )
         """Optimize position sizes using SLSQP.
 
         Args:

@@ -362,6 +362,15 @@ def get_system_status() -> Dict[str, Any]:
         }
 
 
+class SystemStatus:
+    """Thin wrapper for get_system_status(); allows 'from trading.utils.system_status import SystemStatus'."""
+
+    @staticmethod
+    def get_status() -> Dict[str, Any]:
+        """Return current system status (same as get_system_status())."""
+        return get_system_status()
+
+
 def build_health_probe_endpoint() -> Dict[str, Any]:
     """Build health probe endpoint data for external monitoring.
 

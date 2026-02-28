@@ -1414,673 +1414,6 @@
       "created_at": "2025-07-09T20:22:09.181874",
       "updated_at": "2025-07-09T20:22:09.181919"
     },
-    "metalearneragent": {
-      "name": "metalearneragent",
-      "class_name": "MetaLearnerAgent",
-      "module_path": "trading.agents.meta_learner.MetaLearnerAgent",
-      "description": "Meta-learning agent that improves decision-making over time.",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the meta-learning logic.\nArgs:\n    **kwargs: context, action, outcome, performance, metadata, etc.\nReturns:\n    AgentResult",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_learning_summary",
-          "description": "Get summary of learning progress.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_recommendation",
-          "description": "Get recommendation based on learned patterns.\n\nArgs:\n    context: Current market context\n    \nReturns:\n    Dictionary with recommendation and confidence",
-          "required_params": [
-            "context"
-          ],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get the current status of the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentStatus'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "learn_from_experiences",
-          "description": "Learn from stored experiences.\n\nReturns:\n    Dictionary with learning insights",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the meta-learning agent.\n\nArgs:\n    context: Current market context\n    \nReturns:\n    Dictionary with meta-learning results",
-          "required_params": [],
-          "optional_params": [
-            "context"
-          ],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "store_experience",
-          "description": "Store a learning experience.\n\nArgs:\n    context: Market context and conditions\n    action: Action taken\n    outcome: Result of the action\n    performance: Performance metric\n    metadata: Additional metadata",
-          "required_params": [
-            "context",
-            "action",
-            "outcome",
-            "performance"
-          ],
-          "optional_params": [
-            "metadata"
-          ],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "Meta-learning agent that improves decision-making over time.",
-        "trading.agents.meta_learner",
-        "1.0.0"
-      ],
-      "category": "trading",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.183468",
-      "updated_at": "2025-07-09T20:22:09.183509"
-    },
-    "metalearningfeedbackagent": {
-      "name": "metalearningfeedbackagent",
-      "class_name": "MetaLearningFeedbackAgent",
-      "module_path": "trading.agents.meta_learning_feedback_agent.MetaLearningFeedbackAgent",
-      "description": "Agent responsible for:\n- Monitoring model performance after each trade\n- Automatically retuning hyperparameters\n- Replacing underperforming models\n- Updating ensemble weights based on performance",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the meta-learning feedback agent logic.\nArgs:\n    **kwargs: action, feedback, model_name, etc.\nReturns:\n    AgentResult",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_ensemble_weights",
-          "description": "Get current ensemble weights.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, float]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_model_performance_summary",
-          "description": "Get performance summary for a specific model.",
-          "required_params": [
-            "model_name"
-          ],
-          "optional_params": [],
-          "return_type": "typing.Optional[typing.Dict[str, typing.Any]]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get the current status of the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentStatus'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "process_model_feedback",
-          "description": "Process feedback from a model prediction.",
-          "required_params": [
-            "feedback"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'inspect._empty'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the agent with error handling and status updates.\n\nArgs:\n    **kwargs: Agent-specific parameters\n    \nReturns:\n    AgentResult: Result of the execution",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_feedback_history",
-          "description": "Save feedback history to file.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'inspect._empty'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "\nAgent responsible for:\n- Monitoring model performance after each trade\n- Automatically retuning hyperparameters\n- Replacing underperforming models\n- Updating ensemble weights based on performance\n",
-        "trading.agents.meta_learning_feedback_agent",
-        "1.0.0"
-      ],
-      "category": "trading",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.184746",
-      "updated_at": "2025-07-09T20:22:09.184768"
-    },
-    "metaresearchagent": {
-      "name": "metaresearchagent",
-      "class_name": "MetaResearchAgent",
-      "module_path": "trading.agents.meta_research_agent.MetaResearchAgent",
-      "description": "Meta-Research Agent with:\n- Automated research paper discovery\n- Model performance evaluation\n- Implementation feasibility assessment\n- Auto-addition to model registry",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the meta-research agent logic.\nArgs:\n    **kwargs: action, keywords, max_papers, threshold, etc.\nReturns:\n    AgentResult",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "auto_implement_top_models",
-          "description": "Automatically implement top-performing models.\n\nArgs:\n    evaluations: List of model evaluations\n    threshold: Score threshold for implementation\n    \nReturns:\n    List of implemented model names",
-          "required_params": [
-            "evaluations"
-          ],
-          "optional_params": [
-            "threshold"
-          ],
-          "return_type": "typing.List[str]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "discover_research_papers",
-          "description": "Discover new research papers from various sources.\n\nArgs:\n    keywords: Keywords to search for\n    max_papers: Maximum number of papers to discover\n    \nReturns:\n    List of discovered research papers",
-          "required_params": [],
-          "optional_params": [
-            "keywords",
-            "max_papers"
-          ],
-          "return_type": "typing.List[trading.agents.meta_research_agent.ResearchPaper]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "evaluate_models",
-          "description": "Evaluate models described in research papers.\n\nArgs:\n    papers: List of research papers to evaluate\n    \nReturns:\n    List of model evaluations",
-          "required_params": [
-            "papers"
-          ],
-          "optional_params": [],
-          "return_type": "typing.List[trading.agents.meta_research_agent.ModelEvaluation]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_research_summary",
-          "description": "Get summary of research activities.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get the current status of the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentStatus'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the agent with error handling and status updates.\n\nArgs:\n    **kwargs: Agent-specific parameters\n    \nReturns:\n    AgentResult: Result of the execution",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "\nMeta-Research Agent with:\n- Automated research paper discovery\n- Model performance evaluation\n- Implementation feasibility assessment\n- Auto-addition to model registry\n",
-        "trading.agents.meta_research_agent",
-        "1.0.0"
-      ],
-      "category": "analysis",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.186218",
-      "updated_at": "2025-07-09T20:22:09.186264"
-    },
     "metastrategyagent": {
       "name": "metastrategyagent",
       "class_name": "MetaStrategyAgent",
@@ -2263,244 +1596,6 @@
       "config_schema": null,
       "created_at": "2025-07-09T20:22:09.188187",
       "updated_at": "2025-07-09T20:22:09.188226"
-    },
-    "metatuneragent": {
-      "name": "metatuneragent",
-      "class_name": "MetaTunerAgent",
-      "module_path": "trading.agents.meta_tuner_agent.MetaTunerAgent",
-      "description": "Agent for autonomous hyperparameter tuning using multiple optimization strategies.",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the hyperparameter tuning logic.\nArgs:\n    **kwargs: model_type, objective_function, n_trials, method, etc.\nReturns:\n    AgentResult",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "add_parameter_space",
-          "description": "Add or update parameter space for a model type.",
-          "required_params": [
-            "model_type",
-            "param_space"
-          ],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "clear_history",
-          "description": "Clear tuning history for all models or a specific model type.",
-          "required_params": [],
-          "optional_params": [
-            "model_type"
-          ],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_best_hyperparameters",
-          "description": "Get the best hyperparameters for a model type.",
-          "required_params": [
-            "model_type"
-          ],
-          "optional_params": [],
-          "return_type": "typing.Optional[typing.Dict[str, typing.Any]]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get the current status of the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentStatus'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_tuning_history",
-          "description": "Get tuning history for all models or a specific model type.",
-          "required_params": [],
-          "optional_params": [
-            "model_type"
-          ],
-          "return_type": "typing.Dict[str, typing.List[trading.agents.meta_tuner_agent.TuningResult]]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the agent with error handling and status updates.\n\nArgs:\n    **kwargs: Agent-specific parameters\n    \nReturns:\n    AgentResult: Result of the execution",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "tune_hyperparameters",
-          "description": "Tune hyperparameters for a given model type.\n\nArgs:\n    model_type: Type of model to tune\n    objective_function: Function that takes hyperparameters and returns performance score\n    n_trials: Number of trials (overrides config)\n    method: Optimization method ('auto', 'bayesian', 'grid', 'random')\n    \nReturns:\n    Tuning result with best hyperparameters",
-          "required_params": [
-            "model_type",
-            "objective_function"
-          ],
-          "optional_params": [
-            "n_trials",
-            "method"
-          ],
-          "return_type": "<class 'trading.agents.meta_tuner_agent.TuningResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "Agent for autonomous hyperparameter tuning using multiple optimization strategies.",
-        "trading.agents.meta_tuner_agent",
-        "1.0.0"
-      ],
-      "category": "trading",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.189509",
-      "updated_at": "2025-07-09T20:22:09.189631"
     },
     "modelbuilderagent": {
       "name": "modelbuilderagent",
@@ -3660,476 +2755,6 @@
       "created_at": "2025-07-09T20:22:09.194892",
       "updated_at": "2025-07-09T20:22:09.194945"
     },
-    "multimodalagent": {
-      "name": "multimodalagent",
-      "class_name": "MultimodalAgent",
-      "module_path": "trading.agents.multimodal_agent.MultimodalAgent",
-      "description": "Agent for processing multimodal inputs (text, images, audio, data).",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the multimodal analysis logic.\nArgs:\n    **kwargs: equity, returns, action, etc.\nReturns:\n    AgentResult",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "analyze_drawdown",
-          "description": "analyze_drawdown method",
-          "required_params": [
-            "equity"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'str'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "analyze_equity_curve",
-          "description": "analyze_equity_curve method",
-          "required_params": [
-            "equity"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'str'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "analyze_performance",
-          "description": "analyze_performance method",
-          "required_params": [
-            "returns"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'str'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get the current status of the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentStatus'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "plot_drawdown",
-          "description": "plot_drawdown method",
-          "required_params": [
-            "equity"
-          ],
-          "optional_params": [
-            "title"
-          ],
-          "return_type": "<class 'bytes'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "plot_equity_curve",
-          "description": "plot_equity_curve method",
-          "required_params": [
-            "equity"
-          ],
-          "optional_params": [
-            "title"
-          ],
-          "return_type": "<class 'bytes'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "plot_performance",
-          "description": "plot_performance method",
-          "required_params": [
-            "returns"
-          ],
-          "optional_params": [
-            "title"
-          ],
-          "return_type": "<class 'bytes'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the agent with error handling and status updates.\n\nArgs:\n    **kwargs: Agent-specific parameters\n    \nReturns:\n    AgentResult: Result of the execution",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "vision_insight",
-          "description": "Pass image to a vision model and get a natural language insight.",
-          "required_params": [
-            "image_bytes"
-          ],
-          "optional_params": [
-            "prompt"
-          ],
-          "return_type": "<class 'str'>",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "Agent for processing multimodal inputs (text, images, audio, data).",
-        "trading.agents.multimodal_agent",
-        "1.0.0"
-      ],
-      "category": "trading",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.196517",
-      "updated_at": "2025-07-09T20:22:09.196556"
-    },
-    "optimizeragent": {
-      "name": "optimizeragent",
-      "class_name": "OptimizerAgent",
-      "module_path": "trading.agents.optimizer_agent.OptimizerAgent",
-      "description": "Agent for optimizing strategy combinations, thresholds, and indicators.",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the optimization process.\n\nArgs:\n    **kwargs: May include:\n        - optimization_config: OptimizationConfig object\n        - symbols: List of symbols to optimize\n        - time_periods: List of time periods\n        - optimization_type: Type of optimization\n        \nReturns:\n    AgentResult: Result of the optimization",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_best_results",
-          "description": "Get best optimization results by symbol.\n\nReturns:\n    Dictionary of best results by symbol",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, trading.agents.optimizer_agent.OptimizationResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_optimization_history",
-          "description": "Get optimization history.\n\nArgs:\n    limit: Maximum number of entries to return\n    \nReturns:\n    List of optimization history entries",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[typing.Dict[str, typing.Any]]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_optimization_stats",
-          "description": "Get optimization statistics.\n\nReturns:\n    Optimization statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get the current status of the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentStatus'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the agent with error handling and status updates.\n\nArgs:\n    **kwargs: Agent-specific parameters\n    \nReturns:\n    AgentResult: Result of the execution",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "Agent for optimizing strategy combinations, thresholds, and indicators.",
-        "trading.agents.optimizer_agent",
-        "1.0.0"
-      ],
-      "category": "trading",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.198028",
-      "updated_at": "2025-07-09T20:22:09.198066"
-    },
     "performancecriticagent": {
       "name": "performancecriticagent",
       "class_name": "PerformanceCriticAgent",
@@ -4342,234 +2967,6 @@
       "config_schema": null,
       "created_at": "2025-07-09T20:22:09.199610",
       "updated_at": "2025-07-09T20:22:09.199654"
-    },
-    "promptrouteragent": {
-      "name": "promptrouteragent",
-      "class_name": "PromptRouterAgent",
-      "module_path": "trading.agents.prompt_router_agent.PromptRouterAgent",
-      "description": "Intelligent prompt router that directs user requests to appropriate agents.\n\nThis agent analyzes incoming requests and determines the best agent(s) to handle\nthem based on capabilities, availability, performance history, and current load.",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the prompt router agent's main logic.\n\nArgs:\n    **kwargs: Expected to contain 'user_request' and optionally 'context'\n    \nReturns:\n    AgentResult: Result of the routing decision",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_routing_statistics",
-          "description": "Get routing statistics and performance metrics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get the current status of the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentStatus'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "record_agent_performance",
-          "description": "Record performance metrics for an agent.",
-          "required_params": [
-            "agent_name",
-            "success",
-            "response_time"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'inspect._empty'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "route_request",
-          "description": "Route a user request to the most appropriate agent(s).\n\nArgs:\n    user_request: The user's request text\n    context: Additional context information\n    \nReturns:\n    Routing decision with agent recommendations",
-          "required_params": [
-            "user_request"
-          ],
-          "optional_params": [
-            "context"
-          ],
-          "return_type": "<class 'trading.agents.prompt_router_agent.RoutingDecision'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the agent with error handling and status updates.\n\nArgs:\n    **kwargs: Agent-specific parameters\n    \nReturns:\n    AgentResult: Result of the execution",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_agent_status",
-          "description": "Update the status of an agent.",
-          "required_params": [
-            "agent_name",
-            "is_available"
-          ],
-          "optional_params": [
-            "current_load"
-          ],
-          "return_type": "<class 'inspect._empty'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "\nIntelligent prompt router that directs user requests to appropriate agents.\n\nThis agent analyzes incoming requests and determines the best agent(s) to handle\nthem based on capabilities, availability, performance history, and current load.\n",
-        "trading.agents.prompt_router_agent",
-        "1.0.0"
-      ],
-      "category": "trading",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.201081",
-      "updated_at": "2025-07-09T20:22:09.201106"
     },
     "regimedetectionagent": {
       "name": "regimedetectionagent",
@@ -5035,705 +3432,6 @@
       "created_at": "2025-07-09T20:22:09.204450",
       "updated_at": "2025-07-09T20:22:09.204499"
     },
-    "rollingretrainingagent": {
-      "name": "rollingretrainingagent",
-      "class_name": "RollingRetrainingAgent",
-      "module_path": "trading.agents.rolling_retraining_agent.RollingRetrainingAgent",
-      "description": "Advanced rolling retraining and walk-forward validation agent.",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the rolling retraining logic.\nArgs:\n    **kwargs: data, model_factory, target_col, action, etc.\nReturns:\n    AgentResult",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "export_results",
-          "description": "Export retraining results to file.",
-          "required_params": [],
-          "optional_params": [
-            "filepath"
-          ],
-          "return_type": "<class 'inspect._empty'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_feature_importance",
-          "description": "Get feature importance from the current model.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, float]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_summary",
-          "description": "Get summary of model performance over time.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get the current status of the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentStatus'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_latest_model",
-          "description": "Load the latest trained model.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Optional[typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "predict",
-          "description": "Make predictions using the current model.",
-          "required_params": [
-            "features"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'numpy.ndarray'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "prepare_data",
-          "description": "Prepare data for training.",
-          "required_params": [
-            "data"
-          ],
-          "optional_params": [
-            "target_col"
-          ],
-          "return_type": "typing.Tuple[pandas.core.frame.DataFrame, pandas.core.series.Series]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "retrain_model",
-          "description": "Retrain the model with new data.",
-          "required_params": [
-            "data",
-            "model_factory"
-          ],
-          "optional_params": [
-            "target_col"
-          ],
-          "return_type": "<class 'pandas.core.series.Series'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the agent with error handling and status updates.\n\nArgs:\n    **kwargs: Agent-specific parameters\n    \nReturns:\n    AgentResult: Result of the execution",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "should_retrain",
-          "description": "Determine if retraining is needed.",
-          "required_params": [
-            "current_performance"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "walk_forward_validation",
-          "description": "Perform walk-forward validation.",
-          "required_params": [
-            "features",
-            "target",
-            "model_factory"
-          ],
-          "optional_params": [
-            "n_splits"
-          ],
-          "return_type": "typing.List[trading.agents.rolling_retraining_agent.WalkForwardResult]",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "Advanced rolling retraining and walk-forward validation agent.",
-        "trading.agents.rolling_retraining_agent",
-        "1.0.0"
-      ],
-      "category": "trading",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.206824",
-      "updated_at": "2025-07-09T20:22:09.206879"
-    },
-    "selfimprovingagent": {
-      "name": "selfimprovingagent",
-      "class_name": "SelfImprovingAgent",
-      "module_path": "trading.agents.self_improving_agent.SelfImprovingAgent",
-      "description": "Agent that can learn and improve its performance over time.",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the self-improving agent logic.\nArgs:\n    **kwargs: task_data, action, etc.\nReturns:\n    AgentResult",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get the current status of the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentStatus'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "process_task",
-          "description": "Process a task and learn from the results.\n\nArgs:\n    task_data: Task data and parameters\n    \nReturns:\n    Dict[str, Any]: Task results and learning outcomes",
-          "required_params": [
-            "task_data"
-          ],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the agent with error handling and status updates.\n\nArgs:\n    **kwargs: Agent-specific parameters\n    \nReturns:\n    AgentResult: Result of the execution",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "Agent that can learn and improve its performance over time.",
-        "trading.agents.self_improving_agent",
-        "1.0.0"
-      ],
-      "category": "trading",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.208569",
-      "updated_at": "2025-07-09T20:22:09.208609"
-    },
-    "selftuningoptimizeragent": {
-      "name": "selftuningoptimizeragent",
-      "class_name": "SelfTuningOptimizerAgent",
-      "module_path": "trading.agents.self_tuning_optimizer_agent.SelfTuningOptimizerAgent",
-      "description": "Self-Tuning Optimizer Agent with:\n- Dynamic parameter adjustment based on market conditions\n- Performance-based optimization triggers\n- Multi-objective optimization\n- Constraint handling\n- Optimization history tracking",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the self-tuning optimization logic.\nArgs:\n    **kwargs: strategy_name, strategy_performance, market_data, action, etc.\nReturns:\n    AgentResult",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "check_optimization_triggers",
-          "description": "Check if optimization should be triggered.\n\nArgs:\n    strategy_name: Name of the strategy\n    strategy_performance: Strategy performance series\n    market_data: Current market data\n    \nReturns:\n    List of triggered optimization types",
-          "required_params": [
-            "strategy_name",
-            "strategy_performance",
-            "market_data"
-          ],
-          "optional_params": [],
-          "return_type": "typing.List[trading.agents.self_tuning_optimizer_agent.OptimizationTrigger]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_optimization_summary",
-          "description": "Get summary of optimization activities.",
-          "required_params": [],
-          "optional_params": [
-            "strategy_name"
-          ],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get the current status of the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentStatus'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "optimize_strategy_parameters",
-          "description": "Optimize strategy parameters based on triggers and market conditions.\n\nArgs:\n    strategy_name: Name of the strategy to optimize\n    current_parameters: Current strategy parameters\n    strategy_performance: Strategy performance history\n    market_data: Current market data\n    triggers: List of optimization triggers\n    \nReturns:\n    Optimization result with new parameters",
-          "required_params": [
-            "strategy_name",
-            "current_parameters",
-            "strategy_performance",
-            "market_data",
-            "triggers"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.self_tuning_optimizer_agent.OptimizationResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the agent with error handling and status updates.\n\nArgs:\n    **kwargs: Agent-specific parameters\n    \nReturns:\n    AgentResult: Result of the execution",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "set_parameter_constraints",
-          "description": "Set parameter constraints for a strategy.",
-          "required_params": [
-            "strategy_name",
-            "constraints"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'inspect._empty'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "\nSelf-Tuning Optimizer Agent with:\n- Dynamic parameter adjustment based on market conditions\n- Performance-based optimization triggers\n- Multi-objective optimization\n- Constraint handling\n- Optimization history tracking\n",
-        "trading.agents.self_tuning_optimizer_agent",
-        "1.0.0"
-      ],
-      "category": "trading",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.210343",
-      "updated_at": "2025-07-09T20:22:09.210387"
-    },
     "strategyimproveragent": {
       "name": "strategyimproveragent",
       "class_name": "StrategyImproverAgent",
@@ -6163,189 +3861,6 @@
       "created_at": "2025-07-09T20:22:09.213493",
       "updated_at": "2025-07-09T20:22:09.213529"
     },
-    "taskdelegationagent": {
-      "name": "taskdelegationagent",
-      "class_name": "TaskDelegationAgent",
-      "module_path": "trading.agents.task_delegation_agent.TaskDelegationAgent",
-      "description": "Agent responsible for delegating tasks across multiple agents with specific roles.\n\nThis agent orchestrates complex workflows by breaking them down into tasks\nand assigning them to appropriate agents based on their roles and capabilities.",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the task delegation logic.\n\nArgs:\n    **kwargs: action, task_description, workflow, etc.\n    \nReturns:\n    AgentResult: Result of the delegation process",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get agent status information.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the agent with error handling and status updates.\n\nArgs:\n    **kwargs: Agent-specific parameters\n    \nReturns:\n    AgentResult: Result of the execution",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "\nAgent responsible for delegating tasks across multiple agents with specific roles.\n\nThis agent orchestrates complex workflows by breaking them down into tasks\nand assigning them to appropriate agents based on their roles and capabilities.\n",
-        "trading.agents.task_delegation_agent",
-        "1.0.0"
-      ],
-      "category": "trading",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.214849",
-      "updated_at": "2025-07-09T20:22:09.214882"
-    },
     "updateragent": {
       "name": "updateragent",
       "class_name": "UpdaterAgent",
@@ -6576,277 +4091,40 @@
       "config_schema": null,
       "created_at": "2025-07-09T20:22:09.216575",
       "updated_at": "2025-07-09T20:22:09.216633"
-    },
-    "walkforwardagent": {
-      "name": "walkforwardagent",
-      "class_name": "WalkForwardAgent",
-      "module_path": "trading.agents.walk_forward_agent.WalkForwardAgent",
-      "description": "Walk-forward validation and rolling retraining agent.",
-      "capabilities": [
-        {
-          "name": "execute",
-          "description": "Execute the walk-forward validation logic.\nArgs:\n    **kwargs: data, target_column, feature_columns, model_factory, action, etc.\nReturns:\n    AgentResult",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "disable",
-          "description": "Disable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "enable",
-          "description": "Enable the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "export_results",
-          "description": "Export walk-forward results to file.\n\nArgs:\n    filepath: Output file path\n    \nReturns:\n    True if export successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_config",
-          "description": "Get the agent configuration.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentConfig'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_execution_history",
-          "description": "Get execution history.\n\nArgs:\n    limit: Maximum number of results to return\n    \nReturns:\n    List of execution results",
-          "required_params": [],
-          "optional_params": [
-            "limit"
-          ],
-          "return_type": "typing.List[trading.agents.base_agent_interface.AgentResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_metadata",
-          "description": "Get agent metadata for registration.\n\nReturns:\n    Dict containing agent metadata",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_stats",
-          "description": "Get performance statistics.\n\nReturns:\n    Dictionary with performance statistics",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_summary",
-          "description": "Get summary of walk-forward performance.\n\nReturns:\n    Performance summary",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, typing.Any]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_performance_trends",
-          "description": "Get performance trends over time.\n\nReturns:\n    Dictionary of performance trends",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "typing.Dict[str, pandas.core.series.Series]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "get_status",
-          "description": "Get the current status of the agent.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentStatus'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "handle_error",
-          "description": "Handle errors during execution.\n\nArgs:\n    error: Exception that occurred\n    \nReturns:\n    AgentResult: Error result",
-          "required_params": [
-            "error"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_enabled",
-          "description": "Check if the agent is enabled.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "is_running",
-          "description": "Check if the agent is currently running.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "load_state",
-          "description": "Load agent state from file.\n\nArgs:\n    filepath: Path to load state from\n    \nReturns:\n    bool: True if load was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "reset",
-          "description": "Reset agent state and statistics.",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "None",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run",
-          "description": "Run the agent with error handling and status updates.\n\nArgs:\n    **kwargs: Agent-specific parameters\n    \nReturns:\n    AgentResult: Result of the execution",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'trading.agents.base_agent_interface.AgentResult'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "run_walk_forward_validation",
-          "description": "Run walk-forward validation on the data.\n\nArgs:\n    data: Input data with datetime index\n    target_column: Target variable column\n    feature_columns: Feature columns\n    model_factory: Function to create model instances\n    start_date: Start date for validation\n    end_date: End date for validation\n    \nReturns:\n    List of walk-forward results",
-          "required_params": [
-            "data",
-            "target_column",
-            "feature_columns",
-            "model_factory"
-          ],
-          "optional_params": [
-            "start_date",
-            "end_date"
-          ],
-          "return_type": "typing.List[trading.agents.walk_forward_agent.WalkForwardResult]",
-          "version": "1.0.0"
-        },
-        {
-          "name": "save_state",
-          "description": "Save agent state to file.\n\nArgs:\n    filepath: Path to save state\n    \nReturns:\n    bool: True if save was successful",
-          "required_params": [
-            "filepath"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "should_retrain",
-          "description": "Determine if model should be retrained based on performance degradation.\n\nArgs:\n    current_performance: Current model performance\n    threshold: Performance degradation threshold\n    \nReturns:\n    True if retraining is recommended",
-          "required_params": [
-            "current_performance"
-          ],
-          "optional_params": [
-            "threshold"
-          ],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "update_config",
-          "description": "Update agent configuration.\n\nArgs:\n    new_config: New configuration values\n    \nReturns:\n    bool: True if update was successful",
-          "required_params": [
-            "new_config"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_config",
-          "description": "Validate agent configuration.\n\nReturns:\n    bool: True if configuration is valid",
-          "required_params": [],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        },
-        {
-          "name": "validate_input",
-          "description": "Validate input parameters.\n\nArgs:\n    **kwargs: Parameters to validate\n    \nReturns:\n    bool: True if input is valid",
-          "required_params": [
-            "kwargs"
-          ],
-          "optional_params": [],
-          "return_type": "<class 'bool'>",
-          "version": "1.0.0"
-        }
-      ],
-      "dependencies": [
-        "Unknown",
-        "Base agent interface",
-        "Walk-forward validation and rolling retraining agent.",
-        "trading.agents.walk_forward_agent",
-        "1.0.0"
-      ],
-      "category": "trading",
-      "status": "active",
-      "version": "1.0.0",
-      "author": "Unknown",
-      "tags": [],
-      "config_schema": null,
-      "created_at": "2025-07-09T20:22:09.218162",
-      "updated_at": "2025-07-09T20:22:09.218197"
     }
   },
   "capabilities": {
     "execute": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "analyze_performance": [
       "commentaryagent",
@@ -6856,68 +4134,68 @@
       "commentaryagent"
     ],
     "disable": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "enable": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "explain_trade": [
       "commentaryagent"
@@ -6929,484 +4207,484 @@
       "commentaryagent"
     ],
     "get_config": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "get_execution_history": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "get_metadata": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "get_performance_stats": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "get_status": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "handle_error": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "is_enabled": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "is_running": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "load_state": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "reset": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "run": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "save_state": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "update_config": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "validate_config": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "validate_input": [
-      "updateragent",
-      "walkforwardagent",
-      "executionriskagent",
       "executionagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
+      "modelselectoragent",
       "executionriskcontrolagent",
-      "metastrategyagent",
-      "modelbuilderagent",
+      "selftuningoptimizeragent",
+      "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
       "researchagent",
-      "modeloptimizeragent",
+      "modelbuilderagent",
+      "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
       "marketregimeagent",
       "metaresearchagent",
       "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
       "regimedetectionagent",
-      "strategyimproveragent",
       "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
-      "modelselectoragent",
-      "dataqualityagent",
-      "selftuningoptimizeragent",
-      "multimodalagent",
-      "performancecriticagent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "executionriskagent",
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "assess_data_quality": [
       "dataqualityagent"
@@ -7498,8 +4776,8 @@
       "metalearningfeedbackagent"
     ],
     "get_model_performance_summary": [
-      "metalearningfeedbackagent",
-      "performancecriticagent"
+      "performancecriticagent",
+      "metalearningfeedbackagent"
     ],
     "process_model_feedback": [
       "metalearningfeedbackagent"
@@ -7542,13 +4820,13 @@
       "modelbuilderagent"
     ],
     "get_agent_status": [
+      "modelevaluatoragent",
       "modeloptimizeragent",
-      "modelbuilderagent",
-      "modelevaluatoragent"
+      "modelbuilderagent"
     ],
     "get_model_status": [
-      "modelbuilderagent",
-      "modelevaluatoragent"
+      "modelevaluatoragent",
+      "modelbuilderagent"
     ],
     "list_models": [
       "modelbuilderagent"
@@ -7579,8 +4857,8 @@
       "modeloptimizeragent"
     ],
     "get_optimization_history": [
-      "optimizeragent",
-      "modeloptimizeragent"
+      "modeloptimizeragent",
+      "optimizeragent"
     ],
     "get_optimization_recommendations": [
       "modeloptimizeragent"
@@ -7670,15 +4948,15 @@
       "researchagent"
     ],
     "export_results": [
-      "rollingretrainingagent",
-      "walkforwardagent"
+      "walkforwardagent",
+      "rollingretrainingagent"
     ],
     "get_feature_importance": [
       "rollingretrainingagent"
     ],
     "get_performance_summary": [
-      "rollingretrainingagent",
-      "walkforwardagent"
+      "walkforwardagent",
+      "rollingretrainingagent"
     ],
     "load_latest_model": [
       "rollingretrainingagent"
@@ -7693,8 +4971,8 @@
       "rollingretrainingagent"
     ],
     "should_retrain": [
-      "rollingretrainingagent",
-      "walkforwardagent"
+      "walkforwardagent",
+      "rollingretrainingagent"
     ],
     "walk_forward_validation": [
       "rollingretrainingagent"
@@ -7747,31 +5025,31 @@
   },
   "categories": {
     "trading": [
-      "updateragent",
-      "walkforwardagent",
-      "modelevaluatoragent",
-      "rollingretrainingagent",
-      "selfimprovingagent",
-      "metalearningfeedbackagent",
-      "metastrategyagent",
-      "modelbuilderagent",
-      "modeloptimizeragent",
-      "marketregimeagent",
-      "taskdelegationagent",
-      "regimedetectionagent",
-      "strategyimproveragent",
-      "optimizeragent",
-      "metalearneragent",
-      "commentaryagent",
-      "modelimproveragent",
-      "promptrouteragent",
       "modelselectoragent",
-      "dataqualityagent",
       "selftuningoptimizeragent",
       "multimodalagent",
+      "commentaryagent",
+      "metatuneragent",
+      "modelevaluatoragent",
+      "dataqualityagent",
+      "metalearneragent",
+      "promptrouteragent",
+      "metalearningfeedbackagent",
+      "strategyimproveragent",
+      "modelbuilderagent",
       "performancecriticagent",
+      "metastrategyagent",
+      "walkforwardagent",
+      "marketregimeagent",
+      "taskdelegationagent",
+      "updateragent",
+      "selfimprovingagent",
+      "regimedetectionagent",
+      "optimizeragent",
+      "modeloptimizeragent",
       "strategyselectoragent",
-      "metatuneragent"
+      "rollingretrainingagent",
+      "modelimproveragent"
     ],
     "execution": [
       "executionriskagent",
@@ -7787,7 +5065,7 @@
     "total_agents": 30,
     "active_agents": 30,
     "total_capabilities": 130,
-    "last_discovery": "2026-01-04T20:21:43.620258"
+    "last_discovery": "2026-02-28T12:13:03.954160"
   },
-  "last_updated": "2026-01-04T20:21:43.644862"
+  "last_updated": "2026-02-28T12:13:04.006823"
 }

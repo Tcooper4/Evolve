@@ -1,6 +1,34 @@
 """Pytest configuration and shared fixtures for the trading system tests."""
 
+# --- TEST_FIX: Run before any other imports that might pull in neuralforecast ---
+# 1) Windows: avoid UnicodeEncodeError when pytest captures output (e.g. cp1252 can't encode \x8f)
 import sys
+
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+# 2) neuralforecast imports pytorch_lightning and uses pl.utilities.distributed.log; some
+#    pytorch_lightning versions don't have utilities.distributed, causing AttributeError.
+#    Patch it so test collection can load modules that import neuralforecast (e.g. forecast_router).
+try:
+    import pytorch_lightning as _pl
+    _pl_util = getattr(_pl, "utilities", None)
+    if _pl_util is not None and not hasattr(_pl_util, "distributed"):
+        from unittest.mock import MagicMock
+        _m = MagicMock()
+        _m.log = MagicMock()
+        _m.log.setLevel = MagicMock()
+        _pl_util.distributed = _m
+except Exception:
+    pass
+# --- End TEST_FIX ---
+
 from pathlib import Path
 from unittest.mock import Mock, patch
 

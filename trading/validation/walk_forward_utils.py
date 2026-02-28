@@ -5,8 +5,19 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
+from dataclasses import dataclass
+
 from trading.agents.base_agent_interface import AgentConfig
-from trading.agents.walk_forward_agent import WalkForwardAgent, WalkForwardResult
+
+try:
+    from trading.agents.walk_forward_agent import WalkForwardAgent, WalkForwardResult
+except ImportError:
+    WalkForwardAgent = None
+
+    @dataclass
+    class WalkForwardResult:
+        """Stub when WalkForwardAgent is not available (rationalized to _dead_code)."""
+        model_performance: Dict[str, Any]
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +70,10 @@ def _calculate_performance_trend(results: List[WalkForwardResult]) -> Dict[str, 
     return {"early_sharpe": early_sharpe, "late_sharpe": late_sharpe, "trend": trend}
 
 
-def get_walk_forward_agent() -> WalkForwardAgent:
-    """Get a configured walk-forward agent instance."""
+def get_walk_forward_agent():
+    """Get a configured walk-forward agent instance. Returns None if agent was rationalized."""
+    if WalkForwardAgent is None:
+        return None
     config = AgentConfig(
         name="WalkForwardValidator",
         enabled=True,
@@ -75,12 +88,12 @@ def get_walk_forward_agent() -> WalkForwardAgent:
 
 class WalkForwardValidator:
     """Wrapper class for walk-forward validation functionality."""
-    
+
     def __init__(self):
         """Initialize the walk-forward validator."""
         self.agent = get_walk_forward_agent()
         self.logger = logging.getLogger(__name__)
-    
+
     def validate(
         self,
         data: pd.DataFrame,
@@ -105,6 +118,8 @@ class WalkForwardValidator:
             Dictionary with validation results
         """
         try:
+            if self.agent is None:
+                return {"success": False, "error": "Walk-forward validation is not available (agent rationalized)."}
             # Use the agent to run validation
             import asyncio
             result = asyncio.run(

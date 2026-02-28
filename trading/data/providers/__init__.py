@@ -3,6 +3,7 @@ Data Providers Module for Market Data Fetching
 
 This module provides a unified interface for fetching market data from various sources
 including Alpha Vantage, YFinance, and fallback providers with automatic failover.
+Providers are initialized lazily on first use to avoid startup cost.
 """
 
 import logging
@@ -11,10 +12,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from .alpha_vantage_provider import AlphaVantageProvider
 from .base_provider import BaseDataProvider, ProviderConfig
-from .fallback_provider import FallbackDataProvider, get_fallback_provider
-from .yfinance_provider import YFinanceProvider
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -23,15 +21,18 @@ logger = logging.getLogger(__name__)
 
 
 class ProviderManager:
-    """Manages data provider initialization and configuration."""
+    """Manages data provider initialization and configuration. Providers are created on first use."""
 
     def __init__(self):
-        """Initialize the provider manager."""
-        self.providers: Dict[str, BaseDataProvider] = {}
-        self._initialize_providers()
+        """Initialize the provider manager. No providers are created until first use."""
+        self._providers: Dict[str, BaseDataProvider] = {}
+        self._initialized = False
 
     def _initialize_providers(self) -> None:
-        """Initialize all available data providers."""
+        """Initialize all available data providers. Called lazily on first use."""
+        if self._initialized:
+            return
+        self._initialized = True
         # Get API keys from environment
         alpha_vantage_key = os.getenv("ALPHA_VANTAGE_API_KEY", "")
 
@@ -59,7 +60,8 @@ class ProviderManager:
 
         # Initialize YFinance provider
         try:
-            self.providers["yfinance"] = YFinanceProvider(yfinance_config)
+            from .yfinance_provider import YFinanceProvider
+            self._providers["yfinance"] = YFinanceProvider(yfinance_config)
             logger.info("YFinance provider initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize YFinance provider: {e}")
@@ -67,7 +69,8 @@ class ProviderManager:
         # Initialize Alpha Vantage provider
         if alpha_vantage_key:
             try:
-                self.providers["alpha_vantage"] = AlphaVantageProvider(
+                from .alpha_vantage_provider import AlphaVantageProvider
+                self._providers["alpha_vantage"] = AlphaVantageProvider(
                     alpha_vantage_config
                 )
                 logger.info("Alpha Vantage provider initialized successfully")
@@ -78,15 +81,22 @@ class ProviderManager:
 
         # Initialize fallback provider
         try:
+            from .fallback_provider import get_fallback_provider
             fallback_provider = get_fallback_provider()
             if fallback_provider:
-                self.providers["fallback"] = fallback_provider
+                self._providers["fallback"] = fallback_provider
                 logger.info("Fallback provider initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize fallback provider: {e}")
 
+    @property
+    def providers(self) -> Dict[str, BaseDataProvider]:
+        """Lazy access to providers; triggers initialization on first read."""
+        self._initialize_providers()
+        return self._providers
+
     def get_provider(self, name: str) -> Optional[BaseDataProvider]:
-        """Get a specific provider by name.
+        """Get a specific provider by name. Initializes all providers on first call.
 
         Args:
             name: Provider name ('yfinance', 'alpha_vantage', 'fallback')
@@ -94,24 +104,27 @@ class ProviderManager:
         Returns:
             Provider instance or None if not available
         """
-        return self.providers.get(name)
+        self._initialize_providers()
+        return self._providers.get(name)
 
     def get_available_providers(self) -> List[str]:
-        """Get list of available provider names.
+        """Get list of available provider names. Triggers lazy init if needed.
 
         Returns:
             List of available provider names
         """
-        return list(self.providers.keys())
+        self._initialize_providers()
+        return list(self._providers.keys())
 
     def get_provider_status(self) -> Dict[str, Dict[str, Any]]:
-        """Get detailed status of all providers.
+        """Get detailed status of all providers. Triggers lazy init if needed.
 
         Returns:
             Dictionary with provider status information
         """
+        self._initialize_providers()
         status = {}
-        for name, provider in self.providers.items():
+        for name, provider in self._providers.items():
             try:
                 status[name] = provider.get_metadata()
             except Exception as e:
@@ -128,7 +141,7 @@ class ProviderManager:
         Returns:
             True if provider is available and enabled
         """
-        provider = self.providers.get(name)
+        provider = self.get_provider(name)
         return provider is not None and provider.is_enabled()
 
 

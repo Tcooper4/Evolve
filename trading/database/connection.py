@@ -12,7 +12,7 @@ from typing import Generator, Optional
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import NullPool, QueuePool
 
 logger = logging.getLogger(__name__)
 
@@ -68,12 +68,13 @@ def create_database_engine(database_url: Optional[str] = None) -> Engine:
     # Engine configuration
     connect_args = {}
     if database_url.startswith("sqlite"):
-        # SQLite-specific configuration
+        # P2 fix: SQLite uses NullPool; QueuePool can cause unexpected behavior with
+        # concurrent writes. See AUDIT_REPORT.md 2.1.
         connect_args = {"check_same_thread": False}
         engine = create_engine(
             database_url,
             connect_args=connect_args,
-            poolclass=QueuePool,
+            poolclass=NullPool,
             pool_pre_ping=True,
             echo=False,  # Set to True for SQL debugging
         )
@@ -183,7 +184,9 @@ def get_engine() -> Optional[Engine]:
 
 def close_database() -> None:
     """
-    Close database connections.
+    Close database connections (P4.2: explicit shutdown hook).
+    Call this on application teardown so sessions close cleanly.
+    See config/CONFIG_README.md and main.py / app.py atexit registration.
     """
     global _engine, _SessionLocal
     

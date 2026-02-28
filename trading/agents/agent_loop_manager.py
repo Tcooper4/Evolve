@@ -708,5 +708,26 @@ async def main():
         sys.exit(1)
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        await manager.start_loop()
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+
+# AGENT_UPGRADE: Single entry point for AgentLoopManager instance
+_loop_manager: Optional["AgentLoopManager"] = None
+
+
+def get_agent_loop_manager(config: Optional[Dict[str, Any]] = None) -> "AgentLoopManager":
+    """Get the global AgentLoopManager instance (singleton).
+
+    Returns:
+        AgentLoopManager instance. If config is provided and no instance exists, uses it.
+    """
+    global _loop_manager
+    if _loop_manager is None:
+        _loop_manager = AgentLoopManager(config or {})
+    return _loop_manager

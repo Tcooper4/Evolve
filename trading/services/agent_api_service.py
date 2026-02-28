@@ -24,8 +24,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from trading.agents.agent_loop_manager import AgentLoopManager
-from trading.agents.agent_manager import AgentManager
+from trading.agents.agent_loop_manager import get_agent_loop_manager
+from trading.agents.agent_manager import get_agent_manager
 
 # Import agent system components
 from trading.agents.agent_registry import AgentRegistry
@@ -84,8 +84,8 @@ class AgentAPIService:
 
         # Initialize agent system components
         self.agent_registry = AgentRegistry()
-        self.agent_manager = AgentManager()
-        self.loop_manager = AgentLoopManager()
+        self.agent_manager = get_agent_manager()
+        self.loop_manager = get_agent_loop_manager()
 
         # Initialize WebSocket service
         self.websocket_service = WebSocketService(self.agent_manager)

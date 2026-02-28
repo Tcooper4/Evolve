@@ -399,7 +399,9 @@ class AsyncStrategyRunner:
             normalized_weights = [w / total_weight for w in weights]
         else:
             # Equal weights if total is zero
-            normalized_weights = [1.0 / len(weights) for _ in weights] if len(weights) > 0 else []
+            normalized_weights = [
+                safe_divide(1.0, len(weights), default=0.0) for _ in weights
+            ] if len(weights) > 0 else []
 
         # Combine signals
         combined = signals_list[0].copy()
@@ -476,7 +478,7 @@ class AsyncStrategyRunner:
         failed_strategies: List[str],
     ) -> None:
         """Log execution performance metrics."""
-        success_rate = (success_count / total_count) * 100 if total_count > 0 else 0
+        success_rate = safe_divide(success_count * 100, total_count, default=0.0)
 
         logger.info(f"Strategy execution completed:")
         logger.info(f"  - Total time: {execution_time:.2f}s")

@@ -1,11 +1,12 @@
 """
 ResearchAgent: Autonomous research agent for discovering new forecasting models and trading strategies.
 - Searches GitHub and arXiv
-- Summarizes papers and repos using OpenAI API
-- Suggests code snippets
-- Logs findings to research_log.json with tags
+- Summarizes papers and repos using Claude API (OpenAI fallback)
+- Suggests code snippets via Claude
+- AGENT_UPGRADE: Claude primary; blocking HTTP/LLM in run_in_executor
 """
 
+import asyncio
 import json
 import logging
 from dataclasses import dataclass
@@ -17,6 +18,19 @@ import requests
 
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 from .prompt_templates import format_template
+
+# Centralized LLM config (AGENT_UPGRADE)
+try:
+    from config.llm_config import get_llm_config, CLAUDE_PRIMARY_MODEL
+except ImportError:
+    get_llm_config = None
+    CLAUDE_PRIMARY_MODEL = "claude-sonnet-4-20250514"
+
+# Optionally import OpenAI API
+try:
+    import openai
+except ImportError:
+    openai = None
 
 
 @dataclass
@@ -41,12 +55,6 @@ class ResearchResult:
     error_message: Optional[str] = None
 
 
-# Optionally import OpenAI API
-try:
-    import openai
-except ImportError:
-    openai = None
-
 logger = logging.getLogger(__name__)
 
 
@@ -64,11 +72,21 @@ class ResearchAgent(BaseAgent):
             )
         super().__init__(config)
 
-        # Extract config from custom_config or use defaults
         custom_config = config.custom_config or {}
         self.openai_api_key = custom_config.get("openai_api_key") or (
             openai.api_key if openai else None
         )
+        self.anthropic_api_key = custom_config.get("anthropic_api_key")
+        # AGENT_UPGRADE: Centralized LLM config
+        try:
+            if get_llm_config:
+                llm = get_llm_config()
+                if not self.anthropic_api_key:
+                    self.anthropic_api_key = getattr(llm, "anthropic_api_key", None)
+                if not self.openai_api_key:
+                    self.openai_api_key = getattr(llm, "openai_api_key", None)
+        except Exception:
+            pass
         self.log_path = Path(custom_config.get("log_path", "research_log.json"))
 
         if not self.log_path.exists():
@@ -80,25 +98,21 @@ class ResearchAgent(BaseAgent):
         pass
 
     async def execute(self, **kwargs) -> AgentResult:
-        """Execute the research logic.
-        Args:
-            **kwargs: topic, max_results, action, etc.
-        Returns:
-            AgentResult
-        """
+        """Execute the research logic. Blocking HTTP/LLM run in executor. AGENT_UPGRADE."""
         try:
             action = kwargs.get("action", "research")
+            loop = asyncio.get_event_loop()
 
             if action == "research":
                 topic = kwargs.get("topic")
                 max_results = kwargs.get("max_results", 3)
-
                 if topic is None:
                     return AgentResult(
                         success=False, error_message="Missing required parameter: topic"
                     )
-
-                findings = self.research(topic, max_results)
+                findings = await loop.run_in_executor(
+                    None, lambda: self.research(topic, max_results)
+                )
                 return AgentResult(
                     success=True,
                     data={
@@ -111,13 +125,13 @@ class ResearchAgent(BaseAgent):
             elif action == "search_github":
                 query = kwargs.get("query")
                 max_results = kwargs.get("max_results", 5)
-
                 if query is None:
                     return AgentResult(
                         success=False, error_message="Missing required parameter: query"
                     )
-
-                results = self.search_github(query, max_results)
+                results = await loop.run_in_executor(
+                    None, lambda: self.search_github(query, max_results)
+                )
                 return AgentResult(
                     success=True,
                     data={"github_results": results, "results_count": len(results)},
@@ -126,13 +140,13 @@ class ResearchAgent(BaseAgent):
             elif action == "search_arxiv":
                 query = kwargs.get("query")
                 max_results = kwargs.get("max_results", 5)
-
                 if query is None:
                     return AgentResult(
                         success=False, error_message="Missing required parameter: query"
                     )
-
-                results = self.search_arxiv(query, max_results)
+                results = await loop.run_in_executor(
+                    None, lambda: self.search_arxiv(query, max_results)
+                )
                 return AgentResult(
                     success=True,
                     data={"arxiv_results": results, "results_count": len(results)},
@@ -141,33 +155,32 @@ class ResearchAgent(BaseAgent):
             elif action == "summarize":
                 text = kwargs.get("text")
                 custom_prompt = kwargs.get("prompt")
-
                 if text is None:
                     return AgentResult(
                         success=False, error_message="Missing required parameter: text"
                     )
-
-                # Use centralized template if no custom prompt provided
-                if custom_prompt is None:
-                    prompt = format_template("research_summarize", text=text)
-                else:
-                    prompt = custom_prompt
-
-                summary = self.summarize_with_openai(text, prompt)
+                prompt = (
+                    custom_prompt
+                    if custom_prompt is not None
+                    else format_template("research_summarize", text=text)
+                )
+                summary = await loop.run_in_executor(
+                    None, lambda: self._summarize(text, prompt)
+                )
                 return AgentResult(
                     success=True, data={"summary": summary, "text_length": len(text)}
                 )
 
             elif action == "code_suggestion":
                 description = kwargs.get("description")
-
                 if description is None:
                     return AgentResult(
                         success=False,
                         error_message="Missing required parameter: description",
                     )
-
-                code = self.code_suggestion_with_openai(description)
+                code = await loop.run_in_executor(
+                    None, lambda: self._code_suggestion(description)
+                )
                 return AgentResult(
                     success=True,
                     data={
@@ -240,6 +253,51 @@ class ResearchAgent(BaseAgent):
             logger.warning(f"arXiv search failed: {resp.status_code}")
             return []
 
+    def _summarize(self, text: str, prompt: str = None) -> str:
+        """Summarize text using Claude (primary) or OpenAI (fallback). AGENT_UPGRADE."""
+        if prompt is None:
+            prompt = format_template("research_summarize", text=text)
+        try:
+            if getattr(self, "anthropic_api_key", None):
+                import anthropic
+                client = anthropic.Anthropic(api_key=self.anthropic_api_key)
+                model = CLAUDE_PRIMARY_MODEL
+                if get_llm_config:
+                    model = getattr(get_llm_config(), "primary_model", model)
+                resp = client.messages.create(
+                    model=model,
+                    max_tokens=512,
+                    temperature=0.2,
+                    system=prompt,
+                    messages=[{"role": "user", "content": text[:50000]}],
+                )
+                return resp.content[0].text.strip()
+        except Exception as e:
+            logger.warning(f"Claude summarize failed, trying OpenAI: {e}")
+        return self.summarize_with_openai(text, prompt)
+
+    def _code_suggestion(self, description: str) -> str:
+        """Code suggestion using Claude (primary) or OpenAI (fallback). AGENT_UPGRADE."""
+        try:
+            if getattr(self, "anthropic_api_key", None):
+                import anthropic
+                client = anthropic.Anthropic(api_key=self.anthropic_api_key)
+                model = CLAUDE_PRIMARY_MODEL
+                if get_llm_config:
+                    model = getattr(get_llm_config(), "primary_model", model)
+                prompt = format_template("research_code_suggestion", description=description)
+                resp = client.messages.create(
+                    model=model,
+                    max_tokens=512,
+                    temperature=0.2,
+                    system=prompt,
+                    messages=[{"role": "user", "content": description}],
+                )
+                return resp.content[0].text.strip()
+        except Exception as e:
+            logger.warning(f"Claude code_suggestion failed, trying OpenAI: {e}")
+        return self.code_suggestion_with_openai(description)
+
     def summarize_with_openai(self, text: str, prompt: str = None) -> str:
         """Use OpenAI API to summarize text."""
         if not openai or not self.openai_api_key:
@@ -290,8 +348,8 @@ class ResearchAgent(BaseAgent):
         # Search GitHub
         github_results = self.search_github(topic, max_results)
         for repo in github_results:
-            summary = self.summarize_with_openai(repo["description"] or repo["name"])
-            code = self.code_suggestion_with_openai(repo["description"] or repo["name"])
+            summary = self._summarize(repo["description"] or repo["name"])
+            code = self._code_suggestion(repo["description"] or repo["name"])
             finding = {
                 "type": "github",
                 "tag": repo["tag"],
@@ -305,8 +363,8 @@ class ResearchAgent(BaseAgent):
         # Search arXiv
         arxiv_results = self.search_arxiv(topic, max_results)
         for paper in arxiv_results:
-            summary = self.summarize_with_openai(paper["summary"])
-            code = self.code_suggestion_with_openai(paper["summary"])
+            summary = self._summarize(paper["summary"])
+            code = self._code_suggestion(paper["summary"])
             finding = {
                 "type": "arxiv",
                 "tag": paper["tag"],

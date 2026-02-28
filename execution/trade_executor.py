@@ -5,34 +5,15 @@ market conditions including slippage, market impact, and commission.
 """
 
 import logging
-import os
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
 import numpy as np
 
+from execution.models import OrderStatus, OrderType
+
 logger = logging.getLogger(__name__)
-
-
-class OrderType(Enum):
-    """Types of orders."""
-
-    MARKET = "market"
-    LIMIT = "limit"
-    STOP = "stop"
-    STOP_LIMIT = "stop_limit"
-
-
-class OrderStatus(Enum):
-    """Order status."""
-
-    PENDING = "pending"
-    FILLED = "filled"
-    PARTIALLY_FILLED = "partially_filled"
-    CANCELLED = "cancelled"
-    REJECTED = "rejected"
 
 
 @dataclass
@@ -205,14 +186,12 @@ class TradeExecutor:
             live_trading: Whether to use live trading mode
         """
         self.market_simulator = market_simulator or MarketSimulator()
+        # Safety fix: Constructor parameter is the single source of truth; do not override
+        # with LIVE_TRADING env so that callers cannot accidentally enable live when they
+        # passed live_trading=False (e.g. from config).
         self.live_trading = live_trading
         self.orders: List[Order] = []
         self.executions: List[ExecutionResult] = []
-
-        # Load live trading setting from environment
-        if os.getenv("LIVE_TRADING", "False").lower() == "true":
-            self.live_trading = True
-            logger.warning("LIVE TRADING MODE ENABLED - Real money will be used!")
 
         logger.info(f"Trade executor initialized - Live trading: {self.live_trading}")
 

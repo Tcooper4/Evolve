@@ -1,0 +1,9 @@
+{
+  "strategy_alerts": {
+    "default": {
+      "email_alerts": true,
+      "telegram_alerts": true,
+      "slack_alerts": false
+    }
+  }
+}

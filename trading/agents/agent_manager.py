@@ -804,11 +804,10 @@ class EnhancedAgentManager:
         self.logger.info(f"Created default configuration at {config_path}")
 
     def _register_default_agents(self) -> None:
-        """Register the default agents."""
+        """Register the default agents. UpdaterAgent not auto-registered (recommendation-only)."""
         default_agents = {
             "model_builder": ModelBuilderAgent,
             "performance_critic": PerformanceCriticAgent,
-            "updater": UpdaterAgent,
             "execution_agent": ExecutionAgent,
         }
 

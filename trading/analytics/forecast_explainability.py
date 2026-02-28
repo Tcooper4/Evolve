@@ -820,3 +820,10 @@ class IntelligentForecastExplainability:
 
         except Exception as e:
             logger.error(f"Error exporting explanations: {e}")
+
+
+# Re-export for pages (e.g. 7_Model_Lab) that expect ForecastExplainability from analytics
+try:
+    from trading.models.forecast_explainability import ForecastExplainability
+except ImportError:
+    ForecastExplainability = IntelligentForecastExplainability  # type: ignore[misc, assignment]

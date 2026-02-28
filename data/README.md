@@ -1,118 +1,16 @@
-# Data Module
+# Data (Project Root)
 
-The data module handles data processing, storage, and management for the trading platform.
+Project-level data feeds, registry files, and validation results. Market data and preprocessing live under **`trading/data/`**.
 
-## Structure
+## Contents
 
-```
-data/
-├── processing/      # Data processing
-├── storage/         # Data storage
-├── validation/      # Data validation
-└── utils/          # Data utilities
-```
+- **Live/streaming:** `live_data_feed.py`, `live_feed.py`, `streaming_pipeline.py`
+- **Sentiment:** `sentiment/sentiment_fetcher.py`
+- **Registry/state:** `agent_registry.json`, `leaderboard/`, `optimization/optimization_history.json`
+- **Validation:** `validation_results/` (e.g. validation run outputs)
 
-## Components
+Database connection and URL are handled by **`trading.database.connection`**; see root `config/CONFIG_README.md` for DB env vars.
 
-### Processing
+## Market Data and Preprocessing
 
-The `processing` directory contains:
-- Data cleaning
-- Feature engineering
-- Data transformation
-- Data normalization
-- Data augmentation
-
-### Storage
-
-The `storage` directory contains:
-- Database connections
-- Data persistence
-- Cache management
-- Data versioning
-- Backup procedures
-
-### Validation
-
-The `validation` directory contains:
-- Data quality checks
-- Schema validation
-- Data integrity
-- Error detection
-- Data consistency
-
-### Utilities
-
-The `utils` directory contains:
-- Data loaders
-- Data savers
-- Format converters
-- Data generators
-- Helper functions
-
-## Usage
-
-```python
-from data.processing import DataProcessor
-from data.storage import DataStorage
-from data.validation import DataValidator
-from data.utils import DataLoader
-
-# Process data
-processor = DataProcessor()
-processed_data = processor.process(raw_data)
-
-# Store data
-storage = DataStorage()
-storage.save(processed_data)
-
-# Validate data
-validator = DataValidator()
-is_valid = validator.validate(data)
-```
-
-## Testing
-
-```bash
-# Run data tests
-pytest tests/unit/data/
-
-# Run specific component tests
-pytest tests/unit/data/processing/
-pytest tests/unit/data/storage/
-```
-
-## Configuration
-
-The data module can be configured through:
-- Database settings
-- Processing parameters
-- Validation rules
-- Storage options
-
-## Dependencies
-
-- pandas
-- numpy
-- sqlalchemy
-- pymongo
-- redis
-
-## Data Types
-
-- Market data
-- Trading data
-- User data
-- System data
-- Log data
-
-## Contributing
-
-1. Follow the coding style guide
-2. Write unit tests for new features
-3. Update documentation
-4. Submit a pull request
-
-## License
-
-This module is part of the main project and is licensed under the MIT License. 
+For data providers, preprocessing, and feature engineering, see **`trading/data/`** (e.g. `trading/data/data_provider.py`, `trading/data/preprocessing.py`, `trading/data/providers/`).

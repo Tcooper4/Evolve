@@ -320,10 +320,21 @@ class TCNModel(BaseModel):
         shap.summary_plot(shap_values, X_sample.cpu().numpy())
 
     def test_synthetic(self):
-        """Test model on synthetic data - DEPRECATED."""
-        st.warning(
-            "Synthetic data testing is deprecated. Use real market data for testing."
+        """Test model on synthetic data - DEPRECATED (P3: clearly marked).
+        Use real market data for testing. Will be removed in a future release."""
+        import warnings
+        warnings.warn(
+            "TCNModel.test_synthetic is deprecated. Use real market data for testing.",
+            DeprecationWarning,
+            stacklevel=2,
         )
+        try:
+            import streamlit as st
+            st.warning(
+                "Synthetic data testing is deprecated. Use real market data for testing."
+            )
+        except ImportError:
+            pass
         return
 
     def fit(

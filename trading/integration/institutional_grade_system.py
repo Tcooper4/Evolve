@@ -21,15 +21,13 @@ import numpy as np
 
 warnings.filterwarnings("ignore")
 
+logger = logging.getLogger(__name__)
+
 # Import all strategic intelligence modules
 try:
     from reporting.report_format import ReportFormat
     from trading.agents.execution_risk_control_agent import ExecutionRiskControlAgent
     from trading.agents.market_regime_agent import MarketRegimeAgent
-    from trading.agents.rolling_retraining_agent import (
-        RetrainingConfig,
-        RollingRetrainingAgent,
-    )
     from trading.analytics.alpha_attribution_engine import AlphaAttributionEngine
     from trading.analytics.forecast_explainability import (
         IntelligentForecastExplainability,
@@ -41,11 +39,20 @@ try:
     from trading.strategies.multi_strategy_hybrid_engine import (
         MultiStrategyHybridEngine,
     )
+    MODULES_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"Some modules not available: {e}")
     MODULES_AVAILABLE = False
 
-logger = logging.getLogger(__name__)
+# Optional: RollingRetrainingAgent rationalized to _dead_code
+try:
+    from trading.agents.rolling_retraining_agent import (
+        RetrainingConfig,
+        RollingRetrainingAgent,
+    )
+except ImportError:
+    RetrainingConfig = None
+    RollingRetrainingAgent = None
 
 
 class SystemStatus(Enum):
@@ -172,8 +179,12 @@ class InstitutionalGradeSystem:
                     lookback_period=252, regime_threshold=0.7
                 )
 
-            # Rolling Retraining Agent
-            if self.config["modules"]["rolling_retraining"]["enabled"]:
+            # Rolling Retraining Agent (optional; agent rationalized to _dead_code)
+            if (
+                self.config["modules"]["rolling_retraining"]["enabled"]
+                and RollingRetrainingAgent is not None
+                and RetrainingConfig is not None
+            ):
                 retraining_config = RetrainingConfig(
                     retrain_frequency=30,
                     lookback_window=252,

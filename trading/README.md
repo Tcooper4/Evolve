@@ -1,108 +1,62 @@
 # Trading Module
 
-The trading module implements various trading strategies, agents, and optimization techniques.
+Core trading logic: strategies, backtesting, agents, memory, portfolio, risk, models, and reporting.
 
 ## Structure
 
 ```
 trading/
-├── strategies/      # Trading strategies
-├── agents/          # Trading agents
-├── signals/         # Signal generation
-└── optimization/    # Strategy optimization
+├── agents/           # Research, commentary, execution agents; agent registry, loop manager
+├── backtesting/      # Backtester, enhanced backtester, position sizing, visualization
+├── config/           # Trading-specific config (settings, enhanced_settings)
+├── core/             # Shared utilities, history logger
+├── data/             # Data providers, preprocessing
+├── evaluation/       # Metrics and evaluation
+├── execution/        # Execution replay, execution engine (in-process)
+├── memory/           # Agent memory, performance memory, goals
+├── models/           # Model registry, TCN, neural forecast, timeseries, advanced (transformer, GNN)
+├── optimization/     # Strategy optimizer, genetic, PSO, forecasting integration
+├── portfolio/        # Allocator, position sizer, risk manager
+├── report/           # Report generator, templates, export
+├── risk/             # Risk manager, advanced risk, tail risk
+├── strategies/       # Strategy runner, RSI, MACD, Bollinger, registry, fallback
+├── services/         # Commentary generator, research, home briefing, agent API, etc.
+├── market/           # Market data, indicators
+├── nlp/              # Sentiment, response formatting
+├── monitoring/       # Health check
+└── utils/            # Metrics, config utils, safe math, visualization
 ```
 
 ## Components
 
-### Strategies
-
-The `strategies` directory contains trading strategies:
-- Trend following
-- Mean reversion
-- Momentum
-- Arbitrage
-- Machine learning based
-
-### Agents
-
-The `agents` directory contains trading agents:
-- Market making
-- Execution
-- Risk management
-- Portfolio management
-
-### Signals
-
-The `signals` directory contains signal generation:
-- Technical indicators
-- Pattern recognition
-- Market sentiment
-- News analysis
-
-### Optimization
-
-The `optimization` directory contains strategy optimization:
-- Parameter tuning
-- Performance analysis
-- Backtesting
-- Risk optimization
+- **Strategies:** RSI, MACD, Bollinger Bands, pairs trading, strategy runner and registry.
+- **Backtesting:** Main and enhanced backtester; cost/slippage; walk-forward and evaluation.
+- **Agents:** Research, commentary, execution agents; agent registry and loop manager.
+- **Memory:** Agent memory, performance memory, preference storage (used by LLM config).
+- **Portfolio:** Allocation, position sizing, risk-aware portfolio logic.
+- **Risk:** Risk manager, advanced risk, tail risk controls.
+- **Models:** LSTM, XGBoost, Prophet, TCN, Transformer, GNN; model registry and tuning.
+- **Config:** Use root `config` when possible; `trading.config` for trading-specific overrides (see `config/CONFIG_README.md`).
 
 ## Usage
 
+Import from the trading package; ensure project root is on `sys.path` for `config` and `agents` imports.
+
 ```python
-from trading.strategies import TrendFollowing
-from trading.agents import MarketMaker
-from trading.signals import TechnicalIndicators
-from trading.optimization import StrategyOptimizer
-
-# Create a strategy
-strategy = TrendFollowing()
-
-# Create a market maker
-market_maker = MarketMaker()
-
-# Generate signals
-signals = TechnicalIndicators().generate()
-
-# Optimize strategy
-optimizer = StrategyOptimizer()
-optimized_params = optimizer.optimize(strategy)
+from trading.strategies.strategy_runner import StrategyRunner
+from trading.backtesting.backtester import Backtester
+from trading.memory import get_memory_store
+from trading.portfolio.allocator import Allocator
+from trading.risk.risk_manager import RiskManager
 ```
 
 ## Testing
 
 ```bash
-# Run trading tests
-pytest tests/unit/trading/
-
-# Run specific component tests
-pytest tests/unit/trading/strategies/
-pytest tests/unit/trading/agents/
+pytest tests/unit/ -v
+pytest tests/ -k trading -v
 ```
-
-## Configuration
-
-The trading module can be configured through:
-- Strategy parameters
-- Agent settings
-- Signal thresholds
-- Optimization criteria
 
 ## Dependencies
 
-- pandas
-- numpy
-- scikit-learn
-- ta-lib
-- backtrader
-
-## Contributing
-
-1. Follow the coding style guide
-2. Write unit tests for new features
-3. Update documentation
-4. Submit a pull request
-
-## License
-
-This module is part of the main project and is licensed under the MIT License. 
+pandas, numpy, scikit-learn, PyTorch (optional), and project requirements in root `requirements.txt`.

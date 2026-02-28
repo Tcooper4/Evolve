@@ -348,7 +348,7 @@ class AdvancedOrderExecutor:
             # Create child order request
             child_order = OrderRequest(
                 order_id=slice.slice_id,
-                ticker=parent_order.ticker,
+                symbol=parent_order.symbol,
                 side=parent_order.side,
                 order_type=OrderType.LIMIT if slice.price else OrderType.MARKET,
                 quantity=slice.quantity,
@@ -359,7 +359,7 @@ class AdvancedOrderExecutor:
             
             # Submit child order
             logger.info(
-                f"Executing slice {slice.slice_id}: {slice.quantity} {parent_order.ticker}"
+                f"Executing slice {slice.slice_id}: {slice.quantity} {parent_order.symbol}"
             )
             
             execution = await self.broker_adapter.submit_order(child_order)

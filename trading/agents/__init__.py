@@ -165,16 +165,19 @@ def get_research_agent():
 
 
 # Management and Coordination Agents - Lazy loading
+# AGENT_UPGRADE: Single entry point — get_agent_manager returns EnhancedAgentManager instance
 
 
 def get_agent_manager():
-    """Get AgentManager with lazy loading."""
-    return _lazy_import(".agent_manager", "AgentManager")
+    """Get the global EnhancedAgentManager instance (singleton)."""
+    from trading.agents.agent_manager import get_agent_manager as _get
+    return _get()
 
 
-def get_agent_loop_manager():
-    """Get AgentLoopManager with lazy loading."""
-    return _lazy_import(".agent_loop_manager", "AgentLoopManager")
+def get_agent_loop_manager(config=None):
+    """Get the global AgentLoopManager instance (singleton)."""
+    from trading.agents.agent_loop_manager import get_agent_loop_manager as _get
+    return _get(config)
 
 
 def get_task_delegation_agent():

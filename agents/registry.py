@@ -53,20 +53,25 @@ class AgentRegistry:
         self.agents: Dict[str, Type] = {}
         self.metadata: Dict[str, AgentMetadata] = {}
         self.agent_directories = ["agents", "trading.agents"]
+        self._discovery_done = False
+        # Discovery deferred to first use (get_agent, list_agents, get_registry_status)
 
-        # Discover and register all agents
+    def _ensure_discovered(self):
+        """Run discovery once, on first use."""
+        if self._discovery_done:
+            return
         self._discover_agents()
+        self._discovery_done = True
 
     def _discover_agents(self):
         """Discover and register all available agents."""
         logger.info("Starting agent discovery...")
-
         for directory in self.agent_directories:
             try:
                 self._discover_agents_in_directory(directory)
             except Exception as e:
                 logger.warning(f"Failed to discover agents in {directory}: {e}")
-
+        self._last_discovery = datetime.now().isoformat()
         logger.info(f"Agent discovery complete. Registered {len(self.agents)} agents.")
 
     def _discover_agents_in_directory(self, directory: str):
@@ -168,6 +173,7 @@ class AgentRegistry:
         Returns:
             Agent instance or None if not found
         """
+        self._ensure_discovered()
         agent_name = name.lower()
 
         if agent_name not in self.agents:
@@ -240,14 +246,17 @@ class AgentRegistry:
 
     def list_agents(self) -> List[str]:
         """Get list of all registered agent names."""
+        self._ensure_discovered()
         return list(self.agents.keys())
 
     def get_agent_metadata(self, name: str) -> Optional[AgentMetadata]:
         """Get metadata for a specific agent."""
+        self._ensure_discovered()
         return self.metadata.get(name.lower())
 
     def get_agents_by_capability(self, capability: str) -> List[str]:
         """Get agents that provide a specific capability."""
+        self._ensure_discovered()
         matching_agents = []
 
         for name, metadata in self.metadata.items():
@@ -258,6 +267,7 @@ class AgentRegistry:
 
     def search_agents(self, query: str) -> List[str]:
         """Search for agents by name or description."""
+        self._ensure_discovered()
         query = query.lower()
         matching_agents = []
 
@@ -274,13 +284,14 @@ class AgentRegistry:
     def reload_agents(self):
         """Reload all agents from their modules."""
         logger.info("Reloading agents...")
-
+        self._discovery_done = False
         # Clear existing registrations
         self.agents.clear()
         self.metadata.clear()
 
         # Rediscover agents
         self._discover_agents()
+        self._discovery_done = True
 
         logger.info("Agent reload complete")
 
@@ -291,6 +302,7 @@ class AgentRegistry:
         Returns:
             Dict: Registry status information
         """
+        self._ensure_discovered()
         return {
             "total_agents": len(self.agents),
             "agent_names": list(self.agents.keys()),
@@ -385,18 +397,16 @@ ALL_AGENTS = {
     "voice_prompt": get_voice_prompt_agent,
 }
 
-# Add all discovered agents to ALL_AGENTS
-
-
+# Add all discovered agents to ALL_AGENTS on first use (via get_registry().list_agents())
 def _populate_all_agents():
-    """Populate ALL_AGENTS with discovered agents."""
+    """Populate ALL_AGENTS with discovered agents. Called when ALL_AGENTS is needed."""
     registry = get_registry()
-    for agent_name in registry.list_agents():
+    for agent_name in registry.list_agents():  # triggers _ensure_discovered()
         if agent_name not in ALL_AGENTS:
             ALL_AGENTS[agent_name] = lambda name=agent_name, **kwargs: get_agent(
                 name, **kwargs
             )
 
 
-# Initialize ALL_AGENTS when module is imported
-_populate_all_agents()
+# No module-level discovery: _populate_all_agents() is not called at import.
+# Call _populate_all_agents() only if you need ALL_AGENTS to include discovered agents.

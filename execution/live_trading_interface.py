@@ -17,7 +17,7 @@ import numpy as np
 try:
     from alpaca.data.historical import StockHistoricalDataClient
     from alpaca.trading.client import TradingClient
-    from alpaca.trading.enums import OrderSide, TimeInForce
+    from alpaca.trading.enums import OrderSide as AlpacaOrderSide, TimeInForce
     from alpaca.trading.requests import (
         LimitOrderRequest,
         MarketOrderRequest,
@@ -32,25 +32,13 @@ except ImportError as e:
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class OrderRequest:
-    """Order request structure."""
-
-    symbol: str
-    side: str  # "buy" or "sell"
-    quantity: float
-    order_type: str  # "market", "limit", "stop", "stop_limit"
-    limit_price: Optional[float] = None
-    stop_price: Optional[float] = None
-    time_in_force: str = "day"
-    client_order_id: Optional[str] = None
-    strategy_id: Optional[str] = None
+# P2 fix: Canonical order types; support legacy callers via _ensure_canonical_order_request
+from execution.models import OrderRequest, OrderSide, OrderType
 
 
 @dataclass
-class OrderStatus:
-    """Order status information."""
+class OrderStatusInfo:
+    """Order status response (distinct from execution.models OrderStatus enum)."""
 
     order_id: str
     symbol: str
@@ -67,6 +55,28 @@ class OrderStatus:
     filled_at: Optional[datetime] = None
     client_order_id: Optional[str] = None
     strategy_id: Optional[str] = None
+
+
+# Backward-compat alias (callers expect OrderStatus as response type)
+OrderStatus = OrderStatusInfo
+
+
+def _ensure_canonical_order_request(order_request: Any) -> OrderRequest:
+    """Convert legacy (OrderRequestLegacy or dict-like) to canonical OrderRequest."""
+    if isinstance(order_request, OrderRequest):
+        return order_request
+    # Legacy shape: symbol, side str, order_type str, limit_price, ...
+    return OrderRequest.from_legacy(
+        symbol=getattr(order_request, "symbol", ""),
+        side=getattr(order_request, "side", "buy"),
+        quantity=getattr(order_request, "quantity", 0.0),
+        order_type=getattr(order_request, "order_type", "market"),
+        limit_price=getattr(order_request, "limit_price", None),
+        stop_price=getattr(order_request, "stop_price", None),
+        time_in_force=getattr(order_request, "time_in_force", "day"),
+        client_order_id=getattr(order_request, "client_order_id", None),
+        strategy_id=getattr(order_request, "strategy_id", None),
+    )
 
 
 @dataclass
@@ -293,22 +303,22 @@ class SimulatedExecutionEngine:
 
     def place_order(self, order_request: OrderRequest) -> OrderStatus:
         """Place an order in simulated environment."""
+        order_request = _ensure_canonical_order_request(order_request)
         # Simulate latency
         time.sleep(self._simulate_latency())
 
-        # Generate order ID
-        order_id = self._generate_order_id()
+        order_id = order_request.order_id or self._generate_order_id()
 
-        # Create order status
+        # Create order status (OrderStatusInfo)
         order_status = OrderStatus(
             order_id=order_id,
             symbol=order_request.symbol,
-            side=order_request.side,
+            side=order_request.side.value,
             quantity=order_request.quantity,
             filled_quantity=0.0,
-            order_type=order_request.order_type,
+            order_type=order_request.order_type.value,
             status="pending",
-            limit_price=order_request.limit_price,
+            limit_price=order_request.price,
             stop_price=order_request.stop_price,
             created_at=datetime.now(),
             client_order_id=order_request.client_order_id,
@@ -319,11 +329,11 @@ class SimulatedExecutionEngine:
         self.orders[order_id] = order_status
 
         # Process order based on type
-        if order_request.order_type == "market":
+        if order_request.order_type == OrderType.MARKET:
             self._process_market_order(order_status)
-        elif order_request.order_type == "limit":
+        elif order_request.order_type == OrderType.LIMIT:
             self._process_limit_order(order_status)
-        elif order_request.order_type == "stop":
+        elif order_request.order_type == OrderType.STOP:
             self._process_stop_order(order_status)
 
         return order_status
@@ -539,9 +549,14 @@ class AlpacaTradingInterface:
 
     def place_order(self, order_request: OrderRequest) -> OrderStatus:
         """Place order through Alpaca."""
+        order_request = _ensure_canonical_order_request(order_request)
         try:
-            # Convert order side
-            side = OrderSide.BUY if order_request.side == "buy" else OrderSide.SELL
+            # Map canonical OrderSide to Alpaca
+            side = (
+                AlpacaOrderSide.BUY
+                if order_request.side == OrderSide.BUY
+                else AlpacaOrderSide.SELL
+            )
 
             # Convert time in force
             time_in_force = (
@@ -551,7 +566,7 @@ class AlpacaTradingInterface:
             )
 
             # Create appropriate order request based on order type
-            if order_request.order_type == "market":
+            if order_request.order_type == OrderType.MARKET:
                 alpaca_order_request = MarketOrderRequest(
                     symbol=order_request.symbol,
                     qty=order_request.quantity,
@@ -559,16 +574,16 @@ class AlpacaTradingInterface:
                     time_in_force=time_in_force,
                     client_order_id=order_request.client_order_id,
                 )
-            elif order_request.order_type == "limit":
+            elif order_request.order_type == OrderType.LIMIT:
                 alpaca_order_request = LimitOrderRequest(
                     symbol=order_request.symbol,
                     qty=order_request.quantity,
                     side=side,
                     time_in_force=time_in_force,
-                    limit_price=order_request.limit_price,
+                    limit_price=order_request.price,
                     client_order_id=order_request.client_order_id,
                 )
-            elif order_request.order_type == "stop":
+            elif order_request.order_type == OrderType.STOP:
                 alpaca_order_request = StopOrderRequest(
                     symbol=order_request.symbol,
                     qty=order_request.quantity,
@@ -577,13 +592,13 @@ class AlpacaTradingInterface:
                     stop_price=order_request.stop_price,
                     client_order_id=order_request.client_order_id,
                 )
-            elif order_request.order_type == "stop_limit":
+            elif order_request.order_type == OrderType.STOP_LIMIT:
                 alpaca_order_request = StopLimitOrderRequest(
                     symbol=order_request.symbol,
                     qty=order_request.quantity,
                     side=side,
                     time_in_force=time_in_force,
-                    limit_price=order_request.limit_price,
+                    limit_price=order_request.price,
                     stop_price=order_request.stop_price,
                     client_order_id=order_request.client_order_id,
                 )
@@ -728,18 +743,30 @@ class LiveTradingInterface:
         """Initialize live trading interface.
 
         Args:
-            mode: Trading mode ("simulated" or "live")
+            mode: Trading mode: "simulated" (no broker), "paper" (Alpaca paper), or "live" (real money only)
             alpaca_config: Alpaca configuration
         """
         self.mode = mode
         self.alpaca_config = alpaca_config or {}
 
-        # Initialize appropriate interface
+        # Safety fix: mode="live" means real money only; do not allow paper_trading=True
+        # so that "live" is unambiguous. Use mode="paper" or "simulated" for paper.
         if mode == "live" and ALPACA_AVAILABLE:
+            paper_trading = False  # live mode always means real money
+            logger.info(
+                "Live trading mode: paper_trading=False (real money). "
+                "Config paper_trading is ignored when mode is 'live'."
+            )
             self.trading_interface = AlpacaTradingInterface(
                 api_key=self.alpaca_config.get("api_key"),
                 secret_key=self.alpaca_config.get("secret_key"),
-                paper_trading=self.alpaca_config.get("paper_trading", True),
+                paper_trading=paper_trading,
+            )
+        elif mode == "paper" and ALPACA_AVAILABLE:
+            self.trading_interface = AlpacaTradingInterface(
+                api_key=self.alpaca_config.get("api_key"),
+                secret_key=self.alpaca_config.get("secret_key"),
+                paper_trading=True,
             )
         else:
             self.trading_interface = SimulatedExecutionEngine(
@@ -766,6 +793,7 @@ class LiveTradingInterface:
 
     def place_order(self, order_request: OrderRequest) -> OrderStatus:
         """Place an order."""
+        order_request = _ensure_canonical_order_request(order_request)
         try:
             # Risk checks
             if not self._validate_order(order_request):
@@ -786,21 +814,28 @@ class LiveTradingInterface:
 
             return order_status
 
-        except Exception as e:
+        except (ValueError, OSError, ImportError) as e:
             logger.error(f"Error placing order: {e}")
             raise
 
     def _validate_order(self, order_request: OrderRequest) -> bool:
         """Validate order against risk parameters."""
+        order_request = _ensure_canonical_order_request(order_request)
         try:
             # Get account info
             account_info = self.get_account_info()
 
-            # Check position size
-            if order_request.side == "buy":
-                order_value = order_request.quantity * (
-                    order_request.limit_price or 100.0
-                )
+            # Safety fix: Do not use a hardcoded fallback price for order value; reject
+            # validation when price is unknown so risk limits are not misapplied.
+            if order_request.side == OrderSide.BUY:
+                price = order_request.price
+                if price is None:
+                    logger.warning(
+                        "Cannot validate buy order value without price (limit_price unset); "
+                        "rejecting to avoid incorrect risk check."
+                    )
+                    return False
+                order_value = order_request.quantity * price
                 if order_value > account_info.buying_power * self.max_position_size:
                     logger.warning(
                         f"Order value {order_value} exceeds max position size"
@@ -814,7 +849,7 @@ class LiveTradingInterface:
 
             return True
 
-        except Exception as e:
+        except (ValueError, OSError, AttributeError) as e:
             logger.error(f"Error validating order: {e}")
             return False
 

@@ -29,7 +29,14 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-# Local imports
+# P2 fix: Canonical order types (single source of truth)
+from execution.models import (
+    OrderExecution,
+    OrderRequest,
+    OrderSide,
+    OrderStatus,
+    OrderType,
+)
 
 
 class BrokerType(Enum):
@@ -39,80 +46,6 @@ class BrokerType(Enum):
     IBKR = "ibkr"
     POLYGON = "polygon"
     SIMULATION = "simulation"
-
-
-class OrderType(Enum):
-    """Order types supported by brokers"""
-
-    MARKET = "market"
-    LIMIT = "limit"
-    STOP = "stop"
-    STOP_LIMIT = "stop_limit"
-    TRAILING_STOP = "trailing_stop"
-    TWAP = "twap"  # Time-Weighted Average Price
-    VWAP = "vwap"  # Volume-Weighted Average Price
-    ICEBERG = "iceberg"  # Iceberg order (hidden quantity)
-
-
-class OrderSide(Enum):
-    """Order sides"""
-
-    BUY = "buy"
-    SELL = "sell"
-
-
-class OrderStatus(Enum):
-    """Order statuses"""
-
-    PENDING = "pending"
-    SUBMITTED = "submitted"
-    PARTIAL = "partial"
-    FILLED = "filled"
-    CANCELLED = "cancelled"
-    REJECTED = "rejected"
-    EXPIRED = "expired"
-
-
-@dataclass
-class OrderRequest:
-    """Order request structure"""
-
-    order_id: str
-    ticker: str
-    side: OrderSide
-    order_type: OrderType
-    quantity: float
-    price: Optional[float] = None
-    stop_price: Optional[float] = None
-    time_in_force: str = "day"
-    client_order_id: Optional[str] = None
-    timestamp: str = None
-    # Advanced order parameters
-    twap_duration_seconds: Optional[int] = None  # For TWAP orders
-    twap_slice_count: Optional[int] = None  # Number of slices for TWAP
-    vwap_start_time: Optional[str] = None  # For VWAP orders
-    vwap_end_time: Optional[str] = None  # For VWAP orders
-    iceberg_visible_quantity: Optional[float] = None  # For Iceberg orders
-    iceberg_reveal_quantity: Optional[float] = None  # Quantity to reveal when filled
-
-
-@dataclass
-class OrderExecution:
-    """Order execution result"""
-
-    order_id: str
-    ticker: str
-    side: OrderSide
-    order_type: OrderType
-    quantity: float
-    price: float
-    executed_quantity: float
-    average_price: float
-    commission: float
-    timestamp: str
-    status: OrderStatus
-    fills: List[Dict[str, Any]]
-    metadata: Dict[str, Any]
 
 
 @dataclass
@@ -248,6 +181,19 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
         self.secret_key = config.get("secret_key")
         self.base_url = config.get("base_url", "https://paper-api.alpaca.markets")
         self.client = None
+        # Safety fix: Explicit paper/live flag from config; do not infer from URL string
+        # to avoid misconfiguration (e.g. typo in URL). Fallback to URL only when unset.
+        paper_cfg = config.get("paper")
+        if paper_cfg is None:
+            self._paper = "paper" in (self.base_url or "")
+            self.logger.warning(
+                "Alpaca 'paper' not set in config; derived from base_url=%s -> paper=%s. "
+                "Set config['paper'] explicitly for safety.",
+                self.base_url,
+                self._paper,
+            )
+        else:
+            self._paper = bool(paper_cfg)
 
         # Rate limits
         self.rate_limits = {
@@ -268,11 +214,11 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
                 self.is_connected = False
                 return False
 
-            # Initialize trading client
+            # Initialize trading client (paper/live from explicit config, not URL)
             self.client = TradingClient(
                 api_key=self.api_key,
                 secret_key=self.secret_key,
-                paper=True if "paper" in self.base_url else False,
+                paper=self._paper,
             )
 
             # Test connection
@@ -282,10 +228,14 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
             self.logger.info(f"Connected to Alpaca: {account.id}")
             return True
 
-        except Exception as _unused_var:  # Placeholder, flake8 ignore: F841
-            self.logger.error(f"Failed to connect to Alpaca: {_unused_var}")
+        except (ImportError, ValueError, ConnectionError, OSError) as e:
+            self.logger.error(f"Failed to connect to Alpaca: {e}")
             self.is_connected = False
             return False
+        except Exception as e:
+            self.logger.error(f"Failed to connect to Alpaca: {e}")
+            self.is_connected = False
+            raise
 
     async def disconnect(self):
         """Disconnect from Alpaca"""
@@ -322,14 +272,14 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
             # Create order request based on type
             if order.order_type == OrderType.MARKET:
                 order_request = MarketOrderRequest(
-                    symbol=order.ticker,
+                    symbol=order.symbol,
                     qty=order.quantity,
                     side=side,
                     time_in_force=TimeInForce.DAY,
                 )
             elif order.order_type == OrderType.LIMIT:
                 order_request = LimitOrderRequest(
-                    symbol=order.ticker,
+                    symbol=order.symbol,
                     qty=order.quantity,
                     side=side,
                     time_in_force=TimeInForce.DAY,
@@ -337,7 +287,7 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
                 )
             elif order.order_type == OrderType.STOP:
                 order_request = StopOrderRequest(
-                    symbol=order.ticker,
+                    symbol=order.symbol,
                     qty=order.quantity,
                     side=side,
                     time_in_force=TimeInForce.DAY,
@@ -358,7 +308,7 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
             # Create execution result
             execution = OrderExecution(
                 order_id=order.order_id,
-                ticker=order.ticker,
+                symbol=order.symbol,
                 side=order.side,
                 order_type=order.order_type,
                 quantity=order.quantity,
@@ -407,7 +357,7 @@ class AlpacaBrokerAdapter(BaseBrokerAdapter):
             # Convert to our format
             execution = OrderExecution(
                 order_id=order_id,
-                ticker=order_details.symbol,
+                symbol=order_details.symbol,
                 side=(
                     OrderSide.BUY
                     if order_details.side.value == "buy"
@@ -603,7 +553,7 @@ class IBKRBrokerAdapter(BaseBrokerAdapter):
             from ib_insync import LimitOrder, MarketOrder, Stock, StopOrder
 
             # Create contract
-            contract = Stock(order.ticker, "SMART", "USD")
+            contract = Stock(order.symbol, "SMART", "USD")
 
             # Create order based on type
             if order.order_type == OrderType.MARKET:
@@ -631,7 +581,7 @@ class IBKRBrokerAdapter(BaseBrokerAdapter):
             # Create execution result
             execution = OrderExecution(
                 order_id=order.order_id,
-                ticker=order.ticker,
+                symbol=order.symbol,
                 side=order.side,
                 order_type=order.order_type,
                 quantity=order.quantity,
@@ -950,12 +900,12 @@ class SimulationBrokerAdapter(BaseBrokerAdapter):
         if order.order_type == OrderType.MARKET:
             try:
                 # Get real market data for execution price
-                market_data = await self.get_market_data(order.ticker)
+                market_data = await self.get_market_data(order.symbol)
                 execution_price = market_data.last
             except Exception as e:
-                self.logger.error(f"Failed to get real market price for {order.ticker}: {e}")
+                self.logger.error(f"Failed to get real market price for {order.symbol}: {e}")
                 raise RuntimeError(
-                    f"Cannot execute order for {order.ticker}. "
+                    f"Cannot execute order for {order.symbol}. "
                     "Real market data is required for simulation."
                 )
         else:
@@ -964,7 +914,7 @@ class SimulationBrokerAdapter(BaseBrokerAdapter):
         # Create execution
         execution = OrderExecution(
             order_id=order.order_id,
-            ticker=order.ticker,
+            symbol=order.symbol,
             side=order.side,
             order_type=order.order_type,
             quantity=order.quantity,
@@ -1118,7 +1068,7 @@ class BrokerAdapter:
             # Return a pending execution (will be updated as slices fill)
             return OrderExecution(
                 order_id=order.order_id,
-                ticker=order.ticker,
+                symbol=order.symbol,
                 side=order.side,
                 order_type=order.order_type,
                 quantity=order.quantity,
@@ -1160,7 +1110,7 @@ class BrokerAdapter:
                 # Convert to OrderExecution format
                 return OrderExecution(
                     order_id=status["order_id"],
-                    ticker=status["ticker"],
+                    symbol=status.get("ticker", status.get("symbol", "")),
                     side=side,
                     order_type=OrderType(status["order_type"].lower()),
                     quantity=status["total_quantity"],

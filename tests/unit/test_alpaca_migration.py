@@ -15,10 +15,8 @@ from execution.broker_adapter import AlpacaBrokerAdapter
 from execution.broker_adapter import OrderRequest as BrokerOrderRequest
 
 # Test the live trading interface
-from execution.live_trading_interface import (
-    AlpacaTradingInterface,
-    OrderRequest,
-)
+from execution.live_trading_interface import AlpacaTradingInterface
+from execution.models import OrderRequest
 
 # Test the execution providers
 from trading.agents.execution.execution_providers import (
@@ -190,7 +188,7 @@ class TestAlpacaTradingInterfaceMigration:
 
     def test_alpaca_interface_place_market_order(self, alpaca_interface):
         """Test placing market order with alpaca-py"""
-        order_request = OrderRequest(
+        order_request = OrderRequest.from_legacy(
             symbol="AAPL",
             side="buy",
             quantity=10,
@@ -236,7 +234,7 @@ class TestAlpacaTradingInterfaceMigration:
 
     def test_alpaca_interface_place_limit_order(self, alpaca_interface):
         """Test placing limit order with alpaca-py"""
-        order_request = OrderRequest(
+        order_request = OrderRequest.from_legacy(
             symbol="AAPL",
             side="sell",
             quantity=5,

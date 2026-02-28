@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -12,6 +13,20 @@ from agents.llm.tools import ToolRegistry
 from trading.logs.audit_logger import audit_logger
 from trading.logs.logger import get_logger
 from trading.memory.agent_memory_manager import AgentMemoryManager as MemoryManager
+
+# AGENT_UPGRADE: Centralized LLM config for Claude (generate_response)
+try:
+    from config.llm_config import get_llm_config, CLAUDE_PRIMARY_MODEL
+except ImportError:
+    import os
+    CLAUDE_PRIMARY_MODEL = "claude-sonnet-4-20250514"
+    def get_llm_config():
+        from dataclasses import dataclass
+        @dataclass
+        class _C:
+            anthropic_api_key: Optional[str] = None
+            primary_model: str = CLAUDE_PRIMARY_MODEL
+        return _C(anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"), primary_model=CLAUDE_PRIMARY_MODEL)
 
 # Get logger
 logger = get_logger(__name__)
@@ -144,6 +159,52 @@ class LLMInterface:
             )
 
             logger.error(f"Error processing prompt: {str(e)}")
+            raise
+
+    async def generate_response(self, prompt: str) -> str:
+        """
+        Generate a single response using the app's active LLM (Admin setting).
+        Routes through get_active_llm(); supports Claude, GPT-4, Gemini, Ollama, HuggingFace.
+        Failures are logged and re-raised (no silent fallback).
+        """
+        try:
+            from agents.llm.active_llm_calls import call_active_llm_simple
+        except ImportError:
+            from config.llm_config import get_llm_config, get_anthropic_client, CLAUDE_PRIMARY_MODEL
+            llm = get_llm_config()
+            if not getattr(llm, "anthropic_api_key", None):
+                raise ValueError("ANTHROPIC_API_KEY not set and active_llm_calls unavailable.")
+            model = getattr(llm, "primary_model", CLAUDE_PRIMARY_MODEL)
+            loop = asyncio.get_event_loop()
+            def _call_claude() -> str:
+                import anthropic
+                client = anthropic.Anthropic(api_key=llm.anthropic_api_key)
+                msg = client.messages.create(
+                    model=model,
+                    max_tokens=2048,
+                    temperature=0.3,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                return msg.content[0].text
+            return await loop.run_in_executor(None, _call_claude)
+        loop = asyncio.get_event_loop()
+        try:
+            self.metrics["total_requests"] += 1
+            text = await loop.run_in_executor(None, lambda: call_active_llm_simple(prompt))
+            self.metrics["successful_requests"] += 1
+            return text
+        except Exception as e:
+            self.metrics["failed_requests"] += 1
+            self.metrics["errors"].append(
+                {"timestamp": datetime.now().isoformat(), "error": str(e), "prompt": prompt[:200]}
+            )
+            audit_logger.log_error(
+                error=str(e),
+                agent_id="LLMInterface",
+                module=__name__,
+                metadata={"prompt_preview": prompt[:200]},
+            )
+            logger.error(f"generate_response failed: {e}")
             raise
 
     def create_agent(

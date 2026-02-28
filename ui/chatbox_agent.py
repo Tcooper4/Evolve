@@ -743,13 +743,13 @@ class ChatboxAgent:
 
     def _create_order_request(self, command: TradingCommand):
         """Create order request from command."""
-        from execution.live_trading_interface import OrderRequest
+        from execution.models import OrderRequest
 
-        return OrderRequest(
+        return OrderRequest.from_legacy(
             symbol=command.symbol,
             side=command.action,
             quantity=command.quantity,
-            order_type="market",  # Default to market order
+            order_type="market",
             limit_price=command.price,
             strategy_id="chatbox_agent",
         )

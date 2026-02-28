@@ -34,7 +34,6 @@ try:
 except ImportError:
     TIKTOKEN_AVAILABLE = False
 
-from trading.backtesting.backtester import Backtester
 from trading.data.providers.fallback_provider import FallbackDataProvider
 from trading.execution.trade_execution_simulator import TradeExecutionSimulator
 from trading.models.forecast_router import ForecastRouter
@@ -774,6 +773,14 @@ class PromptAgent:
             # Sanitize and validate prompt
             prompt = self.sanitize_prompt(prompt)
 
+            # AGENT_MEMORY_LAYER: Capture user-stated preferences (risk tolerance, style, etc.)
+            try:
+                from trading.memory import get_memory_store
+
+                get_memory_store().ingest_preference_text(prompt, source="PromptAgent")
+            except Exception:
+                pass
+
             # Estimate token usage and cost
             token_estimate = self.estimate_token_usage(prompt, model="gpt-4")
             self.batch_log(
@@ -812,6 +819,10 @@ class PromptAgent:
                 response = self._handle_analysis_request(params)
             elif intent == "create_model":
                 response = self._handle_model_creation_request(params)
+            elif intent == "critique_backtest":
+                response = self._handle_critique_backtest_request(params)
+            elif intent == "recommend_model":
+                response = self._handle_recommend_model_request(params)
             else:
                 response = {
                     "success": True,
@@ -869,14 +880,73 @@ class PromptAgent:
             )
 
     def _parse_prompt(self, prompt: str) -> Tuple[str, Dict[str, Any]]:
-        """Parse prompt to extract intent and parameters.
+        """Parse prompt to extract intent and parameters using Claude API.
 
-        Args:
-            prompt: User prompt
-
-        Returns:
-            Tuple of (intent, parameters)
+        Uses Claude for semantic intent detection; falls back to regex/keywords
+        if Claude is unavailable or returns invalid output. AGENT_UPGRADE.
         """
+        try:
+            from config.llm_config import get_llm_config, CLAUDE_PRIMARY_MODEL
+            llm = get_llm_config()
+            if getattr(llm, "anthropic_api_key", None):
+                import anthropic
+                client = anthropic.Anthropic(api_key=llm.anthropic_api_key)
+                model = getattr(llm, "primary_model", CLAUDE_PRIMARY_MODEL)
+                system = (
+                    "You are an intent classifier for the Evolve trading system. "
+                    "Given a user message, respond with ONLY a single JSON object (no markdown, no explanation) with two keys: "
+                    '"intent" and "params". '
+                    "intent must be exactly one of: forecast, strategy, backtest, trade, optimize, analyze, create_model, critique_backtest, recommend_model, general. "
+                    "params must be an object with: symbol (ticker, default AAPL if missing), timeframe (e.g. 15d, 30d), "
+                    "strategy (name from: RSI Mean Reversion, Bollinger Bands, Moving Average Crossover, etc.), "
+                    "model (e.g. ARIMA, LSTM, XGBoost), create_new_model (boolean), prompt (original user message). "
+                    "Extract ticker symbols (1-5 uppercase letters), timeframes (e.g. next 5 days -> 5d), and strategy/model keywords from the message."
+                )
+                resp = client.messages.create(
+                    model=model,
+                    max_tokens=1024,
+                    temperature=0.0,
+                    system=system,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                text = resp.content[0].text.strip()
+                if text.startswith("```"):
+                    lines = text.split("\n")
+                    if lines[0].startswith("```"):
+                        lines = lines[1:]
+                    if lines and lines[-1].strip() == "```":
+                        lines = lines[:-1]
+                    text = "\n".join(lines)
+                data = json.loads(text)
+                intent = (data.get("intent") or "general").lower()
+                valid_intents = {
+                    "forecast", "strategy", "backtest", "trade", "optimize",
+                    "analyze", "create_model", "critique_backtest", "recommend_model", "general",
+                }
+                if intent not in valid_intents:
+                    intent = "general"
+                params = data.get("params") or {}
+                symbol = (params.get("symbol") or "AAPL").upper()
+                if not (isinstance(symbol, str) and 1 <= len(symbol) <= 5):
+                    symbol = "AAPL"
+                params.setdefault("symbol", symbol)
+                params.setdefault("timeframe", "15d")
+                params.setdefault("prompt", prompt)
+                if not params.get("strategy"):
+                    params["strategy"] = self._select_best_strategy(params["symbol"])
+                if not params.get("model"):
+                    params["model"] = self._select_best_model(
+                        params["symbol"], params["timeframe"]
+                    )
+                params["create_new_model"] = bool(params.get("create_new_model", False))
+                self.logger.info(f"Parsed prompt (Claude) - Intent: {intent}, Params: {params}")
+                return intent, params
+        except Exception as e:
+            self.logger.debug(f"Claude intent parsing failed, using regex fallback: {e}")
+        return self._parse_prompt_regex_fallback(prompt)
+
+    def _parse_prompt_regex_fallback(self, prompt: str) -> Tuple[str, Dict[str, Any]]:
+        """Regex/keyword fallback for intent and parameter extraction (original logic)."""
         prompt_lower = prompt.lower()
 
         # Extract symbol
@@ -916,6 +986,10 @@ class PromptAgent:
             intent = "optimize"
         elif any(word in prompt_lower for word in ["analyze", "analysis", "report"]):
             intent = "analyze"
+        elif any(word in prompt_lower for word in ["critique", "critic", "review"]) and ("backtest" in prompt_lower or "last" in prompt_lower or "result" in prompt_lower):
+            intent = "critique_backtest"
+        elif any(phrase in prompt_lower for phrase in ["what model", "which model", "model should i use", "model for", "best model"]):
+            intent = "recommend_model"
         else:
             intent = "general"
 
@@ -1127,15 +1201,15 @@ class PromptAgent:
     def _handle_backtest_request(self, params: Dict[str, Any]) -> AgentResponse:
         """Handle backtest request.
 
-        Args:
-            params: Request parameters
-
-        Returns:
-            Agent response
+        Uses strategy registry + generate_signals + metrics (same pattern as
+        pages/2_Strategy_Testing). Backtester class has no instance run_backtest;
+        module-level run_backtest expects a .run() that does not exist. See BACKTEST_FIX.md.
         """
         try:
+            import pandas as pd
+
             symbol = params["symbol"]
-            strategy = params["strategy"]
+            strategy_name = params.get("strategy") or "RSI"
 
             # Get historical data
             end_date = datetime.now()
@@ -1154,20 +1228,91 @@ class PromptAgent:
                     ],
                 )
 
-            # Run backtest
-            backtester = Backtester(data)
-            equity_curve, trade_log, metrics = backtester.run_backtest([strategy])
+            # Normalize to lowercase columns and ensure OHLCV (yfinance can return MultiIndex)
+            data = data.copy()
+            try:
+                if hasattr(data.columns, "levels"):
+                    data = data.droplevel(axis=1, level=0) if data.columns.nlevels > 1 else data
+                data.columns = [str(c).lower().strip() for c in data.columns]
+            except Exception:
+                pass
+            if "close" not in data.columns:
+                for c in data.columns:
+                    if "close" in str(c).lower():
+                        data["close"] = data[c]
+                        break
+            if "close" not in data.columns:
+                return AgentResponse(
+                    success=False,
+                    message=f"Data for {symbol} has no 'close' column",
+                    recommendations=["Check data provider output format"],
+                )
+            for col, default in [("open", "close"), ("high", "close"), ("low", "close"), ("volume", 1.0)]:
+                if col not in data.columns:
+                    data[col] = data[default] if default != 1.0 else 1.0
 
-            # Analyze results
-            sharpe = metrics.get("sharpe_ratio", 0)
-            total_return = metrics.get("total_return", 0)
-            max_dd = metrics.get("max_drawdown", 0)
+            # Resolve strategy and run backtest (strategy -> signals -> metrics)
+            strategy_instance, resolved_name = self._get_backtest_strategy(strategy_name)
+            if strategy_instance is None:
+                return AgentResponse(
+                    success=False,
+                    message=f"Unknown strategy: {strategy_name}",
+                    recommendations=["Use one of: RSI, Bollinger Bands, MACD, SMA Crossover"],
+                )
 
-            message = f"Backtest Results for {strategy} on {symbol}:\n"
+            signals_df = strategy_instance.generate_signals(data)
+            if signals_df is None or signals_df.empty:
+                return AgentResponse(
+                    success=False,
+                    message=f"Strategy {resolved_name} produced no signals for {symbol}",
+                    recommendations=["Try a longer date range or different symbol"],
+                )
+
+            signal_col = "signal" if "signal" in signals_df.columns else (signals_df.columns[0] if len(signals_df.columns) > 0 else None)
+            if signal_col is None:
+                return AgentResponse(
+                    success=False,
+                    message=f"No signal column from {resolved_name}",
+                    recommendations=["Check strategy implementation"],
+                )
+
+            # Metrics and equity curve (mirror pages/2_Strategy_Testing)
+            initial_capital = 100000.0
+            data = data.reindex(signals_df.index).ffill().bfill()
+            data["returns"] = data["close"].pct_change()
+            data["strategy_returns"] = signals_df[signal_col].shift(1) * data["returns"]
+            data["strategy_returns"] = data["strategy_returns"].fillna(0)
+            equity_curve = initial_capital * (1 + data["strategy_returns"]).cumprod()
+            equity_curve = equity_curve.fillna(initial_capital)
+
+            total_return = float((equity_curve.iloc[-1] / initial_capital - 1)) if len(equity_curve) > 0 else 0.0
+            returns_series = data["strategy_returns"].replace(0, np.nan).dropna()
+            if len(returns_series) > 0 and returns_series.std() > 0:
+                sharpe = float((returns_series.mean() / returns_series.std()) * np.sqrt(252))
+            else:
+                sharpe = 0.0
+            cumulative = (1 + data["strategy_returns"]).cumprod()
+            running_max = cumulative.cummax()
+            drawdown = cumulative / running_max - 1
+            max_dd = float(drawdown.min()) if len(drawdown) > 0 else 0.0
+            trades = returns_series[returns_series != 0]
+            win_rate = float((trades > 0).sum() / len(trades)) if len(trades) > 0 else 0.0
+
+            metrics = {
+                "sharpe_ratio": sharpe,
+                "total_return": total_return,
+                "max_drawdown": max_dd,
+                "win_rate": win_rate,
+            }
+
+            equity_curve_df = pd.DataFrame({"equity_curve": equity_curve}, index=equity_curve.index)
+            trade_log = signals_df[signals_df[signal_col] != 0].to_dict("records") if signal_col in signals_df.columns else []
+
+            message = f"Backtest Results for {resolved_name} on {symbol}:\n"
             message += f"Sharpe Ratio: {sharpe:.2f}\n"
             message += f"Total Return: {total_return:.2%}\n"
             message += f"Max Drawdown: {max_dd:.2%}\n"
-            message += f"Win Rate: {metrics.get('win_rate', 0):.2%}\n"
+            message += f"Win Rate: {win_rate:.2%}\n"
 
             recommendations = []
             if sharpe < 1.0:
@@ -1199,7 +1344,7 @@ class PromptAgent:
                 message=message,
                 data={
                     "metrics": metrics,
-                    "equity_curve": equity_curve,
+                    "equity_curve": equity_curve_df,
                     "trade_log": trade_log,
                 },
                 recommendations=recommendations,
@@ -1213,6 +1358,113 @@ class PromptAgent:
                 message=f"Backtest failed: {str(e)}",
                 recommendations=["Check data availability and strategy parameters"],
             )
+
+    def _handle_critique_backtest_request(self, params: Dict[str, Any]) -> AgentResponse:
+        """Handle 'critique my last backtest' — use agent_tools.critique_backtest."""
+        try:
+            from trading.services.agent_tools import critique_backtest
+
+            metrics = params.get("metrics") or {}
+            out = critique_backtest(metrics)
+            if out.get("success"):
+                msg = out.get("critique", "") or "No specific issues found."
+                if out.get("suggestions"):
+                    msg += "\n\nSuggestions:\n" + "\n".join(f"• {s}" for s in out["suggestions"])
+                return AgentResponse(
+                    success=True,
+                    message=msg,
+                    data=out,
+                    recommendations=out.get("suggestions", []),
+                    next_actions=["Run walk-forward validation", "Adjust parameters"],
+                )
+            return AgentResponse(
+                success=False,
+                message=out.get("error", "Critique unavailable.") or "Run a backtest first, then ask to critique it.",
+                recommendations=out.get("suggestions", ["Run a backtest in Strategy Testing"]),
+            )
+        except Exception as e:
+            self.logger.exception("Critique backtest failed: %s", e)
+            return AgentResponse(
+                success=False,
+                message=f"Critique failed: {e}",
+                recommendations=["Run a backtest in Strategy Testing, then ask again."],
+            )
+
+    def _handle_recommend_model_request(self, params: Dict[str, Any]) -> AgentResponse:
+        """Handle 'what model should I use for X' — use agent_tools.recommend_model."""
+        try:
+            from trading.services.agent_tools import recommend_model
+
+            symbol = params.get("symbol", "AAPL")
+            timeframe = params.get("timeframe", "15d")
+            days = 30
+            try:
+                days = int(str(timeframe).replace("d", "").replace("w", "").replace("m", ""))
+                if "w" in str(timeframe).lower():
+                    days = days * 7
+                if "m" in str(timeframe).lower():
+                    days = days * 30
+            except Exception:
+                pass
+            horizon = "short_term" if days <= 14 else "medium_term" if days <= 60 else "long_term"
+            out = recommend_model(horizon=horizon, n_data_points=min(500, max(100, days * 2)))
+            if out.get("success") and out.get("model"):
+                msg = f"For {symbol} (horizon ~{days}d), recommended model: **{out['model']}**"
+                if out.get("confidence") is not None:
+                    msg += f" (confidence: {out['confidence']:.2f})"
+                msg += "."
+                return AgentResponse(
+                    success=True,
+                    message=msg,
+                    data=out,
+                    recommendations=["Use Forecasting page to train and compare models"],
+                    next_actions=["Run forecast with recommended model", "Compare with other models"],
+                )
+            fallback = out.get("fallback_models", ["LSTM", "ARIMA", "Prophet"])
+            msg = f"Model suggestion for {symbol}: try {', '.join(fallback)}. " + (out.get("error") or "")
+            return AgentResponse(
+                success=True,
+                message=msg,
+                data=out,
+                recommendations=["Use Model Lab to train and compare"],
+                next_actions=["Open Forecasting or Model Lab"],
+            )
+        except Exception as e:
+            self.logger.exception("Recommend model failed: %s", e)
+            return AgentResponse(
+                success=False,
+                message=f"Model recommendation failed: {e}",
+                recommendations=["Try: LSTM for short-term, Prophet for longer horizons"],
+            )
+
+    def _get_backtest_strategy(self, strategy_name: str) -> Tuple[Optional[Any], str]:
+        """Resolve strategy name to (instance, resolved_name). Uses same strategies as 2_Strategy_Testing."""
+        if not strategy_name or not isinstance(strategy_name, str):
+            strategy_name = "RSI"
+        name = strategy_name.strip()
+        name_lower = name.lower()
+
+        try:
+            from trading.strategies.bollinger_strategy import BollingerStrategy, BollingerConfig
+            from trading.strategies.macd_strategy import MACDStrategy, MACDConfig
+            from trading.strategies.rsi_strategy import RSIStrategy
+            from trading.strategies.sma_strategy import SMAStrategy, SMAConfig
+        except ImportError as e:
+            self.logger.warning(f"Strategy imports failed: {e}")
+            return None, name
+
+        # Map display names and aliases to (class, config_class, default_params)
+        if "bollinger" in name_lower or "bollinger bands" in name_lower:
+            return BollingerStrategy(BollingerConfig(window=20, num_std=2.0)), "Bollinger Bands"
+        if "macd" in name_lower:
+            return MACDStrategy(MACDConfig(fast_period=12, slow_period=26, signal_period=9)), "MACD"
+        if "sma" in name_lower or "moving average" in name_lower or "crossover" in name_lower:
+            return SMAStrategy(SMAConfig(short_window=20, long_window=50)), "SMA Crossover"
+        if "rsi" in name_lower or "mean reversion" in name_lower:
+            return RSIStrategy(rsi_period=14, oversold_threshold=30, overbought_threshold=70), "RSI Mean Reversion"
+
+        # Default
+        return RSIStrategy(rsi_period=14, oversold_threshold=30, overbought_threshold=70), "RSI Mean Reversion"
 
     def _handle_trade_request(self, params: Dict[str, Any]) -> AgentResponse:
         """Handle trade request.

@@ -485,7 +485,11 @@ class StrategyFallback:
                     current_std = std.iloc[-1]
 
                     if current_std > 0:
-                        z_score = (current_price - current_mean) / current_std
+                        z_score = safe_divide(
+                            current_price - current_mean,
+                            current_std,
+                            default=0.0,
+                        )
 
                         if z_score > 1.5:
                             signal = "SELL"
@@ -574,7 +578,7 @@ class StrategyFallback:
             win_rate = safe_divide(wins, total_trades, default=0.0)
 
             pnls = [trade.get("pnl", 0) for trade in strategy_trades]
-            avg_return = sum(pnls) / len(pnls) if pnls else 0.0
+            avg_return = safe_divide(sum(pnls), len(pnls), default=0.0) if pnls else 0.0
 
             # Update performance
             if strategy_name in self.strategy_performance:

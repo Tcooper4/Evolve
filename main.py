@@ -6,11 +6,27 @@ including command-line interface, system health checks, and various
 launch options for different interfaces.
 """
 
+import atexit
 import asyncio
 import logging
 import sys
 from datetime import datetime
 from typing import Any, Dict
+
+# P4.2: Ensure DB connections close on process exit
+def _shutdown_database():
+    try:
+        from trading.database.connection import close_database
+        close_database()
+    except Exception:
+        pass
+    try:
+        from trading.memory import close_memory_store
+        close_memory_store()
+    except Exception:
+        pass
+
+atexit.register(_shutdown_database)
 
 # Configure logging
 logging.basicConfig(

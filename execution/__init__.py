@@ -25,12 +25,19 @@ except ImportError:
 
 # Import execution agent if available
 try:
-    from .execution_agent import ExecutionAgent, ExecutionMode, OrderSide, OrderType
+    from .execution_agent import (
+        ExecutionAgent,
+        ExecutionMode,
+        OrderRejectedError,
+        OrderSide,
+        OrderType,
+    )
     _EXECUTION_AGENT_AVAILABLE = True
 except ImportError:
     _EXECUTION_AGENT_AVAILABLE = False
     ExecutionAgent = None
     ExecutionMode = None
+    OrderRejectedError = None
     OrderSide = None
     OrderType = None
 
@@ -51,4 +58,10 @@ if _BROKER_ADAPTER_AVAILABLE:
 
 # Add execution agent exports if available
 if _EXECUTION_AGENT_AVAILABLE:
-    __all__.extend(["ExecutionAgent", "ExecutionMode", "OrderSide", "OrderType"])
+    __all__.extend([
+        "ExecutionAgent",
+        "ExecutionMode",
+        "OrderRejectedError",
+        "OrderSide",
+        "OrderType",
+    ])

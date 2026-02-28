@@ -233,6 +233,31 @@ class BacktestEvaluator:
         logger.info(
             f"Walk-forward backtest completed. Processed {len(window_results)} windows"
         )
+        # AGENT_MEMORY_LAYER: Persist walk-forward backtest outcomes to long-term memory
+        try:
+            from trading.memory import get_memory_store
+            from trading.memory.memory_store import MemoryType
+
+            store = get_memory_store()
+            store.add(
+                MemoryType.LONG_TERM,
+                namespace="BacktestEvaluator",
+                category="walk_forward_backtest",
+                key=f"{getattr(model, 'name', model.__class__.__name__)}:{datetime.utcnow().isoformat()}",
+                value={
+                    "model": getattr(model, "name", model.__class__.__name__),
+                    "window_size": window_size,
+                    "step_size": step_size,
+                    "test_size": test_size,
+                    "target_column": target_column,
+                    "confidence_threshold": confidence_threshold,
+                    "results_summary": results.get("stability_report", {}),
+                },
+                metadata={"source": "BacktestEvaluator.walk_forward_backtest"},
+            )
+        except Exception as e:
+            logger.debug(f"MemoryStore backtest record failed: {e}")
+
         return results
 
     def _train_model_on_window(

@@ -11,6 +11,7 @@ from .agent_logger import (
     get_agent_logger,
     log_agent_action,
 )
+from .memory_store import MemoryStore, MemoryType, close_memory_store, get_memory_store
 
 __all__ = [
     "AgentLogger",
@@ -19,4 +20,8 @@ __all__ = [
     "LogLevel",
     "get_agent_logger",
     "log_agent_action",
+    "MemoryStore",
+    "MemoryType",
+    "get_memory_store",
+    "close_memory_store",
 ]

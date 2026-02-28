@@ -181,10 +181,17 @@ class AgentRegistry:
         # Load existing registry
         self._load_registry()
 
-        # Discover agents
-        self._discover_agents()
+        # Discovery deferred to first use
+        self._discovery_done = False
 
-        logger.info(f"AgentRegistry initialized with {len(self.agents)} agents")
+        logger.info(f"AgentRegistry initialized with {len(self.agents)} agents (discovery on first use)")
+
+    def _ensure_discovered(self) -> None:
+        """Run discovery once, on first use."""
+        if self._discovery_done:
+            return
+        self._discover_agents()
+        self._discovery_done = True
 
     def _load_registry(self) -> None:
         """Load registry from file."""
@@ -764,6 +771,7 @@ class AgentRegistry:
         Returns:
             AgentInfo object or None if not found
         """
+        self._ensure_discovered()
         return self.agents.get(name)
 
     def get_agents_by_capability(self, capability: str) -> List[AgentInfo]:
@@ -776,6 +784,7 @@ class AgentRegistry:
         Returns:
             List of agents with the capability
         """
+        self._ensure_discovered()
         agent_names = self.capabilities.get(capability, set())
         return [self.agents[name] for name in agent_names if name in self.agents]
 
@@ -791,6 +800,7 @@ class AgentRegistry:
         Returns:
             List of agents in the category
         """
+        self._ensure_discovered()
         if isinstance(category, str):
             try:
                 category = AgentCategory(category)
@@ -835,6 +845,7 @@ class AgentRegistry:
         Returns:
             List of agent names
         """
+        self._ensure_discovered()
         agents = list(self.agents.keys())
 
         if category:
@@ -875,6 +886,7 @@ class AgentRegistry:
         Returns:
             Agent class or None if not found
         """
+        self._ensure_discovered()
         agent_info = self.get_agent(name)
         if not agent_info:
             return None
@@ -947,6 +959,7 @@ class AgentRegistry:
         Returns:
             List of matching agents
         """
+        self._ensure_discovered()
         query = query.lower()
         results = []
 
@@ -970,6 +983,7 @@ class AgentRegistry:
 
     def get_stats(self) -> Dict[str, Any]:
         """Get registry statistics."""
+        self._ensure_discovered()
         return {
             **self.stats,
             "total_agents": len(self.agents),

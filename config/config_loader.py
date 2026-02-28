@@ -170,9 +170,8 @@ class ConfigLoader:
 
                     self.logger.info(f"Loaded configuration section: {section_name}")
 
-                except Exception as e:
+                except (OSError, json.JSONDecodeError, TypeError, yaml.YAMLError) as e:
                     self.logger.error(f"Failed to load config {filename}: {e}")
-                    # Create empty section with error
                     self.sections[section_name] = ConfigSection(
                         name=section_name,
                         data={},
@@ -186,6 +185,7 @@ class ConfigLoader:
                             )
                         ],
                     )
+                    raise
 
     def _apply_environment_overrides(self) -> None:
         """Apply environment variable overrides to configuration."""
@@ -253,7 +253,7 @@ class ConfigLoader:
                     self.logger.error(
                         f"Configuration validation error in '{section_name}': {e}"
                     )
-                except Exception as e:
+                except (TypeError, ValueError) as e:
                     error = ConfigValidationError(
                         field="validation",
                         message=f"Validation failed: {e}",
@@ -263,6 +263,7 @@ class ConfigLoader:
                     self.logger.error(
                         f"Configuration validation failed for '{section_name}': {e}"
                     )
+                    raise
 
     def get_config(self, section: str, key: str = None, default: Any = None) -> Any:
         """Get configuration value."""
@@ -353,9 +354,9 @@ class ConfigLoader:
                 self.logger.info("Reloaded all configuration sections")
                 return True
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, TypeError, yaml.YAMLError) as e:
             self.logger.error(f"Failed to reload configuration: {e}")
-            return False
+            raise
 
     def export_config(self, format: str = "yaml") -> str:
         """Export configuration to string format."""
@@ -366,9 +367,9 @@ class ConfigLoader:
                 return yaml.dump(
                     self.get_all_configs(), default_flow_style=False, indent=2
                 )
-        except Exception as e:
+        except (TypeError, ValueError, yaml.YAMLError) as e:
             self.logger.error(f"Failed to export configuration: {e}")
-            return ""
+            raise
 
     def get_config_summary(self) -> Dict[str, Any]:
         """Get configuration summary with validation status."""

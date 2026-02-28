@@ -122,7 +122,12 @@ class ReportGenerator:
             output_dir: Directory to save reports
             report_config: Dict to control chart types and features
         """
-        self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+        try:
+            from config.llm_config import get_llm_config
+            llm = get_llm_config()
+            self.openai_api_key = openai_api_key or llm.openai_api_key
+        except Exception:
+            self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         self.notion_token = notion_token or os.getenv("NOTION_TOKEN")
         self.slack_webhook = slack_webhook or os.getenv("SLACK_WEBHOOK")
         self.email_config = email_config or {}

@@ -18,6 +18,7 @@ from trading.commentary import (
     create_commentary_engine,
 )
 from trading.memory.agent_memory import AgentMemory
+from trading.memory import get_memory_store
 from trading.utils.reasoning_logger import (
     ConfidenceLevel,
     DecisionType,
@@ -65,7 +66,8 @@ class CommentaryAgent(BaseAgent):
         super().__init__(config)
 
         self.logger = logging.getLogger(__name__)
-        self.memory = AgentMemory()
+        # AGENT_MEMORY_LAYER: Centralized shared memory store (SQLite) + AgentMemory compatibility
+        self.memory = AgentMemory(memory_store=get_memory_store(), namespace="CommentaryAgent")
         self.reasoning_logger = ReasoningLogger()
 
         # Initialize commentary engine

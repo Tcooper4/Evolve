@@ -815,3 +815,7 @@ class TransformerForecaster(BaseModel):
         except Exception as e:
             logger.error(f"Failed to load checkpoint: {e}")
             return False
+
+
+# Alias for imports that expect TimeSeriesTransformer (e.g. trading.models.model_registry)
+TimeSeriesTransformer = TransformerForecaster

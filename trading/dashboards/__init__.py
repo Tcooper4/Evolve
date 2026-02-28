@@ -66,8 +66,9 @@ class PluginManager:
 
             logger.info(f"Discovered {len(self.plugins)} dashboard plugins")
 
-        except Exception as e:
+        except (ImportError, AttributeError, OSError) as e:
             logger.error(f"Error discovering plugins: {e}")
+            raise
 
     def _load_plugins_from_directory(self, directory: Path):
         """Load plugins from a specific directory."""

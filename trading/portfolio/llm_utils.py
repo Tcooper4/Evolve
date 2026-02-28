@@ -99,8 +99,13 @@ class LLMInterface:
         """
         self.config = config or {}
 
-        # Initialize OpenAI client
-        openai.api_key = os.getenv("OPENAI_API_KEY")
+        try:
+            from config.llm_config import get_llm_config
+            llm = get_llm_config()
+            api_key = llm.openai_api_key
+        except Exception:
+            api_key = os.getenv("OPENAI_API_KEY")
+        openai.api_key = api_key
         if not openai.api_key:
             logger.warning("OpenAI API key not found. LLM features will be disabled.")
             self.enabled = False

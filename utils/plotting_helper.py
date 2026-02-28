@@ -279,8 +279,8 @@ def create_performance_chart(
     Returns:
         Plotly figure
     """
-    if PLOTTING_AVAILABLE and PerformancePlotter:
-        plotter = PerformancePlotter(backend='plotly')
+    if PLOTTING_AVAILABLE and TimeSeriesPlotter:
+        plotter = TimeSeriesPlotter(backend='plotly')
         
         # Convert to Series if needed
         if isinstance(equity_curve, np.ndarray):

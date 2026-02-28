@@ -29,14 +29,19 @@ class CommentaryGenerator:
             openai_api_key: OpenAI API key for GPT commentary
             max_tokens: Maximum tokens for response truncation
         """
-        self.openai_api_key = openai_api_key
         self.max_tokens = max_tokens
         if openai_api_key:
-            openai.api_key = openai_api_key
+            self.openai_api_key = openai_api_key
         else:
-            import os
-
-            openai.api_key = os.getenv("OPENAI_API_KEY")
+            try:
+                from config.llm_config import get_llm_config
+                llm = get_llm_config()
+                self.openai_api_key = llm.openai_api_key
+            except Exception:
+                import os
+                self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        if self.openai_api_key:
+            openai.api_key = self.openai_api_key
 
     def truncate_response(self, response: str, max_tokens: Optional[int] = None) -> str:
         """

@@ -20,24 +20,8 @@ from trading.data.data_loader import DataLoader
 from trading.market.market_analyzer import MarketAnalyzer
 from trading.utils.safe_math import safe_divide
 
-
-class OrderType(str, Enum):
-    """Order types."""
-
-    MARKET = "market"
-    LIMIT = "limit"
-    STOP_LIMIT = "stop_limit"
-    STOP_MARKET = "stop_market"
-
-
-class OrderStatus(str, Enum):
-    """Order status."""
-
-    PENDING = "pending"
-    FILLED = "filled"
-    PARTIALLY_FILLED = "partially_filled"
-    CANCELLED = "cancelled"
-    REJECTED = "rejected"
+# P2 fix: Canonical order enums
+from execution.models import OrderStatus, OrderType
 
 
 class FillType(str, Enum):
@@ -273,9 +257,11 @@ class TradeExecutionSimulator:
 
             # Check if order can be executed
             if not self._can_execute_order(order, market_data):
-                return self._create_rejected_result(
+                result = self._create_rejected_result(
                     order, "Market conditions prevent execution"
                 )
+                self._record_execution_memory(result)
+                return result
 
             # Generate or use orderbook (Batch 9 enhancement)
             orderbook = orderbook_data or self._generate_orderbook(
@@ -289,9 +275,11 @@ class TradeExecutionSimulator:
 
             # Simulate fill success (Batch 9 enhancement)
             if random.random() > fill_probability:
-                return self._create_failed_result(
+                result = self._create_failed_result(
                     order, "Fill failed due to market conditions"
                 )
+                self._record_execution_memory(result)
+                return result
 
             # Calculate execution parameters
             execution_price = self._calculate_execution_price(
@@ -341,6 +329,7 @@ class TradeExecutionSimulator:
 
             # Store execution history
             self.execution_history.append(result)
+            self._record_execution_memory(result)
 
             self.logger.info(
                 f"Order {order_id} executed successfully: {execution_price:.4f} "
@@ -351,9 +340,46 @@ class TradeExecutionSimulator:
 
         except Exception as e:
             self.logger.error(f"Error executing order {order_id}: {str(e)}")
-            return self._create_failed_result(
+            result = self._create_failed_result(
                 self.orders.get(order_id), f"Execution error: {str(e)}"
             )
+            self._record_execution_memory(result)
+            return result
+
+    def _record_execution_memory(self, result: ExecutionResult) -> None:
+        """AGENT_MEMORY_LAYER: Persist simulated trade outcomes to centralized MemoryStore."""
+        try:
+            from trading.memory import get_memory_store
+            from trading.memory.memory_store import MemoryType
+
+            store = get_memory_store()
+            # Always long-term: simulated trade history should be queryable globally.
+            store.add(
+                MemoryType.LONG_TERM,
+                namespace="TradeExecutionSimulator",
+                key=result.order_id,
+                category="simulated_trade",
+                value={
+                    "order_id": result.order_id,
+                    "symbol": result.symbol,
+                    "side": result.side,
+                    "quantity": result.quantity,
+                    "price": result.price,
+                    "timestamp": getattr(result.timestamp, "isoformat", lambda: str(result.timestamp))(),
+                    "execution_time": result.execution_time,
+                    "slippage": result.slippage,
+                    "commission": result.commission,
+                    "market_impact": result.market_impact,
+                    "total_cost": result.total_cost,
+                    "success": result.success,
+                    "fill_type": getattr(result.fill_type, "value", str(result.fill_type)),
+                    "failure_reason": result.failure_reason,
+                },
+                metadata={"source": "trade_execution_simulator"},
+            )
+        except Exception as e:
+            # Do not break execution flow if memory fails.
+            self.logger.debug(f"MemoryStore record failed: {e}")
 
     def _validate_order_parameters(
         self,

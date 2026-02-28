@@ -291,14 +291,33 @@ class AgentMemory:
 
     def __init__(
         self,
-        path: str = "agent_memory.json",
+        path: Any = "agent_memory.json",
         max_memory_mb: int = 100,
         max_entries: int = 10000,
         cleanup_interval_seconds: int = 300,
+        memory_store: Optional[Any] = None,
+        namespace: str = "global",
+        session_id: Optional[str] = None,
     ):
+        # Backward-compat: some call sites pass a dict config as first arg.
+        # Example: AgentMemory(config.get("memory_config", {}))
+        if isinstance(path, dict):
+            cfg = path
+            path = cfg.get("path", "agent_memory.json")
+            max_memory_mb = int(cfg.get("max_memory_mb", max_memory_mb))
+            max_entries = int(cfg.get("max_entries", max_entries))
+            cleanup_interval_seconds = int(
+                cfg.get("cleanup_interval_seconds", cleanup_interval_seconds)
+            )
+            namespace = cfg.get("namespace", namespace)
+            session_id = cfg.get("session_id", session_id)
+
         self.path = Path(path)
-        self.lock_path = Path(f"{path}.lock")
+        self.lock_path = Path(f"{str(path)}.lock")
         self.lock = FileLock(str(self.lock_path))
+        self.namespace = namespace
+        self.session_id = session_id
+        self.memory_store = memory_store
 
         # Memory manager for short-term chunks
         self.memory_manager = MemoryManager(
@@ -318,6 +337,107 @@ class AgentMemory:
         # Initialize file if it doesn't exist
         if not self.path.exists():
             self.path.write_text(json.dumps({}))
+
+    # --- Compatibility helpers (used by CommentaryAgent and others) ---
+
+    def store(
+        self,
+        key: str,
+        value: Any,
+        *,
+        memory_type: str = "short_term",
+        ttl_seconds: Optional[int] = None,
+        category: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """
+        Store a key/value in memory.
+        - short_term/medium_term: stored in in-process MemoryManager (TTL-based)
+        - long_term/permanent: stored in file
+        AGENT_MEMORY_LAYER: if a centralized MemoryStore is provided, also persist there.
+        """
+        try:
+            ttl = ttl_seconds if ttl_seconds is not None else self.default_ttls.get(memory_type)
+            if memory_type in ["short_term", "medium_term"]:
+                ok = self.memory_manager.add(key=key, data=value, ttl_seconds=ttl, priority=2)
+            else:
+                ok = True
+                data = self._load()
+                now = datetime.now().isoformat()
+                agent_section = data.setdefault(self.namespace, {})
+                entries = agent_section.setdefault("kv", [])
+                entries.append(
+                    {
+                        "timestamp": now,
+                        "memory_type": memory_type,
+                        "key": key,
+                        "category": category,
+                        "value": value,
+                        "metadata": metadata or {},
+                    }
+                )
+                if len(entries) > 2000:
+                    entries[:] = entries[-2000:]
+                self._save(data)
+
+            if self.memory_store is not None:
+                try:
+                    from trading.memory.memory_store import MemoryType as _MT
+
+                    mt = (
+                        _MT.SHORT_TERM
+                        if memory_type in ["short_term", "medium_term"]
+                        else _MT.LONG_TERM
+                    )
+                    self.memory_store.add(
+                        mt,
+                        namespace=self.namespace,
+                        key=key,
+                        value=value,
+                        category=category,
+                        session_id=self.session_id,
+                        metadata=metadata or {},
+                    )
+                except Exception as e:
+                    logger.warning(f"Central MemoryStore write failed: {e}")
+            return bool(ok)
+        except Exception as e:
+            logger.error(f"Error storing memory: {e}")
+            return False
+
+    def retrieve(self, key: str) -> Optional[Any]:
+        """Retrieve from short-term cache first; then centralized store if available; then file history."""
+        try:
+            v = self.memory_manager.get(key)
+            if v is not None:
+                return v
+        except Exception:
+            pass
+
+        if self.memory_store is not None:
+            try:
+                from trading.memory.memory_store import MemoryType as _MT
+
+                rows = self.memory_store.list(
+                    _MT.SHORT_TERM,
+                    namespace=self.namespace,
+                    session_id=self.session_id,
+                    limit=50,
+                )
+                for r in rows:
+                    if r.key == key:
+                        return r.value
+            except Exception as e:
+                logger.warning(f"Central MemoryStore read failed: {e}")
+
+        try:
+            data = self._load().get(self.namespace, {})
+            for entry in reversed(data.get("kv", [])):
+                if entry.get("key") == key:
+                    return entry.get("value")
+        except Exception:
+            pass
+        return None
 
     def _load(self) -> Dict[str, Any]:
         with self.lock:

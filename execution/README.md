@@ -1,119 +1,33 @@
 # Execution Module
 
-The execution module handles trade execution, order management, and position tracking for the trading platform.
+Handles **paper and live** trade execution: order submission, broker integration, and simulated execution. For **backtest-only** flows use `trading/backtesting/` instead.
 
 ## Structure
 
 ```
 execution/
-├── orders/          # Order management
-├── positions/       # Position tracking
-├── risk/           # Risk management
-└── utils/          # Execution utilities
+├── execution_agent.py           # Order queue, risk checks, simulation or broker submission
+├── live_trading_interface.py   # High-level interface: simulated | paper | live (single entry)
+├── broker_adapter.py           # Unified broker API (Alpaca, IBKR, Polygon, simulation)
+├── trade_executor.py           # Simulation-only legacy; prefer execution_agent / live_trading_interface
+├── advanced_order_executor.py  # Advanced order execution logic
+├── models.py                   # Execution data models
+└── redundant_broker_manager.py # Redundancy / failover (if used)
 ```
 
-## Components
+## Entry Points
 
-### Orders
+- **Paper or live execution:** Use `live_trading_interface.LiveTradingInterface(mode="paper"|"live"|"simulated")` or `execution_agent.ExecutionAgent` with broker adapter configured. Do not use `trade_executor` for real broker flows.
+- **Backtest (historical):** Use `trading/backtesting/backtester.py` (or enhanced_backtester); execution layer is for paper/live only.
 
-The `orders` directory contains:
-- Order creation
-- Order validation
-- Order routing
-- Order tracking
-- Order modification
+See **`docs/EXECUTION_AND_BACKTEST_FLOW.md`** for ownership and flow details.
 
-### Positions
+## Configuration
 
-The `positions` directory contains:
-- Position tracking
-- Position sizing
-- Position limits
-- Position reporting
-- Position reconciliation
-
-### Risk
-
-The `risk` directory contains:
-- Risk checks
-- Exposure limits
-- Margin requirements
-- Risk reporting
-- Risk controls
-
-### Utilities
-
-The `utils` directory contains:
-- Market data
-- Price feeds
-- Execution algorithms
-- Error handling
-- Helper functions
-
-## Usage
-
-```python
-from execution.orders import OrderManager
-from execution.positions import PositionTracker
-from execution.risk import RiskManager
-from execution.utils import MarketData
-
-# Create order
-order_manager = OrderManager()
-order = order_manager.create_order(symbol, quantity, price)
-
-# Track position
-position_tracker = PositionTracker()
-position = position_tracker.get_position(symbol)
-
-# Check risk
-risk_manager = RiskManager()
-is_allowed = risk_manager.check_order(order)
-```
+Paper vs live is set via `LiveTradingInterface(mode=...)` or broker config (`paper: true/false`). See root `config/CONFIG_README.md` and `.env.example`.
 
 ## Testing
 
 ```bash
-# Run execution tests
-pytest tests/unit/execution/
-
-# Run specific component tests
-pytest tests/unit/execution/orders/
-pytest tests/unit/execution/positions/
+pytest tests/unit/ -k execution -v
 ```
-
-## Configuration
-
-The execution module can be configured through:
-- Order parameters
-- Position limits
-- Risk thresholds
-- Execution settings
-
-## Dependencies
-
-- ccxt
-- pandas
-- numpy
-- websockets
-- requests
-
-## Features
-
-- Real-time execution
-- Order management
-- Position tracking
-- Risk controls
-- Error handling
-- Reporting
-
-## Contributing
-
-1. Follow the coding style guide
-2. Write unit tests for new features
-3. Update documentation
-4. Submit a pull request
-
-## License
-
-This module is part of the main project and is licensed under the MIT License. 

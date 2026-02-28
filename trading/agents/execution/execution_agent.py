@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # Local imports
 from trading.agents.base_agent_interface import AgentConfig, AgentResult, BaseAgent
 from trading.memory.agent_memory import AgentMemory
+from trading.memory import get_memory_store
 from trading.portfolio.portfolio_manager import PortfolioManager, Position
 from trading.portfolio.position_sizer import (
     MarketContext,
@@ -61,7 +62,12 @@ class ExecutionAgent(BaseAgent):
         self.portfolio_manager = PortfolioManager(config.get("portfolio_config", {}))
         self.position_sizer = PositionSizer(config.get("sizing_config", {}))
         self.position_manager = PositionManager(config.get("position_config", {}))
-        self.agent_memory = AgentMemory(config.get("memory_config", {}))
+        # AGENT_MEMORY_LAYER: central shared memory store (SQLite) + local short-term cache
+        self.agent_memory = AgentMemory(
+            config.get("memory_config", {}),
+            memory_store=get_memory_store(),
+            namespace="ExecutionAgent",
+        )
 
         # Initialize execution providers
         self.execution_providers: Dict[ExecutionMode, ExecutionProvider] = {}
@@ -199,6 +205,22 @@ class ExecutionAgent(BaseAgent):
             # Update execution history
             self.execution_history.append(result.to_dict())
             self._save_execution_history()
+
+            # AGENT_MEMORY_LAYER: long-term record of every executed trade (or simulated trade)
+            try:
+                ts = datetime.utcnow().isoformat()
+                self.agent_memory.store(
+                    key=f"trade_execution:{result.signal.symbol}:{ts}",
+                    value=result.to_dict(),
+                    memory_type="long_term",
+                    category="trade_execution",
+                    metadata={
+                        "execution_mode": str(self.execution_mode.value),
+                        "success": result.success,
+                    },
+                )
+            except Exception as e:
+                self.logger.debug(f"MemoryStore trade record failed: {e}")
 
             return AgentResult(
                 success=result.success, message=result.message, data=result.to_dict()

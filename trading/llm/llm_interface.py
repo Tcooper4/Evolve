@@ -8,17 +8,26 @@ for backward compatibility and cleaner import paths.
 try:
     from agents.llm.llm_interface import LLMInterface
     __all__ = ["LLMInterface"]
-except ImportError as e:
-    # If import fails, log the error but don't break the import
+except (ImportError, ModuleNotFoundError) as e:
+    # If import fails (e.g. missing 'schedule' or other optional deps), log and degrade
     import logging
-    logger = logging.getLogger(__name__)
-    logger.warning(f"Could not import LLMInterface from agents.llm.llm_interface: {e}")
-    
-    # Create a minimal stub class to prevent import errors
+    _logger = logging.getLogger(__name__)
+    _logger.warning(
+        "Could not import LLMInterface from agents.llm.llm_interface: %s. Using stub.",
+        e,
+    )
+    _llm_interface_error = e  # capture for stub
+
     class LLMInterface:
-        """Stub LLMInterface class when import fails."""
+        """Stub when LLMInterface is unavailable (e.g. missing schedule or other deps)."""
+
         def __init__(self, *args, **kwargs):
-            raise ImportError(f"LLMInterface not available: {e}")
-    
+            self._import_error = _llm_interface_error
+
+        def __getattr__(self, name):
+            raise ImportError(
+                f"LLMInterface not available: {self._import_error}"
+            ) from self._import_error
+
     __all__ = ["LLMInterface"]
 

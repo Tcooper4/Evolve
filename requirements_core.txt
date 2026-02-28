@@ -1,0 +1,17 @@
+# Core requirements — required for Evolve app to start and basic pages to load.
+# These are imported at top level (no try/except) in the startup path:
+#   app.py -> streamlit
+#   config/app_config.py -> yaml (PyYAML)
+#   trading/memory/memory_store.py -> sqlalchemy
+# numpy/pandas are used in so many modules that startup or first page load will
+# fail without them when those modules are imported.
+# Install first: pip install -r requirements_core.txt
+
+streamlit>=1.28.0
+PyYAML>=6.0.0
+SQLAlchemy>=2.0.0
+numpy>=1.24.0,<2.0.0
+pandas>=2.0.0
+
+# Optional but recommended for .env loading (app.py uses it with try/except)
+# python-dotenv>=1.0.0

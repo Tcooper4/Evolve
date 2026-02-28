@@ -1,5 +1,28 @@
 """Test suite for the trading system."""
 
+# TEST_FIX: Apply same env fixes as conftest so "import tests" works (tests/__init__.py loads before conftest)
+import sys
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+try:
+    import pytorch_lightning as _pl
+    _pl_util = getattr(_pl, "utilities", None)
+    if _pl_util is not None and not hasattr(_pl_util, "distributed"):
+        from unittest.mock import MagicMock
+        _m = MagicMock()
+        _m.log = MagicMock()
+        _m.log.setLevel = MagicMock()
+        _pl_util.distributed = _m
+except Exception:
+    pass
+# End TEST_FIX
+
 # Core test modules
 __all__ = [
     # Unit tests
