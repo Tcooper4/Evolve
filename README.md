@@ -82,6 +82,22 @@ streamlit run app.py
 # Or: python main.py streamlit
 ```
 
+**Windows, multiple Python versions:** If you have both Python 3.10 and 3.13 (or others), `pip` may install into the wrong one and the app will not see packages. Use the **same** Python that runs the app for all installs and for starting Streamlit:
+
+```powershell
+# Confirm which Python runs the app (e.g. 3.10)
+py -3.10 -c "import sys; print(sys.executable)"
+
+# Install into that Python only
+py -3.10 -m pip install -r requirements.txt
+py -3.10 -m pip install anthropic yfinance schedule reportlab plotly psutil tenacity scikit-learn scipy xgboost optuna
+
+# Always start Streamlit with that Python
+py -3.10 -m streamlit run app.py
+```
+
+If `py -3.10` is not available, use `py --list` to see versions, or the full path to the desired Python, e.g. `C:\...\Python310\python.exe -m pip install ...` and `...\python.exe -m streamlit run app.py`.
+
 Open **http://localhost:8501**. Use **Admin → Configuration → AI Model Settings** to choose and save the LLM.
 
 ---

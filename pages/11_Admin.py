@@ -22,20 +22,26 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # Ensure project root is on path when Admin runs as a Streamlit page
 _project_root = Path(__file__).resolve().parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
+# Force reload of config package to pick up new market_analysis_config module
+for key in list(sys.modules.keys()):
+    if key == "config" or key.startswith("config."):
+        del sys.modules[key]
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+logger = logging.getLogger(__name__)
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Backend imports (with error handling)
 try:
@@ -142,6 +148,52 @@ try:
 except Exception as e:
     logger.error(f"Error initializing SystemHealthMonitor: {e}")
     health_monitor = None
+
+
+def run_admin_self_test() -> Dict[str, Dict[str, Any]]:
+    """
+    Self-test for Admin page: imports, LLM selector, MemoryStore, provider status.
+    Returns a dict of check names to {'ok': bool, 'message': str}.
+    """
+    results: Dict[str, dict] = {}
+    _root = Path(__file__).resolve().parent.parent
+    if str(_root) not in sys.path:
+        sys.path.insert(0, str(_root))
+
+    # 1. Config and llm_config
+    try:
+        from config.llm_config import get_active_llm, get_llm_config, LLM_PROVIDERS
+        provider, model, opts = get_active_llm()
+        results["config.llm_config"] = {"ok": True, "message": f"active_llm={provider}, model={model}"}
+    except Exception as e:
+        results["config.llm_config"] = {"ok": False, "message": str(e)}
+
+    # 2. MemoryStore
+    try:
+        from trading.memory import get_memory_store
+        store = get_memory_store()
+        _ = store.get_preference("active_llm")
+        results["MemoryStore"] = {"ok": True, "message": "get_memory_store() and get_preference OK"}
+    except Exception as e:
+        results["MemoryStore"] = {"ok": False, "message": str(e)}
+
+    # 3. Provider status (at least one provider)
+    try:
+        from agents.llm.active_llm_calls import get_provider_status
+        status = get_provider_status("claude")
+        results["get_provider_status"] = {"ok": True, "message": f"claude: configured={status.get('configured')}"}
+    except Exception as e:
+        results["get_provider_status"] = {"ok": False, "message": str(e)}
+
+    # 4. test_active_llm (optional; may fail if no API key)
+    try:
+        from agents.llm.active_llm_calls import test_active_llm
+        ok, msg = test_active_llm()
+        results["test_active_llm"] = {"ok": ok, "message": msg[:100] if msg else "no response"}
+    except Exception as e:
+        results["test_active_llm"] = {"ok": False, "message": str(e)}
+
+    return results
 
 # Page header
 st.title("⚙️ System Administration")
@@ -1295,7 +1347,7 @@ curl -X POST http://localhost:8000/forecast \\
                     st.rerun()
     
     except ImportError:
-        st.error("LLM Processor not available. Make sure trading.nlp.llm_processor is available.")
+        st.info("Feature not available. LLM Processor (trading.nlp.llm_processor) is not available.")
     except Exception as e:
         st.error(f"Error initializing AI Assistant: {e}")
         import traceback
@@ -1557,23 +1609,34 @@ with tab2:
     st.subheader("🤖 AI Model Settings")
     st.caption("Choose which LLM powers the entire app (Chat, commentary, intent parsing). Stored in preference memory.")
     try:
-        # Ensure project-root config is used (avoid conflict with trading.config)
+        # Ensure project root is on path
         _root = Path(__file__).resolve().parent.parent
         if str(_root) not in sys.path:
             sys.path.insert(0, str(_root))
-        # If 'config' was already loaded as trading.config, clear so we load project config
-        for _key in list(sys.modules.keys()):
-            if _key == "config" or _key.startswith("config."):
-                del sys.modules[_key]
-        from config.llm_config import (
-            get_active_llm,
-            set_active_llm,
-            LLM_PROVIDERS,
-            DEFAULT_MODELS,
-            PROVIDER_DISPLAY_NAMES,
-            HUGGINGFACE_MODES,
-        )
-        from agents.llm.active_llm_calls import get_provider_status, test_active_llm
+        # Try import; if config resolved to wrong package (e.g. trading.config), clear and retry
+        try:
+            from config.llm_config import (
+                get_active_llm,
+                set_active_llm,
+                LLM_PROVIDERS,
+                DEFAULT_MODELS,
+                PROVIDER_DISPLAY_NAMES,
+                HUGGINGFACE_MODES,
+            )
+            from agents.llm.active_llm_calls import get_provider_status, test_active_llm
+        except (ImportError, ModuleNotFoundError):
+            for _key in list(sys.modules.keys()):
+                if _key == "config" or _key.startswith("config."):
+                    del sys.modules[_key]
+            from config.llm_config import (
+                get_active_llm,
+                set_active_llm,
+                LLM_PROVIDERS,
+                DEFAULT_MODELS,
+                PROVIDER_DISPLAY_NAMES,
+                HUGGINGFACE_MODES,
+            )
+            from agents.llm.active_llm_calls import get_provider_status, test_active_llm
         current_provider, current_model, current_options = get_active_llm()
         col_prov, col_mod, col_status = st.columns([2, 2, 2])
         with col_prov:
@@ -1765,6 +1828,97 @@ with tab2:
     
     # API Keys Section
     with st.expander("🔑 API Keys", expanded=True):
+        import os
+        _env_path = _project_root / ".env"
+        _dotenv_available = False
+        try:
+            from dotenv import set_key, load_dotenv
+            _dotenv_available = True
+        except ImportError:
+            pass
+
+        # --- AI Provider Keys (at top) ---
+        st.markdown("**🤖 AI Provider Keys**")
+        st.caption("Set API keys for LLM providers. Keys are stored in `.env`; never displayed.")
+        _ai_keys = [
+            ("ANTHROPIC_API_KEY", "Claude", "claude"),
+            ("OPENAI_API_KEY", "GPT-4", "gpt4"),
+            ("GOOGLE_API_KEY", "Gemini", "gemini"),
+            ("MOONSHOT_API_KEY", "Kimi", "kimi"),
+            ("HUGGINGFACE_API_KEY", "HuggingFace", "huggingface"),
+        ]
+        for env_var, label, provider in _ai_keys:
+            col_status, col_input, col_save, col_test = st.columns([1, 3, 1, 1])
+            is_set = bool(os.getenv(env_var) or (os.getenv("HF_TOKEN") if env_var == "HUGGINGFACE_API_KEY" else False))
+            with col_status:
+                if bool(is_set):
+                    st.markdown("✅")
+                else:
+                    st.markdown("—")
+            with col_input:
+                new_val = st.text_input(
+                    label,
+                    value="",
+                    type="password",
+                    placeholder="•••••••• (set)" if bool(is_set) else "Enter key...",
+                    key=f"api_{env_var}",
+                    help=f"Stored as {env_var} in .env",
+                )
+            with col_save:
+                if _dotenv_available and st.button("Save", key=f"save_{env_var}"):
+                    if new_val:
+                        try:
+                            set_key(str(_env_path), env_var, new_val)
+                            load_dotenv(_env_path, override=True)
+                            st.success("Saved")
+                        except Exception as e:
+                            st.error(str(e)[:80])
+                    else:
+                        st.warning("Enter a value")
+            with col_test:
+                if st.button("Test", key=f"test_{env_var}"):
+                    try:
+                        from agents.llm.active_llm_calls import get_provider_status
+                        status = get_provider_status(provider)
+                        if status.get("configured"):
+                            st.success(status.get("message", "OK"))
+                        else:
+                            st.warning(status.get("message", "Not set"))
+                    except Exception as e:
+                        st.error(str(e)[:60])
+        if not _dotenv_available:
+            st.caption("Install python-dotenv to save keys to .env.")
+
+        st.markdown("---")
+        st.markdown("**📈 Trading**")
+        _trading_keys = [
+            ("ALPACA_API_KEY", "Alpaca API Key"),
+            ("ALPACA_SECRET_KEY", "Alpaca Secret Key"),
+        ]
+        for env_var, label in _trading_keys:
+            col_status, col_input, col_save = st.columns([1, 3, 1])
+            is_set = bool(os.getenv(env_var))
+            with col_status:
+                st.markdown("✅" if bool(is_set) else "—")
+            with col_input:
+                new_val = st.text_input(
+                    label,
+                    value="",
+                    type="password",
+                    placeholder="•••••••• (set)" if bool(is_set) else "Enter key...",
+                    key=f"api_{env_var}",
+                )
+            with col_save:
+                if _dotenv_available and st.button("Save", key=f"save_{env_var}"):
+                    if new_val:
+                        try:
+                            set_key(str(_env_path), env_var, new_val)
+                            load_dotenv(_env_path, override=True)
+                            st.success("Saved")
+                        except Exception as e:
+                            st.error(str(e)[:80])
+
+        st.markdown("---")
         st.markdown("**Data Provider API Keys:**")
         
         # Alpha Vantage
@@ -4003,4 +4157,19 @@ else:
                 st.info("No task history available")
     else:
         st.warning("⚠️ Task Orchestrator components not initialized. Please restart the application.")
+
+    # Admin self-test (debug)
+    st.markdown("---")
+    with st.expander("🧪 Run self-test", expanded=False):
+        st.caption("Verify Admin page dependencies: config.llm_config, MemoryStore, provider status, test_active_llm.")
+        if st.button("Run self-test", key="admin_run_self_test"):
+            out = run_admin_self_test()
+            for name, r in out.items():
+                ok = r.get("ok", False)
+                msg = r.get("message", "")
+                if ok:
+                    st.success(f"**{name}**: {msg}")
+                else:
+                    st.error(f"**{name}**: {msg}")
+            st.json({k: {"ok": v["ok"], "message": v["message"]} for k, v in out.items()})
 

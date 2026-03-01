@@ -1,6 +1,6 @@
 """
 Home briefing service: builds context from MemoryStore, market data, and risk,
-then asks Claude to produce a plain-English briefing and 2–4 dynamic cards.
+then asks the active LLM (Admin-selected) to produce a plain-English briefing and 2–4 dynamic cards.
 Used by pages/0_Home.py for the personalized morning briefing.
 """
 
@@ -93,11 +93,13 @@ def _get_key_symbols(store: Any) -> List[str]:
 
 
 def _get_market_data(symbols: List[str]) -> Dict[str, Any]:
-    """Fetch current market data for symbols via FallbackDataProvider."""
+    """Fetch current market data for symbols via data provider (fallback when name is None)."""
     result = {}
     try:
-        from trading.data.providers import get_fallback_provider
-        provider = get_fallback_provider()
+        from trading.data.providers import get_data_provider
+        provider = get_data_provider()  # returns fallback provider when name is None
+        if provider is None:
+            return result
         end = datetime.now()
         start = end - timedelta(days=30)
         for sym in symbols:
@@ -115,6 +117,46 @@ def _get_market_data(symbols: List[str]) -> Dict[str, Any]:
     except Exception as e:
         logger.warning(f"Market data fetch failed: {e}")
     return result
+
+
+def _format_market_data_readable(market_data: Dict[str, Any]) -> str:
+    """Format market data dict as readable plain English (no JSON)."""
+    if not market_data:
+        return "No market data available."
+    lines = []
+    for sym, data in market_data.items():
+        if not isinstance(data, dict):
+            continue
+        cur = data.get("current")
+        week = data.get("week_ago")
+        if cur is not None:
+            line = f"{sym}: ${float(cur):,.2f}"
+            if week is not None:
+                pct = ((float(cur) - float(week)) / float(week) * 100) if week else 0
+                line += f" (vs week ago: {pct:+.1f}%)"
+            lines.append(line)
+    return "\n".join(lines) if lines else "No market data available."
+
+
+def _format_risk_snapshot_readable(risk_snapshot: str, summary: Any) -> str:
+    """Format risk/portfolio snapshot as readable text (no raw JSON)."""
+    parts = []
+    if isinstance(summary, dict):
+        equity = summary.get("current_equity") or summary.get("equity")
+        if equity is not None:
+            parts.append(f"Equity: ${float(equity):,.2f}")
+        open_pos = summary.get("open_positions", 0)
+        parts.append(f"Open positions: {open_pos}")
+        pnl = summary.get("total_pnl")
+        if pnl is not None:
+            parts.append(f"P&L: ${float(pnl):,.2f}")
+        if not parts:
+            for k, v in list(summary.items())[:5]:
+                if v is not None and k not in ("strategy_performance", "last_updated"):
+                    parts.append(f"{k.replace('_', ' ').title()}: {v}")
+    if not parts and risk_snapshot and "not available" not in risk_snapshot.lower():
+        return risk_snapshot[:500]
+    return " | ".join(parts) if parts else "No portfolio data available."
 
 
 def _get_risk_snapshot() -> str:
@@ -200,8 +242,8 @@ def generate_briefing(
     force_empty_context: bool = False,
 ) -> Dict[str, Any]:
     """
-    Gather memory, market data, and risk; call Claude to produce briefing text and 2–4 cards.
-    Before Claude: run monitoring checks (model/strategy degradation) and fetch recent recommendations.
+    Gather memory, market data, and risk; call the active LLM (Admin-selected) to produce briefing text and 2–4 cards.
+    Before LLM: run monitoring checks (model/strategy degradation) and fetch recent recommendations.
     Returns dict with keys: briefing_text, cards (list of {headline, detail, card_type, data}).
     """
     memory_context = "" if force_empty_context else _get_memory_context(store)
@@ -265,35 +307,73 @@ Only include cards that are relevant. If there's nothing urgent, you can suggest
     ]
     context_block = "\n".join(context_parts)
 
-    try:
-        from config.llm_config import get_llm_config, get_anthropic_client, CLAUDE_PRIMARY_MODEL
-        client = get_anthropic_client()
-        llm = get_llm_config()
-        model = getattr(llm, "primary_model", CLAUDE_PRIMARY_MODEL)
-    except Exception as e:
-        logger.warning(f"Claude not available for briefing: {e}")
+    def _make_fallback_briefing(portfolio_summary: Any = None) -> Dict[str, Any]:
+        """Build fallback briefing with readable text (no raw JSON)."""
+        risk_text = _format_risk_snapshot_readable(risk_snapshot, portfolio_summary or {})
+        memory_text = (memory_context[:2000] + ("..." if len(memory_context) > 2000 else "")) if memory_context else "No trading history or preferences in memory yet."
+        market_text = _format_market_data_readable(market_data)
+        fallback_lines = [
+            "**AI briefing unavailable** — configure an LLM provider in Admin (e.g. Claude, GPT-4, Gemini, or Ollama) for personalized briefings.",
+            "",
+            "**Memory (recent):**",
+            memory_text,
+            "",
+            "**Market data:**",
+            market_text,
+            "",
+            "**Risk snapshot:**",
+            risk_text,
+        ]
         return {
-            "briefing_text": "We couldn't connect to the AI right now. Check that ANTHROPIC_API_KEY is set and try **Refresh briefing**.",
+            "briefing_text": "\n".join(fallback_lines),
             "cards": [
-                {"headline": "Set up your API key", "detail": "Add ANTHROPIC_API_KEY to your environment to get personalized briefings.", "card_type": "news"},
+                {"headline": "Configure AI briefing", "detail": "Go to Admin → AI Model Settings, choose a provider and set its API key, then Save. Use Refresh briefing to try again.", "card_type": "news"},
             ],
+            "market_data": market_data,
         }
 
+    # Use active LLM (Admin-selected); if none configured or call fails, return readable fallback
     try:
-        resp = client.messages.create(
-            model=model,
-            max_tokens=2048,
-            temperature=0.3,
-            system=system_prompt,
-            messages=[{"role": "user", "content": f"Generate today's briefing and cards.\n\n{context_block}"}],
-        )
-        text = (resp.content[0].text if resp.content else "").strip()
+        from agents.llm.active_llm_calls import get_active_llm, call_active_llm_chat
+        provider, _model, _opts = get_active_llm()
+        if not provider:
+            portfolio_summary = None
+            try:
+                from trading.portfolio.portfolio_manager import PortfolioManager
+                portfolio_summary = PortfolioManager().get_performance_summary()
+            except Exception:
+                pass
+            return _make_fallback_briefing(portfolio_summary)
     except Exception as e:
-        logger.exception(f"Briefing API error: {e}")
-        return {
-            "briefing_text": f"Something went wrong generating your briefing: {e}. Try **Refresh briefing** in a moment.",
-            "cards": [],
-        }
+        logger.warning(f"Active LLM not available for briefing: {e}")
+        portfolio_summary = None
+        try:
+            from trading.portfolio.portfolio_manager import PortfolioManager
+            portfolio_summary = PortfolioManager().get_performance_summary()
+        except Exception:
+            pass
+        return _make_fallback_briefing(portfolio_summary)
+
+    user_message = "Generate today's briefing and cards."
+    try:
+        logger.debug("Calling LLM with provider: %s, model: %s", provider, _model)
+        text = call_active_llm_chat(
+            system_prompt=system_prompt,
+            context_block=context_block,
+            conversation_messages=[],
+            user_message=user_message,
+            max_tokens=2048,
+        )
+        text = (text or "").strip()
+    except Exception as e:
+        logger.exception(f"Briefing LLM call failed: {e}")
+        portfolio_summary = None
+        try:
+            from trading.portfolio.portfolio_manager import PortfolioManager
+            portfolio_summary = PortfolioManager().get_performance_summary()
+        except Exception:
+            pass
+        return _make_fallback_briefing(portfolio_summary)
 
     briefing_text = text
     cards = []

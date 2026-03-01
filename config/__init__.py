@@ -8,7 +8,10 @@ config.primary_config.get_primary_config()). See config/CONFIG_README.md.
 from .app_config import AppConfig, get_config
 from .config import Config
 from .logging_config import LoggingConfig
-from .market_analysis_config import MarketAnalysisConfig
+try:
+    from .market_analysis_config import MarketAnalysisConfig
+except ImportError as _e:
+    MarketAnalysisConfig = None  # type: ignore[misc, assignment]
 
 try:
     from .primary_config import get_primary_config

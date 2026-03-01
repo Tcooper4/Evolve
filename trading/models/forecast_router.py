@@ -62,7 +62,28 @@ except ImportError:
     TRANSFORMER_AVAILABLE = False
     TimeSeriesTransformer = None
 
-logger = logging.getLogger(__name__)
+# Stem (from filename) -> (module_path, class_name) for discovery
+_DISCOVERY_CLASS_MAP = {
+    "arima": ("trading.models.arima_model", "ARIMAModel"),
+    "base": ("trading.models.base_model", "BaseModel"),
+    "catboost": ("trading.models.catboost_model", "CatBoostModel"),
+    "ensemble": ("trading.models.ensemble_model", "EnsembleModel"),
+    "garch": ("trading.models.garch_model", "GARCHModel"),
+    "lstm": ("trading.models.lstm_model", "LSTMModel"),
+    "prophet": ("trading.models.prophet_model", "ProphetModel"),
+    "ridge": ("trading.models.ridge_model", "RidgeModel"),
+    "tcn": ("trading.models.tcn_model", "TCNModel"),
+    "xgboost": ("trading.models.xgboost_model", "XGBoostModel"),
+}
+# Aliases for config class_path that use wrong casing (e.g. ArimaModel -> ARIMAModel)
+_CLASS_NAME_ALIASES = {
+    "ArimaModel": "ARIMAModel",
+    "LstmModel": "LSTMModel",
+    "XgboostModel": "XGBoostModel",
+    "CatboostModel": "CatBoostModel",
+    "GarchModel": "GARCHModel",
+    "TcnModel": "TCNModel",
+}
 
 
 class ForecastRouter:
@@ -102,22 +123,19 @@ class ForecastRouter:
     def _load_model_registry(self):
         """Dynamically load model registry from config or discovery."""
         try:
-            # Try to load from config first
             config_models = self.config.get("models", {})
             if config_models:
                 self._load_models_from_config(config_models)
             else:
-                # Use dynamic registry
                 from trading.models.model_registry import get_registry as get_model_registry
 
                 registry = get_model_registry()
-                self.model_registry = registry.registry
+                # ModelRegistry exposes .registry (property) or ._models
+                self.model_registry = getattr(registry, "registry", None) or getattr(registry, "_models", None) or {}
 
-                # Fallback to default models if registry is empty
                 if not self.model_registry:
                     self._load_default_models()
 
-            # Try to discover additional models
             self._discover_available_models()
 
         except Exception as e:
@@ -161,17 +179,15 @@ class ForecastRouter:
                 logger.warning(f"Failed to load default model {model_name}: {e}")
 
     def _discover_available_models(self):
-        """Discover additional models dynamically."""
+        """Discover additional models dynamically using trading.models paths."""
         try:
-            # Look for model plugins in models directory
             models_dir = Path(__file__).parent
             for model_file in models_dir.glob("*_model.py"):
                 model_name = model_file.stem.replace("_model", "")
-                if model_name not in self.model_registry:
+                if model_name not in self.model_registry and model_name in _DISCOVERY_CLASS_MAP:
+                    module_path, class_name = _DISCOVERY_CLASS_MAP[model_name]
                     try:
-                        model_class = self._get_model_class(
-                            f"models.{model_name}_model.{model_name.title()}Model"
-                        )
+                        model_class = self._get_model_class(f"{module_path}.{class_name}")
                         if model_class:
                             self.model_registry[model_name] = model_class
                             logger.info(f"Discovered model {model_name}")
@@ -181,14 +197,20 @@ class ForecastRouter:
             logger.warning(f"Error discovering models: {e}")
 
     def _get_model_class(self, class_path: str):
-        """Get model class from class path string."""
+        """Get model class from class path string. Normalizes models.* to trading.models.*."""
         try:
             if not class_path:
                 return None
-
+            # Use trading.models.* so we don't trigger top-level models/__init__ (which imports missing forecast_router)
+            if class_path.startswith("models.") and not class_path.startswith("trading.models."):
+                class_path = "trading.models." + class_path[7:]
             module_path, class_name = class_path.rsplit(".", 1)
             module = importlib.import_module(module_path)
-            return getattr(module, class_name)
+            cls = getattr(module, class_name, None)
+            if cls is not None:
+                return cls
+            class_name = _CLASS_NAME_ALIASES.get(class_name, class_name)
+            return getattr(module, class_name, None)
         except Exception as e:
             logger.warning(f"Failed to load model class {class_path}: {e}")
             return None

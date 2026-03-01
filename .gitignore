@@ -185,6 +185,7 @@ certs/
 config/*.local.yaml
 config/*.local.json
 config/*.local.py
+config/settings.json
 config/secrets/
 config/credentials/
 

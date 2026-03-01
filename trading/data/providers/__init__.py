@@ -14,6 +14,13 @@ import pandas as pd
 
 from .base_provider import BaseDataProvider, ProviderConfig
 
+try:
+    from .fallback_provider import get_fallback_provider
+except ImportError:
+    def get_fallback_provider():
+        """Unavailable; use get_data_provider() for fallback provider."""
+        return None
+
 # Configure logging
 logger = logging.getLogger(__name__)
 

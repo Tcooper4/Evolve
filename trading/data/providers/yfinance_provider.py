@@ -265,9 +265,15 @@ class YFinanceProvider(BaseDataProvider):
                 interval=interval,
             )
 
-            # Normalize column names to lowercase (yfinance returns capitalized)
+            # Flatten MultiIndex columns if present (yfinance >= 0.2.40 returns MultiIndex)
+            if not data.empty and isinstance(data.columns, pd.MultiIndex):
+                if len(data.columns.get_level_values(1).unique()) == 1:
+                    data.columns = data.columns.get_level_values(0)
+                else:
+                    data = data.xs(symbol, axis=1, level=1)
+            # Normalize column names to title case (some yfinance versions return lowercase)
             if not data.empty:
-                data.columns = data.columns.str.lower()
+                data.columns = [c.title() if isinstance(c, str) else c for c in data.columns]
 
             # Validate data
             self._validate_data(data)
