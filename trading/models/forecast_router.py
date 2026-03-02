@@ -33,6 +33,7 @@ import pandas as pd
 from trading.models.arima_model import ARIMAModel
 from trading.models.lstm_model import LSTMModel
 from trading.models.xgboost_model import XGBoostModel
+logger = logging.getLogger(__name__)
 
 # Make Prophet import optional
 try:

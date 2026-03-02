@@ -107,10 +107,21 @@ def _get_market_data(symbols: List[str]) -> Dict[str, Any]:
                 df = provider.fetch(sym, "1d", start_date=start.strftime("%Y-%m-%d"), end_date=end.strftime("%Y-%m-%d"))
                 if df is not None and not df.empty:
                     close = df["close"] if "close" in df.columns else (df["Close"] if "Close" in df.columns else df.iloc[:, -1])
+                    tail_df = df.tail(14)
+                    series = close.tail(14).tolist() if len(close) >= 2 else []
+                    dates = []
+                    if len(tail_df) and hasattr(tail_df.index, "strftime"):
+                        try:
+                            dates = [d.strftime("%b %d") for d in tail_df.index]
+                        except Exception:
+                            dates = [str(d)[:10] for d in tail_df.index]
+                    elif len(tail_df):
+                        dates = [str(i) for i in range(len(tail_df))]
                     result[sym] = {
                         "current": float(close.iloc[-1]) if len(close) else None,
                         "week_ago": float(close.iloc[-5]) if len(close) >= 5 else None,
-                        "series": close.tail(14).tolist() if len(close) >= 2 else [],
+                        "series": series,
+                        "dates": dates if len(dates) == len(series) else [],
                     }
             except Exception as e:
                 logger.debug(f"Market data for {sym}: {e}")

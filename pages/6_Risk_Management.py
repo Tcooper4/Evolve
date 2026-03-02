@@ -32,6 +32,8 @@ import plotly.express as px
 import streamlit as st
 from plotly.subplots import make_subplots
 
+from ui.page_assistant import render_page_assistant
+
 # Backend imports
 try:
     from trading.risk.risk_manager import RiskManager
@@ -46,6 +48,16 @@ except ImportError as e:
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+
+def _empty_state(message: str, icon: str = "📊"):
+    st.markdown(f"""
+    <div style="text-align:center;padding:60px 20px;color:#888;border:1px dashed #ddd;border-radius:8px;margin:20px 0">
+        <div style="font-size:48px;margin-bottom:12px">{icon}</div>
+        <div style="font-size:16px">{message}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 # Page config
 st.set_page_config(
@@ -234,12 +246,12 @@ def check_risk_limits(metrics: Dict[str, float], limits: Dict[str, float]) -> Li
     
     return violations
 
-def get_portfolio_data() -> Tuple[Optional[pd.DataFrame], Optional[Dict[str, float]]]:
-    """Get portfolio returns and current positions."""
+def get_portfolio_data() -> Tuple[Optional[pd.Series], Optional[Dict[str, float]], bool]:
+    """Get portfolio returns and current positions. When no real data, returns (None, None, True) for empty state."""
     try:
         portfolio_manager = st.session_state.portfolio_manager
         if not portfolio_manager:
-            return None, None
+            return None, None, True
         
         # Get portfolio positions
         positions = {}
@@ -247,27 +259,17 @@ def get_portfolio_data() -> Tuple[Optional[pd.DataFrame], Optional[Dict[str, flo
             for pos in portfolio_manager.state.open_positions:
                 positions[pos.symbol] = pos.size
         
-        # Generate sample returns if no real data
+        # No positions: no real return data; caller should show empty state
         if not positions:
-            # Create sample portfolio returns
-            dates = pd.date_range(end=datetime.now(), periods=252, freq='D')
-            returns = pd.Series(np.random.normal(0.0005, 0.015, 252), index=dates)
-            return returns, {'AAPL': 0.3, 'GOOGL': 0.25, 'MSFT': 0.2, 'TSLA': 0.15, 'NVDA': 0.1}
-        
-        # Try to get actual returns from portfolio manager
-        # This is a simplified version - in production, you'd fetch real data
-        dates = pd.date_range(end=datetime.now(), periods=252, freq='D')
-        returns = pd.Series(np.random.normal(0.0005, 0.015, 252), index=dates)
-        
-        return returns, positions
-        
+            return None, None, True
+
+        # TODO: get actual returns from portfolio manager / FallbackDataProvider / strategy logs
+        # For now, no synthetic returns: return placeholder so UI shows empty state
+        return None, positions, True
+
     except Exception as e:
         logger.warning(f"Error getting portfolio data: {e}")
-        # Return sample data
-        dates = pd.date_range(end=datetime.now(), periods=252, freq='D')
-        returns = pd.Series(np.random.normal(0.0005, 0.015, 252), index=dates)
-        positions = {'AAPL': 0.3, 'GOOGL': 0.25, 'MSFT': 0.2, 'TSLA': 0.15, 'NVDA': 0.1}
-        return returns, positions
+        return None, None, True
 
 def calculate_risk_metrics(returns: pd.Series) -> Dict[str, float]:
     """Calculate comprehensive risk metrics."""
@@ -312,35 +314,34 @@ def calculate_risk_metrics(returns: pd.Series) -> Dict[str, float]:
 with tab1:
     st.header("📊 Risk Dashboard")
     st.markdown("Real-time risk monitoring and portfolio risk analysis")
-    
-    # Auto-refresh toggle
-    col_refresh, col_limits = st.columns([1, 3])
-    with col_refresh:
-        auto_refresh = st.checkbox("🔄 Auto-refresh (30s)", value=False)
-        if auto_refresh:
-            time.sleep(0.1)  # Small delay for demo
-            st.rerun()
-    
-    with col_limits:
-        st.markdown("**Risk Limits:**")
-        col_lim1, col_lim2, col_lim3, col_lim4 = st.columns(4)
-        with col_lim1:
-            st.caption(f"Max VaR: {st.session_state.risk_limits['max_var']:.2%}")
-        with col_lim2:
-            st.caption(f"Max Volatility: {st.session_state.risk_limits['max_volatility']:.2%}")
-        with col_lim3:
-            st.caption(f"Max Drawdown: {st.session_state.risk_limits['max_drawdown']:.2%}")
-        with col_lim4:
-            st.caption(f"Max Beta: {st.session_state.risk_limits['max_beta']:.2f}")
-    
-    st.markdown("---")
-    
-    # Get portfolio data
-    returns, positions = get_portfolio_data()
-    
-    if returns is None or returns.empty:
-        st.warning("No portfolio data available. Please ensure positions are loaded.")
+    returns, positions, is_placeholder = get_portfolio_data()
+    has_data = not is_placeholder and returns is not None and not returns.empty
+
+    if not has_data:
+        _empty_state("No portfolio data yet. Add positions or run a backtest to see risk metrics.", "📊")
     else:
+        # Auto-refresh toggle
+        col_refresh, col_limits = st.columns([1, 3])
+        with col_refresh:
+            auto_refresh = st.checkbox("🔄 Auto-refresh (30s)", value=False)
+            if auto_refresh:
+                time.sleep(0.1)  # Small delay for demo
+                st.rerun()
+        
+        with col_limits:
+            st.markdown("**Risk Limits:**")
+            col_lim1, col_lim2, col_lim3, col_lim4 = st.columns(4)
+            with col_lim1:
+                st.caption(f"Max VaR: {st.session_state.risk_limits['max_var']:.2%}")
+            with col_lim2:
+                st.caption(f"Max Volatility: {st.session_state.risk_limits['max_volatility']:.2%}")
+            with col_lim3:
+                st.caption(f"Max Drawdown: {st.session_state.risk_limits['max_drawdown']:.2%}")
+            with col_lim4:
+                st.caption(f"Max Beta: {st.session_state.risk_limits['max_beta']:.2f}")
+        
+        st.markdown("---")
+
         # Calculate risk metrics
         if st.session_state.risk_manager:
             try:
@@ -377,6 +378,46 @@ with tab1:
         # Keep only last 100 entries
         if len(st.session_state.risk_history) > 100:
             st.session_state.risk_history = st.session_state.risk_history[-100:]
+        
+        # Situational awareness: write risk snapshot to MemoryStore at most once per hour
+        try:
+            from trading.memory import get_memory_store
+            from trading.memory.memory_store import MemoryType
+            _store = get_memory_store()
+            _recs = _store.list(MemoryType.LONG_TERM, namespace="risk", category="snapshots", limit=1)
+            _now = datetime.utcnow()
+            _write = True
+            if _recs:
+                _created = getattr(_recs[0], "created_at", None) or (_recs[0].get("created_at") if isinstance(_recs[0], dict) else None)
+                if _created:
+                    try:
+                        _s = str(_created)[:26]
+                        _dt = datetime.fromisoformat(_s.replace("Z", "+00:00"))
+                        if _dt.tzinfo:
+                            _dt = _dt.replace(tzinfo=None)  # naive for comparison with utcnow()
+                        if (_now - _dt).total_seconds() < 3600:
+                            _write = False
+                    except Exception:
+                        pass
+            if _write:
+                # Quality gate: only write if at least volatility and sharpe_ratio are non-None
+                _vol = metrics.get("volatility")
+                _sharpe = metrics.get("sharpe_ratio")
+                if _vol is not None and _sharpe is not None:
+                    _store.add(
+                        MemoryType.LONG_TERM,
+                        namespace="risk",
+                        value={
+                            "var_95": metrics.get("var_95"),
+                            "volatility": _vol,
+                            "max_drawdown": metrics.get("max_drawdown"),
+                            "sharpe_ratio": _sharpe,
+                            "timestamp": _now.isoformat(),
+                        },
+                        category="snapshots",
+                    )
+        except Exception:
+            pass
         
         # Risk Gauge and Key Metrics
         col_gauge, col_metrics = st.columns([1, 2])
@@ -729,11 +770,12 @@ with tab2:
     st.markdown("Comprehensive VaR calculation and analysis using multiple methods")
     
     # Get portfolio data
-    returns, positions = get_portfolio_data()
+    returns, positions, is_placeholder = get_portfolio_data()
+    has_data = not is_placeholder and returns is not None and not returns.empty
     portfolio_value = st.session_state.get('portfolio_value', 100000.0)  # Default $100k
-    
-    if returns is None or returns.empty:
-        st.warning("No portfolio data available. Please ensure positions are loaded.")
+
+    if not has_data:
+        _empty_state("No portfolio data yet. Add positions or run a backtest to see risk metrics.", "📊")
     else:
         # Configuration section
         st.subheader("⚙️ VaR Configuration")
@@ -1066,11 +1108,12 @@ with tab3:
     st.markdown("Simulate thousands of possible portfolio scenarios to assess risk and potential outcomes")
     
     # Get portfolio data
-    returns, positions = get_portfolio_data()
+    returns, positions, is_placeholder = get_portfolio_data()
+    has_data = not is_placeholder and returns is not None and not returns.empty
     portfolio_value = st.session_state.get('portfolio_value', 100000.0)
     
-    if returns is None or returns.empty:
-        st.warning("No portfolio data available. Please ensure positions are loaded.")
+    if not has_data:
+        _empty_state("No portfolio data yet. Add positions or run a backtest to see risk metrics.", "📊")
     else:
         # Configuration section
         st.subheader("⚙️ Simulation Configuration")
@@ -1590,11 +1633,12 @@ with tab4:
     st.markdown("Test portfolio resilience under historical and custom stress scenarios")
     
     # Get portfolio data
-    returns, positions = get_portfolio_data()
+    returns, positions, is_placeholder = get_portfolio_data()
+    has_data = not is_placeholder and returns is not None and not returns.empty
     portfolio_value = st.session_state.get('portfolio_value', 100000.0)
     
-    if returns is None or returns.empty:
-        st.warning("No portfolio data available. Please ensure positions are loaded.")
+    if not has_data:
+        _empty_state("No portfolio data yet. Add positions or run a backtest to see risk metrics.", "📊")
     else:
         # Scenario selection
         st.subheader("📋 Scenario Selection")
@@ -2109,11 +2153,12 @@ with tab5:
     st.markdown("Comprehensive risk analysis including correlation, factors, tail risk, and more")
     
     # Get portfolio data
-    returns, positions = get_portfolio_data()
+    returns, positions, is_placeholder = get_portfolio_data()
+    has_data = not is_placeholder and returns is not None and not returns.empty
     portfolio_value = st.session_state.get('portfolio_value', 100000.0)
     
-    if returns is None or returns.empty:
-        st.warning("No portfolio data available. Please ensure positions are loaded.")
+    if not has_data:
+        _empty_state("No portfolio data yet. Add positions or run a backtest to see risk metrics.", "📊")
     else:
         # Calculate advanced metrics
         if st.session_state.advanced_risk_analyzer:
@@ -2562,4 +2607,6 @@ with tab5:
                 st.error(f"Error: {e}")
                 import traceback
                 st.code(traceback.format_exc())
+
+render_page_assistant("Risk Management")
 

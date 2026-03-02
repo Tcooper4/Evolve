@@ -13,7 +13,6 @@ import logging
 import os
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
-
 logger = logging.getLogger(__name__)
 
 # Primary Claude model for Evolve agent layer (default when no preference set)

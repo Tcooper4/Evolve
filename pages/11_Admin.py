@@ -20,6 +20,8 @@ Features:
 
 import logging
 import sys
+import time
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -47,13 +49,13 @@ logging.basicConfig(level=logging.INFO)
 try:
     from trading.config.enhanced_settings import EnhancedSettings
 except ImportError:
-    logger.warning("EnhancedSettings not found, using placeholder")
+    logging.warning("EnhancedSettings not found, using placeholder")
     EnhancedSettings = None
 
 try:
     from trading.agents.agent_registry import AgentRegistry
 except ImportError:
-    logger.warning("AgentRegistry not found, using placeholder")
+    logging.warning("AgentRegistry not found, using placeholder")
     AgentRegistry = None
 
 try:
@@ -62,13 +64,13 @@ except ImportError:
     try:
         from monitoring.health_check import HealthChecker as SystemHealthMonitor
     except ImportError:
-        logger.warning("SystemHealthMonitor not found, using placeholder")
+        logging.warning("SystemHealthMonitor not found, using placeholder")
         SystemHealthMonitor = None
 
 try:
     from trading.utils.system_status import SystemStatus
 except ImportError:
-    logger.warning("SystemStatus not found, using placeholder")
+    logging.warning("SystemStatus not found, using placeholder")
     SystemStatus = None
 
 # Page configuration
@@ -120,6 +122,8 @@ if 'system_metrics' not in st.session_state:
         "disk_usage": 38.0,
         "uptime": "5 days, 12 hours"
     }
+if 'app_start_time' not in st.session_state:
+    st.session_state.app_start_time = time.time()
 
 # Initialize backend modules (with error handling)
 try:
@@ -128,7 +132,7 @@ try:
     else:
         settings_manager = None
 except Exception as e:
-    logger.error(f"Error initializing EnhancedSettings: {e}")
+    logging.error(f"Error initializing EnhancedSettings: {e}")
     settings_manager = None
 
 try:
@@ -137,7 +141,7 @@ try:
     else:
         agent_registry = None
 except Exception as e:
-    logger.error(f"Error initializing AgentRegistry: {e}")
+    logging.error(f"Error initializing AgentRegistry: {e}")
     agent_registry = None
 
 try:
@@ -146,7 +150,7 @@ try:
     else:
         health_monitor = None
 except Exception as e:
-    logger.error(f"Error initializing SystemHealthMonitor: {e}")
+    logging.error(f"Error initializing SystemHealthMonitor: {e}")
     health_monitor = None
 
 
@@ -195,6 +199,83 @@ def run_admin_self_test() -> Dict[str, Dict[str, Any]]:
 
     return results
 
+
+def _get_system_dashboard_data() -> Dict[str, Any]:
+    """Return real data for System Dashboard: uptime, trades today, active strategies, active agents, recent events."""
+    out = {
+        "uptime_str": "—",
+        "trades_today": 0,
+        "active_strategies": 0,
+        "agents_active": 0,
+        "recent_events": [],
+    }
+    try:
+        start = st.session_state.get("app_start_time")
+        if start and isinstance(start, (int, float)):
+            sec = max(0, time.time() - start)
+            days = int(sec // 86400)
+            hours = int((sec % 86400) // 3600)
+            if days > 0:
+                out["uptime_str"] = f"{days} day{'s' if days != 1 else ''}, {hours} hour{'s' if hours != 1 else ''}"
+            else:
+                out["uptime_str"] = f"{hours} hour{'s' if hours != 1 else ''}"
+    except Exception:
+        pass
+    try:
+        from trading.memory import get_memory_store
+        from trading.memory.memory_store import MemoryType
+        store = get_memory_store()
+        recs = store.list(MemoryType.LONG_TERM, namespace="trades", category="orders", limit=500)
+        today = datetime.now().date().isoformat()
+        for r in recs:
+            v = r.value if hasattr(r, "value") else (r.get("value", r) if isinstance(r, dict) else None)
+            if isinstance(v, dict):
+                ts = v.get("timestamp") or getattr(r, "created_at", "")
+                if ts and today in str(ts):
+                    out["trades_today"] += 1
+    except Exception:
+        pass
+    try:
+        import yaml
+        strat_path = Path(__file__).parent.parent / "config" / "strategies.yaml"
+        if strat_path.exists():
+            with open(strat_path, "r") as f:
+                cfg = yaml.safe_load(f) or {}
+            strat_root = cfg.get("strategies") if isinstance(cfg.get("strategies"), dict) else cfg
+            defs = (strat_root or {}).get("definitions") or {}
+            if isinstance(defs, dict):
+                out["active_strategies"] = len([k for k, v in defs.items() if isinstance(v, dict) and v.get("enabled", True)])
+    except Exception:
+        pass
+    try:
+        reg_path = Path(__file__).parent.parent / "data" / "agent_registry.json"
+        if reg_path.exists():
+            with open(reg_path, "r") as f:
+                data = json.load(f)
+            agents = (data.get("agents") or data) if isinstance(data, dict) else {}
+            if isinstance(agents, dict):
+                out["agents_active"] = sum(1 for a in agents.values() if isinstance(a, dict) and (a.get("status") or "").lower() == "active")
+    except Exception:
+        pass
+    try:
+        log_path = Path(__file__).parent.parent / "logs" / "app.log"
+        if log_path.exists():
+            with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+            for line in lines[-50:]:
+                line = line.strip()
+                if not line:
+                    continue
+                if "WARNING" in line or "ERROR" in line or "INFO" in line:
+                    out["recent_events"].append({"timestamp": datetime.now().isoformat(), "type": "info", "message": line[-200:], "component": "Log"})
+                    if len(out["recent_events"]) >= 5:
+                        break
+        out["recent_events"] = out["recent_events"][-5:]
+    except Exception:
+        pass
+    return out
+
+
 # Page header
 st.title("⚙️ System Administration")
 st.markdown("Manage system configuration, monitor health, and administer AI agents.")
@@ -211,6 +292,8 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 
 # TAB 1: System Dashboard
 with tab1:
+    dash = _get_system_dashboard_data()
+    st.session_state.system_health["agents_active"] = dash.get("agents_active", st.session_state.system_health.get("agents_active", 0))
     st.header("📊 System Dashboard")
     st.markdown("High-level system overview and health monitoring.")
     
@@ -386,7 +469,8 @@ with tab1:
             st.warning(f"⚠️ Health monitoring not fully available: {e}")
             st.info("Some health monitoring features may not be accessible.")
     else:
-        st.warning("⚠️ Health monitoring not available")
+        st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
+        st.caption("Health monitoring is not enabled. Enable SystemHealthMonitor in app to use this section.")
     
     st.markdown("---")
     
@@ -733,7 +817,8 @@ with tab1:
                 st.metric("Failed Today", stats.get('failed_today', 0))
     
     else:
-        st.warning("⚠️ Automation system not available. Enable in app.py first.")
+        st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
+        st.caption("Automation system is not enabled. Enable in app.py to manage workflows.")
     
     st.markdown("---")
     
@@ -763,7 +848,8 @@ with tab1:
                 else:
                     st.error(f"❌ API returned error: {response.status_code}")
             except requests.exceptions.ConnectionError:
-                st.warning("⚠️ API is not running")
+                st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
+                st.caption("Agent API is not running. Start it with: python scripts/launch_agent_api.py")
                 
                 if st.button("🚀 Start API Service", key="start_api_service"):
                     try:
@@ -790,9 +876,11 @@ with tab1:
                         import traceback
                         st.code(traceback.format_exc())
             except requests.exceptions.Timeout:
-                st.warning("⚠️ API health check timed out")
+                st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
+                st.caption("Agent API health check timed out.")
         except ImportError:
-            st.warning("⚠️ 'requests' library not available. Install with: pip install requests")
+            st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
+            st.caption("Install requests to check API: pip install requests")
             st.info("You can still start the API service manually using: python scripts/launch_agent_api.py")
     
     with col2:
@@ -951,7 +1039,8 @@ curl -X POST http://localhost:8000/forecast \\
     
     with col1:
         if not st.session_state.get('ws_available', False):
-            st.warning("⚠️ WebSocket client not available. Install websockets: pip install websockets")
+            st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
+            st.caption("WebSocket client not available. Install: pip install websockets")
         elif st.session_state.get('ws_connected', False):
             try:
                 # Check if actually connected
@@ -966,15 +1055,17 @@ curl -X POST http://localhost:8000/forecast \\
                     st.warning("⚠️ Connection lost. Click Connect to reconnect.")
                     st.session_state.ws_connected = False
             except Exception as e:
-                logger.warning(f"Connection check failed: {e}")
+                logging.warning(f"Connection check failed: {e}")
                 st.warning("⚠️ Connection status unknown")
                 st.session_state.ws_connected = False
         else:
-            st.warning("⚠️ Real-time updates disabled")
+            st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
+            st.caption("Real-time updates are disabled. Click Connect to enable.")
     
     with col2:
         if not st.session_state.get('ws_available', False):
-            st.info("💡 Install websockets library to enable real-time updates")
+            st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
+            st.caption("Install websockets to enable real-time updates.")
         elif not st.session_state.get('ws_connected', False):
             if st.button("🔌 Connect", key="ws_connect_btn"):
                 try:
@@ -1030,7 +1121,7 @@ curl -X POST http://localhost:8000/forecast \\
                     st.success("Disconnected!")
                     st.rerun()
                 except Exception as e:
-                    logger.warning(f"Connection check failed: {e}")
+                    logging.warning(f"Connection check failed: {e}")
                     st.session_state.ws_connected = False
                     st.rerun()
     
@@ -1159,7 +1250,7 @@ curl -X POST http://localhost:8000/forecast \\
             st.session_state.ws_client.on('trade_execution', on_trade_execution)
             st.session_state.ws_client.on('risk_alert', on_risk_alert)
         except Exception as e:
-            logger.debug(f"Suppressed error: {e}")  # Callbacks may not be registered if connection is lost
+            logging.debug(f"Suppressed error: {e}")  # Callbacks may not be registered if connection is lost
             pass
         
         # Display recent events
@@ -1409,25 +1500,14 @@ curl -X POST http://localhost:8000/forecast \\
     
     # Quick Stats
     st.subheader("📈 Quick Stats")
-    
     col1, col2, col3, col4 = st.columns(4)
-    
     with col1:
-        uptime = st.session_state.system_metrics.get("uptime", "5 days, 12 hours")
-        st.metric("⏱️ Uptime", uptime)
-    
+        st.metric("⏱️ Uptime", dash["uptime_str"])
     with col2:
-        # Simulated trades today
-        trades_today = 47
-        st.metric("📊 Trades Today", trades_today, delta="+12")
-    
+        st.metric("📊 Trades Today", dash["trades_today"])
     with col3:
-        # Simulated active strategies
-        active_strategies = 8
-        st.metric("📈 Active Strategies", active_strategies)
-    
+        st.metric("📈 Active Strategies", dash["active_strategies"])
     with col4:
-        # System load (CPU)
         cpu_usage = st.session_state.system_metrics.get("cpu_usage", 45.0)
         st.metric("💻 System Load", f"{cpu_usage:.1f}%")
     
@@ -1435,36 +1515,16 @@ curl -X POST http://localhost:8000/forecast \\
     
     # Recent System Events Feed
     st.subheader("📢 Recent System Events")
-    
-    # Initialize events if empty
-    if not st.session_state.system_events:
-        st.session_state.system_events = [
-            {
-                "timestamp": datetime.now().isoformat(),
-                "type": "info",
-                "message": "System started successfully",
-                "component": "System"
-            },
-            {
-                "timestamp": (datetime.now().replace(hour=10, minute=30)).isoformat(),
-                "type": "success",
-                "message": "Database connection restored",
-                "component": "Database"
-            },
-            {
-                "timestamp": (datetime.now().replace(hour=9, minute=15)).isoformat(),
-                "type": "warning",
-                "message": "High CPU usage detected",
-                "component": "Monitoring"
-            }
-        ]
-    
-    # Display events (most recent first)
-    events_to_show = sorted(
-        st.session_state.system_events,
-        key=lambda x: x.get('timestamp', ''),
-        reverse=True
-    )[:10]
+    if dash.get("recent_events"):
+        events_to_show = list(dash["recent_events"])[-10:]
+    else:
+        if not st.session_state.system_events:
+            st.session_state.system_events = []
+        events_to_show = sorted(
+            st.session_state.system_events,
+            key=lambda x: x.get('timestamp', ''),
+            reverse=True
+        )[:10]
     
     if events_to_show:
         for event in events_to_show:
@@ -1717,9 +1777,10 @@ with tab2:
                 except Exception as e:
                     st.error(f"Test failed: {e}")
     except Exception as e:
-        logger.warning("AI Model Settings not available: %s", e)
+        logging.warning("AI Model Settings not available: %s", e)
+        import traceback
+        st.error(traceback.format_exc())
         st.info("Configure LLM in config/llm_config.py. MemoryStore and get_active_llm required.")
-        st.code(str(e), language="text")
 
     st.markdown("---")
 
@@ -2316,76 +2377,42 @@ with tab3:
     st.header("🤖 AI Agents")
     st.markdown("Manage AI agents lifecycle, configuration, and monitoring.")
     
-    # Initialize agent registry if not exists
+    # Initialize agent registry from data/agent_registry.json if not already loaded
     if not st.session_state.agent_registry:
-        st.session_state.agent_registry = {
-            "ModelSelectorAgent": {
-                "name": "ModelSelectorAgent",
-                "type": "Model Selector",
-                "status": "active",
-                "last_run": datetime.now().isoformat(),
-                "performance_score": 92,
-                "enabled": True,
-                "description": "Selects optimal forecasting model based on data characteristics",
-                "configuration": {
-                    "max_models": 5,
-                    "evaluation_metric": "RMSE",
-                    "timeout": 300
-                },
-                "execution_history": [
-                    {"timestamp": datetime.now().isoformat(), "action": "Model selection", "result": "LSTM selected"},
-                    {"timestamp": (datetime.now().replace(hour=10, minute=0)).isoformat(), "action": "Model selection", "result": "XGBoost selected"}
-                ],
-                "performance_metrics": {
-                    "success_rate": 0.95,
-                    "avg_execution_time": 45.2,
-                    "total_executions": 127
-                }
-            },
-            "OptimizerAgent": {
-                "name": "OptimizerAgent",
-                "type": "Optimizer",
-                "status": "active",
-                "last_run": (datetime.now().replace(hour=11, minute=30)).isoformat(),
-                "performance_score": 88,
-                "enabled": True,
-                "description": "Optimizes hyperparameters for machine learning models",
-                "configuration": {
-                    "method": "Optuna",
-                    "n_trials": 100,
-                    "timeout": 600
-                },
-                "execution_history": [
-                    {"timestamp": (datetime.now().replace(hour=11, minute=30)).isoformat(), "action": "Hyperparameter optimization", "result": "Best params found"}
-                ],
-                "performance_metrics": {
-                    "success_rate": 0.92,
-                    "avg_execution_time": 320.5,
-                    "total_executions": 45
-                }
-            },
-            "RiskAnalyzerAgent": {
-                "name": "RiskAnalyzerAgent",
-                "type": "Risk Analyzer",
-                "status": "paused",
-                "last_run": (datetime.now().replace(hour=8, minute=0)).isoformat(),
-                "performance_score": 85,
-                "enabled": False,
-                "description": "Analyzes portfolio risk and generates risk metrics",
-                "configuration": {
-                    "risk_metrics": ["VaR", "CVaR", "Sharpe"],
-                    "confidence_level": 0.95
-                },
-                "execution_history": [
-                    {"timestamp": (datetime.now().replace(hour=8, minute=0)).isoformat(), "action": "Risk analysis", "result": "Analysis complete"}
-                ],
-                "performance_metrics": {
-                    "success_rate": 0.90,
-                    "avg_execution_time": 120.3,
-                    "total_executions": 89
-                }
-            }
-        }
+        _registry_path = Path(__file__).resolve().parent.parent / "data" / "agent_registry.json"
+        try:
+            if _registry_path.exists():
+                with open(_registry_path, "r", encoding="utf-8") as f:
+                    _data = json.load(f)
+                _agents = _data.get("agents", {})
+                _project_root = Path(__file__).resolve().parent.parent
+                for _name, _agent in _agents.items():
+                    _loc = _agent.get("location")
+                    if _loc:
+                        _file_path = (_project_root / _loc).resolve()
+                        if not _file_path.exists():
+                            _agent["status"] = "orphaned"
+                    _agent.setdefault("last_run", "Never")
+                    _agent.setdefault("performance_score", 0)
+                    _agent.setdefault("enabled", _agent.get("status", "active") == "active")
+                    _agent.setdefault("configuration", {})
+                    _agent.setdefault("execution_history", [])
+                    _agent.setdefault("performance_metrics", {})
+                st.session_state.agent_registry = _agents
+            else:
+                st.session_state.agent_registry = {}
+        except Exception as e:
+            logging.warning("Could not load agent registry from %s: %s", _registry_path, e)
+            st.session_state.agent_registry = {}
+    
+    # Re-validate locations on each render so phantom/stale entries show as orphaned
+    _project_root = Path(__file__).resolve().parent.parent
+    for _name, _agent in list(st.session_state.agent_registry.items()):
+        _loc = _agent.get("location")
+        if _loc:
+            _file_path = (_project_root / _loc).resolve()
+            if not _file_path.exists():
+                _agent["status"] = "orphaned"
     
     # Agent Registry Table
     st.subheader("📋 Agent Registry")
@@ -2403,7 +2430,7 @@ with tab3:
     with col2:
         agent_status_filter = st.selectbox(
             "Filter by Status",
-            ["All", "active", "paused", "error"],
+            ["All", "active", "paused", "error", "orphaned"],
             help="Filter agents by status"
         )
     
@@ -2424,7 +2451,8 @@ with tab3:
             status_display = {
                 "active": "🟢 Active",
                 "paused": "⏸️ Paused",
-                "error": "🔴 Error"
+                "error": "🔴 Error",
+                "orphaned": "🔴 Orphaned"
             }.get(status, "❓ Unknown")
             
             last_run = agent.get("last_run", "Never")
@@ -3025,17 +3053,17 @@ with tab4:
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("Avg Response Time", f"{perf_metrics.get('avg_response_time', 0)} ms")
+        st.metric("Avg Response Time", f"{getattr(perf_metrics, 'avg_response_time', 0)} ms")
     
     with col2:
-        st.metric("Avg Query Time", f"{perf_metrics.get('avg_query_time', 0)} ms")
+        st.metric("Avg Query Time", f"{getattr(perf_metrics, 'avg_query_time', 0)} ms")
     
     with col3:
-        error_rate_pct = perf_metrics.get('error_rate', 0) * 100
+        error_rate_pct = getattr(perf_metrics, 'error_rate', 0) * 100
         st.metric("Error Rate", f"{error_rate_pct:.2f}%")
     
     with col4:
-        st.metric("Requests/Min", f"{perf_metrics.get('requests_per_minute', 0)}")
+        st.metric("Requests/Min", f"{getattr(perf_metrics, 'requests_per_minute', 0)}")
     
     # Performance Charts
     st.markdown("---")
@@ -3045,7 +3073,7 @@ with tab4:
     
     with col1:
         # Response Time Trend
-        response_times = [perf_metrics['avg_response_time'] + np.random.normal(0, 10) for _ in time_points]
+        response_times = [getattr(perf_metrics, 'avg_response_time', 0) + np.random.normal(0, 10) for _ in time_points]
         response_times = [max(0, x) for x in response_times]
         
         fig_response = go.Figure()
@@ -3066,7 +3094,7 @@ with tab4:
     
     with col2:
         # Error Rate Trend
-        error_rates = [perf_metrics['error_rate'] * 100 + np.random.normal(0, 0.5) for _ in time_points]
+        error_rates = [getattr(perf_metrics, 'error_rate', 0) * 100 + np.random.normal(0, 0.5) for _ in time_points]
         error_rates = [max(0, x) for x in error_rates]
         
         fig_errors = go.Figure()
@@ -3155,7 +3183,7 @@ with tab5:
                 else:
                     st.metric("Total Audit Entries", 0)
             except Exception as e:
-                logger.warning(f"Connection check failed: {e}")
+                logging.warning(f"Connection check failed: {e}")
                 st.metric("Total Audit Entries", "N/A")
         
         with col2:
@@ -3844,7 +3872,8 @@ with tab6:
         st.metric("Cache Hit Rate", "87.5%")
     
     with col4:
-        st.metric("System Uptime", "5 days, 12 hours")
+        _dash = _get_system_dashboard_data()
+        st.metric("System Uptime", _dash.get("uptime_str", "—"))
 
 # Task Orchestrator Management Section
 st.markdown("---")
@@ -3859,11 +3888,12 @@ try:
     
     ORCHESTRATOR_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"Task Orchestrator not available: {e}")
+    logging.warning(f"Task Orchestrator not available: {e}")
     ORCHESTRATOR_AVAILABLE = False
 
 if not ORCHESTRATOR_AVAILABLE:
-    st.warning("⚠️ Task Orchestrator not available. Enable it in app.py first.")
+    st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
+    st.caption("Task Orchestrator is not enabled. Enable it in app.py to manage scheduled tasks.")
 else:
     # Get orchestrator from session state
     orchestrator = st.session_state.get('task_orchestrator')

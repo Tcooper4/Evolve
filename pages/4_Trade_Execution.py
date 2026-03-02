@@ -453,6 +453,30 @@ with col2:
                             st.session_state.active_orders.append(order_info)
                             st.session_state.order_history.append(order_info)
                             
+                            # Situational awareness: write to MemoryStore for Chat context (quality gate: only accepted orders)
+                            try:
+                                _status = order_info.get("status", "")
+                                if _status in ("submitted", "filled", "accepted", "executed"):
+                                    from trading.memory import get_memory_store
+                                    from trading.memory.memory_store import MemoryType
+                                    _store = get_memory_store()
+                                    _price = limit_price if limit_price is not None else 0.0
+                                    _store.add(
+                                        MemoryType.LONG_TERM,
+                                        namespace="trades",
+                                        value={
+                                            "symbol": symbol,
+                                            "action": side.lower(),
+                                            "quantity": quantity,
+                                            "price": _price,
+                                            "mode": st.session_state.get("execution_mode", "paper"),
+                                            "timestamp": datetime.now().isoformat(),
+                                        },
+                                        category="orders",
+                                    )
+                            except Exception:
+                                pass
+                            
                             # Generate trade commentary
                             if 'commentary_service' in st.session_state:
                                 try:
@@ -2554,3 +2578,9 @@ if filled_orders:
 
 else:
     st.info("No filled orders yet. Execution analytics will appear here after orders are filled.")
+
+try:
+    from ui.page_assistant import render_page_assistant
+    render_page_assistant("Trade Execution")
+except Exception:
+    pass

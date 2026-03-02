@@ -110,7 +110,7 @@ def get_data_quality_agent():
 
 def get_execution_agent():
     """Get ExecutionAgent with lazy loading."""
-    return _lazy_import(".execution_agent", "ExecutionAgent")
+    return _lazy_import(".execution.execution_agent", "ExecutionAgent")
 
 
 def get_execution_risk_agent():
@@ -301,7 +301,7 @@ def _import_core_agents():
                 module_mapping = {
                     "ModelBuilderAgent": ".model_builder_agent",
                     "PerformanceCriticAgent": ".performance_critic_agent",
-                    "ExecutionAgent": ".execution_agent",
+                    "ExecutionAgent": ".execution.execution_agent",
                     "AgentManager": ".agent_manager",
                     "AgentLoopManager": ".agent_loop_manager",
                     "PromptRouterAgent": ".prompt_router_agent",

@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+logger = logging.getLogger(__name__)
 
 # Try to import matplotlib
 try:
@@ -49,9 +50,6 @@ except ImportError as e:
     mean_squared_error = None
     r2_score = None
     SKLEARN_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
-
 
 class ValidationStatus(Enum):
     """Validation status enum."""

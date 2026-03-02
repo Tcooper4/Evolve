@@ -267,7 +267,7 @@ class FallbackDataProvider(BaseDataProvider):
                     }
             except Exception as e:
                 self.logger.error(f"Failed to get market data for {symbol}: {e}")
-                # Use mock data as fallback
+                # MOCK FALLBACK - replace with real data source
                 results[symbol] = {
                     "price": 100.0 + np.random.normal(0, 10),
                     "timestamp": datetime.now(),

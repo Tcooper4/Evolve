@@ -4,6 +4,7 @@
 import logging
 import os
 from typing import Any, Dict, Optional, Tuple
+logger = logging.getLogger(__name__)
 
 import matplotlib.pyplot as plt
 
@@ -48,8 +49,6 @@ except ImportError as e:
 
 # Local imports
 from trading.models.base_model import BaseModel, ModelRegistry, ValidationError
-
-logger = logging.getLogger(__name__)
 
 
 class PositionalEncoding(nn.Module):

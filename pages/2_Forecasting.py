@@ -23,6 +23,8 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 
+from ui.page_assistant import render_page_assistant
+
 logger = logging.getLogger(__name__)
 
 # Backend: lazy load when Forecasting page is opened (not at app startup)
@@ -734,6 +736,42 @@ with tab1:
                             st.session_state.current_forecast = forecast_df
                             st.session_state.current_model = selected_model
                             st.session_state.current_model_instance = model  # Store model instance for explainability
+                            
+                            # Situational awareness: write to MemoryStore for Chat context (quality gate)
+                            try:
+                                from trading.memory import get_memory_store
+                                from trading.memory.memory_store import MemoryType
+                                _store = get_memory_store()
+                                _vals = forecast_values if hasattr(forecast_values, "__len__") else [float(forecast_values)]
+                                _first = _vals[0] if len(_vals) > 0 else None
+                                _last = _vals[-1] if len(_vals) > 0 else None
+                                try:
+                                    _all_same = len(_vals) > 1 and (np.unique(np.asarray(_vals).flatten()).size <= 1)
+                                except Exception:
+                                    _all_same = False
+                                _degenerate = _first is None or _last is None or _all_same
+                                if _first is not None or _last is not None:
+                                    _conf = None
+                                    if isinstance(forecast_result, dict):
+                                        if "lower_bound" in forecast_result and "upper_bound" in forecast_result:
+                                            _conf = {"lower": forecast_result["lower_bound"], "upper": forecast_result["upper_bound"]}
+                                    _store.add(
+                                        MemoryType.LONG_TERM,
+                                        namespace="forecasts",
+                                        value={
+                                            "symbol": st.session_state.get("symbol", ""),
+                                            "model_name": selected_model,
+                                            "horizon": horizon,
+                                            "forecast_first": _first,
+                                            "forecast_last": _last,
+                                            "confidence": _conf,
+                                            "timestamp": datetime.utcnow().isoformat(),
+                                            **({"model_failed": True} if _degenerate else {}),
+                                        },
+                                        category="results",
+                                    )
+                            except Exception:
+                                pass
                             
                             st.success(f"✅ Forecast generated using {selected_model}")
                             
@@ -3143,4 +3181,6 @@ with tab6:
                 st.error(f"Error generating GNN forecast: {e}")
                 import traceback
                 st.code(traceback.format_exc())
+
+render_page_assistant("Forecasting")
 

@@ -12,7 +12,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import speech_recognition as sr
+try:
+    import speech_recognition as sr
+    SPEECH_AVAILABLE = True
+except ImportError:
+    sr = None
+    SPEECH_AVAILABLE = False
 
 # OpenAI imports for Whisper
 try:
@@ -93,18 +98,18 @@ class SpeechRecognizer:
         self.language = language
         self.use_whisper = use_whisper and OPENAI_AVAILABLE
         self.whisper_api_key = whisper_api_key or os.getenv("OPENAI_API_KEY")
-
-        # Initialize recognizer
-        self.recognizer = sr.Recognizer()
-        self.recognizer.energy_threshold = 4000
-        self.recognizer.dynamic_energy_threshold = True
-        self.recognizer.pause_threshold = 0.8
+        self.recognizer = None
+        if SPEECH_AVAILABLE and sr is not None:
+            self.recognizer = sr.Recognizer()
+            self.recognizer.energy_threshold = 4000
+            self.recognizer.dynamic_energy_threshold = True
+            self.recognizer.pause_threshold = 0.8
 
         # OpenAI client for Whisper
         if self.use_whisper and self.whisper_api_key:
             openai.api_key = self.whisper_api_key
 
-        logger.info(f"Initialized Speech Recognizer (Whisper: {self.use_whisper})")
+        logger.info(f"Initialized Speech Recognizer (Whisper: {self.use_whisper}, sr: {SPEECH_AVAILABLE})")
 
     def listen_for_speech(
         self, timeout: float = 5.0, phrase_time_limit: float = 10.0
@@ -118,6 +123,8 @@ class SpeechRecognizer:
         Returns:
             Voice input data or None
         """
+        if not SPEECH_AVAILABLE or self.recognizer is None or sr is None:
+            return None
         try:
             with sr.Microphone() as source:
                 logger.info("Listening for speech...")
@@ -196,6 +203,8 @@ class SpeechRecognizer:
 
     def _transcribe_with_sphinx(self, voice_input: VoiceInput) -> Optional[str]:
         """Transcribe using Sphinx (offline)."""
+        if not SPEECH_AVAILABLE or sr is None or self.recognizer is None:
+            return None
         try:
             # Convert audio data to AudioData object
             audio = sr.AudioData(
@@ -484,7 +493,7 @@ class ChatboxAgent:
 
         # Initialize components
         self.speech_recognizer = (
-            SpeechRecognizer(whisper_api_key=whisper_api_key) if enable_voice else None
+            SpeechRecognizer(whisper_api_key=whisper_api_key) if (enable_voice and SPEECH_AVAILABLE) else None
         )
         self.tts = TextToSpeech() if enable_tts else None
         self.command_parser = CommandParser()

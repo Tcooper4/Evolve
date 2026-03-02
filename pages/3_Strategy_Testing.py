@@ -21,6 +21,8 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
+from ui.page_assistant import render_page_assistant
+
 st.set_page_config(
     page_title="Strategy Development & Testing",
     page_icon="🔄",
@@ -505,28 +507,63 @@ with tab1:
                             'trades': signals_df[signals_df[signal_col] != 0].to_dict('records') if signal_col in signals_df.columns else []
                         }
 
-                        # AGENT_MEMORY_LAYER: Persist backtest outcome (long-term)
+                        # AGENT_MEMORY_LAYER: Persist backtest outcome (long-term) — quality gate: only when metrics present
                         try:
                             from trading.memory.memory_store import MemoryType
-
-                            _get_memory_store().add(
-                                MemoryType.LONG_TERM,
-                                namespace="StreamlitStrategyTesting",
-                                category="backtest",
-                                key=f"{st.session_state.get('backtest_symbol', 'AAPL')}:{strategy_name}:{datetime.utcnow().isoformat()}",
-                                value={
-                                    "symbol": st.session_state.get('backtest_symbol', 'AAPL'),
-                                    "strategy": strategy_name,
-                                    "metrics": {
-                                        "total_return": results.get("total_return"),
-                                        "sharpe_ratio": results.get("sharpe_ratio"),
+                            _sr, _tr = results.get("sharpe_ratio"), results.get("total_return")
+                            if _sr is not None and _tr is not None:
+                                _get_memory_store().add(
+                                    MemoryType.LONG_TERM,
+                                    namespace="StreamlitStrategyTesting",
+                                    category="backtest",
+                                    key=f"{st.session_state.get('backtest_symbol', 'AAPL')}:{strategy_name}:{datetime.utcnow().isoformat()}",
+                                    value={
+                                        "symbol": st.session_state.get('backtest_symbol', 'AAPL'),
+                                        "strategy": strategy_name,
+                                        "metrics": {
+                                            "total_return": _tr,
+                                            "sharpe_ratio": _sr,
+                                            "max_drawdown": results.get("max_drawdown"),
+                                            "win_rate": results.get("win_rate"),
+                                            "total_trades": len(results.get("trades", [])),
+                                        },
+                                    },
+                                    metadata={"source": "pages/3_Strategy_Testing.py quick backtest"},
+                                )
+                        except Exception:
+                            pass
+                        # Situational awareness: also write to backtests/results for Chat context (quality gate)
+                        try:
+                            from trading.memory.memory_store import MemoryType
+                            _store = _get_memory_store()
+                            _sr = results.get("sharpe_ratio")
+                            _tr = results.get("total_return")
+                            if _sr is not None and _tr is not None:
+                                _start = data.index[0]
+                                _end = data.index[-1]
+                                _start_str = str(_start.date()) if hasattr(_start, 'date') else str(_start)
+                                _end_str = str(_end.date()) if hasattr(_end, 'date') else str(_end)
+                                _anomalous = (
+                                    (_sr is not None and _sr < -2) or
+                                    (_tr is not None and _tr < -0.8)
+                                )
+                                _store.add(
+                                    MemoryType.LONG_TERM,
+                                    namespace="backtests",
+                                    value={
+                                        "strategy_name": strategy_name,
+                                        "symbol": st.session_state.get("backtest_symbol", "AAPL"),
+                                        "total_return": _tr,
+                                        "sharpe_ratio": _sr,
                                         "max_drawdown": results.get("max_drawdown"),
                                         "win_rate": results.get("win_rate"),
-                                        "total_trades": len(results.get("trades", [])),
+                                        "start_date": _start_str,
+                                        "end_date": _end_str,
+                                        "timestamp": datetime.utcnow().isoformat(),
+                                        **({"anomalous": True} if _anomalous else {}),
                                     },
-                                },
-                                metadata={"source": "pages/3_Strategy_Testing.py quick backtest"},
-                            )
+                                    category="results",
+                                )
                         except Exception:
                             pass
                         
@@ -3212,6 +3249,7 @@ with tab_research:
             # Research button
             if st.button("🔬 Research Strategies", type="primary", use_container_width=True):
                 with st.spinner("AI is researching optimal strategies..."):
+                    research_result = None
                     try:
                         # Run research - adapt to available method
                         if hasattr(agent, 'research_strategies'):
@@ -3222,61 +3260,66 @@ with tab_research:
                                 complexity=complexity,
                                 data=data
                             )
-                    elif hasattr(agent, 'run_research_scan'):
-                        # Use run_research_scan and process results
-                        discoveries = agent.run_research_scan()
-                        
-                        # Process discoveries into research_result format
-                        strategies = []
-                        for disc in discoveries[:num_strategies]:
-                            strategy = {
-                                'name': disc.title if hasattr(disc, 'title') else f"Strategy {len(strategies) + 1}",
-                                'description': disc.description if hasattr(disc, 'description') else 'No description',
-                                'expected_return': 0.15,  # Placeholder
-                                'sharpe_ratio': 1.5,  # Placeholder
-                                'win_rate': 0.55,  # Placeholder
-                                'entry_rules': ['Entry rule 1', 'Entry rule 2'],
-                                'exit_rules': ['Exit rule 1', 'Exit rule 2'],
-                                'parameters': disc.parameters if hasattr(disc, 'parameters') else {},
-                                'implementation_code': f"# Strategy implementation for {disc.title if hasattr(disc, 'title') else 'discovered strategy'}"
-                            }
-                            strategies.append(strategy)
-                        
-                        research_result = {
-                            'strategies': strategies,
-                            'insights': f"Discovered {len(strategies)} strategies from {research_focus} focus",
-                            'market_analysis': f"Market regime: {market_regime}"
-                        }
-                    elif hasattr(agent, 'run'):
-                        # Use run method
-                        result = agent.run()
-                        # Process result into research_result format
-                        strategies = []
-                        if 'tested_strategies' in result:
-                            for tested in result['tested_strategies'][:num_strategies]:
-                                disc = tested.get('discovery', {})
+                        elif hasattr(agent, 'run_research_scan'):
+                            # Use run_research_scan and process results
+                            discoveries = agent.run_research_scan()
+                            
+                            # Process discoveries into research_result format
+                            strategies = []
+                            for disc in discoveries[:num_strategies]:
                                 strategy = {
                                     'name': disc.title if hasattr(disc, 'title') else f"Strategy {len(strategies) + 1}",
                                     'description': disc.description if hasattr(disc, 'description') else 'No description',
-                                    'expected_return': 0.15,
-                                    'sharpe_ratio': 1.5,
-                                    'win_rate': 0.55,
+                                    'expected_return': 0.15,  # Placeholder
+                                    'sharpe_ratio': 1.5,  # Placeholder
+                                    'win_rate': 0.55,  # Placeholder
                                     'entry_rules': ['Entry rule 1', 'Entry rule 2'],
                                     'exit_rules': ['Exit rule 1', 'Exit rule 2'],
                                     'parameters': disc.parameters if hasattr(disc, 'parameters') else {},
-                                    'backtest_results': tested.get('test_results', {}),
-                                    'implementation_code': f"# Strategy implementation"
+                                    'implementation_code': f"# Strategy implementation for {disc.title if hasattr(disc, 'title') else 'discovered strategy'}"
                                 }
                                 strategies.append(strategy)
-                        
-                        research_result = {
-                            'strategies': strategies,
-                            'insights': result.get('summary', {}).get('summary_text', 'Research complete'),
-                            'market_analysis': f"Market regime: {market_regime}"
-                        }
-                    else:
-                        st.error("StrategyResearchAgent does not have research_strategies, run_research_scan, or run method")
-                        research_result = None
+                            
+                            research_result = {
+                                'strategies': strategies,
+                                'insights': f"Discovered {len(strategies)} strategies from {research_focus} focus",
+                                'market_analysis': f"Market regime: {market_regime}"
+                            }
+                        elif hasattr(agent, 'run'):
+                            # Use run method
+                            result = agent.run()
+                            # Process result into research_result format
+                            strategies = []
+                            if 'tested_strategies' in result:
+                                for tested in result['tested_strategies'][:num_strategies]:
+                                    disc = tested.get('discovery', {})
+                                    strategy = {
+                                        'name': disc.title if hasattr(disc, 'title') else f"Strategy {len(strategies) + 1}",
+                                        'description': disc.description if hasattr(disc, 'description') else 'No description',
+                                        'expected_return': 0.15,
+                                        'sharpe_ratio': 1.5,
+                                        'win_rate': 0.55,
+                                        'entry_rules': ['Entry rule 1', 'Entry rule 2'],
+                                        'exit_rules': ['Exit rule 1', 'Exit rule 2'],
+                                        'parameters': disc.parameters if hasattr(disc, 'parameters') else {},
+                                        'backtest_results': tested.get('test_results', {}),
+                                        'implementation_code': f"# Strategy implementation"
+                                    }
+                                    strategies.append(strategy)
+                            
+                            research_result = {
+                                'strategies': strategies,
+                                'insights': result.get('summary', {}).get('summary_text', 'Research complete'),
+                                'market_analysis': f"Market regime: {market_regime}"
+                            }
+                        else:
+                            st.error("StrategyResearchAgent does not have research_strategies, run_research_scan, or run method")
+                            research_result = None
+                    
+                    except Exception as e:
+                        st.error(f"Research failed: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
                     
                     if research_result and research_result.get('strategies'):
                         # Display results
@@ -3348,11 +3391,6 @@ with tab_research:
                         st.write(research_result.get('market_analysis', 'No analysis available'))
                     else:
                         st.warning("No strategies were discovered. Try adjusting the research parameters.")
-                
-                    except Exception as e:
-                        st.error(f"Error: {e}")
-                        import traceback
-                        st.code(traceback.format_exc())
     
     except ImportError:
         st.error("Strategy Research Agent not available")
@@ -3548,4 +3586,6 @@ with tab_rl:
                 st.metric("Max Drawdown", f"{results.get('max_drawdown', 0):.2%}")
             with col4:
                 st.metric("Win Rate", f"{results.get('win_rate', 0):.2%}")
+
+render_page_assistant("Strategy Testing")
 

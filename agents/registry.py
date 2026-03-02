@@ -236,11 +236,11 @@ class AgentRegistry:
             return None
 
     def _try_prompt_router_fallback(self, name: str, **kwargs) -> Optional[Any]:
-        """Try to use prompt router as fallback for any agent."""
+        """Try to use prompt router as fallback for any agent (EnhancedPromptRouterAgent in live code)."""
         try:
-            from trading.agents.prompt_router_agent import PromptRouterAgent
+            from trading.agents.enhanced_prompt_router import EnhancedPromptRouterAgent
 
-            return PromptRouterAgent(**kwargs)
+            return EnhancedPromptRouterAgent(**kwargs)
         except ImportError:
             return None
 

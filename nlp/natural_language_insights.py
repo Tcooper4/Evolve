@@ -12,6 +12,7 @@ import logging
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+logger = logging.getLogger(__name__)
 
 # Try to import transformers
 try:
@@ -52,9 +53,6 @@ except ImportError as e:
     logger.warning(f"   Missing: {e}")
     spacy = None
     SPACY_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
-
 
 class NaturalLanguageInsights:
     """Advanced NLP processor for financial text analysis."""

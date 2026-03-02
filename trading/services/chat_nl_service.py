@@ -36,6 +36,133 @@ class ChatTurnResult:
     action_data: Optional[Dict[str, Any]] = None  # e.g. metrics, equity_curve for UI
 
 
+def get_trading_context_summary(store: Any) -> str:
+    """
+    Query MemoryStore for last backtests, forecast, trades, and risk snapshot.
+    Return a single plain-English paragraph for Chat situational awareness.
+    """
+    from trading.memory.memory_store import MemoryType
+
+    parts = []
+    try:
+        # Last 3 backtests (namespace=backtests, category=results)
+        recs = store.list(MemoryType.LONG_TERM, namespace="backtests", category="results", limit=3)
+        for r in recs:
+            v = r.value if hasattr(r, "value") else r.get("value", r)
+            if not isinstance(v, dict):
+                continue
+            name = v.get("strategy_name", "?")
+            sym = v.get("symbol", "?")
+            ret = v.get("total_return")
+            sharpe = v.get("sharpe_ratio")
+            ts = v.get("timestamp", "")
+            ret_s = f"{ret:.1%}" if isinstance(ret, (int, float)) else str(ret)
+            sharpe_s = f"{sharpe:.1f}" if isinstance(sharpe, (int, float)) else str(sharpe)
+            when = _relative_time(ts)
+            parts.append(f"Last backtest: {name} on {sym} returned {ret_s}, Sharpe {sharpe_s} ({when}).")
+            if v.get("anomalous"):
+                parts.append("Note: last backtest result was anomalous — treat with caution.")
+        if parts:
+            parts.append("")
+    except Exception as e:
+        logger.debug("Trading context backtests: %s", e)
+
+    try:
+        recs = store.list(MemoryType.LONG_TERM, namespace="forecasts", category="results", limit=1)
+        if recs:
+            r = recs[0]
+            v = r.value if hasattr(r, "value") else r.get("value", r)
+            if isinstance(v, dict):
+                sym = v.get("symbol", "?")
+                model = v.get("model_name", "?")
+                horizon = v.get("horizon", "?")
+                first = v.get("forecast_first")
+                last = v.get("forecast_last")
+                when = _relative_time(v.get("timestamp", ""))
+                pred = ""
+                if first is not None and last is not None:
+                    try:
+                        pct = ((float(last) - float(first)) / float(first)) * 100 if float(first) != 0 else 0
+                        pred = f" predicts {pct:+.1f}% over {horizon} days"
+                    except (TypeError, ValueError):
+                        pred = f" over {horizon} days"
+                else:
+                    pred = f" over {horizon} days"
+                parts.append(f"Last forecast: {model} on {sym}{pred} ({when}).")
+                if v.get("model_failed"):
+                    parts.append("Note: last forecast may indicate model failure — treat with caution.")
+                parts.append("")
+    except Exception as e:
+        logger.debug("Trading context forecasts: %s", e)
+
+    try:
+        recs = store.list(MemoryType.LONG_TERM, namespace="trades", category="orders", limit=3)
+        for r in recs:
+            v = r.value if hasattr(r, "value") else r.get("value", r)
+            if not isinstance(v, dict):
+                continue
+            action = v.get("action", "?")
+            sym = v.get("symbol", "?")
+            qty = v.get("quantity", "?")
+            price = v.get("price")
+            mode = v.get("mode", "paper")
+            when = _relative_time(v.get("timestamp", ""))
+            price_s = f"${price:.2f}" if isinstance(price, (int, float)) else str(price)
+            parts.append(f"Last trade: {action.capitalize()} {qty} {sym} at {price_s} ({mode}, {when}).")
+        if recs:
+            parts.append("")
+    except Exception as e:
+        logger.debug("Trading context trades: %s", e)
+
+    try:
+        recs = store.list(MemoryType.LONG_TERM, namespace="risk", category="snapshots", limit=1)
+        if recs:
+            r = recs[0]
+            v = r.value if hasattr(r, "value") else r.get("value", r)
+            if isinstance(v, dict):
+                var = v.get("var_95")
+                vol = v.get("volatility")
+                dd = v.get("max_drawdown")
+                sharpe = v.get("sharpe_ratio")
+                var_s = f"{abs(var):.2%}" if isinstance(var, (int, float)) else str(var)
+                vol_s = f"{vol:.2%}" if isinstance(vol, (int, float)) else str(vol)
+                dd_s = f"{abs(dd):.2%}" if isinstance(dd, (int, float)) else str(dd)
+                sharpe_s = f"{sharpe:.2f}" if isinstance(sharpe, (int, float)) else str(sharpe)
+                parts.append(f"Risk: VaR95={var_s}, volatility={vol_s}, max drawdown={dd_s}, Sharpe={sharpe_s}.")
+    except Exception as e:
+        logger.debug("Trading context risk: %s", e)
+
+    if not parts:
+        return "No recent backtests, forecasts, trades, or risk snapshot in memory."
+    return " ".join(p.strip() for p in parts if p and p.strip())
+
+
+def _relative_time(ts: str) -> str:
+    """Return a short relative time string (e.g. '3 days ago')."""
+    if not ts:
+        return "unknown"
+    try:
+        from datetime import datetime
+        s = str(ts).replace("Z", "").replace("+00:00", "")[:26]
+        dt = datetime.fromisoformat(s)
+        now = datetime.utcnow()
+        if getattr(dt, "tzinfo", None):
+            dt = dt.replace(tzinfo=None)
+        delta = now - dt
+        sec = delta.total_seconds()
+        if sec < 60:
+            return "just now"
+        if sec < 3600:
+            return f"{int(sec / 60)} min ago"
+        if sec < 86400:
+            return f"{int(sec / 3600)} hours ago"
+        if sec < 604800:
+            return f"{int(sec / 86400)} days ago"
+        return f"{int(sec / 604800)} weeks ago"
+    except Exception:
+        return "recently"
+
+
 def get_memory_context(
     store: Any,
     *,
@@ -135,9 +262,17 @@ def run_agent_action(prompt: str) -> Dict[str, Any]:
         }
 
 
-def build_context_block(memory_context: str, agent_response: Dict[str, Any], intent: Optional[str] = None) -> str:
-    """Build the context string to send to Claude (memory + last agent output)."""
-    blocks = [f"Relevant memory and preferences:\n{memory_context}"]
+def build_context_block(memory_context: str, agent_response: Dict[str, Any], intent: Optional[str] = None, store: Any = None) -> str:
+    """Build the context string to send to Claude (optional trading context + memory + last agent output)."""
+    blocks = []
+    if store:
+        try:
+            trading = get_trading_context_summary(store)
+            blocks.append(f"Current trading context:\n{trading}")
+            blocks.append("")
+        except Exception as e:
+            logger.debug("Trading context for Chat failed: %s", e)
+    blocks.append(f"Relevant memory and preferences:\n{memory_context}")
     blocks.append("\nLatest agent output (use this to answer the user):")
     blocks.append(f"Success: {agent_response.get('success', False)}")
     blocks.append(f"Message: {agent_response.get('message', '')}")

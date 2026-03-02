@@ -98,6 +98,7 @@ if prompt:
                     memory_context,
                     agent_response,
                     intent=intent,
+                    store=store,
                 )
                 conv = [
                     {"role": m["role"], "content": m.get("content", "")}
@@ -171,3 +172,9 @@ def __get_router():
             logger.warning(f"Router init failed: {e}")
             st.session_state.chat_router = None
     return st.session_state.get("chat_router")
+
+try:
+    from ui.page_assistant import render_page_assistant
+    render_page_assistant("Chat")
+except Exception:
+    pass

@@ -14,6 +14,7 @@ project_root = Path(__file__).parent.parent.absolute()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+import pandas as pd
 import streamlit as st
 
 logger = logging.getLogger(__name__)
@@ -78,12 +79,30 @@ if st.session_state.home_briefing_text is None:
             st.session_state.home_briefing_market_data = {}
     st.rerun()
 
-# Show briefing text
-st.markdown(st.session_state.home_briefing_text)
-
-# Dynamic cards (2–4)
-cards = st.session_state.home_briefing_cards
 market_data = st.session_state.home_briefing_market_data
+
+# Metric row: SPY and AAPL price + weekly change %
+if market_data:
+    m1, m2 = st.columns(2)
+    for col, symbol in zip([m1, m2], ["SPY", "AAPL"]):
+        if symbol in market_data:
+            data = market_data[symbol]
+            cur = data.get("current")
+            week_ago = data.get("week_ago")
+            with col:
+                if cur is not None:
+                    delta = None
+                    if week_ago is not None and week_ago != 0:
+                        pct = ((cur - week_ago) / week_ago) * 100
+                        delta = f"{pct:+.1f}% vs 1w"
+                    st.metric(label=symbol, value=f"${cur:,.2f}", delta=delta)
+
+st.markdown("---")
+with st.container(border=True):
+    st.markdown(st.session_state.home_briefing_text)
+
+# Dynamic cards (2–4): container with border, content visible
+cards = st.session_state.home_briefing_cards
 
 if cards:
     st.markdown("---")
@@ -95,27 +114,30 @@ if cards:
         detail = card.get("detail", "")
         card_type = card.get("card_type", "news")
         with cols[i % len(cols)]:
-            with st.container():
+            with st.container(border=True):
                 st.markdown(f"**{headline}**")
                 if detail:
-                    with st.expander("See details"):
-                        st.caption(detail)
-                # Optional: small chart for price_chart if we have series
+                    st.caption(detail)
                 if card_type == "price_chart" and market_data:
-                    symbol = card.get("symbol") or list(market_data.keys())[0] if market_data else None
+                    symbol = card.get("symbol") or (list(market_data.keys())[0] if market_data else None)
                     if symbol and symbol in market_data:
-                        series = market_data[symbol].get("series")
+                        entry = market_data[symbol]
+                        series = entry.get("series")
+                        dates = entry.get("dates") or []
                         if series and len(series) >= 2:
                             try:
-                                import pandas as pd
-                                df = pd.DataFrame({"price": series})
-                                st.line_chart(df)
+                                if len(dates) == len(series):
+                                    df = pd.DataFrame({"price": series}, index=pd.Index(dates))
+                                    st.line_chart(df)
+                                else:
+                                    df = pd.DataFrame({"price": series})
+                                    st.line_chart(df)
                             except Exception:
                                 pass
 
-# Follow-up question: routes to Chat with pre-filled question
+# Follow-up: prominent label
 st.markdown("---")
-st.caption("Ask a follow-up about anything in your briefing.")
+st.markdown("**Ask the AI anything about your portfolio or the markets:**")
 follow_up = st.text_input(
     "Ask a follow-up question",
     placeholder="e.g. Why did my NVDA position go up? What should I do next?",
@@ -129,3 +151,9 @@ if follow_up and follow_up.strip():
     except Exception as e:
         logger.warning(f"switch_page failed: {e}")
         st.info("Go to **Chat** in the sidebar and paste your question there.")
+
+try:
+    from ui.page_assistant import render_page_assistant
+    render_page_assistant("Home")
+except Exception:
+    pass

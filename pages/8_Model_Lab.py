@@ -4444,14 +4444,6 @@ with tab_discovery:
                         st.error(f"Error during model discovery: {e}")
                         import traceback
                         st.code(traceback.format_exc())
-    
-    except ImportError as e:
-        st.error(f"Model Discovery Agent not available: {e}")
-        st.info("The Model Discovery Agent requires additional dependencies. Check the logs for details.")
-    except Exception as e:
-        st.error(f"Error initializing Model Discovery Agent: {e}")
-        import traceback
-        st.code(traceback.format_exc())
 
 # TAB 9: Model Innovation
 with tab_innovation:
@@ -4736,4 +4728,10 @@ with tab_benchmark:
         st.error(f"Error: {e}")
         import traceback
         st.code(traceback.format_exc())
+
+try:
+    from ui.page_assistant import render_page_assistant
+    render_page_assistant("Model Lab")
+except Exception:
+    pass
 

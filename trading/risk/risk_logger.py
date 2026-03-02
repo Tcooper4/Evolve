@@ -9,6 +9,7 @@ from typing import Dict, Optional
 import pandas as pd
 
 from .risk_metrics import calculate_advanced_metrics, calculate_rolling_metrics
+logger = logging.getLogger(__name__)
 
 # Configure logging
 logging.basicConfig(
@@ -19,9 +20,6 @@ logging.basicConfig(
         logging.StreamHandler(),
     ],
 )
-logger = logging.getLogger(__name__)
-
-
 class RiskLogger:
     """Logger for tracking risk metrics in real-time."""
 

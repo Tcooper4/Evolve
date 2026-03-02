@@ -30,6 +30,9 @@ warnings.filterwarnings("ignore")
 
 logger = logging.getLogger(__name__)
 
+# SIMULATION MODE - replace with real broker feed when connecting to live data
+SIMULATION_MODE = True
+
 
 class DataProvider:
     """Base class for data providers."""
@@ -518,11 +521,13 @@ class LiveDataFeed:
         self, symbol: str, start_date: str, end_date: str
     ) -> pd.DataFrame:
         """Generate fallback historical data."""
+        if not SIMULATION_MODE:
+            return pd.DataFrame()
         start = pd.to_datetime(start_date)
         end = pd.to_datetime(end_date)
         dates = pd.date_range(start=start, end=end, freq="D")
 
-        # Generate realistic price data
+        # Generate realistic price data (simulation)
         base_price = 100.0
         prices = []
         for i, date in enumerate(dates):
@@ -552,6 +557,8 @@ class LiveDataFeed:
 
     def _get_fallback_live_data(self, symbol: str) -> Dict:
         """Generate fallback live data."""
+        if not SIMULATION_MODE:
+            return {"symbol": symbol, "price": None, "volume": None, "timestamp": datetime.now().isoformat(), "source": "unavailable"}
         return {
             "symbol": symbol,
             "price": round(100.0 + np.random.normal(0, 2), 2),

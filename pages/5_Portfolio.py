@@ -16,8 +16,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import List
-from datetime import datetime
+from typing import List, Optional
 
 # Add project root to Python path for imports (Streamlit pages run in separate context)
 project_root = Path(__file__).parent.parent.absolute()
@@ -34,6 +33,7 @@ from trading.data.data_loader import DataLoader, DataLoadRequest
 from utils.math_utils import calculate_volatility, calculate_beta
 from trading.utils.performance_metrics import PerformanceMetrics
 from trading.optimization.portfolio_optimizer import PortfolioOptimizer
+from ui.page_assistant import render_page_assistant
 # Import from portfolio package (handles availability checks)
 # Try direct import first (more reliable with Streamlit)
 try:
@@ -50,6 +50,16 @@ except (ImportError, ModuleNotFoundError) as e:
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
+
+def _empty_state(message: str, icon: str = "📊"):
+    st.markdown(f"""
+    <div style="text-align:center;padding:60px 20px;color:#888;border:1px dashed #ddd;border-radius:8px;margin:20px 0">
+        <div style="font-size:48px;margin-bottom:12px">{icon}</div>
+        <div style="font-size:16px">{message}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -170,69 +180,38 @@ def save_portfolio_state(filename: str) -> None:
     except Exception as e:
         st.error(f"Failed to save portfolio state: {e}")
 
-def plot_equity_curve(positions: List[Position]) -> go.Figure:
-    """Plot equity curve with trade markers.
-
-    Args:
-        positions: List of positions
-
-    Returns:
-        Plotly figure
-    """
+def plot_equity_curve(positions: List[Position]) -> Optional[go.Figure]:
+    """Plot equity curve from positions. Returns None when no positions (caller shows empty state)."""
     # Defensive check for positions
     if not positions:
-        logger.warning("No positions provided, creating fallback equity curve")
-        # Create fallback DataFrame
-        dates = pd.date_range(start="2024-01-01", end="2024-12-31", freq="D")
-        fallback_df = pd.DataFrame(
+        return None
+    # Create DataFrame with cumulative PnL
+    df = pd.DataFrame(
+        [
             {
-                "timestamp": dates,
-                "pnl": np.random.normal(0, 100, len(dates)),
-                "type": "fallback",
-                "symbol": "N/A",
-                "direction": "N/A",
+                "timestamp": p.entry_time,
+                "pnl": 0,
+                "type": "entry",
+                "symbol": p.symbol,
+                "direction": p.direction.value,
             }
-        )
-        df = fallback_df
-    else:
-        # Create DataFrame with cumulative PnL
-        df = pd.DataFrame(
-            [
-                {
-                    "timestamp": p.entry_time,
-                    "pnl": 0,
-                    "type": "entry",
-                    "symbol": p.symbol,
-                    "direction": p.direction.value,
-                }
-                for p in positions
-            ]
-            + [
-                {
-                    "timestamp": p.exit_time,
-                    "pnl": p.pnl,
-                    "type": "exit",
-                    "symbol": p.symbol,
-                    "direction": p.direction.value,
-                }
-                for p in positions
-                if p.exit_time is not None
-            ]
-        )
+            for p in positions
+        ]
+        + [
+            {
+                "timestamp": p.exit_time,
+                "pnl": p.pnl,
+                "type": "exit",
+                "symbol": p.symbol,
+                "direction": p.direction.value,
+            }
+            for p in positions
+            if p.exit_time is not None
+        ]
+    )
 
     if df.empty:
-        logger.warning("Empty DataFrame, creating fallback equity curve")
-        # Create fallback DataFrame
-        dates = pd.date_range(start="2024-01-01", end="2024-12-31", freq="D")
-        df = pd.DataFrame(
-            {
-                "timestamp": dates,
-                "pnl": np.random.normal(0, 100, len(dates)),
-                "type": "fallback",
-                "symbol": "N/A",
-                "direction": "N/A",
-            }
-        )
+        return None
 
     # Sort by timestamp
     df = df.sort_values("timestamp")
@@ -286,43 +265,19 @@ def plot_equity_curve(positions: List[Position]) -> go.Figure:
 
     return fig
 
-def plot_rolling_metrics(positions: List[Position], window: int = 20) -> go.Figure:
-    """Plot rolling performance metrics.
-
-    Args:
-        positions: List of positions
-        window: Rolling window size
-
-    Returns:
-        Plotly figure
-    """
-    # Defensive check for positions
+def plot_rolling_metrics(positions: List[Position], window: int = 20) -> Optional[go.Figure]:
+    """Plot rolling performance metrics. Returns None when no positions (caller shows empty state)."""
     if not positions:
-        logger.warning("No positions provided, creating fallback rolling metrics")
-        # Create fallback DataFrame
-        dates = pd.date_range(start="2024-01-01", end="2024-12-31", freq="D")
-        df = pd.DataFrame(
-            {"date": dates, "return": np.random.normal(0, 0.02, len(dates))}
-        )
-    else:
-        # Create DataFrame with daily returns
-        df = pd.DataFrame(
-            [
-                {"date": p.exit_time.date(), "return": p.pnl / (p.entry_price * p.size)}
-                for p in positions
-                if p.exit_time is not None
-            ]
-        )
-
+        return None
+    df = pd.DataFrame(
+        [
+            {"date": p.exit_time.date(), "return": p.pnl / (p.entry_price * p.size)}
+            for p in positions
+            if p.exit_time is not None
+        ]
+    )
     if df.empty:
-        logger.warning("Empty DataFrame, creating fallback rolling metrics")
-        # Create fallback DataFrame
-        dates = pd.date_range(start="2024-01-01", end="2024-12-31", freq="D")
-        df = pd.DataFrame(
-            {"date": dates, "return": np.random.normal(0, 0.02, len(dates))}
-        )
-
-    # Calculate rolling metrics with defensive checks
+        return None
     try:
         df["rolling_sharpe"] = (
             df["return"].rolling(window).mean()
@@ -333,9 +288,8 @@ def plot_rolling_metrics(positions: List[Position], window: int = 20) -> go.Figu
             df["return"].rolling(window).apply(lambda x: (x > 0).mean())
         )
     except Exception as e:
-        logger.warning(f"Error calculating rolling metrics: {e}, using fallback values")
-        df["rolling_sharpe"] = np.random.normal(1.0, 0.3, len(df))
-        df["rolling_win_rate"] = np.random.uniform(0.4, 0.6, len(df))
+        logger.warning(f"Error calculating rolling metrics: {e}")
+        return None
 
     # Create figure
     fig = go.Figure()
@@ -364,71 +318,31 @@ def plot_rolling_metrics(positions: List[Position], window: int = 20) -> go.Figu
 
     return fig
 
-def plot_strategy_performance(positions: List[Position]) -> go.Figure:
-    """Plot strategy performance comparison.
-
-    Args:
-        positions: List of positions
-
-    Returns:
-        Plotly figure
-    """
-    # Defensive check for positions
+def plot_strategy_performance(positions: List[Position]) -> Optional[go.Figure]:
+    """Plot strategy performance comparison. Returns None when no positions (caller shows empty state)."""
     if not positions:
-        logger.warning("No positions provided, creating fallback strategy performance")
-        # Create fallback DataFrame
-        strategies = [
-            "RSI Mean Reversion",
-            "Bollinger Bands",
-            "Moving Average Crossover",
-        ]
-        df = pd.DataFrame(
+        return None
+    df = pd.DataFrame(
+        [
             {
-                "strategy": strategies,
-                "pnl": np.random.normal(1000, 500, len(strategies)),
-                "return": np.random.normal(0.05, 0.02, len(strategies)),
+                "strategy": p.strategy,
+                "pnl": p.pnl,
+                "return": (
+                    p.pnl / (p.entry_price * p.size) if p.pnl is not None else 0
+                ),
             }
-        )
-    else:
-        # Create DataFrame with strategy metrics
-        df = pd.DataFrame(
-            [
-                {
-                    "strategy": p.strategy,
-                    "pnl": p.pnl,
-                    "return": (
-                        p.pnl / (p.entry_price * p.size) if p.pnl is not None else 0
-                    ),
-                }
-                for p in positions
-                if p.exit_time is not None
-            ]
-        )
-
+            for p in positions
+            if p.exit_time is not None
+        ]
+    )
     if df.empty:
-        logger.warning("Empty DataFrame, creating fallback strategy performance")
-        # Create fallback DataFrame
-        strategies = [
-            "RSI Mean Reversion",
-            "Bollinger Bands",
-            "Moving Average Crossover",
-        ]
-        df = pd.DataFrame(
-            {
-                "strategy": strategies,
-                "pnl": np.random.normal(1000, 500, len(strategies)),
-                "return": np.random.normal(0.05, 0.02, len(strategies)),
-            }
-        )
-
-    # Calculate strategy metrics with defensive checks
+        return None
     try:
         strategy_metrics = (
             df.groupby("strategy")
             .agg({"pnl": ["sum", "mean", "std"], "return": ["mean", "std"]})
             .reset_index()
         )
-
         strategy_metrics.columns = [
             "strategy",
             "total_pnl",
@@ -442,28 +356,13 @@ def plot_strategy_performance(positions: List[Position]) -> go.Figure:
             / strategy_metrics["std_return"]
             * np.sqrt(252)
         )
-
-        # Handle division by zero
         strategy_metrics["sharpe"] = strategy_metrics["sharpe"].fillna(0)
         strategy_metrics["sharpe"] = strategy_metrics["sharpe"].replace(
             [np.inf, -np.inf], 0
         )
-
     except Exception as e:
-        logger.warning(
-            f"Error calculating strategy metrics: {e}, using fallback values"
-        )
-        strategy_metrics = pd.DataFrame(
-            {
-                "strategy": [
-                    "RSI Mean Reversion",
-                    "Bollinger Bands",
-                    "Moving Average Crossover",
-                ],
-                "total_pnl": np.random.normal(1000, 500, 3),
-                "sharpe": np.random.normal(1.0, 0.3, 3),
-            }
-        )
+        logger.warning(f"Error calculating strategy metrics: {e}")
+        return None
 
     # Create figure
     fig = go.Figure()
@@ -1003,23 +902,26 @@ with tab1:
     viz_tab1, viz_tab2, viz_tab3 = st.tabs(["Equity Curve", "Rolling Metrics", "Strategy Performance"])
 
     with viz_tab1:
-        st.plotly_chart(
-            plot_equity_curve(portfolio.state.closed_positions),
-            use_container_width=True
-        )
+        fig = plot_equity_curve(portfolio.state.closed_positions)
+        if fig is not None:
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            _empty_state("No trading history yet. Make your first trade or run a backtest to see portfolio performance here.", "📊")
 
     with viz_tab2:
         window = st.slider("Rolling Window", 5, 100, 20)
-        st.plotly_chart(
-            plot_rolling_metrics(portfolio.state.closed_positions, window=window),
-            use_container_width=True
-        )
+        fig = plot_rolling_metrics(portfolio.state.closed_positions, window=window)
+        if fig is not None:
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            _empty_state("No trading history yet. Make your first trade or run a backtest to see portfolio performance here.", "📊")
 
     with viz_tab3:
-        st.plotly_chart(
-            plot_strategy_performance(portfolio.state.closed_positions),
-            use_container_width=True
-        )
+        fig = plot_strategy_performance(portfolio.state.closed_positions)
+        if fig is not None:
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            _empty_state("No trading history yet. Make your first trade or run a backtest to see portfolio performance here.", "📊")
 
 # TAB 2: Positions (detailed view)
 with tab2:
@@ -2703,4 +2605,6 @@ with tab5:
         except Exception as e:
             st.error(f"Error generating tax report: {str(e)}")
             logger.error(f"Tax report generation error: {e}")
+
+render_page_assistant("Portfolio")
 

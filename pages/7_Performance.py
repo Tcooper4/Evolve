@@ -40,6 +40,16 @@ except ImportError as e:
 # Setup logging
 logger = logging.getLogger(__name__)
 
+
+def _empty_state(message: str, icon: str = "📊"):
+    st.markdown(f"""
+    <div style="text-align:center;padding:60px 20px;color:#888;border:1px dashed #ddd;border-radius:8px;margin:20px 0">
+        <div style="font-size:48px;margin-bottom:12px">{icon}</div>
+        <div style="font-size:16px">{message}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 # Page config
 st.set_page_config(
     page_title="Performance & History",
@@ -261,314 +271,315 @@ with tab1:
             st.empty()
     
     st.markdown("---")
-    
-    # Generate sample returns data
-    dates = pd.date_range(end=datetime.now(), periods=365, freq='D')
-    sample_returns = pd.Series(np.random.normal(0.0005, 0.015, 365), index=dates)
-    
-    # Overall Portfolio Metrics
-    st.subheader("📈 Overall Portfolio Metrics")
-    portfolio_metrics = get_portfolio_metrics(sample_returns)
-    
-    if portfolio_metrics:
-        col_met1, col_met2, col_met3, col_met4 = st.columns(4)
-        
-        with col_met1:
-            st.metric(
-                "Total Return",
-                f"{portfolio_metrics['total_return']:.2%}",
-                help="Cumulative return over the period"
-            )
-        
-        with col_met2:
-            st.metric(
-                "Sharpe Ratio",
-                f"{portfolio_metrics['sharpe_ratio']:.2f}",
-                help="Risk-adjusted return metric"
-            )
-        
-        with col_met3:
-            st.metric(
-                "Max Drawdown",
-                f"{portfolio_metrics['max_drawdown']:.2%}",
-                delta_color="inverse",
-                help="Maximum peak-to-trough decline"
-            )
-        
-        with col_met4:
-            st.metric(
-                "Volatility",
-                f"{portfolio_metrics['volatility']:.2%}",
-                help="Annualized volatility"
-            )
-    
-    st.markdown("---")
-    
-    # Strategy Comparison Table
-    st.subheader("📊 Strategy Comparison")
-    
-    strategy_df = get_strategy_performance_data()
-    
-    # Apply filters
-    if strategy_type_filter == "Active":
-        strategy_df = strategy_df[strategy_df['status'] == 'active']
-    elif strategy_type_filter == "Paused":
-        strategy_df = strategy_df[strategy_df['status'] == 'paused']
-    
-    if not strategy_df.empty:
-        # Format the dataframe for display
-        display_df = strategy_df.copy()
-        display_df['total_return'] = display_df['total_return'].apply(lambda x: f"{x:.2%}")
-        display_df['sharpe_ratio'] = display_df['sharpe_ratio'].apply(lambda x: f"{x:.2f}")
-        display_df['win_rate'] = display_df['win_rate'].apply(lambda x: f"{x:.1%}")
-        display_df['status'] = display_df['status'].apply(lambda x: "🟢 Active" if x == 'active' else "🔴 Paused")
-        
-        # Rename columns for display
-        display_df.columns = ['Strategy Name', 'Total Return', 'Sharpe Ratio', 'Win Rate', 'Number of Trades', 'Status']
-        
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
-        
-        # Best/Worst Performers
-        col_best, col_worst = st.columns(2)
-        
-        with col_best:
-            st.markdown("**🏆 Best Performers**")
-            best_by_return = strategy_df.nlargest(3, 'total_return')
-            for idx, row in best_by_return.iterrows():
-                st.success(f"**{row['strategy_name']}**: {row['total_return']:.2%} return, Sharpe: {row['sharpe_ratio']:.2f}")
-            
-            best_by_sharpe = strategy_df.nlargest(3, 'sharpe_ratio')
-            st.markdown("**Best Sharpe Ratio:**")
-            for idx, row in best_by_sharpe.iterrows():
-                st.info(f"**{row['strategy_name']}**: Sharpe {row['sharpe_ratio']:.2f}")
-        
-        with col_worst:
-            st.markdown("**⚠️ Worst Performers**")
-            worst_by_return = strategy_df.nsmallest(3, 'total_return')
-            for idx, row in worst_by_return.iterrows():
-                st.error(f"**{row['strategy_name']}**: {row['total_return']:.2%} return, Sharpe: {row['sharpe_ratio']:.2f}")
-            
-            worst_by_sharpe = strategy_df.nsmallest(3, 'sharpe_ratio')
-            st.markdown("**Worst Sharpe Ratio:**")
-            for idx, row in worst_by_sharpe.iterrows():
-                st.warning(f"**{row['strategy_name']}**: Sharpe {row['sharpe_ratio']:.2f}")
+
+    # Real returns: from strategy logger / MemoryStore when available; otherwise show empty state
+    sample_returns = None  # TODO: load from strategy logger or trade history
+    if sample_returns is None or (hasattr(sample_returns, 'empty') and sample_returns.empty):
+        _empty_state("No performance data yet. Run a backtest or make trades to populate this page.", "📈")
     else:
-        st.info("No strategy data available")
-    
-    st.markdown("---")
-    
-    # Performance Trend Chart
-    st.subheader("📈 Performance Trend")
-    
-    trend_period = st.radio(
-        "Trend Period",
-        ["Last 30 days", "Last 90 days", "Last 365 days"],
-        horizontal=True,
-        index=2
-    )
-    
-    days_map = {"Last 30 days": 30, "Last 90 days": 90, "Last 365 days": 365}
-    trend_days = days_map[trend_period]
-    
-    performance_trend = generate_performance_trend(sample_returns, trend_days)
-    
-    if not performance_trend.empty:
-        # Use advanced performance chart
-        try:
-            from utils.plotting_helper import create_performance_chart
+        # Overall Portfolio Metrics
+        st.subheader("📈 Overall Portfolio Metrics")
+        portfolio_metrics = get_portfolio_metrics(sample_returns)
+        
+        if portfolio_metrics:
+            col_met1, col_met2, col_met3, col_met4 = st.columns(4)
             
-            # Convert cumulative returns to equity curve
-            equity_curve = (1 + performance_trend) * 100  # Start at 100
+            with col_met1:
+                st.metric(
+                    "Total Return",
+                    f"{portfolio_metrics['total_return']:.2%}",
+                    help="Cumulative return over the period"
+                )
             
-            fig_trend = create_performance_chart(
-                equity_curve=equity_curve,
-                benchmark=None,
-                title=f"Performance Trend - {trend_period}"
-            )
+            with col_met2:
+                st.metric(
+                    "Sharpe Ratio",
+                    f"{portfolio_metrics['sharpe_ratio']:.2f}",
+                    help="Risk-adjusted return metric"
+                )
             
-            # Add break-even line
-            fig_trend.add_hline(
-                y=100,
-                line_dash="dash",
-                line_color="gray",
-                annotation_text="Break-even"
-            )
+            with col_met3:
+                st.metric(
+                    "Max Drawdown",
+                    f"{portfolio_metrics['max_drawdown']:.2%}",
+                    delta_color="inverse",
+                    help="Maximum peak-to-trough decline"
+                )
             
-            st.plotly_chart(fig_trend, use_container_width=True)
-        except ImportError:
-            # Fallback to basic chart
-            fig_trend = go.Figure()
-            fig_trend.add_trace(go.Scatter(
-                x=performance_trend.index,
-                y=performance_trend.values,
-                mode='lines',
-                name='Portfolio Performance',
-                line=dict(color='blue', width=2),
-                fill='tozeroy',
-                fillcolor='rgba(0, 100, 255, 0.1)'
-            ))
-            
-            fig_trend.add_hline(
-                y=0,
-                line_dash="dash",
-                line_color="gray",
-                annotation_text="Break-even"
-            )
-            
-            fig_trend.update_layout(
-                title=f"Performance Trend - {trend_period}",
-                xaxis_title="Date",
-                yaxis_title="Cumulative Return (%)",
-                height=400,
-                hovermode='x unified'
-            )
-            
-            st.plotly_chart(fig_trend, use_container_width=True)
-    else:
-        st.warning("Insufficient data for performance trend")
-    
-    st.markdown("---")
-    
-    # Natural Language Performance Summary
-    st.subheader("💬 Performance Summary (Plain English)")
-    
-    if st.button("Generate Performance Narrative", key="generate_perf_narrative"):
-        try:
-            from nlp.natural_language_insights import NaturalLanguageInsights
-            
-            nlg = NaturalLanguageInsights()
-            
-            # Prepare data for narrative
-            equity_curve = (1 + sample_returns).cumprod() * 100 if not sample_returns.empty else pd.Series([100])
-            trades = get_trade_history()
-            performance_metrics = get_portfolio_metrics(sample_returns)
-            
-            # Generate narrative
-            narrative = nlg.generate_performance_narrative(
-                equity_curve=equity_curve,
-                trades=trades,
-                metrics=performance_metrics
-            )
-            
-            st.info(narrative)
-            
-        except ImportError:
-            st.error("Natural Language Insights not available")
-        except Exception as e:
-            st.error(f"Error generating narrative: {e}")
-            import traceback
-            st.code(traceback.format_exc())
-    
-    # Performance Commentary Service
-    if 'commentary_service' in st.session_state:
+            with col_met4:
+                st.metric(
+                    "Volatility",
+                    f"{portfolio_metrics['volatility']:.2%}",
+                    help="Annualized volatility"
+                )
+        
         st.markdown("---")
-        st.subheader("📝 Performance Commentary")
         
-        # Get reporting period
-        reporting_period = st.selectbox(
-            "Reporting Period",
-            ["Last 30 Days", "Last 90 Days", "Last 6 Months", "Last Year", "All Time"],
-            key="perf_commentary_period"
-        )
+        # Strategy Comparison Table
+        st.subheader("📊 Strategy Comparison")
         
-        if st.button("Generate Performance Report", key="generate_perf_commentary"):
-            commentary_service = st.session_state.commentary_service
+        strategy_df = get_strategy_performance_data()
+        
+        # Apply filters
+        if strategy_type_filter == "Active":
+            strategy_df = strategy_df[strategy_df['status'] == 'active']
+        elif strategy_type_filter == "Paused":
+            strategy_df = strategy_df[strategy_df['status'] == 'paused']
+        
+        if not strategy_df.empty:
+            # Format the dataframe for display
+            display_df = strategy_df.copy()
+            display_df['total_return'] = display_df['total_return'].apply(lambda x: f"{x:.2%}")
+            display_df['sharpe_ratio'] = display_df['sharpe_ratio'].apply(lambda x: f"{x:.2f}")
+            display_df['win_rate'] = display_df['win_rate'].apply(lambda x: f"{x:.1%}")
+            display_df['status'] = display_df['status'].apply(lambda x: "🟢 Active" if x == 'active' else "🔴 Paused")
             
-            with st.spinner("Generating performance commentary..."):
-                try:
-                    # Prepare data for commentary
-                    equity_curve = (1 + sample_returns).cumprod() * 100 if not sample_returns.empty else pd.Series([100])
-                    trades = get_trade_history()
-                    performance_metrics = get_portfolio_metrics(sample_returns)
-                    
-                    perf_commentary = commentary_service.generate_performance_commentary(
-                        equity_curve=equity_curve,
-                        trades=trades,
-                        metrics=performance_metrics,
-                        period=reporting_period
-                    )
-                    
-                    # Display executive summary
-                    if 'executive_summary' in perf_commentary:
-                        st.write("**Executive Summary:**")
-                        st.info(perf_commentary['executive_summary'])
-                    elif 'summary' in perf_commentary:
-                        st.write("**Summary:**")
-                        st.info(perf_commentary['summary'])
-                    
-                    with st.expander("📊 Detailed Commentary", expanded=False):
-                        if 'strengths' in perf_commentary and perf_commentary['strengths']:
-                            st.write("**Strengths:**")
-                            for strength in perf_commentary['strengths']:
-                                st.success(f"✅ {strength}")
-                        
-                        if 'improvements' in perf_commentary and perf_commentary['improvements']:
-                            st.write("**Areas for Improvement:**")
-                            for improvement in perf_commentary['improvements']:
-                                st.warning(f"⚠️ {improvement}")
-                        
-                        if 'recommendations' in perf_commentary and perf_commentary['recommendations']:
-                            st.write("**Recommendations:**")
-                            for rec in perf_commentary['recommendations']:
-                                st.info(f"💡 {rec}")
-                        
-                        # Additional sections if available
-                        if 'risk_analysis' in perf_commentary:
-                            st.write("**Risk Analysis:**")
-                            st.write(perf_commentary['risk_analysis'])
-                        
-                        if 'market_context' in perf_commentary:
-                            st.write("**Market Context:**")
-                            st.write(perf_commentary['market_context'])
+            # Rename columns for display
+            display_df.columns = ['Strategy Name', 'Total Return', 'Sharpe Ratio', 'Win Rate', 'Number of Trades', 'Status']
+            
+            st.dataframe(display_df, use_container_width=True, hide_index=True)
+            
+            # Best/Worst Performers
+            col_best, col_worst = st.columns(2)
+            
+            with col_best:
+                st.markdown("**🏆 Best Performers**")
+                best_by_return = strategy_df.nlargest(3, 'total_return')
+                for idx, row in best_by_return.iterrows():
+                    st.success(f"**{row['strategy_name']}**: {row['total_return']:.2%} return, Sharpe: {row['sharpe_ratio']:.2f}")
                 
-                except Exception as e:
-                    st.error(f"Error generating performance commentary: {e}")
-                    import traceback
-                    st.code(traceback.format_exc())
-    
-    st.markdown("---")
-    
-    # Top Trades
-    st.subheader("💰 Top Trades (by P&L)")
-    
-    trade_history = get_trade_history()
-    
-    if not trade_history.empty:
-        # Get top 10 trades
-        top_trades = trade_history.nlargest(10, 'pnl')
+                best_by_sharpe = strategy_df.nlargest(3, 'sharpe_ratio')
+                st.markdown("**Best Sharpe Ratio:**")
+                for idx, row in best_by_sharpe.iterrows():
+                    st.info(f"**{row['strategy_name']}**: Sharpe {row['sharpe_ratio']:.2f}")
+            
+            with col_worst:
+                st.markdown("**⚠️ Worst Performers**")
+                worst_by_return = strategy_df.nsmallest(3, 'total_return')
+                for idx, row in worst_by_return.iterrows():
+                    st.error(f"**{row['strategy_name']}**: {row['total_return']:.2%} return, Sharpe: {row['sharpe_ratio']:.2f}")
+                
+                worst_by_sharpe = strategy_df.nsmallest(3, 'sharpe_ratio')
+                st.markdown("**Worst Sharpe Ratio:**")
+                for idx, row in worst_by_sharpe.iterrows():
+                    st.warning(f"**{row['strategy_name']}**: Sharpe {row['sharpe_ratio']:.2f}")
+        else:
+            st.info("No strategy data available")
         
-        # Format for display
-        display_trades = top_trades[['entry_date', 'symbol', 'strategy', 'direction', 'entry_price', 'exit_price', 'pnl', 'pnl_pct', 'holding_period']].copy()
-        display_trades['entry_date'] = display_trades['entry_date'].dt.strftime('%Y-%m-%d')
-        display_trades['entry_price'] = display_trades['entry_price'].apply(lambda x: f"${x:.2f}")
-        display_trades['exit_price'] = display_trades['exit_price'].apply(lambda x: f"${x:.2f}")
-        display_trades['pnl'] = display_trades['pnl'].apply(lambda x: f"${x:.2f}")
-        display_trades['pnl_pct'] = display_trades['pnl_pct'].apply(lambda x: f"{x:.2%}")
-        display_trades['holding_period'] = display_trades['holding_period'].apply(lambda x: f"{int(x)} days")
+        st.markdown("---")
         
-        display_trades.columns = ['Entry Date', 'Symbol', 'Strategy', 'Direction', 'Entry Price', 'Exit Price', 'P&L ($)', 'P&L (%)', 'Holding Period']
+        # Performance Trend Chart
+        st.subheader("📈 Performance Trend")
         
-        st.dataframe(display_trades, use_container_width=True, hide_index=True)
-        
-        # Top trades chart
-        fig_top = go.Figure()
-        fig_top.add_trace(go.Bar(
-            x=top_trades['symbol'],
-            y=top_trades['pnl'],
-            text=top_trades['pnl'].apply(lambda x: f"${x:.2f}"),
-            textposition='outside',
-            marker_color=['green' if x > 0 else 'red' for x in top_trades['pnl']],
-            name='P&L'
-        ))
-        fig_top.update_layout(
-            title="Top 10 Trades by P&L",
-            xaxis_title="Symbol",
-            yaxis_title="P&L ($)",
-            height=300
+        trend_period = st.radio(
+            "Trend Period",
+            ["Last 30 days", "Last 90 days", "Last 365 days"],
+            horizontal=True,
+            index=2
         )
-        st.plotly_chart(fig_top, use_container_width=True)
-    else:
-        st.info("No trade history available")
+        
+        days_map = {"Last 30 days": 30, "Last 90 days": 90, "Last 365 days": 365}
+        trend_days = days_map[trend_period]
+        
+        performance_trend = generate_performance_trend(sample_returns, trend_days)
+        
+        if not performance_trend.empty:
+            # Use advanced performance chart
+            try:
+                from utils.plotting_helper import create_performance_chart
+                
+                # Convert cumulative returns to equity curve
+                equity_curve = (1 + performance_trend) * 100  # Start at 100
+                
+                fig_trend = create_performance_chart(
+                    equity_curve=equity_curve,
+                    benchmark=None,
+                    title=f"Performance Trend - {trend_period}"
+                )
+                
+                # Add break-even line
+                fig_trend.add_hline(
+                    y=100,
+                    line_dash="dash",
+                    line_color="gray",
+                    annotation_text="Break-even"
+                )
+                
+                st.plotly_chart(fig_trend, use_container_width=True)
+            except ImportError:
+                # Fallback to basic chart
+                fig_trend = go.Figure()
+                fig_trend.add_trace(go.Scatter(
+                    x=performance_trend.index,
+                    y=performance_trend.values,
+                    mode='lines',
+                    name='Portfolio Performance',
+                    line=dict(color='blue', width=2),
+                    fill='tozeroy',
+                    fillcolor='rgba(0, 100, 255, 0.1)'
+                ))
+                
+                fig_trend.add_hline(
+                    y=0,
+                    line_dash="dash",
+                    line_color="gray",
+                    annotation_text="Break-even"
+                )
+                
+                fig_trend.update_layout(
+                    title=f"Performance Trend - {trend_period}",
+                    xaxis_title="Date",
+                    yaxis_title="Cumulative Return (%)",
+                    height=400,
+                    hovermode='x unified'
+                )
+                
+                st.plotly_chart(fig_trend, use_container_width=True)
+        else:
+            st.warning("Insufficient data for performance trend")
+        
+        st.markdown("---")
+        
+        # Natural Language Performance Summary
+        st.subheader("💬 Performance Summary (Plain English)")
+        
+        if st.button("Generate Performance Narrative", key="generate_perf_narrative"):
+            try:
+                from nlp.natural_language_insights import NaturalLanguageInsights
+                
+                nlg = NaturalLanguageInsights()
+                
+                # Prepare data for narrative
+                equity_curve = (1 + sample_returns).cumprod() * 100 if not sample_returns.empty else pd.Series([100])
+                trades = get_trade_history()
+                performance_metrics = get_portfolio_metrics(sample_returns)
+                
+                # Generate narrative
+                narrative = nlg.generate_performance_narrative(
+                    equity_curve=equity_curve,
+                    trades=trades,
+                    metrics=performance_metrics
+                )
+                
+                st.info(narrative)
+                
+            except ImportError:
+                st.error("Natural Language Insights not available")
+            except Exception as e:
+                st.error(f"Error generating narrative: {e}")
+                import traceback
+                st.code(traceback.format_exc())
+        
+        # Performance Commentary Service
+        if 'commentary_service' in st.session_state:
+            st.markdown("---")
+            st.subheader("📝 Performance Commentary")
+            
+            # Get reporting period
+            reporting_period = st.selectbox(
+                "Reporting Period",
+                ["Last 30 Days", "Last 90 Days", "Last 6 Months", "Last Year", "All Time"],
+                key="perf_commentary_period"
+            )
+            
+            if st.button("Generate Performance Report", key="generate_perf_commentary"):
+                commentary_service = st.session_state.commentary_service
+                
+                with st.spinner("Generating performance commentary..."):
+                    try:
+                        # Prepare data for commentary
+                        equity_curve = (1 + sample_returns).cumprod() * 100 if not sample_returns.empty else pd.Series([100])
+                        trades = get_trade_history()
+                        performance_metrics = get_portfolio_metrics(sample_returns)
+                        
+                        perf_commentary = commentary_service.generate_performance_commentary(
+                            equity_curve=equity_curve,
+                            trades=trades,
+                            metrics=performance_metrics,
+                            period=reporting_period
+                        )
+                        
+                        # Display executive summary
+                        if 'executive_summary' in perf_commentary:
+                            st.write("**Executive Summary:**")
+                            st.info(perf_commentary['executive_summary'])
+                        elif 'summary' in perf_commentary:
+                            st.write("**Summary:**")
+                            st.info(perf_commentary['summary'])
+                        
+                        with st.expander("📊 Detailed Commentary", expanded=False):
+                            if 'strengths' in perf_commentary and perf_commentary['strengths']:
+                                st.write("**Strengths:**")
+                                for strength in perf_commentary['strengths']:
+                                    st.success(f"✅ {strength}")
+                            
+                            if 'improvements' in perf_commentary and perf_commentary['improvements']:
+                                st.write("**Areas for Improvement:**")
+                                for improvement in perf_commentary['improvements']:
+                                    st.warning(f"⚠️ {improvement}")
+                            
+                            if 'recommendations' in perf_commentary and perf_commentary['recommendations']:
+                                st.write("**Recommendations:**")
+                                for rec in perf_commentary['recommendations']:
+                                    st.info(f"💡 {rec}")
+                            
+                            # Additional sections if available
+                            if 'risk_analysis' in perf_commentary:
+                                st.write("**Risk Analysis:**")
+                                st.write(perf_commentary['risk_analysis'])
+                            
+                            if 'market_context' in perf_commentary:
+                                st.write("**Market Context:**")
+                                st.write(perf_commentary['market_context'])
+                    
+                    except Exception as e:
+                        st.error(f"Error generating performance commentary: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+        
+        st.markdown("---")
+        
+        # Top Trades
+        st.subheader("💰 Top Trades (by P&L)")
+        
+        trade_history = get_trade_history()
+        
+        if not trade_history.empty:
+            # Get top 10 trades
+            top_trades = trade_history.nlargest(10, 'pnl')
+            
+            # Format for display
+            display_trades = top_trades[['entry_date', 'symbol', 'strategy', 'direction', 'entry_price', 'exit_price', 'pnl', 'pnl_pct', 'holding_period']].copy()
+            display_trades['entry_date'] = display_trades['entry_date'].dt.strftime('%Y-%m-%d')
+            display_trades['entry_price'] = display_trades['entry_price'].apply(lambda x: f"${x:.2f}")
+            display_trades['exit_price'] = display_trades['exit_price'].apply(lambda x: f"${x:.2f}")
+            display_trades['pnl'] = display_trades['pnl'].apply(lambda x: f"${x:.2f}")
+            display_trades['pnl_pct'] = display_trades['pnl_pct'].apply(lambda x: f"{x:.2%}")
+            display_trades['holding_period'] = display_trades['holding_period'].apply(lambda x: f"{int(x)} days")
+            
+            display_trades.columns = ['Entry Date', 'Symbol', 'Strategy', 'Direction', 'Entry Price', 'Exit Price', 'P&L ($)', 'P&L (%)', 'Holding Period']
+            
+            st.dataframe(display_trades, use_container_width=True, hide_index=True)
+            
+            # Top trades chart
+            fig_top = go.Figure()
+            fig_top.add_trace(go.Bar(
+                x=top_trades['symbol'],
+                y=top_trades['pnl'],
+                text=top_trades['pnl'].apply(lambda x: f"${x:.2f}"),
+                textposition='outside',
+                marker_color=['green' if x > 0 else 'red' for x in top_trades['pnl']],
+                name='P&L'
+            ))
+            fig_top.update_layout(
+                title="Top 10 Trades by P&L",
+                xaxis_title="Symbol",
+                yaxis_title="P&L ($)",
+                height=300
+            )
+            st.plotly_chart(fig_top, use_container_width=True)
+        else:
+            st.info("No trade history available")
 
 # TAB 2: Detailed History
 with tab2:
@@ -1430,96 +1441,101 @@ with tab4:
     st.header("🔍 Performance Attribution Analysis")
     st.markdown("Decompose portfolio returns to understand what's driving performance")
     
-    # Get data
-    sample_returns = pd.Series(np.random.normal(0.0005, 0.015, 365), index=pd.date_range(end=datetime.now(), periods=365, freq='D'))
-    benchmark_returns = pd.Series(np.random.normal(0.0004, 0.014, 365), index=sample_returns.index)
-    strategy_df = get_strategy_performance_data()
-    trade_history = get_trade_history()
-    positions = {'AAPL': 0.3, 'GOOGL': 0.25, 'MSFT': 0.2, 'TSLA': 0.15, 'NVDA': 0.1}
+    # Real returns: from strategy logger when available
+    sample_returns = None  # TODO: load from strategy logger or trade history
+    if sample_returns is None or (hasattr(sample_returns, 'empty') and sample_returns.empty):
+        _empty_state("No performance data yet. Run a backtest or make trades to populate this page.", "📈")
+    else:
+        benchmark_returns = None  # TODO: load benchmark from data provider
+        if benchmark_returns is None or (hasattr(benchmark_returns, 'empty') and benchmark_returns.empty):
+            benchmark_returns = pd.Series(0.0, index=sample_returns.index)
+        strategy_df = get_strategy_performance_data()
+        trade_history = get_trade_history()
+        positions = {'AAPL': 0.3, 'GOOGL': 0.25, 'MSFT': 0.2, 'TSLA': 0.15, 'NVDA': 0.1}
+        
+        # Attribution method selector
+        st.subheader("⚙️ Attribution Configuration")
+        
+        col_attr1, col_attr2 = st.columns(2)
     
-    # Attribution method selector
-    st.subheader("⚙️ Attribution Configuration")
+        with col_attr1:
+            attribution_method = st.selectbox(
+                "Attribution Method",
+                ["Return Decomposition", "Factor Attribution", "Time-Based Attribution", "Comprehensive"]
+            )
+        
+        with col_attr2:
+            benchmark_symbol = st.selectbox(
+                "Benchmark",
+                ["S&P 500 (SPY)", "NASDAQ (QQQ)", "Dow Jones (DIA)", "Custom"]
+            )
     
-    col_attr1, col_attr2 = st.columns(2)
+        st.markdown("---")
     
-    with col_attr1:
-        attribution_method = st.selectbox(
-            "Attribution Method",
-            ["Return Decomposition", "Factor Attribution", "Time-Based Attribution", "Comprehensive"]
-        )
+        # Alpha vs Beta Analysis
+        st.subheader("📊 Alpha vs Beta Decomposition")
     
-    with col_attr2:
-        benchmark_symbol = st.selectbox(
-            "Benchmark",
-            ["S&P 500 (SPY)", "NASDAQ (QQQ)", "Dow Jones (DIA)", "Custom"]
-        )
+        alpha_beta = calculate_alpha_beta(sample_returns, benchmark_returns)
     
-    st.markdown("---")
+        col_ab1, col_ab2, col_ab3, col_ab4 = st.columns(4)
     
-    # Alpha vs Beta Analysis
-    st.subheader("📊 Alpha vs Beta Decomposition")
-    
-    alpha_beta = calculate_alpha_beta(sample_returns, benchmark_returns)
-    
-    col_ab1, col_ab2, col_ab3, col_ab4 = st.columns(4)
-    
-    with col_ab1:
+        with col_ab1:
         st.metric("Alpha (Annualized)", f"{alpha_beta['alpha']:.2%}",
                  help="Excess return above benchmark")
     
-    with col_ab2:
+        with col_ab2:
         st.metric("Beta", f"{alpha_beta['beta']:.2f}",
                  help="Sensitivity to benchmark movements")
     
-    with col_ab3:
+        with col_ab3:
         st.metric("R-Squared", f"{alpha_beta['r_squared']:.2%}",
                  help="Percentage of variance explained by benchmark")
     
-    with col_ab4:
+        with col_ab4:
         total_return = sample_returns.sum()
         benchmark_return = benchmark_returns.sum()
         excess_return = total_return - benchmark_return
         st.metric("Excess Return", f"{excess_return:.2%}",
                  help="Portfolio return minus benchmark return")
     
-    # Alpha/Beta visualization
-    fig_ab = go.Figure()
+        # Alpha/Beta visualization
+        fig_ab = go.Figure()
     
-    # Portfolio vs Benchmark
-    fig_ab.add_trace(go.Scatter(
+        # Portfolio vs Benchmark
+        fig_ab.add_trace(go.Scatter(
         x=benchmark_returns,
         y=sample_returns,
         mode='markers',
         name='Daily Returns',
         marker=dict(size=5, opacity=0.5, color='blue')
-    ))
-    
-    # Regression line
-    if len(benchmark_returns) > 1:
-        z = np.polyfit(benchmark_returns, sample_returns, 1)
-        p = np.poly1d(z)
-        x_line = np.linspace(benchmark_returns.min(), benchmark_returns.max(), 100)
-        fig_ab.add_trace(go.Scatter(
-            x=x_line,
-            y=p(x_line),
-            mode='lines',
-            name=f'Beta = {alpha_beta["beta"]:.2f}',
-            line=dict(color='red', width=2, dash='dash')
         ))
     
-    fig_ab.update_layout(
+        # Regression line
+        if len(benchmark_returns) > 1:
+            z = np.polyfit(benchmark_returns, sample_returns, 1)
+            p = np.poly1d(z)
+            x_line = np.linspace(benchmark_returns.min(), benchmark_returns.max(), 100)
+            fig_ab.add_trace(go.Scatter(
+                x=x_line,
+                y=p(x_line),
+                mode='lines',
+                name=f'Beta = {alpha_beta["beta"]:.2f}',
+                line=dict(color='red', width=2, dash='dash')
+            ))
+        
+        fig_ab.update_layout(
         title="Portfolio vs Benchmark Returns (Alpha/Beta Analysis)",
         xaxis_title="Benchmark Return",
         yaxis_title="Portfolio Return",
         height=400
-    )
-    st.plotly_chart(fig_ab, use_container_width=True)
+        )
+        st.plotly_chart(fig_ab, use_container_width=True)
     
-    st.markdown("---")
+        st.markdown("---")
     
-    # Return Decomposition
-    if attribution_method in ["Return Decomposition", "Comprehensive"]:
-        st.subheader("📈 Return Decomposition")
+        # Return Decomposition
+        if attribution_method in ["Return Decomposition", "Comprehensive"]:
+            st.subheader("📈 Return Decomposition")
         
         # Strategy Contribution
         if not strategy_df.empty:
@@ -1629,10 +1645,10 @@ with tab4:
                 )
                 st.plotly_chart(fig_sector, use_container_width=True)
     
-    st.markdown("---")
+        st.markdown("---")
     
-    # Factor Attribution
-    if attribution_method in ["Factor Attribution", "Comprehensive"]:
+        # Factor Attribution
+        if attribution_method in ["Factor Attribution", "Comprehensive"]:
         st.subheader("🔬 Factor Attribution")
         
         factor_attribution = calculate_factor_attribution(sample_returns)
@@ -1666,10 +1682,10 @@ with tab4:
             )
             st.plotly_chart(fig_factor, use_container_width=True)
     
-    st.markdown("---")
+        st.markdown("---")
     
-    # Time-Based Attribution
-    if attribution_method in ["Time-Based Attribution", "Comprehensive"]:
+        # Time-Based Attribution
+        if attribution_method in ["Time-Based Attribution", "Comprehensive"]:
         st.subheader("📅 Time-Based Attribution")
         
         time_period = st.selectbox(
@@ -1712,23 +1728,23 @@ with tab4:
                 st.metric("Positive Periods", f"{(time_returns > 0).sum()}")
                 st.metric("Win Rate", f"{(time_returns > 0).mean():.1%}")
     
-    st.markdown("---")
+        st.markdown("---")
     
-    # Attribution Waterfall Chart
-    st.subheader("💧 Attribution Waterfall Chart")
+        # Attribution Waterfall Chart
+        st.subheader("💧 Attribution Waterfall Chart")
     
-    # Build waterfall data
-    waterfall_data = {
+        # Build waterfall data
+        waterfall_data = {
         'Starting Value': 100000,
         'Alpha Contribution': alpha_beta['alpha'] * 100000 / 252,  # Daily alpha
         'Beta Contribution': (alpha_beta['beta'] - 1) * benchmark_returns.mean() * 100000,
         'Strategy Contribution': sum(strategy_contributions.values()) * 100000 if 'strategy_contributions' in locals() else 0,
         'Factor Contribution': sum(factor_attribution.values()) * 100000 / 252 if 'factor_attribution' in locals() else 0,
         'Ending Value': 100000 * (1 + sample_returns.sum())
-    }
+        }
     
-    # Create waterfall chart
-    fig_waterfall = go.Figure(go.Waterfall(
+        # Create waterfall chart
+        fig_waterfall = go.Figure(go.Waterfall(
         orientation="v",
         measure=["absolute", "relative", "relative", "relative", "relative", "total"],
         x=["Starting<br>Value", "Alpha", "Beta", "Strategy", "Factor", "Ending<br>Value"],
@@ -1736,24 +1752,24 @@ with tab4:
         text=[f"${v:,.0f}" for v in waterfall_data.values()],
         y=list(waterfall_data.values()),
         connector={"line": {"color": "rgb(63, 63, 63)"}},
-    ))
+        ))
     
-    fig_waterfall.update_layout(
+        fig_waterfall.update_layout(
         title="Attribution Waterfall - Return Decomposition",
         showlegend=False,
         height=500
-    )
+        )
     
-    st.plotly_chart(fig_waterfall, use_container_width=True)
+        st.plotly_chart(fig_waterfall, use_container_width=True)
     
-    st.markdown("---")
+        st.markdown("---")
     
-    # Benchmark Comparison
-    st.subheader("📊 Benchmark Comparison")
+        # Benchmark Comparison
+        st.subheader("📊 Benchmark Comparison")
     
-    col_bench1, col_bench2 = st.columns(2)
+        col_bench1, col_bench2 = st.columns(2)
     
-    with col_bench1:
+        with col_bench1:
         # Cumulative returns comparison
         port_cum = (1 + sample_returns).cumprod()
         bench_cum = (1 + benchmark_returns).cumprod()
@@ -1782,7 +1798,7 @@ with tab4:
         )
         st.plotly_chart(fig_bench, use_container_width=True)
     
-    with col_bench2:
+        with col_bench2:
         # Performance comparison table
         comparison_data = {
             'Metric': ['Total Return', 'Annualized Return', 'Volatility', 'Sharpe Ratio', 'Max Drawdown'],
@@ -1814,47 +1830,47 @@ with tab4:
 
 # Helper functions for Advanced Analytics
 def calculate_rolling_sharpe(returns: pd.Series, window: int = 60, risk_free_rate: float = 0.02) -> pd.Series:
-    """Calculate rolling Sharpe ratio."""
-    if returns is None or returns.empty or len(returns) < window:
+        """Calculate rolling Sharpe ratio."""
+        if returns is None or returns.empty or len(returns) < window:
         return pd.Series()
     
-    excess_returns = returns - (risk_free_rate / 252)
-    rolling_mean = excess_returns.rolling(window).mean()
-    rolling_std = returns.rolling(window).std()
-    rolling_sharpe = (rolling_mean / rolling_std) * np.sqrt(252)
+        excess_returns = returns - (risk_free_rate / 252)
+        rolling_mean = excess_returns.rolling(window).mean()
+        rolling_std = returns.rolling(window).std()
+        rolling_sharpe = (rolling_mean / rolling_std) * np.sqrt(252)
     
-    return rolling_sharpe
+        return rolling_sharpe
 
 def calculate_rolling_max_drawdown(returns: pd.Series, window: int = 60) -> pd.Series:
-    """Calculate rolling maximum drawdown."""
-    if returns is None or returns.empty or len(returns) < window:
+        """Calculate rolling maximum drawdown."""
+        if returns is None or returns.empty or len(returns) < window:
         return pd.Series()
     
-    rolling_dd = []
-    for i in range(window, len(returns) + 1):
+        rolling_dd = []
+        for i in range(window, len(returns) + 1):
         window_returns = returns.iloc[i-window:i]
         cum_returns = (1 + window_returns).cumprod()
         rolling_max = cum_returns.expanding().max()
         drawdowns = (cum_returns - rolling_max) / rolling_max
         rolling_dd.append(drawdowns.min())
     
-    return pd.Series(rolling_dd, index=returns.index[window-1:])
+        return pd.Series(rolling_dd, index=returns.index[window-1:])
 
 def analyze_drawdown_periods(returns: pd.Series) -> pd.DataFrame:
-    """Analyze drawdown periods."""
-    if returns is None or returns.empty:
+        """Analyze drawdown periods."""
+        if returns is None or returns.empty:
         return pd.DataFrame()
     
-    cum_returns = (1 + returns).cumprod()
-    rolling_max = cum_returns.expanding().max()
-    drawdowns = (cum_returns - rolling_max) / rolling_max
+        cum_returns = (1 + returns).cumprod()
+        rolling_max = cum_returns.expanding().max()
+        drawdowns = (cum_returns - rolling_max) / rolling_max
     
-    # Find drawdown periods
-    in_drawdown = drawdowns < 0
-    drawdown_periods = []
+        # Find drawdown periods
+        in_drawdown = drawdowns < 0
+        drawdown_periods = []
     
-    start_idx = None
-    for i, is_dd in enumerate(in_drawdown):
+        start_idx = None
+        for i, is_dd in enumerate(in_drawdown):
         if is_dd and start_idx is None:
             start_idx = i
         elif not is_dd and start_idx is not None:
@@ -1871,16 +1887,16 @@ def analyze_drawdown_periods(returns: pd.Series) -> pd.DataFrame:
             })
             start_idx = None
     
-    return pd.DataFrame(drawdown_periods)
+        return pd.DataFrame(drawdown_periods)
 
 def calculate_recovery_time(returns: pd.Series) -> Dict[str, float]:
-    """Calculate recovery time statistics."""
-    if returns is None or returns.empty:
+        """Calculate recovery time statistics."""
+        if returns is None or returns.empty:
         return {}
     
-    drawdown_periods = analyze_drawdown_periods(returns)
+        drawdown_periods = analyze_drawdown_periods(returns)
     
-    if drawdown_periods.empty:
+        if drawdown_periods.empty:
         return {
             'avg_recovery_days': 0,
             'median_recovery_days': 0,
@@ -1888,23 +1904,23 @@ def calculate_recovery_time(returns: pd.Series) -> Dict[str, float]:
             'total_drawdowns': 0
         }
     
-    # Simplified recovery calculation
-    recovery_times = drawdown_periods['duration_days'].values
+        # Simplified recovery calculation
+        recovery_times = drawdown_periods['duration_days'].values
     
-    return {
+        return {
         'avg_recovery_days': recovery_times.mean() if len(recovery_times) > 0 else 0,
         'median_recovery_days': np.median(recovery_times) if len(recovery_times) > 0 else 0,
         'max_recovery_days': recovery_times.max() if len(recovery_times) > 0 else 0,
         'total_drawdowns': len(drawdown_periods)
-    }
+        }
 
 def classify_market_regime(returns: pd.Series, window: int = 60) -> pd.Series:
-    """Classify market regime (Bull/Bear/Sideways)."""
-    if returns is None or returns.empty or len(returns) < window:
+        """Classify market regime (Bull/Bear/Sideways)."""
+        if returns is None or returns.empty or len(returns) < window:
         return pd.Series()
     
-    regimes = []
-    for i in range(window, len(returns) + 1):
+        regimes = []
+        for i in range(window, len(returns) + 1):
         window_returns = returns.iloc[i-window:i]
         mean_return = window_returns.mean() * 252
         volatility = window_returns.std() * np.sqrt(252)
@@ -1918,23 +1934,23 @@ def classify_market_regime(returns: pd.Series, window: int = 60) -> pd.Series:
         
         regimes.append(regime)
     
-    return pd.Series(regimes, index=returns.index[window-1:])
+        return pd.Series(regimes, index=returns.index[window-1:])
 
 def calculate_regime_performance(returns: pd.Series, regimes: pd.Series) -> Dict[str, Dict[str, float]]:
-    """Calculate performance by market regime."""
-    if returns is None or regimes is None or returns.empty or regimes.empty:
+        """Calculate performance by market regime."""
+        if returns is None or regimes is None or returns.empty or regimes.empty:
         return {}
     
-    # Align indices
-    common_index = returns.index.intersection(regimes.index)
-    if len(common_index) == 0:
+        # Align indices
+        common_index = returns.index.intersection(regimes.index)
+        if len(common_index) == 0:
         return {}
     
-    aligned_returns = returns.loc[common_index]
-    aligned_regimes = regimes.loc[common_index]
+        aligned_returns = returns.loc[common_index]
+        aligned_regimes = regimes.loc[common_index]
     
-    regime_perf = {}
-    for regime in ['Bull', 'Bear', 'Sideways']:
+        regime_perf = {}
+        for regime in ['Bull', 'Bear', 'Sideways']:
         regime_returns = aligned_returns[aligned_regimes == regime]
         if len(regime_returns) > 0:
             regime_perf[regime] = {
@@ -1955,70 +1971,73 @@ def calculate_regime_performance(returns: pd.Series, regimes: pd.Series) -> Dict
                 'num_periods': 0
             }
     
-    return regime_perf
+        return regime_perf
 
 def calculate_strategy_correlation(strategy_performance: pd.DataFrame) -> pd.DataFrame:
-    """Calculate correlation matrix between strategies."""
-    if strategy_performance.empty or len(strategy_performance) < 2:
+        """Calculate correlation matrix between strategies."""
+        if strategy_performance.empty or len(strategy_performance) < 2:
         return pd.DataFrame()
     
-    # Create correlation matrix from strategy returns (simplified)
-    strategies = strategy_performance['strategy_name'].tolist()
-    n = len(strategies)
+        # Create correlation matrix from strategy returns (simplified)
+        strategies = strategy_performance['strategy_name'].tolist()
+        n = len(strategies)
     
-    # Generate sample correlation matrix
-    corr_matrix = np.random.rand(n, n)
-    corr_matrix = (corr_matrix + corr_matrix.T) / 2
-    np.fill_diagonal(corr_matrix, 1.0)
+        # Generate sample correlation matrix
+        corr_matrix = np.random.rand(n, n)
+        corr_matrix = (corr_matrix + corr_matrix.T) / 2
+        np.fill_diagonal(corr_matrix, 1.0)
     
-    return pd.DataFrame(corr_matrix, index=strategies, columns=strategies)
+        return pd.DataFrame(corr_matrix, index=strategies, columns=strategies)
 
 # TAB 5: Advanced Analytics
 with tab5:
     st.header("📈 Advanced Performance Analytics")
     st.markdown("Deep dive into performance metrics, distributions, and regime analysis")
     
-    # Get data
-    sample_returns = pd.Series(np.random.normal(0.0005, 0.015, 365), index=pd.date_range(end=datetime.now(), periods=365, freq='D'))
-    trade_history = get_trade_history()
-    strategy_df = get_strategy_performance_data()
+    # Real returns: from strategy logger when available
+    sample_returns = None  # TODO: load from strategy logger or trade history
+    if sample_returns is None or (hasattr(sample_returns, 'empty') and sample_returns.empty):
+        _empty_state("No performance data yet. Run a backtest or make trades to populate this page.", "📈")
+    else:
+        trade_history = get_trade_history()
+        strategy_df = get_strategy_performance_data()
+        
+        # Configuration
+        st.subheader("⚙️ Analysis Configuration")
     
-    # Configuration
-    st.subheader("⚙️ Analysis Configuration")
+        col_config1, col_config2 = st.columns(2)
     
-    col_config1, col_config2 = st.columns(2)
+        with col_config1:
+            rolling_window = st.slider("Rolling Window (days)", min_value=30, max_value=252, value=60, step=10)
+        
+        with col_config2:
+            risk_free_rate = st.number_input("Risk-Free Rate (%)", min_value=0.0, max_value=10.0, value=2.0, step=0.1) / 100
     
-    with col_config1:
-        rolling_window = st.slider("Rolling Window (days)", min_value=30, max_value=252, value=60, step=10)
+        st.markdown("---")
     
-    with col_config2:
-        risk_free_rate = st.number_input("Risk-Free Rate (%)", min_value=0.0, max_value=10.0, value=2.0, step=0.1) / 100
+        # Rolling Metrics
+        st.subheader("📊 Rolling Performance Metrics")
     
-    st.markdown("---")
+        rolling_sharpe = calculate_rolling_sharpe(sample_returns, rolling_window, risk_free_rate)
+        rolling_dd = calculate_rolling_max_drawdown(sample_returns, rolling_window)
     
-    # Rolling Metrics
-    st.subheader("📊 Rolling Performance Metrics")
-    
-    rolling_sharpe = calculate_rolling_sharpe(sample_returns, rolling_window, risk_free_rate)
-    rolling_dd = calculate_rolling_max_drawdown(sample_returns, rolling_window)
-    
-    if not rolling_sharpe.empty and not rolling_dd.empty:
-        # Use advanced rolling stats chart
-        try:
-            from utils.plotting_helper import create_rolling_stats_chart
-            
-            fig_rolling = create_rolling_stats_chart(
-                returns=sample_returns,
-                window=rolling_window,
-                title="Rolling Performance Metrics"
-            )
-            
-            # Add reference lines
-            fig_rolling.add_hline(y=1.0, line_dash="dash", line_color="green", annotation_text="Good Sharpe", row=1, col=1)
-            fig_rolling.add_hline(y=0.0, line_dash="dash", line_color="red", annotation_text="Poor Sharpe", row=1, col=1)
-            
-            st.plotly_chart(fig_rolling, use_container_width=True)
-        except ImportError:
+        if not rolling_sharpe.empty and not rolling_dd.empty:
+            # Use advanced rolling stats chart
+            try:
+                from utils.plotting_helper import create_rolling_stats_chart
+                
+                fig_rolling = create_rolling_stats_chart(
+                    returns=sample_returns,
+                    window=rolling_window,
+                    title="Rolling Performance Metrics"
+                )
+                
+                # Add reference lines
+                fig_rolling.add_hline(y=1.0, line_dash="dash", line_color="green", annotation_text="Good Sharpe", row=1, col=1)
+                fig_rolling.add_hline(y=0.0, line_dash="dash", line_color="red", annotation_text="Poor Sharpe", row=1, col=1)
+                
+                st.plotly_chart(fig_rolling, use_container_width=True)
+            except ImportError:
             # Fallback to basic chart
             fig_rolling = make_subplots(
                 rows=2, cols=1,
@@ -2064,24 +2083,24 @@ with tab5:
             fig_rolling.update_yaxes(title_text="Drawdown (%)", row=2, col=1)
             
             st.plotly_chart(fig_rolling, use_container_width=True)
-    else:
-        st.warning(f"Need at least {rolling_window} days of data for rolling metrics")
+        else:
+            st.warning(f"Need at least {rolling_window} days of data for rolling metrics")
     
-    st.markdown("---")
+        st.markdown("---")
     
-    # Drawdown Periods Analysis
-    st.subheader("📉 Drawdown Periods Analysis")
+        # Drawdown Periods Analysis
+        st.subheader("📉 Drawdown Periods Analysis")
     
-    drawdown_periods = analyze_drawdown_periods(sample_returns)
-    recovery_stats = calculate_recovery_time(sample_returns)
+        drawdown_periods = analyze_drawdown_periods(sample_returns)
+        recovery_stats = calculate_recovery_time(sample_returns)
     
-    # Calculate equity curve for drawdown chart
-    equity_curve = (1 + sample_returns).cumprod() * 100
+        # Calculate equity curve for drawdown chart
+        equity_curve = (1 + sample_returns).cumprod() * 100
     
-    col_dd1, col_dd2 = st.columns([2, 1])
+        col_dd1, col_dd2 = st.columns([2, 1])
     
-    with col_dd1:
-        if not drawdown_periods.empty:
+        with col_dd1:
+            if not drawdown_periods.empty:
             # Drawdown periods table
             display_dd = drawdown_periods.copy()
             display_dd['start_date'] = display_dd['start_date'].dt.strftime('%Y-%m-%d')
@@ -2135,7 +2154,7 @@ with tab5:
             except ImportError:
                 pass
     
-    with col_dd2:
+        with col_dd2:
         st.markdown("**Recovery Statistics**")
         if recovery_stats:
             st.metric("Total Drawdowns", recovery_stats['total_drawdowns'])
@@ -2145,12 +2164,12 @@ with tab5:
         else:
             st.info("No recovery data available")
     
-    st.markdown("---")
+        st.markdown("---")
     
-    # Trade Distribution Analysis
-    st.subheader("📊 Trade Distribution Analysis")
+        # Trade Distribution Analysis
+        st.subheader("📊 Trade Distribution Analysis")
     
-    if not trade_history.empty:
+        if not trade_history.empty:
         col_dist1, col_dist2, col_dist3 = st.columns(3)
         
         with col_dist1:
@@ -2236,18 +2255,18 @@ with tab5:
             
             st.caption(f"Mean: {trade_history['holding_period'].mean():.1f} days")
             st.caption(f"Median: {trade_history['holding_period'].median():.1f} days")
-    else:
+        else:
         st.info("No trade history available for distribution analysis")
     
-    st.markdown("---")
+        st.markdown("---")
     
-    # Regime-Based Performance
-    st.subheader("🌍 Regime-Based Performance")
+        # Regime-Based Performance
+        st.subheader("🌍 Regime-Based Performance")
     
-    regimes = classify_market_regime(sample_returns, rolling_window)
-    regime_perf = calculate_regime_performance(sample_returns, regimes)
+        regimes = classify_market_regime(sample_returns, rolling_window)
+        regime_perf = calculate_regime_performance(sample_returns, regimes)
     
-    if regime_perf:
+        if regime_perf:
         col_regime1, col_regime2 = st.columns([1, 1])
         
         with col_regime1:
@@ -2319,15 +2338,15 @@ with tab5:
                 height=300
             )
             st.plotly_chart(fig_regime_timeline, use_container_width=True)
-    else:
+        else:
         st.warning("Unable to calculate regime-based performance")
     
-    st.markdown("---")
+        st.markdown("---")
     
-    # Strategy Correlation Analysis
-    st.subheader("🔗 Strategy Correlation Analysis")
+        # Strategy Correlation Analysis
+        st.subheader("🔗 Strategy Correlation Analysis")
     
-    if not strategy_df.empty and len(strategy_df) > 1:
+        if not strategy_df.empty and len(strategy_df) > 1:
         strategy_corr = calculate_strategy_correlation(strategy_df)
         
         if not strategy_corr.empty:
@@ -2401,16 +2420,16 @@ with tab5:
                     st.plotly_chart(fig_corr_dist, use_container_width=True)
                 else:
                     st.info("Insufficient data for correlation analysis")
-    else:
+        else:
         st.info("Need at least 2 strategies for correlation analysis")
     
-    st.markdown("---")
+        st.markdown("---")
     
-    # Advanced Performance Visualization
-    st.subheader("📊 Advanced Performance Visualization")
-    st.write("Generate a comprehensive performance dashboard with advanced visualizations")
+        # Advanced Performance Visualization
+        st.subheader("📊 Advanced Performance Visualization")
+        st.write("Generate a comprehensive performance dashboard with advanced visualizations")
     
-    try:
+        try:
         from trading.core.performance import PerformanceVisualizer
         
         visualizer = PerformanceVisualizer()
@@ -2466,7 +2485,7 @@ with tab5:
                     st.error(f"Error generating dashboard: {e}")
                     import traceback
                     st.code(traceback.format_exc())
-    except ImportError:
+        except ImportError:
         st.info("ℹ️ Advanced Performance Visualizer not available. Using standard charts.")
         
         # Fallback: Show drawdown chart using helper
@@ -2491,14 +2510,14 @@ with tab5:
         except ImportError:
             pass
     
-    st.markdown("---")
+        st.markdown("---")
     
-    # Execution Replay
-    st.header("🎬 Execution Replay")
+        # Execution Replay
+        st.header("🎬 Execution Replay")
     
-    st.write("Replay and analyze past trade executions to understand execution quality.")
+        st.write("Replay and analyze past trade executions to understand execution quality.")
     
-    try:
+        try:
         from trading.execution.execution_replay import ExecutionReplay
         
         replay = ExecutionReplay()
@@ -2718,10 +2737,16 @@ with tab5:
                     import traceback
                     st.code(traceback.format_exc())
     
-    except ImportError:
+        except ImportError:
         st.error("Execution Replay not available. Make sure trading.execution.execution_replay is available.")
-    except Exception as e:
+        except Exception as e:
         st.error(f"Error: {e}")
         import traceback
         st.code(traceback.format_exc())
+
+try:
+    from ui.page_assistant import render_page_assistant
+    render_page_assistant("Performance")
+except Exception:
+    pass
 

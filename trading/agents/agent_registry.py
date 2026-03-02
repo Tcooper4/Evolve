@@ -202,8 +202,15 @@ class AgentRegistry:
 
                 # Load agents
                 if "agents" in data:
+                    _known_keys = {
+                        "name", "class_name", "module_path", "description",
+                        "capabilities", "dependencies", "category", "status",
+                        "version", "author", "tags", "config_schema",
+                        "created_at", "updated_at",
+                    }
                     for name, agent_data in data["agents"].items():
-                        self.agents[name] = AgentInfo.from_dict(agent_data)
+                        clean_data = {k: v for k, v in agent_data.items() if k in _known_keys}
+                        self.agents[name] = AgentInfo.from_dict(clean_data)
 
                 # Load capabilities index
                 if "capabilities" in data:

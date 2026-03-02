@@ -37,6 +37,16 @@ except ImportError as e:
 # Setup logging
 logger = logging.getLogger(__name__)
 
+
+def _empty_state(message: str, icon: str = "📊"):
+    st.markdown(f"""
+    <div style="text-align:center;padding:60px 20px;color:#888;border:1px dashed #ddd;border-radius:8px;margin:20px 0">
+        <div style="font-size:48px;margin-bottom:12px">{icon}</div>
+        <div style="font-size:16px">{message}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 # Page config
 st.set_page_config(
     page_title="Reports & Exports",
@@ -214,68 +224,66 @@ with tab1:
                 
                 st.markdown("---")
                 
-                # Executive Summary
-                st.markdown("### Executive Summary")
-                
-                # Simulate metrics (in real implementation, these would come from actual data)
-                summary_metrics = {
-                    "Total Return": "12.5%",
-                    "Sharpe Ratio": "1.85",
-                    "Max Drawdown": "-8.3%",
-                    "Win Rate": "58.2%",
-                    "Total Trades": "142",
-                    "Average Trade P&L": "$125.50"
-                }
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Total Return", summary_metrics["Total Return"])
-                    st.metric("Sharpe Ratio", summary_metrics["Sharpe Ratio"])
-                with col2:
-                    st.metric("Max Drawdown", summary_metrics["Max Drawdown"])
-                    st.metric("Win Rate", summary_metrics["Win Rate"])
-                with col3:
-                    st.metric("Total Trades", summary_metrics["Total Trades"])
-                    st.metric("Avg Trade P&L", summary_metrics["Average Trade P&L"])
-                
-                # Performance Metrics
-                st.markdown("---")
-                st.markdown("### Performance Metrics")
-                
-                performance_data = {
-                    "Daily Return": np.random.normal(0.001, 0.02, (end_date - start_date).days),
-                    "Cumulative Return": np.cumsum(np.random.normal(0.001, 0.02, (end_date - start_date).days))
-                }
-                
-                if include_charts:
-                    # Equity Curve
-                    fig = go.Figure()
-                    dates = pd.date_range(start=start_date, end=end_date, freq='D')
-                    fig.add_trace(go.Scatter(
-                        x=dates[:len(performance_data["Cumulative Return"])],
-                        y=performance_data["Cumulative Return"],
-                        mode='lines',
-                        name='Cumulative Return',
-                        line=dict(color='blue', width=2)
-                    ))
-                    fig.update_layout(
-                        title="Equity Curve",
-                        xaxis_title="Date",
-                        yaxis_title="Cumulative Return",
-                        hovermode='x unified',
-                        height=400
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Performance Table
-                perf_df = pd.DataFrame({
-                    "Metric": ["Total Return", "Annualized Return", "Volatility", "Sharpe Ratio", "Sortino Ratio", "Calmar Ratio"],
-                    "Value": ["12.5%", "15.2%", "18.5%", "1.85", "2.10", "1.83"]
-                })
-                st.dataframe(perf_df, use_container_width=True, hide_index=True)
-                
-                # Risk Metrics (if enabled)
-                if include_risk_metrics:
+                # Real report data: from backtest or trading session when available
+                has_report_data = False  # TODO: set True when real data from backtest/logs exists
+                if not has_report_data:
+                    _empty_state("No report data yet. Complete a backtest or trading session to generate reports.", "📋")
+                else:
+                    # Executive Summary
+                    st.markdown("### Executive Summary")
+                    
+                    summary_metrics = {
+                        "Total Return": "12.5%",
+                        "Sharpe Ratio": "1.85",
+                        "Max Drawdown": "-8.3%",
+                        "Win Rate": "58.2%",
+                        "Total Trades": "142",
+                        "Average Trade P&L": "$125.50"
+                    }
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Total Return", summary_metrics["Total Return"])
+                        st.metric("Sharpe Ratio", summary_metrics["Sharpe Ratio"])
+                    with col2:
+                        st.metric("Max Drawdown", summary_metrics["Max Drawdown"])
+                        st.metric("Win Rate", summary_metrics["Win Rate"])
+                    with col3:
+                        st.metric("Total Trades", summary_metrics["Total Trades"])
+                        st.metric("Avg Trade P&L", summary_metrics["Average Trade P&L"])
+                    
+                    # Performance Metrics (real data only)
+                    st.markdown("---")
+                    st.markdown("### Performance Metrics")
+                    performance_data = {}  # from real source
+                    if include_charts and performance_data:
+                        fig = go.Figure()
+                        dates = pd.date_range(start=start_date, end=end_date, freq='D')
+                        if "Cumulative Return" in performance_data and len(dates) >= len(performance_data["Cumulative Return"]):
+                            fig.add_trace(go.Scatter(
+                                x=dates[:len(performance_data["Cumulative Return"])],
+                                y=performance_data["Cumulative Return"],
+                                mode='lines',
+                                name='Cumulative Return',
+                                line=dict(color='blue', width=2)
+                            ))
+                            fig.update_layout(
+                                title="Equity Curve",
+                                xaxis_title="Date",
+                                yaxis_title="Cumulative Return",
+                                hovermode='x unified',
+                                height=400
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    perf_df = pd.DataFrame({
+                        "Metric": ["Total Return", "Annualized Return", "Volatility", "Sharpe Ratio", "Sortino Ratio", "Calmar Ratio"],
+                        "Value": ["12.5%", "15.2%", "18.5%", "1.85", "2.10", "1.83"]
+                    })
+                    st.dataframe(perf_df, use_container_width=True, hide_index=True)
+                    
+                    # Risk Metrics (if enabled)
+                    if include_risk_metrics:
                     st.markdown("---")
                     st.markdown("### Risk Analysis")
                     
@@ -298,62 +306,61 @@ with tab1:
                     with col3:
                         st.metric("Alpha", risk_metrics["Alpha"])
                         st.metric("Tracking Error", risk_metrics["Tracking Error"])
-                
-                # Trade Details (if enabled)
-                if include_trade_details:
-                    st.markdown("---")
-                    st.markdown("### Trade History")
                     
-                    # Simulate trade data
-                    n_trades = 20
-                    trade_df = pd.DataFrame({
-                        "Date": pd.date_range(start=start_date, periods=n_trades, freq='D'),
-                        "Symbol": np.random.choice(["AAPL", "MSFT", "GOOGL", "AMZN"], n_trades),
-                        "Action": np.random.choice(["Buy", "Sell"], n_trades),
-                        "Quantity": np.random.randint(10, 100, n_trades),
-                        "Price": np.random.uniform(100, 200, n_trades),
-                        "P&L": np.random.uniform(-500, 1000, n_trades),
-                        "Status": np.random.choice(["Filled", "Partial"], n_trades)
-                    })
-                    trade_df["P&L"] = trade_df["P&L"].apply(lambda x: f"${x:.2f}")
-                    trade_df["Price"] = trade_df["Price"].apply(lambda x: f"${x:.2f}")
+                    # Trade Details (if enabled)
+                    if include_trade_details:
+                        st.markdown("---")
+                        st.markdown("### Trade History")
+                        
+                        n_trades = 20
+                        trade_df = pd.DataFrame({
+                            "Date": pd.date_range(start=start_date, periods=n_trades, freq='D'),
+                            "Symbol": np.random.choice(["AAPL", "MSFT", "GOOGL", "AMZN"], n_trades),
+                            "Action": np.random.choice(["Buy", "Sell"], n_trades),
+                            "Quantity": np.random.randint(10, 100, n_trades),
+                            "Price": np.random.uniform(100, 200, n_trades),
+                            "P&L": np.random.uniform(-500, 1000, n_trades),
+                            "Status": np.random.choice(["Filled", "Partial"], n_trades)
+                        })
+                        trade_df["P&L"] = trade_df["P&L"].apply(lambda x: f"${x:.2f}")
+                        trade_df["Price"] = trade_df["Price"].apply(lambda x: f"${x:.2f}")
+                        
+                        st.dataframe(trade_df, use_container_width=True, height=300)
                     
-                    st.dataframe(trade_df, use_container_width=True, height=300)
-                
-                # Performance Attribution (if enabled)
-                if include_performance_attribution:
-                    st.markdown("---")
-                    st.markdown("### Performance Attribution")
+                    # Performance Attribution (if enabled)
+                    if include_performance_attribution:
+                        st.markdown("---")
+                        st.markdown("### Performance Attribution")
+                        
+                        attribution_data = {
+                            "Source": ["Stock Selection", "Market Timing", "Sector Allocation", "Currency", "Other"],
+                            "Contribution": ["8.2%", "2.1%", "1.5%", "0.4%", "0.3%"]
+                        }
+                        attr_df = pd.DataFrame(attribution_data)
+                        st.dataframe(attr_df, use_container_width=True, hide_index=True)
                     
-                    attribution_data = {
-                        "Source": ["Stock Selection", "Market Timing", "Sector Allocation", "Currency", "Other"],
-                        "Contribution": ["8.2%", "2.1%", "1.5%", "0.4%", "0.3%"]
+                    # Store report
+                    report_data["content"] = {
+                        "summary_metrics": summary_metrics,
+                        "performance_data": performance_data,
+                        "risk_metrics": risk_metrics if include_risk_metrics else None,
+                        "trade_count": n_trades if include_trade_details else 0
                     }
-                    attr_df = pd.DataFrame(attribution_data)
-                    st.dataframe(attr_df, use_container_width=True, hide_index=True)
-                
-                # Store report
-                report_data["content"] = {
-                    "summary_metrics": summary_metrics,
-                    "performance_data": performance_data,
-                    "risk_metrics": risk_metrics if include_risk_metrics else None,
-                    "trade_count": n_trades if include_trade_details else 0
-                }
-                
-                st.session_state.generated_reports[report_id] = report_data
-                
-                st.success(f"✅ Report '{report_type}' generated successfully!")
-                
-                st.markdown("---")
-                
-                # Export Options
-                st.subheader("📤 Export Report")
-                
-                export_col1, export_col2, export_col3, export_col4 = st.columns(4)
-                
-                with export_col1:
-                    # PDF Export
-                    if st.button("📄 Export PDF", use_container_width=True):
+                    
+                    st.session_state.generated_reports[report_id] = report_data
+                    
+                    st.success(f"✅ Report '{report_type}' generated successfully!")
+                    
+                    st.markdown("---")
+                    
+                    # Export Options
+                    st.subheader("📤 Export Report")
+                    
+                    export_col1, export_col2, export_col3, export_col4 = st.columns(4)
+                    
+                        with export_col1:
+                        # PDF Export
+                        if st.button("📄 Export PDF", use_container_width=True):
                         try:
                             # Generate PDF report
                             from reportlab.lib.pagesizes import letter
@@ -420,8 +427,8 @@ with tab1:
                             st.error(f"Error generating PDF: {str(e)}")
                 
                 with export_col2:
-                    # Excel Export
-                    if st.button("📊 Export Excel", use_container_width=True):
+                        # Excel Export
+                        if st.button("📊 Export Excel", use_container_width=True):
                         try:
                             # Create Excel file
                             from io import BytesIO
@@ -446,8 +453,8 @@ with tab1:
                             st.error(f"Error generating Excel: {str(e)}")
                 
                 with export_col3:
-                    # HTML Export
-                    if st.button("🌐 Export HTML", use_container_width=True):
+                        # HTML Export
+                        if st.button("🌐 Export HTML", use_container_width=True):
                         try:
                             html_content = f"""
                             <!DOCTYPE html>
@@ -486,8 +493,8 @@ with tab1:
                             st.error(f"Error generating HTML: {str(e)}")
                 
                 with export_col4:
-                    # Email Delivery
-                    if st.button("📧 Email Report", use_container_width=True):
+                        # Email Delivery
+                        if st.button("📧 Email Report", use_container_width=True):
                         email_address = st.text_input("Enter email address", placeholder="your@email.com")
                         if email_address and st.button("Send", key="send_email"):
                             st.info(f"Email delivery to {email_address} would be sent here. (Requires email configuration)")
@@ -766,50 +773,7 @@ with tab2:
                                 st.dataframe(stress_df, use_container_width=True, hide_index=True)
                         
                         elif section == "Equity Curve Chart":
-                            config = section_configs.get(section, {})
-                            
-                            # Generate equity curve
-                            dates = pd.date_range(start=start_date, end=end_date, freq='D')
-                            equity_values = 100000 + np.cumsum(np.random.normal(500, 2000, len(dates)))
-                            
-                            fig = go.Figure()
-                            
-                            if config.get("chart_type") == "Area":
-                                fig.add_trace(go.Scatter(
-                                    x=dates,
-                                    y=equity_values,
-                                    mode='lines',
-                                    fill='tozeroy',
-                                    name='Portfolio Value',
-                                    line=dict(color=primary_color)
-                                ))
-                            else:
-                                fig.add_trace(go.Scatter(
-                                    x=dates,
-                                    y=equity_values,
-                                    mode='lines',
-                                    name='Portfolio Value',
-                                    line=dict(color=primary_color, width=2)
-                                ))
-                            
-                            if config.get("show_benchmark", False):
-                                benchmark_values = 100000 + np.cumsum(np.random.normal(300, 1500, len(dates)))
-                                fig.add_trace(go.Scatter(
-                                    x=dates,
-                                    y=benchmark_values,
-                                    mode='lines',
-                                    name='Benchmark',
-                                    line=dict(color='gray', width=2, dash='dash')
-                                ))
-                            
-                            fig.update_layout(
-                                title="Equity Curve",
-                                xaxis_title="Date",
-                                yaxis_title="Portfolio Value ($)",
-                                hovermode='x unified',
-                                height=400
-                            )
-                            st.plotly_chart(fig, use_container_width=True)
+                            _empty_state("No report data yet. Complete a backtest or trading session to generate reports.", "📋")
                         
                         elif section == "Allocation Chart":
                             config = section_configs.get(section, {})
@@ -852,26 +816,7 @@ with tab2:
                                 st.plotly_chart(fig, use_container_width=True)
                         
                         elif section == "Drawdown Chart":
-                            dates = pd.date_range(start=start_date, end=end_date, freq='D')
-                            drawdown = -np.abs(np.random.normal(0, 2, len(dates)))
-                            
-                            fig = go.Figure()
-                            fig.add_trace(go.Scatter(
-                                x=dates,
-                                y=drawdown,
-                                mode='lines',
-                                fill='tozeroy',
-                                name='Drawdown',
-                                line=dict(color='red', width=2)
-                            ))
-                            fig.update_layout(
-                                title="Drawdown Analysis",
-                                xaxis_title="Date",
-                                yaxis_title="Drawdown (%)",
-                                hovermode='x unified',
-                                height=400
-                            )
-                            st.plotly_chart(fig, use_container_width=True)
+                            _empty_state("No report data yet. Complete a backtest or trading session to generate reports.", "📋")
                         
                         elif section == "Performance Attribution":
                             st.markdown("**Return Attribution:**")
