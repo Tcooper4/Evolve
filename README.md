@@ -70,7 +70,7 @@ python -m venv .venv
 .venv\Scripts\activate          # Windows
 # source .venv/bin/activate     # Linux/macOS
 
-# Dependencies
+# Dependencies (single-file install; includes streamlit, plotly, pandas, yfinance, reportlab, etc.)
 pip install -r requirements.txt
 
 # Environment (copy and edit)
@@ -82,6 +82,12 @@ streamlit run app.py
 # Or: python main.py streamlit
 ```
 
+**Requirements files:** The repo provides:
+
+- **`requirements.txt`** — Single-file install with all packages needed for the dashboard (Streamlit, Plotly, Pandas, YFinance, ReportLab, Anthropic, etc.). Use this for a full install.
+- **`requirements_core.txt`** — Minimal set to start the app (Streamlit, PyYAML, SQLAlchemy, NumPy, Pandas, jsonschema). Use if you want a minimal install first.
+- **`requirements_optional.txt`** — Feature-tier extras (Plotly, YFinance, ReportLab, requests, scikit-learn, scipy, schedule, Anthropic, etc.). Install after core for a complete setup: `pip install -r requirements_core.txt && pip install -r requirements_optional.txt`.
+
 **Windows, multiple Python versions:** If you have both Python 3.10 and 3.13 (or others), `pip` may install into the wrong one and the app will not see packages. Use the **same** Python that runs the app for all installs and for starting Streamlit:
 
 ```powershell
@@ -90,13 +96,12 @@ py -3.10 -c "import sys; print(sys.executable)"
 
 # Install into that Python only
 py -3.10 -m pip install -r requirements.txt
-py -3.10 -m pip install anthropic yfinance schedule reportlab plotly psutil tenacity scikit-learn scipy xgboost optuna
 
 # Always start Streamlit with that Python
 py -3.10 -m streamlit run app.py
 ```
 
-If `py -3.10` is not available, use `py --list` to see versions, or the full path to the desired Python, e.g. `C:\...\Python310\python.exe -m pip install ...` and `...\python.exe -m streamlit run app.py`.
+If `py -3.10` is not available, use `py --list` to see versions, or the full path to the desired Python, e.g. `C:\...\Python310\python.exe -m pip install -r requirements.txt` and `...\python.exe -m streamlit run app.py`.
 
 Open **http://localhost:8501**. Use **Admin → Configuration → AI Model Settings** to choose and save the LLM.
 
