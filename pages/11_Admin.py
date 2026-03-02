@@ -292,8 +292,8 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 
 # TAB 1: System Dashboard
 with tab1:
-    dash = _get_system_dashboard_data()
-    st.session_state.system_health["agents_active"] = dash.get("agents_active", st.session_state.system_health.get("agents_active", 0))
+    dashboard_data = _get_system_dashboard_data()
+    st.session_state.system_health["agents_active"] = dashboard_data.get("agents_active", st.session_state.system_health.get("agents_active", 0))
     st.header("📊 System Dashboard")
     st.markdown("High-level system overview and health monitoring.")
     
@@ -1502,11 +1502,11 @@ curl -X POST http://localhost:8000/forecast \\
     st.subheader("📈 Quick Stats")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("⏱️ Uptime", dash["uptime_str"])
+        st.metric("⏱️ Uptime", dashboard_data["uptime_str"])
     with col2:
-        st.metric("📊 Trades Today", dash["trades_today"])
+        st.metric("📊 Trades Today", dashboard_data["trades_today"])
     with col3:
-        st.metric("📈 Active Strategies", dash["active_strategies"])
+        st.metric("📈 Active Strategies", dashboard_data["active_strategies"])
     with col4:
         cpu_usage = st.session_state.system_metrics.get("cpu_usage", 45.0)
         st.metric("💻 System Load", f"{cpu_usage:.1f}%")
@@ -1515,8 +1515,8 @@ curl -X POST http://localhost:8000/forecast \\
     
     # Recent System Events Feed
     st.subheader("📢 Recent System Events")
-    if dash.get("recent_events"):
-        events_to_show = list(dash["recent_events"])[-10:]
+    if dashboard_data.get("recent_events"):
+        events_to_show = list(dashboard_data["recent_events"])[-10:]
     else:
         if not st.session_state.system_events:
             st.session_state.system_events = []
@@ -1630,7 +1630,7 @@ curl -X POST http://localhost:8000/forecast \\
             ("API Connections", api_status),
             ("Broker Connections", broker_status),
             ("Data Providers", data_status),
-            ("AI Agents", "green" if agents_active > 0 else "yellow")
+            ("AI Agents", "green" if dashboard_data.get("agents_active", 0) > 0 else "yellow")
         ]
         
         for component, status in components:
@@ -1656,8 +1656,8 @@ curl -X POST http://localhost:8000/forecast \\
             st.markdown(f"- **Disk Usage:** {st.session_state.system_metrics.get('disk_usage', 38.0):.1f}%")
         
         with col2:
-            st.markdown(f"- **Uptime:** {uptime}")
-            st.markdown(f"- **Active Agents:** {agents_active}")
+            st.markdown(f"- **Uptime:** {dashboard_data.get('uptime_str', '—')}")
+            st.markdown(f"- **Active Agents:** {dashboard_data.get('agents_active', 0)}")
             st.markdown(f"- **Health Score:** {health_score}/100")
 
 # TAB 2: Configuration

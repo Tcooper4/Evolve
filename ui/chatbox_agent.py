@@ -31,11 +31,14 @@ except ImportError as e:
 # Text-to-speech imports
 try:
     import pyttsx3
-
-    TTS_AVAILABLE = True
+    PYTTSX3_AVAILABLE = True
 except ImportError as e:
     logging.warning(f"pyttsx3 not available: {e}")
-    TTS_AVAILABLE = False
+    pyttsx3 = None
+    PYTTSX3_AVAILABLE = False
+
+# Backward compatibility
+TTS_AVAILABLE = PYTTSX3_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
@@ -230,20 +233,25 @@ class TextToSpeech:
             voice_rate: Speech rate
             voice_volume: Voice volume
         """
-        if not TTS_AVAILABLE:
-            logger.warning("Text-to-speech not available")
+        self.engine = None
+        if not PYTTSX3_AVAILABLE or pyttsx3 is None:
+            logger.warning("Text-to-speech not available (pyttsx3 missing)")
             return
 
-        self.engine = pyttsx3.init()
-        self.engine.setProperty("rate", voice_rate)
-        self.engine.setProperty("volume", voice_volume)
+        try:
+            self.engine = pyttsx3.init()
+            self.engine.setProperty("rate", voice_rate)
+            self.engine.setProperty("volume", voice_volume)
 
-        # Get available voices
-        voices = self.engine.getProperty("voices")
-        if voices:
-            self.engine.setProperty("voice", voices[0].id)
+            # Get available voices
+            voices = self.engine.getProperty("voices")
+            if voices:
+                self.engine.setProperty("voice", voices[0].id)
 
-        logger.info("Initialized Text-to-Speech")
+            logger.info("Initialized Text-to-Speech")
+        except Exception as e:
+            logger.warning(f"Text-to-speech init failed: {e}")
+            self.engine = None
 
     def speak(self, text: str):
         """Convert text to speech.
@@ -251,8 +259,8 @@ class TextToSpeech:
         Args:
             text: Text to speak
         """
-        if not TTS_AVAILABLE:
-            logger.warning("Text-to-speech not available")
+        if not PYTTSX3_AVAILABLE or pyttsx3 is None or self.engine is None:
+            logger.debug("Text-to-speech not available, skipping speak")
             return
 
         try:
@@ -495,7 +503,7 @@ class ChatboxAgent:
         self.speech_recognizer = (
             SpeechRecognizer(whisper_api_key=whisper_api_key) if (enable_voice and SPEECH_AVAILABLE) else None
         )
-        self.tts = TextToSpeech() if enable_tts else None
+        self.tts = TextToSpeech() if (enable_tts and PYTTSX3_AVAILABLE) else None
         self.command_parser = CommandParser()
 
         # Chat state
