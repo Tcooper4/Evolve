@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 from trading.agents.model_builder_agent import ModelBuilderAgent as ModelBuilder
-from trading.agents.prompt_router_agent import PromptRouterAgent as AgentRouter
+from trading.agents.enhanced_prompt_router import EnhancedPromptRouterAgent as AgentRouter
 from trading.agents.self_improving_agent import SelfImprovingAgent
 from trading.agents.task_dashboard import TaskDashboard
 from trading.agents.task_memory import Task, TaskMemory, TaskStatus

@@ -7,7 +7,7 @@ This module provides autonomous agents for model management and centralized prom
 - PerformanceCriticAgent: Evaluates model performance
 - UpdaterAgent: Updates models based on evaluation results
 - AgentLoopManager: Orchestrates the autonomous 3-agent system
-- PromptRouterAgent: Routes prompts to appropriate agents
+- EnhancedPromptRouterAgent: Routes prompts to appropriate agents
 - MarketRegimeAgent: Analyzes and adapts to market conditions
 - StrategySelectorAgent: Selects optimal trading strategies
 - ExecutionAgent: Executes trades and manages positions
@@ -199,8 +199,8 @@ def get_agent_leaderboard():
 
 
 def get_prompt_router_agent():
-    """Get PromptRouterAgent with lazy loading."""
-    return _lazy_import(".prompt_router_agent", "PromptRouterAgent")
+    """Get EnhancedPromptRouterAgent with lazy loading (replaces legacy PromptRouterAgent)."""
+    return _lazy_import(".enhanced_prompt_router", "EnhancedPromptRouterAgent")
 
 
 def get_nlp_agent():
@@ -282,7 +282,7 @@ def _import_core_agents():
         "ExecutionAgent",
         "AgentManager",
         "AgentLoopManager",
-        "PromptRouterAgent",
+        "EnhancedPromptRouterAgent",
         "MarketRegimeAgent",
         "StrategySelectorAgent",
         "CommentaryAgent",
@@ -304,7 +304,7 @@ def _import_core_agents():
                     "ExecutionAgent": ".execution.execution_agent",
                     "AgentManager": ".agent_manager",
                     "AgentLoopManager": ".agent_loop_manager",
-                    "PromptRouterAgent": ".prompt_router_agent",
+                    "EnhancedPromptRouterAgent": ".enhanced_prompt_router",
                     "MarketRegimeAgent": ".market_regime_agent",
                     "StrategySelectorAgent": ".strategy_selector_agent",
                     "CommentaryAgent": ".commentary_agent",

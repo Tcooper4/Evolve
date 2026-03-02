@@ -662,3 +662,6 @@ def get_sharpe_optuna_tuner(
         Configured SharpeOptunaTuner instance
     """
     return SharpeOptunaTuner(study_name=study_name, n_trials=n_trials, timeout=timeout)
+
+# Backward-compatibility alias for code that expects OptunaTuner
+OptunaTuner = SharpeOptunaTuner

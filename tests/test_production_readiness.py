@@ -52,7 +52,7 @@ def sample_price_data():
 # Import components to test
 try:
     from interface.unified_interface import EnhancedUnifiedInterface
-    from trading.agents.prompt_router_agent import PromptRouterAgent
+    from trading.agents.enhanced_prompt_router import EnhancedPromptRouterAgent
     from trading.backtesting.backtester import Backtester
     from trading.llm.agent import PromptAgent
     from trading.models.forecast_engine import ForecastEngine
@@ -159,26 +159,26 @@ class TestProductionReadiness:
 
     @pytest.mark.skipif(not COMPONENTS_AVAILABLE, reason="Components not available")
     def test_prompt_router_agent(self):
-        """Test prompt router agent functionality."""
-        agent = PromptRouterAgent()
+        """Test prompt router agent functionality (EnhancedPromptRouterAgent)."""
+        agent = EnhancedPromptRouterAgent()
 
-        # Test forecast prompt
+        # Test forecast prompt via route()
         forecast_prompt = "Forecast AAPL for the next 30 days"
-        forecast_result = agent.route_prompt(forecast_prompt, {})
+        forecast_result = agent.route(forecast_prompt, {})
         assert forecast_result is not None
-        assert "action" in forecast_result
+        assert "intent" in forecast_result
 
         # Test strategy prompt
         strategy_prompt = "Create a bullish strategy for TSLA"
-        strategy_result = agent.route_prompt(strategy_prompt, {})
+        strategy_result = agent.route(strategy_prompt, {})
         assert strategy_result is not None
-        assert "action" in strategy_result
+        assert "intent" in strategy_result
 
         # Test backtest prompt
         backtest_prompt = "Backtest RSI strategy on SPY"
-        backtest_result = agent.route_prompt(backtest_prompt, {})
+        backtest_result = agent.route(backtest_prompt, {})
         assert backtest_result is not None
-        assert "action" in backtest_result
+        assert "intent" in backtest_result
 
     @pytest.mark.skipif(not COMPONENTS_AVAILABLE, reason="Components not available")
     def test_backtester_functionality(self):

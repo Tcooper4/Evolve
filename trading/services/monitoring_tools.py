@@ -87,7 +87,11 @@ def check_model_degradation(
     if not degraded:
         return {"degradation_detected": False, "message": "No degradation detected"}
 
-    title = f"Model degradation: {model_id or 'model'}"
+    # Only write when we have a real identifier; avoid placeholder "Model degradation: model"
+    if model_id is None:
+        return {"degradation_detected": True, "reasons": reasons, "written_to_memory": False, "message": "Skipped write: no model_id"}
+
+    title = f"Model degradation: {model_id}"
     text = "Consider retraining or switching model. " + "; ".join(reasons)
     ok = _write_recommendation(
         title,
@@ -125,7 +129,11 @@ def check_strategy_degradation(
     if not degraded:
         return {"degradation_detected": False, "message": "No degradation detected"}
 
-    title = f"Strategy degradation: {strategy_name or 'strategy'}"
+    # Only write when we have a real identifier; avoid placeholder "Strategy degradation: strategy"
+    if strategy_name is None:
+        return {"degradation_detected": True, "reasons": reasons, "written_to_memory": False, "message": "Skipped write: no strategy_name"}
+
+    title = f"Strategy degradation: {strategy_name}"
     text = "Consider re-optimizing parameters or switching strategy. " + "; ".join(reasons)
     ok = _write_recommendation(
         title,

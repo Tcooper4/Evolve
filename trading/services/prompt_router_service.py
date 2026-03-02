@@ -1,7 +1,7 @@
 """
 Prompt Router Service
 
-Service wrapper for the PromptRouterAgent, handling prompt routing and intent detection
+Service wrapper for the EnhancedPromptRouterAgent, handling prompt routing and intent detection
 via Redis pub/sub communication.
 """
 
@@ -11,9 +11,9 @@ import sys
 from typing import Any, Dict, Optional
 
 try:
-    from trading.agents.prompt_router_agent import PromptRouterAgent
+    from trading.agents.enhanced_prompt_router import EnhancedPromptRouterAgent
 except ImportError:
-    PromptRouterAgent = None  # Agent rationalized to _dead_code
+    EnhancedPromptRouterAgent = None
 
 from trading.memory.agent_memory import AgentMemory
 from trading.services.base_service import BaseService
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 class PromptRouterService(BaseService):
     """
-    Service wrapper for PromptRouterAgent.
+    Service wrapper for EnhancedPromptRouterAgent.
 
     Handles prompt routing and intent detection requests and communicates results via Redis.
     """
@@ -38,12 +38,12 @@ class PromptRouterService(BaseService):
         """Initialize the PromptRouterService."""
         super().__init__("prompt_router", redis_host, redis_port, redis_db)
 
-        # Initialize the agent (None if moved to _dead_code)
-        self.agent = PromptRouterAgent() if PromptRouterAgent else None
+        # Initialize the agent (None if import failed)
+        self.agent = EnhancedPromptRouterAgent() if EnhancedPromptRouterAgent else None
         self.memory = AgentMemory()
 
         if self.agent is None:
-            logger.warning("PromptRouterAgent not available (rationalized). PromptRouterService will return unavailable.")
+            logger.warning("EnhancedPromptRouterAgent not available. PromptRouterService will return unavailable.")
         else:
             logger.info("PromptRouterService initialized")
 
@@ -107,12 +107,15 @@ class PromptRouterService(BaseService):
 
             logger.info(f"Routing prompt: {user_prompt[:50]}...")
 
-            # Route the prompt using the agent
-            result = self.agent.route_prompt(
-                user_prompt=user_prompt,
-                context=context,
-                available_agents=available_agents,
-            )
+            # Route the prompt using the agent (EnhancedPromptRouterAgent.route returns dict with intent, routed_agent, etc.)
+            agents_dict = {a: None for a in (available_agents or [])}
+            raw = self.agent.route(user_prompt, agents_dict)
+            result = {
+                "intent": raw.get("intent"),
+                "target_agent": raw.get("routed_agent"),
+                "confidence": raw.get("confidence", 0),
+                "args": raw.get("args", {}),
+            }
 
             # Log to memory
             self.memory.log_decision(
@@ -156,10 +159,9 @@ class PromptRouterService(BaseService):
 
             logger.info(f"Detecting intent for: {user_prompt[:50]}...")
 
-            # Detect intent using the agent
-            result = self.agent.detect_intent(
-                user_prompt=user_prompt, use_openai=use_openai
-            )
+            # Detect intent using parse_intent
+            parsed = self.agent.parse_intent(user_prompt)
+            result = {"intent": parsed.intent, "confidence": parsed.confidence, "args": parsed.args}
 
             # Log to memory
             self.memory.log_decision(
@@ -204,10 +206,9 @@ class PromptRouterService(BaseService):
 
             logger.info(f"Parsing arguments for intent: {intent}")
 
-            # Parse arguments using the agent
-            result = self.agent.parse_arguments(
-                user_prompt=user_prompt, intent=intent, use_openai=use_openai
-            )
+            # Parse arguments via parse_intent (args are in ParsedIntent.args)
+            parsed = self.agent.parse_intent(user_prompt)
+            result = {"arguments": parsed.args, "intent": parsed.intent}
 
             # Log to memory
             self.memory.log_decision(
@@ -228,16 +229,14 @@ class PromptRouterService(BaseService):
             return {"type": "error", "error": str(e)}
 
     def _handle_history_request(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle routing history request."""
+        """Handle routing history request. EnhancedPromptRouterAgent has no routing history; return empty."""
         try:
             history_data = data.get("data", {})
-
-            # Extract parameters
             intent = history_data.get("intent")
             limit = history_data.get("limit", 10)
 
-            # Get routing history
-            history = self.agent.get_routing_history(intent=intent, limit=limit)
+            # EnhancedPromptRouterAgent does not expose get_routing_history; return empty
+            history = []
 
             return {
                 "type": "routing_history",

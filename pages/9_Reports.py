@@ -284,28 +284,28 @@ with tab1:
                     
                     # Risk Metrics (if enabled)
                     if include_risk_metrics:
-                    st.markdown("---")
-                    st.markdown("### Risk Analysis")
-                    
-                    risk_metrics = {
-                        "VaR (95%)": "-2.5%",
-                        "CVaR (95%)": "-3.2%",
-                        "Maximum Drawdown": "-8.3%",
-                        "Beta": "0.95",
-                        "Alpha": "2.1%",
-                        "Tracking Error": "5.2%"
-                    }
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("VaR (95%)", risk_metrics["VaR (95%)"])
-                        st.metric("CVaR (95%)", risk_metrics["CVaR (95%)"])
-                    with col2:
-                        st.metric("Max Drawdown", risk_metrics["Maximum Drawdown"])
-                        st.metric("Beta", risk_metrics["Beta"])
-                    with col3:
-                        st.metric("Alpha", risk_metrics["Alpha"])
-                        st.metric("Tracking Error", risk_metrics["Tracking Error"])
+                        st.markdown("---")
+                        st.markdown("### Risk Analysis")
+                        
+                        risk_metrics = {
+                            "VaR (95%)": "-2.5%",
+                            "CVaR (95%)": "-3.2%",
+                            "Maximum Drawdown": "-8.3%",
+                            "Beta": "0.95",
+                            "Alpha": "2.1%",
+                            "Tracking Error": "5.2%"
+                        }
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("VaR (95%)", risk_metrics["VaR (95%)"])
+                            st.metric("CVaR (95%)", risk_metrics["CVaR (95%)"])
+                        with col2:
+                            st.metric("Max Drawdown", risk_metrics["Maximum Drawdown"])
+                            st.metric("Beta", risk_metrics["Beta"])
+                        with col3:
+                            st.metric("Alpha", risk_metrics["Alpha"])
+                            st.metric("Tracking Error", risk_metrics["Tracking Error"])
                     
                     # Trade Details (if enabled)
                     if include_trade_details:
@@ -358,146 +358,146 @@ with tab1:
                     
                     export_col1, export_col2, export_col3, export_col4 = st.columns(4)
                     
-                        with export_col1:
+                    with export_col1:
                         # PDF Export
                         if st.button("📄 Export PDF", use_container_width=True):
-                        try:
-                            # Generate PDF report
-                            from reportlab.lib.pagesizes import letter
-                            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-                            from reportlab.lib.styles import getSampleStyleSheet
-                            from reportlab.lib import colors
-                            import io
-                            
-                            # Create PDF
-                            buffer = io.BytesIO()
-                            doc = SimpleDocTemplate(buffer, pagesize=letter)
-                            story = []
-                            styles = getSampleStyleSheet()
-                            
-                            # Add title
-                            title = Paragraph(f"<b>{report_type} Report</b>", styles['Title'])
-                            story.append(title)
-                            story.append(Spacer(1, 12))
-                            
-                            # Add report date
-                            date_para = Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal'])
-                            story.append(date_para)
-                            story.append(Spacer(1, 12))
-                            
-                            # Add period
-                            period_para = Paragraph(f"Period: {start_date} to {end_date}", styles['Normal'])
-                            story.append(period_para)
-                            story.append(Spacer(1, 12))
-                            
-                            # Add summary metrics if available in session state
-                            if 'report_summary_metrics' in st.session_state:
-                                story.append(Paragraph("<b>Summary Metrics</b>", styles['Heading2']))
-                                metrics_data = [[k, str(v)] for k, v in st.session_state.report_summary_metrics.items()]
-                                metrics_table = Table(metrics_data)
-                                metrics_table.setStyle(TableStyle([
-                                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                                    ('FONTSIZE', (0, 0), (-1, 0), 12),
-                                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
-                                ]))
-                                story.append(metrics_table)
+                            try:
+                                # Generate PDF report
+                                from reportlab.lib.pagesizes import letter
+                                from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+                                from reportlab.lib.styles import getSampleStyleSheet
+                                from reportlab.lib import colors
+                                import io
+                                
+                                # Create PDF
+                                buffer = io.BytesIO()
+                                doc = SimpleDocTemplate(buffer, pagesize=letter)
+                                story = []
+                                styles = getSampleStyleSheet()
+                                
+                                # Add title
+                                title = Paragraph(f"<b>{report_type} Report</b>", styles['Title'])
+                                story.append(title)
                                 story.append(Spacer(1, 12))
-                            
-                            # Build PDF
-                            doc.build(story)
-                            pdf_data = buffer.getvalue()
-                            buffer.close()
-                            
-                            # Provide download button
-                            st.download_button(
-                                label="📄 Download PDF Report",
-                                data=pdf_data,
-                                file_name=f"{report_type.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf",
-                                mime="application/pdf"
-                            )
-                            
-                            st.success("PDF report generated successfully!")
-                        except ImportError:
-                            st.error("reportlab library not installed. Install with: pip install reportlab")
-                        except Exception as e:
-                            st.error(f"Error generating PDF: {str(e)}")
+                                
+                                # Add report date
+                                date_para = Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal'])
+                                story.append(date_para)
+                                story.append(Spacer(1, 12))
+                                
+                                # Add period
+                                period_para = Paragraph(f"Period: {start_date} to {end_date}", styles['Normal'])
+                                story.append(period_para)
+                                story.append(Spacer(1, 12))
+                                
+                                # Add summary metrics if available in session state
+                                if 'report_summary_metrics' in st.session_state:
+                                    story.append(Paragraph("<b>Summary Metrics</b>", styles['Heading2']))
+                                    metrics_data = [[k, str(v)] for k, v in st.session_state.report_summary_metrics.items()]
+                                    metrics_table = Table(metrics_data)
+                                    metrics_table.setStyle(TableStyle([
+                                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                                        ('FONTSIZE', (0, 0), (-1, 0), 12),
+                                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                                        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                                    ]))
+                                    story.append(metrics_table)
+                                    story.append(Spacer(1, 12))
+                                
+                                # Build PDF
+                                doc.build(story)
+                                pdf_data = buffer.getvalue()
+                                buffer.close()
+                                
+                                # Provide download button
+                                st.download_button(
+                                    label="📄 Download PDF Report",
+                                    data=pdf_data,
+                                    file_name=f"{report_type.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                                    mime="application/pdf"
+                                )
+                                
+                                st.success("PDF report generated successfully!")
+                            except ImportError:
+                                st.error("reportlab library not installed. Install with: pip install reportlab")
+                            except Exception as e:
+                                st.error(f"Error generating PDF: {str(e)}")
                 
-                with export_col2:
+                    with export_col2:
                         # Excel Export
                         if st.button("📊 Export Excel", use_container_width=True):
-                        try:
-                            # Create Excel file
-                            from io import BytesIO
-                            output = BytesIO()
-                            
-                            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                                perf_df.to_excel(writer, sheet_name='Performance', index=False)
-                                if include_trade_details:
-                                    trade_df.to_excel(writer, sheet_name='Trades', index=False)
-                                if include_risk_metrics:
-                                    pd.DataFrame([risk_metrics]).to_excel(writer, sheet_name='Risk', index=False)
-                            
-                            output.seek(0)
-                            st.download_button(
-                                label="Download Excel",
-                                data=output.getvalue(),
-                                file_name=f"{report_id}.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            )
-                            st.success("Excel file generated!")
-                        except Exception as e:
-                            st.error(f"Error generating Excel: {str(e)}")
+                            try:
+                                # Create Excel file
+                                from io import BytesIO
+                                output = BytesIO()
+                                
+                                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                                    perf_df.to_excel(writer, sheet_name='Performance', index=False)
+                                    if include_trade_details:
+                                        trade_df.to_excel(writer, sheet_name='Trades', index=False)
+                                    if include_risk_metrics:
+                                        pd.DataFrame([risk_metrics]).to_excel(writer, sheet_name='Risk', index=False)
+                                
+                                output.seek(0)
+                                st.download_button(
+                                    label="Download Excel",
+                                    data=output.getvalue(),
+                                    file_name=f"{report_id}.xlsx",
+                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                )
+                                st.success("Excel file generated!")
+                            except Exception as e:
+                                st.error(f"Error generating Excel: {str(e)}")
                 
-                with export_col3:
+                    with export_col3:
                         # HTML Export
                         if st.button("🌐 Export HTML", use_container_width=True):
-                        try:
-                            html_content = f"""
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <title>{report_type}</title>
-                                <style>
-                                    body {{ font-family: Arial, sans-serif; margin: 20px; }}
-                                    .header {{ background: #f8f9fa; padding: 20px; border-radius: 10px; }}
-                                    .metrics {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0; }}
-                                    .metric {{ background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
-                                </style>
-                            </head>
-                            <body>
-                                <div class="header">
-                                    <h1>{report_type}</h1>
-                                    <p><strong>Period:</strong> {start_date} to {end_date}</p>
-                                    <p><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-                                </div>
-                                <div class="metrics">
-                                    <div class="metric"><strong>Total Return:</strong> {summary_metrics['Total Return']}</div>
-                                    <div class="metric"><strong>Sharpe Ratio:</strong> {summary_metrics['Sharpe Ratio']}</div>
-                                    <div class="metric"><strong>Max Drawdown:</strong> {summary_metrics['Max Drawdown']}</div>
-                                </div>
-                            </body>
-                            </html>
-                            """
-                            st.download_button(
-                                label="Download HTML",
-                                data=html_content,
-                                file_name=f"{report_id}.html",
-                                mime="text/html"
-                            )
-                            st.success("HTML file generated!")
-                        except Exception as e:
-                            st.error(f"Error generating HTML: {str(e)}")
+                            try:
+                                html_content = f"""
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                    <title>{report_type}</title>
+                                    <style>
+                                        body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                                        .header {{ background: #f8f9fa; padding: 20px; border-radius: 10px; }}
+                                        .metrics {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0; }}
+                                        .metric {{ background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
+                                    </style>
+                                </head>
+                                <body>
+                                    <div class="header">
+                                        <h1>{report_type}</h1>
+                                        <p><strong>Period:</strong> {start_date} to {end_date}</p>
+                                        <p><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                                    </div>
+                                    <div class="metrics">
+                                        <div class="metric"><strong>Total Return:</strong> {summary_metrics['Total Return']}</div>
+                                        <div class="metric"><strong>Sharpe Ratio:</strong> {summary_metrics['Sharpe Ratio']}</div>
+                                        <div class="metric"><strong>Max Drawdown:</strong> {summary_metrics['Max Drawdown']}</div>
+                                    </div>
+                                </body>
+                                </html>
+                                """
+                                st.download_button(
+                                    label="Download HTML",
+                                    data=html_content,
+                                    file_name=f"{report_id}.html",
+                                    mime="text/html"
+                                )
+                                st.success("HTML file generated!")
+                            except Exception as e:
+                                st.error(f"Error generating HTML: {str(e)}")
                 
-                with export_col4:
+                    with export_col4:
                         # Email Delivery
                         if st.button("📧 Email Report", use_container_width=True):
-                        email_address = st.text_input("Enter email address", placeholder="your@email.com")
-                        if email_address and st.button("Send", key="send_email"):
-                            st.info(f"Email delivery to {email_address} would be sent here. (Requires email configuration)")
+                            email_address = st.text_input("Enter email address", placeholder="your@email.com")
+                            if email_address and st.button("Send", key="send_email"):
+                                st.info(f"Email delivery to {email_address} would be sent here. (Requires email configuration)")
                             # In real implementation, this would use email service
                 
         except Exception as e:

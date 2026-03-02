@@ -1,6 +1,6 @@
-# Unit tests for OptunaTuner with Prophet support.
+# Unit tests for SharpeOptunaTuner (OptunaTuner alias) with Prophet support.
 
 
 def test_optuna_tuner():
-    """Test OptunaTuner functionality."""
+    """Test SharpeOptunaTuner (OptunaTuner) functionality."""
     # Test implementation here

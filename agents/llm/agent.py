@@ -191,22 +191,22 @@ class PromptAgent:
 
         # Initialize model creator for dynamic model generation
         try:
-            from trading.agents.model_creator_agent import get_model_creator_agent
+            from trading.agents.model_builder_agent import ModelBuilderAgent, ModelBuildRequest
 
-            self.model_creator = get_model_creator_agent()
-            self.logger.info("Model creator agent initialized successfully")
+            self.model_creator = ModelBuilderAgent()
+            self.logger.info("Model builder agent initialized successfully")
         except Exception as e:
-            self.logger.warning(f"Could not initialize model creator: {e}")
+            self.logger.debug(f"Could not initialize model builder: {e}")
             self.model_creator = None
 
         # Initialize prompt router for intelligent routing
         try:
-            from trading.agents.prompt_router_agent import create_prompt_router
+            from trading.agents.enhanced_prompt_router import EnhancedPromptRouterAgent
 
-            self.prompt_router = create_prompt_router()
+            self.prompt_router = EnhancedPromptRouterAgent()
             self.logger.info("Prompt router agent initialized successfully")
         except Exception as e:
-            self.logger.warning(f"Could not initialize prompt router: {e}")
+            self.logger.debug(f"Could not initialize prompt router: {e}")
             self.prompt_router = None
 
         # Default strategy configurations
@@ -1669,7 +1669,7 @@ class PromptAgent:
             if not self.model_creator:
                 return AgentResponse(
                     success=False,
-                    message="Model creator not available",
+                    message="Model builder not available",
                     recommendations=["Please try using an existing model"],
                 )
 
@@ -1677,54 +1677,74 @@ class PromptAgent:
             prompt = params["prompt"]
             symbol = params["symbol"]
 
-            # Generate model requirements based on prompt
-            requirements = self._generate_model_requirements(prompt, symbol)
+            # Infer model type from prompt
+            prompt_lower = prompt.lower()
+            if "xgboost" in prompt_lower or "gradient" in prompt_lower:
+                model_type = "xgboost"
+            elif "ensemble" in prompt_lower:
+                model_type = "ensemble"
+            else:
+                model_type = "lstm"
 
-            # Create model name
-            model_name = f"dynamic_{symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-
-            # Create and validate model
-            model_spec, success, errors = self.model_creator.create_and_validate_model(
-                requirements, model_name
-            )
-
-            if success:
-                # Run full evaluation
-                evaluation = self.model_creator.run_full_evaluation(model_name)
-
-                message = f"Successfully created model '{model_spec.name}':\n"
-                message += f"Framework: {model_spec.framework}\n"
-                message += f"Type: {model_spec.model_type}\n"
-                message += f"Performance Grade: {evaluation.performance_grade}\n"
-                message += f"RMSE: {evaluation.metrics.get('rmse', 'N/A'):.4f}\n"
-                message += (
-                    f"Sharpe: {evaluation.metrics.get('sharpe_ratio', 'N/A'):.4f}\n"
+            # Resolve data path for symbol (ModelBuilderAgent requires an existing file)
+            possible_paths = [
+                Path(f"data/{symbol}.csv"),
+                Path("data") / f"{symbol}_prices.csv",
+                Path("trading/data") / f"{symbol}.csv",
+            ]
+            data_path = None
+            for p in possible_paths:
+                if p.exists():
+                    data_path = str(p)
+                    break
+            if not data_path:
+                return AgentResponse(
+                    success=False,
+                    message=f"No price data file found for {symbol}. Add a CSV (e.g. data/{symbol}.csv) to use model creation.",
+                    recommendations=[
+                        "Export price data for the symbol to data/",
+                        "Use an existing model instead",
+                    ],
                 )
 
-                recommendations = evaluation.recommendations
+            model_name = f"dynamic_{symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            request = ModelBuildRequest(
+                model_type=model_type,
+                data_path=data_path,
+                target_column="Close",
+                request_id=model_name,
+            )
+            result = self.model_creator.build_model(request)
 
-                next_actions = [
-                    f"Test model on {symbol} data",
-                    "Compare with existing models",
-                    "Add to ensemble if performance is good",
-                ]
+            if result.build_status == "success":
+                metrics = result.training_metrics or {}
+                message = f"Successfully built model '{result.model_id}':\n"
+                message += f"Framework: {result.framework}\n"
+                message += f"Type: {result.model_type}\n"
+                message += f"Path: {result.model_path}\n"
+                if metrics:
+                    message += f"Training metrics: {metrics}\n"
 
                 return AgentResponse(
                     success=True,
                     message=message,
                     data={
-                        "model_spec": asdict(model_spec),
-                        "evaluation": asdict(evaluation),
+                        "model_id": result.model_id,
+                        "model_path": result.model_path,
+                        "training_metrics": metrics,
                     },
-                    recommendations=recommendations,
-                    next_actions=next_actions,
+                    recommendations=[],
+                    next_actions=[
+                        f"Test model on {symbol} data",
+                        "Compare with existing models",
+                    ],
                 )
             else:
                 return AgentResponse(
                     success=False,
-                    message=f"Model creation failed: {', '.join(errors)}",
+                    message=f"Model build failed: {result.error_message or 'Unknown error'}",
                     recommendations=[
-                        "Try a different model description",
+                        "Try a different model type or data",
                         "Use an existing model instead",
                     ],
                 )

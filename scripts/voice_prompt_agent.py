@@ -26,14 +26,14 @@ except ImportError:
     TEMPLATES_AVAILABLE = False
     format_template = None
 
-# Import centralized prompt router
+# Import centralized prompt router (EnhancedPromptRouterAgent)
 try:
-    from trading.agents.prompt_router_agent import PromptRouterAgent
+    from trading.agents.enhanced_prompt_router import EnhancedPromptRouterAgent
 
     PROMPT_ROUTER_AVAILABLE = True
 except ImportError:
     PROMPT_ROUTER_AVAILABLE = False
-    PromptRouterAgent = None
+    EnhancedPromptRouterAgent = None
 
 # Try to import speech recognition and Whisper
 try:

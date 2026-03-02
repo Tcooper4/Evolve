@@ -42,7 +42,7 @@ try:
     from trading.data.providers.yfinance_provider import YFinanceProvider
     
     # Optimization and evaluation
-    from trading.optimization.optuna_tuner import OptunaTuner
+    from trading.optimization.optuna_tuner import SharpeOptunaTuner, get_sharpe_optuna_tuner
     from trading.evaluation.model_evaluator import ModelEvaluator
     
     # Explainability
@@ -84,7 +84,7 @@ if 'model_evaluator' not in st.session_state:
 
 if 'optuna_tuner' not in st.session_state:
     try:
-        st.session_state.optuna_tuner = OptunaTuner() if MODEL_MODULES_AVAILABLE else None
+        st.session_state.optuna_tuner = get_sharpe_optuna_tuner() if MODEL_MODULES_AVAILABLE else None
     except Exception as e:
         logger.warning(f"Could not initialize Optuna tuner: {e}")
         st.session_state.optuna_tuner = None
