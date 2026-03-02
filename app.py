@@ -88,6 +88,26 @@ with st.sidebar:
     st.caption("Autonomous Trading Intelligence")
     st.markdown("---")
 
+# Optional: initialize notification service, audit logger, and LLM processor for pages that use them
+if "notification_service" not in st.session_state:
+    try:
+        from trading.utils.notification_system import NotificationSystem
+        st.session_state.notification_service = NotificationSystem()
+    except Exception:
+        st.session_state.notification_service = None
+if "audit_logger" not in st.session_state:
+    try:
+        from trading.logs.audit_logger import audit_logger
+        st.session_state.audit_logger = audit_logger
+    except Exception:
+        st.session_state.audit_logger = None
+if "llm_processor" not in st.session_state:
+    try:
+        from trading.nlp.llm_processor import LLMProcessor
+        st.session_state.llm_processor = LLMProcessor()
+    except Exception:
+        st.session_state.llm_processor = None
+
 # Main area when this script is the active page
 st.markdown("# Welcome to Evolve")
 st.markdown("Use the **sidebar** to open **Home**, **Chat**, **Forecasting**, **Strategy Testing**, and other pages.")

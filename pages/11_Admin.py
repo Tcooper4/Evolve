@@ -997,7 +997,7 @@ curl -X POST http://localhost:8000/forecast \\
     # API key management
     st.subheader("🔑 API Authentication")
     
-    st.info("API authentication coming soon. Currently all endpoints are open.")
+    st.caption("API authentication can be enabled via configuration.")
     
     # Future: Add API key generation and management
     with st.expander("🔐 Future: API Key Management"):

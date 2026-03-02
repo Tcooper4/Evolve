@@ -126,6 +126,48 @@ class XGBoostModel(BaseModel):
             print(f"   Error: {e}")
             # Don't raise exception, just mark as unavailable
 
+    def build_model(self):
+        """Build a basic XGBoost regressor for BaseModel compatibility.
+
+        The full configuration (including GPU support) is applied later via
+        ``_setup_model``; this method exists primarily to satisfy the abstract
+        ``BaseModel.build_model`` contract so the class is instantiable.
+        """
+        try:
+            import xgboost as xgb
+
+            # Safe defaults – will be overridden by _setup_model if it succeeds
+            self.model = xgb.XGBRegressor(
+                n_estimators=50,
+                max_depth=4,
+                learning_rate=0.1,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=42,
+                objective="reg:squarederror",
+            )
+            return self.model
+        except Exception as e:
+            logger.error(f"Failed to build XGBoost model: {e}")
+            self.model = None
+            return None
+
+    def _prepare_data(
+        self, data: pd.DataFrame, is_training: bool
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Prepare features/targets from price data for compatibility with BaseModel.
+
+        Uses the existing feature engineering pipeline to derive inputs from
+        close/volume prices and technical indicators, returning NumPy arrays
+        suitable for gradient-based training if needed.
+        """
+        # Reuse robust feature preparation logic
+        features, target = self.prepare_features(data)
+
+        X = features.values.astype(np.float32)
+        y = target.values.astype(np.float32)
+        return X, y
+
     def _load_hyperparameters(self) -> Dict[str, Any]:
         """Load XGBoost hyperparameters with error handling."""
         try:
@@ -247,43 +289,64 @@ class XGBoostModel(BaseModel):
                 raise ValueError("Input data is empty")
 
             features = data.copy()
+            n_rows = len(features)
+            if n_rows < 5:
+                raise ValueError("Not enough rows to create lag features")
 
-            # Create lag features for close price
-            if "close" in data.columns:
-                for lag in range(1, max_lags + 1):
-                    features[f"close_lag_{lag}"] = data["close"].shift(lag)
+            # Adapt max_lags/window sizes for very short series to avoid dropping
+            # all rows when creating rolling/lagged features.
+            effective_max_lags = max(1, min(max_lags, n_rows - 2))
 
-            # Create lag features for volume
-            if "volume" in data.columns:
-                for lag in range(1, min(max_lags, 10) + 1):
-                    features[f"volume_lag_{lag}"] = data["volume"].shift(lag)
-
-            # Create rolling statistics
-            if "close" in data.columns:
-                for window in [5, 10, 20, 50]:
-                    features[f"close_ma_{window}"] = (
-                        data["close"].rolling(window=window).mean()
-                    )
-                    features[f"close_std_{window}"] = (
-                        data["close"].rolling(window=window).std()
-                    )
-                    features[f"close_min_{window}"] = (
-                        data["close"].rolling(window=window).min()
-                    )
-                    features[f"close_max_{window}"] = (
-                        data["close"].rolling(window=window).max()
-                    )
+            # Create lag features for close price (accept Close or close)
+            price_col = "Close" if "Close" in data.columns else "close"
+            if price_col in data.columns:
+                for lag in range(1, effective_max_lags + 1):
+                    features[f"close_lag_{lag}"] = data[price_col].shift(lag)
+            vol_col = "Volume" if "Volume" in data.columns else "volume"
+            if vol_col in data.columns:
+                for lag in range(1, min(effective_max_lags, 10) + 1):
+                    features[f"volume_lag_{lag}"] = data[vol_col].shift(lag)
+            if price_col in data.columns:
+                windows = [5, 10, 20, 50]
+                # Only use windows that make sense for the available data
+                usable_windows = [w for w in windows if w < n_rows]
+                if not usable_windows:
+                    usable_windows = [min(5, n_rows - 1)]
+                for window in usable_windows:
+                    features[f"close_ma_{window}"] = data[price_col].rolling(
+                        window=window
+                    ).mean()
+                    features[f"close_std_{window}"] = data[price_col].rolling(
+                        window=window
+                    ).std()
+                    features[f"close_min_{window}"] = data[price_col].rolling(
+                        window=window
+                    ).min()
+                    features[f"close_max_{window}"] = data[price_col].rolling(
+                        window=window
+                    ).max()
 
             # Create technical indicators
             features = self._add_technical_indicators(features)
 
             # Remove rows with NaN values
-            features = features.dropna()
+            cleaned = features.dropna()
 
-            if features.empty:
-                raise ValueError("No valid features after removing NaN values")
+            if cleaned.empty:
+                # Fallback: use raw price/volume columns without lags to ensure
+                # we still have valid features for very short series.
+                base_cols = []
+                if price_col in data.columns:
+                    base_cols.append(price_col)
+                if vol_col in data.columns:
+                    base_cols.append(vol_col)
+                if not base_cols:
+                    raise ValueError("No valid features after removing NaN values")
+                cleaned = data[base_cols].dropna()
+                if cleaned.empty:
+                    raise ValueError("No valid features after removing NaN values")
 
-            return features
+            return cleaned
 
         except Exception as e:
             logger.error(f"Error creating lag features: {e}")
@@ -293,35 +356,37 @@ class XGBoostModel(BaseModel):
     def _add_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
         """Add technical indicators with error handling."""
         try:
-            if "close" in data.columns:
+            price_col = "Close" if "Close" in data.columns else "close"
+            if price_col in data.columns:
                 # RSI
-                data["rsi"] = self._calculate_rsi(data["close"])
+                data["rsi"] = self._calculate_rsi(data[price_col])
 
                 # MACD
-                data["macd"], data["macd_signal"] = self._calculate_macd(data["close"])
+                data["macd"], data["macd_signal"] = self._calculate_macd(data[price_col])
 
                 # Bollinger Bands
                 (
                     data["bb_upper"],
                     data["bb_middle"],
                     data["bb_lower"],
-                ) = self._calculate_bollinger_bands(data["close"])
+                ) = self._calculate_bollinger_bands(data[price_col])
 
                 # Price changes
-                data["price_change"] = data["close"].pct_change()
-                data["price_change_2"] = data["close"].pct_change(2)
-                data["price_change_5"] = data["close"].pct_change(5)
+                data["price_change"] = data[price_col].pct_change()
+                data["price_change_2"] = data[price_col].pct_change(2)
+                data["price_change_5"] = data[price_col].pct_change(5)
 
                 # Volatility
-                data["volatility"] = data["close"].rolling(window=20).std()
+                data["volatility"] = data[price_col].rolling(window=20).std()
 
-            if "volume" in data.columns:
+            vol_col = "Volume" if "Volume" in data.columns else "volume"
+            if vol_col in data.columns:
                 # Volume indicators
-                data["volume_ma"] = data["volume"].rolling(window=20).mean()
+                data["volume_ma"] = data[vol_col].rolling(window=20).mean()
                 # Safely calculate volume ratio with division-by-zero protection
                 data["volume_ratio"] = np.where(
                     data["volume_ma"] > 1e-10,
-                    data["volume"] / data["volume_ma"],
+                    data[vol_col] / data["volume_ma"],
                     1.0  # Neutral ratio if no volume MA
                 )
 
@@ -390,17 +455,25 @@ class XGBoostModel(BaseModel):
             # Return first max_features columns
             return list(X.columns[:max_features])
 
+    def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize yfinance lowercase columns to title case for model compatibility."""
+        if df is None or df.empty:
+            return df
+        if "Close" not in df.columns and "close" in df.columns:
+            df = df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"})
+        return df
+
     def prepare_features(self, data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
         """Prepare features with comprehensive error handling."""
         try:
             if not isinstance(data, pd.DataFrame):
                 raise ValueError("Input must be a pandas DataFrame")
-
+            data = self._normalize_columns(data.copy())
             if data.empty:
                 raise ValueError("Input data is empty")
 
-            # Check for required columns
-            if "close" not in data.columns:
+            # Check for required columns (accept both cases)
+            if "close" not in data.columns and "Close" not in data.columns:
                 raise ValueError("Data must contain 'close' column")
 
             # Handle NaN values
@@ -409,8 +482,9 @@ class XGBoostModel(BaseModel):
             # Create features
             features = self._create_lag_features(data)
 
-            # Prepare target variable
-            target = features["close"].shift(-1).dropna()
+            # Prepare target variable (use Close or close)
+            price_col = "Close" if "Close" in features.columns else "close"
+            target = features[price_col].shift(-1).dropna()
             features = features[:-1]  # Remove last row since target is shifted
 
             # Align features and target
@@ -490,8 +564,15 @@ class XGBoostModel(BaseModel):
             logger.error(traceback.format_exc())
             raise ModelTrainingError(f"Model training failed: {str(e)}")
 
+    def fit(self, data: pd.DataFrame, target=None) -> Dict[str, Any]:
+        """Fit model using data (and optional target). Compatible with Forecasting page."""
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+        result = self.train(data)
+        return {"success": result.get("success", True), "model": self.model}
+
     def predict(self, data: pd.DataFrame) -> np.ndarray:
         """Predict with comprehensive error handling."""
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
         if not self.available:
             print("âš ï¸ XGBoostModel unavailable due to initialization failure")
             # Return simple fallback prediction
@@ -643,6 +724,7 @@ class XGBoostModel(BaseModel):
             }
 
         try:
+            data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
             # Validate inputs
             if data.empty:
                 raise ModelPredictionError("Input data is empty")
@@ -655,22 +737,27 @@ class XGBoostModel(BaseModel):
 
             # Generate forecast
             try:
-                # Use recursive forecasting
+                # Use recursive forecasting in price space
                 current_data = data.copy()
                 forecasts = []
 
                 for _ in range(horizon):
-                    # Get prediction for next step
+                    # Get prediction for next step (in price space)
                     pred = self.predict(current_data)
-                    forecasts.append(pred[-1])
+                    next_price = float(pred[-1])
+                    forecasts.append(next_price)
 
-                    # Update data for next iteration
+                    # Update data for next iteration – keep everything in price space
                     new_row = current_data.iloc[-1].copy()
-                    new_row["close"] = pred[-1]
+                    price_col = "Close" if "Close" in new_row.index else "close"
+                    if price_col in new_row.index:
+                        new_row[price_col] = next_price
                     current_data = pd.concat(
                         [current_data, pd.DataFrame([new_row])], ignore_index=True
                     )
-                    current_data = current_data.iloc[1:]  # Remove oldest row
+                    # Maintain rolling window length
+                    if len(current_data) > len(data):
+                        current_data = current_data.iloc[1:]
 
                 # Create forecast dates
                 last_date = (
@@ -728,10 +815,23 @@ class XGBoostModel(BaseModel):
 
             # Return simple fallback
             logger.info("Using simple fallback forecast")
-            fallback_forecast = np.full(horizon, 10.0)
+            # Use a simple but price-aware fallback around the last close
+            price_series = None
+            if isinstance(data, pd.DataFrame):
+                if "close" in data.columns:
+                    price_series = data["close"]
+                elif "Close" in data.columns:
+                    price_series = data["Close"]
+
+            if price_series is not None and not price_series.empty:
+                last_value = float(price_series.iloc[-1])
+            else:
+                last_value = 100.0
+
+            fallback_forecast = np.full(horizon, last_value)
             last_date = (
                 data.index[-1]
-                if hasattr(data.index[-1], "freq")
+                if isinstance(data, pd.DataFrame) and len(data.index) > 0
                 else pd.Timestamp.now()
             )
             forecast_dates = pd.date_range(

@@ -60,10 +60,48 @@ class HybridModel:
     def fit(self, data: pd.DataFrame, window: int = 50):
         """Fit all models and update performance tracking."""
         for name, model in self.models.items():
+            # Ensure performance slot exists even if loaded state lacked this key
+            if name not in self.performance:
+                self.performance[name] = []
             try:
                 model.fit(data)
-                preds = model.predict(data)
-                actual = data["close"].values[-len(preds) :]
+
+                # Prefer model-specific forecast API where available
+                preds: np.ndarray
+                if hasattr(model, "forecast"):
+                    # Use close/Close series when forecasting univariate prices
+                    if "close" in data.columns:
+                        series = data["close"]
+                    elif "Close" in data.columns:
+                        series = data["Close"]
+                    else:
+                        # Fallback: first numeric column
+                        num_cols = data.select_dtypes(include=[np.number]).columns
+                        if not len(num_cols):
+                            raise ValueError("No numeric columns available for hybrid forecasting")
+                        series = data[num_cols[0]]
+
+                    res = model.forecast(series, horizon=len(series))
+                    if isinstance(res, dict):
+                        raw = (
+                            res.get("forecast")
+                            or res.get("values")
+                            or res.get("predictions")
+                            or res.get("forecast_values")
+                        )
+                    else:
+                        raw = res
+                    preds = np.asarray(raw, dtype="float64").ravel()
+                elif hasattr(model, "predict"):
+                    raw = model.predict(data)
+                    preds = np.asarray(raw, dtype="float64").ravel()
+                else:
+                    raise ValueError(f"Model {name} has neither forecast() nor predict()")
+
+                if preds.size == 0:
+                    raise ValueError(f"Model {name} returned empty predictions")
+
+                actual = data["close"].values[-len(preds) :] if "close" in data.columns else data.iloc[:, 0].values[-len(preds) :]
 
                 # Calculate comprehensive performance metrics
                 performance_metrics = self._calculate_performance_metrics(
@@ -709,6 +747,16 @@ class HybridModel:
         else:
             # Equal weighting if no valid weights
             weighted = np.mean([pred for _, pred in aligned_preds], axis=0)
+
+        # Convert returns to prices if predictions look like returns (small values, e.g. -0.1 to 0.1)
+        if len(data) > 0 and ("close" in data.columns or "Close" in data.columns):
+            close_col = "Close" if "Close" in data.columns else "close"
+            last_price = float(data[close_col].iloc[-1])
+            if np.isfinite(last_price) and last_price > 0:
+                abs_vals = np.abs(weighted)
+                if np.all(abs_vals <= 1.5) and np.mean(abs_vals) < 0.5:
+                    # Treat as period returns; convert to price path
+                    weighted = last_price * np.cumprod(1.0 + weighted)
 
         return weighted
 

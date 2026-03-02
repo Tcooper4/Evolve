@@ -35,6 +35,19 @@ if "chat_messages" not in st.session_state:
 if "chat_last_action_data" not in st.session_state:
     st.session_state.chat_last_action_data = None
 
+
+def get_chat_router():
+    """Lazy init EnhancedPromptRouter (may require API keys)."""
+    if "chat_router" not in st.session_state:
+        try:
+            from trading.agents.enhanced_prompt_router import EnhancedPromptRouterAgent
+            st.session_state.chat_router = EnhancedPromptRouterAgent()
+        except Exception as e:
+            logger.warning(f"Router init failed: {e}")
+            st.session_state.chat_router = None
+    return st.session_state.get("chat_router")
+
+
 def _render_action_data(data: dict) -> None:
     """Render inline charts or metrics from agent action data."""
     if not data:
@@ -88,7 +101,7 @@ if prompt:
                     store.ingest_preference_text(prompt, source="chat")
                 except Exception:
                     pass
-                router = __get_router()
+                router = get_chat_router()
                 route_result = chat_nl_service.parse_intent(router, prompt) if router else {"intent": "unknown", "args": {}}
                 intent = route_result.get("intent", "unknown") if isinstance(route_result, dict) else getattr(route_result, "intent", "unknown")
 
@@ -161,17 +174,6 @@ with st.sidebar:
         st.session_state.chat_messages = []
         st.session_state.chat_last_action_data = None
         st.rerun()
-
-def __get_router():
-    """Lazy init EnhancedPromptRouter (may require API keys)."""
-    if "chat_router" not in st.session_state:
-        try:
-            from trading.agents.enhanced_prompt_router import EnhancedPromptRouterAgent
-            st.session_state.chat_router = EnhancedPromptRouterAgent()
-        except Exception as e:
-            logger.warning(f"Router init failed: {e}")
-            st.session_state.chat_router = None
-    return st.session_state.get("chat_router")
 
 try:
     from ui.page_assistant import render_page_assistant

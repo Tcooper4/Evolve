@@ -163,6 +163,14 @@ class RidgeModel(BaseModel):
         combined_features = np.column_stack([features, lag_features])
         return combined_features, target
 
+    def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize yfinance lowercase columns to title case."""
+        if df is None or df.empty:
+            return df
+        if "Close" not in df.columns and "close" in df.columns:
+            df = df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"})
+        return df
+
     def _prepare_data(
         self, data: pd.DataFrame, is_training: bool = True
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -176,6 +184,7 @@ class RidgeModel(BaseModel):
         Returns:
             Tuple of (features, target)
         """
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
         # Ensure we have numeric data
         numeric_data = data.select_dtypes(include=[np.number])
         if numeric_data.empty:
@@ -185,6 +194,8 @@ class RidgeModel(BaseModel):
             target_col = "target"
         elif "price" in numeric_data.columns:
             target_col = "price"
+        elif "Close" in numeric_data.columns:
+            target_col = "Close"
         elif "close" in numeric_data.columns:
             target_col = "close"
         else:
@@ -207,8 +218,10 @@ class RidgeModel(BaseModel):
             raise ValidationError(
                 "Insufficient data for Ridge modeling. Need at least 10 observations."
             )
-        # Create lag features if requested
-        if self.config.get("use_lags", True) and is_training:
+        # Create lag features if requested.
+        # We apply the same lag transformation for both training and inference
+        # so that the scaler and model see a consistent feature dimensionality.
+        if self.config.get("use_lags", True):
             features, target = self._add_lag_features(features, target)
         # Create polynomial features if requested
         if self.config.get("polynomial_degree", 1) > 1:
@@ -259,12 +272,20 @@ class RidgeModel(BaseModel):
         Returns:
             Ridge regression model instance
         """
+        # Ensure max_iter is int (config may have wrong type from registry)
+        max_iter = self.config.get("max_iter", 1000)
+        if not isinstance(max_iter, int):
+            try:
+                max_iter = int(max_iter)
+            except (TypeError, ValueError):
+                max_iter = 1000
+        max_iter = max(1, max_iter)
         model = Ridge(
-            alpha=self.config["alpha"],
-            max_iter=self.config["max_iter"],
-            solver=self.config["solver"],
-            fit_intercept=self.config["fit_intercept"],
-            random_state=self.config.get("random_state", 42),
+            alpha=float(self.config.get("alpha", 1.0)),
+            max_iter=max_iter,
+            solver=self.config.get("solver", "auto"),
+            fit_intercept=self.config.get("fit_intercept", True),
+            random_state=int(self.config.get("random_state", 42)),
         )
 
         return model
@@ -288,6 +309,7 @@ class RidgeModel(BaseModel):
         Returns:
             Training results dictionary
         """
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
         logger.info("Starting Ridge model training")
         start_time = datetime.now()
 
@@ -335,6 +357,37 @@ class RidgeModel(BaseModel):
         except Exception as e:
             logger.error(f"Error during Ridge model training: {e}")
             raise ModelError(f"Ridge training failed: {e}")
+
+    def fit(self, data: pd.DataFrame, target: Optional[pd.Series] = None) -> Dict[str, Any]:
+        """
+        Convenience wrapper so RidgeModel can be used in generic pipelines/ensembles.
+
+        Args:
+            data: Input DataFrame containing price data.
+            target: Optional explicit target series. If None, the method will
+                infer a target column from ``close``/``Close`` or the last
+                numeric column.
+
+        Returns:
+            Training result dictionary from :meth:`train`.
+        """
+        df = data.copy() if hasattr(data, "copy") else data
+        if target is not None:
+            df = df.assign(_ridge_target=target)
+            target_col = "_ridge_target"
+        elif "close" in df.columns:
+            target_col = "close"
+        elif "Close" in df.columns:
+            target_col = "Close"
+        else:
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
+            if not len(numeric_cols):
+                raise ModelError(
+                    "RidgeModel.fit requires at least one numeric column to use as target"
+                )
+            target_col = numeric_cols[-1]
+
+        return self.train(df, target_col=target_col)
 
     def _calculate_training_metrics(
         self, features: np.ndarray, target: np.ndarray
@@ -405,6 +458,7 @@ class RidgeModel(BaseModel):
         Returns:
             Predicted values
         """
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
         if self.model is None:
             raise ModelError("Model must be trained before prediction")
         try:
@@ -461,6 +515,7 @@ class RidgeModel(BaseModel):
         Returns:
             Forecast results dictionary
         """
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
         logger.info(f"Generating Ridge forecast for {horizon} periods")
 
         try:

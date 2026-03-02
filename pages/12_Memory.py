@@ -36,8 +36,12 @@ def _parse_json_text(text: str) -> Any:
 st.set_page_config(page_title="Memory", layout="wide")
 st.title("🧠 Memory Store")
 
-store = get_memory_store()
-st.caption(f"SQLite: `{store.db_path}` • Session: `{store.session_id}`")
+try:
+    store = get_memory_store()
+    st.caption(f"SQLite: `{store.db_path}` • Session: `{store.session_id}`")
+except Exception as e:
+    st.error(f"MemoryStore unavailable: {e}")
+    st.stop()
 
 col_a, col_b, col_c, col_d = st.columns([1, 1, 1, 1])
 with col_a:
@@ -57,13 +61,17 @@ session_id: Optional[str] = None
 if memory_type == MemoryType.SHORT_TERM:
     session_id = st.text_input("Session id (short_term)", value=store.session_id)
 
-entries = store.list(
-    memory_type,
-    namespace=namespace.strip() or None,
-    category=category.strip() or None,
-    session_id=session_id,
-    limit=int(limit),
-)
+try:
+    entries = store.list(
+        memory_type,
+        namespace=namespace.strip() or None,
+        category=category.strip() or None,
+        session_id=session_id,
+        limit=int(limit),
+    )
+except Exception as e:
+    st.error(f"Error listing memory entries: {e}")
+    entries = []
 
 df = pd.DataFrame(
     [
@@ -94,7 +102,11 @@ st.subheader("Edit / Delete")
 
 selected_id = st.text_input("Entry id", value="")
 if selected_id:
-    entry = store.get(selected_id.strip())
+    try:
+        entry = store.get(selected_id.strip())
+    except Exception as e:
+        st.error(f"Error loading entry: {e}")
+        entry = None
 else:
     entry = None
 
@@ -119,23 +131,29 @@ if entry is not None:
         if st.button("💾 Update", type="primary"):
             value_obj = _parse_json_text(new_value_text)
             meta_obj = _parse_json_text(new_metadata_text) or {}
-            ok = store.update_entry(
-                entry.id,
-                value=value_obj,
-                key=new_key.strip() or None,
-                category=new_category.strip() or None,
-                metadata=meta_obj if isinstance(meta_obj, dict) else {"metadata": meta_obj},
-            )
-            if ok:
-                st.success("Updated.")
-            else:
-                st.error("Update failed.")
+            try:
+                ok = store.update_entry(
+                    entry.id,
+                    value=value_obj,
+                    key=new_key.strip() or None,
+                    category=new_category.strip() or None,
+                    metadata=meta_obj if isinstance(meta_obj, dict) else {"metadata": meta_obj},
+                )
+                if ok:
+                    st.success("Updated.")
+                else:
+                    st.error("Update failed.")
+            except Exception as e:
+                st.error(f"Update failed: {e}")
     with btn_col2:
         if st.button("🗑️ Delete"):
-            if store.delete_entry(entry.id):
-                st.success("Deleted.")
-            else:
-                st.error("Delete failed.")
+            try:
+                if store.delete_entry(entry.id):
+                    st.success("Deleted.")
+                else:
+                    st.error("Delete failed.")
+            except Exception as e:
+                st.error(f"Delete failed: {e}")
     with btn_col3:
         st.caption("Tip: copy the `id` from the table above and paste it here to edit.")
 
@@ -160,16 +178,19 @@ with add_col2:
 if st.button("➕ Add entry"):
     val = _parse_json_text(add_value_text)
     meta = _parse_json_text(add_meta_text) or {}
-    entry_id = store.add(
-        add_type,
-        namespace=add_namespace.strip() or "global",
-        key=add_key.strip() or None,
-        category=add_category.strip() or None,
-        value=val,
-        metadata=meta if isinstance(meta, dict) else {"metadata": meta},
-        session_id=store.session_id if add_type == MemoryType.SHORT_TERM else None,
-    )
-    st.success(f"Added entry `{entry_id}`.")
+    try:
+        entry_id = store.add(
+            add_type,
+            namespace=add_namespace.strip() or "global",
+            key=add_key.strip() or None,
+            category=add_category.strip() or None,
+            value=val,
+            metadata=meta if isinstance(meta, dict) else {"metadata": meta},
+            session_id=store.session_id if add_type == MemoryType.SHORT_TERM else None,
+        )
+        st.success(f"Added entry `{entry_id}`.")
+    except Exception as e:
+        st.error(f"Add failed: {e}")
 
 st.divider()
 st.subheader("Clear memory")
@@ -187,6 +208,9 @@ with clear_col2:
     if clear_type == MemoryType.SHORT_TERM:
         clear_session = st.text_input("Session id to clear", value=store.session_id, key="clear_session")
     if st.button("🧹 Clear", type="secondary"):
-        count = store.clear(clear_type, session_id=clear_session)
-        st.success(f"Cleared {count} entries from {clear_type.value}.")
+        try:
+            count = store.clear(clear_type, session_id=clear_session)
+            st.success(f"Cleared {count} entries from {clear_type.value}.")
+        except Exception as e:
+            st.error(f"Clear failed: {e}")
 

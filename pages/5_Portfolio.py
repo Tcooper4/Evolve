@@ -879,8 +879,12 @@ with tab1:
                         
                         if st.button("Apply Consolidation", key="apply_consolidation"):
                             st.info("💡 Consolidation application would update portfolio positions. This is a preview.")
-                            st.session_state.consolidated_positions = consolidated['positions']
-                            st.success("Consolidation preview saved! Apply changes in portfolio manager.")
+                            positions = consolidated.get('positions')
+                            if positions is None:
+                                st.error("Consolidation result did not include positions. Please check the optimizer output.")
+                            else:
+                                st.session_state.consolidated_positions = positions
+                                st.success("Consolidation preview saved! Apply changes in portfolio manager.")
                     else:
                         st.info("No positions to consolidate or all positions meet criteria.")
                 else:

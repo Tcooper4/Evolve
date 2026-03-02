@@ -197,6 +197,25 @@ class ForecastRouter:
         except Exception as e:
             logger.warning(f"Error discovering models: {e}")
 
+    def get_available_models(self) -> list:
+        """Return list of available model names (display-ready, e.g. LSTM, XGBoost)."""
+        name_map = {
+            "lstm": "LSTM",
+            "xgboost": "XGBoost",
+            "xgb": "XGBoost",
+            "prophet": "Prophet",
+            "arima": "ARIMA",
+            "transformer": "Transformer",
+            "ensemble": "Ensemble",
+            "tcn": "TCN",
+            "catboost": "CatBoost",
+            "ridge": "Ridge",
+            "garch": "GARCH",
+            "autoformer": "Autoformer",
+        }
+        display_names = {name_map.get(k, k.capitalize()) for k in self.model_registry.keys()}
+        return sorted(display_names)
+
     def _get_model_class(self, class_path: str):
         """Get model class from class path string. Normalizes models.* to trading.models.*."""
         try:
@@ -301,6 +320,98 @@ class ForecastRouter:
         """
         # Implement trend detection
         return False
+
+    def _prepare_data_safely(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Prepare data with defensive checks; return as-is if valid."""
+        if data is None or data.empty:
+            return pd.DataFrame()
+        return data.copy()
+
+    def _select_model_with_fallback(
+        self, data: pd.DataFrame, model_type: Optional[str] = None
+    ) -> str:
+        """Select model with fallback; never return a key not in registry."""
+        selected = self._select_model(data, model_type)
+        if selected in self.model_registry:
+            return selected
+        fallback = self._get_fallback_model(selected)
+        return fallback if fallback in self.model_registry else list(self.model_registry.keys())[0]
+
+    def _get_fallback_model(self, model_type: str) -> str:
+        """Return fallback model name when given model fails."""
+        fallbacks = {"transformer": "lstm", "lstm": "arima", "xgboost": "arima", "prophet": "arima"}
+        return fallbacks.get(model_type, "arima" if "arima" in self.model_registry else list(self.model_registry.keys())[0])
+
+    def _get_fallback_result(self, data: pd.DataFrame, horizon: int) -> Dict[str, Any]:
+        """Return a minimal fallback forecast result."""
+        last = 0.0
+        if data is not None and not data.empty:
+            numeric = data.select_dtypes(include=[np.number])
+            if not numeric.empty:
+                last = float(numeric.iloc[-1].mean())
+        return {
+            "model": "fallback",
+            "forecast": np.full(horizon, last),
+            "confidence": 0.0,
+            "metadata": {},
+            "warnings": ["Fallback forecast used"],
+        }
+
+    def _get_model_defaults(self, model_name: str) -> Dict[str, Any]:
+        """Return default config kwargs for a model (for instantiation)."""
+        defaults = {
+            "arima": {"order": (5, 1, 0), "use_auto_arima": True, "target_column": "close"},
+            "lstm": {"target_column": "close", "sequence_length": 60, "hidden_dim": 64, "num_layers": 2, "dropout": 0.2},
+            "xgboost": {"target_column": "close", "n_estimators": 100, "max_depth": 5, "learning_rate": 0.1},
+            "prophet": {"date_column": "ds", "target_column": "close", "prophet_params": {}},
+            "ridge": {"target_column": "close", "alpha": 1.0, "max_iter": 1000},
+            "garch": {"p": 1, "q": 1, "target_column": "close"},
+            "ensemble": {"models": [], "voting_method": "mse", "weight_window": 20},
+            "tcn": {"target_column": "close", "feature_columns": ["close", "volume"], "sequence_length": 20},
+            "catboost": {"target_column": "close", "iterations": 500, "depth": 6},
+        }
+        return defaults.get(model_name, {"target_column": "close"}).copy()
+
+    def _generate_simple_forecast(self, data: pd.DataFrame, horizon: int) -> np.ndarray:
+        """Generate a simple constant/last-value forecast."""
+        if data is None or data.empty or horizon <= 0:
+            return np.array([])
+        numeric = data.select_dtypes(include=[np.number])
+        if numeric.empty:
+            return np.zeros(horizon)
+        last = float(numeric.iloc[-1].mean())
+        return np.full(horizon, last)
+
+    def _get_confidence(self, model: Any, model_name: str) -> float:
+        """Return confidence score for the model."""
+        try:
+            if hasattr(model, "get_confidence"):
+                c = model.get_confidence()
+                return float(c.get("confidence", 0.5)) if isinstance(c, dict) else float(c)
+        except Exception:
+            pass
+        return 0.5
+
+    def _get_metadata(self, model: Any, model_name: str) -> Dict[str, Any]:
+        """Return metadata dict for the model."""
+        try:
+            if hasattr(model, "get_model_info"):
+                return model.get_model_info() or {}
+        except Exception:
+            pass
+        return {"model": model_name}
+
+    def _get_warnings(self, data: pd.DataFrame, model_name: str) -> list:
+        """Return list of warnings for the forecast."""
+        return []
+
+    def _log_performance(self, model_name: str, forecast: Any, data: pd.DataFrame) -> None:
+        """Log performance metrics."""
+        logger.debug(f"Model {model_name} forecast length {getattr(forecast, '__len__', lambda: 0)()}")
+
+    def _generate_fallback_data(self) -> pd.DataFrame:
+        """Generate minimal fallback DataFrame for missing data."""
+        return pd.DataFrame({"close": np.random.randn(100).cumsum() + 100})
 
     def _select_model(
         self, data: pd.DataFrame, model_type: Optional[str] = None
@@ -467,19 +578,50 @@ class ForecastRouter:
 
             # Generate forecast with error handling
             try:
-                forecast = model.predict(horizon=horizon)
+                # Prefer explicit forecast/forecast_with_uncertainty APIs, fall back to predict(data)
+                if hasattr(model, "forecast_with_uncertainty"):
+                    result = model.forecast_with_uncertainty(
+                        prepared_data, horizon=horizon
+                    )
+                elif hasattr(model, "forecast"):
+                    # Common signature: forecast(data, horizon=...)
+                    result = model.forecast(prepared_data, horizon=horizon)
+                elif hasattr(model, "predict"):
+                    # Some models expose only predict(data) → array
+                    preds = model.predict(prepared_data)
+                    preds = np.asarray(preds)
+                    if preds.size >= horizon:
+                        preds = preds[-horizon:]
+                    result = {"forecast": preds}
+                else:
+                    result = {"forecast": self._generate_simple_forecast(prepared_data, horizon)}
+
+                # Normalize to dict with "forecast" key
+                if isinstance(result, dict):
+                    forecast_values = result.get("forecast")
+                else:
+                    forecast_values = result
+
+                # Ensure we have a 1D numpy array of floats in price space
+                if forecast_values is None:
+                    raise ValueError("Model returned no forecast values")
+                forecast_array = np.asarray(forecast_values, dtype="float64").ravel()
+                if forecast_array.size == 0:
+                    raise ValueError("Model returned empty forecast array")
+
                 logger.info(f"Successfully generated forecast with {selected_model}")
             except Exception as e:
                 logger.error(f"Failed to generate forecast with {selected_model}: {e}")
                 # Return simple forecast as fallback
-                forecast = self._generate_simple_forecast(prepared_data, horizon)
+                forecast_array = self._generate_simple_forecast(prepared_data, horizon)
+                result = {"forecast": forecast_array}
 
             # Log performance
-            self._log_performance(selected_model, forecast, data)
+            self._log_performance(selected_model, forecast_array, data)
 
             return {
                 "model": selected_model,
-                "forecast": forecast,
+                "forecast": forecast_array,
                 "confidence": self._get_confidence(model, selected_model),
                 "metadata": self._get_metadata(model, selected_model),
                 "warnings": self._get_warnings(data, selected_model),

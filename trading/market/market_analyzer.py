@@ -67,9 +67,10 @@ class MarketAnalyzer:
             Dictionary with regime analysis results
         """
         try:
-            if "Close" not in data.columns:
-                raise KeyError("Missing 'Close' column in input data.")
-
+            if "Close" not in data.columns and "close" not in data.columns:
+                raise KeyError("Missing 'Close' or 'close' column in input data.")
+            if regime_type == "volatility" and len(data) < 50:
+                raise ValueError("Insufficient data for volatility regime (need at least 50 rows)")
             if regime_type == "trend":
                 return self._detect_trend_regime(data)
             elif regime_type == "volatility":
@@ -88,11 +89,14 @@ class MarketAnalyzer:
             raise
 
     def _detect_trend_regime(self, data: pd.DataFrame) -> Dict[str, Any]:
-        """Detect trend-based market regime."""
+        """Detect trend-based market regime (minimum 50 rows)."""
         from trading.utils.safe_math import safe_price_momentum
-        
-        ma_short = data["Close"].rolling(window=20).mean()
-        ma_long = data["Close"].rolling(window=50).mean()
+
+        price_col = "Close" if "Close" in data.columns else "close"
+        if len(data) < 50:
+            raise ValueError("Insufficient data for trend analysis (need at least 50 rows)")
+        ma_short = data[price_col].rolling(window=min(20, len(data))).mean()
+        ma_long = data[price_col].rolling(window=min(50, len(data))).mean()
         trend_strength = safe_price_momentum(ma_short, ma_long)
 
         if len(trend_strength.dropna()) == 0:
@@ -114,20 +118,25 @@ class MarketAnalyzer:
             "regime": current_trend,
             "strength": float(trend_strength.iloc[-1]),
             "duration": int(trend_duration),
-            "ma_short": float(ma_short.iloc[-1]),
-            "ma_long": float(ma_long.iloc[-1]),
+            "ma_short": float(ma_short.iloc[-1]) if len(ma_short.dropna()) else 0.0,
+            "ma_long": float(ma_long.iloc[-1]) if len(ma_long.dropna()) else 0.0,
         }
 
-        log_metrics("trend_regime", result)
+        log_metrics({**result, "metric_type": "trend_regime"})
         return result
 
     def _detect_volatility_regime(self, data: pd.DataFrame) -> Dict[str, Any]:
-        """Detect volatility-based market regime."""
-        returns = data["Close"].pct_change()
+        """Detect volatility-based market regime (minimum 50 rows)."""
+        price_col = "Close" if "Close" in data.columns else "close"
+        if price_col not in data.columns:
+            raise KeyError("Missing 'Close' or 'close' column in input data.")
+        if len(data) < 50:
+            raise ValueError("Insufficient data for volatility analysis (need at least 50 rows)")
+        returns = data[price_col].pct_change()
         current_volatility = returns.std() * np.sqrt(252)
-        historical_volatility = returns.rolling(
-            window=self.config.get("volatility_window", 252)
-        ).std() * np.sqrt(252)
+        vol_window = min(self.config.get("volatility_window", 252), len(data) - 1)
+        vol_window = max(vol_window, 2)
+        historical_volatility = returns.rolling(window=vol_window).std() * np.sqrt(252)
 
         hv_non_null = historical_volatility.dropna()
         if len(hv_non_null) < 2:
@@ -163,7 +172,7 @@ class MarketAnalyzer:
             "historical_volatility": float(historical_volatility.iloc[-1]),
         }
 
-        log_metrics("volatility_regime", result)
+        log_metrics({**result, "metric_type": "volatility_regime"})
         return result
 
     def _detect_correlation_regime(
@@ -206,7 +215,7 @@ class MarketAnalyzer:
             ),
         }
 
-        log_metrics("correlation_regime", result)
+        log_metrics({**result, "metric_type": "correlation_regime"})
         return result
 
     def analyze_trend(self, data: pd.DataFrame) -> Dict[str, Any]:
@@ -239,7 +248,7 @@ class MarketAnalyzer:
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
-            log_metrics("market_conditions", combined)
+            log_metrics({**combined, "metric_type": "market_conditions"})
             return combined
 
         except Exception as e:

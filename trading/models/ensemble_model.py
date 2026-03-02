@@ -11,7 +11,8 @@ import pandas as pd
 
 from utils.model_cache import cache_model_operation
 
-from .base_model import BaseModel, ModelRegistry
+from .base_model import BaseModel
+from .model_registry import get_registry
 
 logger = logging.getLogger(__name__)
 
@@ -35,19 +36,126 @@ class EnsembleModel(BaseModel):
                 - dynamic_weighting: Whether to use dynamic weighting
                 - regime_detection: Whether to use regime-based weighting
         """
+        # Initialize ensemble-specific fields before BaseModel.__init__ so that
+        # _validate_config can safely reference them during construction.
+        self.ensemble_method = config.get("ensemble_method", "weighted_average")
+        self.dynamic_weighting = config.get("dynamic_weighting", True)
+        self.regime_detection = config.get("regime_detection", False)
+
         super().__init__(config)
         self._validate_config()
         self.models = {}
         self.weights = {}
         self.performance_history = {}
         self.strategy_patterns = {}
-        self.ensemble_method = config.get("ensemble_method", "weighted_average")
-        self.dynamic_weighting = config.get("dynamic_weighting", True)
-        self.regime_detection = config.get("regime_detection", False)
         self._load_strategy_patterns()
+
+    def build_model(self):
+        """Initialize ensemble sub-models to satisfy BaseModel.build_model.
+
+        EnsembleModel itself doesn't expose a single nn.Module; instead it
+        manages a collection of child models in ``self.models``.
+        """
+        try:
+            self._initialize_models()
+        except Exception as e:
+            logger.error(f"Failed to initialize ensemble models: {e}")
+            self.models = {}
+        # No single underlying nn.Module – keep self.model as None
+        self.model = None
+        return None
+
+    def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize yfinance lowercase columns to title case."""
+        if df is None or df.empty:
+            return df
+        if "Close" not in df.columns and "close" in df.columns:
+            df = df.rename(
+                columns={
+                    "open": "Open",
+                    "high": "High",
+                    "low": "Low",
+                    "close": "Close",
+                    "volume": "Volume",
+                }
+            )
+        return df
+
+    def _prepare_data(
+        self, data: pd.DataFrame, is_training: bool
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Basic data preparation for compatibility with BaseModel.
+
+        The ensemble primarily delegates training to sub-models, but to satisfy
+        the abstract interface we expose close prices as both features and
+        targets when available.
+        """
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+        if "Close" in data.columns:
+            feature_col = "Close"
+        elif "close" in data.columns:
+            feature_col = "close"
+        else:
+            # Fallback: use first numeric column
+            numeric_cols = data.select_dtypes(include=[np.number]).columns
+            if not numeric_cols.any():
+                raise ValueError("EnsembleModel requires at least one numeric column")
+            feature_col = numeric_cols[0]
+
+        X = data[[feature_col]].to_numpy()
+        y = data[feature_col].to_numpy()
+        return X, y
+
+    def _get_price_series(self, data: pd.DataFrame) -> pd.Series:
+        """Return a robust price series from data handling Close/close and numeric fallback."""
+        if data is None or data.empty:
+            raise ValueError("EnsembleModel requires non-empty data for price series")
+        df = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+        if "Close" in df.columns:
+            series = df["Close"]
+        elif "close" in df.columns:
+            series = df["close"]
+        else:
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
+            if not len(numeric_cols):
+                raise ValueError(
+                    "EnsembleModel could not find a numeric price column in data"
+                )
+            series = df[numeric_cols[0]]
+        return pd.to_numeric(series, errors="coerce")
+
+    def _normalize_submodel_output(self, output: Any) -> np.ndarray:
+        """Normalize arbitrary sub-model outputs to a 1D float64 NumPy array.
+
+        Handles dict outputs (forecast/predictions/values), pandas objects, lists,
+        and NumPy arrays. This mirrors the normalization behavior in ForecastRouter.
+        """
+        value = output
+        if isinstance(value, dict):
+            for key in ("forecast", "predictions", "values"):
+                if key in value:
+                    value = value[key]
+                    break
+            else:
+                # Take first value in dict as a last-resort heuristic
+                try:
+                    value = next(iter(value.values()))
+                except StopIteration:
+                    value = []
+
+        arr = np.asarray(value, dtype="float64")
+        arr = np.atleast_1d(arr).ravel()
+        return arr
 
     def _validate_config(self):
         """Validate ensemble configuration."""
+        # Default empty models list when not in config so registry can load
+        if "models" not in self.config:
+            self.config["models"] = []
+        if "voting_method" not in self.config:
+            self.config["voting_method"] = "mse"
+        if "weight_window" not in self.config:
+            self.config["weight_window"] = 20
         required = ["models", "voting_method", "weight_window"]
         for key in required:
             if key not in self.config:
@@ -90,11 +198,33 @@ class EnsembleModel(BaseModel):
 
     def _initialize_models(self):
         """Initialize all models in the ensemble."""
-        for model_config in self.config["models"]:
+        models_cfg = self.config.get("models") or []
+
+        # If no sub-models configured, default to Ridge + XGBoost which are both
+        # lightweight, CPU-friendly, and confirmed working in smoke tests.
+        if not models_cfg:
+            models_cfg = [
+                {
+                    "name": "Ridge",
+                    "class_path": "trading.models.ridge_model.RidgeModel",
+                    "target_column": "close",
+                },
+                {
+                    "name": "XGBoost",
+                    "class_path": "trading.models.xgboost_model.XGBoostModel",
+                    "target_column": "close",
+                },
+            ]
+            self.config["models"] = models_cfg
+
+        registry = get_registry()
+        for model_config in models_cfg:
             model_name = model_config["name"]
-            model_class = ModelRegistry.get_model_class(model_name)
+            model_class = registry.get(model_name)
+            if model_class is None:
+                raise ValueError(f"Unknown model '{model_name}' in EnsembleModel configuration")
             self.models[model_name] = model_class(model_config)
-            self.weights[model_name] = 1.0 / len(self.config["models"])
+            self.weights[model_name] = 1.0 / len(models_cfg)
             self.performance_history[model_name] = []
 
         return {
@@ -111,7 +241,11 @@ class EnsembleModel(BaseModel):
         """
         window = self.config["weight_window"]
         recent_data = data.iloc[-window:]
-        actual = recent_data["close"].values
+
+        # Robustly obtain actual price series (handles Close/close and numeric fallback)
+        actual_series = self._get_price_series(recent_data)
+        actual = np.asarray(actual_series, dtype="float64")
+        actual = np.atleast_1d(actual).ravel()
 
         # Vectorized performance calculation
         model_scores = {}
@@ -120,20 +254,30 @@ class EnsembleModel(BaseModel):
         for model_name, model in self.models.items():
             try:
                 # Get model predictions
-                preds = model.predict(recent_data)
+                raw_preds = model.predict(recent_data)
+                preds = self._normalize_submodel_output(raw_preds)
+                if preds.size == 0:
+                    raise ValueError("Empty prediction array from sub-model")
+
+                # Align shapes between actual and preds for all arithmetic
+                min_len = min(len(actual), len(preds))
+                if min_len == 0:
+                    raise ValueError("Insufficient data for performance calculation")
+                actual_aligned = actual[-min_len:]
+                preds_aligned = preds[-min_len:]
 
                 # Calculate performance metrics using vectorized operations
                 if self.config["voting_method"] == "mse":
-                    score = -np.mean((actual - preds) ** 2)  # Negative MSE
+                    score = -np.mean((actual_aligned - preds_aligned) ** 2)  # Negative MSE
                 elif self.config["voting_method"] == "sharpe":
                     # Safely calculate returns using safe division utility
                     from trading.utils.safe_math import safe_returns
-                    returns = safe_returns(preds, method='simple')
+                    returns = safe_returns(preds_aligned, method="simple")
                     score = (
                         np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0
                     )
                 else:  # custom
-                    score = self._calculate_custom_score(actual, preds)
+                    score = self._calculate_custom_score(actual_aligned, preds_aligned)
 
                 # Get confidence
                 confidence = (
@@ -263,8 +407,9 @@ class EnsembleModel(BaseModel):
 
     def _calculate_trend_weights(self, data: pd.DataFrame) -> Dict[str, float]:
         """Calculate weights based on trend alignment."""
-        # Calculate market trend
-        returns = data["close"].pct_change().dropna()
+        # Calculate market trend from robust price series
+        price_series = self._get_price_series(data)
+        returns = price_series.pct_change().dropna()
         market_trend = returns.mean()
         market_volatility = returns.std()
 
@@ -272,10 +417,13 @@ class EnsembleModel(BaseModel):
         for model_name, model in self.models.items():
             try:
                 # Get model's trend prediction
-                preds = model.predict(data.iloc[-20:])
+                raw_preds = model.predict(data.iloc[-20:])
+                preds = self._normalize_submodel_output(raw_preds)
+                if preds.size == 0:
+                    raise ValueError("Empty prediction array from sub-model")
                 # Safely calculate pred_returns using safe division utility
                 from trading.utils.safe_math import safe_returns
-                pred_returns = safe_returns(preds, method='simple')
+                pred_returns = safe_returns(preds, method="simple")
                 pred_trend = np.mean(pred_returns)
 
                 # Calculate trend alignment
@@ -294,8 +442,9 @@ class EnsembleModel(BaseModel):
 
     def _calculate_volatility_weights(self, data: pd.DataFrame) -> Dict[str, float]:
         """Calculate weights based on volatility regime."""
-        # Calculate current volatility
-        returns = data["close"].pct_change().dropna()
+        # Calculate current volatility from robust price series
+        price_series = self._get_price_series(data)
+        returns = price_series.pct_change().dropna()
         current_volatility = returns.std()
 
         # Calculate historical volatility for comparison
@@ -338,9 +487,18 @@ class EnsembleModel(BaseModel):
         Returns:
             Custom score combining multiple metrics
         """
+        # Normalize and align arrays
+        actual_arr = np.atleast_1d(np.asarray(actual, dtype="float64")).ravel()
+        preds_arr = np.atleast_1d(np.asarray(preds, dtype="float64")).ravel()
+        min_len = min(actual_arr.size, preds_arr.size)
+        if min_len < 2:
+            return 0.0
+        actual_arr = actual_arr[-min_len:]
+        preds_arr = preds_arr[-min_len:]
+
         # Calculate directional accuracy
-        direction_true = np.sign(np.diff(actual))
-        direction_pred = np.sign(np.diff(preds))
+        direction_true = np.sign(np.diff(actual_arr))
+        direction_pred = np.sign(np.diff(preds_arr))
         directional_accuracy = np.mean(direction_true == direction_pred)
 
         # Calculate normalized MSE
@@ -359,8 +517,9 @@ class EnsembleModel(BaseModel):
         Returns:
             Dictionary with strategy recommendations
         """
-        # Detect market regime
-        returns = data["close"].pct_change()
+        # Detect market regime from robust price series
+        price_series = self._get_price_series(data)
+        returns = price_series.pct_change()
         volatility = returns.std()
         trend = returns.mean()
 
@@ -431,13 +590,16 @@ class EnsembleModel(BaseModel):
             # Get strategy recommendations
             self._get_strategy_recommendation(data)
 
-            # Get predictions from all models
-            model_predictions = {}
+            # Get predictions from all models (normalized to consistent 1D arrays)
+            model_predictions: Dict[str, np.ndarray] = {}
             model_confidences = {}
 
             for model_name, model in self.models.items():
                 try:
-                    pred = model.predict(data)
+                    raw_pred = model.predict(data)
+                    pred = self._normalize_submodel_output(raw_pred)
+                    if pred.size == 0:
+                        raise ValueError("Empty prediction array from sub-model")
                     model_predictions[model_name] = pred
 
                     # Get confidence if available
@@ -462,6 +624,27 @@ class EnsembleModel(BaseModel):
 
             if not model_predictions:
                 raise ValueError("No valid model predictions available")
+
+            # Ensure all prediction arrays have the same length by aligning to the
+            # shortest non-empty prediction. This prevents shape mismatches in all
+            # downstream weighting and voting mechanics.
+            lengths = [arr.size for arr in model_predictions.values() if arr.size > 0]
+            if not lengths:
+                raise ValueError("All sub-model predictions are empty")
+            target_len = min(lengths)
+            if target_len <= 0:
+                raise ValueError("Target prediction length must be positive")
+
+            for name, arr in list(model_predictions.items()):
+                arr = np.atleast_1d(arr).ravel()
+                if arr.size >= target_len:
+                    model_predictions[name] = arr[-target_len:]
+                else:
+                    # Pad short predictions with their last value to match target_len
+                    pad_value = arr[-1] if arr.size > 0 else 0.0
+                    pad_width = target_len - arr.size
+                    padded = np.pad(arr, (pad_width, 0), mode="constant", constant_values=pad_value)
+                    model_predictions[name] = padded
 
             # Calculate ensemble prediction based on method
             if self.ensemble_method == "weighted_average":
@@ -514,15 +697,27 @@ class EnsembleModel(BaseModel):
                     k: v / total_weight for k, v in adjusted_weights.items()
                 }
 
-            # Calculate weighted average
-            if model_predictions:
-                weighted_pred = np.zeros_like(list(model_predictions.values())[0])
-            else:
+            # Calculate weighted average on normalized 1D arrays
+            if not model_predictions:
                 raise ValueError("No model predictions available")
+            first_pred = next(iter(model_predictions.values()))
+            base = np.atleast_1d(first_pred).astype("float64").ravel()
+            weighted_pred = np.zeros_like(base, dtype="float64")
 
             for model_name, pred in model_predictions.items():
                 weight = adjusted_weights.get(model_name, 0)
-                weighted_pred += weight * pred
+                arr = np.atleast_1d(pred).astype("float64").ravel()
+                if arr.size != weighted_pred.size:
+                    # Align by trimming/padding to match weighted_pred length
+                    if arr.size > weighted_pred.size:
+                        arr = arr[-weighted_pred.size :]
+                    else:
+                        pad_value = arr[-1] if arr.size > 0 else 0.0
+                        pad_width = weighted_pred.size - arr.size
+                        arr = np.pad(
+                            arr, (pad_width, 0), mode="constant", constant_values=pad_value
+                        )
+                weighted_pred += weight * arr
 
             logger.info(
                 f"Weighted average ensemble prediction completed using {len(model_predictions)} models"
@@ -708,10 +903,25 @@ class EnsembleModel(BaseModel):
         if not shap_values:
             raise ValueError("No models support SHAP interpretation")
 
-        # Weight SHAP values by model weights
-        weighted_shap = np.zeros_like(next(iter(shap_values.values())))
+        # Weight SHAP values by model weights with shape alignment
+        first = next(iter(shap_values.values()))
+        base = np.atleast_1d(np.asarray(first, dtype="float64"))
+        weighted_shap = np.zeros_like(base)
         for model_name, values in shap_values.items():
-            weighted_shap += self.weights[model_name] * values
+            arr = np.atleast_1d(np.asarray(values, dtype="float64"))
+            if arr.shape != weighted_shap.shape:
+                # Best-effort alignment: trim or pad along the last dimension
+                if arr.size > weighted_shap.size:
+                    arr = arr.reshape(-1)[-weighted_shap.size :].reshape(weighted_shap.shape)
+                else:
+                    flat = arr.reshape(-1)
+                    pad_value = flat[-1] if flat.size > 0 else 0.0
+                    pad_width = weighted_shap.size - flat.size
+                    flat = np.pad(
+                        flat, (pad_width, 0), mode="constant", constant_values=pad_value
+                    )
+                    arr = flat.reshape(weighted_shap.shape)
+            weighted_shap += self.weights.get(model_name, 0.0) * arr
 
         return weighted_shap
 

@@ -78,6 +78,7 @@ if PROPHET_AVAILABLE:
                 try:
                     self.model = Prophet(**prophet_params)
                     self.fitted = False
+                    self.is_fitted = False
                     self.history = None
                     logger.info("Prophet model initialized successfully")
                 except Exception as e:
@@ -96,6 +97,61 @@ if PROPHET_AVAILABLE:
                 print(f"   Error: {e}")
                 # Don't raise exception, just mark as unavailable
 
+        def build_model(self):
+            """Build a Prophet instance to satisfy the BaseModel interface.
+
+            The concrete configuration is applied in __init__; this method
+            primarily exists so ProphetModel is no longer abstract.
+            """
+            if not PROPHET_AVAILABLE:
+                self.model = None
+                return None
+
+            # Fallback minimal instance if initialization in __init__ failed
+            if getattr(self, "model", None) is None:
+                try:
+                    self.model = Prophet()
+                except Exception as e:
+                    logger.error(f"Failed to build Prophet model: {e}")
+                    self.model = None
+            return self.model
+
+        def _prepare_data(
+            self, data: pd.DataFrame, is_training: bool
+        ) -> tuple[np.ndarray, np.ndarray]:
+            """Format a DataFrame as Prophet-compatible ds/y arrays.
+
+            This is mainly for compatibility with BaseModel.prepare_data – the
+            fit/forecast methods already work directly with DataFrames.
+            """
+            if data is None or data.empty:
+                raise ValueError("Training data is empty or None")
+
+            date_col = self.config.get("date_column", "date")
+            target_col = self.config.get("target_column", "close")
+
+            if date_col not in data.columns or target_col not in data.columns:
+                raise ValueError(
+                    f"Required columns '{date_col}' and '{target_col}' must be present"
+                )
+
+            df = data[[date_col, target_col]].rename(
+                columns={date_col: "ds", target_col: "y"}
+            )
+            df["ds"] = pd.to_datetime(df["ds"])
+            df["y"] = pd.to_numeric(df["y"], errors="coerce")
+            df = df.dropna(subset=["ds", "y"])
+
+            return df["ds"].to_numpy(), df["y"].to_numpy()
+
+        def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+            """Normalize yfinance lowercase columns to title case."""
+            if df is None or df.empty:
+                return df
+            if "Close" not in df.columns and "close" in df.columns:
+                df = df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"})
+            return df
+
         def fit(self, train_data: pd.DataFrame, val_data=None, **kwargs):
             """Fit the Prophet model with robust error handling.
 
@@ -111,6 +167,9 @@ if PROPHET_AVAILABLE:
                 ValueError: If data is missing or malformed
                 RuntimeError: If Prophet fitting fails
             """
+            train_data = self._normalize_columns(train_data.copy() if hasattr(train_data, "copy") else train_data)
+            if "Close" in train_data.columns and self.config.get("target_column") == "close":
+                self.config["target_column"] = "Close"
             if not self.available:
                 print("âš ï¸ ProphetModel unavailable due to initialization failure")
                 return {
@@ -175,6 +234,7 @@ if PROPHET_AVAILABLE:
                 # Fit the model
                 self.model.fit(df)
                 self.fitted = True
+                self.is_fitted = True
                 self.history = df
 
                 logger.info(
@@ -498,7 +558,8 @@ if PROPHET_AVAILABLE:
                 }
 
             try:
-                if not self.fitted:
+                data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+                if not getattr(self, "is_fitted", self.fitted):
                     raise RuntimeError("Model must be fit before forecasting.")
 
                 # Calculate dynamic forecast horizon if not provided

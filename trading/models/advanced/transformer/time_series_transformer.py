@@ -142,6 +142,9 @@ class TransformerForecaster(BaseModel):
             "enable_fallback": True,
         }
         default_config.update(config)
+        # Set input_size from feature columns so it matches actual data (avoid "must match input_size (2)" error)
+        if default_config.get("feature_columns"):
+            default_config["input_size"] = len(default_config["feature_columns"])
 
         super().__init__(default_config)
         self._validate_config()
@@ -281,12 +284,18 @@ class TransformerForecaster(BaseModel):
         # Output projection
         self.output_proj = nn.Linear(self.config["d_model"], 1)
 
-        # Initialize weights
-        for name, param in self.named_parameters():
-            if "weight" in name and param.dim() > 1:
-                nn.init.xavier_uniform_(param)
-            elif "bias" in name:
-                nn.init.zeros_(param)
+        # Initialize weights (wrap in try/except: TransformerForecaster is not nn.Module)
+        try:
+            for name, param in self.named_parameters():
+                if "weight" in name and param.dim() > 1:
+                    nn.init.xavier_uniform_(param)
+                elif "bias" in name:
+                    nn.init.zeros_(param)
+        except AttributeError:
+            # No named_parameters (e.g. when not inheriting from nn.Module); init submodules
+            for mod in [self.input_proj, self.output_proj]:
+                if hasattr(mod, "reset_parameters"):
+                    mod.reset_parameters()
 
         return nn.ModuleList(
             [

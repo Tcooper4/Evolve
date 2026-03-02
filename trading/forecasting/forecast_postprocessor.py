@@ -124,6 +124,39 @@ class ForecastPostprocessor:
 
         return processed_data
 
+    def process(
+        self,
+        forecast=None,
+        historical_data=None,
+        apply_smoothing=True,
+        remove_outliers=False,
+        ensure_realistic_bounds=True,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        Process forecast values for display (alias used by Forecasting page).
+        Accepts forecast list/array and optional historical_data; returns dict with 'values', 'notes', 'modifications'.
+        """
+        modifications = []
+        if forecast is None:
+            return {"values": [], "notes": ["No forecast provided"], "modifications": []}
+        if hasattr(forecast, "tolist"):
+            forecast = forecast.tolist()
+        if isinstance(forecast, (list, np.ndarray)):
+            df = pd.DataFrame({"forecast": np.asarray(forecast)})
+        else:
+            df = pd.DataFrame(forecast) if not isinstance(forecast, pd.DataFrame) else forecast
+        if df.empty:
+            return {"values": [], "notes": [], "modifications": modifications}
+        df = self.sanitize_forecast(df)
+        if apply_smoothing and len(df) > 0 and "forecast" in df.columns:
+            df["forecast"] = self.dynamic_ewma_smoothing(df["forecast"])
+            modifications.append("Applied EWMA smoothing")
+        vals = df["forecast"].values if "forecast" in df.columns else df.iloc[:, 0].values
+        if hasattr(vals, "tolist"):
+            vals = vals.tolist()
+        return {"values": vals, "notes": [], "modifications": modifications}
+
     def prepare_for_saving(self, forecast_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Prepare forecast data for saving to file.

@@ -84,10 +84,11 @@ class GARCHModel(BaseModel):
         """
         super().__init__(config)
 
-        # Validate ARCH availability
+        # Validate ARCH availability (defer hard failure to fit/predict)
         if not ARCH_AVAILABLE:
-            raise ImportError(
-                "ARCH library is required for GARCH models. Install with: pip install arch"
+            logger.warning(
+                "ARCH library is not available. "
+                "GARCHModel will raise at fit time until 'arch' is installed."
             )
 
         # Set default configuration
@@ -140,6 +141,14 @@ class GARCHModel(BaseModel):
         if self.config["p"] == 0 and self.config["q"] == 0:
             raise ValidationError("At least one of p or q must be greater than 0")
 
+    def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize yfinance lowercase columns to title case."""
+        if df is None or df.empty:
+            return df
+        if "Close" not in df.columns and "close" in df.columns:
+            df = df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"})
+        return df
+
     def _prepare_data(
         self, data: pd.DataFrame, is_training: bool = True
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -153,16 +162,18 @@ class GARCHModel(BaseModel):
         Returns:
             Tuple of (returns, None) - GARCH models work with returns directly
         """
-        # Ensure we have a price or return column
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+        # Ensure we have a price or return column (use Close or close)
         if "returns" in data.columns:
             returns = data["returns"].values
         elif "price" in data.columns:
             # Calculate returns from prices
             prices = data["price"].values
             returns = np.diff(np.log(prices))
-        elif "close" in data.columns:
+        elif "close" in data.columns or "Close" in data.columns:
             # Calculate returns from close prices
-            prices = data["close"].values
+            col = "Close" if "Close" in data.columns else "close"
+            prices = data[col].values
             returns = np.diff(np.log(prices))
         else:
             # Try to infer the target column
@@ -190,6 +201,14 @@ class GARCHModel(BaseModel):
 
         logger.info(f"Prepared {len(returns)} observations for GARCH modeling")
         return returns, None
+
+    def fit(self, data: pd.DataFrame, target=None) -> Dict[str, Any]:
+        """Fit GARCH model. Compatible with Forecasting page. Requires arch: pip install arch."""
+        if not ARCH_AVAILABLE:
+            raise RuntimeError("GARCH requires arch package: pip install arch")
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+        result = self.train(data, target_col="returns" if "returns" in data.columns else "close", **{})
+        return {"success": True, "model": self.fitted_model, **result}
 
     def build_model(self) -> Any:
         """
@@ -220,6 +239,10 @@ class GARCHModel(BaseModel):
         Returns:
             Training results dictionary
         """
+        if not ARCH_AVAILABLE:
+            # Fail fast with a clear, user-facing error message
+            raise RuntimeError("GARCH requires arch package: pip install arch")
+
         logger.info("Starting GARCH model training")
         start_time = datetime.now()
 
@@ -308,6 +331,7 @@ class GARCHModel(BaseModel):
         Returns:
             Predicted volatility values
         """
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
         if self.fitted_model is None:
             raise ModelError("Model must be trained before prediction")
 
@@ -340,6 +364,7 @@ class GARCHModel(BaseModel):
         Returns:
             Forecast results dictionary
         """
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
         logger.info(f"Generating GARCH volatility forecast for {horizon} periods")
 
         try:

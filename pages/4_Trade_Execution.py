@@ -59,6 +59,17 @@ except (ImportError, ModuleNotFoundError) as e:
 from trading.portfolio.portfolio_manager import PortfolioManager
 from trading.agents.execution_risk_control_agent import ExecutionRiskControlAgent
 
+
+def _empty_state(message: str, icon: str = "📊"):
+    """Render a centered empty-state message."""
+    st.markdown(f"""
+    <div style="text-align:center;padding:60px 20px;color:#888;border:1px dashed #ddd;border-radius:8px;margin:20px 0">
+        <div style="font-size:48px;margin-bottom:12px">{icon}</div>
+        <div style="font-size:16px">{message}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 try:
     st.set_page_config(
         page_title="Trade Execution & Order Management",
@@ -645,13 +656,13 @@ try:
     Choose from TWAP, VWAP, Iceberg, or AI-optimized execution strategies.
     """)
 
-    # Import advanced execution engine
+    # Import advanced execution engine (ExecutionEngine is the concrete class; alias for UI)
     try:
-        from trading.execution.execution_engine import AdvancedExecutionEngine
-    
+        from trading.execution.execution_engine import ExecutionEngine as AdvancedExecutionEngine
+
         if 'execution_engine' not in st.session_state:
             st.session_state.execution_engine = AdvancedExecutionEngine()
-    
+
         engine = st.session_state.execution_engine
     
         st.write("**Execution Algorithms:**")
@@ -838,11 +849,9 @@ try:
                 st.warning("Please fill in all required fields")
 
     except ImportError:
-        st.error("Advanced Execution Engine not available. Make sure trading.execution.execution_engine is available.")
+        _empty_state("Advanced execution algorithms not available in this build.", "⚙️")
     except Exception as e:
-        st.error(f"Error initializing execution engine: {e}")
-        import traceback
-        st.code(traceback.format_exc())
+        _empty_state("Advanced execution algorithms not available in this build.", "⚙️")
 
     st.markdown("---")
 

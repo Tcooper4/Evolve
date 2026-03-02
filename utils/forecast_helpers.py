@@ -48,32 +48,51 @@ def safe_forecast(
                     start_time = time.time()
                     result = func(*args, **kwargs)
                     execution_time = time.time() - start_time
+                    # Two supported patterns:
+                    # 1) Tuple: (predictions, confidence[, ...])
+                    # 2) Dict: {"forecast": array, "confidence": float, ...}
 
-                    # Validate result format
+                    # Tuple-style result (legacy)
                     if isinstance(result, tuple) and len(result) >= 2:
                         predictions, confidence = result[0], result[1]
-
-                        # Basic validation
-                        if not isinstance(predictions, (np.ndarray, list, pd.Series)):
+                    # Dict-style result (modern model.forecast APIs)
+                    elif isinstance(result, dict):
+                        # Dict-style forecast: extract array-like predictions and a numeric confidence
+                        raw_preds = result.get("forecast")
+                        if raw_preds is None:
+                            raw_preds = result.get("values")
+                        if raw_preds is None:
+                            raw_preds = result.get("predictions")
+                        if raw_preds is None:
                             raise ValueError(
-                                f"Invalid prediction format: {type(predictions)}"
+                                f"Dict forecast result from {func.__name__} missing "
+                                "'forecast'/'values'/'predictions' keys"
                             )
-
-                        if not isinstance(confidence, (int, float, np.number)):
-                            raise ValueError(
-                                f"Invalid confidence format: {type(confidence)}"
-                            )
-
-                        if log_errors:
-                            logger.info(
-                                f"Forecast successful in {execution_time:.3f}s (attempt {attempt + 1})"
-                            )
-
-                        return result
+                        predictions = raw_preds
+                        confidence = result.get("confidence", 0.5)
                     else:
                         raise ValueError(
-                            f"Invalid result format: expected tuple, got {type(result)}"
+                            f"Invalid result format for {func.__name__}: expected tuple or dict, got {type(result)}"
                         )
+
+                    # Basic validation of predictions/confidence
+                    if not isinstance(predictions, (np.ndarray, list, pd.Series)):
+                        raise ValueError(
+                            f"Invalid prediction format from {func.__name__}: {type(predictions)}"
+                        )
+
+                    if not isinstance(confidence, (int, float, np.number)):
+                        raise ValueError(
+                            f"Invalid confidence format from {func.__name__}: {type(confidence)}"
+                        )
+
+                    if log_errors:
+                        logger.info(
+                            f"Forecast successful in {execution_time:.3f}s (attempt {attempt + 1})"
+                        )
+
+                    # Preserve original return type: if caller returned dict/tuple, pass it through
+                    return result
 
                 except Exception as e:
                     last_exception = e

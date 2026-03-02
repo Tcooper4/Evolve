@@ -2,6 +2,7 @@
 
 # Standard library imports
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 # Third-party imports
@@ -107,6 +108,13 @@ class TemporalBlock(nn.Module):
         """
         out = self.net(x)
         res = x if self.downsample is None else self.downsample(x)
+
+        # Ensure residual and output have matching sequence length for addition
+        if out.size(-1) > res.size(-1):
+            out = out[..., -res.size(-1) :]
+        elif out.size(-1) < res.size(-1):
+            res = res[..., -out.size(-1) :]
+
         return self.relu(out + res)
 
 
@@ -153,8 +161,9 @@ class TCNModel(BaseModel):
         default_config.update(config)
 
         super().__init__(default_config)
+        # BaseModel.__init__ already validates config and calls build_model;
+        # we keep an explicit validation here for clarity.
         self._validate_config()
-        self._setup_model()
         # __init__ should not return anything
 
     def _validate_config(self) -> None:
@@ -193,11 +202,8 @@ class TCNModel(BaseModel):
             raise ValidationError("sequence_length must be at least 2")
         if not self.config["feature_columns"]:
             raise ValidationError("feature_columns cannot be empty")
-        if len(self.config["feature_columns"]) != self.config["input_size"]:
-            raise ValidationError(
-                f"Number of feature columns ({len(self.config['feature_columns'])}) "
-                f"must match input_size ({self.config['input_size']})"
-            )
+        # Set input_size dynamically from feature_columns instead of raising
+        self.config["input_size"] = len(self.config["feature_columns"])
 
     def _setup_model(self) -> None:
         """Setup the TCN model architecture."""
@@ -223,12 +229,30 @@ class TCNModel(BaseModel):
                 )
             ]
 
-        self.tcn = nn.Sequential(*layers)
+        # TemporalConvNet followed by a linear readout on the last timestep
+        self.tcn = nn.Sequential(*layers).to(self.device)
         self.linear = nn.Linear(
             self.config["num_channels"][-1], self.config["output_size"]
-        )
-        self.model = nn.Sequential(self.tcn, self.linear)
-        self.model = self.model.to(self.device)
+        ).to(self.device)
+
+    def build_model(self):
+        """Build the underlying TCN network to satisfy BaseModel.build_model."""
+        self._setup_model()
+        # Return a simple nn.Module view that mirrors predict/fit behaviour
+        class _TCNWrapper(nn.Module):
+            def __init__(self, tcn, linear):
+                super().__init__()
+                self.tcn = tcn
+                self.linear = linear
+
+            def forward(self, x: torch.Tensor) -> torch.Tensor:
+                # x expected as (batch, seq_len, input_size)
+                x = x.transpose(1, 2)
+                features = self.tcn(x)
+                last_step = features[:, :, -1]
+                return self.linear(last_step)
+
+        return _TCNWrapper(self.tcn, self.linear).to(self.device)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model.
@@ -245,6 +269,14 @@ class TCNModel(BaseModel):
         x = self.linear(x[:, -1, :])  # Take last time step
         return x
 
+    def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize yfinance lowercase columns to title case."""
+        if df is None or df.empty:
+            return df
+        if "Close" not in df.columns and "close" in df.columns:
+            df = df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"})
+        return df
+
     def _prepare_data(
         self, data: pd.DataFrame, is_training: bool
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -259,26 +291,37 @@ class TCNModel(BaseModel):
                 X: Shape (batch_size, sequence_length, input_size)
                 y: Shape (batch_size, output_size)
         """
+        data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+        # Resolve column names (yfinance lowercase -> title case)
+        fc = [c if c in data.columns else ("Close" if c == "close" else "Volume" if c == "volume" else c) for c in self.config["feature_columns"]]
+        fc = [c for c in fc if c in data.columns]
+        tc = self.config["target_column"] if self.config["target_column"] in data.columns else ("Close" if self.config["target_column"] == "close" else self.config["target_column"])
+        if not fc:
+            fc = ["Close"] if "Close" in data.columns else list(data.columns)[:1]
+        if tc not in data.columns:
+            tc = data.columns[0]
         # Validate data
         if data.isnull().any().any():
             raise ValidationError("Data contains missing values")
 
         # Check if all required columns exist
-        missing_cols = [
-            col for col in self.config["feature_columns"] if col not in data.columns
-        ]
+        missing_cols = [col for col in fc + [tc] if col not in data.columns]
         if missing_cols:
             raise ValidationError(f"Missing required columns: {missing_cols}")
 
         # Convert to numpy arrays
-        X = data[self.config["feature_columns"]].values
-        y = data[self.config["target_column"]].values[self.config["sequence_length"] :]
+        X = data[fc].values
+        y = data[tc].values[self.config["sequence_length"]:]
 
-        # Create sequences
+        # Create sequences: shape (batch, seq_len, features)
         X_sequences = []
         for i in range(len(X) - self.config["sequence_length"]):
             X_sequences.append(X[i : i + self.config["sequence_length"]])
         X = np.array(X_sequences)
+
+        # Reorder to (batch, features, seq_len) for Conv1d
+        if X.ndim == 3:
+            X = np.transpose(X, (0, 2, 1))
 
         # Normalize
         if is_training:
@@ -360,18 +403,22 @@ class TCNModel(BaseModel):
             X, y = self._prepare_data(data, is_training=True)
 
             # Setup optimizer and loss function
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+            params = list(self.tcn.parameters()) + list(self.linear.parameters())
+            optimizer = torch.optim.Adam(params, lr=learning_rate)
             criterion = nn.MSELoss()
 
             # Training history
             history = {"train_loss": []}
 
             # Training loop
-            self.model.train()
+            self.tcn.train()
+            self.linear.train()
             for epoch in range(epochs):
-                # Forward pass
+                # Forward pass: TCN over sequence then linear on last timestep
                 optimizer.zero_grad()
-                outputs = self.model(X)
+                features = self.tcn(X)            # (batch, channels, seq_len)
+                last_step = features[:, :, -1]    # (batch, channels)
+                outputs = self.linear(last_step)  # (batch, output_size)
                 loss = criterion(outputs, y)
 
                 # Backward pass
@@ -407,9 +454,12 @@ class TCNModel(BaseModel):
             X, _ = self._prepare_data(data, is_training=False)
 
             # Make predictions
-            self.model.eval()
+            self.tcn.eval()
+            self.linear.eval()
             with torch.no_grad():
-                predictions = self.model(X)
+                features = self.tcn(X)            # (batch, channels, seq_len)
+                last_step = features[:, :, -1]    # (batch, channels)
+                predictions = self.linear(last_step)
 
             # Convert to numpy and denormalize
             predictions = predictions.cpu().numpy()

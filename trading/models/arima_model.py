@@ -634,8 +634,13 @@ class ARIMAModel(BaseModel):
             # Fit the model if not already fitted
             self.fit(data)
 
-        # Generate forecast
-        forecast_result = self.fitted_model.forecast(steps=horizon)
+        # Generate forecast (pmdarima uses predict(n_periods=); statsmodels uses forecast(steps=))
+        if hasattr(self.fitted_model, "predict") and not hasattr(self.fitted_model, "forecast"):
+            forecast_result = self.fitted_model.predict(n_periods=horizon)
+        elif hasattr(self.fitted_model, "forecast"):
+            forecast_result = self.fitted_model.forecast(steps=horizon)
+        else:
+            forecast_result = self.fitted_model.predict(n_periods=horizon)
 
         execution_time = time.time() - start_time
         confidence = 0.8  # ARIMA confidence
@@ -648,8 +653,9 @@ class ARIMAModel(BaseModel):
             confidence=confidence,
         )
 
+        fvals = forecast_result.values if hasattr(forecast_result, "values") else np.asarray(forecast_result)
         return {
-            "forecast": forecast_result.values,
+            "forecast": fvals,
             "confidence": confidence,
             "model": "ARIMA",
             "horizon": horizon,

@@ -75,6 +75,16 @@ class LLMConfig:
 _config: Optional[LLMConfig] = None
 
 
+def _normalize_openai_key(raw: Optional[str]) -> Optional[str]:
+    """Strip surrounding whitespace and quotes from OPENAI_API_KEY. Return None if empty."""
+    if raw is None:
+        return None
+    s = raw.strip().strip('"').strip("'").strip()
+    if s == "" or s.lower() == "null":
+        return None
+    return s
+
+
 def get_llm_config() -> LLMConfig:
     """Return LLM config from app config and env (single source of truth)."""
     global _config
@@ -84,9 +94,11 @@ def get_llm_config() -> LLMConfig:
         from config.app_config import get_config
 
         get_config()  # ensure config loaded
-        openai_key = os.getenv("OPENAI_API_KEY") or None
-        if openai_key == "null":
-            openai_key = None
+        openai_key = _normalize_openai_key(os.getenv("OPENAI_API_KEY"))
+        if openai_key and not openai_key.startswith("sk-"):
+            logger.warning(
+                "OPENAI_API_KEY may be malformed — expected format: sk-..."
+            )
         anthropic_key = os.getenv("ANTHROPIC_API_KEY") or None
         if anthropic_key == "null":
             anthropic_key = None
@@ -105,8 +117,13 @@ def get_llm_config() -> LLMConfig:
         return _config
     except Exception as e:
         logger.warning(f"Could not load app config for LLM, using env only: {e}")
+        openai_key = _normalize_openai_key(os.getenv("OPENAI_API_KEY"))
+        if openai_key and not openai_key.startswith("sk-"):
+            logger.warning(
+                "OPENAI_API_KEY may be malformed — expected format: sk-..."
+            )
         _config = LLMConfig(
-            openai_api_key=os.getenv("OPENAI_API_KEY") or None,
+            openai_api_key=openai_key,
             anthropic_api_key=os.getenv("ANTHROPIC_API_KEY") or None,
             primary_model=os.getenv("EVOLVE_PRIMARY_LLM_MODEL", CLAUDE_PRIMARY_MODEL),
             google_api_key=os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or None,

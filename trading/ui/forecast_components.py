@@ -419,32 +419,57 @@ def render_forecast_results(
     try:
         # Prepare forecast data
         forecast_dates = forecast.get('dates', forecast.get('forecast_dates', []))
-        forecast_values = forecast.get('forecast', forecast.get('values', []))
+        raw_values = forecast.get('forecast', forecast.get('values', []))
         lower_bound = forecast.get('lower_bound', None)
         upper_bound = forecast.get('upper_bound', None)
-        
-        # Create DataFrame for chart
-        if isinstance(forecast_values, (list, np.ndarray)):
-            forecast_df = pd.DataFrame({
-                'prediction': forecast_values,
-                'date': forecast_dates
-            })
-            if forecast_dates and len(forecast_dates) > 0:
-                forecast_df.index = pd.to_datetime(forecast_dates)
+
+        # Normalize forecast values to a clean 1D float array
+        if isinstance(raw_values, (list, np.ndarray)):
+            cleaned_values = [v for v in raw_values if v is not None]
+            forecast_array = np.asarray(cleaned_values, dtype="float64")
+        elif raw_values is None:
+            forecast_array = np.array([], dtype="float64")
         else:
-            forecast_df = pd.DataFrame({'prediction': forecast_values})
+            forecast_array = np.asarray([raw_values], dtype="float64")
+
+        if forecast_array.size == 0:
+            st.error("Forecast returned no usable values.")
+            return
+
+        # Create DataFrame for chart
+        forecast_df = pd.DataFrame(
+            {"prediction": forecast_array},
+            index=pd.to_datetime(forecast_dates[: len(forecast_array)])
+            if forecast_dates and len(forecast_dates) >= len(forecast_array)
+            else pd.RangeIndex(len(forecast_array)),
+        )
         
         # Add confidence intervals if available
         if lower_bound is not None and upper_bound is not None:
             if isinstance(lower_bound, (list, np.ndarray)) and isinstance(upper_bound, (list, np.ndarray)):
-                forecast_df['std_error'] = (np.array(upper_bound) - np.array(lower_bound)) / (2 * 1.96)
+                lb = np.asarray([v for v in lower_bound if v is not None], dtype="float64")
+                ub = np.asarray([v for v in upper_bound if v is not None], dtype="float64")
+                if lb.size == forecast_array.size and ub.size == forecast_array.size:
+                    forecast_df['std_error'] = (ub - lb) / (2 * 1.96)
         
-        # Get model config (simplified)
+        # Get model config (simplified but matching required fields)
         from .config.registry import ModelConfig
+        model_name = forecast.get('model_name', 'Unknown')
+        feature_cols = forecast.get('feature_columns', []) or ['close']
+        horizon = forecast.get('horizon', len(forecast_values) if isinstance(forecast_values, (list, np.ndarray)) else None)
+
         model_config = ModelConfig(
-            name=forecast.get('model_name', 'Unknown'),
+            name=model_name,
+            description=f"{model_name} forecasting model",
+            category="forecasting",
+            parameters={
+                "horizon": horizon,
+                "target_column": forecast.get("target_column", "close"),
+            },
+            required_data=list(feature_cols),
+            output_type="regression",
             confidence_available=lower_bound is not None,
-            benchmark_support=False
+            benchmark_support=False,
         )
         
         # Show chart
@@ -482,17 +507,26 @@ def render_confidence_metrics(forecast_result: Dict[str, Any]) -> None:
         st.subheader("📊 Confidence Metrics")
         
         # Extract confidence data
-        forecast_values = forecast_result.get('forecast', forecast_result.get('values', []))
+        raw_values = forecast_result.get('forecast', forecast_result.get('values', []))
         lower_bound = forecast_result.get('lower_bound', None)
         upper_bound = forecast_result.get('upper_bound', None)
         confidence = forecast_result.get('confidence', None)
-        
-        if lower_bound is not None and upper_bound is not None:
-            # Calculate confidence interval width
-            if isinstance(lower_bound, (list, np.ndarray)) and isinstance(upper_bound, (list, np.ndarray)):
-                ci_width = np.mean(np.array(upper_bound) - np.array(lower_bound))
-                ci_width_pct = (ci_width / np.mean(forecast_values)) * 100 if len(forecast_values) > 0 else 0
-                
+
+        if (
+            lower_bound is not None
+            and upper_bound is not None
+            and isinstance(raw_values, (list, np.ndarray))
+            and isinstance(lower_bound, (list, np.ndarray))
+            and isinstance(upper_bound, (list, np.ndarray))
+        ):
+            fv = np.asarray([v for v in raw_values if v is not None], dtype="float64")
+            lb = np.asarray([v for v in lower_bound if v is not None], dtype="float64")
+            ub = np.asarray([v for v in upper_bound if v is not None], dtype="float64")
+
+            if fv.size > 0 and lb.size == fv.size and ub.size == fv.size:
+                ci_width = float(np.mean(ub - lb))
+                ci_width_pct = float((ci_width / np.mean(fv)) * 100) if np.mean(fv) != 0 else 0.0
+
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     st.metric("Avg CI Width", f"{ci_width:.2f}")
@@ -500,7 +534,11 @@ def render_confidence_metrics(forecast_result: Dict[str, Any]) -> None:
                     st.metric("CI Width %", f"{ci_width_pct:.2f}%")
                 with col3:
                     if confidence is not None:
-                        avg_confidence = np.mean(confidence) if isinstance(confidence, (list, np.ndarray)) else confidence
+                        avg_confidence = (
+                            float(np.mean(confidence))
+                            if isinstance(confidence, (list, np.ndarray))
+                            else float(confidence)
+                        )
                         st.metric("Avg Confidence", f"{avg_confidence:.1%}")
                     else:
                         st.metric("Confidence Level", "95%")

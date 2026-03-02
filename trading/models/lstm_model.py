@@ -1476,11 +1476,21 @@ class LSTMForecaster(BaseModel):
                         # Ensure we get a 1D array
                         forecasts = forecasts_transformed.flatten()
                     except Exception as e:
-                        logger.warning(f"Inverse transform failed: {e}. Using raw forecasts.")
-                        # If inverse transform fails, forecasts might already be in the right scale
+                        logger.warning(f"Inverse transform failed: {e}. Using scale factor from last price.")
+                        # Fallback: scale by last known price if scaler fails
+                        if last_price and np.isfinite(last_price) and last_price > 0:
+                            scale = np.nanmean(forecasts) if len(forecasts) else 1.0
+                            if scale != 0:
+                                forecasts = forecasts * (last_price / scale)
                         forecasts = forecasts.flatten()
                 else:
-                    # No scaler, ensure forecasts are 1D
+                    # No scaler: multiply by last known price scale factor so outputs are in price space
+                    if last_price and np.isfinite(last_price) and last_price > 0 and len(forecasts) > 0:
+                        scale = np.nanmean(forecasts)
+                        if np.isfinite(scale) and abs(scale) > 1e-8:
+                            forecasts = forecasts * (last_price / scale)
+                        else:
+                            forecasts = np.full_like(forecasts, last_price)
                     forecasts = forecasts.flatten()
                 
                 # Ensure forecasts are valid (not NaN/Inf)
