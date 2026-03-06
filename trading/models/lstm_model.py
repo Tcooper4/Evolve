@@ -33,7 +33,7 @@ except ImportError as e:
 
 # Try to import scikit-learn
 try:
-    from sklearn.preprocessing import StandardScaler, RobustScaler
+    from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
 
     SKLEARN_AVAILABLE = True
 except ImportError as e:
@@ -41,6 +41,7 @@ except ImportError as e:
     print(f"   Missing: {e}")
     StandardScaler = None
     RobustScaler = None
+    MinMaxScaler = None
     SKLEARN_AVAILABLE = False
 
 import joblib
@@ -98,19 +99,20 @@ class FallbackModel:
 class LSTMModel(nn.Module):
     """A class to handle LSTM model for time series prediction with robust error handling."""
 
-    def __init__(
-        self,
-        input_dim: int,
-        hidden_dim: int,
-        output_dim: int,
-        num_layers: int = 1,
-        dropout: float = 0.0,
-    ):
-        """Initialize the LSTM model with error handling."""
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize the LSTM model from a single config dict (avoids nn.Module intercepting config/scalers)."""
         if not TORCH_AVAILABLE:
             raise ModelInitializationError(
                 "PyTorch is not available. Cannot initialize LSTM model."
             )
+        config = config or {}
+        input_dim = config.get("input_dim", 1)
+        hidden_dim = config.get("hidden_dim", 64)
+        output_dim = config.get("output_dim", 1)
+        num_layers = config.get("num_layers", 1)
+        dropout = config.get("dropout", 0.0)
+        if "sequence_length" not in config:
+            config = {**config, "sequence_length": 60}
 
         try:
             super().__init__()
@@ -128,6 +130,11 @@ class LSTMModel(nn.Module):
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self.to(self.device)
             self.logger = logging.getLogger(self.__class__.__name__)
+            # Bypass nn.Module __setattr__ so config and scalers are not treated as parameters/buffers
+            object.__setattr__(self, "config", config)
+            object.__setattr__(self, "X_scaler", MinMaxScaler() if MinMaxScaler else None)
+            object.__setattr__(self, "y_scaler", MinMaxScaler() if MinMaxScaler else None)
+            object.__setattr__(self, "is_fitted", False)
             self.logger.info(f"LSTM model initialized on device: {self.device}")
         except Exception as e:
             logger.error(f"Failed to initialize LSTM model: {e}")
@@ -291,6 +298,7 @@ class LSTMModel(nn.Module):
             if best_model_state is not None:
                 self.load_state_dict(best_model_state)
 
+            self.is_fitted = True
             return history
 
         except Exception as e:
@@ -338,7 +346,8 @@ class LSTMModel(nn.Module):
         try:
             sequence_length = getattr(self, "config", {}).get("sequence_length", 10)
             sequences = []
-            for i in range(len(data) - sequence_length + 1):
+            # Align with y_seq = y_tensor[sequence_length:]; we need exactly len(data) - sequence_length sequences
+            for i in range(len(data) - sequence_length):
                 sequences.append(data[i : i + sequence_length])
             return torch.stack(sequences)
         except Exception as e:
@@ -422,8 +431,9 @@ class LSTMForecaster(BaseModel):
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             
             # Initialize caching attributes
-            self.last_input_hash = None
-            self.compiled_model = None
+            object.__setattr__(self, "last_input_hash", None)
+            object.__setattr__(self, "compiled_model", None)
+            object.__setattr__(self, "cache_dir", ".cache/lstm")
 
             # Initialize fallback model
             self.fallback_model = FallbackModel()
@@ -612,21 +622,26 @@ class LSTMForecaster(BaseModel):
             raise ModelInitializationError(f"LSTM model building failed: {str(e)}")
 
     def _validate_config(self):
-        """Validate model configuration with detailed error messages."""
-        try:
-            required_keys = [
-                "input_size",
-                "hidden_size",
-                "num_layers",
-                "dropout",
-                "sequence_length",
-                "feature_columns",
-                "target_column",
-            ]
+        """Validate model configuration with detailed error messages.
 
-            missing_keys = [key for key in required_keys if key not in self.config]
-            if missing_keys:
-                raise ValueError(f"Missing required config keys: {missing_keys}")
+        All core hyperparameters are now optional with sensible defaults; only an entirely
+        empty config is considered invalid. This makes LSTMForecaster more robust when
+        called from generic routers that supply partial configs.
+        """
+        try:
+            if not self.config:
+                raise ValueError("LSTMForecaster config cannot be empty")
+
+            # Populate optional keys with defaults instead of raising
+            self.config.setdefault("input_size", 64)
+            self.config.setdefault("hidden_size", 128)
+            self.config.setdefault("num_layers", 2)
+            self.config.setdefault("dropout", 0.2)
+            self.config.setdefault("sequence_length", 30)
+            self.config.setdefault("feature_columns", [])
+
+            if "target_column" not in self.config:
+                raise ValueError("target_column must be provided in LSTMForecaster config")
 
             # Validate sequence length
             if self.config["sequence_length"] <= 0:
@@ -640,11 +655,17 @@ class LSTMForecaster(BaseModel):
 
             # Validate feature columns
             if not self.config["feature_columns"]:
-                raise ValueError("feature_columns cannot be empty")
+                # Allow empty feature_columns; model will infer from data later
+                logger.info("LSTMForecaster: feature_columns not provided, will infer from data at fit time")
             if self.config["target_column"] not in self.config["feature_columns"]:
-                raise ValueError(
-                    f"target_column '{self.config['target_column']}' must be in feature_columns"
+                logger.info(
+                    "LSTMForecaster: target_column '%s' not in feature_columns; "
+                    "it will be appended automatically.",
+                    self.config["target_column"],
                 )
+                self.config["feature_columns"] = list(self.config["feature_columns"]) + [
+                    self.config["target_column"]
+                ]
 
             # Validate batch size limits
             if "max_batch_size" in self.config and self.config["max_batch_size"] <= 0:

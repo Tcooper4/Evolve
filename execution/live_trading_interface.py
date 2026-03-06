@@ -26,8 +26,8 @@ try:
     )
 
     ALPACA_AVAILABLE = True
-except ImportError as e:
-    logging.warning(f"Alpaca SDK not available: {e}")
+except ImportError:
+    logging.warning("Alpaca live trading disabled (pip install alpaca-trade-api to enable)")
     ALPACA_AVAILABLE = False
 
 logger = logging.getLogger(__name__)

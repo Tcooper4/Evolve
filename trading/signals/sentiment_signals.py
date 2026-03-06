@@ -31,7 +31,7 @@ try:
     TEXTBLOB_AVAILABLE = True
 except ImportError:
     TEXTBLOB_AVAILABLE = False
-    logging.warning("TextBlob not available. Install with: pip install textblob")
+    logging.warning("TextBlob sentiment disabled (pip install textblob to enable)")
 
 # Import data collection libraries
 try:
@@ -40,7 +40,7 @@ try:
     PRAW_AVAILABLE = True
 except ImportError:
     PRAW_AVAILABLE = False
-    logging.warning("PRAW not available. Install with: pip install praw")
+    logging.warning("Reddit sentiment disabled (pip install praw to enable)")
 
 try:
     from newsapi import NewsApiClient

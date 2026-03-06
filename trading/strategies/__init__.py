@@ -20,6 +20,7 @@ from trading.strategies.ensemble import (
 )
 from trading.strategies.gatekeeper import (
     GatekeeperDecision,
+    GatekeeperDecisionResult,
     MarketRegime,
     RegimeClassifier,
     RegimeMetrics,
@@ -185,6 +186,7 @@ __all__ = [
     "MarketRegime",
     "StrategyStatus",
     "GatekeeperDecision",
+    "GatekeeperDecisionResult",
     "RegimeMetrics",
     "StrategyPerformance",
     "create_strategy_gatekeeper",

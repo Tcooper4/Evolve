@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 System Administration Page
 
@@ -3177,8 +3178,11 @@ with tab5:
         with col1:
             try:
                 if Path('logs/audit.log').exists():
-                    with open('logs/audit.log', 'r') as f:
-                        total_entries = len(f.readlines())
+                    try:
+                        with open('logs/audit.log', 'r', encoding='utf-8', errors='replace') as f:
+                            total_entries = len(f.readlines())
+                    except UnicodeDecodeError:
+                        total_entries = 0
                     st.metric("Total Audit Entries", total_entries)
                 else:
                     st.metric("Total Audit Entries", 0)

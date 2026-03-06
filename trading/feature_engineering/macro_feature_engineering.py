@@ -16,12 +16,13 @@ import pandas as pd
 
 # Import data providers with fallback handling
 try:
-    import fredapi
+    from fredapi import Fred
 
     FRED_AVAILABLE = True
 except ImportError:
+    Fred = None
     FRED_AVAILABLE = False
-    logging.warning("FRED API not available. Install with: pip install fredapi")
+    logging.warning("FRED macro features disabled (pip install fredapi to enable)")
 
 try:
     import wbdata
@@ -29,7 +30,7 @@ try:
     WBDATA_AVAILABLE = True
 except ImportError:
     WBDATA_AVAILABLE = False
-    logging.warning("World Bank Data not available. Install with: pip install wbdata")
+    logging.warning("World Bank macro features disabled (pip install wbdata to enable)")
 
 from trading.utils.logging_utils import setup_logger
 
@@ -51,9 +52,9 @@ class MacroFeatureEngineer:
 
         # Initialize FRED client if available
         self.fred_client = None
-        if FRED_AVAILABLE and self.fred_api_key:
+        if FRED_AVAILABLE and self.fred_api_key and Fred is not None:
             try:
-                self.fred_client = fredapi.Fred(api_key=self.fred_api_key)
+                self.fred_client = Fred(api_key=self.fred_api_key)
                 logger.info("FRED API client initialized")
             except Exception as e:
                 logger.warning(f"Failed to initialize FRED client: {e}")
@@ -140,7 +141,9 @@ class MacroFeatureEngineer:
             DataFrame with World Bank data
         """
         if not WBDATA_AVAILABLE:
-            logger.warning("World Bank Data not available, using cached data")
+            logger.warning(
+                "World Bank macro features disabled (pip install wbdata to enable); using cached data"
+            )
             return self._get_cached_macro_data("worldbank", start_date, end_date)
 
         try:

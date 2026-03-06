@@ -262,8 +262,9 @@ class XGBoostModel(BaseModel):
         try:
             import xgboost as xgb
 
-            # Use the loaded hyperparameters
-            self.model = xgb.XGBRegressor(**self.model_params)
+            # Don't pass early_stopping_rounds to constructor (pass only in fit() with eval_set)
+            params = {k: v for k, v in self.model_params.items() if k != "early_stopping_rounds"}
+            self.model = xgb.XGBRegressor(**params)
             logger.info(
                 f"XGBoost model initialized with parameters: {self.model_params}"
             )
@@ -527,10 +528,23 @@ class XGBoostModel(BaseModel):
             # Scale features
             X_scaled = self.scaler.fit_transform(X)
 
-            # Train model
+            # Train model (pass eval_set when early_stopping_rounds is used to avoid "Must have at least 1 validation dataset")
             if self.model is not None:
                 try:
-                    self.model.fit(X_scaled, target)
+                    fit_kwargs = {}
+                    early_rounds = self.model_params.get("early_stopping_rounds")
+                    n = len(X_scaled)
+                    if early_rounds and n >= 20:
+                        val_size = max(1, int(0.2 * n))
+                        X_val = X_scaled[-val_size:]
+                        y_val = target.iloc[-val_size:] if hasattr(target, "iloc") else target[-val_size:]
+                        X_train = X_scaled[:-val_size]
+                        y_train = target.iloc[:-val_size] if hasattr(target, "iloc") else target[:-val_size]
+                        fit_kwargs["eval_set"] = [(X_val, y_val)]
+                        fit_kwargs["early_stopping_rounds"] = min(early_rounds, 20)
+                        self.model.fit(X_train, y_train, **fit_kwargs)
+                    else:
+                        self.model.fit(X_scaled, target)
                     self.is_trained = True
                     self.feature_names = self.selected_features
 

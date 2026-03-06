@@ -45,7 +45,7 @@ except ImportError as e:
     TRANSFORMERS_AVAILABLE = False
     HUGGINGFACE_AVAILABLE = False
 
-from prompt_templates import format_template
+from trading.agents.prompt_templates import format_template
 
 logger = logging.getLogger(__name__)
 
@@ -283,17 +283,20 @@ class EnhancedPromptRouterAgent:
             logger.warning(f"Failed to save cache: {e}")
 
     def parse_intent_openai(self, prompt: str) -> Optional[ParsedIntent]:
-        """Parse intent using OpenAI GPT-4 with enhanced JSON spec."""
-        if not openai or not self.openai_api_key:
+        """Parse intent using OpenAI chat completions (v1 client) with enhanced JSON spec."""
+        if not self.openai_api_key:
             return None
 
         try:
+            from openai import OpenAI
+
             # Use enhanced template for intent classification
             system_prompt = format_template(
                 "enhanced_intent_classification", query=prompt
             )
 
-            response = openai.ChatCompletion.create(
+            client = OpenAI(api_key=self.openai_api_key)
+            response = client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -303,7 +306,7 @@ class EnhancedPromptRouterAgent:
                 temperature=0.1,
             )
 
-            content = response.choices[0].message["content"].strip()
+            content = (response.choices[0].message.content or "").strip()
 
             # Try to extract JSON from response
             json_match = re.search(r"\{.*\}", content, re.DOTALL)

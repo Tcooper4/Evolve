@@ -32,8 +32,8 @@ except ImportError as e:
 try:
     import pyttsx3
     PYTTSX3_AVAILABLE = True
-except ImportError as e:
-    logging.warning(f"pyttsx3 not available: {e}")
+except ImportError:
+    logging.warning("Voice output disabled (pip install pyttsx3 to enable)")
     pyttsx3 = None
     PYTTSX3_AVAILABLE = False
 

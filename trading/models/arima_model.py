@@ -37,26 +37,31 @@ class OptimizationCriterion(Enum):
 class ARIMAModel(BaseModel):
     """ARIMA model for time series forecasting with enhanced auto_arima support."""
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None, order: Optional[tuple] = None):
         """Initialize ARIMA model.
 
         Args:
             config: Model configuration with enhanced auto_arima options:
                 - use_auto_arima: Whether to use auto_arima (default: True)
+                - order: (p, d, q) tuple; if provided here or in config, used instead of auto_arima when use_auto_arima is False
                 - seasonal: Whether to consider seasonal components (default: True)
                 - optimization_criterion: AIC, BIC, MSE, or RMSE (default: AIC)
                 - auto_arima_config: Additional pmdarima configuration
                 - backtest_steps: Number of steps for MSE/RMSE optimization (default: 5)
+            order: Optional (p, d, q) order; overrides config["order"] when provided.
         """
         super().__init__(config)
         self.model = None
         self.fitted_model = None
-        self.order = config.get("order", (1, 1, 1)) if config else (1, 1, 1)
+        if order is not None:
+            self.order = order
+        else:
+            self.order = config.get("order", (1, 1, 1)) if config else (1, 1, 1)
         self.seasonal_order = config.get("seasonal_order", None) if config else None
         self.is_fitted = False
 
-        # Enhanced auto_arima configuration
-        self.use_auto_arima = config.get("use_auto_arima", True) if config else True
+        # Enhanced auto_arima configuration; when order is provided explicitly, use it instead of auto_arima
+        self.use_auto_arima = False if (order is not None) else (config.get("use_auto_arima", True) if config else True)
         self.seasonal = config.get("seasonal", True) if config else True
         self.optimization_criterion = config.get("optimization_criterion", "aic")
         self.backtest_steps = config.get("backtest_steps", 5) if config else 5
@@ -71,25 +76,36 @@ class ARIMAModel(BaseModel):
             )
             self.optimization_criterion = "aic"
 
-    def fit(self, data: pd.Series) -> Dict[str, Any]:
+    def fit(self, data) -> Dict[str, Any]:
         """Fit the ARIMA model using enhanced auto_arima if enabled.
 
         Args:
-            data: Time series data
+            data: Time series data (pd.Series or pd.DataFrame with close/Close or first column)
 
         Returns:
             Dictionary with fit status and model reference
         """
         try:
-            # Add input length check
-            if len(data) < 20:
+            # ARIMA needs a 1D price series; extract from DataFrame if enriched (e.g. from prepare_forecast_data)
+            if isinstance(data, pd.DataFrame):
+                if "close" in data.columns:
+                    series = data["close"].values
+                elif "Close" in data.columns:
+                    series = data["Close"].values
+                else:
+                    series = data.iloc[:, 0].values
+                series = pd.Series(series, index=data.index)
+            else:
+                series = pd.Series(data.values if hasattr(data, "values") else data, index=getattr(data, "index", None))
+
+            logger.info("ARIMA fit input shape: %s, dtype: %s", getattr(series, "shape", (len(series),)), series.dtype)
+            if len(series) < 20:
                 raise ValueError("ARIMA requires at least 20 data points.")
 
-            # Use enhanced auto_arima if enabled
             if self.use_auto_arima:
-                return self._fit_enhanced_auto_arima(data)
+                return self._fit_enhanced_auto_arima(series)
             else:
-                return self._fit_manual_arima(data)
+                return self._fit_manual_arima(series)
 
         except Exception as e:
             return {

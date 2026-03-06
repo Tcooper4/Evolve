@@ -45,11 +45,11 @@ logger = logging.getLogger(__name__)
 # Log warnings after logger is defined
 if not SENTENCE_TRANSFORMERS_AVAILABLE:
     logger.warning(
-        "SentenceTransformers not available. Prompt examples will be disabled."
+        "Semantic prompt matching disabled (pip install sentence-transformers to enable)"
     )
 
 if not TIKTOKEN_AVAILABLE:
-    logger.warning("tiktoken not available. Token counting will be disabled.")
+    logger.warning("Token counting disabled (pip install tiktoken to enable)")
 
 
 @dataclass
@@ -184,7 +184,8 @@ class PromptAgent:
             except Exception as e:
                 self.logger.warning(f"Could not initialize tokenizer: {e}")
         else:
-            self.logger.info("Token counting disabled (tiktoken not available)")
+            # Already logged once at import time; avoid duplicate startup log lines.
+            pass
 
         # Initialize components
         self.forecast_router = ForecastRouter()
@@ -634,6 +635,26 @@ class PromptAgent:
         except Exception as e:
             self.logger.error(f"Error saving prompt example: {e}")
 
+    # Common English words that must not be treated as tickers (1-5 letters)
+    _TICKER_STOPWORDS = frozenset({
+        "what", "why", "how", "when", "where", "which", "who", "whom", "whose",
+        "this", "that", "these", "those", "them", "they", "the", "and", "are",
+        "is", "it", "its", "for", "from", "with", "was", "were", "been", "being",
+        "have", "has", "had", "do", "does", "did", "will", "would", "could",
+        "should", "may", "might", "must", "can", "about", "into", "than",
+        "then", "some", "more", "most", "other", "only", "just", "also",
+        "very", "your", "our", "all", "any", "each", "both", "such", "here",
+        "there", "out", "not", "but", "yes", "no", "see", "saw", "get", "got",
+    })
+
+    # Company name (lowercase) -> ticker
+    _COMPANY_TO_TICKER = {
+        "apple": "AAPL", "tesla": "TSLA", "nvidia": "NVDA", "microsoft": "MSFT",
+        "google": "GOOGL", "amazon": "AMZN", "meta": "META", "netflix": "NFLX",
+        "alphabet": "GOOGL", "amd": "AMD", "intel": "INTC", "ibm": "IBM",
+        "salesforce": "CRM", "oracle": "ORCL", "adobe": "ADBE", "cisco": "CSCO",
+    }
+
     def _extract_symbols_from_prompt(self, prompt: str) -> List[str]:
         """Extract stock symbols from prompt.
 
@@ -641,11 +662,21 @@ class PromptAgent:
             prompt: User prompt
 
         Returns:
-            List of extracted symbols
+            List of extracted symbols (valid tickers only; excludes stopwords and maps company names).
         """
-        # Simple regex to find stock symbols (1-5 capital letters)
-        symbols = re.findall(r"\b([A-Z]{1,5})\b", prompt.upper())
-        return list(set(symbols))  # Remove duplicates
+        prompt_upper = prompt.upper()
+        prompt_lower = prompt.lower()
+        # 1) Map company names to tickers (whole-word match)
+        for company, ticker in self._COMPANY_TO_TICKER.items():
+            if re.search(r"\b" + re.escape(company) + r"\b", prompt_lower):
+                return [ticker]
+        # 2) Find 1-5 uppercase letter tokens and filter out stopwords
+        candidates = re.findall(r"\b([A-Z]{1,5})\b", prompt_upper)
+        symbols = [
+            s for s in set(candidates)
+            if s and s.lower() not in self._TICKER_STOPWORDS
+        ]
+        return list(symbols)
 
     def _extract_timeframe_from_prompt(self, prompt: str) -> str:
         """Extract timeframe from prompt.
@@ -804,6 +835,10 @@ class PromptAgent:
             # Parse prompt to extract intent and parameters
             intent, params = self._parse_prompt(prompt)
 
+            # No valid ticker: respond with general market analysis via LLM only (no data fetch)
+            if params.get("symbol") is None:
+                return self._handle_general_request_llm_only(prompt, params)
+
             # Process the request based on intent
             if intent == "forecast":
                 response = self._handle_forecast_request(params)
@@ -926,10 +961,9 @@ class PromptAgent:
                 if intent not in valid_intents:
                     intent = "general"
                 params = data.get("params") or {}
-                symbol = (params.get("symbol") or "AAPL").upper()
-                if not (isinstance(symbol, str) and 1 <= len(symbol) <= 5):
-                    symbol = "AAPL"
-                params.setdefault("symbol", symbol)
+                # Resolve symbol from prompt: valid 1-5 letter ticker, exclude stopwords, map company names
+                symbol = self._resolve_symbol_from_prompt(prompt)
+                params["symbol"] = symbol
                 params.setdefault("timeframe", "15d")
                 params.setdefault("prompt", prompt)
                 if not params.get("strategy"):
@@ -949,9 +983,8 @@ class PromptAgent:
         """Regex/keyword fallback for intent and parameter extraction (original logic)."""
         prompt_lower = prompt.lower()
 
-        # Extract symbol
-        symbol_match = re.search(r"\b([A-Z]{1,5})\b", prompt.upper())
-        symbol = symbol_match.group(1) if symbol_match else "AAPL"
+        # Extract symbol: valid ticker 1-5 uppercase letters, exclude common words, map company names
+        symbol = self._resolve_symbol_from_prompt(prompt)
 
         # Extract timeframe
         timeframe = "15d"
@@ -1017,16 +1050,16 @@ class PromptAgent:
                     model = model_name
                     break
 
-        # Auto-select best strategy if none specified
+        # Auto-select best strategy if none specified (need a symbol for selection)
         if not strategy:
-            strategy = self._select_best_strategy(symbol)
+            strategy = self._select_best_strategy(symbol or "AAPL")
 
         # Auto-select best model if none specified
         if not model:
-            model = self._select_best_model(symbol, timeframe)
+            model = self._select_best_model(symbol or "AAPL", timeframe)
 
         params = {
-            "symbol": symbol,
+            "symbol": symbol if symbol else None,
             "timeframe": timeframe,
             "strategy": strategy,
             "model": model,
@@ -1037,6 +1070,22 @@ class PromptAgent:
         self.logger.info(f"Parsed prompt - Intent: {intent}, Params: {params}")
 
         return intent, params
+
+    def _resolve_symbol_from_prompt(self, prompt: str) -> Optional[str]:
+        """
+        Resolve a single ticker from the prompt. Returns None if no valid ticker.
+        Valid ticker = 1-5 uppercase letters; excludes common English stopwords;
+        maps company names (apple, tesla, etc.) to their tickers.
+        """
+        prompt_lower = prompt.lower()
+        for company, ticker in self._COMPANY_TO_TICKER.items():
+            if re.search(r"\b" + re.escape(company) + r"\b", prompt_lower):
+                return ticker
+        candidates = re.findall(r"\b([A-Z]{1,5})\b", prompt.upper())
+        for c in candidates:
+            if c and c.lower() not in self._TICKER_STOPWORDS:
+                return c
+        return None
 
     def _select_best_strategy(self, symbol: str) -> str:
         """Select best strategy based on symbol characteristics.
@@ -1161,14 +1210,72 @@ class PromptAgent:
         """
         try:
             symbol = params["symbol"]
-            strategy = params["strategy"]
+            strategy_name = params["strategy"]
 
-            # Get strategy analysis
-            strategy_analysis = self.strategy_gatekeeper.analyze_strategy(
-                strategy, symbol
+            # Get historical data and strategy signals, then evaluate via gatekeeper
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=365)
+            data = self.data_provider.get_historical_data(
+                symbol, start_date, end_date, "1d"
             )
+            if data is None or data.empty:
+                return AgentResponse(
+                    success=False,
+                    message=f"Unable to get data for {symbol}",
+                    recommendations=["Try a different symbol or check data availability"],
+                )
+            data = data.copy()
+            try:
+                if hasattr(data.columns, "levels"):
+                    data = data.droplevel(axis=1, level=0) if data.columns.nlevels > 1 else data
+                data.columns = [str(c).lower().strip() for c in data.columns]
+            except Exception:
+                pass
+            for col, default in [("close", "close"), ("open", "close"), ("high", "close"), ("low", "close"), ("volume", 1.0)]:
+                if col not in data.columns and col != "close":
+                    data[col] = data["close"] if "close" in data.columns else data.iloc[:, 0]
+                elif col == "volume" and col not in data.columns:
+                    data[col] = 1.0
+            if "close" not in data.columns:
+                data["close"] = data.iloc[:, 0]
+            # Gatekeeper expects Close, High, Low, Volume
+            data_ck = data.rename(columns={"close": "Close", "open": "Open", "high": "High", "low": "Low", "volume": "Volume"})
+            for c in ["Close", "High", "Low", "Volume"]:
+                if c not in data_ck.columns and c.lower() in data.columns:
+                    data_ck[c] = data[c.lower()]
+            strategy_instance, _ = self._get_backtest_strategy(strategy_name or "RSI")
+            if strategy_instance is None:
+                return AgentResponse(
+                    success=False,
+                    message=f"Unknown strategy: {strategy_name}",
+                    recommendations=["Use one of: RSI, Bollinger Bands, MACD, SMA Crossover"],
+                )
+            signals_df = strategy_instance.generate_signals(data)
+            if signals_df is None or signals_df.empty:
+                return AgentResponse(
+                    success=False,
+                    message=f"Strategy produced no signals for {symbol}",
+                    recommendations=["Try a longer date range or different symbol"],
+                )
+            signal_col = "signal" if "signal" in signals_df.columns else (signals_df.columns[0] if len(signals_df.columns) > 0 else None)
+            if signal_col is None:
+                return AgentResponse(
+                    success=False,
+                    message="No signal column from strategy",
+                    recommendations=["Check strategy implementation"],
+                )
+            decision = self.strategy_gatekeeper.evaluate_strategy(
+                strategy_name or "RSI Mean Reversion", data_ck, signals_df
+            )
+            risk_level = "low" if decision.risk_score < 0.3 else "medium" if decision.risk_score < 0.6 else "high"
+            strategy_analysis = {
+                "health_score": decision.confidence,
+                "risk_level": risk_level,
+                "recommendations": decision.reasoning or [],
+                "decision": getattr(decision.decision, "value", str(decision.decision)),
+            }
 
-            message = f"Strategy Analysis for {strategy} on {symbol}:\n"
+            message = f"Strategy Analysis for {strategy_name} on {symbol}:\n"
             message += f"Health Score: {strategy_analysis.get('health_score', 'N/A')}\n"
             message += f"Risk Level: {strategy_analysis.get('risk_level', 'N/A')}\n"
 
@@ -1808,6 +1915,331 @@ class PromptAgent:
             requirements += " with robust performance"
 
         return requirements
+
+    def _handle_general_request_llm_only(
+        self, prompt: str, params: Dict[str, Any]
+    ) -> AgentResponse:
+        """
+        Respond with general market analysis using the active LLM.
+        When a symbol is detected in the prompt, fetch real price data first and pass it to the LLM
+        so the answer is grounded in actual numbers (e.g. 'why is apple down this week').
+        """
+        # Diagnostic tracing to confirm this path is hit from the chat pipeline
+        try:
+            symbol = self._resolve_symbol_from_prompt(prompt)
+        except Exception:
+            symbol = None
+        logger.info(
+            "[CHAT DIAG] _handle_general_request_llm_only called, symbol=%s, prompt=%s",
+            symbol,
+            (prompt or "")[:50],
+        )
+        try:
+            from agents.llm.active_llm_calls import call_active_llm_simple
+
+            system = (
+                "You are the Evolve trading platform assistant. "
+                "You have access to real-time market data fetched live from yfinance. "
+                "The data context below contains current price information fetched right now. "
+                "Use these exact numbers in your response. "
+                "Never say you lack access to current market data — you have it. "
+                "Always cite the data source and note its freshness. "
+                "You also have access to forecasting models (LSTM, XGBoost, ARIMA, Prophet, etc.) "
+                "and recent forecast/backtest results stored in memory when available."
+            )
+
+            data_context = ""
+
+            # Check if multi-agent orchestration mode is enabled (Streamlit UI toggle)
+            use_orchestration = False
+            try:
+                import streamlit as st  # type: ignore
+
+                use_orchestration = bool(
+                    st.session_state.get("agent_orchestration_mode", False)
+                )
+            except Exception:
+                use_orchestration = False
+
+            if use_orchestration and symbol:
+                try:
+                    from agents.orchestrator import AgentOrchestrator
+
+                    orch = AgentOrchestrator(symbol, prompt, self.data_provider)
+                    orch_result = orch.run()
+                    data_context = orch_result.get("context", "") or ""
+                    agents_used = orch_result.get("agents_used") or []
+                    errors = orch_result.get("errors") or {}
+                    if agents_used:
+                        data_context += (
+                            f"\n\n[Agents used: {', '.join(agents_used)}]"
+                        )
+                    if errors:
+                        data_context += f"\n[Agent errors: {errors}]"
+                except Exception as e:
+                    self.logger.error(
+                        "Orchestrator failed for symbol %s: %s", symbol, e
+                    )
+                    # Fall back to solo mode data fetch if orchestrator fails
+                    use_orchestration = False
+
+            if not use_orchestration and symbol:
+                try:
+                    # 1) Always fetch live price data first (freshest source)
+                    live_price = self.data_provider.get_live_price(symbol)
+                    live_price_block = ""
+                    if live_price is not None:
+                        try:
+                            live_price_f = float(live_price)
+                            live_price_block = (
+                                f"\n\n[Live market data for {symbol} — fetched now]\n"
+                                f"Current live price: ${live_price_f:.2f}\n"
+                            )
+                            self.logger.info(
+                                "Live price fetch for %s: current_price=%.2f",
+                                symbol,
+                                live_price_f,
+                            )
+                        except Exception:
+                            # Fall back to string formatting if casting fails
+                            live_price_block = (
+                                f"\n\n[Live market data for {symbol} — fetched now]\n"
+                                f"Current live price: {live_price}\n"
+                            )
+                            self.logger.info(
+                                "Live price fetch for %s (non-float): %s",
+                                symbol,
+                                str(live_price),
+                            )
+                    else:
+                        self.logger.warning(
+                            "Live price fetch for %s returned None", symbol
+                        )
+
+                    # 2) Recent historical window for context (trend/high/low)
+                    end_date = datetime.now()
+                    start_date = end_date - timedelta(days=14)
+                    data = self.data_provider.get_historical_data(
+                        symbol, start_date, end_date, "1d"
+                    )
+                    history_block = ""
+                    if data is not None and not data.empty:
+                        df = data.copy()
+                        if hasattr(df.columns, "levels"):
+                            df = (
+                                df.droplevel(axis=1, level=0)
+                                if df.columns.nlevels > 1
+                                else df
+                            )
+                        df.columns = [str(c).lower().strip() for c in df.columns]
+                        close_col = (
+                            "close"
+                            if "close" in df.columns
+                            else next(
+                                (c for c in df.columns if "close" in c.lower()), None
+                            )
+                        )
+                        if not close_col:
+                            self.logger.debug(
+                                "Chat data context: no close column for symbol %s; columns=%s",
+                                symbol,
+                                list(df.columns),
+                            )
+                        elif len(df) < 2:
+                            self.logger.debug(
+                                "Chat data context: not enough rows for symbol %s (rows=%d)",
+                                symbol,
+                                len(df),
+                            )
+                        else:
+                            closes = df[close_col].dropna()
+                            if len(closes) >= 2:
+                                current_price_hist = float(closes.iloc[-1])
+                                price_start = float(closes.iloc[0])
+                                pct_change = (
+                                    (current_price_hist - price_start)
+                                    / price_start
+                                    * 100
+                                    if price_start
+                                    else None
+                                )
+                                high_col = (
+                                    "high"
+                                    if "high" in df.columns
+                                    else close_col
+                                )
+                                low_col = (
+                                    "low" if "low" in df.columns else close_col
+                                )
+                                period_high = (
+                                    float(df[high_col].max())
+                                    if high_col in df.columns
+                                    else current_price_hist
+                                )
+                                period_low = (
+                                    float(df[low_col].min())
+                                    if low_col in df.columns
+                                    else current_price_hist
+                                )
+                                history_block = (
+                                    f"[Historical window for {symbol} — last ~2 weeks]\n"
+                                    f"Price at start of period: ${price_start:.2f}\n"
+                                )
+                                if pct_change is not None:
+                                    history_block += (
+                                        f"Period change: {pct_change:+.2f}%\n"
+                                    )
+                                history_block += (
+                                    f"Period high: ${period_high:.2f}, "
+                                    f"Period low: ${period_low:.2f}\n"
+                                )
+                            else:
+                                self.logger.debug(
+                                    "Chat data context: insufficient non-NaN closes for symbol %s (len=%d)",
+                                    symbol,
+                                    len(closes),
+                                )
+                    else:
+                        self.logger.info(
+                            "Chat data context: empty historical data for symbol %s from provider",
+                            symbol,
+                        )
+
+                    data_context += live_price_block + ("\n" + history_block if history_block else "")
+
+                    # 3) Recent news (always labeled as fetched now)
+                    try:
+                        from trading.data.news_fetcher import (
+                            fetch_recent_news,
+                            format_news_for_context,
+                        )
+
+                        headlines = fetch_recent_news(symbol, max_items=5)
+                        if headlines:
+                            data_context += (
+                                f"\n[Recent news headlines — fetched now]\n"
+                            )
+                            data_context += format_news_for_context(headlines)
+                    except Exception as ne:
+                        self.logger.debug(
+                            "Could not fetch news for LLM context: %s", ne
+                        )
+
+                    # 4) Enrich with recent MemoryStore context (forecasts/regime) if fresh
+                    try:
+                        from trading.memory import get_memory_store
+
+                        store = get_memory_store()
+                        now_utc = datetime.utcnow()
+
+                        # Forecast freshness
+                        recent_forecast = store.get_preference(f"forecast_{symbol}")
+                        forecast_added = False
+                        if isinstance(recent_forecast, dict):
+                            ts_str = recent_forecast.get("timestamp")
+                            try:
+                                if ts_str:
+                                    s = (
+                                        str(ts_str)
+                                        .replace("Z", "")
+                                        .replace("+00:00", "")[:26]
+                                    )
+                                    ts_dt = datetime.fromisoformat(s)
+                                    if getattr(ts_dt, "tzinfo", None):
+                                        ts_dt = ts_dt.replace(tzinfo=None)
+                                    minutes = (
+                                        now_utc - ts_dt
+                                    ).total_seconds() / 60.0
+                                    if minutes <= 60:
+                                        data_context += (
+                                            f"\n[Forecast from this session ({int(minutes)} min ago)]\n"
+                                            f"{recent_forecast.get('forecast') or recent_forecast}\n"
+                                        )
+                                        forecast_added = True
+                            except Exception:
+                                # Malformed timestamp; treat as stale
+                                pass
+
+                        if not forecast_added:
+                            data_context += (
+                                f"\n[Note: No recent forecast available for {symbol} — "
+                                "run the Forecasting page for model predictions]\n"
+                            )
+
+                        # Market regime freshness
+                        recent_regime = store.get_preference(
+                            f"market_regime_{symbol}"
+                        )
+                        regime_added = False
+                        if isinstance(recent_regime, dict):
+                            ts_str = recent_regime.get("timestamp")
+                            try:
+                                if ts_str:
+                                    s = (
+                                        str(ts_str)
+                                        .replace("Z", "")
+                                        .replace("+00:00", "")[:26]
+                                    )
+                                    ts_dt = datetime.fromisoformat(s)
+                                    if getattr(ts_dt, "tzinfo", None):
+                                        ts_dt = ts_dt.replace(tzinfo=None)
+                                    minutes = (
+                                        now_utc - ts_dt
+                                    ).total_seconds() / 60.0
+                                    if minutes <= 60:
+                                        data_context += (
+                                            f"\n[Market regime analysis from this session ({int(minutes)} min ago)]\n"
+                                            f"{recent_regime.get('regime') or recent_regime}\n"
+                                        )
+                                        regime_added = True
+                            except Exception:
+                                pass
+
+                        if not regime_added:
+                            data_context += (
+                                f"\n[Note: No recent market regime analysis available for {symbol} — "
+                                "run the Market Analysis or Strategy pages for regime diagnostics]\n"
+                            )
+
+                        # If neither forecast nor regime exists at all, add session-history note
+                        if not recent_forecast and not recent_regime:
+                            data_context += (
+                                f"\n[Note: {symbol} has not been analyzed in this session. "
+                                "Live price data shown above. For forecasts and strategy signals, "
+                                "navigate to the Forecasting or Strategy pages.]\n"
+                            )
+                    except Exception as me:
+                        self.logger.warning(
+                            "Could not read MemoryStore for chat context: %s", me
+                        )
+                except Exception as e:
+                    self.logger.debug(
+                        "Could not build data context for symbol %s: %s", symbol, e
+                    )
+
+            # Log final context size so we can debug empty-context cases
+            self.logger.info(
+                "Chat data context length: %d, symbol: %s",
+                len(data_context),
+                symbol or "None",
+            )
+
+            full_prompt = f"{system}{data_context}\n\nUser: {prompt}\n\nAssistant:"
+            text = call_active_llm_simple(full_prompt, max_tokens=1024)
+            return AgentResponse(
+                success=True,
+                message=text or "I couldn't generate a response. Please try rephrasing.",
+                data=None,
+                recommendations=[],
+                next_actions=[],
+            )
+        except Exception as e:
+            self.logger.error(f"General LLM response failed: {e}")
+            return AgentResponse(
+                success=False,
+                message=f"Could not generate response: {str(e)}",
+                recommendations=["Try asking with a specific ticker (e.g. AAPL) or rephrasing."],
+            )
 
     def _handle_general_request(
         self, prompt: str, params: Dict[str, Any]

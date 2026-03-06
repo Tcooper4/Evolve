@@ -7,6 +7,7 @@ Used by agents/llm/llm_interface.py generate_response() and trading/services/cha
 """
 
 import logging
+import os
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -77,8 +78,17 @@ def get_active_llm():
     return _get()
 
 
+def _is_anthropic_401(e: Exception) -> bool:
+    """True if the exception indicates Anthropic 401 Unauthorized."""
+    code = getattr(e, "status_code", None)
+    if code == 401:
+        return True
+    msg = (getattr(e, "message", None) or str(e)).lower()
+    return "401" in msg or "unauthorized" in msg
+
+
 def _call_claude_simple(prompt: str, model: str, *, max_tokens: int = 2048) -> str:
-    from config.llm_config import get_anthropic_client, get_llm_config
+    from config.llm_config import get_anthropic_client
     try:
         client = get_anthropic_client()
     except Exception as e:
@@ -93,6 +103,9 @@ def _call_claude_simple(prompt: str, model: str, *, max_tokens: int = 2048) -> s
         )
         return (msg.content[0].text if msg.content else "").strip()
     except Exception as e:
+        if _is_anthropic_401(e):
+            logger.warning("Anthropic key invalid, falling back to OpenAI")
+            return _call_gpt4_simple(prompt, "gpt-4o", max_tokens=max_tokens)
         logger.exception("Claude API call failed: %s", e)
         raise
 
@@ -132,6 +145,9 @@ def _call_claude_chat(
         text = resp.content[0].text if resp.content else ""
         return text.strip() or ""
     except Exception as e:
+        if _is_anthropic_401(e):
+            logger.warning("Anthropic key invalid, falling back to OpenAI")
+            return _call_gpt4_chat(system_prompt, context_block, conversation_messages, user_message, "gpt-4o", max_tokens=max_tokens)
         logger.exception("Claude API chat failed: %s", e)
         raise
 
@@ -462,9 +478,30 @@ def call_active_llm_simple(prompt: str, *, max_tokens: int = 2048) -> str:
     Single prompt → response using the app's active LLM (from Admin preference).
     Raises on failure; no silent fallback.
     """
+    # Allow env to override active provider for diagnostics and flexibility
+    env_provider = os.getenv("LLM_PROVIDER", "").strip().lower()
     provider, model, options = get_active_llm()
+    if env_provider in {"openai", "anthropic", "huggingface"}:
+        logger.info("LLM_PROVIDER override active: %s", env_provider)
+        if env_provider == "anthropic":
+            return _call_claude_simple(prompt, model, max_tokens=max_tokens)
+        if env_provider == "openai":
+            return _call_gpt4_simple(prompt, model, max_tokens=max_tokens)
+        if env_provider == "huggingface":
+            hf_mode = options.get("huggingface_mode", "inference")
+            if hf_mode == "local":
+                return _call_huggingface_local_simple(prompt, model, max_tokens=max_tokens)
+            return _call_huggingface_simple(prompt, model, max_tokens=max_tokens)
+
+    # Default: use active provider selection with Anthropic-first, then OpenAI, then others
     if provider == "claude":
-        return _call_claude_simple(prompt, model, max_tokens=max_tokens)
+        try:
+            return _call_claude_simple(prompt, model, max_tokens=max_tokens)
+        except Exception as e:
+            if _is_anthropic_401(e):
+                logger.warning("Anthropic key invalid, falling back to OpenAI")
+                return _call_gpt4_simple(prompt, "gpt-4o", max_tokens=max_tokens)
+            raise
     if provider == "gpt4":
         return _call_gpt4_simple(prompt, model, max_tokens=max_tokens)
     if provider == "gemini":

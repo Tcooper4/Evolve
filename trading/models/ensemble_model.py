@@ -36,18 +36,17 @@ class EnsembleModel(BaseModel):
                 - dynamic_weighting: Whether to use dynamic weighting
                 - regime_detection: Whether to use regime-based weighting
         """
-        # Initialize ensemble-specific fields before BaseModel.__init__ so that
-        # _validate_config can safely reference them during construction.
+        # Ensure self.models exists before any code (e.g. _initialize_models) runs
+        object.__setattr__(self, "models", {})
+        self.weights = {}
+        self.performance_history = {}
+        self.strategy_patterns = {}
         self.ensemble_method = config.get("ensemble_method", "weighted_average")
         self.dynamic_weighting = config.get("dynamic_weighting", True)
         self.regime_detection = config.get("regime_detection", False)
 
         super().__init__(config)
         self._validate_config()
-        self.models = {}
-        self.weights = {}
-        self.performance_history = {}
-        self.strategy_patterns = {}
         self._load_strategy_patterns()
 
     def build_model(self):
@@ -219,14 +218,27 @@ class EnsembleModel(BaseModel):
 
         registry = get_registry()
         for model_config in models_cfg:
-            model_name = model_config["name"]
+            model_name = model_config.get("name")
+            if not model_name:
+                logger.warning("EnsembleModel: skipping entry with no 'name': %s", model_config)
+                continue
             model_class = registry.get(model_name)
             if model_class is None:
-                raise ValueError(f"Unknown model '{model_name}' in EnsembleModel configuration")
-            self.models[model_name] = model_class(model_config)
-            self.weights[model_name] = 1.0 / len(models_cfg)
-            self.performance_history[model_name] = []
-
+                logger.warning("EnsembleModel: unknown model '%s', skipping", model_name)
+                continue
+            try:
+                self.models[model_name] = model_class(model_config)
+                self.weights[model_name] = 1.0 / max(1, len(models_cfg))
+                self.performance_history[model_name] = []
+            except Exception as e:
+                logger.warning("EnsembleModel: failed to create sub-model '%s': %s", model_name, e)
+                continue
+        if self.models:
+            n = len(self.models)
+            self.weights = {k: 1.0 / n for k in self.models}
+        else:
+            self.weights = {}
+        logger.info("Ensemble initialized with %d models: %s", len(self.models), list(self.models.keys()))
         return {
             "success": True,
             "message": "Initialization completed",

@@ -16,11 +16,7 @@ try:
     from sentence_transformers import SentenceTransformer
 
     SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError as e:
-    print(
-        "âš ï¸ sentence_transformers not available. Disabling soft-matching features."
-    )
-    print(f"   Missing: {e}")
+except ImportError:
     SentenceTransformer = None
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
@@ -29,11 +25,10 @@ try:
     from sklearn.metrics.pairwise import cosine_similarity
 
     SKLEARN_AVAILABLE = True
-except ImportError as e:
+except ImportError:
     print(
         "âš ï¸ scikit-learn not available. Disabling cosine similarity calculations."
     )
-    print(f"   Missing: {e}")
     cosine_similarity = None
     SKLEARN_AVAILABLE = False
 

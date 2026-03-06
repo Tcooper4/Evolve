@@ -292,11 +292,10 @@ class ModelRegistry:
                 
                 logger.info("✅ All NeuralForecast models registered successfully")
             else:
-                logger.warning("⚠️  NeuralForecast not available - models not registered")
+                logger.warning("Neural forecasting models disabled (pip install neuralforecast to enable)")
                 
-        except ImportError as e:
-            logger.warning(f"⚠️  Could not register NeuralForecast models: {e}")
-            logger.info("Install with: pip install neuralforecast")
+        except ImportError:
+            logger.warning("Neural forecasting models disabled (pip install neuralforecast to enable)")
         
         logger.info(f"✅ Registered {len(self._models)} models")
     

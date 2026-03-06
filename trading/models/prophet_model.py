@@ -193,43 +193,37 @@ if PROPHET_AVAILABLE:
                 if train_data is None or train_data.empty:
                     raise ValueError("Training data is empty or None")
 
-                required_columns = [
-                    self.config["date_column"],
-                    self.config["target_column"],
-                ]
-                missing_columns = [
-                    col for col in required_columns if col not in train_data.columns
-                ]
-                if missing_columns:
-                    raise ValueError(f"Missing required columns: {missing_columns}")
-
-                # Check for NaN values
-                if train_data[required_columns].isnull().any().any():
-                    logger.warning(
-                        "NaN values found in training data, attempting to clean"
-                    )
-                    train_data = train_data.dropna(subset=required_columns)
-                    if train_data.empty:
+                # Prophet needs exactly ds (date) and y (target). Extract from enriched DataFrame.
+                date_col = self.config.get("date_column", "ds")
+                target_col = self.config.get("target_column", "close")
+                if target_col not in train_data.columns and "Close" in train_data.columns:
+                    target_col = "Close"
+                if target_col not in train_data.columns and "close" in train_data.columns:
+                    target_col = "close"
+                if date_col not in train_data.columns and isinstance(train_data.index, pd.DatetimeIndex):
+                    # Use index as ds when no date column (e.g. after prepare_forecast_data)
+                    df = pd.DataFrame({"ds": train_data.index, "y": train_data[target_col].values})
+                else:
+                    if date_col not in train_data.columns or target_col not in train_data.columns:
                         raise ValueError(
-                            "No valid data remaining after removing NaN values"
+                            f"Prophet requires date and target columns. Have: {list(train_data.columns)}"
                         )
-
-                # Prepare data for Prophet
-                df = train_data[required_columns].rename(
-                    columns={
-                        self.config["date_column"]: "ds",
-                        self.config["target_column"]: "y",
-                    }
-                )
+                    df = train_data[[date_col, target_col]].rename(
+                        columns={date_col: "ds", target_col: "y"}
+                    )
+                df = df.dropna(subset=["ds", "y"])
+                if df.empty:
+                    raise ValueError("No valid data remaining after extracting ds/y")
 
                 # Validate Prophet data format
                 if df["ds"].dtype != "datetime64[ns]":
                     df["ds"] = pd.to_datetime(df["ds"])
-
-                if df["y"].dtype not in ["float64", "int64"]:
-                    df["y"] = pd.to_numeric(df["y"], errors="coerce")
-                    if df["y"].isnull().any():
-                        raise ValueError("Target column contains non-numeric values")
+                # Prophet does not support timezone-aware datetimes in ds
+                df["ds"] = pd.to_datetime(df["ds"]).dt.tz_localize(None)
+                df["y"] = pd.to_numeric(df["y"], errors="coerce")
+                df = df.dropna(subset=["ds", "y"])
+                if df.empty:
+                    raise ValueError("No valid data after converting ds/y types")
 
                 # Fit the model
                 self.model.fit(df)

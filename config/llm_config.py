@@ -85,6 +85,20 @@ def _normalize_openai_key(raw: Optional[str]) -> Optional[str]:
     return s
 
 
+def _normalize_anthropic_key(raw: Optional[str]) -> Optional[str]:
+    """Strip surrounding whitespace and quotes from ANTHROPIC_API_KEY. Return None if empty."""
+    if raw is None:
+        return None
+    s = raw.strip().strip('"').strip("'").strip()
+    if s == "" or s.lower() == "null":
+        return None
+    if s and not s.startswith("sk-ant-"):
+        logger.warning(
+            "ANTHROPIC_API_KEY may be malformed — expected format: sk-ant-..."
+        )
+    return s
+
+
 def get_llm_config() -> LLMConfig:
     """Return LLM config from app config and env (single source of truth)."""
     global _config
@@ -99,9 +113,7 @@ def get_llm_config() -> LLMConfig:
             logger.warning(
                 "OPENAI_API_KEY may be malformed — expected format: sk-..."
             )
-        anthropic_key = os.getenv("ANTHROPIC_API_KEY") or None
-        if anthropic_key == "null":
-            anthropic_key = None
+        anthropic_key = _normalize_anthropic_key(os.getenv("ANTHROPIC_API_KEY"))
         google_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or None
         hf_key = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("HF_TOKEN") or None
         moonshot_key = os.getenv("MOONSHOT_API_KEY") or None
@@ -124,7 +136,7 @@ def get_llm_config() -> LLMConfig:
             )
         _config = LLMConfig(
             openai_api_key=openai_key,
-            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY") or None,
+            anthropic_api_key=_normalize_anthropic_key(os.getenv("ANTHROPIC_API_KEY")),
             primary_model=os.getenv("EVOLVE_PRIMARY_LLM_MODEL", CLAUDE_PRIMARY_MODEL),
             google_api_key=os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or None,
             huggingface_api_key=os.getenv("HUGGINGFACE_API_KEY") or os.getenv("HF_TOKEN") or None,

@@ -147,8 +147,19 @@ if prompt:
                     "action_data": None,
                 })
 
-# Sidebar: Save conversation summary to short-term memory
 with st.sidebar:
+    # Multi-agent orchestration toggle
+    agent_mode = st.toggle(
+        "🤖 Multi-Agent Mode",
+        value=False,
+        help=(
+            "When enabled, the chat agent coordinates with specialized agents "
+            "(Forecasting, Market Analysis, Strategy) to answer questions. "
+            "Slower but more comprehensive."
+        ),
+    )
+    st.session_state["agent_orchestration_mode"] = agent_mode
+
     st.subheader("Session")
     if st.button("Save conversation to memory"):
         if not st.session_state.chat_messages:

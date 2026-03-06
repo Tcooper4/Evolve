@@ -25,6 +25,7 @@ venv/
 env/
 ENV/
 .venv/
+evolve_venv/
 
 # IDE
 .idea/
@@ -54,6 +55,7 @@ site/
 logs/*.log
 trading/logs/*.log
 trading/logs/*.jsonl
+logs/
 
 # Data (only ignore specific data files)
 data/private/
@@ -65,6 +67,12 @@ data/temp/
 *.private.h5
 *.private.db
 *.private.sqlite3
+
+# Per-user DB (never commit)
+data/users.db
+data/users.db-shm
+data/users.db-wal
+data/*.db
 
 # Models (only ignore specific model files)
 models/private/

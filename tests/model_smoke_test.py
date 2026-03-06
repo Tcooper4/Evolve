@@ -64,6 +64,7 @@ def test_xgboost():
     fc = np.asarray(preds, dtype="float64").ravel()[-7:]
     logger.info("XGBoostModel forecast: %s", fc)
     _assert_price_range("XGBoostModel", fc)
+    print("PASS: XGBoostModel")
 
 
 def test_arima():
@@ -83,6 +84,7 @@ def test_arima():
     fc = np.asarray(raw, dtype="float64").ravel()
     logger.info("ARIMAModel forecast: %s", fc)
     _assert_price_range("ARIMAModel", fc)
+    print("PASS: ARIMAModel")
 
 
 def test_lstm():
@@ -118,6 +120,7 @@ def test_lstm():
     fc = np.asarray(res.get("forecast", res), dtype="float64").ravel()
     logger.info("LSTMForecaster forecast: %s", fc)
     _assert_price_range("LSTMForecaster", fc)
+    print("PASS: LSTMForecaster")
 
 
 def test_hybrid():
@@ -143,6 +146,7 @@ def test_hybrid():
     logger.info("HybridModel forecast: %s", preds[-7:])
     # Use last 7 as the comparable horizon
     _assert_price_range("HybridModel", preds[-7:])
+    print("PASS: HybridModel")
 
 
 def test_prophet():
@@ -168,6 +172,7 @@ def test_prophet():
     fc = np.asarray(raw, dtype="float64").ravel()
     logger.info("ProphetModel forecast: %s", fc)
     _assert_price_range("ProphetModel", fc)
+    print("PASS: ProphetModel")
 
 
 def test_catboost():
@@ -191,6 +196,7 @@ def test_catboost():
     fc = np.asarray(raw, dtype="float64").ravel()
     logger.info("CatBoostModel forecast: %s", fc)
     _assert_price_range("CatBoostModel", fc)
+    print("PASS: CatBoostModel")
 
 
 def test_ridge():
@@ -205,6 +211,7 @@ def test_ridge():
     fc = np.asarray(raw, dtype="float64").ravel()
     logger.info("RidgeModel forecast: %s", fc)
     _assert_price_range("RidgeModel", fc)
+    print("PASS: RidgeModel")
 
 
 def test_tcn():
@@ -232,6 +239,7 @@ def test_tcn():
     fc = np.asarray(raw, dtype="float64").ravel()
     logger.info("TCNModel forecast: %s", fc)
     _assert_price_range("TCNModel", fc)
+    print("PASS: TCNModel")
 
 
 def test_ensemble():
@@ -254,6 +262,7 @@ def test_ensemble():
     fc = np.asarray(preds, dtype="float64").ravel()[-7:]
     logger.info("EnsembleModel forecast: %s", fc)
     _assert_price_range("EnsembleModel", fc)
+    print("PASS: EnsembleModel")
 
 
 def test_garch():
@@ -272,6 +281,7 @@ def test_garch():
                 raise
         else:
             raise AssertionError("GARCHModel.fit() did not raise RuntimeError when arch is missing")
+        print("PASS: GARCHModel (skipped - arch not installed)")
         return
 
     # When arch is installed, this should behave like other models
@@ -281,6 +291,7 @@ def test_garch():
     fc = np.asarray(raw, dtype="float64").ravel()
     logger.info("GARCHModel forecast: %s", fc)
     _assert_price_range("GARCHModel", fc)
+    print("PASS: GARCHModel")
 
 
 def main():
@@ -298,6 +309,7 @@ def main():
     test_garch()
     elapsed = (datetime.now() - start).total_seconds()
     logger.info("All smoke tests completed in %.2f seconds", elapsed)
+    print("All smoke tests completed. All PASS.")
 
 
 if __name__ == "__main__":

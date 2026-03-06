@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Forecasting & Market Analysis Page
 
@@ -7,7 +8,7 @@ Merges functionality from:
 - 7_Market_Analysis.py
 
 Features:
-- Quick Forecast with 4 models (LSTM, XGBoost, Prophet, ARIMA)
+- Quick Forecast with 3 fast models (ARIMA, XGBoost, Ridge); no walk-forward
 - Advanced Forecasting with hyperparameter tuning
 - AI-powered model selection
 - Multi-model comparison and ensemble
@@ -118,9 +119,12 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🔗 Multi-Asset (GNN)"  # NEW TAB
 ])
 
+# Quick Forecast: fast models only (ARIMA, XGBoost, Ridge). No walk-forward, no auto-select.
+QUICK_FORECAST_MODELS = ["ARIMA", "XGBoost", "Ridge"]
+
 with tab1:
     st.header("Quick Forecast")
-    st.markdown("Generate fast forecasts with pre-configured models")
+    st.markdown("Generate fast forecasts with pre-configured models (ARIMA, XGBoost, Ridge)")
     
     # Data Loading Form
     with st.form("data_form"):
@@ -369,64 +373,25 @@ with tab1:
         with col1:
             st.markdown("**Select Model**")
             
-            # Use UI component for model selection; prefer forecast_router.get_available_models() for full list
-            try:
-                from trading.ui.forecast_components import render_model_selector
-                from trading.models.model_registry import get_registry
-                
-                available_models = []
-                try:
-                    from trading.models.forecast_router import ForecastRouter
-                    router = ForecastRouter()
-                    available_models = router.get_available_models()
-                except Exception:
-                    pass
-                if not available_models:
-                    registry = get_registry()
-                    available_models = registry.list_models()
-                if not available_models:
-                    st.warning("⚠️ No models available. Using default models.")
-                    available_models = ["LSTM", "XGBoost", "Prophet", "ARIMA"]
-                
-                selected_model = render_model_selector(
-                    available_models=available_models,
-                    key="quick_forecast_model"
-                )
-                
-                registry = get_registry()
-                # Show model description if available
-                if selected_model:
-                    try:
-                        model_info = registry.get_model_info(selected_model)
-                        if model_info and model_info.get('description'):
-                            description = model_info['description']
-                            if len(description) > 200:
-                                description = description[:200] + "..."
-                            st.info(f"ℹ️ {description}")
-                    except Exception as e:
-                        logger.warning(f"Forecasting error: {e}")
-                        pass
-            except ImportError:
-                # Fallback to original code
+            # Quick Forecast: hardcoded fast models only — no LSTM, no Transformer
+            selected_model = st.selectbox(
+                "Select Model",
+                ["ARIMA", "XGBoost", "Ridge"],
+                key="quick_forecast_model",
+                help="Fast models only (ARIMA, XGBoost, Ridge)"
+            )
+            if selected_model:
                 try:
                     from trading.models.model_registry import get_registry
                     registry = get_registry()
-                    available_models = registry.list_models()
-                    if not available_models:
-                        available_models = ["LSTM", "XGBoost", "Prophet", "ARIMA"]
-                    selected_model = st.radio(
-                        "Choose model:",
-                        available_models,
-                        help="Choose a forecasting model"
-                    )
+                    model_info = registry.get_model_info(selected_model) if registry else None
+                    if model_info and model_info.get('description'):
+                        description = model_info['description']
+                        if len(description) > 200:
+                            description = description[:200] + "..."
+                        st.info(f"ℹ️ {description}")
                 except Exception as e:
                     logger.warning(f"Forecasting error: {e}")
-                    available_models = ["LSTM", "XGBoost", "Prophet", "ARIMA"]
-                    selected_model = st.radio(
-                        "Choose model:",
-                        available_models,
-                        help="Different models work better for different data patterns"
-                    )
             
             forecast_button = st.button(
                 "🚀 Generate Forecast",
@@ -443,76 +408,153 @@ with tab1:
                             raise RuntimeError("No forecast_data in session_state; please load data first.")
                         data = data.copy()
                         horizon = st.session_state.get("forecast_horizon", 7)
-                        
-                        # Prepare data for models (ensure proper format)
                         if not isinstance(data.index, pd.DatetimeIndex):
                             data.index = pd.to_datetime(data.index)
-                        
-                        # Initialize model with proper config using registry
-                        model = None
+                        # Normalize column names for router (expects 'close')
+                        if "Close" in data.columns and "close" not in data.columns:
+                            data = data.rename(columns={"Close": "close", "Open": "open", "High": "high", "Low": "low", "Volume": "volume"})
+                        # Use forecast router for accuracy-validated forecast (walk-forward, validation MAPE, confidence)
+                        model_key = (selected_model or "arima").lower().replace(" ", "")
+                        used_router = False
                         try:
-                            from trading.models.model_registry import get_registry
-                            registry = get_registry()
-                            ModelClass = registry.get(selected_model)
-                            
-                            if ModelClass is None:
-                                st.error(f"Model {selected_model} not available")
-                            else:
-                                # Model-specific initialization
-                                if selected_model == 'GARCH':
-                                    st.subheader("Volatility Forecasting with GARCH")
-                                    st.write("GARCH models are specialized for forecasting volatility and risk metrics.")
-                                    config = {
-                                        "p": 1,
-                                        "q": 1,
-                                        "target_column": "close"
-                                    }
-                                    model = ModelClass(config)
+                            from trading.models.forecast_router import ForecastRouter
+                            _router = ForecastRouter()
+                            router_result = _router.get_forecast(data, horizon=horizon, model_type=model_key, run_walk_forward=False)
+                            if router_result and router_result.get("forecast") is not None:
+                                used_router = True
+                                forecast_values = np.asarray(router_result["forecast"]).ravel()
+                                forecast_dates = pd.date_range(start=data.index[-1] + timedelta(days=1), periods=horizon, freq="D")[:len(forecast_values)]
+                                st.session_state.current_forecast = pd.DataFrame({"forecast": forecast_values}, index=forecast_dates)
+                                st.session_state.current_model = selected_model or router_result.get("model", "unknown")
+                                st.session_state.current_forecast_result = {
+                                    **router_result,
+                                    "validation_mape": router_result.get("validation_mape"),
+                                    "in_sample_mape": router_result.get("in_sample_mape"),
+                                    "last_actual_price": router_result.get("last_actual_price"),
+                                    "confidence_label": router_result.get("confidence_label"),
+                                }
+                                for w in router_result.get("warnings", []):
+                                    st.warning(w)
+                                st.success(f"✅ Forecast generated using {selected_model}")
+                        except Exception as _e:
+                            logger.debug("Router forecast failed, using direct model: %s", _e)
+                        _denorm_price = 1.0
+                        if not used_router:
+                            # Fallback: direct model fit/forecast with feature enrichment and price normalization
+                            from trading.models.forecast_features import prepare_forecast_data
+                            data_prepared, last_price = prepare_forecast_data(data)
+                            _denorm_price = last_price if last_price and last_price != 0 else 1.0
+                            if data_prepared is not None and not data_prepared.empty:
+                                data = data_prepared
+                        
+                        # Initialize model with proper config using registry (only when not used_router)
+                        model = None
+                        if not used_router:
+                            try:
+                                from trading.models.model_registry import get_registry
+                                registry = get_registry()
+                                ModelClass = registry.get(selected_model)
+                                
+                                if ModelClass is None:
+                                    st.error(f"Model {selected_model} not available")
+                                else:
+                                    # Model-specific initialization
+                                    if selected_model == 'GARCH':
+                                        st.subheader("Volatility Forecasting with GARCH")
+                                        st.write("GARCH models are specialized for forecasting volatility and risk metrics.")
+                                        config = {
+                                            "p": 1,
+                                            "q": 1,
+                                            "target_column": "close"
+                                        }
+                                        model = ModelClass(config)
                                     
-                                elif selected_model == 'Autoformer':
-                                    st.subheader("Advanced Transformer Forecasting")
-                                    st.write("Autoformer uses advanced attention mechanisms for complex time series patterns.")
-                                    config = {
-                                        "seq_len": 60,
-                                        "pred_len": horizon,
-                                        "d_model": 128,
-                                        "target_column": "close"
-                                    }
-                                    model = ModelClass(config)
+                                    elif selected_model == 'Autoformer':
+                                        st.subheader("Advanced Transformer Forecasting")
+                                        st.write("Autoformer uses advanced attention mechanisms for complex time series patterns.")
+                                        config = {
+                                            "seq_len": 60,
+                                            "pred_len": horizon,
+                                            "d_model": 128,
+                                            "target_column": "close"
+                                        }
+                                        model = ModelClass(config)
                                     
-                                elif selected_model == 'CatBoost':
-                                    st.subheader("CatBoost Gradient Boosting")
-                                    st.write("Alternative to XGBoost with better categorical feature handling.")
-                                    config = {
-                                        "target_column": "close",
-                                        "iterations": 500,
-                                        "depth": 6,
-                                        "learning_rate": 0.03
-                                    }
-                                    model = ModelClass(config)
+                                    elif selected_model == 'CatBoost':
+                                        st.subheader("CatBoost Gradient Boosting")
+                                        st.write("Alternative to XGBoost with better categorical feature handling.")
+                                        config = {
+                                            "target_column": "close",
+                                            "iterations": 500,
+                                            "depth": 6,
+                                            "learning_rate": 0.03
+                                        }
+                                        model = ModelClass(config)
                                     
-                                elif selected_model == 'TCN':
-                                    st.subheader("Temporal Convolutional Network")
-                                    st.write("TCN uses dilated convolutions for efficient long-range dependencies.")
-                                    config = {
-                                        "target_column": "close",
-                                        "num_channels": [64, 128, 256],
-                                        "kernel_size": 3,
-                                        "dropout": 0.2
-                                    }
-                                    model = ModelClass(config)
+                                    elif selected_model == 'TCN':
+                                        st.subheader("Temporal Convolutional Network")
+                                        st.write("TCN uses dilated convolutions for efficient long-range dependencies.")
+                                        config = {
+                                            "target_column": "close",
+                                            "num_channels": [64, 128, 256],
+                                            "kernel_size": 3,
+                                            "dropout": 0.2
+                                        }
+                                        model = ModelClass(config)
                                     
-                                elif selected_model == 'Ridge':
-                                    st.subheader("Ridge Regression Baseline")
-                                    st.write("Simple linear baseline with L2 regularization.")
-                                    config = {
-                                        "target_column": "close",
-                                        "alpha": 1.0
-                                    }
-                                    model = ModelClass(config)
+                                    elif selected_model == 'Ridge':
+                                        st.subheader("Ridge Regression Baseline")
+                                        st.write("Simple linear baseline with L2 regularization.")
+                                        config = {
+                                            "target_column": "close",
+                                            "alpha": 1.0
+                                        }
+                                        model = ModelClass(config)
                                     
-                                elif "LSTM" in selected_model:
-                                    # LSTMForecaster uses config dictionary
+                                    elif "LSTM" in selected_model:
+                                        config = {
+                                            "target_column": "close",
+                                            "sequence_length": 60,
+                                            "hidden_size": 64,
+                                            "num_layers": 2,
+                                            "dropout": 0.2,
+                                            "learning_rate": 0.001,
+                                            "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"],
+                                            "input_size": len(data.columns) if len(data.columns) > 0 else 1
+                                        }
+                                        model = ModelClass(config)
+                                    elif "XGBoost" in selected_model:
+                                        config = {
+                                            "target_column": "close",
+                                            "n_estimators": 100,
+                                            "max_depth": 5,
+                                            "learning_rate": 0.1
+                                        }
+                                        model = ModelClass(config)
+                                    elif "Prophet" in selected_model:
+                                        config = {
+                                            "date_column": data.index.name if data.index.name else "ds",
+                                            "target_column": "close",
+                                            "prophet_params": {}
+                                        }
+                                        model = ModelClass(config)
+                                    elif "ARIMA" in selected_model:
+                                        config = {
+                                            "order": (5, 1, 0),
+                                            "use_auto_arima": True,
+                                            "target_column": "close"
+                                        }
+                                        model = ModelClass(config)
+                                    else:
+                                        config = {
+                                            "target_column": "close",
+                                            "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"]
+                                        }
+                                        model = ModelClass(config)
+                            except Exception as e:
+                                st.warning(f"Could not use model registry: {e}. Using direct imports.")
+                                # Fallback to direct imports
+                                if "LSTM" in selected_model:
                                     config = {
                                         "target_column": "close",
                                         "sequence_length": 60,
@@ -523,7 +565,7 @@ with tab1:
                                         "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"],
                                         "input_size": len(data.columns) if len(data.columns) > 0 else 1
                                     }
-                                    model = ModelClass(config)
+                                    model = LSTMForecaster(config)
                                 elif "XGBoost" in selected_model:
                                     config = {
                                         "target_column": "close",
@@ -531,64 +573,20 @@ with tab1:
                                         "max_depth": 5,
                                         "learning_rate": 0.1
                                     }
-                                    model = ModelClass(config)
+                                    model = XGBoostModel(config)
                                 elif "Prophet" in selected_model:
                                     config = {
                                         "date_column": data.index.name if data.index.name else "ds",
                                         "target_column": "close",
                                         "prophet_params": {}
                                     }
-                                    model = ModelClass(config)
+                                    model = ProphetModel(config)
                                 elif "ARIMA" in selected_model:
                                     config = {
                                         "order": (5, 1, 0),
-                                        "use_auto_arima": True,
-                                        "target_column": "close"
+                                        "use_auto_arima": True
                                     }
-                                    model = ModelClass(config)
-                                else:
-                                    # Generic model initialization
-                                    config = {
-                                        "target_column": "close",
-                                        "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"]
-                                    }
-                                    model = ModelClass(config)
-                        except Exception as e:
-                            st.warning(f"Could not use model registry: {e}. Using direct imports.")
-                            # Fallback to direct imports
-                            if "LSTM" in selected_model:
-                                config = {
-                                    "target_column": "close",
-                                    "sequence_length": 60,
-                                    "hidden_size": 64,
-                                    "num_layers": 2,
-                                    "dropout": 0.2,
-                                    "learning_rate": 0.001,
-                                    "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"],
-                                    "input_size": len(data.columns) if len(data.columns) > 0 else 1
-                                }
-                                model = LSTMForecaster(config)
-                            elif "XGBoost" in selected_model:
-                                config = {
-                                    "target_column": "close",
-                                    "n_estimators": 100,
-                                    "max_depth": 5,
-                                    "learning_rate": 0.1
-                                }
-                                model = XGBoostModel(config)
-                            elif "Prophet" in selected_model:
-                                config = {
-                                    "date_column": data.index.name if data.index.name else "ds",
-                                    "target_column": "close",
-                                    "prophet_params": {}
-                                }
-                                model = ProphetModel(config)
-                            elif "ARIMA" in selected_model:
-                                config = {
-                                    "order": (5, 1, 0),
-                                    "use_auto_arima": True
-                                }
-                                model = ARIMAModel(config)
+                                    model = ARIMAModel(config)
                         
                         if model is None:
                             st.error("Failed to initialize model")
@@ -749,6 +747,9 @@ with tab1:
                                     forecast_values = np.full(horizon, last_price)
                                 else:
                                     forecast_values = np.array([float(forecast_values)] * horizon)
+                            # Denormalize: model was trained on price/last_price
+                            if _denorm_price and _denorm_price != 1.0:
+                                forecast_values = np.asarray(forecast_values, dtype=float) * _denorm_price
                             
                             # Create forecast DataFrame
                             forecast_df = pd.DataFrame({
@@ -932,8 +933,6 @@ with tab1:
                         'forecast': forecast_df['forecast'].values.tolist() if hasattr(forecast_df['forecast'].values, 'tolist') else list(forecast_df['forecast'].values),
                         'model_name': st.session_state.current_model
                     }
-                    
-                    # Add confidence intervals if available
                     if isinstance(forecast_result, dict):
                         if 'lower_bound' in forecast_result:
                             forecast_data['lower_bound'] = forecast_result['lower_bound']
@@ -941,6 +940,29 @@ with tab1:
                             forecast_data['upper_bound'] = forecast_result['upper_bound']
                         if 'confidence' in forecast_result:
                             forecast_data['confidence'] = forecast_result['confidence']
+                        if forecast_result.get('validation_mape') is not None:
+                            forecast_data['validation_mape'] = forecast_result['validation_mape']
+                        if forecast_result.get('confidence_label'):
+                            forecast_data['confidence_label'] = forecast_result['confidence_label']
+                        if forecast_result.get('last_actual_price') is not None:
+                            forecast_data['last_actual_price'] = forecast_result['last_actual_price']
+                    if forecast_data.get('last_actual_price') is None and hist_data is not None and len(hist_data) > 0:
+                        close_col = 'close' if 'close' in hist_data.columns else (hist_data.columns[0] if len(hist_data.columns) > 0 else None)
+                        if close_col:
+                            forecast_data['last_actual_price'] = float(hist_data[close_col].iloc[-1])
+                    
+                    # Show validation MAPE, confidence label, last actual vs first forecast
+                    if forecast_data.get('validation_mape') is not None or forecast_data.get('last_actual_price') is not None:
+                        with st.expander("📐 Accuracy & continuity", expanded=True):
+                            if forecast_data.get('validation_mape') is not None:
+                                st.metric("Walk-forward validation MAPE", f"{forecast_data['validation_mape']:.2f}%")
+                            if forecast_data.get('confidence_label'):
+                                st.metric("Confidence (based on MAPE)", forecast_data['confidence_label'])
+                            last_act = forecast_data.get('last_actual_price')
+                            fvals = forecast_data.get('forecast', [])
+                            first_fc = fvals[0] if fvals else None
+                            if last_act is not None and first_fc is not None:
+                                st.write("**Continuity:** Last actual price **${:.2f}** → First forecast **${:.2f}**".format(float(last_act), float(first_fc)))
                     
                     # Render forecast results
                     render_forecast_results(
@@ -1199,11 +1221,41 @@ with tab2:
                     
                     if reqs:
                         st.caption(" • ".join(reqs))
+                
+                # Auto-select best model (Advanced only; runs all models, slow)
+                if st.button("🔬 Auto-select best model", key="auto_select_best_advanced"):
+                    data_for_best = st.session_state.get("forecast_data")
+                    if data_for_best is not None and len(data_for_best) >= 60:
+                        try:
+                            from trading.models.forecast_router import ForecastRouter
+                            _router = ForecastRouter()
+                            _horizon = st.session_state.get("forecast_horizon", 7)
+                            _symbol = st.session_state.get("symbol", "")
+                            _df = data_for_best.copy()
+                            if "Close" in _df.columns and "close" not in _df.columns:
+                                _df = _df.rename(columns={"Close": "close", "Open": "open", "High": "high", "Low": "low", "Volume": "volume"})
+                            best_key, best_result = _router.select_best_model(_df, _horizon, symbol=_symbol or None)
+                            display_map = {"lstm": "LSTM", "xgboost": "XGBoost", "prophet": "Prophet", "arima": "ARIMA", "ridge": "Ridge", "garch": "GARCH", "tcn": "TCN", "catboost": "CatBoost", "ensemble": "Ensemble", "transformer": "Transformer", "autoformer": "Autoformer", "hybrid": "Hybrid"}
+                            best_display = display_map.get(best_key, best_key.capitalize())
+                            st.session_state["advanced_forecast_best_model"] = best_display
+                            st.session_state["advanced_best_model_scores"] = best_result
+                            st.success(f"Best model: **{best_display}** (validation MAPE: {best_result.get('validation_mape') or 'N/A'}%)")
+                        except Exception as e:
+                            st.warning(f"Auto-select failed: {e}")
+                    else:
+                        st.warning("Load at least 60 rows of data first in Quick Forecast tab.")
+                if st.session_state.get("advanced_best_model_scores"):
+                    with st.expander("📊 Model validation scores (walk-forward)", expanded=False):
+                        scores = st.session_state["advanced_best_model_scores"].get("scores", [])
+                        if scores:
+                            import pandas as pd
+                            tab_df = pd.DataFrame(scores)
+                            st.dataframe(tab_df, use_container_width=True)
             except Exception as e:
                 st.warning(f"⚠️ Could not load model registry: {e}. Using default models.")
                 model_type = st.selectbox(
                     "Model Type",
-                    ["LSTM", "XGBoost", "Prophet", "ARIMA"]
+                    ["LSTM", "XGBoost", "Prophet", "ARIMA", "Ridge", "TCN", "GARCH", "CatBoost", "Ensemble"]
                 )
                 model_info = {}
             
@@ -2097,17 +2149,49 @@ with tab4:
         with col1:
             st.subheader("📊 Select Models")
             
+            from trading.models.forecast_router import ForecastRouter
+            _router_for_names = ForecastRouter()
+            try:
+                available_models = list(_router_for_names.model_registry.keys())
+            except Exception:
+                available_models = [
+                    "lstm",
+                    "xgboost",
+                    "prophet",
+                    "arima",
+                    "ridge",
+                    "tcn",
+                    "catboost",
+                    "ensemble",
+                    "hybrid",
+                ]
+            display_models = [
+                "LSTM",
+                "XGBoost",
+                "Prophet",
+                "ARIMA",
+                "Ridge",
+                "TCN",
+                "CatBoost",
+                "Ensemble",
+                "Hybrid",
+            ]
+            # Filter to models actually available in the router when possible
+            display_models = [
+                m for m in display_models if m.lower() in available_models
+            ] or display_models
+
             models_to_compare = st.multiselect(
                 "Choose models to compare:",
-                ["LSTM", "XGBoost", "Prophet", "ARIMA"],
-                default=["LSTM", "XGBoost"],
-                help="Select 2-4 models to compare"
+                display_models,
+                default=[m for m in display_models if m in ["LSTM", "XGBoost"]][:2],
+                help="Select 2-5 models to compare",
             )
             
             if len(models_to_compare) < 2:
                 st.warning("Please select at least 2 models")
-            elif len(models_to_compare) > 4:
-                st.warning("Please select no more than 4 models")
+            elif len(models_to_compare) > 5:
+                st.warning("Please select 5 or fewer models for comparison")
             
             create_ensemble = st.checkbox("Create Ensemble Forecast", value=True)
             
@@ -2121,6 +2205,10 @@ with tab4:
             st.subheader("📈 Comparison Results")
             
             if compare_button and len(models_to_compare) >= 2:
+                if len(models_to_compare) > 5:
+                    st.warning("Please select 5 or fewer models for comparison")
+                    st.stop()
+
                 progress_bar = st.progress(0)
                 status_text = st.empty()
                 
@@ -2134,93 +2222,53 @@ with tab4:
                     # Ensure proper format
                     if not isinstance(data.index, pd.DatetimeIndex):
                         data.index = pd.to_datetime(data.index)
-                    
-                    if 'close' in data.columns:
-                        data['Close'] = data['close']
+
+                    # Router expects lowercase OHLCV when possible
+                    if "Close" in data.columns and "close" not in data.columns:
+                        data = data.rename(
+                            columns={
+                                "Close": "close",
+                                "Open": "open",
+                                "High": "high",
+                                "Low": "low",
+                                "Volume": "volume",
+                            }
+                        )
                     
                     forecasts = {}
                     model_configs = {}
                     
+                    # Forecast via ForecastRouter (single canonical invocation path)
+                    from trading.models.forecast_router import ForecastRouter
+                    _router = ForecastRouter()
+
                     # Train and forecast for each model
                     total_models = len(models_to_compare)
                     for idx, model_name in enumerate(models_to_compare):
-                        status_text.text(f"Training {model_name} ({idx+1}/{total_models})...")
+                        status_text.text(f"Running {model_name} ({idx+1}/{total_models})...")
                         progress_bar.progress((idx) / (total_models + 1))
                         
                         try:
-                            # Create model config
-                            if model_name == "LSTM":
-                                # LSTMForecaster uses config dictionary
-                                config = {
-                                    "target_column": "close" if "close" in data.columns else "Close",
-                                    "sequence_length": 60,
-                                    "hidden_size": 64,
-                                    "num_layers": 2,
-                                    "dropout": 0.2,
-                                    "learning_rate": 0.001,
-                                    "feature_columns": list(data.columns) if len(data.columns) > 0 else ["close"],
-                                    "input_size": len(data.columns) if len(data.columns) > 0 else 1
-                                }
-                                model = LSTMForecaster(config)
-                            elif model_name == "XGBoost":
-                                config = {
-                                    "target_column": "close" if "close" in data.columns else "Close",
-                                    "n_estimators": 100,
-                                    "max_depth": 5,
-                                    "learning_rate": 0.1
-                                }
-                                model = XGBoostModel(config)
-                            elif model_name == "Prophet":
-                                config = {
-                                    "date_column": "ds",
-                                    "target_column": "close" if 'close' in data.columns else 'Close',
-                                    "prophet_params": {}
-                                }
-                                model = ProphetModel(config)
-                            elif model_name == "ARIMA":
-                                config = {
-                                    "order": (5, 1, 0),
-                                    "use_auto_arima": True
-                                }
-                                model = ARIMAModel(config)
-                            
-                            model_configs[model_name] = config
-                            
-                            # Train model
-                            if model_name == "Prophet":
-                                train_df = pd.DataFrame({
-                                    'ds': data.index,
-                                    'y': data[config["target_column"]]
-                                })
-                                model.fit(train_df)
-                            elif model_name == "ARIMA":
-                                model.fit(data[config["target_column"]])
-                            else:
-                                model.fit(data, data[config["target_column"]])
-                            
-                            # Generate forecast
-                            forecast_result = model.forecast(data, horizon=horizon)
-                            
-                            # Extract forecast values
-                            if isinstance(forecast_result, dict):
-                                forecast_values = forecast_result.get('forecast', [])
-                                forecast_dates = forecast_result.get('dates', pd.date_range(
-                                    start=data.index[-1] + timedelta(days=1),
-                                    periods=horizon,
-                                    freq='D'
-                                ))
-                            else:
-                                forecast_values = forecast_result
-                                forecast_dates = pd.date_range(
-                                    start=data.index[-1] + timedelta(days=1),
-                                    periods=horizon,
-                                    freq='D'
-                                )
-                            
-                            if isinstance(forecast_values, (list, np.ndarray)):
-                                forecast_values = np.array(forecast_values).flatten()
-                            else:
-                                forecast_values = np.array([forecast_values] * horizon)
+                            model_key = str(model_name).strip().lower()
+                            router_result = _router.get_forecast(
+                                data,
+                                horizon=horizon,
+                                model_type=model_key,
+                                run_walk_forward=False,
+                            )
+
+                            forecast_values = np.asarray(
+                                (router_result or {}).get("forecast", []),
+                                dtype="float64",
+                            ).ravel()
+                            if forecast_values.size == 0:
+                                raise ValueError("Router returned empty forecast")
+
+                            forecast_dates = pd.date_range(
+                                start=data.index[-1] + timedelta(days=1),
+                                periods=len(forecast_values),
+                                freq="D",
+                            )
                             
                             forecasts[model_name] = {
                                 'values': forecast_values,

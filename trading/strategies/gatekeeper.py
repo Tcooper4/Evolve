@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from trading.utils.safe_math import safe_rsi, safe_drawdown
+from trading.utils.safe_math import safe_rsi, safe_drawdown, safe_divide
 
 warnings.filterwarnings("ignore")
 
@@ -99,8 +99,8 @@ class StrategyPerformance:
 
 
 @dataclass
-class GatekeeperDecision:
-    """Gatekeeper decision with reasoning."""
+class GatekeeperDecisionResult:
+    """Gatekeeper decision with reasoning (holds a GatekeeperDecision enum value)."""
 
     decision: GatekeeperDecision
     strategy_name: str
@@ -394,7 +394,7 @@ class StrategyGatekeeper:
 
     def evaluate_strategy(
         self, strategy_name: str, data: pd.DataFrame, strategy_signals: pd.DataFrame
-    ) -> GatekeeperDecision:
+    ) -> GatekeeperDecisionResult:
         """Evaluate a strategy and make a decision.
 
         Args:
@@ -403,7 +403,7 @@ class StrategyGatekeeper:
             strategy_signals: Strategy signals dataframe
 
         Returns:
-            GatekeeperDecision with approval/rejection and modifications
+            GatekeeperDecisionResult with approval/rejection and modifications
         """
         try:
             # Classify current market regime
@@ -492,15 +492,15 @@ class StrategyGatekeeper:
         return strategy_returns.fillna(0)
 
     def _calculate_sharpe_ratio(self, returns: pd.Series) -> float:
-        """Calculate Sharpe ratio."""
+        """Calculate Sharpe ratio. Avoid division by near-zero std (would produce huge bogus values)."""
         if len(returns) < 2:
             return 0.0
 
         excess_returns = returns - 0.02 / 252  # Assuming 2% risk-free rate
-        if excess_returns.std() == 0:
+        std = excess_returns.std()
+        if std is None or std <= 1e-8:
             return 0.0
-
-        return excess_returns.mean() / excess_returns.std() * np.sqrt(252)
+        return float(excess_returns.mean() / std * np.sqrt(252))
 
     def _calculate_max_drawdown(self, returns: pd.Series) -> float:
         """Calculate maximum drawdown."""
@@ -528,10 +528,10 @@ class StrategyGatekeeper:
         excess_returns = returns - 0.02 / 252
         downside_returns = excess_returns[excess_returns < 0]
 
-        if len(downside_returns) == 0 or downside_returns.std() == 0:
+        dstd = downside_returns.std()
+        if len(downside_returns) == 0 or dstd is None or dstd <= 1e-8:
             return 0.0
-
-        return excess_returns.mean() / downside_returns.std() * np.sqrt(252)
+        return float(excess_returns.mean() / dstd * np.sqrt(252))
 
     def _calculate_regime_performance(
         self, returns: pd.Series, current_regime: MarketRegime
@@ -546,7 +546,7 @@ class StrategyGatekeeper:
         strategy_name: str,
         performance: StrategyPerformance,
         regime_metrics: RegimeMetrics,
-    ) -> GatekeeperDecision:
+    ) -> GatekeeperDecisionResult:
         """Make comprehensive decision about strategy."""
         reasoning = []
         modifications = {}
@@ -614,7 +614,7 @@ class StrategyGatekeeper:
             decision_type = GatekeeperDecision.TEST
             confidence = 0.6
 
-        return GatekeeperDecision(
+        return GatekeeperDecisionResult(
             decision=decision_type,
             strategy_name=strategy_name,
             confidence=confidence,
@@ -629,9 +629,9 @@ class StrategyGatekeeper:
 
     def _create_rejection_decision(
         self, strategy_name: str, reason: str
-    ) -> GatekeeperDecision:
+    ) -> GatekeeperDecisionResult:
         """Create a rejection decision."""
-        return GatekeeperDecision(
+        return GatekeeperDecisionResult(
             decision=GatekeeperDecision.REJECT,
             strategy_name=strategy_name,
             confidence=0.9,
@@ -660,7 +660,7 @@ class StrategyGatekeeper:
             risk_adjusted_return=0.0,
         )
 
-    def _log_decision(self, decision: GatekeeperDecision):
+    def _log_decision(self, decision: GatekeeperDecisionResult):
         """Log decision for audit trail."""
         self.decision_history.append(decision)
 

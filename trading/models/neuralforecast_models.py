@@ -31,8 +31,8 @@ try:
     )
     NEURALFORECAST_AVAILABLE = True
     logger.info("✅ NeuralForecast available")
-except ImportError as e:
-    logger.warning(f"⚠️  NeuralForecast not available: {e}")
+except ImportError:
+    logger.warning("Neural forecasting models disabled (pip install neuralforecast to enable)")
     NEURALFORECAST_AVAILABLE = False
     NeuralForecast = None
     Autoformer = Informer = TFT = NBEATS = PatchTST = NHITS = None

@@ -25,11 +25,12 @@ Example:
 import importlib
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
+from trading.models.forecast_features import add_forecast_features, prepare_forecast_data
 from trading.models.arima_model import ARIMAModel
 from trading.models.lstm_model import LSTMModel
 from trading.models.xgboost_model import XGBoostModel
@@ -120,6 +121,7 @@ class ForecastRouter:
 
         self.performance_history = pd.DataFrame()
         self.model_weights = self._initialize_weights()
+        self._last_price_used = 1.0
 
     def _load_model_registry(self):
         """Dynamically load model registry from config or discovery."""
@@ -322,10 +324,14 @@ class ForecastRouter:
         return False
 
     def _prepare_data_safely(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Prepare data with defensive checks; return as-is if valid."""
+        """Prepare data: add forecast features and normalize target by raw last price. Store raw last_price for single denorm."""
         if data is None or data.empty:
+            self._last_price_used = 1.0
             return pd.DataFrame()
-        return data.copy()
+        prepared, last_price = prepare_forecast_data(data)
+        self._last_price_used = last_price  # raw close, used exactly once to denormalize forecast
+        logger.info("Forecast denorm: last_price=%.2f (raw close, multiply forecast once)", self._last_price_used)
+        return prepared
 
     def _select_model_with_fallback(
         self, data: pd.DataFrame, model_type: Optional[str] = None
@@ -355,13 +361,17 @@ class ForecastRouter:
             "confidence": 0.0,
             "metadata": {},
             "warnings": ["Fallback forecast used"],
+            "validation_mape": None,
+            "in_sample_mape": None,
+            "last_actual_price": last,
+            "confidence_label": "Unknown",
         }
 
     def _get_model_defaults(self, model_name: str) -> Dict[str, Any]:
         """Return default config kwargs for a model (for instantiation)."""
         defaults = {
             "arima": {"order": (5, 1, 0), "use_auto_arima": True, "target_column": "close"},
-            "lstm": {"target_column": "close", "sequence_length": 60, "hidden_dim": 64, "num_layers": 2, "dropout": 0.2},
+            "lstm": {"target_column": "close", "sequence_length": 60, "hidden_dim": 64, "num_layers": 2, "dropout": 0.2, "epochs": 50, "batch_size": 32, "learning_rate": 0.001},
             "xgboost": {"target_column": "close", "n_estimators": 100, "max_depth": 5, "learning_rate": 0.1},
             "prophet": {"date_column": "ds", "target_column": "close", "prophet_params": {}},
             "ridge": {"target_column": "close", "alpha": 1.0, "max_iter": 1000},
@@ -404,6 +414,90 @@ class ForecastRouter:
     def _get_warnings(self, data: pd.DataFrame, model_name: str) -> list:
         """Return list of warnings for the forecast."""
         return []
+
+    @staticmethod
+    def _compute_mape(actual: np.ndarray, pred: np.ndarray) -> float:
+        """Mean Absolute Percentage Error; return 0 if undefined."""
+        actual = np.asarray(actual, dtype="float64").ravel()
+        pred = np.asarray(pred, dtype="float64").ravel()
+        n = min(len(actual), len(pred))
+        if n == 0:
+            return 0.0
+        actual, pred = actual[:n], pred[:n]
+        mask = np.isfinite(actual) & (np.abs(actual) > 1e-12)
+        if not np.any(mask):
+            return 0.0
+        return float(np.mean(np.abs((actual[mask] - pred[mask]) / actual[mask])) * 100.0)
+
+    def _run_walk_forward_validation(
+        self,
+        prepared_data: pd.DataFrame,
+        selected_model: str,
+        horizon: int,
+    ) -> float:
+        """Train on first 200 rows, predict next 50, return validation MAPE (%). Uses 80/20 if len < 250."""
+        if prepared_data is None or len(prepared_data) < 60:
+            return float("nan")
+        n = len(prepared_data)
+        if n >= 250:
+            train_size, val_size = 200, 50
+        else:
+            train_size = int(0.8 * n)
+            val_size = min(50, n - train_size)
+        if val_size < 5:
+            return float("nan")
+        train_df = prepared_data.iloc[:train_size]
+        val_df = prepared_data.iloc[train_size: train_size + val_size]
+        close_col = "close" if "close" in prepared_data.columns else prepared_data.columns[0]
+        try:
+            model_class = self.model_registry.get(selected_model)
+            if not model_class:
+                return float("nan")
+            config = self._get_model_defaults(selected_model)
+            if selected_model == "lstm":
+                config["input_dim"] = train_df.shape[1] if hasattr(train_df, "shape") else 1
+                config["output_dim"] = 1
+            model = model_class(config)
+            if selected_model == "lstm":
+                model.train_model(
+                    train_df, train_df[close_col],
+                    epochs=config.get("epochs", 30), batch_size=32
+                )
+            else:
+                model.fit(train_df)
+            if hasattr(model, "forecast"):
+                fc = model.forecast(train_df, horizon=val_size)
+            else:
+                fc = model.predict(val_df) if hasattr(model, "predict") else None
+            if fc is None:
+                return float("nan")
+            pred = np.asarray(fc, dtype="float64").ravel()[:val_size]
+            actual = val_df[close_col].values[: len(pred)]
+            return self._compute_mape(actual, pred)
+        except Exception as e:
+            logger.debug("Walk-forward validation failed: %s", e)
+            return float("nan")
+
+    def _in_sample_mape(self, model: Any, prepared_data: pd.DataFrame, selected_model: str) -> Optional[float]:
+        """Compute in-sample MAPE (%) if model supports predict on training data."""
+        if prepared_data is None or len(prepared_data) < 10:
+            return None
+        close_col = "close" if "close" in prepared_data.columns else prepared_data.columns[0]
+        try:
+            if hasattr(model, "predict"):
+                pred = model.predict(prepared_data)
+            else:
+                return None
+            if pred is None:
+                return None
+            pred = np.asarray(pred, dtype="float64").ravel()
+            actual = prepared_data[close_col].values
+            n = min(len(actual), len(pred))
+            if n < 5:
+                return None
+            return self._compute_mape(actual[:n], pred[:n])
+        except Exception:
+            return None
 
     def _log_performance(self, model_name: str, forecast: Any, data: pd.DataFrame) -> None:
         """Log performance metrics."""
@@ -467,6 +561,7 @@ class ForecastRouter:
         data: pd.DataFrame,
         horizon: int = 30,
         model_type: Optional[str] = None,
+        run_walk_forward: bool = True,
         **kwargs,
     ) -> Dict[str, Any]:
         """Get forecast for time series data.
@@ -475,6 +570,7 @@ class ForecastRouter:
             data: Time series data
             horizon: Forecast horizon in periods
             model_type: Optional preferred model type
+            run_walk_forward: If True, run walk-forward validation for MAPE (slower). Use False for Quick Forecast.
             **kwargs: Additional model-specific parameters
 
         Returns:
@@ -526,36 +622,35 @@ class ForecastRouter:
             selected_model = self._select_model_with_fallback(prepared_data, model_type)
             logger.info(f"Selected model: {selected_model}")
 
-            # Initialize model with sensible defaults
+            # Initialize model with single config dict (all constructors accept config: Dict)
             model_class = self.model_registry[selected_model]
-            model_kwargs = self._get_model_defaults(selected_model)
-            model_kwargs.update(kwargs)  # Override with user-provided kwargs
-
-            # For LSTM, only pass valid constructor args
+            config = self._get_model_defaults(selected_model)
+            kwargs_for_model = {k: v for k, v in kwargs.items() if k != "run_walk_forward"}
+            config.update(kwargs_for_model)
             if selected_model == "lstm":
-                # Determine input_dim and output_dim from data
-                input_dim = (
+                config["input_dim"] = (
                     prepared_data.shape[1] if hasattr(prepared_data, "shape") else 1
                 )
-                output_dim = 1
-                lstm_args = {
-                    "input_dim": input_dim,
-                    "hidden_dim": model_kwargs.get("hidden_dim", 64),
-                    "output_dim": output_dim,
-                    "num_layers": model_kwargs.get("num_layers", 2),
-                    "dropout": model_kwargs.get("dropout", 0.2),
+                config["output_dim"] = 1
+            model = model_class(config)
+            fit_args = (
+                {
+                    "epochs": config.get("epochs", 50),
+                    "batch_size": config.get("batch_size", 32),
+                    "learning_rate": config.get("learning_rate", 0.001),
                 }
-                model = model_class(**lstm_args)
-                fit_args = {
-                    "epochs": model_kwargs.get("epochs", 50),
-                    "batch_size": model_kwargs.get("batch_size", 32),
-                    "learning_rate": model_kwargs.get("learning_rate", 0.001),
-                }
-            else:
-                model = model_class(**model_kwargs)
-                fit_args = {}
+                if selected_model == "lstm"
+                else {}
+            )
 
-            logger.info(f"Initializing {selected_model} with config: {model_kwargs}")
+            logger.info(f"Initializing {selected_model} with config: {config}")
+
+            # Walk-forward validation (optional; skip for Quick Forecast to keep it fast)
+            validation_mape = float("nan")
+            if run_walk_forward and len(prepared_data) >= 60:
+                validation_mape = self._run_walk_forward_validation(
+                    prepared_data, selected_model, horizon
+                )
 
             # Fit model with error handling
             try:
@@ -572,7 +667,13 @@ class ForecastRouter:
                 fallback_model = self._get_fallback_model(selected_model)
                 logger.info(f"Trying fallback model: {fallback_model}")
                 model_class = self.model_registry[fallback_model]
-                model = model_class(**self._get_model_defaults(fallback_model))
+                fallback_config = self._get_model_defaults(fallback_model)
+                if fallback_model == "lstm":
+                    fallback_config["input_dim"] = (
+                        prepared_data.shape[1] if hasattr(prepared_data, "shape") else 1
+                    )
+                    fallback_config["output_dim"] = 1
+                model = model_class(fallback_config)
                 model.fit(prepared_data)
                 selected_model = fallback_model
 
@@ -585,7 +686,11 @@ class ForecastRouter:
                     )
                 elif hasattr(model, "forecast"):
                     # Common signature: forecast(data, horizon=...)
-                    result = model.forecast(prepared_data, horizon=horizon)
+                    # Some decorator/caching wrappers are picky about kwargs; try kwargs then positional.
+                    try:
+                        result = model.forecast(prepared_data, horizon=horizon)
+                    except TypeError:
+                        result = model.forecast(prepared_data, horizon)
                 elif hasattr(model, "predict"):
                     # Some models expose only predict(data) → array
                     preds = model.predict(prepared_data)
@@ -602,19 +707,55 @@ class ForecastRouter:
                 else:
                     forecast_values = result
 
-                # Ensure we have a 1D numpy array of floats in price space
+                # Ensure we have a 1D numpy array of floats; denormalize from normalized price space
                 if forecast_values is None:
                     raise ValueError("Model returned no forecast values")
                 forecast_array = np.asarray(forecast_values, dtype="float64").ravel()
                 if forecast_array.size == 0:
                     raise ValueError("Model returned empty forecast array")
+                last_price = getattr(self, "_last_price_used", 1.0)
+                # Denormalize exactly once unless model explicitly says it already returned raw prices
+                already_denormalized = False
+                if isinstance(result, dict):
+                    already_denormalized = bool(
+                        result.get("denormalized", False) or result.get("already_denormalized", False)
+                    )
+                if (not already_denormalized) and last_price and last_price != 1.0:
+                    forecast_array = forecast_array * last_price
 
                 logger.info(f"Successfully generated forecast with {selected_model}")
             except Exception as e:
                 logger.error(f"Failed to generate forecast with {selected_model}: {e}")
-                # Return simple forecast as fallback
+                # Return simple forecast as fallback (in normalized space; denorm once)
                 forecast_array = self._generate_simple_forecast(prepared_data, horizon)
+                lp = getattr(self, "_last_price_used", 1.0)
+                if lp and lp != 1.0:
+                    forecast_array = np.asarray(forecast_array, dtype="float64") * lp
                 result = {"forecast": forecast_array}
+
+            # In-sample MAPE and poor-fit warning
+            warnings_list = list(self._get_warnings(data, selected_model))
+            in_sample_mape = self._in_sample_mape(model, prepared_data, selected_model)
+            if in_sample_mape is not None and in_sample_mape > 15.0:
+                msg = (
+                    f"Model {selected_model} has poor in-sample fit (MAPE={in_sample_mape:.1f}%). "
+                    "Consider more training data or different hyperparameters."
+                )
+                logger.warning(msg)
+                warnings_list.append(msg)
+
+            last_actual_price = getattr(self, "_last_price_used", 1.0)
+            # Confidence label: Low = MAPE < 5%, Medium = 5-10%, High = > 10%
+            vmape = validation_mape if np.isfinite(validation_mape) else None
+            if vmape is not None:
+                if vmape < 5.0:
+                    confidence_label = "Low"
+                elif vmape < 10.0:
+                    confidence_label = "Medium"
+                else:
+                    confidence_label = "High"
+            else:
+                confidence_label = "Unknown"
 
             # Log performance
             self._log_performance(selected_model, forecast_array, data)
@@ -624,7 +765,11 @@ class ForecastRouter:
                 "forecast": forecast_array,
                 "confidence": self._get_confidence(model, selected_model),
                 "metadata": self._get_metadata(model, selected_model),
-                "warnings": self._get_warnings(data, selected_model),
+                "warnings": warnings_list,
+                "validation_mape": validation_mape if np.isfinite(validation_mape) else None,
+                "in_sample_mape": in_sample_mape,
+                "last_actual_price": last_actual_price,
+                "confidence_label": confidence_label,
             }
 
         except (ValueError, TypeError, AttributeError) as e:
@@ -637,3 +782,84 @@ class ForecastRouter:
             # Return fallback result for unexpected errors
             fallback_result = self._get_fallback_result(data, horizon)
             return fallback_result
+
+    def select_best_model(
+        self,
+        data: pd.DataFrame,
+        horizon: int,
+        symbol: Optional[str] = None,
+    ) -> Tuple[str, Dict[str, Any]]:
+        """
+        Train each available model on first 80% of data, evaluate on last 20%.
+        Return the model name with lowest validation MAPE and a table of all scores.
+        Cache result in MemoryStore with key "best_model_{symbol}" when symbol is provided.
+        """
+        if data is None or data.empty or len(data) < 60:
+            return "arima", {"scores": [], "best": "arima", "reason": "Insufficient data"}
+        prepared_data = self._prepare_data_safely(data)
+        n = len(prepared_data)
+        train_size = int(0.8 * n)
+        val_size = n - train_size
+        if val_size < 5:
+            return "arima", {"scores": [], "best": "arima", "reason": "Validation split too small"}
+        train_df = prepared_data.iloc[:train_size]
+        val_df = prepared_data.iloc[train_size:]
+        close_col = "close" if "close" in prepared_data.columns else prepared_data.columns[0]
+        actual_val = val_df[close_col].values
+
+        scores: List[Dict[str, Any]] = []
+        best_name = "arima"
+        best_mape = float("inf")
+
+        for model_name in list(self.model_registry.keys()):
+            if model_name == "base":
+                continue
+            try:
+                model_class = self.model_registry[model_name]
+                config = self._get_model_defaults(model_name)
+                if model_name == "lstm":
+                    config["input_dim"] = train_df.shape[1] if hasattr(train_df, "shape") else 1
+                    config["output_dim"] = 1
+                model = model_class(config)
+                if model_name == "lstm":
+                    model.train_model(
+                        train_df, train_df[close_col],
+                        epochs=config.get("epochs", 30), batch_size=32
+                    )
+                else:
+                    model.fit(train_df)
+                if hasattr(model, "forecast"):
+                    fc = model.forecast(train_df, horizon=val_size)
+                else:
+                    fc = model.predict(val_df) if hasattr(model, "predict") else None
+                if fc is None:
+                    scores.append({"model": model_name, "validation_mape": None, "error": "No forecast"})
+                    continue
+                # Normalize dict outputs from models (TCN/Ridge/CatBoost/etc.)
+                if isinstance(fc, dict):
+                    raw_vals = (
+                        fc.get("predictions")
+                        or fc.get("forecast")
+                        or fc.get("values")
+                        or fc.get("forecast_values")
+                    )
+                else:
+                    raw_vals = fc
+                pred = np.asarray(raw_vals, dtype="float64").ravel()[:val_size]
+                mape_val = self._compute_mape(actual_val[: len(pred)], pred)
+                scores.append({"model": model_name, "validation_mape": round(mape_val, 2)})
+                if np.isfinite(mape_val) and mape_val < best_mape:
+                    best_mape = mape_val
+                    best_name = model_name
+            except Exception as e:
+                logger.debug("select_best_model %s failed: %s", model_name, e)
+                scores.append({"model": model_name, "validation_mape": None, "error": str(e)})
+
+        result = {"scores": scores, "best": best_name, "validation_mape": best_mape if np.isfinite(best_mape) else None}
+        if symbol:
+            try:
+                from trading.memory import get_memory_store
+                get_memory_store().upsert_preference(f"best_model_{symbol}", {"model": best_name, "validation_mape": result["validation_mape"], "scores": scores})
+            except Exception as e:
+                logger.debug("Could not cache best model: %s", e)
+        return best_name, result

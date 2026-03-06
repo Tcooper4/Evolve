@@ -27,17 +27,62 @@ class HybridModel:
     ):
         """
         Args:
-            model_dict: Dictionary of model_name: model_instance
+            model_dict: Dictionary of model_name: model_instance, OR a config dict with "models" key (list of model configs).
             weight_file: Path to save/load ensemble weights
             perf_file: Path to save/load model performance
         """
-        self.models = model_dict
+        # Log raw config keys to debug mis-configurations (e.g. stray 'target_column')
+        try:
+            logger.info("HybridModel raw config keys: %s", list(model_dict.keys()))
+        except Exception:
+            pass
+
+        # If passed a config dict with a "models" key, interpret it explicitly.
+        self.models = {}
+        try:
+            from trading.models.model_registry import get_registry
+            registry = get_registry()
+        except Exception as e:
+            logger.warning("HybridModel: could not access model registry: %s", e)
+            registry = None
+
+        if isinstance(model_dict, dict) and "models" in model_dict:
+            models_cfg = model_dict.get("models")
+            # Case 1: list of model configs / names
+            if isinstance(models_cfg, list) and registry is not None:
+                for cfg in models_cfg:
+                    name = cfg.get("name") if isinstance(cfg, dict) else str(cfg)
+                    if not name:
+                        continue
+                    model_class = registry.get(name)
+                    if model_class is None:
+                        logger.warning(
+                            "HybridModel: unknown model '%s', skipping", name
+                        )
+                        continue
+                    try:
+                        init_cfg = cfg if isinstance(cfg, dict) else {}
+                        self.models[name] = model_class(init_cfg)
+                    except Exception as e:
+                        logger.warning(
+                            "HybridModel: failed to create '%s': %s", name, e
+                        )
+            # Case 2: already-constructed dict of name -> instance
+            elif isinstance(models_cfg, dict):
+                self.models = dict(models_cfg)
+            else:
+                logger.warning(
+                    "HybridModel: unsupported 'models' config type (%s); expected list or dict",
+                    type(models_cfg).__name__,
+                )
+        else:
+            # Backward-compat: treat incoming dict as {name: instance}
+            self.models = dict(model_dict) if isinstance(model_dict, dict) else {}
         self.weight_file = weight_file
         self.perf_file = perf_file
-        self.weights = {name: 1.0 / len(model_dict) for name in model_dict}
-        self.performance = {
-            name: [] for name in model_dict
-        }  # List of recent performance metrics
+        n = len(self.models)
+        self.weights = {name: 1.0 / n for name in self.models} if n else {}
+        self.performance = {name: [] for name in self.models}
         self.scoring_config = {
             "method": "risk_aware",  # "risk_aware", "weighted_average", "ahp", "composite"
             "weighting_metric": "sharpe",  # "sharpe", "drawdown", "mse"
@@ -60,28 +105,32 @@ class HybridModel:
     def fit(self, data: pd.DataFrame, window: int = 50):
         """Fit all models and update performance tracking."""
         for name, model in self.models.items():
-            # Ensure performance slot exists even if loaded state lacked this key
+            if not callable(getattr(model, "fit", None)):
+                logger.warning("HybridModel: skipping '%s' (not a model instance)", name)
+                continue
             if name not in self.performance:
                 self.performance[name] = []
             try:
                 model.fit(data)
 
-                # Prefer model-specific forecast API where available
+                # Prefer model-specific forecast API where available (use horizon=7 for perf eval)
                 preds: np.ndarray
+                horizon = 7
                 if hasattr(model, "forecast"):
-                    # Use close/Close series when forecasting univariate prices
                     if "close" in data.columns:
                         series = data["close"]
                     elif "Close" in data.columns:
                         series = data["Close"]
                     else:
-                        # Fallback: first numeric column
                         num_cols = data.select_dtypes(include=[np.number]).columns
                         if not len(num_cols):
                             raise ValueError("No numeric columns available for hybrid forecasting")
                         series = data[num_cols[0]]
-
-                    res = model.forecast(series, horizon=len(series))
+                    # XGBoostModel.forecast(data, horizon); ARIMAModel.forecast(series, horizon)
+                    try:
+                        res = model.forecast(data, horizon=horizon)
+                    except TypeError:
+                        res = model.forecast(series, horizon=horizon)
                     if isinstance(res, dict):
                         raw = (
                             res.get("forecast")
@@ -674,10 +723,34 @@ class HybridModel:
     def predict(self, data: pd.DataFrame) -> np.ndarray:
         """Weighted ensemble prediction with fallback for None/mismatched forecasts."""
         valid_preds = []
+        if "close" in data.columns:
+            series = data["close"]
+        elif "Close" in data.columns:
+            series = data["Close"]
+        else:
+            series = data.iloc[:, 0] if len(data.columns) else pd.Series(dtype=float)
 
         for name, model in self.models.items():
             try:
-                pred = model.predict(data)
+                if not callable(getattr(model, "predict", None)):
+                    logger.warning("HybridModel: skipping '%s' (no predict)", name)
+                    continue
+                try:
+                    pred = model.predict(data)
+                except TypeError:
+                    # ARIMAModel.predict(steps, confidence_level) not predict(data); use forecast
+                    if hasattr(model, "forecast") and callable(getattr(model, "forecast")):
+                        try:
+                            res = model.forecast(data, horizon=min(30, len(data)))
+                        except TypeError:
+                            res = model.forecast(series, horizon=min(30, len(data)))
+                        if isinstance(res, dict):
+                            pred = res.get("forecast") or res.get("predictions") or res.get("values")
+                        else:
+                            pred = res
+                        pred = np.asarray(pred, dtype="float64").ravel()
+                    else:
+                        raise
 
                 # Validate prediction
                 if pred is None:

@@ -30,23 +30,35 @@ def render_page_assistant(page_name: str) -> None:
     allow_suggestions_key = f"{prefix}_allow_suggestions"
     clear_input_key = f"{prefix}_clear_input"
 
-    if clear_input_key in st.session_state and st.session_state[clear_input_key]:
-        st.session_state[input_key] = ""
-        del st.session_state[clear_input_key]
-    if history_key not in st.session_state:
-        st.session_state[history_key] = []
-    if allow_suggestions_key not in st.session_state:
-        st.session_state[allow_suggestions_key] = False
-    if input_key not in st.session_state:
-        st.session_state[input_key] = ""
+    try:
+        if clear_input_key in st.session_state and st.session_state.get(clear_input_key):
+            st.session_state[input_key] = ""
+            del st.session_state[clear_input_key]
+    except Exception:
+        pass
+    try:
+        if history_key not in st.session_state:
+            st.session_state[history_key] = []
+    except Exception:
+        pass
+    try:
+        if allow_suggestions_key not in st.session_state:
+            st.session_state[allow_suggestions_key] = False
+    except Exception:
+        pass
+    try:
+        if input_key not in st.session_state:
+            st.session_state[input_key] = ""
+    except Exception:
+        pass
 
-    # Render in sidebar: expander at bottom
+    # Render in sidebar: expander at bottom (use .get to avoid KeyError when run without streamlit run)
     with st.sidebar:
         with st.expander("💬 Page Assistant", expanded=True):
             st.caption(f"Context: **{page_name}**")
 
             # Conversation history (this page session)
-            history = st.session_state[history_key]
+            history = st.session_state.get(history_key, [])
             for msg in history:
                 if msg.get("role") == "user":
                     st.markdown(f"**You:** {msg.get('content', '')}")

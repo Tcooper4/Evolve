@@ -82,6 +82,20 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
+# Per-user onboarding: init DB, check keys; inject into env if complete
+from config.user_store import init_user_db, load_user_keys
+from components.onboarding import check_onboarding
+
+init_user_db()
+session_id = check_onboarding()
+if session_id:
+    user_keys = load_user_keys(session_id)
+    for key, value in user_keys.items():
+        if value:
+            os.environ[key] = value
+else:
+    st.stop()
+
 # Sidebar branding
 with st.sidebar:
     st.markdown("## 🚀 Evolve AI")

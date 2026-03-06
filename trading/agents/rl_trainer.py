@@ -23,7 +23,9 @@ try:
     GYMNASIUM_AVAILABLE = True
 except ImportError:
     GYMNASIUM_AVAILABLE = False
-    logging.warning("Gymnasium not available. Install with: pip install gymnasium")
+    logging.warning(
+        "Reinforcement learning disabled (pip install gymnasium stable-baselines3 to enable)"
+    )
 
 try:
     from stable_baselines3 import A2C, PPO
@@ -33,9 +35,10 @@ try:
     STABLE_BASELINES3_AVAILABLE = True
 except ImportError:
     STABLE_BASELINES3_AVAILABLE = False
-    logging.warning(
-        "Stable-Baselines3 not available. Install with: pip install stable-baselines3"
-    )
+    if GYMNASIUM_AVAILABLE:
+        logging.warning(
+            "Reinforcement learning disabled (pip install gymnasium stable-baselines3 to enable)"
+        )
 
 from trading.utils.logging_utils import setup_logger
 

@@ -352,6 +352,8 @@ def create_forecast_table(forecast_data: Dict[str, Any]) -> Dict[str, Any]:
 
         # Format numbers
         for col in ["Forecast", "Lower Bound", "Upper Bound"]:
+            # Avoid NoneType arithmetic during rounding/formatting
+            df[col] = pd.to_numeric(df[col], errors="coerce")
             df[col] = df[col].round(2)
 
         # Display table
@@ -456,7 +458,7 @@ def render_forecast_results(
         from .config.registry import ModelConfig
         model_name = forecast.get('model_name', 'Unknown')
         feature_cols = forecast.get('feature_columns', []) or ['close']
-        horizon = forecast.get('horizon', len(forecast_values) if isinstance(forecast_values, (list, np.ndarray)) else None)
+        horizon = forecast.get('horizon', len(forecast_array) if forecast_array.size > 0 else None)
 
         model_config = ModelConfig(
             name=model_name,
@@ -485,11 +487,12 @@ def render_forecast_results(
         
         # Show table
         if show_table:
+            n = len(forecast_array)
             forecast_table_data = {
-                'forecast_dates': forecast_dates,
-                'forecast': forecast_values,
-                'lower_bound': lower_bound if lower_bound is not None else [None] * len(forecast_values),
-                'upper_bound': upper_bound if upper_bound is not None else [None] * len(forecast_values)
+                'forecast_dates': forecast_dates[:n] if forecast_dates else [],
+                'forecast': forecast_array.tolist() if hasattr(forecast_array, 'tolist') else list(forecast_array),
+                'lower_bound': lower_bound if lower_bound is not None else [None] * n,
+                'upper_bound': upper_bound if upper_bound is not None else [None] * n
             }
             create_forecast_table(forecast_table_data)
     except Exception as e:
