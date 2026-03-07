@@ -20,12 +20,15 @@ from trading.portfolio.portfolio_manager import PortfolioManager
 
 
 def setup_logging() -> None:
-    """Setup logging configuration."""
+    """Setup logging configuration (create log dir at runtime for Community Cloud)."""
+    import os
+    _log_dir = os.path.join(os.path.dirname(__file__), "logs")
+    os.makedirs(_log_dir, exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
-            logging.FileHandler("trading/agents/logs/execution_agent.log"),
+            logging.FileHandler(os.path.join(_log_dir, "execution_agent.log")),
             logging.StreamHandler(sys.stdout),
         ],
     )

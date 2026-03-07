@@ -1,19 +1,22 @@
 """Risk-adjusted strategy module for dynamic position sizing."""
 
 import logging
+import os
 from dataclasses import dataclass
 from typing import Dict, Optional
 
 import pandas as pd
 
-from trading.risk_analyzer import RiskAnalyzer
+from trading.risk.risk_analyzer import RiskAnalyzer
 
-# Configure logging
+# Configure logging (create log dir at runtime for Community Cloud)
+_risk_log_dir = os.path.join(os.path.dirname(__file__), "logs")
+os.makedirs(_risk_log_dir, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("trading/risk/logs/risk_strategy.log"),
+        logging.FileHandler(os.path.join(_risk_log_dir, "risk_strategy.log")),
         logging.StreamHandler(),
     ],
 )

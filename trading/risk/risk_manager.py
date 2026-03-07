@@ -379,12 +379,15 @@ class RiskManager:
                 os.makedirs("trading/risk/logs", exist_ok=True)
             except Exception as e:
                 self.logger.error(f"Failed to create trading/risk/logs: {e}")
+            _risk_dir = os.path.dirname(__file__)
+            _log_dir = os.path.join(_risk_dir, "logs")
             try:
-                os.makedirs("trading/risk/results", exist_ok=True)
+                os.makedirs(os.path.join(_risk_dir, "results"), exist_ok=True)
+                os.makedirs(_log_dir, exist_ok=True)
             except Exception as e:
-                self.logger.error(f"Failed to create trading/risk/results: {e}")
+                self.logger.error(f"Failed to create trading/risk dirs: {e}")
 
-            debug_handler = logging.FileHandler("trading/risk/logs/risk_debug.log")
+            debug_handler = logging.FileHandler(os.path.join(_log_dir, "risk_debug.log"))
             debug_handler.setLevel(logging.DEBUG)
             debug_formatter = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

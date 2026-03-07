@@ -23,11 +23,12 @@ from trading.utils.safe_math import safe_drawdown, safe_divide
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# Add file handler for debug logs
+# Add file handler for debug logs (create log dir at runtime for Community Cloud)
+_opt_log_dir = os.path.join(os.path.dirname(__file__), "logs")
 try:
-    os.makedirs("trading/optimization/logs", exist_ok=True)
+    os.makedirs(_opt_log_dir, exist_ok=True)
     debug_handler = logging.FileHandler(
-        "trading/optimization/logs/optimization_debug.log"
+        os.path.join(_opt_log_dir, "optimization_debug.log")
     )
     debug_handler.setLevel(logging.DEBUG)
     debug_formatter = logging.Formatter(

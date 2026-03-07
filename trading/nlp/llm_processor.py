@@ -11,8 +11,10 @@ from openai import OpenAI
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# Add file handler for debug logs
-debug_handler = logging.FileHandler("trading/nlp/logs/nlp_debug.log")
+# Add file handler for debug logs (create log dir at runtime for Community Cloud)
+_log_dir = os.path.join(os.path.dirname(__file__), "logs")
+os.makedirs(_log_dir, exist_ok=True)
+debug_handler = logging.FileHandler(os.path.join(_log_dir, "nlp_debug.log"))
 debug_handler.setLevel(logging.DEBUG)
 debug_formatter = logging.Formatter(
     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

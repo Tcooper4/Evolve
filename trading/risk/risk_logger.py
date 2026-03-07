@@ -11,12 +11,14 @@ import pandas as pd
 from .risk_metrics import calculate_advanced_metrics, calculate_rolling_metrics
 logger = logging.getLogger(__name__)
 
-# Configure logging
+# Configure logging (create log dir at runtime for Community Cloud)
+_risk_log_dir = os.path.join(os.path.dirname(__file__), "logs")
+os.makedirs(_risk_log_dir, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("trading/risk/logs/risk_logger.log"),
+        logging.FileHandler(os.path.join(_risk_log_dir, "risk_logger.log")),
         logging.StreamHandler(),
     ],
 )

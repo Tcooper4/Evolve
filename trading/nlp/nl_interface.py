@@ -32,14 +32,15 @@ class NLResponse:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# Create logs directory if it doesn't exist
+# Create logs directory at runtime (for Community Cloud)
+_log_dir = os.path.join(os.path.dirname(__file__), "logs")
 try:
-    os.makedirs("trading/nlp/logs", exist_ok=True)
+    os.makedirs(_log_dir, exist_ok=True)
 except Exception as e:
-    logger.error(f"Failed to create trading/nlp/logs: {e}")
+    logger.error(f"Failed to create nlp logs dir: {e}")
 
 # Add file handler for debug logs
-debug_handler = logging.FileHandler("trading/nlp/logs/nlp_debug.log")
+debug_handler = logging.FileHandler(os.path.join(_log_dir, "nlp_debug.log"))
 debug_handler.setLevel(logging.DEBUG)
 debug_formatter = logging.Formatter(
     "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
