@@ -11,14 +11,15 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Try to import sentence_transformers
+# Try to import sentence_transformers (optional; guarded for version conflicts)
 try:
     from sentence_transformers import SentenceTransformer
 
     SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
+except Exception as e:
     SentenceTransformer = None
     SENTENCE_TRANSFORMERS_AVAILABLE = False
+    logger.warning("Semantic matching disabled: %s", e)
 
 # Try to import scikit-learn
 try:
@@ -91,7 +92,7 @@ class SentimentBridge:
 
         # Initialize embedding model if available
         self.embedding_model = None
-        if self.enable_soft_matching:
+        if self.enable_soft_matching and SENTENCE_TRANSFORMERS_AVAILABLE and SentenceTransformer is not None:
             try:
                 self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
                 logger.info("Embedding model loaded for soft-matching")

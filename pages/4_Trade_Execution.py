@@ -90,6 +90,8 @@ try:
         st.session_state.active_orders = []
     if 'order_history' not in st.session_state:
         st.session_state.order_history = []
+    if 'trade_page_loaded' not in st.session_state:
+        st.session_state.trade_page_loaded = False
 
     @st.cache_data(ttl=60)  # Cache for 60 seconds
     def get_current_price(ticker: str) -> float:
@@ -112,9 +114,24 @@ try:
             st.warning(f"Could not fetch price for {ticker}: {e}")
             return None
 
+    def _current_price(ticker: str):
+        """Return current price only when user has clicked Connect; avoids slow fetch on every load."""
+        if not st.session_state.get("trade_page_loaded") or not (ticker or "").strip():
+            return None
+        return get_current_price((ticker or "").strip())
+
     # Main page title
     st.title("💰 Trade Execution & Order Management")
     st.markdown("Execute trades, manage orders, and monitor execution quality")
+
+    # Connect / Load data — fetch prices only after user requests it so page renders instantly
+    if not st.session_state.get("trade_page_loaded"):
+        if st.button("🔌 Connect / Load market data", type="primary", key="trade_connect"):
+            st.session_state.trade_page_loaded = True
+            st.rerun()
+        st.caption("Click to load live prices and enable order defaults. Page will not fetch data until you connect.")
+    else:
+        st.caption("✅ Market data connected. Prices will refresh from cache (60s TTL).")
 
     # Paper/Live trading toggle at top
     col_mode1, col_mode2, col_mode3 = st.columns([1, 1, 2])
@@ -211,7 +228,7 @@ try:
         limit_price = None
         if OrderType is not None and order_type == OrderType.LIMIT:
             # Get current price for default value
-            default_price = get_current_price(symbol) if symbol else None
+            default_price = _current_price(symbol) if symbol else None
             limit_price = st.number_input(
                 "Limit Price ($)",
                 min_value=0.01,
@@ -256,8 +273,8 @@ try:
             )
     
         with col_calc2:
-            # Fetch real-time price
-            fetched_price = get_current_price(symbol) if symbol else None
+            # Fetch real-time price (only when connected)
+            fetched_price = _current_price(symbol) if symbol else None
             current_price = limit_price or fetched_price
             if not current_price:
                 st.warning(f"⚠️ Cannot fetch price for {symbol}. Please enter manually.")
@@ -325,7 +342,7 @@ try:
                     risk_checks.append("✅ Limit price valid")
         
             # Order value check
-            fetched_price = get_current_price(symbol) if symbol else None
+            fetched_price = _current_price(symbol) if symbol else None
             estimated_price = limit_price or fetched_price or 100.0
             order_value = quantity * estimated_price
         
@@ -364,7 +381,7 @@ try:
         st.subheader("📋 Order Summary")
     
         if symbol and quantity > 0:
-            fetched_price = get_current_price(symbol) if symbol else None
+            fetched_price = _current_price(symbol) if symbol else None
             estimated_price = limit_price or fetched_price or 100.0
             order_value = quantity * estimated_price
             estimated_commission = order_value * 0.001  # 0.1% commission estimate
@@ -500,7 +517,7 @@ try:
                                         portfolio_value = 10000  # Placeholder - would need portfolio manager
                                     
                                         # Get execution price
-                                        execution_price = limit_price if limit_price else get_current_price(symbol) or 0.0
+                                        execution_price = limit_price if limit_price else _current_price(symbol) or 0.0
                                     
                                         trade_commentary = commentary_service.generate_trade_commentary(
                                             symbol=symbol,
@@ -525,7 +542,7 @@ try:
                                         ws_client = st.session_state.ws_client
                                     
                                         # Get execution price (use limit price or current market price)
-                                        execution_price = limit_price if limit_price else get_current_price(symbol) or 0.0
+                                        execution_price = limit_price if limit_price else _current_price(symbol) or 0.0
                                     
                                         # Send trade execution event
                                         async def send_trade_update():
@@ -735,11 +752,11 @@ try:
             exec_stop_price = None
         
             if exec_order_type in ["Limit", "Stop-Limit"]:
-                default_limit = get_current_price(exec_symbol) if exec_symbol else 100.0
+                default_limit = _current_price(exec_symbol) if exec_symbol else 100.0
                 exec_limit_price = st.number_input("Limit Price", min_value=0.01, value=float(default_limit) if default_limit else 100.0, step=0.01, key="exec_limit_price")
         
             if exec_order_type in ["Stop", "Stop-Limit"]:
-                default_stop = get_current_price(exec_symbol) if exec_symbol else 100.0
+                default_stop = _current_price(exec_symbol) if exec_symbol else 100.0
                 exec_stop_price = st.number_input("Stop Price", min_value=0.01, value=float(default_stop) if default_stop else 100.0, step=0.01, key="exec_stop_price")
     
         # Execute with advanced engine
@@ -874,7 +891,7 @@ try:
             bracket_entry_price = None
             if bracket_entry_type == "Limit":
                 # Get current price for default value
-                default_price = get_current_price(bracket_symbol) or 150.0
+                default_price = _current_price(bracket_symbol) or 150.0
                 bracket_entry_price = st.number_input("Entry Limit Price ($)", min_value=0.01, value=float(default_price), step=0.01, key="bracket_entry_price")
     
         with col_b2:
@@ -907,7 +924,7 @@ try:
             if bracket_symbol and bracket_quantity > 0:
                 try:
                     # Calculate TP/SL prices if using percentages
-                    fetched_price = get_current_price(bracket_symbol) if bracket_symbol else None
+                    fetched_price = _current_price(bracket_symbol) if bracket_symbol else None
                     entry_price = bracket_entry_price or fetched_price or 100.0
                 
                     if use_take_profit and take_profit_type == "Percentage":
@@ -961,7 +978,7 @@ try:
             trailing_side = st.radio("Side", ["Buy", "Sell"], horizontal=True, key="trailing_side")
             trailing_quantity = st.number_input("Quantity", min_value=1, value=100, key="trailing_quantity")
             # Get current price for default value
-            default_trailing_price = get_current_price(trailing_symbol) if trailing_symbol else None
+            default_trailing_price = _current_price(trailing_symbol) if trailing_symbol else None
             trailing_entry_price = st.number_input("Entry Price ($)", min_value=0.01, value=float(default_trailing_price) if default_trailing_price else 100.0, step=0.01, key="trailing_entry")
     
         with col_t2:
@@ -1013,7 +1030,7 @@ try:
             if condition_type == "Price":
                 condition_operator = st.selectbox("Operator", [">", "<", ">=", "<=", "=="], key="cond_op_price")
                 # Get current price for default value
-                default_price = get_current_price(condition_symbol) or 150.0
+                default_price = _current_price(condition_symbol) or 150.0
                 condition_value = st.number_input("Price ($)", min_value=0.01, value=float(default_price), step=0.01, key="cond_price")
             elif condition_type == "Volume":
                 condition_operator = st.selectbox("Operator", [">", "<"], key="cond_op_vol")
@@ -1032,7 +1049,7 @@ try:
             action_price = None
             if action_order_type == "Limit":
                 # Get current price for default value
-                default_price = get_current_price(action_symbol) or 150.0
+                default_price = _current_price(action_symbol) or 150.0
                 action_price = st.number_input("Limit Price ($)", min_value=0.01, value=float(default_price), step=0.01, key="action_price")
     
         if st.button("🔀 Submit Conditional Order", type="primary", use_container_width=True, key="submit_conditional"):
@@ -1074,7 +1091,7 @@ try:
             oco_quantity1 = st.number_input("Quantity", min_value=1, value=100, key="oco_qty1")
             oco_type1 = st.selectbox("Order Type", ["Limit", "Stop"], key="oco_type1")
             # Get current price for default value
-            default_price = get_current_price(oco_symbol) or 150.0
+            default_price = _current_price(oco_symbol) or 150.0
             oco_price1 = st.number_input("Price ($)", min_value=0.01, value=float(default_price), step=0.01, key="oco_price1")
     
         with col_o2:
@@ -1128,7 +1145,7 @@ try:
                 leg_quantity = st.number_input("Quantity", min_value=1, value=100, key=f"leg_qty_{i}")
             with col_leg3:
                 # Get current price for default value
-                default_price = get_current_price(leg_symbol) or 150.0
+                default_price = _current_price(leg_symbol) or 150.0
                 leg_price = st.number_input("Price ($)", min_value=0.01, value=float(default_price), step=0.01, key=f"leg_price_{i}")
         
             legs.append({
@@ -1451,7 +1468,7 @@ try:
                 
                     if symbol and quantity > 0 and fill_price > 0:
                         # Get current price for the symbol
-                        current_price = get_current_price(symbol)
+                        current_price = _current_price(symbol)
                         if current_price:
                             # Calculate unrealized P&L
                             if side == 'buy':
@@ -1606,11 +1623,8 @@ try:
         )
         st.session_state.order_refresh_interval = refresh_interval
 
-    # Auto-refresh logic
-    if auto_refresh:
-        import time
-        time.sleep(st.session_state.order_refresh_interval)
-        st.rerun()
+    # No auto-refresh loop (time.sleep blocked the thread and caused permanent spinner).
+    # Use "Refresh Now" button above to refresh order status when needed.
 
     st.markdown("---")
 
@@ -1767,7 +1781,7 @@ try:
                     if isinstance(selected_order['price'], (int, float)) and selected_order['price'] > 0:
                         default_modify_price = float(selected_order['price'])
                     elif order_symbol:
-                        default_modify_price = get_current_price(order_symbol)
+                        default_modify_price = _current_price(order_symbol)
                 
                     new_price = st.number_input(
                         "New Price ($)",

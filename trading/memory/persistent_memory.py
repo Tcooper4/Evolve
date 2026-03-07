@@ -31,14 +31,18 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
-# Try to import vector store
+# Try to import vector store (faiss + sentence_transformers; optional)
 try:
     import faiss
     from sentence_transformers import SentenceTransformer
 
     VECTOR_STORE_AVAILABLE = True
-except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except Exception as e:
     VECTOR_STORE_AVAILABLE = False
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+    SentenceTransformer = None
+    logging.getLogger(__name__).warning("Semantic matching disabled: %s", e)
 
 logger = logging.getLogger(__name__)
 
@@ -375,8 +379,8 @@ class VectorMemoryStore:
             vector_dim: Dimension of vectors
             index_path: Path to store vector index
         """
-        if not VECTOR_STORE_AVAILABLE:
-            raise ImportError("Vector store not available")
+        if not VECTOR_STORE_AVAILABLE or SentenceTransformer is None:
+            raise ImportError("Vector store not available (requires faiss and sentence_transformers)")
 
         self.vector_dim = vector_dim
         self.index_path = Path(index_path)

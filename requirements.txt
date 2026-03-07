@@ -1,5 +1,6 @@
 # Core
 streamlit==1.31.1
+streamlit-autorefresh>=0.0.1
 python-dotenv==1.0.0
 PyYAML==6.0.2
 packaging==23.2
@@ -30,7 +31,7 @@ numba==0.61.2
 # LLM / AI
 openai==1.88.0
 anthropic==0.84.0
-transformers==4.36.2
+transformers==4.44.2
 tokenizers==0.15.2
 huggingface-hub==0.32.4
 safetensors==0.5.3
@@ -80,7 +81,7 @@ fredapi
 wbdata
 textblob
 praw
-sentence-transformers
+sentence-transformers==3.0.1
 tiktoken
 pyttsx3
 shap

@@ -18,14 +18,15 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from textstat import textstat
 
-# Try to import sentence_transformers
+# Try to import sentence_transformers (optional; guarded for version conflicts)
 try:
     from sentence_transformers import SentenceTransformer
 
     SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
+except Exception as e:
     SentenceTransformer = None
     SENTENCE_TRANSFORMERS_AVAILABLE = False
+    logging.getLogger(__name__).warning("Semantic matching disabled: %s", e)
 
 # Try to import scikit-learn
 try:
@@ -533,7 +534,7 @@ class SentimentProcessor:
     def _initialize_soft_matching(self):
         """Initialize soft-matching capabilities with embeddings."""
         try:
-            if not EMBEDDINGS_AVAILABLE:
+            if not EMBEDDINGS_AVAILABLE or not SENTENCE_TRANSFORMERS_AVAILABLE or SentenceTransformer is None:
                 logger.warning(
                     "Embedding libraries not available, soft-matching disabled"
                 )

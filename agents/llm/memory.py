@@ -9,7 +9,16 @@ from typing import Any, Dict, List, Optional, Union
 
 import faiss
 import numpy as np
-from sentence_transformers import SentenceTransformer
+
+# Optional: sentence_transformers for embeddings (guarded for version conflicts)
+try:
+    from sentence_transformers import SentenceTransformer
+
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except Exception as e:
+    SentenceTransformer = None
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+    logging.getLogger(__name__).warning("Semantic matching disabled: %s", e)
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +56,12 @@ class MemoryManager:
         self.storage_path = Path(storage_path)
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
-        self.embedding_model = SentenceTransformer(embedding_model)
+        if SENTENCE_TRANSFORMERS_AVAILABLE and SentenceTransformer is not None:
+            self.embedding_model = SentenceTransformer(embedding_model)
+        else:
+            self.embedding_model = None
+            logger.warning("sentence_transformers not available; memory embeddings disabled")
+
         self.max_memories = max_memories
         self.similarity_threshold = similarity_threshold
 
@@ -117,17 +131,19 @@ class MemoryManager:
             importance=importance,
         )
 
-        # Get embedding for the prompt
-        memory.embedding = self.embedding_model.encode([prompt])[0]
+        # Get embedding for the prompt (skip if embeddings unavailable)
+        if self.embedding_model is not None:
+            memory.embedding = self.embedding_model.encode([prompt])[0]
 
         # Add to memories
         self.memories.append(memory)
 
-        # Update FAISS index
-        if self.index is None:
-            self._rebuild_index()
-        else:
-            self.index.add(memory.embedding.reshape(1, -1).astype("float32"))
+        # Update FAISS index (only when embeddings available)
+        if memory.embedding is not None:
+            if self.index is None:
+                self._rebuild_index()
+            else:
+                self.index.add(memory.embedding.reshape(1, -1).astype("float32"))
 
         # Trim memories if needed
         if len(self.memories) > self.max_memories:
@@ -148,7 +164,7 @@ class MemoryManager:
         Returns:
             Dictionary with recalled memories or None if no matches
         """
-        if not self.memories or self.index is None:
+        if not self.memories or self.index is None or self.embedding_model is None:
             return None
 
         # Get embedding for the prompt

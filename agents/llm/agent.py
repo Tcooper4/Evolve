@@ -18,13 +18,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-# Import sentence transformers for semantic similarity
+# Import sentence transformers for semantic similarity (optional; guarded for version conflicts)
 try:
     from sentence_transformers import SentenceTransformer
 
     SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
+except Exception as e:
+    SentenceTransformer = None
     SENTENCE_TRANSFORMERS_AVAILABLE = False
+    logging.getLogger(__name__).warning("Semantic matching disabled: %s", e)
 
 # Import tiktoken for token counting
 try:
@@ -142,7 +144,7 @@ class PromptAgent:
         self.sentence_transformer = None
         self.example_embeddings = None
 
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
+        if SENTENCE_TRANSFORMERS_AVAILABLE and SentenceTransformer is not None:
             try:
                 self.sentence_transformer = SentenceTransformer("all-MiniLM-L6-v2")
                 if self.prompt_examples:

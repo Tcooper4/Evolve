@@ -1,4 +1,0 @@
-# Deploy / user persistence (per-user encrypted storage)
-# Install: pip install -r requirements_deploy.txt
-cryptography>=41.0.0
-streamlit>=1.28.0
