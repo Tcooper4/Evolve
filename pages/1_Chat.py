@@ -148,6 +148,24 @@ if prompt:
                     "action_data": None,
                 })
 
+# Live news for current chat symbol
+_chat_symbol = st.session_state.get("last_symbol_mentioned", "SPY")
+with st.expander(f"Live News: {_chat_symbol}", expanded=False):
+    try:
+        from trading.data.news_aggregator import get_news
+
+        _news = get_news(_chat_symbol, max_items=8)
+        for item in _news:
+            title = item.get("title", "")
+            url = item.get("url", "")
+            source = item.get("source", "")
+            st.markdown(f"**[{source}]** [{title}]({url})")
+            summary = item.get("summary")
+            if summary:
+                st.caption(summary[:150])
+            st.divider()
+    except Exception as e:
+        st.caption(f"News unavailable: {e}")
 with st.sidebar:
     # Multi-agent orchestration toggle
     agent_mode = st.toggle(

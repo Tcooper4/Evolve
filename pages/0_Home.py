@@ -25,6 +25,7 @@ from trading.analysis.market_monitor import scan_watchlist, DEFAULT_WATCHLIST
 from trading.analysis.event_news_fetcher import fetch_news_around_event
 from trading.analysis.news_ranker import rank_news_by_relevance
 from trading.analysis.chart_builder import build_event_chart
+from trading.data.earnings_calendar import get_upcoming_earnings
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +166,84 @@ if movers:
         with mcols[i]:
             icon = "🔴" if mover["change"] < 0 else "🟢"
             st.metric(f"{icon} {mover['symbol']}", f"${mover['price']:.2f}", f"{mover['change']:+.2f}%")
+
+    # Upcoming earnings for a core watchlist
+    try:
+        _watchlist = [
+            "AAPL",
+            "MSFT",
+            "NVDA",
+            "GOOGL",
+            "AMZN",
+            "META",
+            "TSLA",
+            "JPM",
+            "BAC",
+            "SPY",
+        ]
+        _upcoming = [
+            e
+            for sym in _watchlist
+            for e in [get_upcoming_earnings(sym, 14)]
+            if e.get("is_within_window")
+        ]
+        _upcoming.sort(key=lambda x: x.get("days_until", 99))
+        if _upcoming:
+            with st.expander(
+                f"Upcoming Earnings — next 14 days ({len(_upcoming)} stocks)",
+                expanded=True,
+            ):
+                for _e in _upcoming[:6]:
+                    c1, c2, c3, c4 = st.columns([1, 2, 1, 2])
+                    c1.write(f"**{_e['symbol']}**")
+                    c2.write(_e["next_earnings_date"])
+                    c3.write(f"{_e['days_until']}d")
+                    if _e.get("eps_estimate"):
+                        try:
+                            c4.write(f"EPS est ${_e['eps_estimate']:.2f}")
+                        except Exception:
+                            c4.write("EPS est —")
+                    else:
+                        c4.write("—")
+    except Exception:
+        pass
+
+# ── NEWS-LINKED CANDLESTICK CHART ──────────────────────────────────────────
 st.markdown("---")
+st.subheader("Live Market Chart")
+
+# Chart controls
+chart_col1, chart_col2, chart_col3, chart_col4 = st.columns([2, 2, 2, 1])
+with chart_col1:
+    chart_symbol = st.selectbox(
+        "Symbol",
+        ["AAPL", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "SPY", "QQQ", "BTC-USD"],
+        key="home_chart_symbol",
+    )
+with chart_col2:
+    chart_period = st.selectbox(
+        "Period",
+        ["1mo", "3mo", "6mo", "1y", "2y"],
+        index=1,
+        key="home_chart_period",
+    )
+with chart_col3:
+    chart_interval = st.selectbox(
+        "Interval",
+        ["1d", "1wk"],
+        key="home_chart_interval",
+    )
+with chart_col4:
+    show_news = st.toggle("News", value=True, key="home_chart_news_toggle")
+
+from components.news_candle_chart import render_news_candle_chart
+
+render_news_candle_chart(
+    symbol=chart_symbol,
+    period=chart_period,
+    interval=chart_interval,
+    show_annotations=show_news,
+)
 
 # Session state for live market monitor
 if "last_scan_time" not in st.session_state:
@@ -277,84 +355,7 @@ if should_scan:
 
 seconds_left = max(0, int(POLL_INTERVAL_SECONDS - time_since_scan))
 
-# Two columns: featured event (left 70%), live feed (right 30%)
-col_main, col_feed = st.columns([7, 3])
-with col_main:
-    if st.session_state.featured_event or st.session_state.selected_event:
-        event = st.session_state.selected_event or st.session_state.featured_event
-        symbol = event["symbol"]
-        direction_emoji = "🟢" if event["direction"] == "up" else "🔴"
-        st.markdown(
-            f"### {direction_emoji} {symbol} — {event['price_move_pct']:.1f}% move on {event['volume_ratio']:.1f}x volume"
-        )
-        if event.get("df") is not None:
-            fig = build_event_chart(event["df"], symbol, event["timestamp"])
-            st.plotly_chart(fig, use_container_width=True)
-        if event.get("news"):
-            st.markdown("#### 📰 Related News")
-            for i, article in enumerate(event["news"][:3]):
-                score = article.get("relevance_score", 0)
-                badge = "🟢" if score >= 4 else "🟡" if score >= 2 else "⚪"
-                st.markdown(f"{badge} **{article['title']}**")
-                st.caption(
-                    f"{article.get('source', {}).get('name', '')} · "
-                    f"{article.get('publishedAt', '')[:10]} · {article.get('relevance_reason', '')}"
-                )
-                if article.get("url"):
-                    st.markdown(f"[Read article →]({article['url']})")
-                if i < 2:
-                    st.divider()
-        if st.button("🤖 Explain this move", key=f"explain_{symbol}"):
-            headlines = "\n".join([f"- {a['title']}" for a in event.get("news", [])[:5]])
-            prompt = (
-                f"{symbol} moved {event['price_move_pct']:.1f}% "
-                f"{'up' if event['direction'] == 'up' else 'down'} on {event['volume_ratio']:.1f}x average volume "
-                f"at {event['timestamp']}. These news headlines were published around that time:\n{headlines}\n\n"
-                "Which headline most likely caused this move and why? Answer in 3 sentences."
-            )
-            with st.spinner("Analyzing..."):
-                try:
-                    from agents.llm.active_llm_calls import call_active_llm_simple
-                    explanation = call_active_llm_simple(prompt)
-                    st.info(explanation)
-                except Exception as e:
-                    st.error(f"Could not generate explanation: {e}")
-    else:
-        st.info(
-            "🔍 Monitoring markets... First scan runs on page load. "
-            "Significant volume spikes will appear here automatically."
-        )
-        st.caption(f"Watching: {', '.join(watchlist)}")
-
-with col_feed:
-    st.markdown("### 📡 Live Feed")
-    st.caption(
-        f"Next scan in {seconds_left}s · Last scan: "
-        f"{datetime.fromtimestamp(st.session_state.last_scan_time).strftime('%H:%M:%S') if st.session_state.last_scan_time else 'Never'}"
-    )
-    st.progress(1 - (seconds_left / POLL_INTERVAL_SECONDS))
-    if not st.session_state.event_feed:
-        st.caption("No significant events detected yet. Threshold: 3x volume + 2% move.")
-    for event in st.session_state.event_feed:
-        direction_emoji = "🟢" if event["direction"] == "up" else "🔴"
-        time_str = (
-            event["timestamp"].strftime("%H:%M")
-            if hasattr(event["timestamp"], "strftime") else str(event["timestamp"])
-        )
-        headline_short = (
-            (event.get("top_headline", "")[:60] + "...")
-            if len(event.get("top_headline", "")) > 60
-            else event.get("top_headline", "No news")
-        )
-        if st.button(
-            f"{direction_emoji} {event['symbol']} {event['price_move_pct']:.1f}% · {time_str}",
-            key=f"feed_{event['symbol']}_{time_str}",
-            use_container_width=True,
-        ):
-            st.session_state.selected_event = event
-            st.rerun()
-        st.caption(headline_short)
-        st.divider()
+    # Old live feed UI has been replaced by the news-linked chart above.
 
 st.markdown("---")
 

@@ -16,15 +16,18 @@ Features:
 """
 
 import logging
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 
+import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
+from plotly.subplots import make_subplots
+
 from ui.page_assistant import render_page_assistant
+from trading.data.earnings_calendar import get_upcoming_earnings
+from trading.data.insider_flow import get_insider_flow
 
 logger = logging.getLogger(__name__)
 
@@ -110,15 +113,18 @@ st.title("📈 Forecasting & Market Analysis")
 st.markdown("Advanced forecasting with AI model selection and comprehensive market analysis")
 
 # Create tabbed interface
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "🚀 Quick Forecast",
-    "⚙️ Advanced Forecasting",
-    "🤖 AI Model Selection",
-    "📊 Model Comparison",
-    "📈 Market Analysis",
-    "🔗 Multi-Asset (GNN)",
-    "🎲 Monte Carlo",
-])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_insider = st.tabs(
+    [
+        "🚀 Quick Forecast",
+        "⚙️ Advanced Forecasting",
+        "🤖 AI Model Selection",
+        "📊 Model Comparison",
+        "📈 Market Analysis",
+        "🔗 Multi-Asset (GNN)",
+        "🎲 Monte Carlo",
+        "🕵️ Insider Flow",
+    ]
+)
 
 # Quick Forecast: fast models only (ARIMA, XGBoost, Ridge). No walk-forward, no auto-select.
 QUICK_FORECAST_MODELS = ["ARIMA", "XGBoost", "Ridge"]
@@ -249,7 +255,25 @@ with tab1:
             except Exception as e:
                 st.error(f"Error loading data: {str(e)}")
                 st.info("Please check the ticker symbol and try again.")
-    
+
+    # Earnings proximity warning (forecasts may be less reliable near earnings)
+    try:
+        if st.session_state.get("forecast_data") is not None and symbol:
+            _e = get_upcoming_earnings(symbol)
+            if _e.get("is_within_window"):
+                _d, _dt = _e["days_until"], _e["next_earnings_date"]
+                _s = (
+                    f" | Last surprise: {_e['last_eps_surprise_pct']:+.1f}%"
+                    if _e.get("last_eps_surprise_pct") is not None
+                    else "  "
+                )
+                st.warning(
+                    f"Earnings in {_d} day{'s' if _d != 1 else ''} ({_dt}){_s} — "
+                    "forecasts may be less reliable near earnings."
+                )
+    except Exception:
+        pass
+
     # Display loaded data
     if st.session_state.get("forecast_data") is not None:
         data = st.session_state.get("forecast_data")
@@ -921,10 +945,92 @@ with tab1:
                     st.code(traceback.format_exc())
                     st.info("Try adjusting the date range or selecting a different model.")
             
+            # Display consensus forecast above individual model results
+            try:
+                hist_data_cons = st.session_state.get("forecast_data")
+                if hist_data_cons is not None and len(hist_data_cons) >= 2:
+                    from trading.models.forecast_router import ForecastRouter
+
+                    router = ForecastRouter()
+                    horizon = st.session_state.get("forecast_horizon", 7)
+                    consensus = router.get_consensus_forecast(
+                        hist_data_cons, horizon=horizon
+                    )
+                    if "error" not in consensus:
+                        st.subheader("Model Consensus")
+                        c1, c2, c3, c4 = st.columns(4)
+                        chg = consensus.get("consensus_7d_change_pct", 0.0)
+                        c1.metric(
+                            f"Consensus {horizon}d Target",
+                            f"${consensus['consensus_forecast'][-1]:.2f}",
+                            f"{chg:+.1f}%",
+                        )
+                        c2.metric("Direction", consensus.get("direction", "UNKNOWN"))
+                        c3.metric(
+                            "Model Agreement",
+                            f"{consensus.get('model_agreement', 0.0) * 100:.0f}%",
+                        )
+                        c4.metric("Conviction", consensus.get("conviction", "LOW"))
+
+                        days = list(range(1, horizon + 1))
+                        fig = go.Figure()
+                        fig.add_trace(
+                            go.Scatter(
+                                x=days,
+                                y=consensus["upper_bound"],
+                                fill=None,
+                                mode="lines",
+                                line_color="rgba(0,212,170,0.2)",
+                                showlegend=False,
+                            )
+                        )
+                        fig.add_trace(
+                            go.Scatter(
+                                x=days,
+                                y=consensus["lower_bound"],
+                                fill="tonexty",
+                                mode="lines",
+                                fillcolor="rgba(0,212,170,0.12)",
+                                line_color="rgba(0,212,170,0.2)",
+                                name="Uncertainty Band",
+                            )
+                        )
+                        fig.add_trace(
+                            go.Scatter(
+                                x=days,
+                                y=consensus["consensus_forecast"],
+                                mode="lines+markers",
+                                line=dict(color="#00D4AA", width=2.5),
+                                name="Consensus",
+                            )
+                        )
+                        fig.add_hline(
+                            y=consensus["last_price"],
+                            line_dash="dash",
+                            line_color="gray",
+                            annotation_text=f"Last ${consensus['last_price']:.2f}",
+                        )
+                        fig.update_layout(
+                            template="plotly_dark",
+                            title=f"{st.session_state.symbol} Consensus ({len(consensus.get('models_used', []))} models)",
+                            xaxis_title="Days Ahead",
+                            yaxis_title="Price ($)",
+                            height=350,
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                        st.caption(
+                            "Models: "
+                            + ", ".join(consensus.get("models_used") or [])
+                            + " | Failed: "
+                            + (", ".join(consensus.get("models_failed") or []) or "none")
+                        )
+            except Exception as e:
+                st.caption(f"Consensus unavailable: {e}")
+
             # Display forecast using UI components
             if st.session_state.get('current_forecast') is not None:
                 st.markdown(f"**Forecast using {st.session_state.current_model}**")
-                
+
                 try:
                     from trading.ui.forecast_components import render_forecast_results, render_confidence_metrics
                     
@@ -3335,6 +3441,49 @@ with tab7:
         st.error(f"Monte Carlo tab error: {e}")
         import traceback
         st.code(traceback.format_exc())
+
+with tab_insider:
+    try:
+        st.header("Insider Flow")
+        if st.session_state.get("forecast_data") is None or not st.session_state.get(
+            "symbol"
+        ):
+            st.info("Load data in the Quick Forecast tab to see insider activity.")
+        else:
+            symbol = st.session_state.get("symbol")
+            insider = get_insider_flow(symbol)
+
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Insider Buys (90d)", insider.get("buy_count", 0))
+            c2.metric("Insider Sells (90d)", insider.get("sell_count", 0))
+            color = {
+                "INSIDER_BUYING": "green",
+                "INSIDER_SELLING": "red",
+                "MIXED": "orange",
+            }.get(insider.get("signal"), "gray")
+            c3.markdown(
+                f"**Signal:** :{color}[{insider.get('signal', 'NO_ACTIVITY').replace('_', ' ').title()}]"
+            )
+
+            txns = insider.get("transactions", [])
+            if txns:
+                st.subheader(f"Recent Insider Transactions for {symbol}")
+                df_txn = pd.DataFrame(txns)[
+                    [
+                        "date",
+                        "insider",
+                        "title",
+                        "transaction_type",
+                        "shares",
+                        "value",
+                        "is_buy",
+                    ]
+                ]
+                st.dataframe(df_txn, use_container_width=True)
+            else:
+                st.info("No insider transactions found in the last 90 days.")
+    except Exception as e:
+        st.error(f"Insider Flow tab error: {e}")
 
 render_page_assistant("Forecasting")
 

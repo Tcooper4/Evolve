@@ -229,6 +229,63 @@ def run_admin_self_test() -> Dict[str, Dict[str, Any]]:
     return results
 
 
+with tab_data_mgmt:
+    st.subheader("Cache & Storage Management")
+    from trading.utils.data_manager import (
+        CACHE_CONFIG,
+        cache_stats,
+        cache_clear,
+        cleanup_disk_cache,
+        rotate_logs,
+        get_yf_request_count,
+    )
+
+    # Live stats
+    stats = cache_stats()
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Cache Entries (active)", stats.get("active", 0))
+    c2.metric("Cache Entries (expired)", stats.get("expired", 0))
+    c3.metric("Total Cache Entries", stats.get("total", 0))
+    c4.metric("yfinance calls/min", get_yf_request_count())
+
+    st.markdown("---")
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        if st.button("Clear In-Memory Cache", key="admin_clear_mem_cache"):
+            n = cache_clear()
+            st.success(f"Cleared {n} entries")
+    with col_b:
+        if st.button("Clean Disk Cache (>24h)", key="admin_clean_disk_cache"):
+            result = cleanup_disk_cache(24)
+            freed_mb = result["freed_bytes"] / 1024 / 1024
+            st.success(
+                f"Removed {result['removed']} files, freed {freed_mb:.1f} MB"
+            )
+    with col_c:
+        if st.button("Rotate Logs", key="admin_rotate_logs"):
+            result = rotate_logs()
+            st.success(
+                f"Rotated {result['rotated']} log files, freed {result['freed_bytes']/1024:.0f} KB"
+            )
+
+    st.markdown("Cache TTL Configuration")
+    ttl_data = [
+        {
+            "Data Type": k,
+            "TTL": (
+                f"{v[0]//60}m {v[0]%60}s"
+                if v[0] >= 60
+                else f"{v[0]}s"
+            ),
+            "Max Entries": v[1],
+        }
+        for k, v in CACHE_CONFIG.items()
+    ]
+    if ttl_data:
+        ttl_df = pd.DataFrame(ttl_data)
+        st.dataframe(ttl_df, use_container_width=True, hide_index=True)
+
+
 def _get_system_dashboard_data() -> Dict[str, Any]:
     """Return real data for System Dashboard: uptime, trades today, active strategies, active agents, recent events."""
     out = {
@@ -310,14 +367,17 @@ st.title("⚙️ System Administration")
 st.markdown("Manage system configuration, monitor health, and administer AI agents.")
 
 # Tab structure
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📊 System Dashboard",
-    "⚙️ Configuration",
-    "🤖 AI Agents",
-    "📈 System Monitoring",
-    "📜 Logs & Debugging",
-    "🔧 Maintenance"
-])
+tab1, tab2, tab3, tab4, tab5, tab6, tab_data_mgmt = st.tabs(
+    [
+        "📊 System Dashboard",
+        "⚙️ Configuration",
+        "🤖 AI Agents",
+        "📈 System Monitoring",
+        "📜 Logs & Debugging",
+        "🔧 Maintenance",
+        "🗄️ Data Management",
+    ]
+)
 
 # TAB 1: System Dashboard
 with tab1:
@@ -2802,15 +2862,23 @@ with tab4:
     st.header("📈 System Monitoring")
     st.markdown("Real-time system resource usage and service status monitoring.")
     
-    # Auto-refresh toggle
-    auto_refresh = st.checkbox("🔄 Auto-refresh (5 seconds)", value=False, help="Automatically refresh metrics every 5 seconds")
-    
+    # Auto-refresh toggle (timestamp-based, no sleep loop)
+    if "admin_metrics_last_rerun" not in st.session_state:
+        st.session_state.admin_metrics_last_rerun = 0.0
+    auto_refresh = st.checkbox(
+        "🔄 Auto-refresh (5 seconds)",
+        value=False,
+        help="Automatically refresh metrics every 5 seconds",
+    )
     if auto_refresh:
-        import time
-        last_rerun = st.session_state.get("admin_metrics_last_rerun", 0)
-        if time.time() - last_rerun >= 5:
-            st.session_state.admin_metrics_last_rerun = time.time()
+        import time as _time
+
+        elapsed = _time.time() - st.session_state.admin_metrics_last_rerun
+        if elapsed >= 5:
+            st.session_state.admin_metrics_last_rerun = _time.time()
             st.rerun()
+        else:
+            st.caption(f"Next refresh in {int(5 - elapsed)}s")
     
     # Resource Usage Section
     st.subheader("💻 Resource Usage")

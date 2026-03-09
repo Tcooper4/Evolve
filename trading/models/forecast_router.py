@@ -915,3 +915,95 @@ class ForecastRouter:
             except Exception as e:
                 logger.debug("Could not cache best model: %s", e)
         return best_name, result
+
+    def get_consensus_forecast(
+        self,
+        data: pd.DataFrame,
+        horizon: int = 7,
+        models: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Run multiple models and build a consensus forecast with uncertainty band.
+
+        Returns a dict with consensus series, upper/lower bounds, agreement metrics,
+        and which models succeeded/failed.
+        """
+        if data is None or data.empty:
+            return {"error": "No data provided", "models_failed": []}
+
+        # Determine price column
+        price_col = None
+        for col in ("Close", "close", "price", "Price"):
+            if col in data.columns:
+                price_col = col
+                break
+        if price_col is None:
+            numeric = data.select_dtypes(include=[np.number])
+            if numeric.empty:
+                return {"error": "No numeric price column found", "models_failed": []}
+            price_col = numeric.columns[0]
+
+        last_price = float(pd.to_numeric(data[price_col], errors="coerce").dropna().iloc[-1])
+
+        if models is None:
+            models = ["arima", "xgboost", "ridge", "catboost", "prophet"]
+
+        all_forecasts: List[np.ndarray] = []
+        used: List[str] = []
+        failed: List[str] = []
+
+        for name in models:
+            try:
+                result = self.get_forecast(
+                    data,
+                    model_type=name,
+                    horizon=horizon,
+                    run_walk_forward=False,
+                )
+                fc = np.asarray(result.get("forecast", []), dtype="float64").ravel()
+                if fc.size == horizon and (fc.min(initial=0) > last_price * 0.5):
+                    all_forecasts.append(fc)
+                    used.append(name)
+                else:
+                    failed.append(f"{name}(bad_output)")
+            except Exception as e:  # pragma: no cover - defensive guard
+                failed.append(f"{name}({e})")
+
+        if not all_forecasts:
+            return {"error": "All models failed", "models_failed": failed}
+
+        stacked = np.stack(all_forecasts)
+        consensus = stacked.mean(axis=0)
+        std = stacked.std(axis=0)
+
+        directions = [1 if fc[-1] > last_price else -1 for fc in all_forecasts]
+        total_dir = sum(directions)
+        agreement = abs(total_dir) / len(directions)
+        if total_dir > 0:
+            direction = "BULLISH"
+        elif total_dir < 0:
+            direction = "BEARISH"
+        else:
+            direction = "NEUTRAL"
+
+        conviction = (
+            "HIGH"
+            if agreement >= 0.8
+            else ("MODERATE" if agreement >= 0.6 else "LOW")
+        )
+
+        change_pct = float((consensus[-1] / last_price - 1) * 100) if last_price else 0.0
+
+        return {
+            "consensus_forecast": consensus.tolist(),
+            "upper_bound": (consensus + std).tolist(),
+            "lower_bound": (consensus - std).tolist(),
+            "model_agreement": round(float(agreement), 2),
+            "conviction": conviction,
+            "direction": direction,
+            "models_used": used,
+            "models_failed": failed,
+            "last_price": last_price,
+            "consensus_7d_change_pct": round(change_pct, 2),
+        }
+

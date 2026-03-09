@@ -1,7 +1,7 @@
 {
     "model_strategy_patterns": {
         "neutral": {
-            "timestamp": "2026-03-08T13:35:12.305121",
+            "timestamp": "2026-03-09T12:52:53.040992",
             "model_confidences": {
                 "Ridge": 1.0,
                 "XGBoost": 1.0
@@ -9,7 +9,15 @@
             "best_model": "Ridge"
         },
         "bull": {
-            "timestamp": "2026-03-07T20:14:39.501899",
+            "timestamp": "2026-03-09T16:47:31.626905",
+            "model_confidences": {
+                "Ridge": 1.0,
+                "XGBoost": 1.0
+            },
+            "best_model": "Ridge"
+        },
+        "bear": {
+            "timestamp": "2026-03-09T12:53:08.326865",
             "model_confidences": {
                 "Ridge": 1.0,
                 "XGBoost": 1.0

@@ -276,3 +276,34 @@ Comprehensive bug-fix session addressing user-observed errors across Forecasting
 - **Traceback visibility**: several previously raw `traceback.format_exc()` displays (e.g. Portfolio consolidator, Risk Monte Carlo, Forecasting insights) are now behind **“Show technical details”** checkboxes so end‑users see friendly errors by default.
 - **Dependencies**: `requirements.txt` now explicitly includes `flaml>=2.5.0` and `arch>=8.0.0` to match the environment.
 
+---
+
+## Session 11 — v1.1.0 (2026-03-09)
+
+### Pipeline tests
+
+- earnings_calendar AAPL: [next_earnings_date, days_until]
+- short_interest GME: [short_pct_float, squeeze_score, signal]
+- insider_flow MSFT: [buy_count, sell_count, signal]
+- consensus forecast AAPL: [direction, conviction, models_used count]
+
+### News aggregator
+
+- yfinance news AAPL: [article count]
+- NewsAPI (if key configured): [article count or "key not set"]
+- RSS feeds: [article count]
+- feedparser/praw installed: [yes/no]
+
+### Data manager
+
+- memory_audit.py output: [paste key numbers]
+- cache_stats on startup: [active entries]
+
+### Pending browser verification (requires manual test)
+
+- Forecasting tabs (AI Model Selection, Model Comparison, Market Analysis, GNN, Monte Carlo): [not yet tested]
+- News-linked candlestick chart on Home: [not yet tested]
+- Admin Data Management tab: [not yet tested]
+- SHAP explainability: [not yet tested]
+
+### v1.1.0 tag: [pushed/pending]

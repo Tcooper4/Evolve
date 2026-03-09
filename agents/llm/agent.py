@@ -38,6 +38,10 @@ except ImportError:
     TIKTOKEN_AVAILABLE = False
 
 from trading.data.providers.fallback_provider import FallbackDataProvider
+from trading.data.earnings_calendar import get_upcoming_earnings
+from trading.data.insider_flow import get_insider_flow
+from trading.data.news_aggregator import get_news
+from trading.data.short_interest import get_short_interest
 from trading.execution.trade_execution_simulator import TradeExecutionSimulator
 from trading.models.forecast_router import ForecastRouter
 from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer
@@ -1999,8 +2003,8 @@ class PromptAgent:
         return requirements
 
     def _get_rich_context(self, symbol: str) -> str:
-        """Assemble news, RSI/MACD, 5d/20d returns, 52wk range, P/E, 50/200 MA for ticker-specific answers."""
-        parts = []
+        """Assemble earnings, short interest, insider flow, news, RSI/MACD, returns, 52wk range, P/E, 50/200 MA for ticker-specific answers."""
+        parts: List[str] = []
         try:
             end_date = datetime.now()
             start_1y = end_date - timedelta(days=365)
@@ -2045,12 +2049,71 @@ class PromptAgent:
                             parts.append(f"[MACD] {float(macd.iloc[-1]):.4f}")
                     except Exception:
                         pass
+            # Earnings context (upcoming earnings and last EPS surprise)
             try:
-                from trading.data.news_fetcher import fetch_recent_news, format_news_for_context
-                headlines = fetch_recent_news(symbol, max_items=5)
-                if headlines:
-                    parts.append("[Last 5 news headlines]")
-                    parts.append(format_news_for_context(headlines))
+                earnings = get_upcoming_earnings(symbol)
+                if earnings.get("next_earnings_date"):
+                    line = f"Next Earnings: {earnings['next_earnings_date']} ({earnings.get('days_until', '?')}d away)"
+                    if earnings.get("eps_estimate") is not None:
+                        try:
+                            line += f", EPS est: ${earnings['eps_estimate']:.2f}"
+                        except Exception:
+                            pass
+                    if earnings.get("last_eps_surprise_pct") is not None:
+                        line += f", last surprise: {earnings['last_eps_surprise_pct']:+.1f}%"
+                    parts.append(line)
+            except Exception:
+                pass
+
+            # Short interest and squeeze risk
+            try:
+                si = get_short_interest(symbol)
+                if si.get("short_pct_float"):
+                    line = f"Short Interest: {si['short_pct_float']:.1f}% of float"
+                    if si.get("short_ratio"):
+                        line += f", {si['short_ratio']:.1f}d to cover"
+                    if si.get("signal") == "HIGH_SHORT":
+                        line += " [HIGH SHORT — squeeze potential]"
+                    parts.append(line)
+            except Exception:
+                pass
+
+            # Insider activity summary
+            try:
+                insider = get_insider_flow(symbol)
+                buys = insider.get("buy_count", 0)
+                sells = insider.get("sell_count", 0)
+                if buys + sells > 0:
+                    line = f"Insider Activity (90d): {buys} buys, {sells} sells"
+                    sig = insider.get("signal")
+                    if sig in ("INSIDER_BUYING", "INSIDER_SELLING"):
+                        line += f" [{sig.replace('_', ' ')}]"
+                    parts.append(line)
+            except Exception:
+                pass
+            # Recent news headlines (multi-source aggregator)
+            try:
+                news_items = get_news(symbol, max_items=5)
+                if news_items:
+                    parts.append("Recent News Headlines:")
+                    for item in news_items[:5]:
+                        age = ""
+                        try:
+                            pub_raw = item.get("published", "") or ""
+                            if pub_raw:
+                                s = pub_raw.replace("Z", "+00:00")
+                                pub_dt = datetime.fromisoformat(s.split("+")[0])
+                                hrs = int(
+                                    (datetime.utcnow() - pub_dt).total_seconds() / 3600
+                                )
+                                if hrs < 48:
+                                    age = f" ({hrs}h ago)"
+                        except Exception:
+                            pass
+                        parts.append(
+                            f"- [{item.get('source','?')}]"
+                            f"{age}: {item.get('title','')}"
+                        )
             except Exception:
                 pass
             try:

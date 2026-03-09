@@ -259,6 +259,86 @@
       "max_drawdown": -1.0,
       "mse": Infinity,
       "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:01:50.189832",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:03:28.905371",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:05:03.793188",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:06:19.212766",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:08:02.270067",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:09:38.627879",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:32:21.880804",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T11:23:23.907879",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T13:44:19.275243",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T16:47:23.073125",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
     }
   ],
   "xgboost": [
@@ -472,6 +552,86 @@
     },
     {
       "timestamp": "2026-03-08T13:35:06.319582",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:01:50.657489",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:03:29.699279",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:05:04.551581",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:06:20.168202",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:08:02.929736",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:09:39.370775",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T03:32:22.848177",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T11:23:24.969643",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T13:44:19.878854",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-09T16:47:24.821138",
       "sharpe_ratio": -1.0,
       "win_rate": 0.0,
       "max_drawdown": -1.0,

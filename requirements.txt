@@ -54,7 +54,7 @@ joblib==1.5.1
 tqdm==4.67.1
 loguru==0.7.3
 rich==13.9.4
-psutil==5.9.5
+psutil>=5.9.0
 python-dateutil==2.9.0.post0
 pytz==2025.2
 colorama==0.4.6
@@ -90,7 +90,8 @@ backtrader==1.9.78.123
 fredapi
 wbdata
 textblob
-praw
+feedparser>=6.0.0
+praw>=7.0.0
 sentence-transformers>=3.0.1,<4.0
 tiktoken
 # pyttsx3

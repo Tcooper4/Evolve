@@ -27,12 +27,13 @@ if str(_project_root) not in sys.path:
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
 from ui.page_assistant import render_page_assistant
+from trading.data.short_interest import get_short_interest
 
 # Backend imports
 try:
@@ -609,6 +610,43 @@ with tab1:
                 
                 df_positions = pd.DataFrame(position_risks)
                 st.dataframe(df_positions, use_container_width=True, hide_index=True)
+            else:
+                st.info("No positions available for position-level risk breakdown.")
+
+        # Short interest and squeeze risk for a focus symbol
+        if positions:
+            st.markdown("---")
+            st.subheader("Short Interest & Squeeze Risk")
+            symbols_list = list(positions.keys())
+            default_symbol = symbols_list[0] if symbols_list else "AAPL"
+            risk_symbol = st.selectbox(
+                "Focus symbol",
+                symbols_list,
+                index=0,
+                help="Select a position to inspect short interest and squeeze risk.",
+            )
+            try:
+                si = get_short_interest(risk_symbol)
+                c1, c2, c3 = st.columns(3)
+                short_pct = si.get("short_pct_float")
+                short_ratio = si.get("short_ratio")
+                squeeze_score = si.get("short_squeeze_score", 0)
+
+                c1.metric(
+                    "Short % Float",
+                    f"{short_pct:.1f}%" if short_pct is not None else "N/A",
+                )
+                c2.metric(
+                    "Days to Cover",
+                    f"{short_ratio:.1f}" if short_ratio is not None else "N/A",
+                )
+                c3.metric(
+                    "Squeeze Score",
+                    f"{squeeze_score:.0f}/100",
+                    delta=si.get("signal", "").replace("_", " "),
+                )
+            except Exception as e:
+                st.caption(f"Short interest unavailable: {e}")
             else:
                 st.info("No positions available")
         
