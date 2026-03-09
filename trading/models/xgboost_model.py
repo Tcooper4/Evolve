@@ -580,11 +580,16 @@ class XGBoostModel(BaseModel):
         result = self.train(data)
         return {"success": result.get("success", True), "model": self.model}
 
-    def predict(self, data: pd.DataFrame) -> np.ndarray:
-        """Predict with comprehensive error handling."""
+    def predict(self, data: pd.DataFrame, return_returns: bool = False) -> np.ndarray:
+        """Predict with comprehensive error handling.
+
+        By default returns predictions in **price space** (next-step price estimates).
+        Set ``return_returns=True`` to get the raw predicted returns used internally
+        by :meth:`forecast`.
+        """
         data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
         if not self.available:
-            print("âš ï¸ XGBoostModel unavailable due to initialization failure")
+            print("XGBoostModel unavailable due to initialization failure")
             # Return simple fallback prediction
             if "close" in data.columns:
                 return data["close"].rolling(window=20).mean().values
@@ -602,25 +607,51 @@ class XGBoostModel(BaseModel):
                 raise ValueError("No features selected during training")
 
             X = features[self.selected_features]
+            price_col = "Close" if "Close" in features.columns else "close" if "close" in features.columns else None
 
             # Make prediction
             if self.model is not None and self.is_trained:
                 try:
                     X_scaled = self.scaler.transform(X)
-                    predictions = self.model.predict(X_scaled)
-                    return predictions
+                    pred_returns = self.model.predict(X_scaled)
+                    pred_returns = np.asarray(pred_returns, dtype="float64").ravel()
+                    if return_returns or price_col is None:
+                        return pred_returns
+                    base_prices = np.asarray(features[price_col], dtype="float64").ravel()
+                    n = min(len(base_prices), len(pred_returns))
+                    return base_prices[:n] * (1.0 + pred_returns[:n])
                 except Exception as e:
                     logger.error(f"XGBoost prediction failed: {e}")
                     logger.info("Using fallback model for prediction")
-                    return self.fallback_model.predict(X)
+                    pred_returns = np.asarray(self.fallback_model.predict(X), dtype="float64").ravel()
+                    if return_returns or price_col is None:
+                        return pred_returns
+                    base_prices = np.asarray(features[price_col], dtype="float64").ravel()
+                    n = min(len(base_prices), len(pred_returns))
+                    return base_prices[:n] * (1.0 + pred_returns[:n])
             else:
-                return self.fallback_model.predict(X)
+                pred_returns = np.asarray(self.fallback_model.predict(X), dtype="float64").ravel()
+                if return_returns or price_col is None:
+                    return pred_returns
+                base_prices = np.asarray(features[price_col], dtype="float64").ravel()
+                n = min(len(base_prices), len(pred_returns))
+                return base_prices[:n] * (1.0 + pred_returns[:n])
 
         except Exception as e:
             logger.error(f"Prediction failed: {e}")
             logger.error(traceback.format_exc())
             logger.info("Using simple fallback prediction (zero return)")
             # Model predicts returns; fallback = no change (0.0)
+            if return_returns:
+                return np.zeros(len(data))
+            # Price-space fallback: return last close repeated
+            if isinstance(data, pd.DataFrame):
+                if "Close" in data.columns and len(data["Close"]):
+                    last = float(data["Close"].iloc[-1])
+                    return np.full(len(data), last, dtype="float64")
+                if "close" in data.columns and len(data["close"]):
+                    last = float(data["close"].iloc[-1])
+                    return np.full(len(data), last, dtype="float64")
             return np.zeros(len(data))
 
     def get_feature_importance(self) -> Dict[str, float]:
@@ -705,10 +736,10 @@ class XGBoostModel(BaseModel):
 
     @cache_model_operation
     @safe_forecast(max_retries=2, retry_delay=0.5, log_errors=True)
-    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
+    def forecast(self, data: pd.DataFrame, horizon: int = 30, **kwargs) -> Dict[str, Any]:
         """Generate forecast with comprehensive error handling."""
         if not self.available:
-            print("âš ï¸ XGBoostModel unavailable due to initialization failure")
+            print("XGBoostModel unavailable due to initialization failure")
             # Return simple fallback forecast
             fallback_forecast = np.full(horizon, 1000.0)
             last_date = (
@@ -723,7 +754,7 @@ class XGBoostModel(BaseModel):
             return {
                 "forecast": fallback_forecast,
                 "dates": forecast_dates,
-                "confidence": np.full(horizon, 0.1),
+                "confidence": 0.1,
                 "model_type": "XGBoost_Unavailable",
                 "horizon": horizon,
                 "error": "XGBoostModel unavailable due to initialization failure",
@@ -749,8 +780,8 @@ class XGBoostModel(BaseModel):
                 forecasts = []
 
                 for _ in range(horizon):
-                    pred = self.predict(current_data)
-                    r = float(pred[-1])
+                    pred = self.predict(current_data, return_returns=True)
+                    r = float(pred[-1]) if len(pred) else 0.0
                     # Clamp return to sane range to avoid explosion (e.g. -20% to +20%)
                     r = np.clip(r, -0.20, 0.20)
                     next_ratio = current_ratio * (1.0 + r)
@@ -775,12 +806,22 @@ class XGBoostModel(BaseModel):
                     start=last_date, periods=horizon + 1, freq="D"
                 )[1:]
 
+                forecast_prices = np.array(forecasts)
+                std_estimate = np.std(getattr(self, "residuals", None)) if hasattr(self, "residuals") and getattr(self, "residuals", None) is not None else (current_ratio * 0.02)
+                if not np.isfinite(std_estimate) or std_estimate <= 0:
+                    std_estimate = current_ratio * 0.02
+                horizon_multiplier = np.sqrt(np.arange(1, horizon + 1, dtype="float64"))
+                lower_bound = forecast_prices - 1.96 * std_estimate * horizon_multiplier
+                upper_bound = forecast_prices + 1.96 * std_estimate * horizon_multiplier
                 return {
-                    "forecast": np.array(forecasts),
+                    "forecast": forecast_prices,
                     "dates": forecast_dates,
-                    "confidence": np.full(horizon, 0.8),
+                    "confidence": 0.8,
                     "model_type": "XGBoost",
                     "horizon": horizon,
+                    "already_denormalized": True,
+                    "lower_bound": lower_bound,
+                    "upper_bound": upper_bound,
                 }
 
             except Exception as e:
@@ -810,7 +851,7 @@ class XGBoostModel(BaseModel):
                 return {
                     "forecast": fallback_forecast,
                     "dates": forecast_dates,
-                    "confidence": np.full(horizon, 0.5),
+                    "confidence": 0.5,
                     "model_type": "XGBoost_Fallback",
                     "horizon": horizon,
                 }
@@ -847,7 +888,7 @@ class XGBoostModel(BaseModel):
             return {
                 "forecast": fallback_forecast,
                 "dates": forecast_dates,
-                "confidence": np.full(horizon, 0.3),
+                "confidence": 0.3,
                 "model_type": "XGBoost_Simple_Fallback",
                 "horizon": horizon,
             }

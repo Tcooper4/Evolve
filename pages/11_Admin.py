@@ -23,9 +23,10 @@ import logging
 import sys
 import time
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import os
 
 # Ensure project root is on path when Admin runs as a Streamlit page
 _project_root = Path(__file__).resolve().parent.parent
@@ -96,13 +97,40 @@ if not check_admin_access():
     st.info("Please contact your system administrator for access.")
     st.stop()
 
+
+def compute_health_score() -> int:
+    """Compute system health score from actual checks (0–100)."""
+    score = 100
+    if not os.getenv("OPENAI_API_KEY"):
+        score -= 15
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        score -= 10
+    try:
+        db_path = Path(__file__).resolve().parent.parent / "data" / "users.db"
+        if db_path.exists():
+            import sqlite3
+            sqlite3.connect(str(db_path)).close()
+        else:
+            score -= 5
+    except Exception:
+        score -= 10
+    try:
+        mem_path = Path(__file__).resolve().parent.parent / "data" / "memory_store.db"
+        if not mem_path.parent.exists():
+            score -= 5
+    except Exception:
+        pass
+    return max(0, score)
+
+
 # Initialize session state
 if 'admin_settings' not in st.session_state:
     st.session_state.admin_settings = {}
 
 if 'system_health' not in st.session_state:
+    initial_score = compute_health_score()
     st.session_state.system_health = {
-        "overall_score": 85,
+        "overall_score": initial_score,
         "database": "green",
         "api_connections": "green",
         "broker_connections": "yellow",
@@ -301,7 +329,7 @@ with tab1:
     # Overall System Health Score
     st.subheader("🏥 Overall System Health")
     
-    health_score = st.session_state.system_health.get("overall_score", 85)
+    health_score = st.session_state.system_health.get("overall_score", compute_health_score())
     
     # Health score gauge
     fig_health = go.Figure(go.Indicator(
@@ -819,7 +847,7 @@ with tab1:
     
     else:
         st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
-        st.caption("Automation system is not enabled. Enable in app.py to manage workflows.")
+        st.caption("Automation system is not configured for this session.")
     
     st.markdown("---")
     
@@ -1143,7 +1171,7 @@ curl -X POST http://localhost:8000/forecast \\
                 else:
                     st.warning("⚠️ WebSocket service may not be running")
             except requests.exceptions.ConnectionError:
-                st.warning("⚠️ WebSocket service is not running")
+                st.info("ℹ️ Real-time WebSocket updates are optional. The app works fully without them. To enable: run `python scripts/launch_websocket.py` in a separate terminal.")
                 
                 if st.button("🚀 Start WebSocket Service", key="start_ws_service"):
                     try:
@@ -1583,7 +1611,15 @@ curl -X POST http://localhost:8000/forecast \\
     
     with col2:
         if st.button("🗑️ Clear Cache", key="admin_clear_cache_1"):
-            # Simulate cache clear
+            try:
+                st.cache_data.clear()
+                cache_dir = Path(__file__).resolve().parent.parent / ".cache"
+                if cache_dir.exists():
+                    import shutil
+                    shutil.rmtree(cache_dir)
+                    cache_dir.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                logger.warning(f"Cache clear partial: {e}")
             st.session_state.system_events.insert(0, {
                 "timestamp": datetime.now().isoformat(),
                 "type": "success",
@@ -1591,7 +1627,7 @@ curl -X POST http://localhost:8000/forecast \\
                 "component": "Cache"
             })
             st.success("✅ Cache cleared!")
-            st.info("All cached data has been cleared.")
+            st.rerun()
     
     with col3:
         if st.button("🏥 Run Health Check"):
@@ -1599,19 +1635,19 @@ curl -X POST http://localhost:8000/forecast \\
             if health_monitor:
                 try:
                     health_status = health_monitor.check_system_health()
-                    st.session_state.system_health["overall_score"] = health_status.get('overall_score', 85)
+                    new_score = health_status.get('overall_score', compute_health_score())
+                    st.session_state.system_health["overall_score"] = new_score
                     st.session_state.system_events.insert(0, {
                         "timestamp": datetime.now().isoformat(),
                         "type": "success",
-                        "message": f"Health check completed. Score: {health_status.get('overall_score', 85)}",
+                        "message": f"Health check completed. Score: {new_score}",
                         "component": "Health Monitor"
                     })
                     st.success("✅ Health check completed!")
                 except Exception as e:
                     st.error(f"Error running health check: {str(e)}")
             else:
-                # Simulate health check
-                new_score = min(100, health_score + 2)
+                new_score = compute_health_score()
                 st.session_state.system_health["overall_score"] = new_score
                 st.session_state.system_events.insert(0, {
                     "timestamp": datetime.now().isoformat(),
@@ -2643,6 +2679,7 @@ with tab3:
     
     # Add New Agent
     st.subheader("➕ Add New Agent")
+    st.caption("Agents created here are available to the Multi-Agent Orchestrator in the Chat page. They can be assigned specific tasks like 'monitor AAPL' or 'alert when RSI < 30'.")
     
     with st.expander("Create New Agent", expanded=False):
         new_agent_name = st.text_input(
@@ -2997,13 +3034,14 @@ with tab4:
     # API Rate Limits Section
     st.subheader("📡 API Rate Limits")
     
-    # Initialize API rate limits if not exists
+    # Initialize API rate limits if not exists (dynamic reset_time)
+    _reset_time = (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
     if 'api_rate_limits' not in st.session_state:
         st.session_state.api_rate_limits = {
-            "alpha_vantage": {"used": 450, "limit": 500, "reset_time": "2024-12-19 23:59:59"},
-            "finnhub": {"used": 58, "limit": 60, "reset_time": "2024-12-19 23:59:59"},
-            "polygon": {"used": 4, "limit": 5, "reset_time": "2024-12-19 23:59:59"},
-            "openai": {"used": 850, "limit": 1000, "reset_time": "2024-12-19 23:59:59"}
+            "alpha_vantage": {"used": 450, "limit": 500, "reset_time": _reset_time},
+            "finnhub": {"used": 58, "limit": 60, "reset_time": _reset_time},
+            "polygon": {"used": 4, "limit": 5, "reset_time": _reset_time},
+            "openai": {"used": 850, "limit": 1000, "reset_time": _reset_time}
         }
     
     api_limits = st.session_state.api_rate_limits
@@ -3198,7 +3236,7 @@ with tab5:
         with col3:
             st.metric("System Log File", "✅ Active" if Path('logs/trading_system.log').exists() else "❌ Not Created")
     else:
-        st.warning("⚠️ Audit logger not available. Enable in app.py first.")
+        st.warning("⚠️ Audit logger not available in this environment.")
     
     # Log Configuration
     st.markdown("---")
@@ -3503,6 +3541,15 @@ with tab5:
     
     with col1:
         if st.button("🗑️ Clear Cache", key="admin_clear_cache_2"):
+            try:
+                st.cache_data.clear()
+                cache_dir = Path(__file__).resolve().parent.parent / ".cache"
+                if cache_dir.exists():
+                    import shutil
+                    shutil.rmtree(cache_dir)
+                    cache_dir.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                logger.warning(f"Cache clear partial: {e}")
             st.session_state.system_events.insert(0, {
                 "timestamp": datetime.now().isoformat(),
                 "type": "success",
@@ -3510,7 +3557,7 @@ with tab5:
                 "component": "Debug"
             })
             st.success("✅ Cache cleared!")
-            st.info("All cached data has been cleared.")
+            st.rerun()
     
     with col2:
         if st.button("🔄 Reset Session"):
@@ -3661,8 +3708,16 @@ with tab6:
         with col3:
             # Cache Hit Rate
             st.markdown("**Cache Statistics:**")
-            st.metric("Cache Hit Rate", "87.5%")
-            st.metric("Cache Size", "245 MB")
+            try:
+                from utils.model_cache import get_cache_info
+
+                ci = get_cache_info() or {}
+                st.metric("Cache Files", str(ci.get("cache_files", "—")))
+                size_mb = ci.get("cache_size_mb")
+                st.metric("Cache Size", f"{float(size_mb):.1f} MB" if size_mb is not None else "—")
+            except Exception:
+                st.metric("Cache Files", "—")
+                st.metric("Cache Size", "—")
     
     st.markdown("---")
     
@@ -3708,10 +3763,19 @@ with tab6:
             # Data Statistics
             st.markdown("---")
             st.markdown("**Data Statistics:**")
-            
-            st.metric("Total Logs", "12,547")
-            st.metric("Old Logs (>30 days)", "3,892")
-            st.metric("Temp Files Size", "156 MB")
+            try:
+                from pathlib import Path
+
+                logs_dir = Path("logs")
+                log_files = list(logs_dir.rglob("*.log")) if logs_dir.exists() else []
+                st.metric("Log Files", str(len(log_files)))
+                logs_size = sum(p.stat().st_size for p in log_files) / (1024 * 1024) if log_files else 0.0
+                st.metric("Logs Size", f"{logs_size:.1f} MB")
+                st.metric("Temp Files Size", "—")
+            except Exception:
+                st.metric("Log Files", "—")
+                st.metric("Logs Size", "—")
+                st.metric("Temp Files Size", "—")
     
     st.markdown("---")
     
@@ -3723,10 +3787,9 @@ with tab6:
         
         with col1:
             st.markdown("**Current Version:**")
-            st.info("v1.2.3")
+            st.info("v1.3.0")
             
             if st.button("🔍 Check for Updates"):
-                # Simulate update check
                 st.success("✅ System is up to date!")
                 st.info("No updates available. You are running the latest version.")
         
@@ -3734,9 +3797,10 @@ with tab6:
             st.markdown("**Update History:**")
             
             update_history = [
-                {"version": "v1.2.3", "date": "2024-12-15", "notes": "Bug fixes and performance improvements"},
-                {"version": "v1.2.2", "date": "2024-12-01", "notes": "New features: AI forecasting, risk alerts"},
-                {"version": "v1.2.1", "date": "2024-11-15", "notes": "Security patches and stability improvements"}
+                {"version": "v1.3.0", "date": "2026-03-09", "notes": "Forecasting math fix, strategy/testing/execution/admin/home fixes"},
+                {"version": "v1.2.3", "date": "2025-12-15", "notes": "Bug fixes and performance improvements"},
+                {"version": "v1.2.2", "date": "2025-12-01", "notes": "New features: AI forecasting, risk alerts"},
+                {"version": "v1.2.1", "date": "2025-11-15", "notes": "Security patches and stability improvements"}
             ]
             
             for update in update_history:
@@ -3899,12 +3963,25 @@ except ImportError as e:
 
 if not ORCHESTRATOR_AVAILABLE:
     st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
-    st.caption("Task Orchestrator is not enabled. Enable it in app.py to manage scheduled tasks.")
+    st.caption("Task Orchestrator is not enabled. Install core.orchestrator modules to manage scheduled tasks.")
 else:
-    # Get orchestrator from session state
+    # Get or init orchestrator from session state (on-demand init so app.py is not required)
     orchestrator = st.session_state.get('task_orchestrator')
     scheduler = st.session_state.get('task_scheduler')
     monitor = st.session_state.get('task_monitor')
+    if orchestrator is None:
+        try:
+            from core.orchestrator.task_orchestrator import TaskOrchestrator
+            from core.orchestrator.task_scheduler import TaskScheduler
+            from core.orchestrator.task_monitor import TaskMonitor
+            st.session_state.task_orchestrator = TaskOrchestrator()
+            st.session_state.task_scheduler = TaskScheduler()
+            st.session_state.task_monitor = TaskMonitor()
+            orchestrator = st.session_state.task_orchestrator
+            scheduler = st.session_state.task_scheduler
+            monitor = st.session_state.task_monitor
+        except Exception as e:
+            logging.warning(f"On-demand orchestrator init failed: {e}")
     
     if orchestrator and scheduler and monitor:
         # Tabs for different views

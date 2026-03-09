@@ -6,6 +6,7 @@ LSTM and XGBoost forecasts to improve performance and reduce redundant computati
 """
 
 import hashlib
+import functools
 import logging
 import os
 from datetime import datetime
@@ -197,7 +198,16 @@ def cache_model_operation(func: Callable) -> Callable:
     Returns:
         Callable: Cached function
     """
-    return _model_cache.cache_function(func)
+    cached_func = _model_cache.cache_function(func)
+
+    # joblib.Memory.cache returns a callable that is NOT a descriptor, so instance-method
+    # binding (self injection) breaks when used as a decorator on class methods.
+    # Wrap it in a real function so Python binds self correctly.
+    @functools.wraps(func)
+    def _wrapped(*args, **kwargs):
+        return cached_func(*args, **kwargs)
+
+    return _wrapped
 
 
 def clear_model_cache() -> None:

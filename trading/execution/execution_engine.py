@@ -190,6 +190,36 @@ class ExecutionEngine:
             logger.error(error_msg)
             return {"status": "error", "message": error_msg}
 
+    def execute_order(self, order_config: dict) -> dict:
+        """Execute an order from a config dict. Returns result with success, avg_price, filled_quantity, etc."""
+        try:
+            order = {
+                "symbol": order_config.get("symbol", ""),
+                "quantity": int(order_config.get("quantity", 0)),
+                "side": (order_config.get("side") or "buy").lower(),
+                "order_type": (order_config.get("order_type") or order_config.get("type") or "market").lower(),
+                "limit_price": order_config.get("limit_price"),
+            }
+            if order["symbol"].endswith("USD") and self.config.execution_mode == "live" and "binance" in self.brokers:
+                raw = self._execute_crypto_order(order)
+            elif self.config.execution_mode == "live" and "alpaca" in self.brokers:
+                raw = self._execute_alpaca_order(order)
+            else:
+                raw = self._execute_simulation_order(order)
+            status = raw.get("status", "error")
+            return {
+                "success": status == "success",
+                "order_id": raw.get("order_id"),
+                "avg_price": raw.get("execution_price") or raw.get("average_price", 0),
+                "filled_quantity": raw.get("quantity", 0),
+                "expected_price": order.get("limit_price"),
+                "execution_timeline": [{"timestamp": raw.get("timestamp"), "price": raw.get("execution_price"), "quantity": raw.get("quantity")}] if status == "success" else [],
+                **raw,
+            }
+        except Exception as e:
+            logger.error(f"execute_order error: {e}")
+            return {"success": False, "message": str(e)}
+
     def _get_simulated_price(self, symbol: str) -> float:
         """Get simulated price for symbol."""
         # Simple price simulation - in real implementation, this would use market data

@@ -430,8 +430,11 @@ class GNNForecaster:
         self.model.eval()
         
         for step in range(horizon):
-            # Predict next step
+            # Predict next step (ensure we have a numpy array, not dict)
             next_pred = self.predict(current_data, horizon=1)
+            if isinstance(next_pred, dict):
+                next_pred = next_pred.get("forecast", next_pred.get("predictions", np.array([0.0])))
+            next_pred = np.asarray(next_pred).ravel()
             predictions.append(next_pred)
             
             # Update data with prediction

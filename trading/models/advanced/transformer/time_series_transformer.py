@@ -155,6 +155,10 @@ class TransformerForecaster(BaseModel):
         if self.config["enable_fallback"]:
             self._setup_fallback_model()
 
+    def _setup_model(self) -> None:
+        """Initialize the transformer model (alias for _safe_model_loading for BaseModel compatibility)."""
+        self._safe_model_loading()
+
     def _setup_fallback_model(self) -> None:
         """Setup ARIMA fallback model."""
         try:

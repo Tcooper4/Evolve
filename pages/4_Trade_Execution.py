@@ -214,11 +214,12 @@ try:
         order_type = OrderType.MARKET if order_type_str == "Market" else OrderType.LIMIT
         order_side = OrderSide.BUY if side == "Buy" else OrderSide.SELL
     
-        # Quantity input
+        # Quantity input (use _suggested_quantity when "Use Suggested Quantity" was clicked to avoid widget state conflict)
+        default_qty = st.session_state.pop("_suggested_quantity", None)
         quantity = st.number_input(
             "Quantity (Shares)",
             min_value=1,
-            value=100,
+            value=default_qty if default_qty is not None else st.session_state.get("quick_quantity", 100),
             step=1,
             help="Number of shares to trade",
             key="quick_quantity"
@@ -308,7 +309,7 @@ try:
                 st.metric("Order Value", f"${suggested_value:,.2f}")
             
                 if st.button("📋 Use Suggested Quantity", use_container_width=True):
-                    st.session_state.quick_quantity = suggested_quantity
+                    st.session_state["_suggested_quantity"] = suggested_quantity
                     st.rerun()
 
     with col2:
@@ -1679,6 +1680,12 @@ try:
     if active_orders_list:
         # Create DataFrame
         orders_df = pd.DataFrame(active_orders_list)
+        # Ensure 'price' column exists (orders may use limit_price or fill_price)
+        if "price" not in orders_df.columns:
+            orders_df["price"] = orders_df.apply(
+                lambda r: r.get("price") or r.get("limit_price") or r.get("fill_price") or r.get("order_price") or 0,
+                axis=1,
+            )
     
         # Add selection column for batch operations
         if 'order_selection' not in st.session_state:
@@ -1692,7 +1699,7 @@ try:
             selected_indices = st.multiselect(
                 "Select orders for batch operations",
                 options=range(len(orders_df)),
-                format_func=lambda x: f"{orders_df.iloc[x]['symbol']} - {orders_df.iloc[x]['side']} {orders_df.iloc[x]['quantity']} @ {orders_df.iloc[x]['price']}",
+                format_func=lambda x: f"{orders_df.iloc[x]['symbol']} - {orders_df.iloc[x]['side']} {orders_df.iloc[x]['quantity']} @ {orders_df.iloc[x].get('price', orders_df.iloc[x].get('limit_price', orders_df.iloc[x].get('fill_price', 'N/A')))}",
                 key="order_multiselect"
             )
             st.session_state.selected_orders_for_cancel = [orders_df.iloc[i]['order_id'] for i in selected_indices]

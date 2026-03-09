@@ -582,7 +582,18 @@ if PROPHET_AVAILABLE:
                     logger.info(f"Using dynamic forecast horizon: {horizon} periods")
 
                 # Create future dates for forecasting using time utilities
-                last_date = parse_datetime(data[self.config["date_column"]].iloc[-1])
+                date_col = self.config.get("date_column", "ds")
+                if date_col in data.columns:
+                    last_date = parse_datetime(data[date_col].iloc[-1])
+                elif isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+                    last_date = parse_datetime(data.index[-1])
+                else:
+                    last_date = pd.Timestamp.now()
+                # Prophet does not support tz-aware datetimes
+                try:
+                    last_date = pd.to_datetime(last_date).tz_localize(None)
+                except Exception:
+                    last_date = pd.Timestamp.now()
                 future_dates = pd.date_range(
                     start=last_date, periods=horizon + 1, freq="D"
                 )[1:]
@@ -599,6 +610,7 @@ if PROPHET_AVAILABLE:
                     "forecast_dates": future_dates,
                     "lower_bound": forecast_result["yhat_lower"].values,
                     "upper_bound": forecast_result["yhat_upper"].values,
+                    "already_denormalized": True,
                 }
 
             except Exception as e:

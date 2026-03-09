@@ -128,8 +128,8 @@ class CatBoostModel(BaseModel):
         X = data[fc]
         return self.model.predict(X)
 
-    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
-        """Generate forecast: model predicts returns; build ratio path so router denormalizes once."""
+    def forecast(self, data: pd.DataFrame, horizon: int = 30, **kwargs) -> Dict[str, Any]:
+        """Generate forecast: model predicts returns; build price path from last price. Returns already_denormalized=True."""
         try:
             data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
             if not self.fitted:
@@ -157,13 +157,25 @@ class CatBoostModel(BaseModel):
                     current_data = current_data.iloc[1:]
                 current_ratio = next_ratio
 
+            forecast_array = np.array(forecast_values, dtype="float64")
+            last_price = float(data[price_col].iloc[-1]) if price_col in data.columns else 1.0
+            std_estimate = getattr(self, "residuals", None)
+            std_estimate = np.std(std_estimate) if std_estimate is not None and hasattr(std_estimate, "__len__") and len(std_estimate) > 0 else (last_price * 0.02)
+            if not np.isfinite(std_estimate) or std_estimate <= 0:
+                std_estimate = last_price * 0.02
+            horizon_multiplier = np.sqrt(np.arange(1, horizon + 1, dtype="float64"))
+            lower_bound = forecast_array - 1.96 * std_estimate * horizon_multiplier
+            upper_bound = forecast_array + 1.96 * std_estimate * horizon_multiplier
             return {
-                "forecast": np.array(forecast_values, dtype="float64"),
+                "forecast": forecast_array,
                 "confidence": 0.85,
                 "model": "CatBoost",
                 "horizon": horizon,
                 "feature_columns": self.feature_columns,
                 "target_column": self.target_column,
+                "already_denormalized": True,
+                "lower_bound": lower_bound,
+                "upper_bound": upper_bound,
             }
 
         except Exception as e:

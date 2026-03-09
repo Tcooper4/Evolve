@@ -273,7 +273,11 @@ class ForecastExplainability:
                 except Exception as e:
                     logger.warning(f"LIME calculation failed: {e}")
             elif method.lower() == "shap":
-                if SHAP_AVAILABLE and hasattr(model, "predict"):
+                try:
+                    import shap
+                except ImportError:
+                    shap = None
+                if shap is not None and hasattr(model, "predict"):
                     try:
                         # Model type detection
                         model_name = type(model).__name__.lower()

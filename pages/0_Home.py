@@ -48,6 +48,123 @@ st.set_page_config(
 st.title("🏠 Good morning")
 st.caption("Your personalized briefing. Simple, jargon-free.")
 
+
+@st.cache_data(ttl=300)
+def get_market_pulse() -> dict:
+    """Fetch live data for major market indicators."""
+    try:
+        import yfinance as yf
+        tickers = {"SPY": "S&P 500", "QQQ": "Nasdaq", "IWM": "Russell 2000", "^VIX": "VIX", "GLD": "Gold", "BTC-USD": "Bitcoin"}
+        results = {}
+        for ticker, name in tickers.items():
+            try:
+                hist = yf.Ticker(ticker).history(period="2d")
+                if len(hist) >= 2:
+                    last = hist["Close"].iloc[-1]
+                    prev = hist["Close"].iloc[-2]
+                    chg = (last - prev) / prev * 100
+                    results[ticker] = {"name": name, "price": last, "change": chg}
+            except Exception:
+                pass
+        return results
+    except Exception:
+        return {}
+
+
+@st.cache_data(ttl=600)
+def get_top_movers() -> list:
+    """Get today's top movers from a watchlist of major stocks."""
+    try:
+        import yfinance as yf
+        watchlist = ["AAPL", "NVDA", "MSFT", "TSLA", "AMZN", "META", "GOOGL", "AMD", "NFLX", "JPM"]
+        movers = []
+        for sym in watchlist:
+            try:
+                hist = yf.Ticker(sym).history(period="2d")
+                if len(hist) >= 2:
+                    chg = (hist["Close"].iloc[-1] - hist["Close"].iloc[-2]) / hist["Close"].iloc[-2] * 100
+                    movers.append({"symbol": sym, "price": hist["Close"].iloc[-1], "change": chg})
+            except Exception:
+                pass
+        movers.sort(key=lambda x: abs(x["change"]), reverse=True)
+        return movers[:5]
+    except Exception:
+        return []
+
+
+def _fallback_briefing(market_pulse: dict, top_movers: list) -> str:
+    spy = (market_pulse or {}).get("SPY", {})
+    vix = (market_pulse or {}).get("^VIX", {}).get("price", 20)
+    direction = "higher" if spy.get("change", 0) > 0 else "lower"
+    movers = ", ".join([f"{m['symbol']} ({m['change']:+.1f}%)" for m in (top_movers or [])[:3]]) or "None"
+    return (
+        f"Markets opened {direction} with SPY {spy.get('change', 0):+.2f}%. "
+        f"VIX is {vix:.1f}. Notable movers: {movers}."
+    )
+
+
+@st.cache_data(ttl=600)
+def generate_morning_briefing(market_pulse: dict, top_movers: list) -> str:
+    """Generate a dynamic briefing based on actual market data."""
+    try:
+        from agents.llm.agent import get_prompt_agent
+
+        agent = get_prompt_agent()
+        if not agent:
+            return _fallback_briefing(market_pulse, top_movers)
+
+        spy_chg = (market_pulse or {}).get("SPY", {}).get("change", 0)
+        vix = (market_pulse or {}).get("^VIX", {}).get("price", 20)
+        movers_str = ", ".join(
+            [f"{m['symbol']} {m['change']:+.1f}%" for m in (top_movers or [])[:5]]
+        )
+
+        prompt = f"""Write a concise 3-paragraph morning market briefing (like opening a newspaper).
+
+Today's data: SPY {spy_chg:+.2f}%, VIX {vix:.1f}, Top movers: {movers_str}.
+Paragraph 1: Overall market tone and what's driving it.
+Paragraph 2: The 2-3 biggest individual stock stories today.
+Paragraph 3: What to watch for the rest of the day.
+Be specific; cite the actual % moves. Do NOT mention Apple unless it is actually one of the top movers."""
+
+        response = agent.process_prompt(prompt)
+        return response.message if hasattr(response, "message") else str(response)
+    except Exception:
+        return _fallback_briefing(market_pulse, top_movers)
+
+
+# Market Pulse row (6 tiles)
+pulse = get_market_pulse()
+if pulse:
+    cols = st.columns(6)
+    for i, (ticker, data) in enumerate(pulse.items()):
+        with cols[i]:
+            fmt = f"{data['price']:.1f}" if ticker == "^VIX" else f"${data['price']:.2f}"
+            st.metric(data["name"], fmt, f"{data['change']:+.2f}%")
+
+# Fear & Greed proxy + Top 5 Movers
+vix = pulse.get("^VIX", {}).get("price", 20)
+if vix < 15:
+    fg_label, fg_color = "Extreme Greed", "green"
+elif vix < 20:
+    fg_label, fg_color = "Greed", "lightgreen"
+elif vix < 25:
+    fg_label, fg_color = "Neutral", "gray"
+elif vix < 30:
+    fg_label, fg_color = "Fear", "orange"
+else:
+    fg_label, fg_color = "Extreme Fear", "red"
+st.markdown(f"**Market Sentiment:** VIX {vix:.1f} — :{fg_color}[{fg_label}]")
+movers = get_top_movers()
+if movers:
+    st.subheader("Today's Top Movers")
+    mcols = st.columns(5)
+    for i, mover in enumerate(movers):
+        with mcols[i]:
+            icon = "🔴" if mover["change"] < 0 else "🟢"
+            st.metric(f"{icon} {mover['symbol']}", f"${mover['price']:.2f}", f"{mover['change']:+.2f}%")
+st.markdown("---")
+
 # Session state for live market monitor
 if "last_scan_time" not in st.session_state:
     st.session_state.last_scan_time = 0
@@ -247,14 +364,13 @@ if st.session_state.home_briefing_text is None:
             from trading.services.home_briefing_service import generate_briefing
             store = get_memory_store()
             out = generate_briefing(store)
-            st.session_state.home_briefing_text = out.get("briefing_text", "")
+            # Prefer a dynamic briefing driven by live market pulse and top movers.
+            st.session_state.home_briefing_text = generate_morning_briefing(pulse, movers)
             st.session_state.home_briefing_cards = out.get("cards", [])
             st.session_state.home_briefing_market_data = out.get("market_data", {})
         except Exception as e:
             logger.exception(f"Briefing generation failed: {e}")
-            st.session_state.home_briefing_text = (
-                "We couldn't generate your briefing right now. Please try **Refresh briefing** in the sidebar."
-            )
+            st.session_state.home_briefing_text = _fallback_briefing(pulse, movers)
             st.session_state.home_briefing_cards = []
             st.session_state.home_briefing_market_data = {}
     st.rerun()

@@ -1438,9 +1438,16 @@ with tab5:
     st.header("⚙️ Notification Settings")
     st.markdown("Configure notification channels and preferences")
     
-    # Check if notification service is available
-    if 'notification_service' in st.session_state:
-        notification_service = st.session_state.notification_service
+    # Check if notification system is available (init on demand if needed)
+    if 'notification_system' not in st.session_state or st.session_state.notification_system is None:
+        try:
+            from trading.utils.notification_system import NotificationSystem
+            st.session_state.notification_system = NotificationSystem()
+        except Exception as e:
+            logger.warning(f"Notification system unavailable: {e}")
+            st.session_state.notification_system = None
+    notification_service = st.session_state.get('notification_system')
+    if notification_service:
         
         st.subheader("📧 Configure Notifications")
         
@@ -1614,7 +1621,7 @@ with tab5:
                 st.error(f"Error loading history: {e}")
     
     else:
-        st.warning("⚠️ Notification service not available. Enable in app.py first.")
+        st.warning("⚠️ Notification system unavailable. Check that trading.utils.notification_system is available.")
     
     # Keep existing notification settings UI below
     st.markdown("---")

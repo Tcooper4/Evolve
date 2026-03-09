@@ -912,7 +912,7 @@ class LSTMForecaster(BaseModel):
     def fit(
         self,
         X: pd.DataFrame,
-        y: pd.Series,
+        y: Optional[pd.Series] = None,
         epochs: int = 100,
         batch_size: int = 32,
         learning_rate: float = 0.0001,  # Reduced for stability
@@ -921,7 +921,7 @@ class LSTMForecaster(BaseModel):
         min_delta: float = 1e-4,  # Minimum improvement
         **kwargs
     ) -> Dict[str, List[float]]:
-        """Train the model with robust error handling and input validation."""
+        """Train the model with robust error handling and input validation. If y is None, derive from X (next-period close)."""
         if not self.available:
             print("âš ï¸ LSTMForecaster unavailable due to initialization failure")
             return {
@@ -944,6 +944,13 @@ class LSTMForecaster(BaseModel):
             if self._load_cached_model(input_hash):
                 self.last_input_hash = input_hash
                 return {"train_loss": [0.0], "val_loss": [0.0], "cached": True}
+
+            # Derive y from X if not provided (e.g. walk-forward calls fit(X) only)
+            if y is None:
+                close_col = "close" if "close" in X.columns else "Close" if "Close" in X.columns else X.columns[0]
+                y = X[close_col].shift(-1).dropna()
+                X = X.loc[y.index].copy()
+                y = y.astype("float64")
 
             # Input validation: Drop NaNs
             X = X.copy()
@@ -1623,6 +1630,7 @@ class LSTMForecaster(BaseModel):
                     "confidence": np.full(horizon, 0.8),  # Placeholder confidence
                     "model_type": "LSTM",
                     "horizon": horizon,
+                    "already_denormalized": True,
                 }
                 
                 # Cache the result

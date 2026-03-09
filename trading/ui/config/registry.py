@@ -6,7 +6,7 @@ It serves as a single source of truth for UI components and enables agentic inte
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
@@ -32,15 +32,15 @@ class StrategyConfig:
     """Configuration for a trading strategy."""
 
     name: str
-    description: str
-    category: str  # e.g., "technical", "fundamental", "hybrid"
-    parameters: Dict[str, Union[str, float, int, bool]]
-    required_models: List[str]
-    required_data: List[str]
-    output_type: str
-    risk_level: str  # e.g., "low", "medium", "high"
-    timeframes: List[str]
-    asset_classes: List[str]
+    description: str = ""
+    category: str = "custom"  # e.g., "technical", "fundamental", "hybrid"
+    parameters: Dict[str, Union[str, float, int, bool]] = field(default_factory=dict)
+    required_models: List[str] = field(default_factory=list)
+    required_data: List[str] = field(default_factory=lambda: ["OHLCV"])
+    output_type: str = "signals"
+    risk_level: str = "medium"  # e.g., "low", "medium", "high"
+    timeframes: List[str] = field(default_factory=lambda: ["1d"])
+    asset_classes: List[str] = field(default_factory=lambda: ["equity"])
     confidence_available: bool = False
     benchmark_support: bool = False
 

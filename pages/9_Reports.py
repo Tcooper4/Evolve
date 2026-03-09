@@ -233,17 +233,38 @@ with tab1:
                 if not has_report_data:
                     _empty_state("No report data yet. Complete a backtest or trading session to generate reports.", "📋")
                 else:
-                    # Executive Summary
+                    # Executive Summary — use real backtest data when available
                     st.markdown("### Executive Summary")
-                    
-                    summary_metrics = {
-                        "Total Return": "12.5%",
-                        "Sharpe Ratio": "1.85",
-                        "Max Drawdown": "-8.3%",
-                        "Win Rate": "58.2%",
-                        "Total Trades": "142",
-                        "Average Trade P&L": "$125.50"
-                    }
+                    backtest_results = st.session_state.get("backtest_results")
+                    if backtest_results:
+                        total_return = backtest_results.get("total_return")
+                        total_return_str = f"{total_return * 100:.1f}%" if isinstance(total_return, (int, float)) else str(total_return or "N/A")
+                        sharpe = backtest_results.get("sharpe_ratio")
+                        sharpe_str = f"{sharpe:.2f}" if isinstance(sharpe, (int, float)) else str(sharpe or "N/A")
+                        max_dd = backtest_results.get("max_drawdown")
+                        max_dd_str = f"{max_dd * 100:.1f}%" if isinstance(max_dd, (int, float)) else str(max_dd or "N/A")
+                        win_rate = backtest_results.get("win_rate")
+                        win_rate_str = f"{win_rate * 100:.1f}%" if isinstance(win_rate, (int, float)) else str(win_rate or "N/A")
+                        trades_list = backtest_results.get("trades", [])
+                        n_trades = len(trades_list) if isinstance(trades_list, list) else 0
+                        summary_metrics = {
+                            "Total Return": total_return_str,
+                            "Sharpe Ratio": sharpe_str,
+                            "Max Drawdown": max_dd_str,
+                            "Win Rate": win_rate_str,
+                            "Total Trades": str(n_trades),
+                            "Average Trade P&L": "$—"  # optional: compute from trades
+                        }
+                    else:
+                        summary_metrics = {
+                            "Total Return": "—",
+                            "Sharpe Ratio": "—",
+                            "Max Drawdown": "—",
+                            "Win Rate": "—",
+                            "Total Trades": "0",
+                            "Average Trade P&L": "—"
+                        }
+                        st.caption("Run a backtest on the Strategy Testing page to populate metrics.")
                     
                     col1, col2, col3 = st.columns(3)
                     with col1:
@@ -280,75 +301,60 @@ with tab1:
                             )
                             st.plotly_chart(fig, use_container_width=True)
                     
-                    perf_df = pd.DataFrame({
-                        "Metric": ["Total Return", "Annualized Return", "Volatility", "Sharpe Ratio", "Sortino Ratio", "Calmar Ratio"],
-                        "Value": ["12.5%", "15.2%", "18.5%", "1.85", "2.10", "1.83"]
-                    })
-                    st.dataframe(perf_df, use_container_width=True, hide_index=True)
+                    if summary_metrics:
+                        perf_df = pd.DataFrame(
+                            [{"Metric": k, "Value": v} for k, v in summary_metrics.items()]
+                        )
+                        st.dataframe(perf_df, use_container_width=True, hide_index=True)
+                    else:
+                        st.info("Run a backtest to populate performance metrics.")
                     
                     # Risk Metrics (if enabled)
                     if include_risk_metrics:
                         st.markdown("---")
                         st.markdown("### Risk Analysis")
-                        
-                        risk_metrics = {
-                            "VaR (95%)": "-2.5%",
-                            "CVaR (95%)": "-3.2%",
-                            "Maximum Drawdown": "-8.3%",
-                            "Beta": "0.95",
-                            "Alpha": "2.1%",
-                            "Tracking Error": "5.2%"
-                        }
-                        
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("VaR (95%)", risk_metrics["VaR (95%)"])
-                            st.metric("CVaR (95%)", risk_metrics["CVaR (95%)"])
-                        with col2:
-                            st.metric("Max Drawdown", risk_metrics["Maximum Drawdown"])
-                            st.metric("Beta", risk_metrics["Beta"])
-                        with col3:
-                            st.metric("Alpha", risk_metrics["Alpha"])
-                            st.metric("Tracking Error", risk_metrics["Tracking Error"])
+                        risk_metrics = (st.session_state.get("backtest_results") or {}).get("risk_metrics")
+                        if isinstance(risk_metrics, dict) and risk_metrics:
+                            st.dataframe(
+                                pd.DataFrame([risk_metrics]),
+                                use_container_width=True,
+                                hide_index=True,
+                            )
+                        else:
+                            st.info("Risk metrics not available for this backtest.")
                     
-                    # Trade Details (if enabled)
+                    # Trade Details (if enabled) — use real backtest data when available
                     if include_trade_details:
                         st.markdown("---")
                         st.markdown("### Trade History")
-                        
-                        n_trades = 20
-                        trade_df = pd.DataFrame({
-                            "Date": pd.date_range(start=start_date, periods=n_trades, freq='D'),
-                            "Symbol": np.random.choice(["AAPL", "MSFT", "GOOGL", "AMZN"], n_trades),
-                            "Action": np.random.choice(["Buy", "Sell"], n_trades),
-                            "Quantity": np.random.randint(10, 100, n_trades),
-                            "Price": np.random.uniform(100, 200, n_trades),
-                            "P&L": np.random.uniform(-500, 1000, n_trades),
-                            "Status": np.random.choice(["Filled", "Partial"], n_trades)
-                        })
-                        trade_df["P&L"] = trade_df["P&L"].apply(lambda x: f"${x:.2f}")
-                        trade_df["Price"] = trade_df["Price"].apply(lambda x: f"${x:.2f}")
-                        
-                        st.dataframe(trade_df, use_container_width=True, height=300)
+                        backtest_results = st.session_state.get("backtest_results")
+                        if backtest_results and backtest_results.get("trades") and len(backtest_results["trades"]) > 0:
+                            trade_df = pd.DataFrame(backtest_results["trades"])
+                            if not trade_df.empty:
+                                st.dataframe(trade_df, use_container_width=True, height=300)
+                            else:
+                                st.info("No trade history in backtest results.")
+                        else:
+                            st.info("No report data available — run a backtest on the Strategy Testing page to see real trade history here.")
                     
                     # Performance Attribution (if enabled)
                     if include_performance_attribution:
                         st.markdown("---")
                         st.markdown("### Performance Attribution")
-                        
-                        attribution_data = {
-                            "Source": ["Stock Selection", "Market Timing", "Sector Allocation", "Currency", "Other"],
-                            "Contribution": ["8.2%", "2.1%", "1.5%", "0.4%", "0.3%"]
-                        }
-                        attr_df = pd.DataFrame(attribution_data)
-                        st.dataframe(attr_df, use_container_width=True, hide_index=True)
+                        attribution = (backtest_results or {}).get("attribution")
+                        if isinstance(attribution, (list, dict)) and attribution:
+                            st.dataframe(pd.DataFrame(attribution), use_container_width=True, hide_index=True)
+                        else:
+                            st.info("Attribution data not available for this backtest.")
                     
                     # Store report
+                    _br = st.session_state.get("backtest_results")
+                    _trade_count = len(_br.get("trades", [])) if _br and include_trade_details else 0
                     report_data["content"] = {
                         "summary_metrics": summary_metrics,
                         "performance_data": performance_data,
                         "risk_metrics": risk_metrics if include_risk_metrics else None,
-                        "trade_count": n_trades if include_trade_details else 0
+                        "trade_count": _trade_count
                     }
                     
                     st.session_state.generated_reports[report_id] = report_data
@@ -359,6 +365,23 @@ with tab1:
                     
                     # Export Options
                     st.subheader("📤 Export Report")
+                    backtest = st.session_state.get("backtest_results")
+                    if not backtest:
+                        st.error("No backtest data to export. Run a strategy backtest first.")
+                        st.stop()
+                    trades_export = backtest.get("trades", []) if isinstance(backtest, dict) else []
+                    trade_df_export = pd.DataFrame(trades_export) if trades_export else pd.DataFrame()
+                    eq_export = backtest.get("equity_curve") if isinstance(backtest, dict) else None
+                    perf_df_export = None
+                    try:
+                        if isinstance(eq_export, pd.DataFrame) and "equity" in eq_export.columns:
+                            perf_df_export = eq_export.copy()
+                        elif isinstance(eq_export, pd.Series):
+                            perf_df_export = pd.DataFrame({"equity": eq_export.values})
+                        elif isinstance(eq_export, (list, np.ndarray)):
+                            perf_df_export = pd.DataFrame({"equity": np.asarray(eq_export, dtype="float64").ravel()})
+                    except Exception:
+                        perf_df_export = None
                     
                     export_col1, export_col2, export_col3, export_col4 = st.columns(4)
                     
@@ -395,9 +418,9 @@ with tab1:
                                 story.append(Spacer(1, 12))
                                 
                                 # Add summary metrics if available in session state
-                                if 'report_summary_metrics' in st.session_state:
+                                if summary_metrics:
                                     story.append(Paragraph("<b>Summary Metrics</b>", styles['Heading2']))
-                                    metrics_data = [[k, str(v)] for k, v in st.session_state.report_summary_metrics.items()]
+                                    metrics_data = [[k, str(v)] for k, v in summary_metrics.items()]
                                     metrics_table = Table(metrics_data)
                                     metrics_table.setStyle(TableStyle([
                                         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -439,9 +462,13 @@ with tab1:
                                 output = BytesIO()
                                 
                                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                                    perf_df.to_excel(writer, sheet_name='Performance', index=False)
+                                    if perf_df_export is not None and not perf_df_export.empty:
+                                        perf_df_export.to_excel(writer, sheet_name='Performance', index=False)
+                                    else:
+                                        pd.DataFrame([summary_metrics]).to_excel(writer, sheet_name='Summary', index=False)
                                     if include_trade_details:
-                                        trade_df.to_excel(writer, sheet_name='Trades', index=False)
+                                        if not trade_df_export.empty:
+                                            trade_df_export.to_excel(writer, sheet_name='Trades', index=False)
                                     if include_risk_metrics:
                                         pd.DataFrame([risk_metrics]).to_excel(writer, sheet_name='Risk', index=False)
                                 
@@ -684,69 +711,87 @@ with tab2:
                         if section == "Executive Summary":
                             st.markdown("**Key Highlights:**")
                             col1, col2, col3 = st.columns(3)
+                            _br = st.session_state.get("backtest_results") or {}
+                            _trades = _br.get("trades", []) if isinstance(_br, dict) else []
+                            _n_trades = len(_trades) if isinstance(_trades, list) else 0
+                            _total_return = _br.get("total_return")
+                            _sharpe = _br.get("sharpe_ratio")
+                            _max_dd = _br.get("max_drawdown")
+                            _win_rate = _br.get("win_rate")
+                            total_return_str = f"{_total_return * 100:.1f}%" if isinstance(_total_return, (int, float)) else "—"
+                            sharpe_str = f"{_sharpe:.2f}" if isinstance(_sharpe, (int, float)) else "—"
+                            max_dd_str = f"{_max_dd * 100:.1f}%" if isinstance(_max_dd, (int, float)) else "—"
+                            win_rate_str = f"{_win_rate * 100:.1f}%" if isinstance(_win_rate, (int, float)) else "—"
                             with col1:
-                                st.metric("Total Return", "12.5%")
-                                st.metric("Sharpe Ratio", "1.85")
+                                st.metric("Total Return", total_return_str)
+                                st.metric("Sharpe Ratio", sharpe_str)
                             with col2:
-                                st.metric("Max Drawdown", "-8.3%")
-                                st.metric("Win Rate", "58.2%")
+                                st.metric("Max Drawdown", max_dd_str)
+                                st.metric("Win Rate", win_rate_str)
                             with col3:
-                                st.metric("Total Trades", "142")
-                                st.metric("Avg Trade P&L", "$125.50")
+                                st.metric("Total Trades", str(_n_trades))
+                                st.metric("Avg Trade P&L", "—")
                         
                         elif section == "Performance Metrics":
                             config = section_configs.get(section, {})
                             if config.get("include_returns", True):
                                 st.markdown("**Returns:**")
-                                returns_df = pd.DataFrame({
-                                    "Period": ["Daily", "Weekly", "Monthly", "YTD", "Annual"],
-                                    "Return": ["0.12%", "0.85%", "3.2%", "12.5%", "15.2%"]
-                                })
-                                st.dataframe(returns_df, use_container_width=True, hide_index=True)
+                                if st.session_state.get("backtest_results"):
+                                    st.dataframe(
+                                        pd.DataFrame([{
+                                            "Total Return": total_return_str,
+                                            "Max Drawdown": max_dd_str,
+                                            "Win Rate": win_rate_str,
+                                            "Total Trades": _n_trades,
+                                        }]),
+                                        use_container_width=True,
+                                        hide_index=True,
+                                    )
+                                else:
+                                    st.info("Run a backtest to populate performance metrics.")
                             
                             if config.get("include_ratios", True):
                                 st.markdown("**Risk-Adjusted Ratios:**")
-                                ratios_df = pd.DataFrame({
-                                    "Ratio": ["Sharpe", "Sortino", "Calmar", "Information"],
-                                    "Value": ["1.85", "2.10", "1.83", "0.95"]
-                                })
-                                st.dataframe(ratios_df, use_container_width=True, hide_index=True)
+                                st.dataframe(
+                                    pd.DataFrame([{"Sharpe": sharpe_str}]),
+                                    use_container_width=True,
+                                    hide_index=True,
+                                )
                         
                         elif section == "Portfolio Holdings":
                             st.markdown("**Current Positions:**")
-                            holdings_df = pd.DataFrame({
-                                "Symbol": ["AAPL", "MSFT", "GOOGL", "AMZN"],
-                                "Quantity": [100, 50, 75, 25],
-                                "Price": ["$175.50", "$380.20", "$140.30", "$155.80"],
-                                "Value": ["$17,550", "$19,010", "$10,522", "$3,895"],
-                                "Weight": ["34.5%", "37.4%", "20.7%", "7.7%"]
-                            })
-                            st.dataframe(holdings_df, use_container_width=True, hide_index=True)
+                            backtest_results = st.session_state.get("backtest_results")
+                            if backtest_results and backtest_results.get("trades") and len(backtest_results["trades"]) > 0:
+                                trades = backtest_results["trades"]
+                                # Build holdings from trades if possible
+                                try:
+                                    holdings_df = pd.DataFrame(trades)
+                                    if not holdings_df.empty and "symbol" in holdings_df.columns.str.lower():
+                                        st.dataframe(holdings_df, use_container_width=True, hide_index=True)
+                                    else:
+                                        st.info("No report data available — run a backtest first.")
+                                except Exception:
+                                    st.info("No report data available — run a backtest on the Strategy Testing page first.")
+                            else:
+                                st.info("No report data available — run a backtest on the Strategy Testing page to see holdings.")
                         
                         elif section == "Trade History":
                             config = section_configs.get(section, {})
                             max_trades = config.get("max_trades", 100)
                             st.markdown(f"**Recent Trades (showing up to {max_trades}):**")
-                            
-                            # Simulate trade data
-                            n_trades = min(20, max_trades)
-                            trade_df = pd.DataFrame({
-                                "Date": pd.date_range(start=start_date, periods=n_trades, freq='D'),
-                                "Symbol": np.random.choice(["AAPL", "MSFT", "GOOGL", "AMZN"], n_trades),
-                                "Action": np.random.choice(["Buy", "Sell"], n_trades),
-                                "Quantity": np.random.randint(10, 100, n_trades),
-                                "Price": [f"${x:.2f}" for x in np.random.uniform(100, 200, n_trades)],
-                                "P&L": [f"${x:.2f}" for x in np.random.uniform(-500, 1000, n_trades)]
-                            })
-                            
-                            if config.get("sort_by") == "P&L":
-                                trade_df = trade_df.sort_values("P&L", ascending=False)
-                            elif config.get("sort_by") == "Symbol":
-                                trade_df = trade_df.sort_values("Symbol")
+                            backtest_results = st.session_state.get("backtest_results")
+                            if backtest_results and backtest_results.get("trades") and len(backtest_results["trades"]) > 0:
+                                trade_df = pd.DataFrame(backtest_results["trades"]).head(max_trades)
+                                if config.get("sort_by") == "P&L" and "P&L" in trade_df.columns:
+                                    trade_df = trade_df.sort_values("P&L", ascending=False)
+                                elif config.get("sort_by") == "Symbol" and "symbol" in trade_df.columns:
+                                    trade_df = trade_df.sort_values("symbol")
+                                elif "date" in trade_df.columns or "Date" in trade_df.columns:
+                                    date_col = "date" if "date" in trade_df.columns else "Date"
+                                    trade_df = trade_df.sort_values(date_col, ascending=False)
+                                st.dataframe(trade_df, use_container_width=True, height=300)
                             else:
-                                trade_df = trade_df.sort_values("Date", ascending=False)
-                            
-                            st.dataframe(trade_df, use_container_width=True, height=300)
+                                st.info("No report data available — run a backtest on the Strategy Testing page first.")
                         
                         elif section == "Risk Analysis":
                             config = section_configs.get(section, {})

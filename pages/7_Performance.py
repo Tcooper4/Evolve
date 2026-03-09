@@ -59,12 +59,41 @@ def _get_sample_returns() -> Optional[pd.Series]:
     results = st.session_state.get("backtest_results")
     if not results:
         return None
+    # Prefer explicit returns when available
+    r = results.get("returns")
+    if r is not None:
+        try:
+            if isinstance(r, pd.Series):
+                return r.dropna()
+            if isinstance(r, (list, np.ndarray)):
+                s = pd.Series(r).astype("float64")
+                return s.replace([np.inf, -np.inf], np.nan).dropna()
+        except Exception:
+            pass
     eq = results.get("equity_curve")
     if eq is None or (hasattr(eq, 'empty') and eq.empty):
         return None
-    if "equity" not in getattr(eq, "columns", []):
+    try:
+        # DataFrame with an equity column
+        if isinstance(eq, pd.DataFrame):
+            for col in ("equity", "Equity", "portfolio_value", "value"):
+                if col in eq.columns:
+                    return pd.to_numeric(eq[col], errors="coerce").pct_change().dropna()
+            # single numeric column fallback
+            numeric_cols = list(eq.select_dtypes(include=[np.number]).columns)
+            if numeric_cols:
+                return pd.to_numeric(eq[numeric_cols[0]], errors="coerce").pct_change().dropna()
+            return None
+        # Series or array-like equity curve
+        if isinstance(eq, pd.Series):
+            s = pd.to_numeric(eq, errors="coerce")
+            return s.pct_change().dropna()
+        if isinstance(eq, (list, np.ndarray)):
+            s = pd.Series(eq).astype("float64")
+            return s.pct_change().dropna()
+    except Exception:
         return None
-    return eq["equity"].pct_change().dropna()
+    return None
 
 
 try:
@@ -172,77 +201,37 @@ try:
         }
 
     def get_strategy_performance_data() -> pd.DataFrame:
-        """Get strategy performance data (sample data for now)."""
-        # In production, this would come from StrategyLogger or database
-        strategies = [
-            {
-                'strategy_name': 'Bollinger Bands',
-                'total_return': 0.125,
-                'sharpe_ratio': 1.8,
-                'win_rate': 0.685,
-                'num_trades': 45,
-                'status': 'active'
-            },
-            {
-                'strategy_name': 'Moving Average Crossover',
-                'total_return': 0.187,
-                'sharpe_ratio': 2.1,
-                'win_rate': 0.723,
-                'num_trades': 38,
-                'status': 'active'
-            },
-            {
-                'strategy_name': 'RSI Mean Reversion',
-                'total_return': 0.089,
-                'sharpe_ratio': 1.2,
-                'win_rate': 0.652,
-                'num_trades': 52,
-                'status': 'active'
-            },
-            {
-                'strategy_name': 'MACD Momentum',
-                'total_return': 0.153,
-                'sharpe_ratio': 1.9,
-                'win_rate': 0.708,
-                'num_trades': 41,
-                'status': 'active'
-            },
-            {
-                'strategy_name': 'Volatility Breakout',
-                'total_return': 0.062,
-                'sharpe_ratio': 0.9,
-                'win_rate': 0.587,
-                'num_trades': 28,
-                'status': 'paused'
-            }
-        ]
-    
-        return pd.DataFrame(strategies)
+        """Get strategy performance data from backtest_results when available; otherwise empty (no fake data)."""
+        try:
+            backtest = st.session_state.get("backtest_results")
+            if backtest and isinstance(backtest, dict):
+                strategy_name = backtest.get("strategy_name") or backtest.get("strategy") or "Backtest"
+                strategies = [{
+                    'strategy_name': strategy_name,
+                    'total_return': backtest.get("total_return", 0),
+                    'sharpe_ratio': backtest.get("sharpe_ratio", 0),
+                    'win_rate': backtest.get("win_rate", 0),
+                    'num_trades': len(backtest.get("trades", [])),
+                    'status': 'active'
+                }]
+                return pd.DataFrame(strategies)
+        except Exception:
+            pass
+        return pd.DataFrame()
 
     def get_trade_history() -> pd.DataFrame:
-        """Get trade history (sample data for now)."""
-        # In production, this would come from trade logs
-        dates = pd.date_range(end=datetime.now(), periods=100, freq='D')
-    
-        trades = []
-        for i, date in enumerate(dates):
-            trades.append({
-                'entry_date': date,
-                'exit_date': date + timedelta(days=np.random.randint(1, 10)),
-                'symbol': np.random.choice(['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA']),
-                'strategy': np.random.choice(['Bollinger Bands', 'Moving Average Crossover', 'RSI Mean Reversion']),
-                'direction': np.random.choice(['Long', 'Short']),
-                'entry_price': np.random.uniform(100, 200),
-                'exit_price': np.random.uniform(100, 200),
-                'pnl': np.random.uniform(-500, 1000),
-                'pnl_pct': np.random.uniform(-0.05, 0.10),
-                'holding_period': np.random.randint(1, 10)
-            })
-    
-        df = pd.DataFrame(trades)
-        df['exit_date'] = pd.to_datetime(df['exit_date'])
-        df['entry_date'] = pd.to_datetime(df['entry_date'])
-        return df
+        """Get trade history from backtest_results when available; otherwise empty (no fake data)."""
+        try:
+            backtest = st.session_state.get("backtest_results")
+            if backtest and backtest.get("trades") and len(backtest["trades"]) > 0:
+                df = pd.DataFrame(backtest["trades"])
+                for col in ['entry_date', 'exit_date', 'date', 'Date']:
+                    if col in df.columns:
+                        df[col] = pd.to_datetime(df[col], errors='coerce')
+                return df
+        except Exception:
+            pass
+        return pd.DataFrame()
 
     def generate_performance_trend(returns: pd.Series, days: int) -> pd.Series:
         """Generate performance trend for specified period."""
@@ -295,6 +284,10 @@ try:
         if sample_returns is None or (hasattr(sample_returns, 'empty') and sample_returns.empty):
             _empty_state("No performance data yet. Run a backtest or make trades to populate this page.", "📈")
         else:
+            equity_curve_preview = (1 + sample_returns).cumprod()
+            if hasattr(equity_curve_preview, "nunique") and equity_curve_preview.nunique() <= 2:
+                st.warning("Strategy produced no equity movement — check strategy signals.")
+
             # Overall Portfolio Metrics
             st.subheader("📈 Overall Portfolio Metrics")
             portfolio_metrics = get_portfolio_metrics(sample_returns)
@@ -338,11 +331,12 @@ try:
         
             strategy_df = get_strategy_performance_data()
         
-            # Apply filters
-            if strategy_type_filter == "Active":
-                strategy_df = strategy_df[strategy_df['status'] == 'active']
-            elif strategy_type_filter == "Paused":
-                strategy_df = strategy_df[strategy_df['status'] == 'paused']
+            # Apply filters (only when we have data and columns)
+            if not strategy_df.empty and 'status' in strategy_df.columns:
+                if strategy_type_filter == "Active":
+                    strategy_df = strategy_df[strategy_df['status'] == 'active']
+                elif strategy_type_filter == "Paused":
+                    strategy_df = strategy_df[strategy_df['status'] == 'paused']
         
             if not strategy_df.empty:
                 # Format the dataframe for display
@@ -382,7 +376,7 @@ try:
                     for idx, row in worst_by_sharpe.iterrows():
                         st.warning(f"**{row['strategy_name']}**: Sharpe {row['sharpe_ratio']:.2f}")
             else:
-                st.info("No strategy data available")
+                st.info("Run a backtest on the Strategy Testing page to see real performance data here.")
         
             st.markdown("---")
         
@@ -597,7 +591,7 @@ try:
                 )
                 st.plotly_chart(fig_top, use_container_width=True)
             else:
-                st.info("No trade history available")
+                st.info("Run a backtest on the Strategy Testing page to see trade history here.")
 
     # TAB 2: Detailed History
     with tab2:
@@ -608,7 +602,7 @@ try:
         trade_history = get_trade_history()
     
         if trade_history.empty:
-            st.warning("No trade history available. Trades will appear here once executed.")
+            st.info("Run a backtest on the Strategy Testing page to see real trade history here.")
         else:
             # Filters and search
             st.subheader("🔍 Search & Filters")
@@ -1528,18 +1522,24 @@ try:
                 marker=dict(size=5, opacity=0.5, color='blue')
             ))
     
-            # Regression line
+            # Regression line (guard against NaN/inf/constant inputs to avoid LinAlgError)
             if len(benchmark_returns) > 1:
-                z = np.polyfit(benchmark_returns, sample_returns, 1)
-                p = np.poly1d(z)
-                x_line = np.linspace(benchmark_returns.min(), benchmark_returns.max(), 100)
-                fig_ab.add_trace(go.Scatter(
-                    x=x_line,
-                    y=p(x_line),
-                    mode='lines',
-                    name=f'Beta = {alpha_beta["beta"]:.2f}',
-                    line=dict(color='red', width=2, dash='dash')
-                ))
+                try:
+                    mask = np.isfinite(benchmark_returns) & np.isfinite(sample_returns)
+                    if mask.sum() < 3:
+                        raise ValueError("Not enough clean data points")
+                    z = np.polyfit(benchmark_returns[mask], sample_returns[mask], 1)
+                    p = np.poly1d(z)
+                    x_line = np.linspace(benchmark_returns.min(), benchmark_returns.max(), 100)
+                    fig_ab.add_trace(go.Scatter(
+                        x=x_line,
+                        y=p(x_line),
+                        mode='lines',
+                        name=f'Beta = {alpha_beta["beta"]:.2f}',
+                        line=dict(color='red', width=2, dash='dash')
+                    ))
+                except (np.linalg.LinAlgError, ValueError) as e:
+                    logger.warning(f"Beta regression line failed: {e}")
         
             fig_ab.update_layout(
                 title="Portfolio vs Benchmark Returns (Alpha/Beta Analysis)",

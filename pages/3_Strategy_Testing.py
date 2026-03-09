@@ -363,27 +363,35 @@ with tab1:
                             symbol = st.session_state.get('backtest_symbol', 'AAPL')
                             data = st.session_state.loaded_data.copy()
                             
-                            # Generate signals
-                            signals = sentiment_signals.generate_signals(
-                                symbol=symbol,
-                                price_data=data,
-                                sentiment_threshold=sentiment_threshold
-                            )
+                            # Generate signals (SentimentSignals uses generate_sentiment_signals(ticker) or generate_signals if present)
+                            method = next((m for m in ["generate_signals", "generate_sentiment_signals", "get_signals", "compute_signals"] if hasattr(sentiment_signals, m)), None)
+                            if method:
+                                fn = getattr(sentiment_signals, method)
+                                if method == "generate_sentiment_signals":
+                                    raw = fn(symbol, include_reddit=True, include_news=True)
+                                    signals = {"buy_count": 1 if raw.get("signals", {}).get("buy_signal") else 0, "sell_count": 1 if raw.get("signals", {}).get("sell_signal") else 0, "signal_history": [{"date": raw.get("timestamp", ""), "signal": "buy" if raw.get("signals", {}).get("buy_signal") else "sell" if raw.get("signals", {}).get("sell_signal") else "hold", "confidence": raw.get("confidence", 0)}], **raw}
+                                else:
+                                    signals = fn(symbol=symbol, price_data=data, sentiment_threshold=sentiment_threshold) if method == "generate_signals" else fn(symbol)
+                            else:
+                                signals = None
                             
                             sentiment_signals_data = signals
                             
-                            st.success("✅ Sentiment signals generated!")
+                            if signals is None:
+                                st.warning("Sentiment signals not available")
+                            else:
+                                st.success("✅ Sentiment signals generated!")
                             
                             # Display signal summary
                             col_sig1, col_sig2 = st.columns(2)
                             
                             with col_sig1:
-                                st.metric("Buy Signals", signals.get('buy_count', 0))
+                                st.metric("Buy Signals", signals.get('buy_count', 0) if signals else 0)
                             with col_sig2:
-                                st.metric("Sell Signals", signals.get('sell_count', 0))
+                                st.metric("Sell Signals", signals.get('sell_count', 0) if signals else 0)
                             
                             # Show recent signals
-                            if 'signal_history' in signals and len(signals['signal_history']) > 0:
+                            if signals and 'signal_history' in signals and len(signals.get('signal_history', [])) > 0:
                                 st.markdown("**Recent Signals:**")
                                 recent_signals = signals['signal_history'][-10:]
                                 signals_df = pd.DataFrame(recent_signals)
@@ -399,7 +407,8 @@ with tab1:
                                     st.dataframe(signals_df, use_container_width=True)
                             
                             # Store in session state for use in backtest
-                            st.session_state.sentiment_signals = signals
+                            if signals is not None:
+                                st.session_state.sentiment_signals = signals
                 
                 except ImportError:
                     st.warning("⚠️ Sentiment signals not available. Install required dependencies.")
@@ -1205,7 +1214,7 @@ with tab2:
                 col_save, col_test = st.columns(2)
                 
                 with col_save:
-                    if st.button("💾 Save Strategy", type="primary"):
+                    if st.button("💾 Save Strategy", type="primary", key="save_strategy_builder"):
                         try:
                             # Build strategy configuration
                             strategy_config = {
@@ -1490,7 +1499,7 @@ def generate_signals(data: pd.DataFrame, fast: int = 12, slow: int = 26, signal:
         col_save, col_validate, col_test = st.columns(3)
         
         with col_save:
-            save_code = st.button("💾 Save Strategy", type="primary")
+            save_code = st.button("💾 Save Strategy", type="primary", key="save_strategy_advanced")
         
         with col_validate:
             validate_code = st.button("✓ Validate")

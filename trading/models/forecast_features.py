@@ -103,14 +103,15 @@ def add_forecast_features(df: pd.DataFrame) -> pd.DataFrame:
 def prepare_forecast_data(
     df: pd.DataFrame,
     target_col: Optional[str] = None,
+    normalize_close: bool = False,
 ) -> Tuple[pd.DataFrame, float]:
     """
-    Add forecast features and normalize the target column by the last known price.
-    Use the returned last_price to denormalize forecasts: forecast_price = forecast_normalized * last_price.
+    Add forecast features. Optionally normalize the target column by the last known price.
 
-    IMPORTANT: last_price is extracted ONLY from the raw close column BEFORE any feature
-    engineering or normalization. It is never modified. The router must multiply the
-    final forecast array by this raw last_price exactly once.
+    Tree-based and statistical models (ARIMA, XGBoost, Ridge, CatBoost, Prophet) should
+    receive raw close prices (normalize_close=False). Only LSTM/TCN need normalized
+    inputs; they normalize internally. last_price is always returned for fallback
+    forecasts in the router.
     """
     if df is None or df.empty:
         return df, 1.0
@@ -118,12 +119,13 @@ def prepare_forecast_data(
     close_col = target_col or _ensure_close(raw)
     if close_col not in raw.columns:
         return df, 1.0
-    # Extract raw last price BEFORE any feature engineering — never modify this value
+    # Extract raw last price BEFORE any feature engineering
     last_price = float(raw[close_col].iloc[-1])
     if last_price <= 0 or not np.isfinite(last_price):
         last_price = 1.0
-    # Now add features (does not change close column values)
+    # Add features (does not change close column values)
     df = add_forecast_features(raw)
-    # Normalize only the target column by the stored raw last_price
-    df[close_col] = df[close_col] / last_price
+    # Only normalize close for neural models (LSTM/TCN); they will inverse_transform before return
+    if normalize_close:
+        df[close_col] = df[close_col] / last_price
     return df, last_price

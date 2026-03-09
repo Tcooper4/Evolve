@@ -112,14 +112,19 @@ def create_strategy_selector(
     Returns:
         Selected strategy name or None if no selection
     """
-    strategies = registry.get_available_strategies(category)
+    try:
+        strategies = registry.get_available_strategies(category)
+    except Exception as e:
+        logger.warning(f"Registry get_available_strategies failed: {e}")
+        strategies = []
     if not strategies:
-        st.warning("No strategies available for the selected category")
-
-    strategy_names = [strategy.name for strategy in strategies]
+        st.warning("No strategies from registry; using built-in list.")
+        strategy_names = ["Bollinger Bands", "RSI Mean Reversion", "Moving Average Crossover", "MACD Strategy", "Volatility Breakout", "Momentum", "Pairs Trading"]
+    else:
+        strategy_names = [strategy.name for strategy in strategies]
     selected_strategy = st.selectbox(
         "Select Strategy",
-        options=strategy_names,
+        options=strategy_names if strategy_names else ["Bollinger Bands"],
         index=(
             strategy_names.index(default_strategy)
             if default_strategy in strategy_names

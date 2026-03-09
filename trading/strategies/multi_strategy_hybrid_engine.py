@@ -555,9 +555,9 @@ class MultiStrategyHybridEngine:
                 total_weight += weight
 
             if total_weight > 0:
-            avg_return = safe_divide(weighted_return, total_weight, default=0.0)
-            avg_confidence = safe_divide(weighted_confidence, total_weight, default=0.0)
-            avg_risk = safe_divide(weighted_risk, total_weight, default=0.0)
+                avg_return = safe_divide(weighted_return, total_weight, default=0.0)
+                avg_confidence = safe_divide(weighted_confidence, total_weight, default=0.0)
+                avg_risk = safe_divide(weighted_risk, total_weight, default=0.0)
             else:
                 avg_return = 0.0
                 avg_confidence = 0.5

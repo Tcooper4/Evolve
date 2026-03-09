@@ -39,7 +39,7 @@ def run_system_initialization() -> Dict[str, Any]:
     Returns:
         Dictionary containing initialization status for each module
     """
-    logger.info("🔧 Starting system initialization...")
+    logger.info("Starting system initialization...")
 
     module_status = {}
 
@@ -47,52 +47,52 @@ def run_system_initialization() -> Dict[str, Any]:
     try:
         from trading.data.data_loader import DataLoader
 
-        logger.info("📊 Initializing data management...")
+        logger.info("Initializing data management...")
         data_loader = DataLoader()
         safe_session_set("data_loader", data_loader)
         module_status["data_management"] = "SUCCESS"
-        logger.info("✅ Data management initialized successfully")
+        logger.info("Data management initialized successfully")
     except Exception as e:
-        logger.error(f"❌ Data management initialization failed: {e}")
+        logger.error(f"Data management initialization failed: {e}")
         module_status["data_management"] = "FAILED"
 
     # Initialize market analysis
     try:
         from trading.market.market_analyzer import MarketAnalyzer
 
-        logger.info("📈 Initializing market analysis...")
+        logger.info("Initializing market analysis...")
         market_analyzer = MarketAnalyzer()
         safe_session_set("market_analyzer", market_analyzer)
         module_status["market_analysis"] = "SUCCESS"
-        logger.info("✅ Market analysis initialized successfully")
+        logger.info("Market analysis initialized successfully")
     except Exception as e:
-        logger.error(f"❌ Market analysis initialization failed: {e}")
+        logger.error(f"Market analysis initialization failed: {e}")
         module_status["market_analysis"] = "FAILED"
 
     # Initialize strategy engine
     try:
         from trading.strategies.strategy_engine import StrategyEngine
 
-        logger.info("🎯 Initializing strategy engine...")
+        logger.info("Initializing strategy engine...")
         strategy_engine = StrategyEngine()
         safe_session_set("strategy_engine", strategy_engine)
         module_status["strategy_engine"] = "SUCCESS"
-        logger.info("✅ Strategy engine initialized successfully")
+        logger.info("Strategy engine initialized successfully")
     except Exception as e:
-        logger.error(f"❌ Strategy engine initialization failed: {e}")
+        logger.error(f"Strategy engine initialization failed: {e}")
         module_status["strategy_engine"] = "FAILED"
 
     # Initialize optimization
     try:
         from trading.optimization.optimizer_factory import OptimizerFactory
 
-        logger.info("⚡ Initializing optimization...")
+        logger.info("Initializing optimization...")
         optimizer_factory = OptimizerFactory()
         safe_session_set("optimizer_factory", optimizer_factory)
         module_status["optimization"] = "SUCCESS"
-        logger.info("✅ Optimization initialized successfully")
+        logger.info("Optimization initialized successfully")
     except Exception as e:
-        logger.error(f"❌ Optimization initialization failed: {e}")
+        logger.error(f"Optimization initialization failed: {e}")
         module_status["optimization"] = "FAILED"
 
     # Log final status
@@ -100,7 +100,7 @@ def run_system_initialization() -> Dict[str, Any]:
     total_count = len(module_status)
 
     logger.info(
-        f"🎯 System initialization finished: {success_count}/{total_count} modules successful"
+        f"System initialization finished: {success_count}/{total_count} modules successful"
     )
 
     return module_status
@@ -115,17 +115,17 @@ def run_agentic_routing() -> Optional[str]:
     try:
         from core.capability_router import CapabilityRouter
 
-        logger.info("🤖 Initializing agentic routing...")
+        logger.info("Initializing agentic routing...")
         capability_router = CapabilityRouter()
 
         # Store in session state
         safe_session_set("capability_router", capability_router)
 
-        logger.info("✅ Agentic routing initialized successfully")
+        logger.info("Agentic routing initialized successfully")
         return "SUCCESS"
 
     except Exception as e:
-        logger.error(f"❌ Agentic routing initialization failed: {e}")
+        logger.error(f"Agentic routing initialization failed: {e}")
         return None
 
 
@@ -138,17 +138,17 @@ def run_portfolio_management() -> bool:
     try:
         from trading.portfolio.portfolio_manager import PortfolioManager
 
-        logger.info("📊 Initializing portfolio management...")
+        logger.info("Initializing portfolio management...")
         portfolio_manager = PortfolioManager()
 
         # Store in session state
         safe_session_set("portfolio_manager", portfolio_manager)
 
-        logger.info("✅ Portfolio management initialized successfully")
+        logger.info("Portfolio management initialized successfully")
         return True
 
     except Exception as e:
-        logger.error(f"❌ Portfolio management initialization failed: {e}")
+        logger.error(f"Portfolio management initialization failed: {e}")
         return False
 
 
@@ -161,17 +161,17 @@ def run_performance_tracking() -> bool:
     try:
         from trading.optimization.performance_logger import PerformanceLogger
 
-        logger.info("📈 Initializing performance tracking...")
+        logger.info("Initializing performance tracking...")
         performance_logger = PerformanceLogger()
 
         # Store in session state
         safe_session_set("performance_logger", performance_logger)
 
-        logger.info("✅ Performance tracking initialized successfully")
+        logger.info("Performance tracking initialized successfully")
         return True
 
     except Exception as e:
-        logger.error(f"❌ Performance tracking initialization failed: {e}")
+        logger.error(f"Performance tracking initialization failed: {e}")
         return False
 
 
@@ -184,17 +184,17 @@ def run_strategy_logging() -> bool:
     try:
         from trading.memory.strategy_logger import StrategyLogger
 
-        logger.info("📝 Initializing strategy logging...")
+        logger.info("Initializing strategy logging...")
         strategy_logger = StrategyLogger()
 
         # Store in session state
         safe_session_set("strategy_logger", strategy_logger)
 
-        logger.info("✅ Strategy logging initialized successfully")
+        logger.info("Strategy logging initialized successfully")
         return True
 
     except Exception as e:
-        logger.error(f"❌ Strategy logging initialization failed: {e}")
+        logger.error(f"Strategy logging initialization failed: {e}")
         return False
 
 
@@ -207,17 +207,17 @@ def run_model_monitoring() -> bool:
     try:
         from trading.memory.model_monitor import ModelMonitor
 
-        logger.info("🔍 Initializing model monitoring...")
+        logger.info("Initializing model monitoring...")
         model_monitor = ModelMonitor()
 
         # Store in session state
         safe_session_set("model_monitor", model_monitor)
 
-        logger.info("✅ Model monitoring initialized successfully")
+        logger.info("Model monitoring initialized successfully")
         return True
 
     except Exception as e:
-        logger.error(f"❌ Model monitoring initialization failed: {e}")
+        logger.error(f"Model monitoring initialization failed: {e}")
         return False
 
 
@@ -227,7 +227,7 @@ def run_complete_system() -> Dict[str, Any]:
     Returns:
         Dictionary containing complete system status
     """
-    logger.info("🚀 Starting complete system initialization...")
+    logger.info("Starting complete system initialization...")
 
     # Initialize core system
     module_status = run_system_initialization()

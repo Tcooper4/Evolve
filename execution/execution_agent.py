@@ -539,7 +539,7 @@ class ExecutionAgent:
         current_position = self.positions.get(
             order.symbol,
             Position(
-                symbol=order.symbol,
+                ticker=order.symbol,
                 quantity=0,
                 average_price=0,
                 market_value=0,

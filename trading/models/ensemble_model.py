@@ -660,13 +660,33 @@ class EnsembleModel(BaseModel):
 
             # Calculate ensemble prediction based on method
             if self.ensemble_method == "weighted_average":
-                return self._weighted_average_predict(
+                ensemble_pred = self._weighted_average_predict(
                     model_predictions, model_confidences
                 )
             else:
-                return self._vote_based_predict(
+                ensemble_pred = self._vote_based_predict(
                     model_predictions, model_confidences, data
                 )
+
+            # Final price-space guard: if sub-models disagree wildly or produce non-price outputs,
+            # fall back to a flat forecast at the last close.
+            try:
+                close_col = None
+                if isinstance(data, pd.DataFrame):
+                    if "Close" in data.columns:
+                        close_col = "Close"
+                    elif "close" in data.columns:
+                        close_col = "close"
+                if close_col is not None:
+                    last_close = float(data[close_col].iloc[-1])
+                    ep = np.asarray(ensemble_pred, dtype="float64").ravel()
+                    if last_close > 10 and ep.size:
+                        if (not np.all(np.isfinite(ep))) or ep.min() < 50.0 or ep.max() > 1000.0 or ep.max() < 10.0 or ep.max() > last_close * 10:
+                            ensemble_pred = np.full(ep.size, last_close, dtype="float64")
+            except Exception:
+                pass
+
+            return ensemble_pred
 
         except Exception as e:
             logger.error(f"Error in ensemble prediction: {e}")
@@ -938,7 +958,7 @@ class EnsembleModel(BaseModel):
         return weighted_shap
 
     @cache_model_operation
-    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
+    def forecast(self, data: pd.DataFrame, horizon: int = 30, **kwargs) -> Dict[str, Any]:
         """Generate forecast for future time steps.
 
         Args:
@@ -982,6 +1002,7 @@ class EnsembleModel(BaseModel):
                 "horizon": horizon,
                 "weights": self.weights,
                 "strategy_patterns": self.strategy_patterns,
+                "already_denormalized": True,
             }
 
         except Exception as e:

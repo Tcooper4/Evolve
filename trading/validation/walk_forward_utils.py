@@ -149,3 +149,82 @@ class WalkForwardValidator:
                 "success": False,
                 "error": str(e),
             }
+
+    def walk_forward_test(
+        self,
+        strategy: Any,
+        data: pd.DataFrame,
+        train_window: int = 252,
+        test_window: int = 63,
+        step_size: int = 21,
+        num_iterations: int = 5,
+        progress_callback: Any = None,
+    ) -> Dict[str, Any]:
+        """
+        Run walk-forward backtest: roll train/test windows, collect returns, aggregate metrics.
+        Compatible with Strategy Testing page (strategy, data, train_window, test_window, step_size, num_iterations).
+        """
+        try:
+            if data is None or len(data) < train_window + test_window:
+                return {
+                    "avg_return": 0.0,
+                    "consistency_score": 0.0,
+                    "win_rate": 0.0,
+                    "error": "Insufficient data for walk-forward",
+                }
+            returns_list = []
+            wins = 0
+            total = 0
+            n = len(data)
+            for i in range(num_iterations):
+                start = i * step_size
+                train_end = start + train_window
+                test_end = min(train_end + test_window, n)
+                if test_end > n or train_end > n - 1:
+                    break
+                train_df = data.iloc[start:train_end]
+                test_df = data.iloc[train_end:test_end]
+                if progress_callback:
+                    progress_callback(i + 1, num_iterations)
+                try:
+                    if hasattr(strategy, "backtest"):
+                        result = strategy.backtest(train_df, test_df)
+                    elif hasattr(strategy, "run_backtest"):
+                        result = strategy.run_backtest(train_df, test_df)
+                    else:
+                        total_return = 0.0
+                        if len(test_df) >= 2 and "close" in test_df.columns:
+                            total_return = (test_df["close"].iloc[-1] / test_df["close"].iloc[0] - 1.0)
+                        returns_list.append(total_return)
+                        total += 1
+                        wins += 1 if total_return > 0 else 0
+                        continue
+                    tr = result.get("total_return", result.get("returns", 0.0))
+                    if isinstance(tr, (list, pd.Series)):
+                        tr = float(tr[-1]) if len(tr) else 0.0
+                    returns_list.append(float(tr))
+                    total += 1
+                    wins += 1 if float(tr) > 0 else 0
+                except Exception as e:
+                    self.logger.debug("Walk-forward window %s failed: %s", i, e)
+            if progress_callback and total == num_iterations:
+                progress_callback(num_iterations, num_iterations)
+            avg_return = float(pd.Series(returns_list).mean()) if returns_list else 0.0
+            consistency = float(pd.Series(returns_list).std()) if len(returns_list) > 1 else 0.0
+            consistency_score = (1.0 / (1.0 + consistency)) if consistency >= 0 else 0.0
+            win_rate = (wins / total) if total else 0.0
+            return {
+                "avg_return": avg_return,
+                "consistency_score": consistency_score,
+                "win_rate": win_rate,
+                "num_windows": total,
+                "returns": returns_list,
+            }
+        except Exception as e:
+            self.logger.error(f"Walk-forward test failed: {e}")
+            return {
+                "avg_return": 0.0,
+                "consistency_score": 0.0,
+                "win_rate": 0.0,
+                "error": str(e),
+            }

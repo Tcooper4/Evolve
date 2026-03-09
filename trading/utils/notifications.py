@@ -131,7 +131,7 @@ class TradeLogger:
             with open(self.log_file, "w") as f:
                 json.dump(self.trade_log, f, indent=2)
         except Exception as e:
-            logger.error(f"❌ Error saving trade log: {e}")
+            logger.error(f"Error saving trade log: {e}")
 
         # Send notifications
         self._send_notifications(trade_data)

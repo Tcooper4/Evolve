@@ -515,17 +515,19 @@ class RidgeModel(BaseModel):
             logger.error(f"Error during Ridge prediction: {e}")
             raise ModelError(f"Ridge prediction failed: {e}")
 
-    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
+    def forecast(self, data: pd.DataFrame, horizon: int = 30, **kwargs) -> Dict[str, Any]:
         """
-        Generate forecasts using the Ridge model. Model predicts returns; build ratio path
-        so router denormalizes once (forecast in normalized space = ratio to last price).
+        Generate forecasts using the Ridge model. Model predicts returns; build price path
+        from last price (raw close). Returns already_denormalized=True for router.
         """
         data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
         logger.info(f"Generating Ridge forecast for {horizon} periods")
 
         try:
             price_col = "Close" if "Close" in data.columns else "close"
+            # Last price in raw space (no normalization) — build price path from it
             current_ratio = float(data[price_col].iloc[-1]) if price_col in data.columns else 1.0
+            base_price = current_ratio
             forecasts = []
             current_data = data.copy()
 
@@ -545,11 +547,26 @@ class RidgeModel(BaseModel):
                 current_ratio = next_ratio
 
             forecast_array = np.array(forecasts, dtype="float64")
+            # Price-space sanity guard (prevents runaway compounding on bad return predictions)
+            if base_price and np.isfinite(base_price) and base_price > 10 and len(forecast_array) > 0:
+                min_ok = base_price * 0.70
+                max_ok = base_price * 1.30
+                if (not np.all(np.isfinite(forecast_array))) or forecast_array.min() < min_ok or forecast_array.max() > max_ok:
+                    forecast_array = np.full(horizon, base_price, dtype="float64")
+            std_estimate = np.std(getattr(self, "residuals", None)) if hasattr(self, "residuals") and getattr(self, "residuals", None) is not None else (base_price * 0.02)
+            if not np.isfinite(std_estimate) or std_estimate <= 0:
+                std_estimate = base_price * 0.02
+            horizon_multiplier = np.sqrt(np.arange(1, horizon + 1, dtype="float64"))
+            lower_bound = forecast_array - 1.96 * std_estimate * horizon_multiplier
+            upper_bound = forecast_array + 1.96 * std_estimate * horizon_multiplier
             return {
                 "forecast": forecast_array,
                 "horizon": horizon,
                 "model_type": "Ridge",
                 "timestamp": datetime.now().isoformat(),
+                "already_denormalized": True,
+                "lower_bound": lower_bound,
+                "upper_bound": upper_bound,
             }
 
         except Exception as e:

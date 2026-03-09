@@ -672,24 +672,38 @@ class ARIMAModel(BaseModel):
         fvals = forecast_result.values if hasattr(forecast_result, "values") else np.asarray(forecast_result)
         fvals = np.asarray(fvals, dtype="float64").ravel()
 
-        # Continuity check: first forecast should be close to last in-sample value
+        # Last actual price (data is in raw price space)
         if isinstance(data, pd.DataFrame):
             close_col = "close" if "close" in data.columns else "Close" if "Close" in data.columns else data.columns[0]
             last_actual = float(data[close_col].iloc[-1])
         else:
             last_actual = float(data.values[-1]) if hasattr(data, "values") else float(data.iloc[-1])
+
+        # Continuity correction: enforce continuity with last actual price if >2% gap
+        offset = 0.0
         if len(fvals) > 0 and (last_actual or 1e-8) > 0:
             first_forecast = float(fvals[0])
-            continuity_gap = abs(first_forecast - last_actual) / (last_actual or 1e-8)
-            if continuity_gap > 0.05:
-                logger.warning(
-                    "ARIMA continuity gap: %.1f%% — last=%.2f, first_forecast=%.2f",
-                    continuity_gap * 100,
-                    last_actual,
-                    first_forecast,
-                )
+            gap_pct = abs(first_forecast - last_actual) / (last_actual or 1e-8)
+            if gap_pct > 0.02:
+                offset = last_actual - first_forecast
+                fvals = fvals + offset
+                logger.info("ARIMA continuity correction: offset=%.2f (%.1f%% gap)", offset, gap_pct * 100)
 
-        return {
+        # Confidence intervals from statsmodels when available
+        lower_bound = upper_bound = None
+        try:
+            if hasattr(self.fitted_model, "get_forecast"):
+                fcast_obj = self.fitted_model.get_forecast(steps=horizon)
+                conf_int = fcast_obj.conf_int(alpha=0.05)
+                if conf_int is not None:
+                    lower_bound = conf_int.iloc[:, 0].values if hasattr(conf_int, "iloc") else np.asarray(conf_int)[:, 0]
+                    upper_bound = conf_int.iloc[:, 1].values if hasattr(conf_int, "iloc") else np.asarray(conf_int)[:, 1]
+                    if offset != 0 and lower_bound is not None and upper_bound is not None:
+                        lower_bound = np.asarray(lower_bound, dtype="float64") + offset
+                        upper_bound = np.asarray(upper_bound, dtype="float64") + offset
+        except Exception as e:
+            logger.debug("ARIMA conf_int not available: %s", e)
+        result = {
             "forecast": fvals,
             "confidence": confidence,
             "model": "ARIMA",
@@ -698,7 +712,13 @@ class ARIMAModel(BaseModel):
             "seasonal_order": self.seasonal_order,
             "aic": self.get_aic(),
             "bic": self.get_bic(),
+            "already_denormalized": True,
         }
+        if lower_bound is not None:
+            result["lower_bound"] = np.asarray(lower_bound, dtype="float64").ravel()
+        if upper_bound is not None:
+            result["upper_bound"] = np.asarray(upper_bound, dtype="float64").ravel()
+        return result
 
     def plot_results(self, data: pd.Series, predictions: np.ndarray = None) -> None:
         """Plot ARIMA model results and predictions.
@@ -711,7 +731,12 @@ class ARIMAModel(BaseModel):
             import matplotlib.pyplot as plt
 
             if predictions is None:
-                predictions = self.predict(steps=len(data))
+                pred_result = self.predict(steps=len(data))
+                predictions = pred_result.get("predictions", pred_result) if isinstance(pred_result, dict) else pred_result
+            if predictions is not None and hasattr(predictions, "__len__") and len(predictions) == 0:
+                predictions = None
+            if predictions is None:
+                predictions = np.array([])
 
             plt.figure(figsize=(15, 10))
 
@@ -720,7 +745,7 @@ class ARIMAModel(BaseModel):
             plt.plot(data.index, data.values, label="Actual", color="blue")
             plt.plot(
                 data.index[-len(predictions) :],
-                predictions,
+                np.asarray(predictions),
                 label="Predicted",
                 color="red",
             )
@@ -732,7 +757,7 @@ class ARIMAModel(BaseModel):
 
             # Plot 2: Residuals
             plt.subplot(2, 2, 2)
-            if len(predictions) == len(data):
+            if predictions is not None and hasattr(predictions, "__len__") and len(predictions) == len(data):
                 residuals = data.values - predictions
                 plt.plot(residuals)
                 plt.title("Model Residuals")

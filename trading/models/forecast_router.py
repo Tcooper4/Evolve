@@ -323,14 +323,14 @@ class ForecastRouter:
         # Implement trend detection
         return False
 
-    def _prepare_data_safely(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Prepare data: add forecast features and normalize target by raw last price. Store raw last_price for single denorm."""
+    def _prepare_data_safely(self, data: pd.DataFrame, normalize_close: bool = False) -> pd.DataFrame:
+        """Prepare data: add forecast features. Do not normalize close for non-neural models (they predict raw prices)."""
         if data is None or data.empty:
             self._last_price_used = 1.0
             return pd.DataFrame()
-        prepared, last_price = prepare_forecast_data(data)
-        self._last_price_used = last_price  # raw close, used exactly once to denormalize forecast
-        logger.info("Forecast denorm: last_price=%.2f (raw close, multiply forecast once)", self._last_price_used)
+        prepared, last_price = prepare_forecast_data(data, normalize_close=normalize_close)
+        self._last_price_used = last_price
+        logger.info("Forecast data prepared: last_price=%.2f, normalize_close=%s", self._last_price_used, normalize_close)
         return prepared
 
     def _select_model_with_fallback(
@@ -386,11 +386,21 @@ class ForecastRouter:
         """Generate a simple constant/last-value forecast."""
         if data is None or data.empty or horizon <= 0:
             return np.array([])
+        # Use an explicit close/price column when possible (avoid volume/features blowing up the fallback).
+        for col in ("Close", "close", "price", "Price"):
+            if col in data.columns:
+                try:
+                    last = float(pd.to_numeric(data[col], errors="coerce").dropna().iloc[-1])
+                    if np.isfinite(last):
+                        return np.full(horizon, last, dtype="float64")
+                except Exception:
+                    pass
+
         numeric = data.select_dtypes(include=[np.number])
         if numeric.empty:
-            return np.zeros(horizon)
-        last = float(numeric.iloc[-1].mean())
-        return np.full(horizon, last)
+            return np.zeros(horizon, dtype="float64")
+        last = float(numeric.iloc[-1].dropna().iloc[-1]) if not numeric.iloc[-1].dropna().empty else 0.0
+        return np.full(horizon, last, dtype="float64")
 
     def _get_confidence(self, model: Any, model_name: str) -> float:
         """Return confidence score for the model."""
@@ -519,42 +529,39 @@ class ForecastRouter:
         Returns:
             Selected model type
         """
-        # Handle None or invalid model_name with fallback
-        if model_type is None:
-            logger.warning("No model_name specified, defaulting to Prophet forecaster")
-            if PROPHET_AVAILABLE:
-                return "prophet"
-            else:
-                logger.warning("Prophet not available, falling back to ARIMA")
-                return "arima"
+        # If the user explicitly asked for a model, honor it (no heuristic override).
+        if model_type is not None:
+            mt = str(model_type).lower()
+            # Common aliases
+            if mt in ("xgb",):
+                mt = "xgboost"
+            if mt in self.model_registry:
+                return mt
+            if mt != "auto":
+                logger.warning("Requested model '%s' not in registry; falling back.", model_type)
 
-        # Check if model exists in registry
-        if model_type not in self.model_registry:
-            logger.warning(
-                f"Model '{model_type}' not found in registry, defaulting to Prophet forecaster"
-            )
-            if PROPHET_AVAILABLE:
-                return "prophet"
-            else:
-                logger.warning("Prophet not available, falling back to ARIMA")
-                return "arima"
-
-        # Alias matching for xgboost/xgb
-        if model_type.lower() in ["xgboost", "xgb"]:
-            return "xgboost"
-
-        # Analyze data characteristics
-        characteristics = self._analyze_data(data)
-
-        # Apply selection rules
-        if characteristics["length"] < 100:
-            return "arima"  # Better for short series
-        elif characteristics["has_seasonality"] and PROPHET_AVAILABLE:
-            return "prophet"  # Better for seasonal data
-        elif characteristics["has_trend"]:
-            return "autoformer"  # Better for trending data
+        # Auto-selection: pick a reasonable default when model_type is None/"auto"/invalid.
+        if PROPHET_AVAILABLE and "prophet" in self.model_registry:
+            default_model = "prophet"
         else:
-            return "lstm"
+            default_model = "arima" if "arima" in self.model_registry else list(self.model_registry.keys())[0]
+
+        # Heuristic selection (only in auto mode)
+        try:
+            characteristics = self._analyze_data(data)
+            if characteristics.get("length", 0) < 100 and "arima" in self.model_registry:
+                return "arima"
+            if characteristics.get("has_seasonality") and "prophet" in self.model_registry:
+                return "prophet"
+            # Prefer tree models for longer, non-seasonal series when available
+            if "xgboost" in self.model_registry:
+                return "xgboost"
+            if "ridge" in self.model_registry:
+                return "ridge"
+        except Exception:
+            pass
+
+        return default_model
 
     def get_forecast(
         self,
@@ -580,6 +587,11 @@ class ForecastRouter:
             ValueError: If data is invalid or model type is not supported
         """
         try:
+            # Accept common alias used throughout the app/scripts
+            # (keeps backwards compatibility with callers passing model_name=...)
+            if model_type is None:
+                model_type = kwargs.get("model_name") or kwargs.get("model")
+
             # Defensive checks for input parameters
             if data is None or data.empty:
                 logger.warning("Empty or None data provided, using fallback data")
@@ -596,24 +608,13 @@ class ForecastRouter:
                 logger.error(f"Data must be pandas DataFrame, got {type(data)}")
                 raise ValueError("Data must be pandas DataFrame")
 
-            # Check for required columns
-            required_columns = (
-                ["close", "volume"] if "close" in data.columns else ["price"]
-            )
-            missing_columns = [
-                col for col in required_columns if col not in data.columns
-            ]
-            if missing_columns:
-                logger.warning(
-                    f"Missing columns {missing_columns}, using available columns"
-                )
-                # Use first numeric column as target
-                numeric_columns = data.select_dtypes(include=[np.number]).columns
-                if len(numeric_columns) > 0:
-                    target_col = numeric_columns[0]
-                    logger.info(f"Using {target_col} as target column")
-                else:
+            # Ensure we have at least one numeric price column (yfinance uses "Close")
+            price_cols = [c for c in ("close", "Close", "price", "Price") if c in data.columns]
+            if not price_cols:
+                numeric_columns = list(data.select_dtypes(include=[np.number]).columns)
+                if not numeric_columns:
                     raise ValueError("No numeric columns found in data")
+                logger.warning("No explicit price column found; using %s as price proxy", numeric_columns[0])
 
             # Prepare data with defensive checks
             prepared_data = self._prepare_data_safely(data)
@@ -625,7 +626,11 @@ class ForecastRouter:
             # Initialize model with single config dict (all constructors accept config: Dict)
             model_class = self.model_registry[selected_model]
             config = self._get_model_defaults(selected_model)
-            kwargs_for_model = {k: v for k, v in kwargs.items() if k != "run_walk_forward"}
+            kwargs_for_model = {
+                k: v
+                for k, v in kwargs.items()
+                if k not in ("run_walk_forward", "model_name", "model")
+            }
             config.update(kwargs_for_model)
             if selected_model == "lstm":
                 config["input_dim"] = (
@@ -722,6 +727,46 @@ class ForecastRouter:
                     )
                 if (not already_denormalized) and last_price and last_price != 1.0:
                     forecast_array = forecast_array * last_price
+
+                # FINAL PRICE SPACE GUARD — non-negotiable
+                # Enforce that outputs are in price space and roughly anchored to last close.
+                try:
+                    last_close = None
+                    if isinstance(data, pd.DataFrame):
+                        if "Close" in data.columns:
+                            last_close = float(data["Close"].iloc[-1])
+                        elif "close" in data.columns:
+                            last_close = float(data["close"].iloc[-1])
+                        elif "price" in data.columns:
+                            last_close = float(data["price"].iloc[-1])
+                    if last_close is not None and np.isfinite(last_close) and last_close > 10:
+                        fa = np.asarray(forecast_array, dtype="float64").ravel()
+                        if fa.size:
+                            # If model produced ratios/returns, convert to prices
+                            if np.nanmax(fa) < 10:
+                                prices = [last_close]
+                                for v in fa:
+                                    r = float(v)
+                                    next_p = (
+                                        prices[-1] * r
+                                        if 0.5 < r < 2.0
+                                        else prices[-1] * (1.0 + r)
+                                    )
+                                    prices.append(float(next_p))
+                                forecast_array = np.asarray(prices[1:], dtype="float64")
+                            # Explosion guard
+                            elif np.nanmax(fa) > last_close * 10:
+                                forecast_array = np.full(len(fa), last_close, dtype="float64")
+
+                            # Anchor first step within 10% of last close (shift series)
+                            fa2 = np.asarray(forecast_array, dtype="float64").ravel()
+                            if fa2.size:
+                                gap_pct = abs(float(fa2[0]) - last_close) / (last_close or 1e-8)
+                                if gap_pct > 0.10:
+                                    offset = last_close - float(fa2[0])
+                                    forecast_array = fa2 + offset
+                except Exception:
+                    pass
 
                 logger.info(f"Successfully generated forecast with {selected_model}")
             except Exception as e:

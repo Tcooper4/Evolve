@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
 import pandas as pd
+import inspect
 
 from .base_strategy import BaseStrategy
 
@@ -45,12 +46,12 @@ class StrategyDiscovery:
         self, recursive: bool = True, pattern: str = "*_strategy.py"
     ) -> Dict[str, Type[BaseStrategy]]:
         """Discover strategy modules using file globbing and introspection."""
-        logger.info(f"🔍 Discovering strategies in: {self.strategies_dir}")
+        logger.info("Discovering strategies in: %s", self.strategies_dir)
         if recursive:
             strategy_files = list(self.strategies_dir.rglob(pattern))
         else:
             strategy_files = list(self.strategies_dir.glob(pattern))
-        logger.info(f"📁 Found {len(strategy_files)} potential strategy files")
+        logger.info("Found %s potential strategy files", len(strategy_files))
         for file_path in strategy_files:
             try:
                 self._discover_strategies_from_file(file_path)
@@ -79,7 +80,7 @@ class StrategyDiscovery:
                 if class_name not in self.discovered_strategies:
                     self.discovered_strategies[class_name] = strategy_class
                     logger.info(
-                        f"📦 Discovered strategy: {class_name} from {module_name}"
+                        "Discovered strategy: %s from %s", class_name, module_name
                     )
                     self.discovery_log.append(
                         {
@@ -106,12 +107,23 @@ class StrategyDiscovery:
         strategy_classes = {}
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            if (
-                isinstance(attr, type)
-                and issubclass(attr, BaseStrategy)
-                and attr is not BaseStrategy
-            ):
-                strategy_classes[attr_name] = attr
+            if not isinstance(attr, type):
+                continue
+            if attr_name == "BaseStrategy" or attr_name.lower().startswith("fallback"):
+                continue
+            # Primary: BaseStrategy subclasses
+            try:
+                if issubclass(attr, BaseStrategy) and attr is not BaseStrategy:
+                    strategy_classes[attr_name] = attr
+                    continue
+            except Exception:
+                pass
+
+            # Secondary: legacy strategy classes that don't inherit BaseStrategy but expose generate_signals
+            if attr_name.lower().endswith("strategy") and hasattr(attr, "generate_signals"):
+                gen = getattr(attr, "generate_signals", None)
+                if callable(gen):
+                    strategy_classes[attr_name] = attr
         return strategy_classes
 
     def discover_strategies_by_pattern(
@@ -164,7 +176,18 @@ class StrategyRegistry:
         discovered = discovery.discover_strategies()
         for name, cls in discovered.items():
             try:
-                instance = cls(name)
+                # Instantiate strategies that either accept (name) or have a default constructor.
+                try:
+                    sig = inspect.signature(cls.__init__)
+                    params = list(sig.parameters.keys())
+                except Exception:
+                    params = []
+                if len(params) <= 1:
+                    instance = cls()
+                elif "name" in params:
+                    instance = cls(name=name)
+                else:
+                    instance = cls()
                 self.strategies[name] = instance
             except Exception as e:
                 logger.error(f"Failed to instantiate strategy {name}: {e}")

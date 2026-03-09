@@ -384,14 +384,14 @@ class {model_name}:
         # Replace placeholder with actual model name
         code = template.replace("{model_name}", model_name)
 
-        # Add paper reference comment
+        # Add paper reference comment (avoid nested f-string for Python 3.10)
+        paper_title = paper.title
+        paper_authors = ", ".join(paper.authors)
+        paper_arxiv = paper.arxiv_id
         code = (
-            f'"""\nImplementation based on: {
-                paper.title}\nAuthors: {
-                ", ".join(
-                    paper.authors)}\nArXiv ID: {
-                    paper.arxiv_id}\n"""\n\n' +
-            code)
+            f'"""\nImplementation based on: {paper_title}\nAuthors: {paper_authors}\nArXiv ID: {paper_arxiv}\n"""\n\n'
+            + code
+        )
 
         return code
 

@@ -144,7 +144,7 @@ with tab1:
                 value=datetime.now().date() - timedelta(days=365),
                 min_value=datetime.now().date() - timedelta(days=365*10),
                 max_value=datetime.now().date(),
-                help="Historical data start (cannot be in the future)"
+                help="Historical data start. Cannot select a future date."
             )
         
         with col3:
@@ -152,12 +152,14 @@ with tab1:
                 "End Date",
                 value=datetime.now().date(),
                 min_value=start_date,
-                max_value=datetime.now().date() + timedelta(days=365),
-                help="End date for data load; can be in the future for forecast horizon"
+                max_value=datetime.now().date(),
+                help="End date for historical data. For forecasting future prices, use the 'Forecast Horizon (days)' slider — do not set end date in the future."
             )
         
         submitted = st.form_submit_button("📊 Load Data")
     
+    if end_date > datetime.now().date():
+        st.warning("End date is in the future. Historical data will only load up to today. Use the forecast horizon slider to project forward.")
     if submitted:
         # Validation
         if not symbol:
@@ -1109,62 +1111,27 @@ with tab1:
                 
                 if st.button("Generate AI Commentary", key="generate_commentary"):
                     try:
-                        from agents.llm.quant_gpt_commentary_agent import QuantGPTCommentaryAgent, CommentaryRequest, CommentaryType
-                        import asyncio
-                        
-                        agent = QuantGPTCommentaryAgent()
-                        
-                        if not agent.available:
-                            st.error("QuantGPT Commentary Agent not available. Check initialization.")
-                        else:
+                        from agents.llm.agent import get_prompt_agent
+                        agent = get_prompt_agent()
+                        model_name = st.session_state.get("current_model", "Unknown")
+                        symbol = st.session_state.get("symbol", "Unknown")
+                        last_price = float(data["close"].iloc[-1]) if "close" in data.columns else 0.0
+                        fcast = forecast_result.get("forecast", []) if isinstance(forecast_result, dict) else []
+                        forecast_mean = float(np.mean(fcast)) if len(fcast) > 0 else last_price
+                        pct_change = ((forecast_mean - last_price) / last_price * 100) if last_price else 0.0
+                        if agent:
                             with st.spinner("AI is analyzing the forecast..."):
-                                # Prepare commentary request
-                                request = CommentaryRequest(
-                                    request_type=CommentaryType.REGIME_ANALYSIS,
-                                    symbol=st.session_state.symbol,
-                                    timestamp=datetime.now(),
-                                    market_data=data,
-                                    model_data={
-                                        'model_type': st.session_state.current_model,
-                                        'forecast': forecast_result,
-                                        'horizon': st.session_state.forecast_horizon
-                                    }
+                                commentary_prompt = (
+                                    f"Provide 3 sentences of market commentary on the {model_name} forecast for {symbol}: "
+                                    f"last price ${last_price:.2f}, 7-day forecast ${forecast_mean:.2f} ({pct_change:+.1f}%). Be specific and concise."
                                 )
-                                
-                                # Generate commentary (handle async)
-                                try:
-                                    loop = asyncio.new_event_loop()
-                                    asyncio.set_event_loop(loop)
-                                    commentary = loop.run_until_complete(agent.generate_commentary(request))
-                                    loop.close()
-                                    
-                                    st.info(commentary.summary)
-                                    
-                                    with st.expander("📊 Detailed Analysis"):
-                                        st.write("**Technical Analysis:**")
-                                        st.write(commentary.detailed_analysis)
-                                        
-                                        if commentary.key_insights:
-                                            st.write("**Key Insights:**")
-                                            for insight in commentary.key_insights:
-                                                st.write(f"• {insight}")
-                                        
-                                        if commentary.recommendations:
-                                            st.write("**Recommendations:**")
-                                            for rec in commentary.recommendations:
-                                                st.write(f"• {rec}")
-                                        
-                                        if commentary.risk_warnings:
-                                            st.write("**Risk Factors:**")
-                                            for risk in commentary.risk_warnings:
-                                                st.warning(f"⚠️ {risk}")
-                                except Exception as e:
-                                    st.error(f"Error generating commentary: {e}")
-                    
-                    except ImportError:
-                        st.error("QuantGPT Commentary Agent not available")
+                                response = agent.process_prompt(commentary_prompt)
+                                commentary = response.message if hasattr(response, "message") else str(response)
+                                st.write(commentary)
+                        else:
+                            st.info("AI commentary requires a valid API key in .env")
                     except Exception as e:
-                        st.error(f"Error: {e}")
+                        st.info(f"AI commentary unavailable: {e}")
 
 with tab2:
     st.header("Advanced Forecasting")
@@ -1892,1455 +1859,1481 @@ with tab2:
                 st.dataframe(prev_forecast.tail(10))
 
 with tab3:
-    st.header("AI Model Selection")
-    st.markdown("""
-    🤖 Let AI analyze your data and recommend the best forecasting model.
-    
-    The AI considers:
-    - Data characteristics (trend, seasonality, volatility)
-    - Historical model performance
-    - Forecast horizon
-    - Computational efficiency
-    """)
-    
-    if st.session_state.get("forecast_data") is None:
-        st.warning("⚠️ Please load data first in the Quick Forecast tab")
-    else:
-        col1, col2 = st.columns([1, 1])
+    try:
+        st.header("AI Model Selection")
+        st.markdown("""
+        🤖 Let AI analyze your data and recommend the best forecasting model.
         
-        with col1:
-            st.subheader("📊 Data Analysis")
-            
-            analyze_button = st.button(
-                "🔍 Analyze Data & Recommend Model",
-                type="primary"
-            )
-            
-            if analyze_button:
-                with st.spinner("AI analyzing data characteristics..."):
-                    try:
-                        # Use ModelSelectorAgent if available; otherwise fallback to simple recommendation
-                        try:
-                            from trading.agents.model_selector_agent import ModelSelectorAgent
-                            agent = ModelSelectorAgent()
-                        except Exception:
-                            agent = None
-                        
-                        # Detect market regime from data
-                        fd = st.session_state.get("forecast_data")
-                        price_data = fd["close"].values if hasattr(fd, "columns") and "close" in fd.columns else (
-                            fd.get("close")
-                            if isinstance(fd, dict)
-                            else (list(fd.values())[0] if isinstance(fd, dict) and fd else None)
-                        )
-                        if price_data is None:
-                            price_data = np.array([])
-                        if hasattr(price_data, 'tolist'):
-                            price_data = np.asarray(price_data).ravel()
-                        horizon = st.session_state.forecast_horizon
-                        
-                        # Determine horizon enum
-                        from trading.agents.model_selector_agent import ForecastingHorizon, MarketRegime
-                        
-                        if horizon <= 7:
-                            horizon_enum = ForecastingHorizon.SHORT_TERM
-                        elif horizon <= 30:
-                            horizon_enum = ForecastingHorizon.MEDIUM_TERM
-                        else:
-                            horizon_enum = ForecastingHorizon.LONG_TERM
-                        
-                        # Simple market regime detection
-                        if len(price_data) < 2:
-                            regime_enum = MarketRegime.SIDEWAYS
-                        else:
-                            price_arr = np.asarray(price_data).astype(float)
-                            price_trend = (price_arr[-1] - price_arr[0]) / (price_arr[0] or 1)
-                            volatility = np.nanstd(price_arr)
-                            if price_trend > 0.05:
-                                regime_enum = MarketRegime.TRENDING_UP
-                            elif price_trend < -0.05:
-                                regime_enum = MarketRegime.TRENDING_DOWN
-                            elif volatility > (np.nanmean(price_arr) * 0.1):
-                                regime_enum = MarketRegime.VOLATILE
-                            else:
-                                regime_enum = MarketRegime.SIDEWAYS
-                        
-                        if agent is not None:
-                            # Use agent's select_model method
-                            selected_model_id, confidence = agent.select_model(
-                                horizon=horizon_enum,
-                                market_regime=regime_enum,
-                                data_length=len(price_data),
-                                required_features=[],
-                                performance_weight=0.6,
-                                capability_weight=0.4
-                            )
-                            recommendations = agent.get_model_recommendations(
-                                horizon_enum, regime_enum, top_k=3
-                            )
-                        else:
-                            selected_model_id = "xgboost_medium"
-                            confidence = 0.75
-                            recommendations = [
-                                {"model_type": "xgboost", "model_id": "xgboost_medium", "total_score": 0.8},
-                                {"model_type": "lstm", "model_id": "lstm_medium", "total_score": 0.7},
-                                {"model_type": "prophet", "model_id": "prophet_medium", "total_score": 0.65},
-                            ]
-                        
-                        # Map model types to display names
-                        model_name_map = {
-                            'lstm': 'LSTM (Deep Learning)',
-                            'xgboost': 'XGBoost (Gradient Boosting)',
-                            'prophet': 'Prophet (Facebook)',
-                            'arima': 'ARIMA (Statistical)',
-                            'transformer': 'Transformer (Attention)',
-                            'ensemble': 'Ensemble (Multiple Models)'
-                        }
-                        
-                        # Extract model type from selected_model_id
-                        model_type = selected_model_id.split('_')[0] if '_' in selected_model_id else selected_model_id
-                        display_name = model_name_map.get(model_type.lower(), selected_model_id)
-                        
-                        # Create recommendation dict
-                        recommendation = {
-                            'model_name': display_name,
-                            'confidence': confidence,
-                            'reasoning': f"Selected based on data characteristics and forecast horizon of {horizon} days. Market regime: {regime_enum.value}.",
-                            'data_characteristics': {
-                                'Data Points': len(price_data),
-                                'Forecast Horizon': f"{horizon} days",
-                                'Volatility': f"{volatility:.2f}",
-                                'Trend': f"{price_trend*100:.2f}%",
-                                'Market Regime': regime_enum.value
-                            },
-                            'alternatives': [
-                                {
-                                    'model_name': model_name_map.get(rec.get('model_type', '').lower(), rec.get('model_id', '')),
-                                    'confidence': rec.get('total_score', 0.5),
-                                    'reason': f"Score: {rec.get('total_score', 0):.2f}"
-                                }
-                                for rec in recommendations[:3]
-                            ] if recommendations else []
-                        }
-                        
-                        st.session_state.ai_recommendation = recommendation
-                    
-                    except Exception as e:
-                        st.error(f"Analysis failed: {str(e)}")
-                        import traceback
-                        st.code(traceback.format_exc())
-        
-        with col2:
-            st.subheader("💡 AI Recommendation")
-            
-            if st.session_state.get('ai_recommendation'):
-                rec = st.session_state.ai_recommendation
-                
-                # Main recommendation
-                st.success(f"**Recommended Model: {rec['model_name']}**")
-                
-                # Confidence
-                confidence_pct = rec.get('confidence', 0.75) * 100
-                st.metric("Confidence", f"{confidence_pct:.1f}%")
-                
-                # Progress bar for confidence
-                st.progress(rec.get('confidence', 0.75))
-                
-                # Reasoning
-                with st.expander("🧠 Why this model?", expanded=True):
-                    st.markdown(rec.get('reasoning', 'Model selected based on data analysis'))
-                    
-                    if 'data_characteristics' in rec:
-                        st.markdown("**Data Characteristics:**")
-                        chars = rec['data_characteristics']
-                        for key, value in chars.items():
-                            st.text(f"• {key}: {value}")
-                
-                # Alternatives
-                if rec.get('alternatives'):
-                    with st.expander("🔄 Alternative Models"):
-                        for alt in rec['alternatives']:
-                            st.markdown(f"**{alt['model_name']}**")
-                            st.caption(f"Confidence: {alt.get('confidence', 0)*100:.1f}%")
-                            st.caption(alt.get('reason', ''))
-                            st.markdown("---")
-                
-                # Action buttons
-                col_a, col_b = st.columns(2)
-                
-                with col_a:
-                    if st.button("✅ Use Recommended Model"):
-                        st.session_state.selected_model = rec['model_name']
-                        st.success(f"Selected: {rec['model_name']}")
-                        st.info("Go to Quick Forecast tab to generate forecast")
-                
-                with col_b:
-                    if st.button("🔄 Choose Different Model"):
-                        st.session_state.show_override = True
-                
-                if st.session_state.get('show_override'):
-                    st.markdown("**Override AI Selection:**")
-                    override = st.selectbox(
-                        "Select model:",
-                        ["LSTM (Deep Learning)", "XGBoost (Gradient Boosting)", 
-                         "Prophet (Facebook)", "ARIMA (Statistical)"]
-                    )
-                    if st.button("Confirm Override"):
-                        st.session_state.selected_model = override
-                        st.session_state.show_override = False
-                        st.success(f"Selected: {override}")
-        
-        # Hybrid Model Selector Section
-        st.markdown("---")
-        st.subheader("🎯 Hybrid Model Selection")
-        
-        st.write("""
-        Hybrid selection combines multiple model types and automatically 
-        switches between them based on market conditions.
+        The AI considers:
+        - Data characteristics (trend, seasonality, volatility)
+        - Historical model performance
+        - Forecast horizon
+        - Computational efficiency
         """)
         
-        if st.button("Use Hybrid Selector"):
-            try:
-                from trading.forecasting.hybrid_model_selector import HybridModelSelector
+        if st.session_state.get("forecast_data") is None:
+            st.warning("⚠️ Please load data first in the Quick Forecast tab")
+        else:
+            col1, col2 = st.columns([1, 1])
+            
+            with col1:
+                st.subheader("📊 Data Analysis")
                 
-                data = st.session_state.get("forecast_data")
-                selector = HybridModelSelector()
+                analyze_button = st.button(
+                    "🔍 Analyze Data & Recommend Model",
+                    type="primary"
+                )
                 
-                with st.spinner("Analyzing market conditions and selecting models..."):
-                    # Detect market regime: HybridModelSelector has no detect_market_regime; use MarketAnalyzer or default
-                    regime = "neutral"
-                    try:
-                        from trading.market.market_analyzer import MarketAnalyzer
-                        import pandas as pd
-                        df = data.copy() if hasattr(data, 'copy') else pd.DataFrame(data)
-                        if 'close' in df.columns and 'Close' not in df.columns:
-                            df['Close'] = df['close']
-                        if 'Close' in df.columns:
-                            analyzer = MarketAnalyzer()
-                            trend_result = analyzer.detect_market_regime(df, "trend")
-                            regime = trend_result.get("regime", "neutral")
-                    except Exception as e:
-                        st.caption(f"Regime detection fell back to neutral: {e}")
-                    
-                    st.info(f"📊 Detected market regime: **{regime}**")
-                    
-                    # HybridModelSelector has select_best_model(model_scores, metric), not select_models_for_regime
-                    # Show a simple recommendation based on regime
-                    recommended = [
-                        {"name": "XGBoost", "reason": "Robust across regimes"},
-                        {"name": "LSTM", "reason": "Captures nonlinear patterns"},
-                        {"name": "Prophet", "reason": "Good for trend and seasonality"},
-                    ]
-                    selected_models = recommended
-                    
-                    st.write("**Recommended models for current conditions:**")
-                    for i, model_config in enumerate(selected_models, 1):
-                        st.write(f"{i}. {model_config['name']} - {model_config['reason']}")
-                    
-                    # Store selected models
-                    st.session_state.hybrid_selected_models = selected_models
-                    st.session_state.hybrid_regime = regime
-                    
-                    st.caption("To train an ensemble, use the Model Comparison tab and select multiple models.")
-            
-            except ImportError:
-                st.error("Hybrid Model Selector not available")
-            except Exception as e:
-                st.error(f"Error using hybrid selector: {e}")
-                import traceback
-                st.code(traceback.format_exc())
-
-with tab4:
-    st.header("Model Comparison")
-    st.markdown("Compare multiple models side-by-side and create ensemble forecasts")
-    
-    if st.session_state.get("forecast_data") is None:
-        st.warning("⚠️ Please load data first in the Quick Forecast tab")
-    else:
-        col1, col2 = st.columns([1, 2])
-        
-        with col1:
-            st.subheader("📊 Select Models")
-            
-            from trading.models.forecast_router import ForecastRouter
-            _router_for_names = ForecastRouter()
-            try:
-                available_models = list(_router_for_names.model_registry.keys())
-            except Exception:
-                available_models = [
-                    "lstm",
-                    "xgboost",
-                    "prophet",
-                    "arima",
-                    "ridge",
-                    "tcn",
-                    "catboost",
-                    "ensemble",
-                    "hybrid",
-                ]
-            display_models = [
-                "LSTM",
-                "XGBoost",
-                "Prophet",
-                "ARIMA",
-                "Ridge",
-                "TCN",
-                "CatBoost",
-                "Ensemble",
-                "Hybrid",
-            ]
-            # Filter to models actually available in the router when possible
-            display_models = [
-                m for m in display_models if m.lower() in available_models
-            ] or display_models
-
-            models_to_compare = st.multiselect(
-                "Choose models to compare:",
-                display_models,
-                default=[m for m in display_models if m in ["LSTM", "XGBoost"]][:2],
-                help="Select 2-5 models to compare",
-            )
-            
-            if len(models_to_compare) < 2:
-                st.warning("Please select at least 2 models")
-            elif len(models_to_compare) > 5:
-                st.warning("Please select 5 or fewer models for comparison")
-            
-            create_ensemble = st.checkbox("Create Ensemble Forecast", value=True)
-            
-            compare_button = st.button(
-                "🚀 Compare Models",
-                type="primary",
-                disabled=len(models_to_compare) < 2
-            )
-        
-        with col2:
-            st.subheader("📈 Comparison Results")
-            
-            if compare_button and len(models_to_compare) >= 2:
-                if len(models_to_compare) > 5:
-                    st.warning("Please select 5 or fewer models for comparison")
-                    st.stop()
-
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                
-                try:
-                    data = st.session_state.get("forecast_data")
-                    if data is None:
-                        raise RuntimeError("No forecast_data in session_state; please load data first.")
-                    data = data.copy()
-                    horizon = st.session_state.forecast_horizon
-                    
-                    # Ensure proper format
-                    if not isinstance(data.index, pd.DatetimeIndex):
-                        data.index = pd.to_datetime(data.index)
-
-                    # Router expects lowercase OHLCV when possible
-                    if "Close" in data.columns and "close" not in data.columns:
-                        data = data.rename(
-                            columns={
-                                "Close": "close",
-                                "Open": "open",
-                                "High": "high",
-                                "Low": "low",
-                                "Volume": "volume",
-                            }
-                        )
-                    
-                    forecasts = {}
-                    model_configs = {}
-                    
-                    # Forecast via ForecastRouter (single canonical invocation path)
-                    from trading.models.forecast_router import ForecastRouter
-                    _router = ForecastRouter()
-
-                    # Train and forecast for each model
-                    total_models = len(models_to_compare)
-                    for idx, model_name in enumerate(models_to_compare):
-                        status_text.text(f"Running {model_name} ({idx+1}/{total_models})...")
-                        progress_bar.progress((idx) / (total_models + 1))
-                        
+                if analyze_button:
+                    with st.spinner("AI analyzing data characteristics..."):
                         try:
-                            model_key = str(model_name).strip().lower()
-                            router_result = _router.get_forecast(
-                                data,
-                                horizon=horizon,
-                                model_type=model_key,
-                                run_walk_forward=False,
-                            )
-
-                            forecast_values = np.asarray(
-                                (router_result or {}).get("forecast", []),
-                                dtype="float64",
-                            ).ravel()
-                            if forecast_values.size == 0:
-                                raise ValueError("Router returned empty forecast")
-
-                            forecast_dates = pd.date_range(
-                                start=data.index[-1] + timedelta(days=1),
-                                periods=len(forecast_values),
-                                freq="D",
-                            )
+                            # Use ModelSelectorAgent if available; otherwise fallback to simple recommendation
+                            try:
+                                from trading.agents.model_selector_agent import ModelSelectorAgent
+                                agent = ModelSelectorAgent()
+                            except Exception:
+                                agent = None
                             
-                            forecasts[model_name] = {
-                                'values': forecast_values,
-                                'dates': forecast_dates[:len(forecast_values)]
+                            # Detect market regime from data
+                            fd = st.session_state.get("forecast_data")
+                            price_data = fd["close"].values if hasattr(fd, "columns") and "close" in fd.columns else (
+                                fd.get("close")
+                                if isinstance(fd, dict)
+                                else (list(fd.values())[0] if isinstance(fd, dict) and fd else None)
+                            )
+                            if price_data is None:
+                                price_data = np.array([])
+                            if hasattr(price_data, 'tolist'):
+                                price_data = np.asarray(price_data).ravel()
+                            horizon = st.session_state.forecast_horizon
+                            
+                            # Determine horizon enum
+                            from trading.agents.model_selector_agent import ForecastingHorizon, MarketRegime
+                            
+                            if horizon <= 7:
+                                horizon_enum = ForecastingHorizon.SHORT_TERM
+                            elif horizon <= 30:
+                                horizon_enum = ForecastingHorizon.MEDIUM_TERM
+                            else:
+                                horizon_enum = ForecastingHorizon.LONG_TERM
+                            
+                            # Simple market regime detection
+                            if len(price_data) < 2:
+                                regime_enum = MarketRegime.SIDEWAYS
+                            else:
+                                price_arr = np.asarray(price_data).astype(float)
+                                price_trend = (price_arr[-1] - price_arr[0]) / (price_arr[0] or 1)
+                                volatility = np.nanstd(price_arr)
+                                if price_trend > 0.05:
+                                    regime_enum = MarketRegime.TRENDING_UP
+                                elif price_trend < -0.05:
+                                    regime_enum = MarketRegime.TRENDING_DOWN
+                                elif volatility > (np.nanmean(price_arr) * 0.1):
+                                    regime_enum = MarketRegime.VOLATILE
+                                else:
+                                    regime_enum = MarketRegime.SIDEWAYS
+                            
+                            if agent is not None:
+                                # Use agent's select_model method
+                                selected_model_id, confidence = agent.select_model(
+                                    horizon=horizon_enum,
+                                    market_regime=regime_enum,
+                                    data_length=len(price_data),
+                                    required_features=[],
+                                    performance_weight=0.6,
+                                    capability_weight=0.4
+                                )
+                                recommendations = agent.get_model_recommendations(
+                                    horizon_enum, regime_enum, top_k=3
+                                )
+                            else:
+                                selected_model_id = "xgboost_medium"
+                                confidence = 0.75
+                                recommendations = [
+                                    {"model_type": "xgboost", "model_id": "xgboost_medium", "total_score": 0.8},
+                                    {"model_type": "lstm", "model_id": "lstm_medium", "total_score": 0.7},
+                                    {"model_type": "prophet", "model_id": "prophet_medium", "total_score": 0.65},
+                                ]
+                            
+                            # Map model types to display names
+                            model_name_map = {
+                                'lstm': 'LSTM (Deep Learning)',
+                                'xgboost': 'XGBoost (Gradient Boosting)',
+                                'prophet': 'Prophet (Facebook)',
+                                'arima': 'ARIMA (Statistical)',
+                                'transformer': 'Transformer (Attention)',
+                                'ensemble': 'Ensemble (Multiple Models)'
                             }
                             
+                            # Extract model type from selected_model_id
+                            model_type = selected_model_id.split('_')[0] if '_' in selected_model_id else selected_model_id
+                            display_name = model_name_map.get(model_type.lower(), selected_model_id)
+                            
+                            # Create recommendation dict
+                            recommendation = {
+                                'model_name': display_name,
+                                'confidence': confidence,
+                                'reasoning': f"Selected based on data characteristics and forecast horizon of {horizon} days. Market regime: {regime_enum.value}.",
+                                'data_characteristics': {
+                                    'Data Points': len(price_data),
+                                    'Forecast Horizon': f"{horizon} days",
+                                    'Volatility': f"{volatility:.2f}",
+                                    'Trend': f"{price_trend*100:.2f}%",
+                                    'Market Regime': regime_enum.value
+                                },
+                                'alternatives': [
+                                    {
+                                        'model_name': model_name_map.get(rec.get('model_type', '').lower(), rec.get('model_id', '')),
+                                        'confidence': rec.get('total_score', 0.5),
+                                        'reason': f"Score: {rec.get('total_score', 0):.2f}"
+                                    }
+                                    for rec in recommendations[:3]
+                                ] if recommendations else []
+                            }
+                            
+                            st.session_state.ai_recommendation = recommendation
+                        
                         except Exception as e:
-                            st.warning(f"Failed to train {model_name}: {str(e)}")
-                            continue
-                    
-                    progress_bar.progress(0.9)
-                    
-                    # Create ensemble if requested
-                    if create_ensemble and len(forecasts) >= 2:
-                        status_text.text("Creating ensemble forecast...")
-                        ensemble_values = []
-                        for i in range(horizon):
-                            values_at_step = [f['values'][i] for f in forecasts.values() if i < len(f['values'])]
-                            if values_at_step:
-                                ensemble_values.append(np.mean(values_at_step))
-                            else:
-                                ensemble_values.append(0)
-                        
-                        forecasts['Ensemble'] = {
-                            'values': np.array(ensemble_values),
-                            'dates': forecasts[list(forecasts.keys())[0]]['dates']
-                        }
-                    
-                    progress_bar.progress(1.0)
-                    status_text.text("Complete!")
-                    
-                    # Store results
-                    st.session_state.comparison_results = forecasts
-                    
-                    st.success(f"✅ Compared {len(forecasts)} models successfully!")
-                    
-                    # Display comparison chart
-                    fig = go.Figure()
-                    
-                    # Historical data
-                    hist_data = st.session_state.get("forecast_data")
-                    fig.add_trace(go.Scatter(
-                        x=hist_data.index,
-                        y=hist_data['close'],
-                        mode='lines',
-                        name='Historical',
-                        line=dict(color='black', width=2)
-                    ))
-                    
-                    # Forecasts from each model
-                    colors = ['red', 'blue', 'green', 'orange', 'purple']
-                    for idx, (model_name, forecast_data) in enumerate(forecasts.items()):
-                        fig.add_trace(go.Scatter(
-                            x=forecast_data['dates'],
-                            y=forecast_data['values'],
-                            mode='lines+markers',
-                            name=model_name,
-                            line=dict(color=colors[idx % len(colors)], width=2, dash='dash' if model_name == 'Ensemble' else None),
-                            marker=dict(size=6)
-                        ))
-                    
-                    fig.update_layout(
-                        title=f"{st.session_state.symbol} - Model Comparison",
-                        xaxis_title="Date",
-                        yaxis_title="Price ($)",
-                        hovermode='x unified',
-                        height=600
-                    )
-                    
-                    st.plotly_chart(fig)
-                    
-                    # Metrics table
-                    st.markdown("---")
-                    st.subheader("📊 Performance Metrics")
-                    
-                    metrics_data = []
-                    for model_name, forecast_data in forecasts.items():
-                        if model_name == 'Ensemble':
-                            continue
-                        
-                        # Calculate simple metrics
-                        forecast_vals = forecast_data['values']
-                        last_price = hist_data['close'].iloc[-1]
-                        
-                        # Mean forecast
-                        mean_forecast = np.mean(forecast_vals)
-                        
-                        # Forecast range
-                        forecast_range = np.max(forecast_vals) - np.min(forecast_vals)
-                        
-                        # Trend (first vs last)
-                        trend = (forecast_vals[-1] - forecast_vals[0]) / forecast_vals[0] * 100 if len(forecast_vals) > 1 else 0
-                        
-                        metrics_data.append({
-                            'Model': model_name,
-                            'Mean Forecast': f"${mean_forecast:.2f}",
-                            'Range': f"${forecast_range:.2f}",
-                            'Trend (%)': f"{trend:.2f}%",
-                            'Std Dev': f"${np.std(forecast_vals):.2f}"
-                        })
-                    
-                    if metrics_data:
-                        metrics_df = pd.DataFrame(metrics_data)
-                        st.dataframe(metrics_df)
-                    
-                    # Forecast table
-                    st.markdown("---")
-                    st.subheader("📋 Forecast Values")
-                    
-                    # Create comparison DataFrame
-                    comparison_df = pd.DataFrame({
-                        'Date': forecasts[list(forecasts.keys())[0]]['dates']
-                    })
-                    
-                    for model_name, forecast_data in forecasts.items():
-                        comparison_df[model_name] = forecast_data['values'][:len(comparison_df)]
-                    
-                    # Format for display
-                    display_df = comparison_df.copy()
-                    for col in display_df.columns:
-                        if col != 'Date' and col in forecasts:
-                            display_df[col] = display_df[col].apply(
-                                lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
-                            )
-                    
-                    st.dataframe(display_df)
-                    
-                    # Download button
-                    csv = comparison_df.to_csv(index=False)
-                    st.download_button(
-                        label="📥 Download Comparison CSV",
-                        data=csv,
-                        file_name=f"{st.session_state.symbol}_model_comparison.csv",
-                        mime="text/csv"
-                    )
+                            st.error(f"Analysis failed: {str(e)}")
+                            import traceback
+                            st.code(traceback.format_exc())
+            
+            with col2:
+                st.subheader("💡 AI Recommendation")
                 
-                except Exception as e:
-                    st.error(f"Comparison failed: {str(e)}")
-                    import traceback
-                    st.code(traceback.format_exc())
-                finally:
-                    progress_bar.empty()
-                    status_text.empty()
-            
-            # Display previous comparison if exists
-            if st.session_state.get('comparison_results'):
-                st.markdown("---")
-                st.markdown("**Previous Comparison Results**")
-                prev_results = st.session_state.comparison_results
-                st.info(f"Compared {len(prev_results)} models in previous run")
-
-with tab5:
-    st.header("Market Analysis")
-    st.markdown("Technical indicators, market regime detection, trend analysis, and correlation tools")
-    
-    if st.session_state.get("forecast_data") is None:
-        st.warning("⚠️ Please load data first in the Quick Forecast tab")
-    else:
-        # Analysis options
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            show_technical = st.checkbox("Technical Indicators", value=True)
-        with col2:
-            show_regime = st.checkbox("Market Regime", value=True)
-        with col3:
-            show_trend = st.checkbox("Trend Analysis", value=True)
-        
-        analyze_button = st.button("🔍 Run Analysis", type="primary")
-        
-        if analyze_button:
-            data = st.session_state.get("forecast_data")
-            if data is None:
-                raise RuntimeError("No forecast_data in session_state; please load data first.")
-            data = data.copy()
-            
-            # Ensure proper column names
-            if 'close' in data.columns:
-                data['Close'] = data['close']
-            if 'open' in data.columns:
-                data['Open'] = data['open']
-            if 'high' in data.columns:
-                data['High'] = data['high']
-            if 'low' in data.columns:
-                data['Low'] = data['low']
-            if 'volume' in data.columns:
-                data['Volume'] = data['volume']
-            
-            # Ensure required columns exist
-            if 'Open' not in data.columns:
-                data['Open'] = data['Close']
-            if 'High' not in data.columns:
-                data['High'] = data['Close']
-            if 'Low' not in data.columns:
-                data['Low'] = data['Close']
-            if 'Volume' not in data.columns:
-                data['Volume'] = 1000000
-            
-            # Technical Indicators
-            if show_technical:
-                st.markdown("---")
-                st.subheader("📊 Technical Indicators")
-                
-                try:
-                    fe = FeatureEngineering()
+                if st.session_state.get('ai_recommendation'):
+                    rec = st.session_state.ai_recommendation
                     
-                    # Calculate indicators
-                    indicators_data = {}
+                    # Main recommendation
+                    st.success(f"**Recommended Model: {rec['model_name']}**")
                     
-                    # Moving Averages
-                    ma_data = fe.calculate_moving_averages(data)
-                    indicators_data.update(ma_data.to_dict('series'))
+                    # Confidence
+                    confidence_pct = rec.get('confidence', 0.75) * 100
+                    st.metric("Confidence", f"{confidence_pct:.1f}%")
                     
-                    # RSI
-                    rsi_data = fe.calculate_rsi(data)
-                    indicators_data.update(rsi_data.to_dict('series'))
+                    # Progress bar for confidence
+                    st.progress(rec.get('confidence', 0.75))
                     
-                    # MACD
-                    macd_data = fe.calculate_macd(data)
-                    indicators_data.update(macd_data.to_dict('series'))
-                    
-                    # Bollinger Bands
-                    bb_data = fe.calculate_bollinger_bands(data)
-                    indicators_data.update(bb_data.to_dict('series'))
-                    
-                    # Create indicators DataFrame
-                    indicators_df = pd.DataFrame(indicators_data, index=data.index)
-                    
-                    # Display key indicators
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        if 'RSI' in indicators_df.columns:
-                            current_rsi = indicators_df['RSI'].iloc[-1]
-                            st.metric("RSI", f"{current_rsi:.2f}")
-                            if current_rsi > 70:
-                                st.warning("Overbought")
-                            elif current_rsi < 30:
-                                st.info("Oversold")
-                    
-                    with col2:
-                        if 'SMA_20' in indicators_df.columns:
-                            sma_20 = indicators_df['SMA_20'].iloc[-1]
-                            current_price = data['Close'].iloc[-1]
-                            st.metric("SMA(20)", f"${sma_20:.2f}")
-                            if current_price > sma_20:
-                                st.success("Above SMA")
-                            else:
-                                st.error("Below SMA")
-                    
-                    with col3:
-                        if 'MACD' in indicators_df.columns and 'MACD_Signal' in indicators_df.columns:
-                            macd_val = indicators_df['MACD'].iloc[-1]
-                            signal_val = indicators_df['MACD_Signal'].iloc[-1]
-                            st.metric("MACD", f"{macd_val:.2f}")
-                            if macd_val > signal_val:
-                                st.success("Bullish")
-                            else:
-                                st.error("Bearish")
-                    
-                    with col4:
-                        if 'BB_Upper' in indicators_df.columns and 'BB_Lower' in indicators_df.columns:
-                            upper = indicators_df['BB_Upper'].iloc[-1]
-                            lower = indicators_df['BB_Lower'].iloc[-1]
-                            current = data['Close'].iloc[-1]
-                            st.metric("Bollinger Position", f"{((current - lower) / (upper - lower) * 100):.1f}%")
-                    
-                    # Chart with indicators
-                    fig = make_subplots(
-                        rows=3, cols=1,
-                        subplot_titles=("Price with Moving Averages", "RSI", "MACD"),
-                        vertical_spacing=0.1,
-                        row_heights=[0.5, 0.25, 0.25]
-                    )
-                    
-                    # Price and MAs
-                    fig.add_trace(go.Scatter(
-                        x=data.index,
-                        y=data['Close'],
-                        mode='lines',
-                        name='Close Price',
-                        line=dict(color='blue', width=2)
-                    ), row=1, col=1)
-                    
-                    if 'SMA_20' in indicators_df.columns:
-                        fig.add_trace(go.Scatter(
-                            x=indicators_df.index,
-                            y=indicators_df['SMA_20'],
-                            mode='lines',
-                            name='SMA(20)',
-                            line=dict(color='orange', width=1, dash='dash')
-                        ), row=1, col=1)
-                    
-                    if 'SMA_50' in indicators_df.columns:
-                        fig.add_trace(go.Scatter(
-                            x=indicators_df.index,
-                            y=indicators_df['SMA_50'],
-                            mode='lines',
-                            name='SMA(50)',
-                            line=dict(color='red', width=1, dash='dash')
-                        ), row=1, col=1)
-                    
-                    # Bollinger Bands
-                    if 'BB_Upper' in indicators_df.columns:
-                        fig.add_trace(go.Scatter(
-                            x=indicators_df.index,
-                            y=indicators_df['BB_Upper'],
-                            mode='lines',
-                            name='BB Upper',
-                            line=dict(color='gray', width=1, dash='dot'),
-                            showlegend=False
-                        ), row=1, col=1)
+                    # Reasoning
+                    with st.expander("🧠 Why this model?", expanded=True):
+                        st.markdown(rec.get('reasoning', 'Model selected based on data analysis'))
                         
-                        fig.add_trace(go.Scatter(
-                            x=indicators_df.index,
-                            y=indicators_df['BB_Lower'],
-                            mode='lines',
-                            name='BB Lower',
-                            line=dict(color='gray', width=1, dash='dot'),
-                            fill='tonexty',
-                            fillcolor='rgba(128,128,128,0.1)',
-                            showlegend=False
-                        ), row=1, col=1)
+                        if 'data_characteristics' in rec:
+                            st.markdown("**Data Characteristics:**")
+                            chars = rec['data_characteristics']
+                            for key, value in chars.items():
+                                st.text(f"• {key}: {value}")
                     
-                    # RSI
-                    if 'RSI' in indicators_df.columns:
-                        fig.add_trace(go.Scatter(
-                            x=indicators_df.index,
-                            y=indicators_df['RSI'],
-                            mode='lines',
-                            name='RSI',
-                            line=dict(color='purple', width=2)
-                        ), row=2, col=1)
-                        
-                        # Add overbought/oversold lines
-                        fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
-                        fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
+                    # Alternatives
+                    if rec.get('alternatives'):
+                        with st.expander("🔄 Alternative Models"):
+                            for alt in rec['alternatives']:
+                                st.markdown(f"**{alt['model_name']}**")
+                                st.caption(f"Confidence: {alt.get('confidence', 0)*100:.1f}%")
+                                st.caption(alt.get('reason', ''))
+                                st.markdown("---")
                     
-                    # MACD
-                    if 'MACD' in indicators_df.columns:
-                        fig.add_trace(go.Scatter(
-                            x=indicators_df.index,
-                            y=indicators_df['MACD'],
-                            mode='lines',
-                            name='MACD',
-                            line=dict(color='blue', width=2)
-                        ), row=3, col=1)
-                        
-                        if 'MACD_Signal' in indicators_df.columns:
-                            fig.add_trace(go.Scatter(
-                                x=indicators_df.index,
-                                y=indicators_df['MACD_Signal'],
-                                mode='lines',
-                                name='Signal',
-                                line=dict(color='red', width=2)
-                            ), row=3, col=1)
+                    # Action buttons
+                    col_a, col_b = st.columns(2)
                     
-                    fig.update_layout(height=800, showlegend=True, hovermode='x unified')
-                    fig.update_xaxes(title_text="Date", row=3, col=1)
-                    fig.update_yaxes(title_text="Price ($)", row=1, col=1)
-                    fig.update_yaxes(title_text="RSI", row=2, col=1)
-                    fig.update_yaxes(title_text="MACD", row=3, col=1)
+                    with col_a:
+                        if st.button("✅ Use Recommended Model"):
+                            st.session_state.selected_model = rec['model_name']
+                            st.success(f"Selected: {rec['model_name']}")
+                            st.info("Go to Quick Forecast tab to generate forecast")
                     
-                    st.plotly_chart(fig)
+                    with col_b:
+                        if st.button("🔄 Choose Different Model"):
+                            st.session_state.show_override = True
                     
-                    # Indicators table
-                    with st.expander("📋 View All Indicators"):
-                        st.dataframe(indicators_df.tail(50))
-                
-                except Exception as e:
-                    st.error(f"Error calculating indicators: {str(e)}")
-            
-            # Market Regime Detection
-            if show_regime:
-                st.markdown("---")
-                st.subheader("🎯 Market Regime Detection")
-                
-                try:
-                    import pandas as pd
-                    analyzer = MarketAnalyzer()
-                    # Ensure data is DataFrame with Close column (log_metrics fix: do not pass dict as path)
-                    regime_data = data.copy() if isinstance(data, pd.DataFrame) else pd.DataFrame(data)
-                    if 'Close' not in regime_data.columns and 'close' in regime_data.columns:
-                        regime_data['Close'] = regime_data['close']
-                    if 'Close' not in regime_data.columns:
-                        st.warning("No Close price column for regime detection.")
-                    else:
-                        # Detect trend regime
-                        trend_regime = analyzer.detect_market_regime(regime_data, "trend")
-                        
-                        # Detect volatility regime
-                        volatility_regime = analyzer.detect_market_regime(regime_data, "volatility")
-                    
-                        # Display regime information
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            st.markdown("**Trend Regime**")
-                            regime = trend_regime.get('regime', 'unknown')
-                            strength = trend_regime.get('strength', 0)
-                            
-                            if regime == 'up':
-                                st.success(f"📈 Uptrend (Strength: {strength:.2%})")
-                            elif regime == 'down':
-                                st.error(f"📉 Downtrend (Strength: {abs(strength):.2%})")
-                            else:
-                                st.info(f"➡️ Sideways")
-                            
-                            st.metric("MA Short (20)", f"${trend_regime.get('ma_short', 0):.2f}")
-                            st.metric("MA Long (50)", f"${trend_regime.get('ma_long', 0):.2f}")
-                        
-                        with col2:
-                            st.markdown("**Volatility Regime**")
-                            vol_regime = volatility_regime.get('regime', 'unknown')
-                            current_vol = volatility_regime.get('current_volatility', 0)
-                            
-                            if 'high' in vol_regime:
-                                st.warning(f"⚡ High Volatility ({current_vol:.2%})")
-                            elif 'low' in vol_regime:
-                                st.success(f"🔇 Low Volatility ({current_vol:.2%})")
-                            else:
-                                st.info(f"📊 Normal Volatility ({current_vol:.2%})")
-                            
-                            st.metric("Volatility Rank", f"{volatility_regime.get('volatility_rank', 0):.2%}")
-                            st.metric("Volatility Trend", volatility_regime.get('volatility_trend', 'unknown'))
-                        
-                        # Store regime in session state
-                        st.session_state.market_regime = {
-                            'trend': trend_regime,
-                            'volatility': volatility_regime
-                        }
-                
-                except Exception as e:
-                    st.error(f"Error detecting market regime: {str(e)}")
-            
-            # Trend Analysis
-            if show_trend:
-                st.markdown("---")
-                st.subheader("📈 Trend Analysis")
-                
-                try:
-                    # Calculate trend metrics
-                    returns = data['Close'].pct_change()
-                    
-                    # Short-term trend (5 days)
-                    short_trend = (data['Close'].iloc[-1] / data['Close'].iloc[-6] - 1) * 100 if len(data) >= 6 else 0
-                    
-                    # Medium-term trend (20 days)
-                    medium_trend = (data['Close'].iloc[-1] / data['Close'].iloc[-21] - 1) * 100 if len(data) >= 21 else 0
-                    
-                    # Long-term trend (full period)
-                    long_trend = (data['Close'].iloc[-1] / data['Close'].iloc[0] - 1) * 100
-                    
-                    # Volatility
-                    volatility = returns.std() * np.sqrt(252) * 100
-                    
-                    # Display metrics
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("Short-term (5d)", f"{short_trend:.2f}%", 
-                                delta=f"{short_trend:.2f}%")
-                    
-                    with col2:
-                        st.metric("Medium-term (20d)", f"{medium_trend:.2f}%",
-                                delta=f"{medium_trend:.2f}%")
-                    
-                    with col3:
-                        st.metric("Long-term (Full)", f"{long_trend:.2f}%",
-                                delta=f"{long_trend:.2f}%")
-                    
-                    with col4:
-                        st.metric("Annualized Volatility", f"{volatility:.2f}%")
-                    
-                    # Trend chart
-                    fig = go.Figure()
-                    
-                    # Price
-                    fig.add_trace(go.Scatter(
-                        x=data.index,
-                        y=data['Close'],
-                        mode='lines',
-                        name='Price',
-                        line=dict(color='blue', width=2)
-                    ))
-                    
-                    # Trend lines
-                    if len(data) >= 20:
-                        # 20-day moving average
-                        ma20 = data['Close'].rolling(20).mean()
-                        fig.add_trace(go.Scatter(
-                            x=ma20.index,
-                            y=ma20.values,
-                            mode='lines',
-                            name='MA(20)',
-                            line=dict(color='orange', width=1, dash='dash')
-                        ))
-                    
-                    if len(data) >= 50:
-                        # 50-day moving average
-                        ma50 = data['Close'].rolling(50).mean()
-                        fig.add_trace(go.Scatter(
-                            x=ma50.index,
-                            y=ma50.values,
-                            mode='lines',
-                            name='MA(50)',
-                            line=dict(color='red', width=1, dash='dash')
-                        ))
-                    
-                    fig.update_layout(
-                        title=f"{st.session_state.symbol} - Trend Analysis",
-                        xaxis_title="Date",
-                        yaxis_title="Price ($)",
-                        hovermode='x unified',
-                        height=400
-                    )
-                    
-                    st.plotly_chart(fig)
-                
-                except Exception as e:
-                    st.error(f"Error analyzing trend: {str(e)}")
-            
-            # Correlation Analysis (if multiple symbols available)
-            st.markdown("---")
-            st.subheader("🔗 Correlation Analysis")
-            st.info("Correlation analysis requires multiple symbols. Load additional data to compare.")
-            
-            # News Sentiment Analysis
-            st.markdown("---")
-            st.subheader("📰 News Sentiment Analysis")
-            
-            symbol_for_sentiment = st.text_input(
-                "Symbol for sentiment", 
-                value=st.session_state.get('symbol', 'AAPL'),
-                key="sentiment_symbol"
-            )
-            
-            # Display cached sentiment result so it persists across reruns
-            if st.session_state.get('sentiment_analysis_result') is not None:
-                sentiment_result = st.session_state.sentiment_analysis_result
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    sentiment_score = sentiment_result.get('overall_sentiment', 0)
-                    if sentiment_score > 0.3:
-                        st.success(f"😊 Positive: {sentiment_score:.2f}")
-                    elif sentiment_score < -0.3:
-                        st.error(f"😞 Negative: {sentiment_score:.2f}")
-                    else:
-                        st.info(f"😐 Neutral: {sentiment_score:.2f}")
-                with col2:
-                    st.metric("Articles Analyzed", sentiment_result.get('num_articles', 0))
-                with col3:
-                    st.metric("Sentiment Confidence", f"{sentiment_result.get('confidence', 0):.1%}")
-                if 'sentiment_history' in sentiment_result:
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=sentiment_result.get('dates', []),
-                        y=sentiment_result['sentiment_history'],
-                        name='Sentiment',
-                        line=dict(color='purple')
-                    ))
-                    fig.update_layout(title='Sentiment Over Time', xaxis_title='Date', yaxis_title='Sentiment Score', height=400)
-                    st.plotly_chart(fig, use_container_width=True)
-                st.subheader("📰 Recent Headlines")
-                for article in sentiment_result.get('articles', [])[:10]:
-                    sentiment_emoji = "😊" if article.get('sentiment', 0) > 0 else "😞" if article.get('sentiment', 0) < 0 else "😐"
-                    st.write(f"{sentiment_emoji} **{article.get('title', '')}**")
-                    st.caption(f"Sentiment: {article.get('sentiment', 0):.2f} | {article.get('date', '')}")
-                if st.button("Clear sentiment result", key="clear_sentiment"):
-                    st.session_state.sentiment_analysis_result = None
-                    st.rerun()
-            
-            if st.button("Analyze News Sentiment", key="analyze_sentiment"):
-                try:
-                    from trading.nlp.sentiment_classifier import SentimentClassifier
-                    classifier = SentimentClassifier()
-                    with st.spinner("Analyzing news sentiment..."):
-                        sentiment_result = classifier.analyze_symbol_sentiment(
-                            symbol=symbol_for_sentiment,
-                            lookback_days=7
+                    if st.session_state.get('show_override'):
+                        st.markdown("**Override AI Selection:**")
+                        override = st.selectbox(
+                            "Select model:",
+                            ["LSTM (Deep Learning)", "XGBoost (Gradient Boosting)", 
+                             "Prophet (Facebook)", "ARIMA (Statistical)"]
                         )
-                        st.session_state.sentiment_analysis_result = sentiment_result
-                        st.rerun()
-                except ImportError:
-                    st.error("Sentiment classifier not available")
-                except Exception as e:
-                    st.error(f"Error: {e}")
-                    import traceback
-                    st.code(traceback.format_exc())
+                        if st.button("Confirm Override"):
+                            st.session_state.selected_model = override
+                            st.session_state.show_override = False
+                            st.success(f"Selected: {override}")
             
-            # Causal Analysis
+            # Hybrid Model Selector Section
             st.markdown("---")
-            st.subheader("🔬 Causal Analysis")
+            st.subheader("🎯 Hybrid Model Selection")
             
             st.write("""
-            Understand what actually drives price movements using causal inference.
-            Goes beyond correlation to identify true causal relationships.
+            Hybrid selection combines multiple model types and automatically 
+            switches between them based on market conditions.
             """)
             
-            # Display cached causal result so it persists across reruns
-            if st.session_state.get('causal_analysis_result') is not None:
-                cached = st.session_state.causal_analysis_result
-                causal_graph = cached.get('causal_graph', {})
-                drivers = cached.get('drivers', {})
-                symbol = cached.get('symbol', '')
-                st.subheader("📊 Causal Graph")
-                if causal_graph.get('graph_visualization') is not None:
-                    st.image(causal_graph['graph_visualization'])
-                else:
-                    st.write("**Causal Relationships:**")
-                    if causal_graph.get('relationships'):
-                        for r in causal_graph['relationships']:
-                            st.write(f"• {r.get('cause')} → {r.get('effect')} (strength: {r.get('strength', 0):.2f})")
-                    else:
-                        st.info("Causal relationships will be displayed here")
-                st.subheader("🎯 Key Price Drivers")
-                if drivers.get('drivers'):
-                    drivers_df = pd.DataFrame(drivers['drivers']).sort_values('importance', ascending=False)
-                    fig = px.bar(drivers_df, x='importance', y='driver', orientation='h',
-                        title='Price Drivers (Ranked by Causal Impact)', labels={'importance': 'Causal Impact', 'driver': 'Driver'})
-                    st.plotly_chart(fig, use_container_width=True)
-                    top_driver = drivers_df.iloc[0]
-                    st.info(f"**Primary Driver:** {top_driver['driver']}. Strongest causal impact on {symbol} (importance: {top_driver['importance']:.2f}).")
-                    with st.expander("📊 Detailed Driver Analysis"):
-                        for _, d in drivers_df.iterrows():
-                            st.write(f"**{d['driver']}** - Importance: {d['importance']:.2f}")
-                if st.button("Clear causal result", key="clear_causal"):
-                    st.session_state.causal_analysis_result = None
-                    st.rerun()
+            if st.button("Use Hybrid Selector"):
+                try:
+                    from trading.forecasting.hybrid_model_selector import HybridModelSelector
+                    
+                    data = st.session_state.get("forecast_data")
+                    selector = HybridModelSelector()
+                    
+                    with st.spinner("Analyzing market conditions and selecting models..."):
+                        # Detect market regime: HybridModelSelector has no detect_market_regime; use MarketAnalyzer or default
+                        regime = "neutral"
+                        try:
+                            from trading.market.market_analyzer import MarketAnalyzer
+                            import pandas as pd
+                            df = data.copy() if hasattr(data, 'copy') else pd.DataFrame(data)
+                            if 'close' in df.columns and 'Close' not in df.columns:
+                                df['Close'] = df['close']
+                            if 'Close' in df.columns:
+                                analyzer = MarketAnalyzer()
+                                trend_result = analyzer.detect_market_regime(df, "trend")
+                                regime = trend_result.get("regime", "neutral")
+                        except Exception as e:
+                            st.caption(f"Regime detection fell back to neutral: {e}")
+                        
+                        st.info(f"📊 Detected market regime: **{regime}**")
+                        
+                        # HybridModelSelector has select_best_model(model_scores, metric), not select_models_for_regime
+                        # Show a simple recommendation based on regime
+                        recommended = [
+                            {"name": "XGBoost", "reason": "Robust across regimes"},
+                            {"name": "LSTM", "reason": "Captures nonlinear patterns"},
+                            {"name": "Prophet", "reason": "Good for trend and seasonality"},
+                        ]
+                        selected_models = recommended
+                        
+                        st.write("**Recommended models for current conditions:**")
+                        for i, model_config in enumerate(selected_models, 1):
+                            st.write(f"{i}. {model_config['name']} - {model_config['reason']}")
+                        
+                        # Store selected models
+                        st.session_state.hybrid_selected_models = selected_models
+                        st.session_state.hybrid_regime = regime
+                        
+                        st.caption("To train an ensemble, use the Model Comparison tab and select multiple models.")
+                
+                except ImportError:
+                    st.error("Hybrid Model Selector not available")
+                except Exception as e:
+                    st.error(f"Error using hybrid selector: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+    except Exception as e:
+        import traceback
+        st.error(f"Tab error: {e}")
+        st.code(traceback.format_exc())
+
+with tab4:
+    try:
+        st.header("Model Comparison")
+        st.markdown("Compare multiple models side-by-side and create ensemble forecasts")
+        
+        if st.session_state.get("forecast_data") is None:
+            st.warning("⚠️ Please load data first in the Quick Forecast tab")
+        else:
+            col1, col2 = st.columns([1, 2])
             
-            if st.button("Run Causal Analysis", key="run_causal_analysis"):
-                if st.session_state.get("forecast_data") is None:
-                    st.error("Please load data first")
-                else:
+            with col1:
+                st.subheader("📊 Select Models")
+                
+                from trading.models.forecast_router import ForecastRouter
+                _router_for_names = ForecastRouter()
+                try:
+                    available_models = list(_router_for_names.model_registry.keys())
+                except Exception:
+                    available_models = [
+                        "lstm",
+                        "xgboost",
+                        "prophet",
+                        "arima",
+                        "ridge",
+                        "tcn",
+                        "catboost",
+                        "ensemble",
+                        "hybrid",
+                    ]
+                display_models = [
+                    "LSTM",
+                    "XGBoost",
+                    "Prophet",
+                    "ARIMA",
+                    "Ridge",
+                    "TCN",
+                    "CatBoost",
+                    "Ensemble",
+                    "Hybrid",
+                ]
+                # Filter to models actually available in the router when possible
+                display_models = [
+                    m for m in display_models if m.lower() in available_models
+                ] or display_models
+
+                models_to_compare = st.multiselect(
+                    "Choose models to compare:",
+                    display_models,
+                    default=[m for m in display_models if m in ["LSTM", "XGBoost"]][:2],
+                    help="Select 2-5 models to compare",
+                )
+                
+                if len(models_to_compare) < 2:
+                    st.warning("Please select at least 2 models")
+                elif len(models_to_compare) > 5:
+                    st.warning("Please select 5 or fewer models for comparison")
+                
+                create_ensemble = st.checkbox("Create Ensemble Forecast", value=True)
+                
+                compare_button = st.button(
+                    "🚀 Compare Models",
+                    type="primary",
+                    disabled=len(models_to_compare) < 2
+                )
+            
+            with col2:
+                st.subheader("📈 Comparison Results")
+                
+                if compare_button and len(models_to_compare) >= 2:
+                    if len(models_to_compare) > 5:
+                        st.warning("Please select 5 or fewer models for comparison")
+                        st.stop()
+
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
                     try:
-                        from causal.causal_model import CausalModel
-                        from causal.driver_analysis import DriverAnalysis
                         data = st.session_state.get("forecast_data")
                         if data is None:
                             raise RuntimeError("No forecast_data in session_state; please load data first.")
                         data = data.copy()
-                        symbol = st.session_state.get("symbol", "AAPL")
-                        if 'close' in data.columns:
-                            data['Close'] = data['close']
-                        if 'open' in data.columns:
-                            data['Open'] = data['open']
-                        if 'high' in data.columns:
-                            data['High'] = data['high']
-                        if 'low' in data.columns:
-                            data['Low'] = data['low']
-                        if 'volume' in data.columns:
-                            data['Volume'] = data['volume']
-                        if 'Open' not in data.columns:
-                            data['Open'] = data['Close']
-                        if 'High' not in data.columns:
-                            data['High'] = data['Close']
-                        if 'Low' not in data.columns:
-                            data['Low'] = data['Close']
-                        if 'Volume' not in data.columns:
-                            data['Volume'] = 1000000
-                        with st.spinner("Performing causal analysis..."):
-                            causal_model = CausalModel()
-                            driver_analysis = DriverAnalysis()
-                            causal_graph = causal_model.build_causal_graph(
-                                data=data, target='Close', features=['Volume', 'High', 'Low', 'Open']
+                        horizon = st.session_state.forecast_horizon
+                        
+                        # Ensure proper format
+                        if not isinstance(data.index, pd.DatetimeIndex):
+                            data.index = pd.to_datetime(data.index)
+
+                        # Router expects lowercase OHLCV when possible
+                        if "Close" in data.columns and "close" not in data.columns:
+                            data = data.rename(
+                                columns={
+                                    "Close": "close",
+                                    "Open": "open",
+                                    "High": "high",
+                                    "Low": "low",
+                                    "Volume": "volume",
+                                }
                             )
-                            drivers = driver_analysis.identify_drivers(data=data, target='Close')
-                            st.session_state.causal_analysis_result = {
-                                'causal_graph': causal_graph,
-                                'drivers': drivers,
-                                'symbol': symbol,
-                                'data': data,
+                        
+                        forecasts = {}
+                        model_configs = {}
+                        
+                        # Forecast via ForecastRouter (single canonical invocation path)
+                        from trading.models.forecast_router import ForecastRouter
+                        _router = ForecastRouter()
+
+                        # Train and forecast for each model
+                        total_models = len(models_to_compare)
+                        for idx, model_name in enumerate(models_to_compare):
+                            status_text.text(f"Running {model_name} ({idx+1}/{total_models})...")
+                            progress_bar.progress((idx) / (total_models + 1))
+                            
+                            try:
+                                model_key = str(model_name).strip().lower()
+                                router_result = _router.get_forecast(
+                                    data,
+                                    horizon=horizon,
+                                    model_type=model_key,
+                                    run_walk_forward=False,
+                                )
+
+                                forecast_values = np.asarray(
+                                    (router_result or {}).get("forecast", []),
+                                    dtype="float64",
+                                ).ravel()
+                                if forecast_values.size == 0:
+                                    raise ValueError("Router returned empty forecast")
+
+                                forecast_dates = pd.date_range(
+                                    start=data.index[-1] + timedelta(days=1),
+                                    periods=len(forecast_values),
+                                    freq="D",
+                                )
+                                
+                                forecasts[model_name] = {
+                                    'values': forecast_values,
+                                    'dates': forecast_dates[:len(forecast_values)]
+                                }
+                                
+                            except Exception as e:
+                                st.warning(f"Failed to train {model_name}: {str(e)}")
+                                continue
+                        
+                        progress_bar.progress(0.9)
+                        
+                        # Create ensemble if requested
+                        if create_ensemble and len(forecasts) >= 2:
+                            status_text.text("Creating ensemble forecast...")
+                            ensemble_values = []
+                            for i in range(horizon):
+                                values_at_step = [f['values'][i] for f in forecasts.values() if i < len(f['values'])]
+                                if values_at_step:
+                                    ensemble_values.append(np.mean(values_at_step))
+                                else:
+                                    ensemble_values.append(0)
+                            
+                            forecasts['Ensemble'] = {
+                                'values': np.array(ensemble_values),
+                                'dates': forecasts[list(forecasts.keys())[0]]['dates']
                             }
-                            st.success("✅ Causal analysis complete!")
-                            st.rerun()
-                    except ImportError:
-                        st.error("Causal analysis modules not available")
+                        
+                        progress_bar.progress(1.0)
+                        status_text.text("Complete!")
+                        
+                        # Store results
+                        st.session_state.comparison_results = forecasts
+                        
+                        st.success(f"✅ Compared {len(forecasts)} models successfully!")
+                        
+                        # Display comparison chart
+                        fig = go.Figure()
+                        
+                        # Historical data
+                        hist_data = st.session_state.get("forecast_data")
+                        fig.add_trace(go.Scatter(
+                            x=hist_data.index,
+                            y=hist_data['close'],
+                            mode='lines',
+                            name='Historical',
+                            line=dict(color='black', width=2)
+                        ))
+                        
+                        # Forecasts from each model
+                        colors = ['red', 'blue', 'green', 'orange', 'purple']
+                        for idx, (model_name, forecast_data) in enumerate(forecasts.items()):
+                            fig.add_trace(go.Scatter(
+                                x=forecast_data['dates'],
+                                y=forecast_data['values'],
+                                mode='lines+markers',
+                                name=model_name,
+                                line=dict(color=colors[idx % len(colors)], width=2, dash='dash' if model_name == 'Ensemble' else None),
+                                marker=dict(size=6)
+                            ))
+                        
+                        fig.update_layout(
+                            title=f"{st.session_state.symbol} - Model Comparison",
+                            xaxis_title="Date",
+                            yaxis_title="Price ($)",
+                            hovermode='x unified',
+                            height=600
+                        )
+                        
+                        st.plotly_chart(fig)
+                        
+                        # Metrics table
+                        st.markdown("---")
+                        st.subheader("📊 Performance Metrics")
+                        
+                        metrics_data = []
+                        for model_name, forecast_data in forecasts.items():
+                            if model_name == 'Ensemble':
+                                continue
+                            
+                            # Calculate simple metrics
+                            forecast_vals = forecast_data['values']
+                            last_price = hist_data['close'].iloc[-1]
+                            
+                            # Mean forecast
+                            mean_forecast = np.mean(forecast_vals)
+                            
+                            # Forecast range
+                            forecast_range = np.max(forecast_vals) - np.min(forecast_vals)
+                            
+                            # Trend (first vs last)
+                            trend = (forecast_vals[-1] - forecast_vals[0]) / forecast_vals[0] * 100 if len(forecast_vals) > 1 else 0
+                            
+                            metrics_data.append({
+                                'Model': model_name,
+                                'Mean Forecast': f"${mean_forecast:.2f}",
+                                'Range': f"${forecast_range:.2f}",
+                                'Trend (%)': f"{trend:.2f}%",
+                                'Std Dev': f"${np.std(forecast_vals):.2f}"
+                            })
+                        
+                        if metrics_data:
+                            metrics_df = pd.DataFrame(metrics_data)
+                            st.dataframe(metrics_df)
+                        
+                        # Forecast table
+                        st.markdown("---")
+                        st.subheader("📋 Forecast Values")
+                        
+                        # Create comparison DataFrame
+                        comparison_df = pd.DataFrame({
+                            'Date': forecasts[list(forecasts.keys())[0]]['dates']
+                        })
+                        
+                        for model_name, forecast_data in forecasts.items():
+                            comparison_df[model_name] = forecast_data['values'][:len(comparison_df)]
+                        
+                        # Format for display
+                        display_df = comparison_df.copy()
+                        for col in display_df.columns:
+                            if col != 'Date' and col in forecasts:
+                                display_df[col] = display_df[col].apply(
+                                    lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
+                                )
+                        
+                        st.dataframe(display_df)
+                        
+                        # Download button
+                        csv = comparison_df.to_csv(index=False)
+                        st.download_button(
+                            label="📥 Download Comparison CSV",
+                            data=csv,
+                            file_name=f"{st.session_state.symbol}_model_comparison.csv",
+                            mime="text/csv"
+                        )
+                    
                     except Exception as e:
-                        st.error(f"Error in causal analysis: {e}")
+                        st.error(f"Comparison failed: {str(e)}")
                         import traceback
                         st.code(traceback.format_exc())
+                    finally:
+                        progress_bar.empty()
+                        status_text.empty()
+                
+                # Display previous comparison if exists
+                if st.session_state.get('comparison_results'):
+                    st.markdown("---")
+                    st.markdown("**Previous Comparison Results**")
+                    prev_results = st.session_state.comparison_results
+                    st.info(f"Compared {len(prev_results)} models in previous run")
+    except Exception as e:
+        import traceback
+        st.error(f"Tab error: {e}")
+        st.code(traceback.format_exc())
+
+with tab5:
+    try:
+        st.header("Market Analysis")
+        st.markdown("Technical indicators, market regime detection, trend analysis, and correlation tools")
+        
+        if st.session_state.get("forecast_data") is None:
+            st.warning("⚠️ Please load data first in the Quick Forecast tab")
+        else:
+            # Analysis options
+            col1, col2, col3 = st.columns(3)
             
-            # Summary
-            st.markdown("---")
-            st.subheader("📋 Analysis Summary")
+            with col1:
+                show_technical = st.checkbox("Technical Indicators", value=True)
+            with col2:
+                show_regime = st.checkbox("Market Regime", value=True)
+            with col3:
+                show_trend = st.checkbox("Trend Analysis", value=True)
             
-            summary_data = {
-                'Metric': [],
-                'Value': []
-            }
+            analyze_button = st.button("🔍 Run Analysis", type="primary")
             
-            if show_technical and 'RSI' in locals() and 'indicators_df' in locals():
-                summary_data['Metric'].append('Current RSI')
-                summary_data['Value'].append(f"{indicators_df['RSI'].iloc[-1]:.2f}")
-            
-            if show_regime and 'trend_regime' in locals():
-                summary_data['Metric'].append('Market Regime')
-                summary_data['Value'].append(trend_regime.get('regime', 'unknown').upper())
-            
-            if show_trend:
-                summary_data['Metric'].append('Overall Trend')
-                trend_direction = "UP" if long_trend > 0 else "DOWN"
-                summary_data['Value'].append(f"{trend_direction} ({long_trend:.2f}%)")
-            
-            if summary_data['Metric']:
-                summary_df = pd.DataFrame(summary_data)
-                st.dataframe(summary_df, hide_index=True)
+            if analyze_button:
+                data = st.session_state.get("forecast_data")
+                if data is None:
+                    raise RuntimeError("No forecast_data in session_state; please load data first.")
+                data = data.copy()
+                
+                # Ensure proper column names
+                if 'close' in data.columns:
+                    data['Close'] = data['close']
+                if 'open' in data.columns:
+                    data['Open'] = data['open']
+                if 'high' in data.columns:
+                    data['High'] = data['high']
+                if 'low' in data.columns:
+                    data['Low'] = data['low']
+                if 'volume' in data.columns:
+                    data['Volume'] = data['volume']
+                
+                # Ensure required columns exist
+                if 'Open' not in data.columns:
+                    data['Open'] = data['Close']
+                if 'High' not in data.columns:
+                    data['High'] = data['Close']
+                if 'Low' not in data.columns:
+                    data['Low'] = data['Close']
+                if 'Volume' not in data.columns:
+                    data['Volume'] = 1000000
+                
+                # Technical Indicators
+                if show_technical:
+                    st.markdown("---")
+                    st.subheader("📊 Technical Indicators")
+                    
+                    try:
+                        fe = FeatureEngineering()
+                        
+                        # Calculate indicators
+                        indicators_data = {}
+                        
+                        # Moving Averages
+                        ma_data = fe.calculate_moving_averages(data)
+                        indicators_data.update(ma_data.to_dict('series'))
+                        
+                        # RSI
+                        rsi_data = fe.calculate_rsi(data)
+                        indicators_data.update(rsi_data.to_dict('series'))
+                        
+                        # MACD
+                        macd_data = fe.calculate_macd(data)
+                        indicators_data.update(macd_data.to_dict('series'))
+                        
+                        # Bollinger Bands
+                        bb_data = fe.calculate_bollinger_bands(data)
+                        indicators_data.update(bb_data.to_dict('series'))
+                        
+                        # Create indicators DataFrame
+                        indicators_df = pd.DataFrame(indicators_data, index=data.index)
+                        
+                        # Display key indicators
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            if 'RSI' in indicators_df.columns:
+                                current_rsi = indicators_df['RSI'].iloc[-1]
+                                st.metric("RSI", f"{current_rsi:.2f}")
+                                if current_rsi > 70:
+                                    st.warning("Overbought")
+                                elif current_rsi < 30:
+                                    st.info("Oversold")
+                        
+                        with col2:
+                            if 'SMA_20' in indicators_df.columns:
+                                sma_20 = indicators_df['SMA_20'].iloc[-1]
+                                current_price = data['Close'].iloc[-1]
+                                st.metric("SMA(20)", f"${sma_20:.2f}")
+                                if current_price > sma_20:
+                                    st.success("Above SMA")
+                                else:
+                                    st.error("Below SMA")
+                        
+                        with col3:
+                            if 'MACD' in indicators_df.columns and 'MACD_Signal' in indicators_df.columns:
+                                macd_val = indicators_df['MACD'].iloc[-1]
+                                signal_val = indicators_df['MACD_Signal'].iloc[-1]
+                                st.metric("MACD", f"{macd_val:.2f}")
+                                if macd_val > signal_val:
+                                    st.success("Bullish")
+                                else:
+                                    st.error("Bearish")
+                        
+                        with col4:
+                            if 'BB_Upper' in indicators_df.columns and 'BB_Lower' in indicators_df.columns:
+                                upper = indicators_df['BB_Upper'].iloc[-1]
+                                lower = indicators_df['BB_Lower'].iloc[-1]
+                                current = data['Close'].iloc[-1]
+                                st.metric("Bollinger Position", f"{((current - lower) / (upper - lower) * 100):.1f}%")
+                        
+                        # Chart with indicators
+                        fig = make_subplots(
+                            rows=3, cols=1,
+                            subplot_titles=("Price with Moving Averages", "RSI", "MACD"),
+                            vertical_spacing=0.1,
+                            row_heights=[0.5, 0.25, 0.25]
+                        )
+                        
+                        # Price and MAs
+                        fig.add_trace(go.Scatter(
+                            x=data.index,
+                            y=data['Close'],
+                            mode='lines',
+                            name='Close Price',
+                            line=dict(color='blue', width=2)
+                        ), row=1, col=1)
+                        
+                        if 'SMA_20' in indicators_df.columns:
+                            fig.add_trace(go.Scatter(
+                                x=indicators_df.index,
+                                y=indicators_df['SMA_20'],
+                                mode='lines',
+                                name='SMA(20)',
+                                line=dict(color='orange', width=1, dash='dash')
+                            ), row=1, col=1)
+                        
+                        if 'SMA_50' in indicators_df.columns:
+                            fig.add_trace(go.Scatter(
+                                x=indicators_df.index,
+                                y=indicators_df['SMA_50'],
+                                mode='lines',
+                                name='SMA(50)',
+                                line=dict(color='red', width=1, dash='dash')
+                            ), row=1, col=1)
+                        
+                        # Bollinger Bands
+                        if 'BB_Upper' in indicators_df.columns:
+                            fig.add_trace(go.Scatter(
+                                x=indicators_df.index,
+                                y=indicators_df['BB_Upper'],
+                                mode='lines',
+                                name='BB Upper',
+                                line=dict(color='gray', width=1, dash='dot'),
+                                showlegend=False
+                            ), row=1, col=1)
+                            
+                            fig.add_trace(go.Scatter(
+                                x=indicators_df.index,
+                                y=indicators_df['BB_Lower'],
+                                mode='lines',
+                                name='BB Lower',
+                                line=dict(color='gray', width=1, dash='dot'),
+                                fill='tonexty',
+                                fillcolor='rgba(128,128,128,0.1)',
+                                showlegend=False
+                            ), row=1, col=1)
+                        
+                        # RSI
+                        if 'RSI' in indicators_df.columns:
+                            fig.add_trace(go.Scatter(
+                                x=indicators_df.index,
+                                y=indicators_df['RSI'],
+                                mode='lines',
+                                name='RSI',
+                                line=dict(color='purple', width=2)
+                            ), row=2, col=1)
+                            
+                            # Add overbought/oversold lines
+                            fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
+                            fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
+                        
+                        # MACD
+                        if 'MACD' in indicators_df.columns:
+                            fig.add_trace(go.Scatter(
+                                x=indicators_df.index,
+                                y=indicators_df['MACD'],
+                                mode='lines',
+                                name='MACD',
+                                line=dict(color='blue', width=2)
+                            ), row=3, col=1)
+                            
+                            if 'MACD_Signal' in indicators_df.columns:
+                                fig.add_trace(go.Scatter(
+                                    x=indicators_df.index,
+                                    y=indicators_df['MACD_Signal'],
+                                    mode='lines',
+                                    name='Signal',
+                                    line=dict(color='red', width=2)
+                                ), row=3, col=1)
+                        
+                        fig.update_layout(height=800, showlegend=True, hovermode='x unified')
+                        fig.update_xaxes(title_text="Date", row=3, col=1)
+                        fig.update_yaxes(title_text="Price ($)", row=1, col=1)
+                        fig.update_yaxes(title_text="RSI", row=2, col=1)
+                        fig.update_yaxes(title_text="MACD", row=3, col=1)
+                        
+                        st.plotly_chart(fig)
+                        
+                        # Indicators table
+                        with st.expander("📋 View All Indicators"):
+                            st.dataframe(indicators_df.tail(50))
+                    
+                    except Exception as e:
+                        st.error(f"Error calculating indicators: {str(e)}")
+                
+                # Market Regime Detection
+                if show_regime:
+                    st.markdown("---")
+                    st.subheader("🎯 Market Regime Detection")
+                    
+                    try:
+                        import pandas as pd
+                        analyzer = MarketAnalyzer()
+                        # Ensure data is DataFrame with Close column (log_metrics fix: do not pass dict as path)
+                        regime_data = data.copy() if isinstance(data, pd.DataFrame) else pd.DataFrame(data)
+                        if 'Close' not in regime_data.columns and 'close' in regime_data.columns:
+                            regime_data['Close'] = regime_data['close']
+                        if 'Close' not in regime_data.columns:
+                            st.warning("No Close price column for regime detection.")
+                        else:
+                            # Detect trend regime
+                            trend_regime = analyzer.detect_market_regime(regime_data, "trend")
+                            
+                            # Detect volatility regime
+                            volatility_regime = analyzer.detect_market_regime(regime_data, "volatility")
+                        
+                            # Display regime information
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.markdown("**Trend Regime**")
+                                regime = trend_regime.get('regime', 'unknown')
+                                strength = trend_regime.get('strength', 0)
+                                
+                                if regime == 'up':
+                                    st.success(f"📈 Uptrend (Strength: {strength:.2%})")
+                                elif regime == 'down':
+                                    st.error(f"📉 Downtrend (Strength: {abs(strength):.2%})")
+                                else:
+                                    st.info(f"➡️ Sideways")
+                                
+                                st.metric("MA Short (20)", f"${trend_regime.get('ma_short', 0):.2f}")
+                                st.metric("MA Long (50)", f"${trend_regime.get('ma_long', 0):.2f}")
+                            
+                            with col2:
+                                st.markdown("**Volatility Regime**")
+                                vol_regime = volatility_regime.get('regime', 'unknown')
+                                current_vol = volatility_regime.get('current_volatility', 0)
+                                
+                                if 'high' in vol_regime:
+                                    st.warning(f"⚡ High Volatility ({current_vol:.2%})")
+                                elif 'low' in vol_regime:
+                                    st.success(f"🔇 Low Volatility ({current_vol:.2%})")
+                                else:
+                                    st.info(f"📊 Normal Volatility ({current_vol:.2%})")
+                                
+                                st.metric("Volatility Rank", f"{volatility_regime.get('volatility_rank', 0):.2%}")
+                                st.metric("Volatility Trend", volatility_regime.get('volatility_trend', 'unknown'))
+                            
+                            # Store regime in session state
+                            st.session_state.market_regime = {
+                                'trend': trend_regime,
+                                'volatility': volatility_regime
+                            }
+                    
+                    except Exception as e:
+                        st.error(f"Error detecting market regime: {str(e)}")
+                
+                # Trend Analysis
+                if show_trend:
+                    st.markdown("---")
+                    st.subheader("📈 Trend Analysis")
+                    
+                    try:
+                        # Calculate trend metrics
+                        returns = data['Close'].pct_change()
+                        
+                        # Short-term trend (5 days)
+                        short_trend = (data['Close'].iloc[-1] / data['Close'].iloc[-6] - 1) * 100 if len(data) >= 6 else 0
+                        
+                        # Medium-term trend (20 days)
+                        medium_trend = (data['Close'].iloc[-1] / data['Close'].iloc[-21] - 1) * 100 if len(data) >= 21 else 0
+                        
+                        # Long-term trend (full period)
+                        long_trend = (data['Close'].iloc[-1] / data['Close'].iloc[0] - 1) * 100
+                        
+                        # Volatility
+                        volatility = returns.std() * np.sqrt(252) * 100
+                        
+                        # Display metrics
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            st.metric("Short-term (5d)", f"{short_trend:.2f}%", 
+                                    delta=f"{short_trend:.2f}%")
+                        
+                        with col2:
+                            st.metric("Medium-term (20d)", f"{medium_trend:.2f}%",
+                                    delta=f"{medium_trend:.2f}%")
+                        
+                        with col3:
+                            st.metric("Long-term (Full)", f"{long_trend:.2f}%",
+                                    delta=f"{long_trend:.2f}%")
+                        
+                        with col4:
+                            st.metric("Annualized Volatility", f"{volatility:.2f}%")
+                        
+                        # Trend chart
+                        fig = go.Figure()
+                        
+                        # Price
+                        fig.add_trace(go.Scatter(
+                            x=data.index,
+                            y=data['Close'],
+                            mode='lines',
+                            name='Price',
+                            line=dict(color='blue', width=2)
+                        ))
+                        
+                        # Trend lines
+                        if len(data) >= 20:
+                            # 20-day moving average
+                            ma20 = data['Close'].rolling(20).mean()
+                            fig.add_trace(go.Scatter(
+                                x=ma20.index,
+                                y=ma20.values,
+                                mode='lines',
+                                name='MA(20)',
+                                line=dict(color='orange', width=1, dash='dash')
+                            ))
+                        
+                        if len(data) >= 50:
+                            # 50-day moving average
+                            ma50 = data['Close'].rolling(50).mean()
+                            fig.add_trace(go.Scatter(
+                                x=ma50.index,
+                                y=ma50.values,
+                                mode='lines',
+                                name='MA(50)',
+                                line=dict(color='red', width=1, dash='dash')
+                            ))
+                        
+                        fig.update_layout(
+                            title=f"{st.session_state.symbol} - Trend Analysis",
+                            xaxis_title="Date",
+                            yaxis_title="Price ($)",
+                            hovermode='x unified',
+                            height=400
+                        )
+                        
+                        st.plotly_chart(fig)
+                    
+                    except Exception as e:
+                        st.error(f"Error analyzing trend: {str(e)}")
+                
+                # Correlation Analysis (if multiple symbols available)
+                st.markdown("---")
+                st.subheader("🔗 Correlation Analysis")
+                st.info("Correlation analysis requires multiple symbols. Load additional data to compare.")
+                
+                # News Sentiment Analysis
+                st.markdown("---")
+                st.subheader("📰 News Sentiment Analysis")
+                
+                symbol_for_sentiment = st.text_input(
+                    "Symbol for sentiment", 
+                    value=st.session_state.get('symbol', 'AAPL'),
+                    key="sentiment_symbol"
+                )
+                
+                # Display cached sentiment result so it persists across reruns
+                if st.session_state.get('sentiment_analysis_result') is not None:
+                    sentiment_result = st.session_state.sentiment_analysis_result
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        sentiment_score = sentiment_result.get('overall_sentiment', 0)
+                        if sentiment_score > 0.3:
+                            st.success(f"😊 Positive: {sentiment_score:.2f}")
+                        elif sentiment_score < -0.3:
+                            st.error(f"😞 Negative: {sentiment_score:.2f}")
+                        else:
+                            st.info(f"😐 Neutral: {sentiment_score:.2f}")
+                    with col2:
+                        st.metric("Articles Analyzed", sentiment_result.get('num_articles', 0))
+                    with col3:
+                        st.metric("Sentiment Confidence", f"{sentiment_result.get('confidence', 0):.1%}")
+                    if 'sentiment_history' in sentiment_result:
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(
+                            x=sentiment_result.get('dates', []),
+                            y=sentiment_result['sentiment_history'],
+                            name='Sentiment',
+                            line=dict(color='purple')
+                        ))
+                        fig.update_layout(title='Sentiment Over Time', xaxis_title='Date', yaxis_title='Sentiment Score', height=400)
+                        st.plotly_chart(fig, use_container_width=True)
+                    st.subheader("📰 Recent Headlines")
+                    for article in sentiment_result.get('articles', [])[:10]:
+                        sentiment_emoji = "😊" if article.get('sentiment', 0) > 0 else "😞" if article.get('sentiment', 0) < 0 else "😐"
+                        st.write(f"{sentiment_emoji} **{article.get('title', '')}**")
+                        st.caption(f"Sentiment: {article.get('sentiment', 0):.2f} | {article.get('date', '')}")
+                    if st.button("Clear sentiment result", key="clear_sentiment"):
+                        st.session_state.sentiment_analysis_result = None
+                        st.rerun()
+                
+                if st.button("Analyze News Sentiment", key="analyze_sentiment"):
+                    try:
+                        from trading.nlp.sentiment_classifier import SentimentClassifier
+                        classifier = SentimentClassifier()
+                        with st.spinner("Analyzing news sentiment..."):
+                            sentiment_result = classifier.analyze_symbol_sentiment(
+                                symbol=symbol_for_sentiment,
+                                lookback_days=7
+                            )
+                            st.session_state.sentiment_analysis_result = sentiment_result
+                            st.rerun()
+                    except ImportError:
+                        st.error("Sentiment classifier not available")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+                
+                # Causal Analysis
+                st.markdown("---")
+                st.subheader("🔬 Causal Analysis")
+                
+                st.write("""
+                Understand what actually drives price movements using causal inference.
+                Goes beyond correlation to identify true causal relationships.
+                """)
+                
+                # Display cached causal result so it persists across reruns
+                if st.session_state.get('causal_analysis_result') is not None:
+                    cached = st.session_state.causal_analysis_result
+                    causal_graph = cached.get('causal_graph', {})
+                    drivers = cached.get('drivers', {})
+                    symbol = cached.get('symbol', '')
+                    st.subheader("📊 Causal Graph")
+                    if causal_graph.get('graph_visualization') is not None:
+                        st.image(causal_graph['graph_visualization'])
+                    else:
+                        st.write("**Causal Relationships:**")
+                        if causal_graph.get('relationships'):
+                            for r in causal_graph['relationships']:
+                                st.write(f"• {r.get('cause')} → {r.get('effect')} (strength: {r.get('strength', 0):.2f})")
+                        else:
+                            st.info("Causal relationships will be displayed here")
+                    st.subheader("🎯 Key Price Drivers")
+                    if drivers.get('drivers'):
+                        drivers_df = pd.DataFrame(drivers['drivers']).sort_values('importance', ascending=False)
+                        fig = px.bar(drivers_df, x='importance', y='driver', orientation='h',
+                            title='Price Drivers (Ranked by Causal Impact)', labels={'importance': 'Causal Impact', 'driver': 'Driver'})
+                        st.plotly_chart(fig, use_container_width=True)
+                        top_driver = drivers_df.iloc[0]
+                        st.info(f"**Primary Driver:** {top_driver['driver']}. Strongest causal impact on {symbol} (importance: {top_driver['importance']:.2f}).")
+                        with st.expander("📊 Detailed Driver Analysis"):
+                            for _, d in drivers_df.iterrows():
+                                st.write(f"**{d['driver']}** - Importance: {d['importance']:.2f}")
+                    if st.button("Clear causal result", key="clear_causal"):
+                        st.session_state.causal_analysis_result = None
+                        st.rerun()
+                
+                if st.button("Run Causal Analysis", key="run_causal_analysis"):
+                    if st.session_state.get("forecast_data") is None:
+                        st.error("Please load data first")
+                    else:
+                        try:
+                            from causal.causal_model import CausalModel
+                            from causal.driver_analysis import DriverAnalysis
+                            data = st.session_state.get("forecast_data")
+                            if data is None:
+                                raise RuntimeError("No forecast_data in session_state; please load data first.")
+                            data = data.copy()
+                            symbol = st.session_state.get("symbol", "AAPL")
+                            if 'close' in data.columns:
+                                data['Close'] = data['close']
+                            if 'open' in data.columns:
+                                data['Open'] = data['open']
+                            if 'high' in data.columns:
+                                data['High'] = data['high']
+                            if 'low' in data.columns:
+                                data['Low'] = data['low']
+                            if 'volume' in data.columns:
+                                data['Volume'] = data['volume']
+                            if 'Open' not in data.columns:
+                                data['Open'] = data['Close']
+                            if 'High' not in data.columns:
+                                data['High'] = data['Close']
+                            if 'Low' not in data.columns:
+                                data['Low'] = data['Close']
+                            if 'Volume' not in data.columns:
+                                data['Volume'] = 1000000
+                            with st.spinner("Performing causal analysis..."):
+                                causal_model = CausalModel()
+                                driver_analysis = DriverAnalysis()
+                                causal_graph = causal_model.build_causal_graph(
+                                    data=data, target='Close', features=['Volume', 'High', 'Low', 'Open']
+                                )
+                                drivers = driver_analysis.identify_drivers(data=data, target='Close')
+                                st.session_state.causal_analysis_result = {
+                                    'causal_graph': causal_graph,
+                                    'drivers': drivers,
+                                    'symbol': symbol,
+                                    'data': data,
+                                }
+                                st.success("✅ Causal analysis complete!")
+                                st.rerun()
+                        except ImportError:
+                            st.error("Causal analysis modules not available")
+                        except Exception as e:
+                            st.error(f"Error in causal analysis: {e}")
+                            import traceback
+                            st.code(traceback.format_exc())
+                
+                # Summary
+                st.markdown("---")
+                st.subheader("📋 Analysis Summary")
+                
+                summary_data = {
+                    'Metric': [],
+                    'Value': []
+                }
+                
+                if show_technical and 'RSI' in locals() and 'indicators_df' in locals():
+                    summary_data['Metric'].append('Current RSI')
+                    summary_data['Value'].append(f"{indicators_df['RSI'].iloc[-1]:.2f}")
+                
+                if show_regime and 'trend_regime' in locals():
+                    summary_data['Metric'].append('Market Regime')
+                    summary_data['Value'].append(trend_regime.get('regime', 'unknown').upper())
+                
+                if show_trend:
+                    summary_data['Metric'].append('Overall Trend')
+                    trend_direction = "UP" if long_trend > 0 else "DOWN"
+                    summary_data['Value'].append(f"{trend_direction} ({long_trend:.2f}%)")
+                
+                if summary_data['Metric']:
+                    summary_df = pd.DataFrame(summary_data)
+                    st.dataframe(summary_df, hide_index=True)
+    except Exception as e:
+        import traceback
+        st.error(f"Tab error: {e}")
+        st.code(traceback.format_exc())
 
 with tab6:
-    st.header("🔗 Multi-Asset Forecasting with Graph Neural Networks")
-    st.markdown("""
-    GNN models relationships between correlated assets. Perfect for:
-    - **Portfolio-level forecasting** - Predict entire portfolio together
-    - **Sector analysis** - Model how sector stocks move together
-    - **Market contagion** - Understand how shocks spread
-    - **Relationship-based predictions** - Use asset correlations for better forecasts
-    """)
-    
-    st.info("💡 GNN requires 3-20 correlated assets. It won't work with single tickers.")
-    
-    # Multi-ticker input
-    st.subheader("📊 Step 1: Select Multiple Assets")
-    
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        tickers_input = st.text_area(
-            "Enter ticker symbols (one per line)",
-            value="AAPL\nMSFT\nGOOGL\nAMZN\nMETA",
-            height=150,
-            help="Enter 3-20 correlated stocks. Tech stocks, bank stocks, etc."
-        )
+    try:
+        st.header("🔗 Multi-Asset Forecasting with Graph Neural Networks")
+        st.markdown("""
+        GNN models relationships between correlated assets. Perfect for:
+        - **Portfolio-level forecasting** - Predict entire portfolio together
+        - **Sector analysis** - Model how sector stocks move together
+        - **Market contagion** - Understand how shocks spread
+        - **Relationship-based predictions** - Use asset correlations for better forecasts
+        """)
         
-        tickers = [t.strip().upper() for t in tickers_input.split('\n') if t.strip()]
+        st.info("💡 GNN requires 3-20 correlated assets. It won't work with single tickers.")
         
-        if len(tickers) < 3:
-            st.error("❌ GNN requires at least 3 assets")
-        elif len(tickers) > 20:
-            st.warning("⚠️ Too many assets (max 20). Performance may be slow.")
-        else:
-            st.success(f"✅ {len(tickers)} assets selected")
-    
-    with col2:
-        st.write("**Settings:**")
+        # Multi-ticker input
+        st.subheader("📊 Step 1: Select Multiple Assets")
         
-        correlation_threshold = st.slider(
-            "Correlation Threshold",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.5,
-            step=0.05,
-            help="Assets with correlation > this will be connected in graph"
-        )
+        col1, col2 = st.columns([2, 1])
         
-        gnn_horizon = st.slider(
-            "Forecast Days",
-            min_value=1,
-            max_value=30,
-            value=7
-        )
+        with col1:
+            tickers_input = st.text_area(
+                "Enter ticker symbols (one per line)",
+                value="AAPL\nMSFT\nGOOGL\nAMZN\nMETA",
+                height=150,
+                help="Enter 3-20 correlated stocks. Tech stocks, bank stocks, etc."
+            )
+            
+            tickers = [t.strip().upper() for t in tickers_input.split('\n') if t.strip()]
+            
+            if len(tickers) < 3:
+                st.error("❌ GNN requires at least 3 assets")
+            elif len(tickers) > 20:
+                st.warning("⚠️ Too many assets (max 20). Performance may be slow.")
+            else:
+                st.success(f"✅ {len(tickers)} assets selected")
         
-        gnn_epochs = st.slider(
-            "Training Epochs",
-            min_value=20,
-            max_value=100,
-            value=50,
-            help="More epochs = better accuracy but slower"
-        )
-    
-    # Load multi-asset data
-    if st.button("📥 Load Multi-Asset Data", type="primary", use_container_width=True):
-        if len(tickers) < 3:
-            st.error("Please select at least 3 assets")
-        elif len(tickers) > 20:
-            st.error("Please limit to 20 assets for performance")
-        else:
-            try:
-                with st.spinner(f"Loading data for {len(tickers)} assets..."):
-                    from trading.data.data_loader import DataLoader, DataLoadRequest
-                    from datetime import datetime, timedelta
-                    
-                    loader = DataLoader()
-                    
-                    # Load data for each ticker
-                    multi_asset_data = {}
-                    failed_tickers = []
-                    
-                    progress_bar = st.progress(0)
-                    
-                    for i, ticker in enumerate(tickers):
-                        try:
-                            request = DataLoadRequest(
-                                ticker=ticker,
-                                start_date=(datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d"),
-                                end_date=datetime.now().strftime("%Y-%m-%d"),
-                                interval="1d"
-                            )
-                            response = loader.load_market_data(request)
-                            
-                            if response.success and response.data is not None:
-                                # Get close prices
-                                data = response.data
-                                if 'close' in data.columns:
-                                    multi_asset_data[ticker] = data['close']
-                                elif 'Close' in data.columns:
-                                    multi_asset_data[ticker] = data['Close']
-                            else:
+        with col2:
+            st.write("**Settings:**")
+            
+            correlation_threshold = st.slider(
+                "Correlation Threshold",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.5,
+                step=0.05,
+                help="Assets with correlation > this will be connected in graph"
+            )
+            
+            gnn_horizon = st.slider(
+                "Forecast Days",
+                min_value=1,
+                max_value=30,
+                value=7
+            )
+            
+            gnn_epochs = st.slider(
+                "Training Epochs",
+                min_value=20,
+                max_value=100,
+                value=50,
+                help="More epochs = better accuracy but slower"
+            )
+        
+        # Load multi-asset data
+        if st.button("📥 Load Multi-Asset Data", type="primary", use_container_width=True):
+            if len(tickers) < 3:
+                st.error("Please select at least 3 assets")
+            elif len(tickers) > 20:
+                st.error("Please limit to 20 assets for performance")
+            else:
+                try:
+                    with st.spinner(f"Loading data for {len(tickers)} assets..."):
+                        from trading.data.data_loader import DataLoader, DataLoadRequest
+                        from datetime import datetime, timedelta
+                        
+                        loader = DataLoader()
+                        
+                        # Load data for each ticker
+                        multi_asset_data = {}
+                        failed_tickers = []
+                        
+                        progress_bar = st.progress(0)
+                        
+                        for i, ticker in enumerate(tickers):
+                            try:
+                                request = DataLoadRequest(
+                                    ticker=ticker,
+                                    start_date=(datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d"),
+                                    end_date=datetime.now().strftime("%Y-%m-%d"),
+                                    interval="1d"
+                                )
+                                response = loader.load_market_data(request)
+                                
+                                if response.success and response.data is not None:
+                                    # Get close prices
+                                    data = response.data
+                                    if 'close' in data.columns:
+                                        multi_asset_data[ticker] = data['close']
+                                    elif 'Close' in data.columns:
+                                        multi_asset_data[ticker] = data['Close']
+                                else:
+                                    failed_tickers.append(ticker)
+                            except Exception as e:
+                                logger.error(f"Error loading {ticker}: {e}")
                                 failed_tickers.append(ticker)
-                        except Exception as e:
-                            logger.error(f"Error loading {ticker}: {e}")
-                            failed_tickers.append(ticker)
+                            
+                            progress_bar.progress((i + 1) / len(tickers))
                         
-                        progress_bar.progress((i + 1) / len(tickers))
-                    
-                    progress_bar.empty()
-                    
-                    if len(multi_asset_data) < 3:
-                        st.error(f"Could not load enough assets. Failed: {', '.join(failed_tickers)}")
-                    else:
-                        # Combine into DataFrame
-                        multi_df = pd.DataFrame(multi_asset_data)
+                        progress_bar.empty()
                         
-                        # Align dates (drop rows with any NaN)
-                        multi_df = multi_df.dropna()
-                        
-                        if len(multi_df) < 100:
-                            st.error("Insufficient overlapping data. Try different tickers or longer date range.")
+                        if len(multi_asset_data) < 3:
+                            st.error(f"Could not load enough assets. Failed: {', '.join(failed_tickers)}")
                         else:
-                            st.session_state.gnn_data = multi_df
-                            st.session_state.gnn_tickers = list(multi_df.columns)
+                            # Combine into DataFrame
+                            multi_df = pd.DataFrame(multi_asset_data)
                             
-                            st.success(f"✅ Loaded {len(multi_df)} days of data for {len(multi_df.columns)} assets")
+                            # Align dates (drop rows with any NaN)
+                            multi_df = multi_df.dropna()
                             
-                            if failed_tickers:
-                                st.warning(f"⚠️ Could not load: {', '.join(failed_tickers)}")
+                            if len(multi_df) < 100:
+                                st.error("Insufficient overlapping data. Try different tickers or longer date range.")
+                            else:
+                                st.session_state.gnn_data = multi_df
+                                st.session_state.gnn_tickers = list(multi_df.columns)
+                                
+                                st.success(f"✅ Loaded {len(multi_df)} days of data for {len(multi_df.columns)} assets")
+                                
+                                if failed_tickers:
+                                    st.warning(f"⚠️ Could not load: {', '.join(failed_tickers)}")
+                
+                except Exception as e:
+                    st.error(f"Error loading data: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+        
+        # Display correlation matrix and train GNN
+        if 'gnn_data' in st.session_state and st.session_state.gnn_data is not None:
+            st.markdown("---")
+            st.subheader("📊 Step 2: View Asset Correlations")
             
-            except Exception as e:
-                st.error(f"Error loading data: {e}")
-                import traceback
-                st.code(traceback.format_exc())
-    
-    # Display correlation matrix and train GNN
-    if 'gnn_data' in st.session_state and st.session_state.gnn_data is not None:
-        st.markdown("---")
-        st.subheader("📊 Step 2: View Asset Correlations")
-        
-        multi_df = st.session_state.gnn_data
-        
-        # Calculate correlation matrix
-        corr_matrix = multi_df.corr()
-        
-        # Plot heatmap
-        fig_corr = px.imshow(
-            corr_matrix,
-            labels=dict(color="Correlation"),
-            x=corr_matrix.columns,
-            y=corr_matrix.columns,
-            color_continuous_scale='RdBu_r',
-            zmin=-1,
-            zmax=1,
-            title=f"Asset Correlation Matrix ({len(multi_df.columns)} assets)"
-        )
-        
-        fig_corr.update_layout(height=500)
-        st.plotly_chart(fig_corr)
-        
-        # Show graph connections
-        num_connections = (corr_matrix.abs() > correlation_threshold).sum().sum() - len(multi_df.columns)
-        st.info(f"🔗 Graph will have {num_connections // 2} edges (connections) based on {correlation_threshold:.0%} threshold")
-        
-        # Generate forecast
-        st.markdown("---")
-        st.subheader("🚀 Step 3: Generate GNN Forecast")
-        
-        target_asset = st.selectbox(
-            "Select primary asset to forecast",
-            options=st.session_state.gnn_tickers,
-            help="GNN will forecast this asset using all connected assets"
-        )
-        
-        if st.button("🔮 Train GNN & Generate Forecast", type="primary", use_container_width=True):
-            try:
-                with st.spinner(f"Training Graph Neural Network on {len(multi_df.columns)} assets..."):
-                    from trading.models.advanced.gnn.gnn_model import GNNForecaster
-                    
-                    # Progress indicator
-                    progress_text = st.empty()
-                    
-                    # Initialize GNN
-                    progress_text.text("Initializing GNN model...")
-                    gnn = GNNForecaster(
-                        num_assets=len(multi_df.columns),
-                        hidden_size=64,
-                        num_layers=2,
-                        seq_length=30,
-                        correlation_threshold=correlation_threshold
-                    )
-                    
-                    # Train
-                    progress_text.text(f"Training for {gnn_epochs} epochs...")
-                    gnn.fit(multi_df, epochs=gnn_epochs, batch_size=32)
-                    
-                    # Generate forecast
-                    progress_text.text("Generating forecast...")
-                    forecast_result = gnn.forecast(
-                        multi_df,
-                        horizon=gnn_horizon,
-                        target_asset=target_asset
-                    )
-                    
-                    progress_text.empty()
-                    st.success("✅ GNN forecast generated!")
-                    
-                    # Display forecast chart
-                    st.subheader(f"📈 {target_asset} Forecast")
-                    
-                    fig = go.Figure()
-                    
-                    # Historical data
-                    fig.add_trace(go.Scatter(
-                        x=multi_df.index,
-                        y=multi_df[target_asset],
-                        name='Historical',
-                        line=dict(color='blue', width=2)
-                    ))
-                    
-                    # Forecast
-                    fig.add_trace(go.Scatter(
-                        x=forecast_result['dates'],
-                        y=forecast_result['forecast'],
-                        name='GNN Forecast',
-                        line=dict(color='red', width=2, dash='dash')
-                    ))
-                    
-                    fig.update_layout(
-                        title=f"GNN Multi-Asset Forecast for {target_asset}",
-                        xaxis_title="Date",
-                        yaxis_title="Price ($)",
-                        hovermode='x unified',
-                        height=500
-                    )
-                    
-                    st.plotly_chart(fig)
-                    
-                    # Metrics
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("Forecast Horizon", f"{gnn_horizon} days")
-                    with col2:
-                        st.metric("Assets Used", len(multi_df.columns))
-                    with col3:
-                        avg_conf = forecast_result['confidence'].mean()
-                        st.metric("Avg Confidence", f"{avg_conf:.1%}")
-                    with col4:
-                        last_price = multi_df[target_asset].iloc[-1]
-                        forecast_return = ((forecast_result['forecast'][-1] / last_price) - 1) * 100
-                        st.metric("Forecast Return", f"{forecast_return:+.2f}%")
-                    
-                    # Show relationship matrix
-                    st.markdown("---")
-                    st.subheader("🔗 Learned Asset Relationships")
-                    
-                    relationship_matrix = gnn.get_relationship_matrix()
-                    
-                    fig_rel = px.imshow(
-                        relationship_matrix,
-                        labels=dict(color="Connection Strength"),
-                        x=multi_df.columns,
-                        y=multi_df.columns,
-                        color_continuous_scale='Viridis',
-                        title="GNN Asset Relationship Graph (1 = connected, 0 = not connected)"
-                    )
-                    
-                    fig_rel.update_layout(height=500)
-                    st.plotly_chart(fig_rel)
-                    
-                    # Forecast table
-                    with st.expander("📋 View Forecast Data"):
-                        forecast_df = pd.DataFrame({
-                            'Date': forecast_result['dates'],
-                            'Forecast': forecast_result['forecast'],
-                            'Confidence': forecast_result['confidence']
-                        })
-                        st.dataframe(forecast_df)
+            multi_df = st.session_state.gnn_data
             
-            except ImportError:
-                st.error("❌ GNN model not available. Make sure it has been recreated using the prompts.")
-            except Exception as e:
-                st.error(f"Error generating GNN forecast: {e}")
-                import traceback
-                st.code(traceback.format_exc())
+            # Calculate correlation matrix
+            corr_matrix = multi_df.corr()
+            
+            # Plot heatmap
+            fig_corr = px.imshow(
+                corr_matrix,
+                labels=dict(color="Correlation"),
+                x=corr_matrix.columns,
+                y=corr_matrix.columns,
+                color_continuous_scale='RdBu_r',
+                zmin=-1,
+                zmax=1,
+                title=f"Asset Correlation Matrix ({len(multi_df.columns)} assets)"
+            )
+            
+            fig_corr.update_layout(height=500)
+            st.plotly_chart(fig_corr)
+            
+            # Show graph connections
+            num_connections = (corr_matrix.abs() > correlation_threshold).sum().sum() - len(multi_df.columns)
+            st.info(f"🔗 Graph will have {num_connections // 2} edges (connections) based on {correlation_threshold:.0%} threshold")
+            
+            # Generate forecast
+            st.markdown("---")
+            st.subheader("🚀 Step 3: Generate GNN Forecast")
+            
+            target_asset = st.selectbox(
+                "Select primary asset to forecast",
+                options=st.session_state.gnn_tickers,
+                help="GNN will forecast this asset using all connected assets"
+            )
+            
+            if st.button("🔮 Train GNN & Generate Forecast", type="primary", use_container_width=True):
+                try:
+                    with st.spinner(f"Training Graph Neural Network on {len(multi_df.columns)} assets..."):
+                        from trading.models.advanced.gnn.gnn_model import GNNForecaster
+                        
+                        # Progress indicator
+                        progress_text = st.empty()
+                        
+                        # Initialize GNN
+                        progress_text.text("Initializing GNN model...")
+                        gnn = GNNForecaster(
+                            num_assets=len(multi_df.columns),
+                            hidden_size=64,
+                            num_layers=2,
+                            seq_length=30,
+                            correlation_threshold=correlation_threshold
+                        )
+                        
+                        # Train
+                        progress_text.text(f"Training for {gnn_epochs} epochs...")
+                        gnn.fit(multi_df, epochs=gnn_epochs, batch_size=32)
+                        
+                        # Generate forecast
+                        progress_text.text("Generating forecast...")
+                        forecast_result = gnn.forecast(
+                            multi_df,
+                            horizon=gnn_horizon,
+                            target_asset=target_asset
+                        )
+                        
+                        progress_text.empty()
+                        st.success("✅ GNN forecast generated!")
+                        
+                        # Display forecast chart
+                        st.subheader(f"📈 {target_asset} Forecast")
+                        
+                        fig = go.Figure()
+                        
+                        # Historical data
+                        fig.add_trace(go.Scatter(
+                            x=multi_df.index,
+                            y=multi_df[target_asset],
+                            name='Historical',
+                            line=dict(color='blue', width=2)
+                        ))
+                        
+                        # Forecast
+                        fig.add_trace(go.Scatter(
+                            x=forecast_result['dates'],
+                            y=forecast_result['forecast'],
+                            name='GNN Forecast',
+                            line=dict(color='red', width=2, dash='dash')
+                        ))
+                        
+                        fig.update_layout(
+                            title=f"GNN Multi-Asset Forecast for {target_asset}",
+                            xaxis_title="Date",
+                            yaxis_title="Price ($)",
+                            hovermode='x unified',
+                            height=500
+                        )
+                        
+                        st.plotly_chart(fig)
+                        
+                        # Metrics
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            st.metric("Forecast Horizon", f"{gnn_horizon} days")
+                        with col2:
+                            st.metric("Assets Used", len(multi_df.columns))
+                        with col3:
+                            avg_conf = forecast_result['confidence'].mean()
+                            st.metric("Avg Confidence", f"{avg_conf:.1%}")
+                        with col4:
+                            last_price = multi_df[target_asset].iloc[-1]
+                            forecast_return = ((forecast_result['forecast'][-1] / last_price) - 1) * 100
+                            st.metric("Forecast Return", f"{forecast_return:+.2f}%")
+                        
+                        # Show relationship matrix
+                        st.markdown("---")
+                        st.subheader("🔗 Learned Asset Relationships")
+                        
+                        relationship_matrix = gnn.get_relationship_matrix()
+                        
+                        fig_rel = px.imshow(
+                            relationship_matrix,
+                            labels=dict(color="Connection Strength"),
+                            x=multi_df.columns,
+                            y=multi_df.columns,
+                            color_continuous_scale='Viridis',
+                            title="GNN Asset Relationship Graph (1 = connected, 0 = not connected)"
+                        )
+                        
+                        fig_rel.update_layout(height=500)
+                        st.plotly_chart(fig_rel)
+                        
+                        # Forecast table
+                        with st.expander("📋 View Forecast Data"):
+                            forecast_df = pd.DataFrame({
+                                'Date': forecast_result['dates'],
+                                'Forecast': forecast_result['forecast'],
+                                'Confidence': forecast_result['confidence']
+                            })
+                            st.dataframe(forecast_df)
+                
+                except ImportError:
+                    st.error("❌ GNN model not available. Make sure it has been recreated using the prompts.")
+                except Exception as e:
+                    st.error(f"Error generating GNN forecast: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+    except Exception as e:
+        import traceback
+        st.error(f"Tab error: {e}")
+        st.code(traceback.format_exc())
 
 with tab7:
-    st.header("🎲 Monte Carlo Price Simulation")
-    st.markdown("Geometric Brownian Motion fan chart: 5th–95th percentile price paths and probability above/below levels.")
-    mc_symbol = st.text_input("Ticker (Monte Carlo)", value=st.session_state.get("symbol", "AAPL"), key="mc_symbol").upper()
-    horizon_days = st.slider("Horizon (days)", 5, 90, 30, key="mc_horizon")
-    n_simulations = st.slider("Simulations", 100, 5000, 1000, key="mc_n_sim")
-    if st.button("Run Monte Carlo", type="primary", key="mc_run"):
-        try:
-            from trading.data.data_loader import DataLoader, DataLoadRequest
-            from trading.data.providers.yfinance_provider import YFinanceProvider
-            from trading.analysis.monte_carlo import (
-                simulate_price_paths,
-                fan_chart_percentiles,
-                probability_above_below,
-            )
-            req = DataLoadRequest(
-                ticker=mc_symbol,
-                start_date=(datetime.now().date() - timedelta(days=365)).strftime("%Y-%m-%d"),
-                end_date=datetime.now().date().strftime("%Y-%m-%d"),
-            )
-            loader = DataLoader(provider=YFinanceProvider())
-            response = loader.load_market_data(req)
-            df = response.data if response.success and response.data is not None else None
-            if df is None or df.empty or "close" not in [c.lower() for c in df.columns]:
-                st.error("No price data for " + mc_symbol)
-            else:
-                close_col = "close" if "close" in df.columns else "Close"
-                close = df[close_col].dropna()
-                last_price = float(close.iloc[-1])
-                returns = close.pct_change().dropna()
-                mu = float(returns.mean() * 252)
-                sigma = float(returns.std() * np.sqrt(252))
-                if sigma < 1e-8:
-                    sigma = 0.20
-                paths = simulate_price_paths(last_price, mu, sigma, horizon_days=horizon_days, n_simulations=n_simulations)
-                bands = fan_chart_percentiles(paths, (5, 25, 50, 75, 95))
-                st.session_state.mc_paths = paths
-                st.session_state.mc_bands = bands
-                st.session_state.mc_last_price = last_price
-                st.session_state.mc_dates = pd.date_range(start=df.index[-1], periods=horizon_days + 1, freq="D")[1:]
-                st.session_state.mc_hist_dates = close.index
-                st.session_state.mc_hist_prices = close.values
-                st.success(f"Ran {n_simulations} paths. Last price ${last_price:.2f}, μ={mu:.2%}, σ={sigma:.2%}.")
-        except Exception as e:
-            st.error(f"Monte Carlo failed: {e}")
-            import traceback
-            st.code(traceback.format_exc())
-    if st.session_state.get("mc_bands") is not None:
-        from trading.analysis.monte_carlo import probability_above_below
-        bands = st.session_state.mc_bands
-        mc_dates = st.session_state.get("mc_dates")
-        last_price = st.session_state.get("mc_last_price")
-        fig = go.Figure()
-        hist_dates = st.session_state.get("mc_hist_dates")
-        hist_prices = st.session_state.get("mc_hist_prices")
-        if hist_dates is not None and hist_prices is not None:
-            fig.add_trace(go.Scatter(x=hist_dates, y=hist_prices, name="Historical", line=dict(color="blue", width=2)))
-        fig.add_vline(x=pd.Timestamp.now(), line_dash="dash", line_color="gray", annotation_text="Today")
-        for p, label in [(5, "5th %"), (95, "95th %"), (25, "25th %"), (75, "75th %"), (50, "50th %")]:
-            fig.add_trace(go.Scatter(x=mc_dates, y=bands[p], name=label, line=dict(width=2 if p == 50 else 1)))
-        fig.update_layout(title="Monte Carlo fan chart (5th–95th percentiles)", xaxis_title="Date", yaxis_title="Price ($)", height=450)
-        fig.update_yaxes(tickprefix="$")
-        st.plotly_chart(fig, use_container_width=True)
-        prob_above, _ = probability_above_below(st.session_state.mc_paths, last_price, day_index=-1)
-        st.metric("P(price ≥ last)", f"{prob_above:.1%}")
-        st.metric("30-day 95% interval", f"${bands[5][-1]:.2f} – ${bands[95][-1]:.2f}")
+    try:
+        st.header("🎲 Monte Carlo Price Simulation")
+        st.markdown("Geometric Brownian Motion fan chart: 5th–95th percentile price paths and probability above/below levels.")
+        mc_input = st.text_input("Ticker (Monte Carlo)", value=st.session_state.get("symbol", "AAPL") or "AAPL", key="mc_symbol")
+        mc_symbol = (mc_input or "AAPL").upper()
+        horizon_days = st.slider("Horizon (days)", 5, 90, 30, key="mc_horizon")
+        n_simulations = st.slider("Simulations", 100, 5000, 1000, key="mc_n_sim")
+        if st.button("Run Monte Carlo", type="primary", key="mc_run"):
+            try:
+                from trading.data.data_loader import DataLoader, DataLoadRequest
+                from trading.data.providers.yfinance_provider import YFinanceProvider
+                from trading.analysis.monte_carlo import (
+                    simulate_price_paths,
+                    fan_chart_percentiles,
+                    probability_above_below,
+                )
+                req = DataLoadRequest(
+                    ticker=mc_symbol,
+                    start_date=(datetime.now().date() - timedelta(days=365)).strftime("%Y-%m-%d"),
+                    end_date=datetime.now().date().strftime("%Y-%m-%d"),
+                )
+                loader = DataLoader(provider=YFinanceProvider())
+                response = loader.load_market_data(req)
+                df = response.data if response.success and response.data is not None else None
+                if df is None or df.empty or "close" not in [c.lower() for c in df.columns]:
+                    st.error("No price data for " + mc_symbol)
+                else:
+                    close_col = "close" if "close" in df.columns else "Close"
+                    close = df[close_col].dropna()
+                    last_price = float(close.iloc[-1])
+                    returns = close.pct_change().dropna()
+                    mu = float(returns.mean() * 252)
+                    sigma = float(returns.std() * np.sqrt(252))
+                    if sigma < 1e-8:
+                        sigma = 0.20
+                    paths = simulate_price_paths(last_price, mu, sigma, horizon_days=horizon_days, n_simulations=n_simulations)
+                    bands = fan_chart_percentiles(paths, (5, 25, 50, 75, 95))
+                    st.session_state.mc_paths = paths
+                    st.session_state.mc_bands = bands
+                    st.session_state.mc_last_price = last_price
+                    st.session_state.mc_dates = pd.date_range(start=df.index[-1], periods=horizon_days + 1, freq="D")[1:]
+                    st.session_state.mc_hist_dates = close.index
+                    st.session_state.mc_hist_prices = close.values
+                    st.success(f"Ran {n_simulations} paths. Last price ${last_price:.2f}, μ={mu:.2%}, σ={sigma:.2%}.")
+            except Exception as e:
+                st.error(f"Monte Carlo failed: {e}")
+                import traceback
+                st.code(traceback.format_exc())
+        if st.session_state.get("mc_bands") is not None:
+            from trading.analysis.monte_carlo import probability_above_below
+            bands = st.session_state.mc_bands
+            mc_dates = st.session_state.get("mc_dates")
+            last_price = st.session_state.get("mc_last_price")
+            fig = go.Figure()
+            hist_dates = st.session_state.get("mc_hist_dates")
+            hist_prices = st.session_state.get("mc_hist_prices")
+            if hist_dates is not None and hist_prices is not None:
+                fig.add_trace(go.Scatter(x=hist_dates, y=hist_prices, name="Historical", line=dict(color="blue", width=2)))
+            fig.add_vline(x=pd.Timestamp.now(), line_dash="dash", line_color="gray", annotation_text="Today")
+            for p, label in [(5, "5th %"), (95, "95th %"), (25, "25th %"), (75, "75th %"), (50, "50th %")]:
+                fig.add_trace(go.Scatter(x=mc_dates, y=bands[p], name=label, line=dict(width=2 if p == 50 else 1)))
+            fig.update_layout(title="Monte Carlo fan chart (5th–95th percentiles)", xaxis_title="Date", yaxis_title="Price ($)", height=450)
+            fig.update_yaxes(tickprefix="$")
+            st.plotly_chart(fig, use_container_width=True)
+            prob_above, _ = probability_above_below(st.session_state.mc_paths, last_price, day_index=-1)
+            st.metric("P(price ≥ last)", f"{prob_above:.1%}")
+            st.metric("30-day 95% interval", f"${bands[5][-1]:.2f} – ${bands[95][-1]:.2f}")
+    except Exception as e:
+        st.error(f"Monte Carlo tab error: {e}")
+        import traceback
+        st.code(traceback.format_exc())
 
 render_page_assistant("Forecasting")
 
