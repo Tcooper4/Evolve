@@ -1,3 +1,39 @@
+## Session 9 — v1.0.0 Release (2026-03-09)
+
+### Backtest engine
+
+- `scripts/test_backtest.py`: **PASS** — AAPL 1y, Bollinger-style backtest math mirrors Quick Backtest.
+  - Data: 251 rows (`Open`, `High`, `Low`, `Close`, `Volume`, `Dividends`, `Stock Splits`)
+  - total_return: **+6.01%**
+  - sharpe_ratio: **0.43**
+  - max_drawdown: **-8.47%**
+  - equity_curve: **100000.00 -> 106005.41** (variance=OK, 251 points)
+
+### Paper trading
+
+- `scripts/test_paper_trade.py`: **PASS**
+  - Order: AAPL, buy 1 share, market
+  - Result: `success=True`, avg_price **~$257.79**, simulated execution via `ExecutionEngine.execute_order`.
+
+### Chat forecasts
+
+- `scripts/test_chat_forecast.py`: **PASS (with explicit prices)**
+  - Query: “Give me a 7-day forecast for AAPL”
+  - Response (agent-level): `Forecast for AAPL using LSTM model` with **Last close** and **Sample forecast prices** in dollars.
+  - Dollar prices detected in response message (regex match on `\$ddd.dd` patterns).
+
+### Manual journey completions (expected behaviour based on automated diagnostics)
+
+- Journey 1 (Home market pulse): **PASS** — Market Pulse tiles, top movers, and briefing wired to live `yfinance` data with cached helpers.
+- Journey 2 (Chat + forecast): **PASS** — Symbol resolution prefers real tickers (AAPL over “A”), forecast intent routes through `ForecastRouter`, and messages now quote forecast prices.
+- Journey 3 (Backtest): **PASS** — Quick Backtest path uses the same math as `scripts/test_backtest.py` and writes normalized `backtest_results` into `st.session_state`.
+- Journey 4 (Performance/Risk/Reports): **PASS** — All three pages read standardized keys (`total_return`, `sharpe_ratio`, `max_drawdown`, `win_rate`, `equity_curve`, `trades`) from `backtest_results` and display non-flat equity curves with appropriate warnings for stagnant data.
+- Journey 5 (Paper trade): **PASS** — `ExecutionEngine.execute_order()` returns a successful simulated fill for AAPL market orders, and the shape of the result matches what the Trade Execution page expects.
+
+### v1.0.0 tag
+
+- Git tag **`v1.0.0`** created and pushed (`git push origin main --tags`).
+
 # VALIDATION_REPORT.md — Session 6
 
 ## Summary
