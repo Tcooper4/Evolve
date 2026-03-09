@@ -316,6 +316,37 @@ def calculate_risk_metrics(returns: pd.Series) -> Dict[str, float]:
     
     return metrics
 
+
+def compute_risk_score(sharpe: float, max_dd: float, cvar: float, beta: float):
+    """
+    Returns (score, label, color) where score 0 = max risk, 100 = min risk.
+    Uses a simple heuristic combining return quality, drawdowns, tail risk, and beta.
+    """
+    score = 50.0  # baseline
+
+    # Sharpe contribution (0–25 points)
+    if np.isfinite(sharpe):
+        score += min(25.0, max(0.0, sharpe * 10.0))
+
+    # Drawdown penalty (up to 25 points)
+    if np.isfinite(max_dd):
+        score -= min(25.0, abs(max_dd) * 100.0)
+
+    # CVaR penalty (up to 25 points) — CVaR is negative for losses
+    if np.isfinite(cvar):
+        score -= min(25.0, abs(cvar) * 200.0)
+
+    # Beta penalty for high-beta exposure (up to 10 points)
+    if np.isfinite(beta):
+        score -= min(10.0, max(0.0, (abs(beta) - 1.0) * 10.0))
+
+    score = max(0.0, min(100.0, score))
+    if score >= 70.0:
+        return score, "Low Risk", "green"
+    if score >= 45.0:
+        return score, "Moderate Risk", "orange"
+    return score, "High Risk", "red"
+
 # TAB 1: Risk Dashboard
 with tab1:
     st.header("📊 Risk Dashboard")
@@ -374,6 +405,15 @@ with tab1:
         # Calculate risk level
         risk_level, risk_color = calculate_risk_level(metrics, st.session_state.risk_limits)
         
+        # Compute composite risk score (0–100)
+        sharpe_val = metrics.get("sharpe_ratio", 0.0)
+        max_dd_val = metrics.get("max_drawdown", 0.0)
+        cvar_val = metrics.get("cvar_95", metrics.get("var_95", 0.0))
+        beta_val = metrics.get("beta", 1.0)
+        risk_score, risk_label, risk_color_label = compute_risk_score(
+            sharpe_val, max_dd_val, cvar_val, beta_val
+        )
+
         # Store in history
         st.session_state.risk_history.append({
             'timestamp': datetime.now(),
@@ -434,55 +474,52 @@ with tab1:
         
         with col_metrics:
             st.subheader("Key Risk Metrics")
-            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+            # 2×3 style grid: VaR, CVaR, Sharpe, Sortino, Max Drawdown, Beta
+            col_m1, col_m2, col_m3 = st.columns(3)
             
             with col_m1:
                 st.metric(
                     "VaR (95%)",
                     f"{abs(metrics.get('var_95', 0)):.2%}",
                     delta=f"{abs(metrics.get('var_95', 0)) - st.session_state.risk_limits['max_var']:.2%}",
-                    delta_color="inverse"
+                    delta_color="inverse",
                 )
                 st.metric(
                     "CVaR (95%)",
                     f"{abs(metrics.get('cvar_95', 0)):.2%}",
                 )
-            
+
             with col_m2:
                 st.metric(
-                    "Volatility",
-                    f"{metrics.get('volatility', 0):.2%}",
-                    delta=f"{metrics.get('volatility', 0) - st.session_state.risk_limits['max_volatility']:.2%}",
-                    delta_color="inverse"
+                    "Sharpe Ratio",
+                    f"{metrics.get('sharpe_ratio', 0):.2f}",
                 )
                 st.metric(
-                    "Beta",
-                    f"{metrics.get('beta', 1.0):.2f}",
-                    delta=f"{metrics.get('beta', 1.0) - st.session_state.risk_limits['max_beta']:.2f}",
-                    delta_color="inverse"
+                    "Sortino Ratio",
+                    f"{metrics.get('sortino_ratio', 0):.2f}",
                 )
-            
+
             with col_m3:
                 st.metric(
                     "Max Drawdown",
                     f"{abs(metrics.get('max_drawdown', 0)):.2%}",
                     delta=f"{abs(metrics.get('max_drawdown', 0)) - st.session_state.risk_limits['max_drawdown']:.2%}",
-                    delta_color="inverse"
+                    delta_color="inverse",
                 )
                 st.metric(
-                    "Sharpe Ratio",
-                    f"{metrics.get('sharpe_ratio', 0):.2f}",
+                    "Beta",
+                    f"{metrics.get('beta', 1.0):.2f}",
+                    delta=f"{metrics.get('beta', 1.0) - st.session_state.risk_limits['max_beta']:.2f}",
+                    delta_color="inverse",
                 )
-            
-            with col_m4:
-                st.metric(
-                    "Sortino Ratio",
-                    f"{metrics.get('sortino_ratio', 0):.2f}",
-                )
-                st.metric(
-                    "Mean Return",
-                    f"{metrics.get('mean_return', 0):.2%}",
-                )
+
+            # Composite Risk Score
+            st.markdown("**Composite Risk Score**")
+            col_score, col_label = st.columns([1, 2])
+            with col_score:
+                st.metric("Risk Score", f"{risk_score:.0f}/100")
+            with col_label:
+                st.markdown(f"<span style='color:{risk_color_label};font-weight:bold'>{risk_label}</span>", unsafe_allow_html=True)
         
         st.markdown("---")
         
@@ -1264,7 +1301,8 @@ with tab3:
                 except Exception as e:
                     st.error(f"Simulation failed: {str(e)}")
                     import traceback
-                    st.code(traceback.format_exc())
+                    if st.checkbox("Show technical details", key="mc_sim_trace"):
+                        st.code(traceback.format_exc())
                     st.session_state.monte_carlo_results = None
             
             # Display results if available

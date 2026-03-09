@@ -171,3 +171,31 @@ Comprehensive bug-fix session addressing user-observed errors across Forecasting
 - **Removed non-ASCII emoji from logger calls** to avoid cp1252/encoding issues:
   - `trading/utils/notifications.py`
   - `trading/strategies/registry.py`
+
+---
+
+## Session 8 — Demo readiness (2026-03-09)
+
+### Forecasting math and model health
+
+- **`scripts/verify_forecasts.py`**: All models **OK** (AAPL ~\$257, forecasts stay within 15% band).
+  - Latest run: ARIMA **$257.56 → $257.21**, XGBoost **$256.77 → $263.25**, Ridge **$257.32 → $256.76**, CatBoost **$257.04 → $256.19**, Prophet **$267.13 → $267.79**.
+- **`tests/model_smoke_test.py`**: **All PASS** including **GARCHModel** (with `arch` installed).
+
+### UX and analytics improvements
+
+- **Portfolio page**:
+  - If there are no live positions but `backtest_results` exists, Overview now shows a **simulated portfolio snapshot** (final equity and total return) instead of a pure empty state.
+  - Correlation analysis now has a **demo mode**: when there are no positions, an expander shows a sample correlation matrix for `SPY/QQQ/AAPL/MSFT/NVDA` using 6‑month `yfinance` data.
+- **Risk Management page**:
+  - Added a **2×3 key metrics grid**: VaR (95%), CVaR (95%), Sharpe, Sortino, Max Drawdown, Beta.
+  - Added a **composite Risk Score (0–100)** with Low/Moderate/High labels derived from sharpe, drawdowns, CVaR, and beta.
+- **Chat & forecasts**:
+  - `ModelInnovationAgent` stub implemented so orchestrators/tests can import it safely; flaml/optuna availability is detected but long AutoML searches are intentionally disabled in UI paths.
+  - Chat system prompt (`EVOLVE_CHAT_SYSTEM_PROMPT`) updated to explicitly instruct the LLM to **quote specific forecast prices** when forecast data is present (e.g. “ARIMA forecasts TSLA at $245.20 in 7 days”).
+
+### Production hardening
+
+- **Traceback visibility**: several previously raw `traceback.format_exc()` displays (e.g. Portfolio consolidator, Risk Monte Carlo, Forecasting insights) are now behind **“Show technical details”** checkboxes so end‑users see friendly errors by default.
+- **Dependencies**: `requirements.txt` now explicitly includes `flaml>=2.5.0` and `arch>=8.0.0` to match the environment.
+

@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import yfinance as yf
 
 from trading.portfolio.portfolio_manager import PortfolioManager, Position
 from trading.data.data_loader import DataLoader, DataLoadRequest
@@ -523,6 +524,34 @@ with tab1:
     col3.metric("Max Drawdown", f"{summary.get('max_drawdown', 0):.2%}")
     col4.metric("Win Rate", f"{summary.get('win_rate', 0):.2%}")
 
+    # Backtest-aware empty state: if no live positions but we have backtest_results,
+    # surface the simulated portfolio snapshot so the page is still useful.
+    open_positions = portfolio.state.open_positions
+    closed_positions = portfolio.state.closed_positions
+    portfolio_has_positions = bool(open_positions or closed_positions)
+
+    backtest = st.session_state.get("backtest_results")
+    if backtest and not portfolio_has_positions:
+        st.info("No live positions — showing backtest simulation results below.")
+        try:
+            equity_curve = backtest.get("equity_curve")
+            if isinstance(equity_curve, (list, tuple, np.ndarray, pd.Series)):
+                equity_series = pd.Series(equity_curve)
+            elif isinstance(equity_curve, pd.DataFrame):
+                col = "equity_curve" if "equity_curve" in equity_curve.columns else equity_curve.columns[0]
+                equity_series = equity_curve[col]
+            else:
+                equity_series = None
+
+            if equity_series is not None and len(equity_series) > 0:
+                st.metric("Simulated Portfolio Value", f"${float(equity_series.iloc[-1]):,.2f}")
+            total_return = backtest.get("total_return")
+            if isinstance(total_return, (int, float)):
+                st.metric("Total Return", f"{total_return*100:+.2f}%")
+        except Exception:
+            # Best-effort; portfolio page should still render even if backtest data is oddly shaped.
+            pass
+
     st.markdown("---")
 
     # Enhanced Features Section
@@ -726,6 +755,32 @@ with tab1:
                 st.info("Could not calculate correlation matrix. Please ensure market data is available.")
         else:
             st.info("No open positions to analyze correlation")
+            # Demo mode: show a sample correlation matrix so new users see how this works.
+            with st.expander("Sample Correlation Matrix (demo)", expanded=False):
+                demo_symbols = ["SPY", "QQQ", "AAPL", "MSFT", "NVDA"]
+                try:
+                    prices = yf.download(demo_symbols, period="6mo")["Close"]
+                    if isinstance(prices, pd.DataFrame) and not prices.empty:
+                        corr = prices.pct_change().dropna().corr()
+                        fig_demo = go.Figure(
+                            data=go.Heatmap(
+                                z=corr.values,
+                                x=corr.columns,
+                                y=corr.index,
+                                colorscale="RdYlGn",
+                                zmin=-1,
+                                zmax=1,
+                            )
+                        )
+                        fig_demo.update_layout(
+                            title="Sample Correlation Matrix (SPY, QQQ, AAPL, MSFT, NVDA)",
+                            height=500,
+                        )
+                        st.plotly_chart(fig_demo, use_container_width=True)
+                    else:
+                        st.info("Correlation demo unavailable: no price data.")
+                except Exception as e:
+                    st.info(f"Correlation demo unavailable: {e}")
     except Exception as e:
         logger.warning(f"Error in correlation analysis: {e}")
         st.info("Correlation analysis unavailable")
@@ -895,7 +950,8 @@ with tab1:
         except Exception as e:
             st.error(f"Error consolidating positions: {e}")
             import traceback
-            st.code(traceback.format_exc())
+            if st.checkbox("Show technical details", key="consolidator_trace"):
+                st.code(traceback.format_exc())
 
     st.markdown("---")
 

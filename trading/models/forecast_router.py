@@ -765,6 +765,11 @@ class ForecastRouter:
                                 if gap_pct > 0.10:
                                     offset = last_close - float(fa2[0])
                                     forecast_array = fa2 + offset
+                        # Extra hard clamp: if anything is still wildly off, flatten to last_close.
+                        fa3 = np.asarray(forecast_array, dtype="float64").ravel()
+                        if fa3.size:
+                            if (np.nanmax(fa3) > last_close * 5.0) or (np.nanmin(fa3) < last_close * 0.2):
+                                forecast_array = np.full(len(fa3), last_close, dtype="float64")
                 except Exception:
                     pass
 

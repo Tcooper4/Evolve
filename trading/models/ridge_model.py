@@ -210,11 +210,13 @@ class RidgeModel(BaseModel):
             raise ValidationError("No feature columns found")
         features = numeric_data[feature_cols].values
         price_series = numeric_data[target_col].values
-        # Train on returns (next-period return) for continuity; inference keeps level for lag building
-        if is_training and target_col in ("Close", "close") and len(price_series) > 2:
+        # Train and infer on returns (next-period return) for continuity;
+        # we always build lag features from returns when dealing with price columns.
+        if target_col in ("Close", "close") and len(price_series) > 2:
             returns = np.diff(price_series) / (price_series[:-1] + 1e-10)
-            target = returns  # predict next return
-            features = features[1:]  # align: row i predicts return from i to i+1
+            target = returns  # model predicts next-period return
+            # Align features so that row i predicts return from i -> i+1
+            features = features[1:]
             if len(features) != len(target):
                 min_len = min(len(features), len(target))
                 features = features[:min_len]
@@ -526,25 +528,40 @@ class RidgeModel(BaseModel):
         try:
             price_col = "Close" if "Close" in data.columns else "close"
             # Last price in raw space (no normalization) — build price path from it
-            current_ratio = float(data[price_col].iloc[-1]) if price_col in data.columns else 1.0
-            base_price = current_ratio
-            forecasts = []
-            current_data = data.copy()
+            current_price = float(data[price_col].iloc[-1]) if price_col in data.columns else 1.0
+            base_price = current_price
+
+            # Prepare a single feature vector for autoregressive forecasting.
+            # We reuse the same feature dimensionality as training (including lag features)
+            # and update only the lag segment with newly predicted returns.
+            features, _ = self._prepare_data(data, is_training=False)
+            if features.size == 0:
+                raise ModelError("Ridge forecasting failed: no features available after preparation")
+
+            current_features = features[-1].copy()
+            lag_periods = int(self.config.get("lag_periods", 5) or 0)
+            n_total = current_features.shape[0]
+            n_orig = max(0, n_total - lag_periods) if lag_periods > 0 else n_total
+
+            forecasts: List[float] = []
 
             for _ in range(horizon):
-                pred = self.predict(current_data, horizon=1)
-                r = float(pred[-1]) if len(pred) else 0.0
-                r = np.clip(r, -0.20, 0.20)
-                next_ratio = current_ratio * (1.0 + r)
-                forecasts.append(next_ratio)
-                # Append a new row for next step (simplified: reuse last row with updated price)
-                new_row = current_data.iloc[-1].copy()
-                if price_col in new_row.index:
-                    new_row[price_col] = next_ratio
-                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
-                if len(current_data) > len(data):
-                    current_data = current_data.iloc[1:]
-                current_ratio = next_ratio
+                pred_return = float(self.model.predict(current_features.reshape(1, -1))[0])
+                pred_return = float(np.clip(pred_return, -0.20, 0.20))
+
+                next_price = current_price * (1.0 + pred_return)
+                forecasts.append(next_price)
+                current_price = next_price
+
+                # Autoregressively update lag features: lag_1 = new return, lag_k = previous lag_{k-1}
+                if lag_periods > 0 and n_orig < n_total:
+                    lags = current_features[n_orig:].copy()
+                    new_lags = np.empty_like(lags)
+                    if new_lags.size:
+                        new_lags[0] = pred_return
+                        if new_lags.size > 1:
+                            new_lags[1:] = lags[:-1]
+                        current_features[n_orig:] = new_lags
 
             forecast_array = np.array(forecasts, dtype="float64")
             # Price-space sanity guard (prevents runaway compounding on bad return predictions)
