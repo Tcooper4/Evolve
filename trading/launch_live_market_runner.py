@@ -90,35 +90,35 @@ async def main():
         # Load configuration
         try:
             config = load_config()
-            logger.info("✅ Configuration loaded successfully")
+            logger.info("[OK] Configuration loaded successfully")
         except FileNotFoundError as e:
-            logger.error(f"❌ Configuration file not found: {e}")
-            logger.info("📝 Creating default configuration...")
+            logger.error(f"[FAIL] Configuration file not found: {e}")
+            logger.info("[NOTE] Creating default configuration...")
             config = load_config()  # This will create default config
         except json.JSONDecodeError as e:
-            logger.error(f"❌ Invalid JSON in configuration file: {e}")
-            logger.info("📝 Using default configuration...")
+            logger.error(f"[FAIL] Invalid JSON in configuration file: {e}")
+            logger.info("[NOTE] Using default configuration...")
             config = load_config()  # This will create default config
         except Exception as e:
-            logger.error(f"❌ Error loading configuration: {e}")
-            logger.info("📝 Using default configuration...")
+            logger.error(f"[FAIL] Error loading configuration: {e}")
+            logger.info("[NOTE] Using default configuration...")
             config = load_config()  # This will create default config
 
         # Create runner
         try:
             runner = create_live_market_runner(config)
-            logger.info("✅ Live Market Runner created successfully")
+            logger.info("[OK] Live Market Runner created successfully")
         except Exception as e:
-            logger.error(f"❌ Failed to create Live Market Runner: {e}")
-            logger.error("🛑 Exiting due to initialization failure")
+            logger.error(f"[FAIL] Failed to create Live Market Runner: {e}")
+            logger.error("[STOP] Exiting due to initialization failure")
             return
 
-        logger.info(f"📊 Symbols: {config['symbols']}")
-        logger.info(f"🤖 Agents: {list(config['triggers'].keys())}")
+        logger.info(f"[DATA] Symbols: {config['symbols']}")
+        logger.info(f"[AGENTS] Agents: {list(config['triggers'].keys())}")
 
         # Setup signal handlers
         def signal_handler(signum, frame):
-            logger.info(f"\n🛑 Received signal {signum}, shutting down...")
+            logger.info(f"\n[STOP] Received signal {signum}, shutting down...")
             asyncio.create_task(runner.stop())
             sys.exit(0)
 
@@ -126,19 +126,19 @@ async def main():
         signal.signal(signal.SIGTERM, signal_handler)
 
         # Start the runner
-        logger.info(f"\n🔄 Starting Live Market Runner...")
+        logger.info(f"\n[START] Starting Live Market Runner...")
         try:
             await runner.start()
-            logger.info("✅ Live Market Runner started successfully")
+            logger.info("[OK] Live Market Runner started successfully")
         except Exception as e:
-            logger.error(f"❌ Failed to start Live Market Runner: {e}")
-            logger.error("🛑 Exiting due to startup failure")
+            logger.error(f"[FAIL] Failed to start Live Market Runner: {e}")
+            logger.error("[STOP] Exiting due to startup failure")
             return
 
         # Add success log on launch
-        logger.info(f"✅ Live Market Runner initialized.")
+        logger.info(f"[OK] Live Market Runner initialized.")
 
-        logger.info(f"✅ Live Market Runner is running!")
+        logger.info(f"[OK] Live Market Runner is running!")
         logger.info(f"   Press Ctrl+C to stop")
         logger.info(f"   Logs: trading/live/logs/")
         logger.info(f"   Forecasts: trading/live/forecast_results.json")
@@ -148,19 +148,19 @@ async def main():
             while runner.running:
                 await asyncio.sleep(1)
         except KeyboardInterrupt:
-            logger.info(f"\n🛑 Shutting down...")
+            logger.info(f"\n[STOP] Shutting down...")
         except Exception as e:
-            logger.error(f"❌ Unexpected error during execution: {e}")
+            logger.error(f"[FAIL] Unexpected error during execution: {e}")
         finally:
             try:
                 await runner.stop()
-                logger.info(f"✅ Live Market Runner stopped gracefully")
+                logger.info(f"[OK] Live Market Runner stopped gracefully")
             except Exception as e:
-                logger.error(f"❌ Error during shutdown: {e}")
+                logger.error(f"[FAIL] Error during shutdown: {e}")
 
     except Exception as e:
-        logger.error(f"❌ Critical error in main function: {e}")
-        logger.error("🛑 Live Market Runner failed to start")
+        logger.error(f"[FAIL] Critical error in main function: {e}")
+        logger.error("[STOP] Live Market Runner failed to start")
         return
 
 

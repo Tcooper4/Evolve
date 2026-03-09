@@ -51,6 +51,22 @@ def _empty_state(message: str, icon: str = "📊"):
     """, unsafe_allow_html=True)
 
 
+def _get_sample_returns() -> Optional[pd.Series]:
+    """Return backtest returns from session_state (equity curve) or None."""
+    out = st.session_state.get("backtest_returns", None)
+    if out is not None and (not hasattr(out, 'empty') or not out.empty):
+        return out
+    results = st.session_state.get("backtest_results")
+    if not results:
+        return None
+    eq = results.get("equity_curve")
+    if eq is None or (hasattr(eq, 'empty') and eq.empty):
+        return None
+    if "equity" not in getattr(eq, "columns", []):
+        return None
+    return eq["equity"].pct_change().dropna()
+
+
 try:
     # Page config
     st.set_page_config(
@@ -274,8 +290,8 @@ try:
     
         st.markdown("---")
 
-        # Real returns: from strategy logger / MemoryStore when available; otherwise show empty state
-        sample_returns = None  # TODO: load from strategy logger or trade history
+        # Real returns: from backtest_results when available
+        sample_returns = _get_sample_returns()
         if sample_returns is None or (hasattr(sample_returns, 'empty') and sample_returns.empty):
             _empty_state("No performance data yet. Run a backtest or make trades to populate this page.", "📈")
         else:
@@ -1443,8 +1459,8 @@ try:
         st.header("🔍 Performance Attribution Analysis")
         st.markdown("Decompose portfolio returns to understand what's driving performance")
     
-        # Real returns: from strategy logger when available
-        sample_returns = None  # TODO: load from strategy logger or trade history
+        # Real returns: from backtest when available
+        sample_returns = _get_sample_returns()
         if sample_returns is None or (hasattr(sample_returns, 'empty') and sample_returns.empty):
             _empty_state("No performance data yet. Run a backtest or make trades to populate this page.", "📈")
         else:
@@ -1649,14 +1665,34 @@ try:
     
             st.markdown("---")
     
-            # Factor Attribution
+            # Factor Attribution (factor_model when OHLCV available, else legacy)
             if attribution_method in ["Factor Attribution", "Comprehensive"]:
                 st.subheader("🔬 Factor Attribution")
-            
-                factor_attribution = calculate_factor_attribution(sample_returns)
-            
+                factor_attribution = None
+                try:
+                    from trading.analysis.factor_model import factor_attribution_pct, STANDARD_FACTORS
+                    symbol = st.session_state.get("backtest_symbol", "AAPL")
+                    from trading.data.data_loader import DataLoader, DataLoadRequest
+                    from trading.data.providers.yfinance_provider import YFinanceProvider
+                    req = DataLoadRequest(
+                        ticker=symbol,
+                        start_date=(datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d"),
+                        end_date=datetime.now().strftime("%Y-%m-%d"),
+                    )
+                    loader = DataLoader(provider=YFinanceProvider())
+                    response = loader.load_market_data(req)
+                    ohlcv = response.data if response.success and response.data is not None else None
+                    if ohlcv is not None and not ohlcv.empty:
+                        has_close = "Close" in ohlcv.columns or "close" in ohlcv.columns
+                        has_vol = "Volume" in ohlcv.columns or "volume" in ohlcv.columns
+                        if has_close and has_vol:
+                            pct = factor_attribution_pct(ohlcv, sample_returns, window=60)
+                            factor_attribution = {k: pct.get(k, 0.0) for k in STANDARD_FACTORS}
+                except Exception:
+                    pass
+                if factor_attribution is None:
+                    factor_attribution = calculate_factor_attribution(sample_returns)
                 col_fact1, col_fact2 = st.columns([1, 1])
-            
                 with col_fact1:
                     factor_data = []
                     for factor, contrib in factor_attribution.items():
@@ -1667,7 +1703,6 @@ try:
                         })
                     df_factor = pd.DataFrame(factor_data)
                     st.dataframe(df_factor, use_container_width=True, hide_index=True)
-            
                 with col_fact2:
                     fig_factor = go.Figure(data=[
                         go.Bar(
@@ -1996,8 +2031,8 @@ try:
         st.header("📈 Advanced Performance Analytics")
         st.markdown("Deep dive into performance metrics, distributions, and regime analysis")
     
-        # Real returns: from strategy logger when available
-        sample_returns = None  # TODO: load from strategy logger or trade history
+        # Real returns: from backtest when available
+        sample_returns = _get_sample_returns()
         if sample_returns is None or (hasattr(sample_returns, 'empty') and sample_returns.empty):
             _empty_state("No performance data yet. Run a backtest or make trades to populate this page.", "📈")
         else:

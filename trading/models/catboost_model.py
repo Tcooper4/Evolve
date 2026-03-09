@@ -98,12 +98,23 @@ class CatBoostModel(BaseModel):
         fc = [c for c in fc if c in train_data.columns]
         if not fc:
             fc = ["Close"] if "Close" in train_data.columns else list(train_data.columns)[:1]
-        X = train_data[fc]
-        y = train_data[self.target_column]
+        price_col = self.target_column
+        if price_col not in train_data.columns:
+            price_col = "Close" if "Close" in train_data.columns else "close"
+        # Train on next-period return for continuity (avoid level discontinuity)
+        returns = train_data[price_col].pct_change().dropna()
+        target = returns.shift(-1).dropna()
+        common = train_data.index.intersection(target.index)
+        X = train_data.loc[common][fc]
+        y = target.loc[common]
         eval_set = None
         if val_data is not None:
             val_data = self._normalize_columns(val_data.copy() if hasattr(val_data, "copy") else val_data)
-            eval_set = (val_data[fc], val_data[self.target_column])
+            vr = val_data[price_col].pct_change().dropna()
+            vy = vr.shift(-1).dropna()
+            vc = val_data.index.intersection(vy.index)
+            if len(vc) > 0:
+                eval_set = (val_data.loc[vc][fc], vy.loc[vc])
         self.model.fit(X, y, eval_set=eval_set, use_best_model=True, verbose=False)
         self.fitted = True
         return {"train_loss": [], "val_loss": []}
@@ -118,51 +129,37 @@ class CatBoostModel(BaseModel):
         return self.model.predict(X)
 
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
-        """Generate forecast for future time steps.
-
-        Args:
-            data: Historical data DataFrame
-            horizon: Number of time steps to forecast
-
-        Returns:
-            Dictionary containing forecast results
-        """
+        """Generate forecast: model predicts returns; build ratio path so router denormalizes once."""
         try:
             data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
             if not self.fitted:
                 raise RuntimeError("Model must be fitted before forecasting.")
-
-            # Make initial prediction
-            self.predict(data)
-
-            # Generate multi-step forecast
+            price_col = self.target_column
+            if price_col not in data.columns:
+                price_col = "Close" if "Close" in data.columns else "close"
+            current_ratio = float(data[price_col].iloc[-1])
             forecast_values = []
             current_data = data.copy()
 
             for i in range(horizon):
-                # Get prediction for next step
                 pred = self.predict(current_data)
-                if len(pred) > 0:
-                    forecast_values.append(pred[-1])
-                else:
-                    logger.warning("Empty prediction array, skipping")
+                if len(pred) == 0:
                     break
-
-                # Update data for next iteration
-                if len(current_data) > 0:
-                    new_row = current_data.iloc[-1].copy()
-                else:
-                    logger.warning("Empty data, cannot continue forecast")
-                    break
-                new_row[self.target_column] = pred[-1]  # Update with prediction
-                current_data = pd.concat(
-                    [current_data, pd.DataFrame([new_row])], ignore_index=True
-                )
-                current_data = current_data.iloc[1:]  # Remove oldest row
+                r = float(pred[-1])
+                r = np.clip(r, -0.20, 0.20)
+                next_ratio = current_ratio * (1.0 + r)
+                forecast_values.append(next_ratio)
+                new_row = current_data.iloc[-1].copy()
+                if price_col in new_row.index:
+                    new_row[price_col] = next_ratio
+                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                if len(current_data) > len(data):
+                    current_data = current_data.iloc[1:]
+                current_ratio = next_ratio
 
             return {
-                "forecast": np.array(forecast_values),
-                "confidence": 0.85,  # CatBoost confidence
+                "forecast": np.array(forecast_values, dtype="float64"),
+                "confidence": 0.85,
                 "model": "CatBoost",
                 "horizon": horizon,
                 "feature_columns": self.feature_columns,

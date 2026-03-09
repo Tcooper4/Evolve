@@ -745,8 +745,10 @@ class ForecastRouter:
                 warnings_list.append(msg)
 
             last_actual_price = getattr(self, "_last_price_used", 1.0)
-            # Confidence label: Low = MAPE < 5%, Medium = 5-10%, High = > 10%
+            # Confidence label from validation or in-sample MAPE (Low = MAPE < 5%, Medium = 5-10%, High = > 10%)
             vmape = validation_mape if np.isfinite(validation_mape) else None
+            if vmape is None and in_sample_mape is not None and np.isfinite(in_sample_mape):
+                vmape = in_sample_mape
             if vmape is not None:
                 if vmape < 5.0:
                     confidence_label = "Low"

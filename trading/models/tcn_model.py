@@ -16,7 +16,7 @@ try:
 
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling TCN models.")
+    print("[WARN] PyTorch not available. Disabling TCN models.")
     print(f"   Missing: {e}")
     torch = None
     nn = None
@@ -309,9 +309,16 @@ class TCNModel(BaseModel):
         if missing_cols:
             raise ValidationError(f"Missing required columns: {missing_cols}")
 
-        # Convert to numpy arrays
+        # Convert to numpy arrays; train on next-period return when target is price
         X = data[fc].values
-        y = data[tc].values[self.config["sequence_length"]:]
+        if tc in ("Close", "close") and len(data) > self.config["sequence_length"] + 1:
+            price_vals = data[tc].values
+            returns = np.diff(price_vals) / (price_vals[:-1] + 1e-10)
+            y = returns[self.config["sequence_length"] - 1:]  # align: sequence i -> return i to i+1
+        else:
+            y = data[tc].values[self.config["sequence_length"]:]
+        if len(y) > len(X) - self.config["sequence_length"]:
+            y = y[: len(X) - self.config["sequence_length"]]
 
         # Create sequences: shape (batch, seq_len, features)
         X_sequences = []
@@ -472,53 +479,39 @@ class TCNModel(BaseModel):
             raise RuntimeError(f"TCN model prediction failed: {e}")
 
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
-        """Generate forecast for future time steps.
-
-        Args:
-            data: Historical data DataFrame
-            horizon: Number of time steps to forecast
-
-        Returns:
-            Dictionary containing forecast results
-        """
+        """Generate forecast: model predicts returns; build ratio path so router denormalizes once."""
         try:
-            # Make initial prediction
-            self.predict(data)
-
-            # Generate multi-step forecast
+            data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+            tc = self.config["target_column"]
+            if tc not in data.columns:
+                tc = "Close" if "Close" in data.columns else "close"
+            current_ratio = float(data[tc].iloc[-1])
             forecast_values = []
             current_data = data.copy()
 
             for i in range(horizon):
-                # Get prediction for next step
                 pred = self.predict(current_data)
-                if len(pred) > 0:
-                    forecast_values.append(pred[-1])
-                else:
+                if len(pred) == 0:
                     break
-
-                # Update data for next iteration (simple approach)
-                # In a production system, you might want more sophisticated handling
-                if len(current_data) > 0:
-                    new_row = current_data.iloc[-1].copy()
-                else:
+                r = float(pred[-1])
+                r = np.clip(r, -0.20, 0.20)
+                next_ratio = current_ratio * (1.0 + r)
+                forecast_values.append(next_ratio)
+                if len(current_data) == 0:
                     break
-                new_row["close"] = pred[-1]  # Update with prediction
-                current_data = pd.concat(
-                    [current_data, pd.DataFrame([new_row])], ignore_index=True
-                )
-                current_data = current_data.iloc[1:]  # Remove oldest row
+                new_row = current_data.iloc[-1].copy()
+                if tc in new_row.index:
+                    new_row[tc] = next_ratio
+                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                if len(current_data) > len(data):
+                    current_data = current_data.iloc[1:]
+                current_ratio = next_ratio
 
             return {
-                "success": True,
-                "result": {
-                    "forecast": np.array(forecast_values),
-                    "confidence": 0.8,  # Placeholder confidence
-                    "model": "TCN",
-                    "horizon": horizon,
-                },
-                "message": "Operation completed successfully",
-                "timestamp": datetime.now().isoformat(),
+                "forecast": np.array(forecast_values, dtype="float64"),
+                "confidence": 0.8,
+                "model": "TCN",
+                "horizon": horizon,
             }
 
         except Exception as e:

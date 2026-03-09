@@ -21,6 +21,7 @@ from services.model_builder_service import ModelBuilderService
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
+os.makedirs("logs", exist_ok=True)
 
 LLM_IDENTITY = os.environ.get("LLM_IDENTITY", "LLM-v1.0")
 

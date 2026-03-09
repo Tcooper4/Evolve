@@ -7,10 +7,11 @@ Supports both GPT-based and regex-based parsing with fallback mechanisms.
 
 import json
 import logging
+import os
 import re
 from typing import Any, Dict
 
-import openai
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +31,12 @@ class QueryParser:
         Args:
             openai_api_key: OpenAI API key for GPT parsing
         """
-        self.openai_api_key = openai_api_key
-        if openai_api_key:
-            openai.api_key = openai_api_key
-        else:
-            import os
-
-            openai.api_key = os.getenv("OPENAI_API_KEY")
+        self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+        try:
+            self._client = OpenAI(api_key=self.openai_api_key) if self.openai_api_key else None
+        except Exception as e:
+            logger.warning("OpenAI client init failed: %s", e)
+            self._client = None
 
         # Trading system context
         self.trading_context = {
@@ -89,10 +89,9 @@ class QueryParser:
         """
         try:
             # Use OpenAI to parse the query if available
-            if openai.api_key:
+            if self._client:
                 return self._parse_with_gpt(query)
-            else:
-                return self._parse_with_regex(query)
+            return self._parse_with_regex(query)
         except Exception as e:
             logger.error(f"Error parsing query: {e}")
             return self._parse_with_regex(query)
@@ -116,8 +115,10 @@ class QueryParser:
 
             Return only valid JSON with the extracted information.
             """
+            if not self._client:
+                return self._parse_with_regex(query)
 
-            response = openai.ChatCompletion.create(
+            response = self._client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": system_prompt},

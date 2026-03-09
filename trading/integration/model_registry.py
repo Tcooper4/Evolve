@@ -627,6 +627,6 @@ if __name__ == "__main__":
         logger.info(f"Total models: {summary['total_models']}")
         logger.info(f"Task type distribution: {summary['task_type_distribution']}")
 
-        logger.info("\n✅ Demo completed!")
+        logger.info("\n[OK] Demo completed!")
 
     asyncio.run(demo())

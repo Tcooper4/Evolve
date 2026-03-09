@@ -26,11 +26,11 @@ except ImportError:
     get_llm_config = None
     CLAUDE_PRIMARY_MODEL = "claude-sonnet-4-20250514"
 
-# Optionally import OpenAI API
+# Optionally import OpenAI API (v1 client)
 try:
-    import openai
+    from openai import OpenAI
 except ImportError:
-    openai = None
+    OpenAI = None
 
 
 @dataclass
@@ -73,9 +73,8 @@ class ResearchAgent(BaseAgent):
         super().__init__(config)
 
         custom_config = config.custom_config or {}
-        self.openai_api_key = custom_config.get("openai_api_key") or (
-            openai.api_key if openai else None
-        )
+        import os
+        self.openai_api_key = custom_config.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
         self.anthropic_api_key = custom_config.get("anthropic_api_key")
         # AGENT_UPGRADE: Centralized LLM config
         try:
@@ -91,8 +90,6 @@ class ResearchAgent(BaseAgent):
 
         if not self.log_path.exists():
             self.log_path.write_text(json.dumps([]))
-        if openai and self.openai_api_key:
-            openai.api_key = self.openai_api_key
 
     def _setup(self):
         pass
@@ -300,40 +297,44 @@ class ResearchAgent(BaseAgent):
 
     def summarize_with_openai(self, text: str, prompt: str = None) -> str:
         """Use OpenAI API to summarize text."""
-        if not openai or not self.openai_api_key:
+        if not OpenAI or not self.openai_api_key:
             return "[OpenAI API not available]"
-
-        # Use centralized template if no prompt provided
-        if prompt is None:
-            prompt = format_template("research_summarize", text=text)
-
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": text},
-            ],
-            max_tokens=300,
-        )
-        return response.choices[0].message["content"].strip()
+        try:
+            client = OpenAI(api_key=self.openai_api_key)
+            if prompt is None:
+                prompt = format_template("research_summarize", text=text)
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": text},
+                ],
+                max_tokens=300,
+            )
+            return (response.choices[0].message.content or "").strip()
+        except Exception as e:
+            logging.getLogger(__name__).error("OpenAI summarize failed: %s", e)
+            return "[OpenAI summarize failed]"
 
     def code_suggestion_with_openai(self, description: str) -> str:
         """Use OpenAI API to generate code suggestion from a description."""
-        if not openai or not self.openai_api_key:
+        if not OpenAI or not self.openai_api_key:
             return "[OpenAI API not available]"
-
-        # Use centralized template for code suggestions
-        prompt = format_template("research_code_suggestion", description=description)
-
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": description},
-            ],
-            max_tokens=300,
-        )
-        return response.choices[0].message["content"].strip()
+        try:
+            client = OpenAI(api_key=self.openai_api_key)
+            prompt = format_template("research_code_suggestion", description=description)
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": description},
+                ],
+                max_tokens=300,
+            )
+            return (response.choices[0].message.content or "").strip()
+        except Exception as e:
+            logging.getLogger(__name__).error("OpenAI code_suggestion failed: %s", e)
+            return "[OpenAI code suggestion failed]"
 
     def log_finding(self, finding: Dict[str, Any]) -> None:
         """Log a research finding to research_log.json."""

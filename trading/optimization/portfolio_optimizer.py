@@ -74,6 +74,27 @@ class PortfolioOptimizer:
             Dictionary with optimization results
         """
         if not CVXPY_AVAILABLE:
+            # Try PyPortfolioOpt as fallback when CVXPY is missing
+            try:
+                from pypfopt import EfficientFrontier, risk_models, expected_returns
+                mu = expected_returns.mean_historical_return(returns)
+                S = risk_models.sample_cov(returns)
+                ef = EfficientFrontier(mu, S)
+                ef.max_sharpe()
+                cleaned = ef.clean_weights()
+                weights = np.array([cleaned.get(c, 0.0) for c in returns.columns])
+                portfolio_return = mu @ weights
+                portfolio_vol = np.sqrt(weights @ S @ weights)
+                sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol if portfolio_vol > 1e-10 else 0.0
+                return {
+                    "weights": dict(zip(returns.columns, weights)),
+                    "portfolio_return": float(portfolio_return),
+                    "portfolio_volatility": float(portfolio_vol),
+                    "sharpe_ratio": float(sharpe_ratio),
+                    "optimization_status": "pypfopt_max_sharpe",
+                }
+            except Exception as e:
+                logger.debug("PyPortfolioOpt fallback failed: %s", e)
             return self._simple_mean_variance(returns, target_return, risk_aversion)
 
         try:

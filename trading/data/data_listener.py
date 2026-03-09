@@ -507,9 +507,9 @@ class DataListener:
                     elif isinstance(data, dict):
                         # Handle status messages
                         if data.get('status') == 'auth_success':
-                            logger.info("✅ Polygon WebSocket authenticated successfully")
+                            logger.info("[OK] Polygon WebSocket authenticated successfully")
                         elif data.get('status') == 'auth_failed':
-                            logger.error(f"❌ Polygon authentication failed: {data.get('message', 'Unknown error')}")
+                            logger.error(f"[FAIL] Polygon authentication failed: {data.get('message', 'Unknown error')}")
                         elif data.get('status') == 'success':
                             logger.debug(f"Polygon message: {data.get('message', '')}")
                 except json.JSONDecodeError as e:
@@ -544,7 +544,7 @@ class DataListener:
                             subscribed_count += 1
                     
                     if subscribed_count > 0:
-                        logger.info(f"✅ Subscribed to {subscribed_count} symbols on Polygon WebSocket")
+                        logger.info(f"[OK] Subscribed to {subscribed_count} symbols on Polygon WebSocket")
                     else:
                         logger.warning("No valid symbols to subscribe to")
                 except Exception as e:

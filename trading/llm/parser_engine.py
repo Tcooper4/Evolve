@@ -13,13 +13,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Try to import OpenAI
+# Try to import OpenAI (v1 client)
 try:
-    import openai
-
+    from openai import OpenAI
     OPENAI_AVAILABLE = True
 except ImportError:
-    openai = None
+    OpenAI = None
     OPENAI_AVAILABLE = False
 
 # Try to import PyTorch and transformers
@@ -391,11 +390,9 @@ class ParserEngine:
         }
 
     def _initialize_providers(self) -> None:
-        """Initialize LLM providers."""
-        # Initialize OpenAI if available
-        if self.use_openai_fallback and self.openai_api_key:
-            openai.api_key = self.openai_api_key
-            logger.info("âœ… OpenAI initialized for prompt parsing")
+        """Initialize LLM providers (OpenAI client created per-call in parse_intent_openai)."""
+        if self.use_openai_fallback and self.openai_api_key and OPENAI_AVAILABLE:
+            logger.info("OpenAI available for prompt parsing")
 
         # Initialize HuggingFace if available
         if self.use_local_llm:
@@ -549,11 +546,12 @@ class ParserEngine:
             return None
 
     def parse_intent_openai(self, prompt: str) -> Optional[ParsedIntent]:
-        """Parse intent using OpenAI."""
-        if not OPENAI_AVAILABLE or not self.openai_api_key:
+        """Parse intent using OpenAI (v1 client)."""
+        if not OPENAI_AVAILABLE or not OpenAI or not self.openai_api_key:
             return None
 
         try:
+            client = OpenAI(api_key=self.openai_api_key)
             # Create structured prompt for OpenAI
             system_prompt = """
             You are an intent classification system. Analyze the user's request and return a JSON response with:
@@ -562,7 +560,7 @@ class ParserEngine:
             - args: Extracted arguments as key-value pairs
             """
 
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -572,7 +570,7 @@ class ParserEngine:
                 max_tokens=200,
             )
 
-            response_text = response.choices[0].message.content.strip()
+            response_text = (response.choices[0].message.content or "").strip()
 
             # Parse JSON response
             try:

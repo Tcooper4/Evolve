@@ -22,6 +22,8 @@ from services.prompt_router_service import PromptRouterService
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
+# Ensure logs directory exists before FileHandler
+os.makedirs("logs", exist_ok=True)
 
 # Configure logging
 logging.basicConfig(

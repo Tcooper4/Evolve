@@ -15,7 +15,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import openai
+from openai import OpenAI
 import redis
 from jinja2 import Template
 
@@ -123,9 +123,15 @@ class ReasoningLogger:
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         self.enable_gpt_explanations = enable_gpt_explanations
 
-        # Initialize OpenAI if available
+        # Initialize OpenAI client if available
         if self.openai_api_key and self.enable_gpt_explanations:
-            openai.api_key = self.openai_api_key
+            try:
+                self._openai_client = OpenAI(api_key=self.openai_api_key)
+            except Exception as e:
+                logger.warning("OpenAI client init failed: %s", e)
+                self._openai_client = None
+        else:
+            self._openai_client = None
 
         # Setup logging directory
         self.log_dir = Path(log_dir)
@@ -321,6 +327,8 @@ class ReasoningLogger:
 
     def _generate_gpt_explanation(self, decision: AgentDecision) -> str:
         """Generate GPT-enhanced explanation."""
+        if not self._openai_client:
+            return self._generate_fallback_explanation(decision)
         try:
             prompt = f"""
             You are an AI trading agent explaining a decision you just made.
@@ -348,7 +356,7 @@ class ReasoningLogger:
             Make it sound natural and conversational, like you're explaining to a colleague.
             """
 
-            response = openai.ChatCompletion.create(
+            response = self._openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {
@@ -361,10 +369,10 @@ class ReasoningLogger:
                 max_tokens=300,
             )
 
-            return response.choices[0].message.content
+            return response.choices[0].message.content or ""
 
         except Exception as e:
-            logger.error(f"Error generating GPT explanation: {e}")
+            logger.error("Error generating GPT explanation: %s", e)
             return self._generate_fallback_explanation(decision)
 
     def _generate_fallback_explanation(self, decision: AgentDecision) -> str:

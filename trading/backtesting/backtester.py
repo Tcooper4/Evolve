@@ -454,7 +454,7 @@ class Backtester:
                     # CRITICAL: Backward fill creates look-ahead bias in backtesting!
                     # Using future data to fill past values invalidates backtest results.
                     self.logger.error(
-                        "❌ BACKWARD FILL NOT ALLOWED IN BACKTESTING - creates look-ahead bias! "
+                        "[FAIL] BACKWARD FILL NOT ALLOWED IN BACKTESTING - creates look-ahead bias! "
                         "Using forward fill instead."
                     )
                     signals_df = signals_df.ffill()

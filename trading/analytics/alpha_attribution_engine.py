@@ -18,7 +18,7 @@ try:
 
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling linear regression attribution.")
+    print("[WARN] scikit-learn not available. Disabling linear regression attribution.")
     print(f"   Missing: {e}")
     LinearRegression = None
     SKLEARN_AVAILABLE = False

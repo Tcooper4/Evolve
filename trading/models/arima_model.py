@@ -670,6 +670,25 @@ class ARIMAModel(BaseModel):
         )
 
         fvals = forecast_result.values if hasattr(forecast_result, "values") else np.asarray(forecast_result)
+        fvals = np.asarray(fvals, dtype="float64").ravel()
+
+        # Continuity check: first forecast should be close to last in-sample value
+        if isinstance(data, pd.DataFrame):
+            close_col = "close" if "close" in data.columns else "Close" if "Close" in data.columns else data.columns[0]
+            last_actual = float(data[close_col].iloc[-1])
+        else:
+            last_actual = float(data.values[-1]) if hasattr(data, "values") else float(data.iloc[-1])
+        if len(fvals) > 0 and (last_actual or 1e-8) > 0:
+            first_forecast = float(fvals[0])
+            continuity_gap = abs(first_forecast - last_actual) / (last_actual or 1e-8)
+            if continuity_gap > 0.05:
+                logger.warning(
+                    "ARIMA continuity gap: %.1f%% — last=%.2f, first_forecast=%.2f",
+                    continuity_gap * 100,
+                    last_actual,
+                    first_forecast,
+                )
+
         return {
             "forecast": fvals,
             "confidence": confidence,

@@ -124,10 +124,11 @@ if prompt:
                     prompt,
                 )
                 action_data = None
-                if isinstance(agent_response.get("data"), dict):
-                    action_data = agent_response["data"]
-                elif agent_response.get("data") is not None:
-                    action_data = {"raw": str(agent_response["data"])[:500]}
+                _ar = agent_response if isinstance(agent_response, dict) else {"data": getattr(agent_response, "data", None)}
+                if isinstance(_ar.get("data"), dict):
+                    action_data = _ar["data"]
+                elif _ar.get("data") is not None:
+                    action_data = {"raw": str(_ar["data"])[:500]}
 
                 st.markdown(reply)
                 st.session_state.chat_messages.append({

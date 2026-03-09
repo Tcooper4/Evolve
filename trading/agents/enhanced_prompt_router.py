@@ -15,15 +15,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-# Try to import OpenAI
+# Try to import OpenAI (v1 client used in parse_intent_openai)
 try:
-    import openai
-
+    from openai import OpenAI
     OPENAI_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ OpenAI not available. Disabling OpenAI-based parsing.")
+    print("[WARN] OpenAI not available. Disabling OpenAI-based parsing.")
     print(f"   Missing: {e}")
-    openai = None
+    OpenAI = None
     OPENAI_AVAILABLE = False
 
 # Try to import PyTorch and transformers
@@ -35,7 +34,7 @@ try:
     TRANSFORMERS_AVAILABLE = True
     HUGGINGFACE_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch/transformers not available. Disabling local LLM features.")
+    print("[WARN] PyTorch/transformers not available. Disabling local LLM features.")
     print(f"   Missing: {e}")
     torch = None
     AutoModelForCausalLM = None
@@ -89,18 +88,17 @@ class EnhancedPromptRouterAgent:
         self.hf_pipeline = None
         self.enable_debug_mode = enable_debug_mode
 
-        # Initialize OpenAI if available
-        if openai and self.openai_api_key:
-            openai.api_key = self.openai_api_key
-            logger.info("✅ OpenAI initialized for prompt routing")
+        # OpenAI client is created per-call in parse_intent_openai when api_key is set
+        if self.openai_api_key:
+            logger.info("[OK] OpenAI initialized for prompt routing")
 
         # Initialize HuggingFace if available
         if HUGGINGFACE_AVAILABLE:
             try:
                 self._init_huggingface()
-                logger.info("✅ HuggingFace initialized for prompt routing")
+                logger.info("[OK] HuggingFace initialized for prompt routing")
             except Exception as e:
-                logger.warning(f"⚠️ HuggingFace initialization failed: {e}")
+                logger.warning("[WARN] HuggingFace initialization failed: %s", e)
 
         # Enhanced intent keywords for regex fallback with ambiguous prompt handling
         self.intent_keywords = {
@@ -288,8 +286,8 @@ class EnhancedPromptRouterAgent:
             return None
 
         try:
-            from openai import OpenAI
-
+            if not OpenAI:
+                return None
             # Use enhanced template for intent classification
             system_prompt = format_template(
                 "enhanced_intent_classification", query=prompt
@@ -604,23 +602,23 @@ class EnhancedPromptRouterAgent:
         result = self.parse_intent_claude(prompt)
         if result and result.intent != "unknown":
             logger.info(
-                f"✅ Claude parsed intent: {result.intent} (confidence: {result.confidence})"
+                f"[OK] Claude parsed intent: {result.intent} (confidence: {result.confidence})"
             )
             return result
 
         # Try OpenAI second
-        if openai and self.openai_api_key:
+        if OpenAI and self.openai_api_key:
             result = self.parse_intent_openai(prompt)
             if result and result.intent != "unknown":
                 logger.info(
-                    f"✅ OpenAI parsed intent: {result.intent} (confidence: {result.confidence})"
+                    f"[OK] OpenAI parsed intent: {result.intent} (confidence: {result.confidence})"
                 )
                 return result
 
         # Fallback to enhanced regex
         result = self.parse_intent_regex(prompt)
         logger.info(
-            f"✅ Regex parsed intent: {result.intent} (confidence: {result.confidence})"
+            f"[OK] Regex parsed intent: {result.intent} (confidence: {result.confidence})"
         )
         return result
 

@@ -228,7 +228,7 @@ class ModelRegistry:
                     'min_data_points': 100,
                     'best_for': 'Long-term forecasting with trend/seasonality'
                 })
-                logger.info("✅ Registered: Autoformer (NeuralForecast)")
+                logger.info("[OK] Registered: Autoformer (NeuralForecast)")
                 
                 # Informer - Efficient transformer
                 self.register('Informer', InformerModel, {
@@ -240,7 +240,7 @@ class ModelRegistry:
                     'min_data_points': 100,
                     'best_for': 'Very long-term forecasting (100+ days)'
                 })
-                logger.info("✅ Registered: Informer")
+                logger.info("[OK] Registered: Informer")
                 
                 # TFT - Temporal Fusion Transformer
                 self.register('TFT', TFTModel, {
@@ -252,7 +252,7 @@ class ModelRegistry:
                     'min_data_points': 100,
                     'best_for': 'Multi-horizon with interpretability'
                 })
-                logger.info("✅ Registered: TFT")
+                logger.info("[OK] Registered: TFT")
                 
                 # N-BEATS - Neural basis expansion
                 self.register('N-BEATS', NBEATSModel, {
@@ -264,7 +264,7 @@ class ModelRegistry:
                     'min_data_points': 100,
                     'best_for': 'Interpretable trend/seasonality'
                 })
-                logger.info("✅ Registered: N-BEATS")
+                logger.info("[OK] Registered: N-BEATS")
                 
                 # PatchTST - Latest SOTA
                 self.register('PatchTST', PatchTSTModel, {
@@ -276,7 +276,7 @@ class ModelRegistry:
                     'min_data_points': 100,
                     'best_for': 'Best overall performance, long-term'
                 })
-                logger.info("✅ Registered: PatchTST (Latest SOTA)")
+                logger.info("[OK] Registered: PatchTST (Latest SOTA)")
                 
                 # N-HiTS - Fast and accurate
                 self.register('N-HiTS', NHITSModel, {
@@ -288,16 +288,16 @@ class ModelRegistry:
                     'min_data_points': 100,
                     'best_for': 'Fast training, good accuracy'
                 })
-                logger.info("✅ Registered: N-HiTS")
+                logger.info("[OK] Registered: N-HiTS")
                 
-                logger.info("✅ All NeuralForecast models registered successfully")
+                logger.info("[OK] All NeuralForecast models registered successfully")
             else:
                 logger.warning("Neural forecasting models disabled (pip install neuralforecast to enable)")
                 
         except ImportError:
             logger.warning("Neural forecasting models disabled (pip install neuralforecast to enable)")
         
-        logger.info(f"✅ Registered {len(self._models)} models")
+        logger.info(f"[OK] Registered {len(self._models)} models")
     
     def register(self, name: str, model_class: Type, metadata: Dict = None):
         """Register a model class with metadata.

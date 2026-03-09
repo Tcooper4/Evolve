@@ -16,6 +16,7 @@ from services.research_service import ResearchService
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
+os.makedirs("logs", exist_ok=True)
 
 # Configure logging
 logging.basicConfig(

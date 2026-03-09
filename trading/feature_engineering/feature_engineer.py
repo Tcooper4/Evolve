@@ -698,16 +698,16 @@ class FeatureEngineer(FeatureEngineering):
         # Volatility
         df["volatility"] = df["returns"].rolling(window=20).std()
 
-        # RSI - Using safe division utility
+        # RSI - standard 14-period (Wilder); safe division utility
         df["RSI"] = safe_rsi(df["close"], period=14)
 
-        # MACD
+        # MACD: fast 12, slow 26, signal 9 (standard)
         exp1 = df["close"].ewm(span=12, adjust=False).mean()
         exp2 = df["close"].ewm(span=26, adjust=False).mean()
         df["MACD"] = exp1 - exp2
         df["Signal_Line"] = df["MACD"].ewm(span=9, adjust=False).mean()
 
-        # Bollinger Bands
+        # Bollinger Bands: 20-period SMA, +/- 2 std
         df["BB_Middle"] = df["close"].rolling(window=20).mean()
         df["BB_Upper"] = df["BB_Middle"] + 2 * df["close"].rolling(window=20).std()
         df["BB_Lower"] = df["BB_Middle"] - 2 * df["close"].rolling(window=20).std()

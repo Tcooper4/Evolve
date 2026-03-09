@@ -8,6 +8,7 @@ of the trading pipeline.
 
 import json
 import logging
+import os
 import re
 import time
 from collections import deque
@@ -860,11 +861,26 @@ class PromptAgent:
                 response = self._handle_critique_backtest_request(params)
             elif intent == "recommend_model":
                 response = self._handle_recommend_model_request(params)
+            elif intent == "general":
+                # Price/market questions: use LLM-only path with live data so reply includes real price
+                response = self._handle_general_request_llm_only(prompt, params)
             else:
                 response = {
                     "success": True,
                     "result": self._handle_general_request(prompt, params),
                     "message": "Operation completed successfully",
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+            # Normalize AgentResponse to dict so downstream .get() and save block work
+            if hasattr(response, "success") and not isinstance(response, dict):
+                response = {
+                    "success": response.success,
+                    "message": getattr(response, "message", ""),
+                    "data": getattr(response, "data", None),
+                    "recommendations": getattr(response, "recommendations", None) or [],
+                    "next_actions": getattr(response, "next_actions", None) or [],
+                    "result": response,
                     "timestamp": datetime.now().isoformat(),
                 }
 
@@ -1918,6 +1934,73 @@ class PromptAgent:
 
         return requirements
 
+    def _get_rich_context(self, symbol: str) -> str:
+        """Assemble news, RSI/MACD, 5d/20d returns, 52wk range, P/E, 50/200 MA for ticker-specific answers."""
+        parts = []
+        try:
+            end_date = datetime.now()
+            start_1y = end_date - timedelta(days=365)
+            start_20d = end_date - timedelta(days=30)
+            data = self.data_provider.get_historical_data(
+                symbol, start_1y, end_date, "1d"
+            )
+            if data is not None and not data.empty:
+                df = data.copy()
+                if hasattr(df.columns, "levels") and df.columns.nlevels > 1:
+                    df = df.droplevel(axis=1, level=0)
+                df.columns = [str(c).lower().strip() for c in df.columns]
+                close_col = "close" if "close" in df.columns else next((c for c in df.columns if "close" in c.lower()), None)
+                if close_col and len(df) >= 5:
+                    closes = df[close_col].dropna()
+                    if len(closes) >= 5:
+                        ret_5d = (float(closes.iloc[-1]) / float(closes.iloc[-5]) - 1.0) * 100 if len(closes) >= 5 else None
+                        ret_20d = (float(closes.iloc[-1]) / float(closes.iloc[-min(20, len(closes))]) - 1.0) * 100 if len(closes) >= 20 else None
+                        parts.append(f"[Returns] 5-day: {ret_5d:+.2f}%" if ret_5d is not None else "")
+                        parts.append(f"20-day: {ret_20d:+.2f}%" if ret_20d is not None else "")
+                    if len(closes) >= 252:
+                        high_52 = float(closes.tail(252).max())
+                        low_52 = float(closes.tail(252).min())
+                        parts.append(f"[52-week] High: ${high_52:.2f}, Low: ${low_52:.2f}")
+                    if len(closes) >= 200:
+                        ma50 = float(closes.tail(50).mean())
+                        ma200 = float(closes.tail(200).mean())
+                        last_p = float(closes.iloc[-1])
+                        parts.append(f"[MAs] Price vs 50-day MA: {'above' if last_p >= ma50 else 'below'}; vs 200-day: {'above' if last_p >= ma200 else 'below'}")
+                    try:
+                        from trading.utils.safe_math import safe_rsi
+                        rsi = safe_rsi(closes, period=14)
+                        if rsi is not None and len(rsi) and not np.isnan(rsi.iloc[-1]):
+                            parts.append(f"[RSI(14)] {float(rsi.iloc[-1]):.1f}")
+                    except Exception:
+                        pass
+                    try:
+                        ema12 = closes.ewm(span=12).mean()
+                        ema26 = closes.ewm(span=26).mean()
+                        macd = ema12 - ema26
+                        if len(macd) and not np.isnan(macd.iloc[-1]):
+                            parts.append(f"[MACD] {float(macd.iloc[-1]):.4f}")
+                    except Exception:
+                        pass
+            try:
+                from trading.data.news_fetcher import fetch_recent_news, format_news_for_context
+                headlines = fetch_recent_news(symbol, max_items=5)
+                if headlines:
+                    parts.append("[Last 5 news headlines]")
+                    parts.append(format_news_for_context(headlines))
+            except Exception:
+                pass
+            try:
+                info = getattr(self.data_provider, "get_ticker_info", None)
+                if callable(info):
+                    inf = info(symbol)
+                    if isinstance(inf, dict) and inf.get("trailingPE"):
+                        parts.append(f"[P/E (trailing)] {inf['trailingPE']}")
+            except Exception:
+                pass
+        except Exception as e:
+            self.logger.debug("_get_rich_context failed for %s: %s", symbol, e)
+        return "\n".join(p for p in parts if p).strip()
+
     def _handle_general_request_llm_only(
         self, prompt: str, params: Dict[str, Any]
     ) -> AgentResponse:
@@ -1931,11 +2014,8 @@ class PromptAgent:
             symbol = self._resolve_symbol_from_prompt(prompt)
         except Exception:
             symbol = None
-        logger.info(
-            "[CHAT DIAG] _handle_general_request_llm_only called, symbol=%s, prompt=%s",
-            symbol,
-            (prompt or "")[:50],
-        )
+        logger.info("[CHAT DIAG 1] method called, symbol=%s", symbol)
+        logger.info("[CHAT DIAG 1b] prompt preview=%s", (prompt or "")[:80])
         try:
             from agents.llm.active_llm_calls import call_active_llm_simple
 
@@ -1951,6 +2031,32 @@ class PromptAgent:
             )
 
             data_context = ""
+
+            # For "forecast X" type questions, route to ForecastRouter and return actual model output
+            prompt_lower = (prompt or "").lower()
+            if symbol and ("forecast" in prompt_lower or "predict" in prompt_lower or "outlook" in prompt_lower):
+                try:
+                    router = ForecastRouter()
+                    end_date = datetime.now()
+                    start_date = end_date - timedelta(days=365)
+                    data = self.data_provider.get_historical_data(symbol, start_date, end_date, "1d")
+                    if data is not None and not getattr(data, "empty", True):
+                        if hasattr(data.columns, "levels") and data.columns.nlevels > 1:
+                            data = data.droplevel(axis=1, level=0)
+                        result = router.get_forecast(data, horizon=7, model_type="auto")
+                        fc = result.get("forecast")
+                        if fc is not None and len(fc) > 0:
+                            last_p = getattr(router, "_last_price_used", None) or (float(data["close"].iloc[-1]) if "close" in data.columns else None)
+                            summary = f"7-day forecast for {symbol}: last price ${last_p:.2f}; forecast (next 7 days): " + ", ".join(f"${x:.2f}" for x in fc[:7])
+                            return AgentResponse(success=True, message=summary, data=result, recommendations=[], next_actions=[])
+                except Exception as e:
+                    self.logger.debug("ForecastRouter path failed for chat: %s", e)
+
+            # Rich context (news, RSI, MACD, 5d/20d returns, 52wk, P/E, 50/200 MA) for ticker questions
+            if symbol:
+                rich = self._get_rich_context(symbol)
+                if rich:
+                    data_context += "\n\n[Rich context for " + symbol + "]\n" + rich
 
             # Check if multi-agent orchestration mode is enabled (Streamlit UI toggle)
             use_orchestration = False
@@ -2220,11 +2326,19 @@ class PromptAgent:
                     )
 
             # Log final context size so we can debug empty-context cases
+            logger.info("[CHAT DIAG 2] data_context length=%d", len(data_context))
             self.logger.info(
                 "Chat data context length: %d, symbol: %s",
                 len(data_context),
                 symbol or "None",
             )
+            # For "why did X move" type: instruct to use ONLY the provided news and data
+            if symbol and ("why" in prompt_lower and ("move" in prompt_lower or "recent" in prompt_lower or "change" in prompt_lower)):
+                system += " When explaining price movement, use ONLY the specific news and data provided above. Do not speculate about general market factors."
+
+            system_prompt = system + (data_context or "")
+            logger.info("[CHAT DIAG 3] system_prompt preview=%s", (system_prompt[:200] if system_prompt else ""))
+            logger.info("[CHAT DIAG 4] about to call LLM with provider=%s", os.getenv("LLM_PROVIDER"))
 
             full_prompt = f"{system}{data_context}\n\nUser: {prompt}\n\nAssistant:"
             text = call_active_llm_simple(full_prompt, max_tokens=1024)
@@ -2350,10 +2464,16 @@ class PromptAgent:
             )
 
 
-# Global prompt agent instance
-prompt_agent = PromptAgent()
+# Global prompt agent instance (lazy; avoid module-level init that pulls in ForecastRouter/ModelRegistry and can trigger Windows Unicode errors)
+prompt_agent = None
+try:
+    prompt_agent = PromptAgent()
+except Exception as e:
+    import logging
+    _log = logging.getLogger(__name__)
+    _log.warning("PromptAgent init failed: %s", e)
 
 
-def get_prompt_agent() -> PromptAgent:
-    """Get the global prompt agent instance."""
+def get_prompt_agent():
+    """Get the global prompt agent instance. May be None if init failed."""
     return prompt_agent

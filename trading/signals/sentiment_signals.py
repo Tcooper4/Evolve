@@ -20,7 +20,7 @@ try:
 
     VADER_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ vaderSentiment not available. Disabling VADER sentiment analysis.")
+    print("[WARN] vaderSentiment not available. Disabling VADER sentiment analysis.")
     print(f"   Missing: {e}")
     SentimentIntensityAnalyzer = None
     VADER_AVAILABLE = False
@@ -84,8 +84,8 @@ class SentimentSignals:
                 if hasattr(st, 'session_state') and 'system_config' in st.session_state:
                     admin_keys = st.session_state.get('system_config', {}).get('api_keys', {})
                     self.newsapi_key = admin_keys.get('newsapi') or admin_keys.get('news_api')
-            except:
-                pass
+            except Exception as e:
+                logging.getLogger(__name__).warning("Caught: %s", e)
             
             # Fall back to environment variables (support both naming conventions)
             self.newsapi_key = (
@@ -113,8 +113,8 @@ class SentimentSignals:
                         self.reddit_client_id = admin_keys.get('reddit_client_id')
                     if not self.reddit_client_secret:
                         self.reddit_client_secret = admin_keys.get('reddit_client_secret')
-            except:
-                pass
+            except Exception as e:
+                logging.getLogger(__name__).warning("Caught: %s", e)
         
         # Fall back to environment variables
         if not self.reddit_client_id:

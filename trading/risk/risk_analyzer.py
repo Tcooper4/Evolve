@@ -9,15 +9,14 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
-# Try to import OpenAI
+# Try to import OpenAI (v1 client)
 try:
-    import openai
-
+    from openai import OpenAI
     OPENAI_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ OpenAI not available. Disabling LLM-based risk analysis.")
+    print("[WARN] OpenAI not available. Disabling LLM-based risk analysis.")
     print(f"   Missing: {e}")
-    openai = None
+    OpenAI = None
     OPENAI_AVAILABLE = False
 
 from .risk_metrics import (
@@ -77,9 +76,15 @@ class RiskAnalyzer:
         except Exception as e:
             logger.error(f"Failed to create directory for memory_path: {e}")
 
-        # Initialize OpenAI if key is available
-        if self.openai_api_key and OPENAI_AVAILABLE:
-            openai.api_key = self.openai_api_key
+        # Initialize OpenAI client if key is available
+        if self.openai_api_key and OPENAI_AVAILABLE and OpenAI:
+            try:
+                self._openai_client = OpenAI(api_key=self.openai_api_key)
+            except Exception as e:
+                logger.warning("OpenAI client init failed: %s", e)
+                self._openai_client = None
+        else:
+            self._openai_client = None
 
     def analyze_risk(
         self, returns: pd.Series, forecast_confidence: float, historical_error: float
@@ -207,7 +212,7 @@ class RiskAnalyzer:
         Returns:
             Risk explanation string
         """
-        if not self.openai_api_key or not OPENAI_AVAILABLE:
+        if not self._openai_client:
             return self._generate_basic_explanation(
                 risk_level, regime_metrics, forecast_risk_score
             )
@@ -227,7 +232,7 @@ class RiskAnalyzer:
             and its implications for trading strategy.
             """
 
-            response = openai.ChatCompletion.create(
+            response = self._openai_client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {
@@ -239,7 +244,7 @@ class RiskAnalyzer:
                 max_tokens=200,
             )
 
-            return response.choices[0].message.content.strip()
+            return (response.choices[0].message.content or "").strip()
 
         except Exception as e:
             logger.error(f"Error generating LLM explanation: {e}")

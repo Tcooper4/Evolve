@@ -33,15 +33,14 @@ except ImportError as e:
     go = None
     PLOTLY_AVAILABLE = False
 
-# Try to import OpenAI
+# Try to import OpenAI (v1 client)
 try:
-    import openai
-
+    from openai import OpenAI
     OPENAI_AVAILABLE = True
 except ImportError as e:
     logger.warning("⚠️ OpenAI not available. Disabling GPT-4V image analysis.")
     logger.warning(f"   Missing: {e}")
-    openai = None
+    OpenAI = None
     OPENAI_AVAILABLE = False
 
 # Try to import PIL and transformers
@@ -120,13 +119,19 @@ class ImageHandler:
     """Handler for image processing and analysis."""
 
     def __init__(self, openai_api_key: Optional[str] = None, use_blip: bool = False):
-        self.openai_api_key = openai_api_key
+        import os
+        self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         self.use_blip = (
             use_blip and BlipProcessor and BlipForConditionalGeneration and Image
         )
-
-        if openai and self.openai_api_key:
-            openai.api_key = self.openai_api_key
+        if OpenAI and self.openai_api_key:
+            try:
+                self._client = OpenAI(api_key=self.openai_api_key)
+            except Exception as e:
+                logger.warning("OpenAI client init failed: %s", e)
+                self._client = None
+        else:
+            self._client = None
 
         if self.use_blip:
             try:
@@ -156,7 +161,7 @@ class ImageHandler:
             results = {}
 
             # Try OpenAI GPT-4V if available
-            if openai and self.openai_api_key:
+            if self._client:
                 openai_result = self._analyze_with_openai(image_bytes, prompt)
                 results["openai"] = openai_result
 
@@ -184,7 +189,7 @@ class ImageHandler:
     ) -> Dict[str, Any]:
         """Analyze image using OpenAI GPT-4V."""
         try:
-            if not openai or not self.openai_api_key:
+            if not self._client:
                 return {"error": "OpenAI not available"}
 
             # Convert image to base64
@@ -202,7 +207,7 @@ class ImageHandler:
 
             analysis_prompt = prompt or default_prompt
 
-            response = openai.ChatCompletion.create(
+            response = self._client.chat.completions.create(
                 model="gpt-4-vision-preview",
                 messages=[
                     {
@@ -222,7 +227,7 @@ class ImageHandler:
             )
 
             return {
-                "analysis": response.choices[0].message.content,
+                "analysis": response.choices[0].message.content or "",
                 "model": "gpt-4-vision-preview",
                 "confidence": 0.9,  # High confidence for GPT-4V
             }
@@ -519,9 +524,8 @@ class MultimodalAgent(BaseAgent):
 
         # Extract config from custom_config or use defaults
         custom_config = config.custom_config or {}
-        openai_api_key = custom_config.get("openai_api_key") or (
-            openai.api_key if openai else None
-        )
+        import os
+        openai_api_key = custom_config.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
         use_blip = custom_config.get("use_blip", False)
 
         # Initialize handlers

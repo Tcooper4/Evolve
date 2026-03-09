@@ -18,7 +18,7 @@ try:
 
     PSUTIL_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ psutil not available. Disabling system resource monitoring.")
+    print("[WARN] psutil not available. Disabling system resource monitoring.")
     print(f"   Missing: {e}")
     psutil = None
     PSUTIL_AVAILABLE = False
@@ -29,7 +29,7 @@ try:
 
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ PyTorch not available. Disabling PyTorch diagnostics.")
+    print("[WARN] PyTorch not available. Disabling PyTorch diagnostics.")
     print(f"   Missing: {e}")
     torch = None
     TORCH_AVAILABLE = False

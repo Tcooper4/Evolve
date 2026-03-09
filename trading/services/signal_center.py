@@ -507,7 +507,7 @@ class SignalCenter:
             SignalType.STRONG_BUY: "🟢🟢",
             SignalType.STRONG_SELL: "🔴🔴",
             SignalType.HOLD: "🟡",
-            SignalType.ALERT: "⚠️",
+            SignalType.ALERT: "[WARN]",
         }
 
         emoji = emoji_map.get(signal.signal_type, "📊")

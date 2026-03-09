@@ -224,8 +224,12 @@ with tab1:
                 
                 st.markdown("---")
                 
-                # Real report data: from backtest or trading session when available
-                has_report_data = False  # TODO: set True when real data from backtest/logs exists
+                # Real report data: from backtest, portfolio, or forecast in session
+                has_report_data = bool(
+                    st.session_state.get("backtest_results")
+                    or st.session_state.get("portfolio_manager")
+                    or st.session_state.get("current_forecast") is not None
+                )
                 if not has_report_data:
                     _empty_state("No report data yet. Complete a backtest or trading session to generate reports.", "📋")
                 else:

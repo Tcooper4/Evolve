@@ -71,7 +71,7 @@ class FallbackXGBoostModel:
         except Exception as e:
             logger.error(f"Fallback model prediction failed: {e}")
             # Return mean of training data or constant
-            return np.full(len(X), 1000.0)
+            return np.zeros(len(X))
 
 
 class XGBoostModel(BaseModel):
@@ -465,7 +465,7 @@ class XGBoostModel(BaseModel):
         return df
 
     def prepare_features(self, data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
-        """Prepare features with comprehensive error handling."""
+        """Prepare features and target. Target = next-period return (pct_change) so model predicts returns; router can build price path."""
         try:
             if not isinstance(data, pd.DataFrame):
                 raise ValueError("Input must be a pandas DataFrame")
@@ -473,22 +473,18 @@ class XGBoostModel(BaseModel):
             if data.empty:
                 raise ValueError("Input data is empty")
 
-            # Check for required columns (accept both cases)
             if "close" not in data.columns and "Close" not in data.columns:
                 raise ValueError("Data must contain 'close' column")
 
-            # Handle NaN values
             data = data.ffill().bfill()
-
-            # Create features
             features = self._create_lag_features(data)
 
-            # Prepare target variable (use Close or close)
             price_col = "Close" if "Close" in features.columns else "close"
-            target = features[price_col].shift(-1).dropna()
-            features = features[:-1]  # Remove last row since target is shifted
+            # Target = next-period return (e.g. 0.01, -0.02) so model predicts returns, not raw price
+            returns = features[price_col].pct_change().dropna()
+            target = returns.shift(-1).dropna()
+            features = features.loc[target.index]
 
-            # Align features and target
             common_index = features.index.intersection(target.index)
             features = features.loc[common_index]
             target = target.loc[common_index]
@@ -623,13 +619,9 @@ class XGBoostModel(BaseModel):
         except Exception as e:
             logger.error(f"Prediction failed: {e}")
             logger.error(traceback.format_exc())
-
-            # Return simple fallback prediction
-            logger.info("Using simple fallback prediction")
-            if "close" in data.columns:
-                return data["close"].rolling(window=20).mean().values
-            else:
-                return np.full(len(data), 1000.0)
+            logger.info("Using simple fallback prediction (zero return)")
+            # Model predicts returns; fallback = no change (0.0)
+            return np.zeros(len(data))
 
     def get_feature_importance(self) -> Dict[str, float]:
         """Feature importance with error handling."""
@@ -749,31 +741,31 @@ class XGBoostModel(BaseModel):
             if not self.is_trained:
                 raise ModelPredictionError("Model must be trained before forecasting")
 
-            # Generate forecast
+            # Generate forecast: model predicts returns; build ratio path so router can denorm once
             try:
-                # Use recursive forecasting in price space
+                price_col = "Close" if "Close" in data.columns else "close"
+                current_ratio = float(data[price_col].iloc[-1])
                 current_data = data.copy()
                 forecasts = []
 
                 for _ in range(horizon):
-                    # Get prediction for next step (in price space)
                     pred = self.predict(current_data)
-                    next_price = float(pred[-1])
-                    forecasts.append(next_price)
+                    r = float(pred[-1])
+                    # Clamp return to sane range to avoid explosion (e.g. -20% to +20%)
+                    r = np.clip(r, -0.20, 0.20)
+                    next_ratio = current_ratio * (1.0 + r)
+                    forecasts.append(next_ratio)
 
-                    # Update data for next iteration – keep everything in price space
                     new_row = current_data.iloc[-1].copy()
-                    price_col = "Close" if "Close" in new_row.index else "close"
                     if price_col in new_row.index:
-                        new_row[price_col] = next_price
+                        new_row[price_col] = next_ratio
                     current_data = pd.concat(
                         [current_data, pd.DataFrame([new_row])], ignore_index=True
                     )
-                    # Maintain rolling window length
                     if len(current_data) > len(data):
                         current_data = current_data.iloc[1:]
+                    current_ratio = next_ratio
 
-                # Create forecast dates
                 last_date = (
                     data.index[-1]
                     if hasattr(data.index[-1], "freq")

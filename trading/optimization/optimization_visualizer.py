@@ -8,7 +8,7 @@ try:
 
     OPTUNA_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ optuna not available. Disabling optuna-based visualization.")
+    print("[WARN] optuna not available. Disabling optuna-based visualization.")
     print(f"   Missing: {e}")
     optuna = None
     OPTUNA_AVAILABLE = False
@@ -20,7 +20,7 @@ try:
 
     PLOTLY_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ plotly not available. Disabling plotly-based visualization.")
+    print("[WARN] plotly not available. Disabling plotly-based visualization.")
     print(f"   Missing: {e}")
     go = None
     make_subplots = None

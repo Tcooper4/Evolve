@@ -64,7 +64,7 @@ def example_queries():
                 results = result.get("results", {})
                 commentary = result.get("gpt_commentary", "")
 
-                logger.info(f"✅ Success (processed in {processing_time:.2f}s)")
+                logger.info(f"[OK] Success (processed in {processing_time:.2f}s)")
                 logger.info(f"Intent: {parsed.get('intent', 'unknown')}")
                 logger.info(f"Symbol: {parsed.get('symbol', 'N/A')}")
                 logger.info(f"Timeframe: {parsed.get('timeframe', 'N/A')}")
@@ -97,10 +97,10 @@ def example_queries():
 
             else:
                 error = result.get("error", "Unknown error")
-                logger.error(f"❌ Error: {error}")
+                logger.error(f"[FAIL] Error: {error}")
 
         except Exception as e:
-            logger.error(f"❌ Exception: {e}")
+            logger.error(f"[FAIL] Exception: {e}")
 
         logger.info("\n" + "=" * 60)
 
@@ -139,7 +139,7 @@ def example_service_client():
             processing_time = time.time() - start_time
 
             if result:
-                logger.info(f"✅ Service Response (processed in {processing_time:.2f}s)")
+                logger.info(f"[OK] Service Response (processed in {processing_time:.2f}s)")
                 logger.info(f"Type: {result.get('type', 'unknown')}")
 
                 if result.get("type") == "query_processed":
@@ -160,17 +160,17 @@ def example_service_client():
                             )
                     else:
                         logger.error(
-                            f"❌ Query Error: {query_result.get('error', 'Unknown error')}"
+                            f"[FAIL] Query Error: {query_result.get('error', 'Unknown error')}"
                         )
                 else:
                     logger.error(
-                        f"❌ Service Error: {result.get('error', 'Unknown error')}"
+                        f"[FAIL] Service Error: {result.get('error', 'Unknown error')}"
                     )
             else:
-                logger.error("❌ No response from service")
+                logger.error("[FAIL] No response from service")
 
         except Exception as e:
-            logger.error(f"❌ Exception: {e}")
+            logger.error(f"[FAIL] Exception: {e}")
 
         logger.info("\n" + "=" * 60)
 
@@ -191,10 +191,10 @@ def example_service_client():
             logger.info(f"Periods: {', '.join(periods)}")
             logger.info(f"Models: {', '.join(models)}")
         else:
-            logger.error("❌ Could not retrieve available symbols")
+            logger.error("[FAIL] Could not retrieve available symbols")
 
     except Exception as e:
-        logger.error(f"❌ Exception: {e}")
+        logger.error(f"[FAIL] Exception: {e}")
 
     # Clean up
     client.close()
@@ -209,9 +209,9 @@ def main():
 
             r = redis.Redis(host="localhost", port=6379)
             r.ping()
-            logger.info("✅ Redis connection successful")
+            logger.info("[OK] Redis connection successful")
         except Exception as e:
-            logger.warning(f"⚠️  Redis not available: {e}")
+            logger.warning(f"[WARN]  Redis not available: {e}")
             logger.warning("Running direct QuantGPT examples only...")
             example_queries()
 
@@ -224,7 +224,7 @@ def main():
     except KeyboardInterrupt:
         logger.warning("\n\n⏹️  Examples interrupted by user")
     except Exception as e:
-        logger.error(f"\n❌ Error running examples: {e}")
+        logger.error(f"\n[FAIL] Error running examples: {e}")
 
 
 if __name__ == "__main__":

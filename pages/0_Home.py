@@ -133,11 +133,16 @@ if should_scan:
         if new_spikes:
             top = new_spikes[0]
             company = COMPANY_NAMES.get(top["symbol"], top["symbol"])
-            articles = fetch_news_around_event(
-                top["symbol"],
-                company,
-                top["timestamp"].to_pydatetime() if hasattr(top["timestamp"], "to_pydatetime") else top["timestamp"],
-            )
+            try:
+                articles = fetch_news_around_event(
+                    top["symbol"],
+                    company,
+                    top["timestamp"].to_pydatetime() if hasattr(top["timestamp"], "to_pydatetime") else top["timestamp"],
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning("Fetch news failed: %s", e)
+                articles = []
             ranked = rank_news_by_relevance(
                 articles, top["symbol"], company, top["direction"],
             )

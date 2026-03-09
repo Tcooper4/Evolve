@@ -18,7 +18,7 @@ try:
 
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling feature selection capabilities.")
+    print("[WARN] scikit-learn not available. Disabling feature selection capabilities.")
     print(f"   Missing: {e}")
     SelectKBest = None
     f_regression = None

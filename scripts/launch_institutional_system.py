@@ -22,6 +22,9 @@ from typing import Any, Dict, Optional
 
 import psutil
 import yaml
+import os
+
+os.makedirs("logs", exist_ok=True)
 
 # Setup logging
 logging.basicConfig(

@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
-import openai
+from openai import OpenAI
 
 from trading.utils.safe_math import safe_returns
 import pandas as pd
@@ -143,9 +143,15 @@ class ReportGenerator:
             "hyperparameter_export": True,  # New option
         }
 
-        # Initialize OpenAI if available
+        # Initialize OpenAI client if available
         if self.openai_api_key:
-            openai.api_key = self.openai_api_key
+            try:
+                self._openai_client = OpenAI(api_key=self.openai_api_key)
+            except Exception as e:
+                logger.warning("OpenAI client init failed: %s", e)
+                self._openai_client = None
+        else:
+            self._openai_client = None
 
         # Create subdirectories
         (self.output_dir / "pdf").mkdir(exist_ok=True)
@@ -396,7 +402,7 @@ class ReportGenerator:
     ) -> StrategyReasoning:
         """Generate strategy reasoning using GPT."""
         try:
-            if not self.openai_api_key:
+            if not self._openai_client:
                 return self._generate_fallback_reasoning(strategy_data)
 
             # Prepare context for GPT
@@ -440,7 +446,7 @@ class ReportGenerator:
             }}
             """
 
-            response = openai.ChatCompletion.create(
+            response = self._openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {
@@ -454,7 +460,8 @@ class ReportGenerator:
             )
 
             try:
-                reasoning_data = json.loads(response.choices[0].message.content)
+                content = response.choices[0].message.content or "{}"
+                reasoning_data = json.loads(content)
                 return StrategyReasoning(
                     summary=reasoning_data.get("summary", ""),
                     key_factors=reasoning_data.get("key_factors", []),

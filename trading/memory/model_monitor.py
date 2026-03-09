@@ -20,7 +20,7 @@ try:
 
     SCIPY_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scipy not available. Disabling statistical drift detection.")
+    print("[WARN] scipy not available. Disabling statistical drift detection.")
     print(f"   Missing: {e}")
     stats = None
     SCIPY_AVAILABLE = False
@@ -31,7 +31,7 @@ try:
 
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling anomaly detection.")
+    print("[WARN] scikit-learn not available. Disabling anomaly detection.")
     print(f"   Missing: {e}")
     IsolationForest = None
     SKLEARN_AVAILABLE = False

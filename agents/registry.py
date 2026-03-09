@@ -189,7 +189,7 @@ class AgentRegistry:
 
     def _get_fallback_agent(self, name: str, **kwargs) -> Optional[Any]:
         """Get a fallback agent when the requested agent is not available."""
-        logger.warning(f"⚠️ Returning fallback agent for {name}")
+        logger.warning(f"[WARN] Returning fallback agent for {name}")
 
         # Try multiple fallback strategies
         fallback_strategies = [

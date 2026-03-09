@@ -43,6 +43,8 @@ import psutil
 import requests
 import yaml
 
+os.makedirs("logs", exist_ok=True)
+
 logger = logging.getLogger(__name__)
 
 

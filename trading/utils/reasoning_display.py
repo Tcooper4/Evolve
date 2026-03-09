@@ -60,7 +60,7 @@ class ReasoningDisplay:
         logger.info(f"📅 Time: {decision.timestamp}")
         logger.info(f"🎯 Type: {decision.decision_type.value.replace('_', ' ').title()}")
         logger.info(f"📈 Symbol: {decision.context.symbol}")
-        logger.info(f"⏱️  Timeframe: {decision.context.timeframe}")
+        logger.info(f"[TIME]  Timeframe: {decision.context.timeframe}")
         logger.info(f"🎯 Action: {decision.action_taken}")
         logger.info(
             f"🎯 Confidence: {decision.confidence_level.value.replace('_', ' ').title()}"

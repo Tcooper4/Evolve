@@ -410,11 +410,11 @@ def test_query_processing():
             logger.info(f"Testing query: {query}")
             # Basic validation - just check if query is not empty
             if query and len(query.strip()) > 0:
-                logger.info("✅ Query validation passed")
+                logger.info("[OK] Query validation passed")
             else:
-                logger.warning("⚠️ Query validation failed")
+                logger.warning("[WARN] Query validation failed")
 
-        logger.info("✅ Query processing tests completed")
+        logger.info("[OK] Query processing tests completed")
         return True
     except Exception as e:
         logger.error(f"❌ Query processing test failed: {e}")

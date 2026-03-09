@@ -77,9 +77,9 @@ class SlackNotifier(BaseNotifier):
         self.enabled = bool(webhook_url)
 
         if self.enabled:
-            logger.info("✅ Slack notifications enabled")
+            logger.info("[OK] Slack notifications enabled")
         else:
-            logger.warning("⚠️ Slack webhook URL not provided")
+            logger.warning("[WARN] Slack webhook URL not provided")
 
 
 class TradeLogger:
@@ -97,7 +97,7 @@ class TradeLogger:
         except Exception as e:
             logging.error(f"Failed to create logs directory: {e}")
 
-        logger.info("✅ Trade logger initialized")
+        logger.info("[OK] Trade logger initialized")
 
     def add_notifier(self, notifier: BaseNotifier) -> Dict[str, Any]:
         """Add a notification system.
@@ -106,7 +106,7 @@ class TradeLogger:
             notifier: Notification system to add
         """
         self.notifiers.append(notifier)
-        logger.info(f"✅ Added notifier: {type(notifier).__name__}")
+        logger.info(f"[OK] Added notifier: {type(notifier).__name__}")
         return {
             "success": True,
             "result": {"status": "notifier_added", "type": type(notifier).__name__},
@@ -137,7 +137,7 @@ class TradeLogger:
         self._send_notifications(trade_data)
 
         logger.info(
-            f"✅ Trade logged: {trade_data.get('symbol', 'Unknown')} - {trade_data.get('action', 'Unknown')}"
+            f"[OK] Trade logged: {trade_data.get('symbol', 'Unknown')} - {trade_data.get('action', 'Unknown')}"
         )
         return {
             "success": True,

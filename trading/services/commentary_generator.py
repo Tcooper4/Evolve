@@ -6,9 +6,10 @@ Handles generation of GPT-powered and fallback commentary for trading analysis r
 
 import json
 import logging
+import os
 from typing import Any, Dict, Optional
 
-import openai
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +39,12 @@ class CommentaryGenerator:
                 llm = get_llm_config()
                 self.openai_api_key = llm.openai_api_key
             except Exception:
-                import os
                 self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        if self.openai_api_key:
-            openai.api_key = self.openai_api_key
+        try:
+            self._client = OpenAI(api_key=self.openai_api_key) if self.openai_api_key else None
+        except Exception as e:
+            logger.warning("OpenAI client init failed: %s", e)
+            self._client = None
 
     def truncate_response(self, response: str, max_tokens: Optional[int] = None) -> str:
         """
@@ -115,7 +118,7 @@ class CommentaryGenerator:
         Returns:
             Generated commentary
         """
-        if not openai.api_key:
+        if not self._client:
             return self._generate_fallback_commentary(query, parsed, result)
 
         try:
@@ -162,18 +165,22 @@ class CommentaryGenerator:
 
         Please provide a comprehensive commentary on these results, explaining the key findings and their implications for trading decisions.
         """
-
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.7,
-            max_tokens=500,
-        )
-
-        return response.choices[0].message.content
+        try:
+            if not self._client:
+                return self._generate_fallback_commentary(query, parsed, result)
+            response = self._client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.7,
+                max_tokens=500,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error("OpenAI commentary failed: %s", e)
+            return self._generate_fallback_commentary(query, parsed, result)
 
     def _generate_fallback_commentary(
         self, query: str, parsed: Dict[str, Any], result: Dict[str, Any]

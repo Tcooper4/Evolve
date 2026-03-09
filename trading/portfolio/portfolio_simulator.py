@@ -9,7 +9,13 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
-import cvxpy as cp
+try:
+    import cvxpy as cp
+    CVXPY_AVAILABLE = True
+except ImportError:
+    cp = None
+    CVXPY_AVAILABLE = False
+
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize

@@ -262,8 +262,22 @@ def run_agent_action(prompt: str) -> Dict[str, Any]:
         }
 
 
+def _agent_response_to_dict(agent_response: Any) -> Dict[str, Any]:
+    """Normalize AgentResponse or dict to dict so .get() can be used safely."""
+    if isinstance(agent_response, dict):
+        return agent_response
+    return {
+        "success": getattr(agent_response, "success", False),
+        "message": getattr(agent_response, "message", ""),
+        "data": getattr(agent_response, "data", None),
+        "recommendations": getattr(agent_response, "recommendations", None) or [],
+        "next_actions": getattr(agent_response, "next_actions", None) or [],
+    }
+
+
 def build_context_block(memory_context: str, agent_response: Dict[str, Any], intent: Optional[str] = None, store: Any = None) -> str:
     """Build the context string to send to Claude (optional trading context + memory + last agent output)."""
+    agent_response = _agent_response_to_dict(agent_response)
     blocks = []
     if store:
         try:

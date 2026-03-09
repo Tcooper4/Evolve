@@ -77,7 +77,7 @@ class NotificationSystem:
             )
 
             if response.status_code == 200:
-                logger.info(f"✅ Slack notification sent successfully to {channel}")
+                logger.info(f"[OK] Slack notification sent successfully to {channel}")
                 self.notification_status["last_notification"] = datetime.now()
                 return True
             else:
@@ -87,7 +87,7 @@ class NotificationSystem:
                 return False
 
         except Exception as e:
-            logger.error(f"❌ Error sending Slack notification: {str(e)}")
+            logger.error(f"[FAIL] Error sending Slack notification: {str(e)}")
             return False
 
     def send_email_notification(

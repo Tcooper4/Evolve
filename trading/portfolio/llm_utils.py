@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-import openai
+from openai import OpenAI
 from pydantic import BaseModel, Field
 
 # Setup logging
@@ -107,12 +107,18 @@ class LLMInterface:
             api_key = llm.openai_api_key
         except Exception:
             api_key = os.getenv("OPENAI_API_KEY")
-        openai.api_key = api_key
-        if not openai.api_key:
+        if not api_key:
             logger.warning("OpenAI API key not found. LLM features will be disabled.")
             self.enabled = False
+            self._client = None
         else:
             self.enabled = True
+            try:
+                self._client = OpenAI(api_key=api_key)
+            except Exception as e:
+                logger.error(f"OpenAI client init failed: {e}")
+                self._client = None
+                self.enabled = False
 
         # Create necessary directories
         try:
@@ -152,8 +158,11 @@ class LLMInterface:
                 market_data=market_data,
             )
 
-            # Call LLM
-            response = openai.ChatCompletion.create(
+            # Call LLM (OpenAI v1 client)
+            if not self._client:
+                logger.warning("OpenAI client not available, skipping trade rationale")
+                return None
+            response = self._client.chat.completions.create(
                 model=self.config.get("model", "gpt-4"),
                 messages=[
                     {
@@ -217,8 +226,11 @@ class LLMInterface:
                 portfolio_state=portfolio_state, trades=trades, market_data=market_data
             )
 
-            # Call LLM
-            response = openai.ChatCompletion.create(
+            # Call LLM (OpenAI v1 client)
+            if not self._client:
+                logger.warning("OpenAI client not available, skipping daily commentary")
+                return None
+            response = self._client.chat.completions.create(
                 model=self.config.get("model", "gpt-4"),
                 messages=[
                     {

@@ -16,6 +16,7 @@ from services.quant_gpt import QuantGPT
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
+os.makedirs("logs", exist_ok=True)
 
 # Configure logging
 logging.basicConfig(
@@ -142,7 +143,7 @@ def main():
 
                 else:
                     error = result.get("error", "Unknown error")
-                    logger.error(f"❌ Error: {error}")
+                    logger.error(f"[FAIL] Error: {error}")
 
                 logger.info("\n" + "=" * 50)
 
@@ -151,7 +152,7 @@ def main():
                 break
             except Exception as e:
                 logger.error(f"Error processing query: {e}")
-                logger.error(f"❌ Error: {e}")
+                logger.error(f"[FAIL] Error: {e}")
 
         logger.info("QuantGPT service shutting down...")
         quant_gpt.close()

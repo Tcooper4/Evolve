@@ -123,6 +123,16 @@ def calculate_advanced_metrics(
     }
 
 
+def compute_correlation_matrix(prices_df: pd.DataFrame, window: int = 60) -> pd.DataFrame:
+    """Rolling correlation matrix for portfolio of assets. Essential for diversification and risk attribution."""
+    if prices_df is None or prices_df.empty or len(prices_df.columns) < 2:
+        return pd.DataFrame()
+    returns = prices_df.pct_change().dropna()
+    if len(returns) < window:
+        return returns.corr()
+    return returns.tail(window).corr()
+
+
 def plot_risk_metrics(
     metrics: pd.DataFrame, title: str = "Risk Metrics Dashboard", height: int = 800
 ) -> go.Figure:
@@ -229,7 +239,7 @@ def plot_drawdown_heatmap(
                         returns[col] = pd.to_numeric(returns[col], errors="coerce")
                     except Exception as e:
                         logger.warning(
-                            f"⚠️ Could not convert column {col} to numeric: {e}"
+                            f"[WARN] Could not convert column {col} to numeric: {e}"
                         )
                         continue
 

@@ -168,7 +168,7 @@ class StrategyExecutor:
         if self.running_tasks:
             await asyncio.gather(*self.running_tasks.values(), return_exceptions=True)
 
-        logger.info("✅ StrategyExecutor stopped gracefully")
+        logger.info("[OK] StrategyExecutor stopped gracefully")
 
     async def submit_task(
         self,

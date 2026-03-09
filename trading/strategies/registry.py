@@ -55,7 +55,7 @@ class StrategyDiscovery:
             try:
                 self._discover_strategies_from_file(file_path)
             except Exception as e:
-                logger.error(f"❌ Failed to discover strategies from {file_path}: {e}")
+                logger.error(f"[FAIL] Failed to discover strategies from {file_path}: {e}")
                 self.discovery_log.append(
                     {
                         "file": str(file_path),
@@ -64,7 +64,7 @@ class StrategyDiscovery:
                         "timestamp": datetime.now().isoformat(),
                     }
                 )
-        logger.info(f"✅ Discovered {len(self.discovered_strategies)} strategy classes")
+        logger.info(f"[OK] Discovered {len(self.discovered_strategies)} strategy classes")
         return self.discovered_strategies.copy()
 
     def _discover_strategies_from_file(self, file_path: Path):
@@ -92,13 +92,13 @@ class StrategyDiscovery:
                     )
                 else:
                     logger.warning(
-                        f"⚠️  Strategy {class_name} already discovered, skipping duplicate"
+                        f"[WARN]  Strategy {class_name} already discovered, skipping duplicate"
                     )
         except ImportError as e:
-            logger.error(f"❌ Failed to import module {file_path}: {e}")
+            logger.error(f"[FAIL] Failed to import module {file_path}: {e}")
             raise
         except Exception as e:
-            logger.error(f"❌ Error discovering strategies from {file_path}: {e}")
+            logger.error(f"[FAIL] Error discovering strategies from {file_path}: {e}")
             raise
 
     def _find_strategy_classes(self, module) -> Dict[str, Type[BaseStrategy]]:

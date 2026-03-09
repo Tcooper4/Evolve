@@ -53,12 +53,12 @@ class StartupMonitor:
         self.startup_log.append(step_result)
 
         if success:
-            logger.info(f"✓ {component} initialized successfully in {duration:.3f}s")
+            logger.info(f"[OK] {component} initialized successfully in {duration:.3f}s")
             if details:
                 logger.debug(f"  {component} details: {details}")
         else:
             logger.error(
-                f"✗ {component} initialization failed in {duration:.3f}s: {error}"
+                f"[FAIL] {component} initialization failed in {duration:.3f}s: {error}"
             )
 
     def check_dependency(self, name: str, check_func, description: str = "") -> bool:
@@ -72,7 +72,7 @@ class StartupMonitor:
                 "duration": duration,
                 "description": description,
             }
-            logger.info(f"✓ Dependency {name} available ({duration:.3f}s)")
+            logger.info(f"[OK] Dependency {name} available ({duration:.3f}s)")
             return True
         except Exception as e:
             duration = time.time() - start_time
@@ -82,7 +82,7 @@ class StartupMonitor:
                 "description": description,
                 "error": str(e),
             }
-            logger.error(f"✗ Dependency {name} unavailable ({duration:.3f}s): {e}")
+            logger.error(f"[FAIL] Dependency {name} unavailable ({duration:.3f}s): {e}")
             return False
 
     def get_startup_summary(self) -> Dict[str, Any]:

@@ -2770,8 +2770,10 @@ with tab4:
     
     if auto_refresh:
         import time
-        time.sleep(5)
-        st.rerun()
+        last_rerun = st.session_state.get("admin_metrics_last_rerun", 0)
+        if time.time() - last_rerun >= 5:
+            st.session_state.admin_metrics_last_rerun = time.time()
+            st.rerun()
     
     # Resource Usage Section
     st.subheader("💻 Resource Usage")

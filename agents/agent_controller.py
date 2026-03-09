@@ -1058,17 +1058,17 @@ class AgentController:
                             ),
                         }
 
-                self.logger.info("✅ Agent registration successful")
+                self.logger.info("[OK] Agent registration successful")
 
             else:
-                self.logger.warning("⚠️ No agents found in registry")
+                self.logger.warning("[WARN] No agents found in registry")
                 self._create_fallback_agent()
 
         except ImportError as e:
-            self.logger.warning(f"⚠️ Agent registry not available: {e}")
+            self.logger.warning(f"[WARN] Agent registry not available: {e}")
             self._create_fallback_agent()
         except Exception as e:
-            self.logger.error(f"❌ Error during agent registration: {e}")
+            self.logger.error(f"[FAIL] Error during agent registration: {e}")
             self.agent_registration_status["failed_registrations"] += 1
             self._create_fallback_agent()
 
@@ -1106,7 +1106,7 @@ class AgentController:
             )
 
         except Exception as e:
-            self.logger.error(f"❌ Failed to create fallback agent: {e}")
+            self.logger.error(f"[FAIL] Failed to create fallback agent: {e}")
             self.agent_registration_status["failed_registrations"] += 1
 
     def get_agent_registration_status(self) -> Dict[str, Any]:

@@ -17,7 +17,7 @@ try:
 
     YFINANCE_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ yfinance not available. Disabling Yahoo Finance data provider.")
+    print("[WARN] yfinance not available. Disabling Yahoo Finance data provider.")
     print(f"   Missing: {e}")
     yf = None
     YFINANCE_AVAILABLE = False
@@ -33,7 +33,7 @@ try:
 
     TENACITY_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ tenacity not available. Disabling retry logic.")
+    print("[WARN] tenacity not available. Disabling retry logic.")
     print(f"   Missing: {e}")
     retry = None
     retry_if_exception_type = None
@@ -362,6 +362,32 @@ class YFinanceProvider(BaseDataProvider):
             kwargs["end_date"] = end_date
 
         return self.fetch(symbol, interval, **kwargs)
+
+    def get_live_price(self, symbol: str) -> Optional[float]:
+        """Return current/latest price for symbol. Used by chat and live displays."""
+        if not YFINANCE_AVAILABLE:
+            return None
+        try:
+            ticker = yf.Ticker(symbol)
+            # Prefer fast_info (single request); fallback to last close from history
+            if hasattr(ticker, "fast_info") and getattr(ticker.fast_info, "last_price", None) is not None:
+                return float(ticker.fast_info.last_price)
+            df = ticker.history(period="5d", interval="1d")
+            if df is None or df.empty:
+                return None
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            df.columns = [c.title() if isinstance(c, str) else c for c in df.columns]
+            close_col = "Close" if "Close" in df.columns else next((c for c in df.columns if "close" in c.lower()), None)
+            if close_col is None:
+                return None
+            last = df[close_col].dropna()
+            if last.empty:
+                return None
+            return float(last.iloc[-1])
+        except Exception as e:
+            self.logger.debug("get_live_price %s failed: %s", symbol, e)
+            return None
 
     def get_multiple_data(
         self,

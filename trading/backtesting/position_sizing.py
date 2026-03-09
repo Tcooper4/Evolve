@@ -19,7 +19,7 @@ try:
 
     SCIPY_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scipy not available. Disabling optimization-based position sizing.")
+    print("[WARN] scipy not available. Disabling optimization-based position sizing.")
     print(f"   Missing: {e}")
     minimize = None
     SCIPY_AVAILABLE = False

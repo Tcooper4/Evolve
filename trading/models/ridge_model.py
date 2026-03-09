@@ -33,7 +33,7 @@ try:
 
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling Ridge models.")
+    print("[WARN] scikit-learn not available. Disabling Ridge models.")
     print(f"   Missing: {e}")
     Ridge = None
     mean_absolute_error = None
@@ -209,7 +209,18 @@ class RidgeModel(BaseModel):
         if not feature_cols:
             raise ValidationError("No feature columns found")
         features = numeric_data[feature_cols].values
-        target = numeric_data[target_col].values
+        price_series = numeric_data[target_col].values
+        # Train on returns (next-period return) for continuity; inference keeps level for lag building
+        if is_training and target_col in ("Close", "close") and len(price_series) > 2:
+            returns = np.diff(price_series) / (price_series[:-1] + 1e-10)
+            target = returns  # predict next return
+            features = features[1:]  # align: row i predicts return from i to i+1
+            if len(features) != len(target):
+                min_len = min(len(features), len(target))
+                features = features[:min_len]
+                target = target[:min_len]
+        else:
+            target = price_series
         # Remove any NaN values
         valid_mask = ~(np.isnan(features).any(axis=1) | np.isnan(target))
         features = features[valid_mask]
@@ -506,43 +517,40 @@ class RidgeModel(BaseModel):
 
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """
-        Generate forecasts using the Ridge model.
-
-        Args:
-            data: Input data
-            horizon: Forecast horizon
-
-        Returns:
-            Forecast results dictionary
+        Generate forecasts using the Ridge model. Model predicts returns; build ratio path
+        so router denormalizes once (forecast in normalized space = ratio to last price).
         """
         data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
         logger.info(f"Generating Ridge forecast for {horizon} periods")
 
         try:
-            # For Ridge regression, we can only predict for available features
-            # This is a simplified approach - in practice, you might want to use
-            # a more sophisticated forecasting method
+            price_col = "Close" if "Close" in data.columns else "close"
+            current_ratio = float(data[price_col].iloc[-1]) if price_col in data.columns else 1.0
+            forecasts = []
+            current_data = data.copy()
 
-            # Get point predictions
-            predictions = self.predict(data, horizon)
+            for _ in range(horizon):
+                pred = self.predict(current_data, horizon=1)
+                r = float(pred[-1]) if len(pred) else 0.0
+                r = np.clip(r, -0.20, 0.20)
+                next_ratio = current_ratio * (1.0 + r)
+                forecasts.append(next_ratio)
+                # Append a new row for next step (simplified: reuse last row with updated price)
+                new_row = current_data.iloc[-1].copy()
+                if price_col in new_row.index:
+                    new_row[price_col] = next_ratio
+                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                if len(current_data) > len(data):
+                    current_data = current_data.iloc[1:]
+                current_ratio = next_ratio
 
-            # Generate confidence intervals (simplified)
-            # In practice, you might want to use bootstrap or other methods
-            std_error = np.std(predictions) * 0.1  # Simplified
-            confidence_intervals = np.column_stack(
-                [predictions - 1.96 * std_error, predictions + 1.96 * std_error]
-            )
-
-            forecast_results = {
-                "predictions": predictions,
-                "confidence_intervals": confidence_intervals,
+            forecast_array = np.array(forecasts, dtype="float64")
+            return {
+                "forecast": forecast_array,
                 "horizon": horizon,
                 "model_type": "Ridge",
                 "timestamp": datetime.now().isoformat(),
             }
-
-            logger.info("Ridge forecast completed")
-            return forecast_results
 
         except Exception as e:
             logger.error(f"Error during Ridge forecasting: {e}")

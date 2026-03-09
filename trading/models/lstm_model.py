@@ -344,12 +344,27 @@ class LSTMModel(nn.Module):
     def _create_sequences(self, data: torch.Tensor) -> torch.Tensor:
         """Create sequences for LSTM with error handling."""
         try:
-            sequence_length = getattr(self, "config", {}).get("sequence_length", 10)
+            config = getattr(self, "config", {})
+            sequence_length = config.get("sequence_length", 60)
             sequences = []
-            # Align with y_seq = y_tensor[sequence_length:]; we need exactly len(data) - sequence_length sequences
             for i in range(len(data) - sequence_length):
                 sequences.append(data[i : i + sequence_length])
+            if len(sequences) == 0:
+                reduced = max(5, len(data) // 4)
+                logger.warning(
+                    "Not enough data for sequence_length=%s, reducing to %s",
+                    sequence_length,
+                    reduced,
+                )
+                for i in range(len(data) - reduced):
+                    sequences.append(data[i : i + reduced])
+            if len(sequences) == 0:
+                raise ModelPredictionError(
+                    f"Insufficient data: need at least {sequence_length} rows, got {len(data)}"
+                )
             return torch.stack(sequences)
+        except ModelPredictionError:
+            raise
         except Exception as e:
             logger.error(f"Sequence creation failed: {e}")
             raise ModelPredictionError(f"Sequence creation failed: {str(e)}")
@@ -821,9 +836,23 @@ class LSTMForecaster(BaseModel):
         Returns:
             torch.Tensor: Sequences tensor
         """
+        sequence_length = self.config.get("sequence_length", 60)
         sequences = []
-        for i in range(len(data) - self.config["sequence_length"]):
-            sequences.append(data[i : i + self.config["sequence_length"]])
+        for i in range(len(data) - sequence_length):
+            sequences.append(data[i : i + sequence_length])
+        if len(sequences) == 0:
+            reduced = max(5, len(data) // 4)
+            logger.warning(
+                "Not enough data for sequence_length=%s, reducing to %s",
+                sequence_length,
+                reduced,
+            )
+            for i in range(len(data) - reduced):
+                sequences.append(data[i : i + reduced])
+        if len(sequences) == 0:
+            raise ModelPredictionError(
+                f"Insufficient data: need at least {sequence_length} rows, got {len(data)}"
+            )
         return torch.stack(sequences)
 
     def _get_input_hash(self, data: pd.DataFrame) -> str:
@@ -1235,8 +1264,16 @@ class LSTMForecaster(BaseModel):
                     predictions.append(batch_preds.cpu().numpy())
 
             # Concatenate all batch predictions
-            all_predictions = np.concatenate(predictions, axis=0)
-            return all_predictions.flatten()
+            all_predictions = np.concatenate(predictions, axis=0).flatten()
+            # Inverse transform to price space so evaluate() MAPE is correct
+            if hasattr(self, "y_scaler") and self.y_scaler is not None:
+                try:
+                    all_predictions = self.y_scaler.inverse_transform(
+                        all_predictions.reshape(-1, 1)
+                    ).flatten()
+                except Exception as e:
+                    logger.warning(f"LSTM predict inverse_transform failed: {e}")
+            return all_predictions
 
         except Exception as e:
             logger.error(f"LSTM prediction failed: {e}")
@@ -1718,7 +1755,7 @@ class LSTMForecaster(BaseModel):
             Dictionary with mean forecast, lower/upper bounds, and confidence
         """
         if not self.available:
-            print("⚠️ LSTMForecaster unavailable due to initialization failure")
+            print("[WARN] LSTMForecaster unavailable due to initialization failure")
             return {
                 'forecast': np.full(horizon, 1000.0),
                 'lower_bound': np.full(horizon, 900.0),

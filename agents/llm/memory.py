@@ -7,7 +7,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-import faiss
+try:
+    import faiss
+    FAISS_AVAILABLE = True
+except ImportError:
+    faiss = None
+    FAISS_AVAILABLE = False
+
 import numpy as np
 
 # Optional: sentence_transformers for embeddings (guarded for version conflicts)
@@ -91,16 +97,16 @@ class MemoryManager:
 
     def _rebuild_index(self) -> None:
         """Rebuild the FAISS index for memory search."""
-        if not self.memories:
+        if not FAISS_AVAILABLE or not self.memories:
             return
 
         # Get embeddings for all memories
         texts = [m.prompt for m in self.memories]
         embeddings = self.embedding_model.encode(texts)
 
-        # Create FAISS index
+        # Create FAISS index (faiss already checked above)
         dimension = embeddings.shape[1]
-        self.index = faiss.IndexFlatL2(dimension)
+        self.index = faiss.IndexFlatL2(dimension)  # type: ignore[union-attr]
         self.index.add(embeddings.astype("float32"))
 
         # Store embeddings in memory entries

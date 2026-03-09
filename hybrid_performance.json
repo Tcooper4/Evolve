@@ -211,6 +211,54 @@
       "max_drawdown": -1.0,
       "mse": Infinity,
       "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-07T20:14:35.671760",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-08T12:41:52.238686",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-08T12:55:22.592115",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-08T12:57:28.233950",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-08T13:01:05.023243",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-08T13:35:06.055377",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
     }
   ],
   "xgboost": [
@@ -376,6 +424,54 @@
     },
     {
       "timestamp": "2026-03-06T02:44:24.207921",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-07T20:14:35.860080",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-08T12:41:52.905844",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-08T12:55:23.158387",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-08T12:57:28.801207",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-08T13:01:05.290415",
+      "sharpe_ratio": -1.0,
+      "win_rate": 0.0,
+      "max_drawdown": -1.0,
+      "mse": Infinity,
+      "total_return": -10
+    },
+    {
+      "timestamp": "2026-03-08T13:35:06.319582",
       "sharpe_ratio": -1.0,
       "win_rate": 0.0,
       "max_drawdown": -1.0,

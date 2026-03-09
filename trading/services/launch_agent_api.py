@@ -61,7 +61,7 @@ class APILoggingMiddleware:
 
         # Log request start
         self.logger.info(
-            f"🚀 API Request Started | ID: {request_id} | {method} {endpoint}"
+            f"[START] API Request Started | ID: {request_id} | {method} {endpoint}"
         )
 
         try:
@@ -69,7 +69,7 @@ class APILoggingMiddleware:
             request_details = self._extract_request_details(args, kwargs)
             if request_details:
                 self.logger.debug(
-                    f"📋 Request Details | ID: {request_id} | {json.dumps(request_details, default=str)}"
+                    f"[REQ] Request Details | ID: {request_id} | {json.dumps(request_details, default=str)}"
                 )
 
             # Execute function
@@ -80,7 +80,7 @@ class APILoggingMiddleware:
 
             # Log successful completion
             self.logger.info(
-                f"✅ API Request Completed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s"
+                f"[OK] API Request Completed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s"
             )
 
             # Update statistics
@@ -94,7 +94,7 @@ class APILoggingMiddleware:
 
             # Log error
             self.logger.error(
-                f"❌ API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s | Error: {str(e)}"
+                f"[FAIL] API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s | Error: {str(e)}"
             )
 
             # Update statistics
@@ -111,7 +111,7 @@ class APILoggingMiddleware:
 
         # Log request start
         self.logger.info(
-            f"🚀 API Request Started | ID: {request_id} | {method} {endpoint}"
+            f"[START] API Request Started | ID: {request_id} | {method} {endpoint}"
         )
 
         try:
@@ -119,7 +119,7 @@ class APILoggingMiddleware:
             request_details = self._extract_request_details(args, kwargs)
             if request_details:
                 self.logger.debug(
-                    f"📋 Request Details | ID: {request_id} | {json.dumps(request_details, default=str)}"
+                    f"[REQ] Request Details | ID: {request_id} | {json.dumps(request_details, default=str)}"
                 )
 
             # Execute function
@@ -130,7 +130,7 @@ class APILoggingMiddleware:
 
             # Log successful completion
             self.logger.info(
-                f"✅ API Request Completed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s"
+                f"[OK] API Request Completed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s"
             )
 
             # Update statistics
@@ -144,7 +144,7 @@ class APILoggingMiddleware:
 
             # Log error
             self.logger.error(
-                f"❌ API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s | Error: {str(e)}"
+                f"[FAIL] API Request Failed | ID: {request_id} | {method} {endpoint} | Time: {execution_time:.3f}s | Error: {str(e)}"
             )
 
             # Update statistics
@@ -299,7 +299,7 @@ async def main():
         # Apply middleware to service endpoints
         service.apply_middleware(api_middleware)
 
-        logger.info("✅ Agent API Service initialized successfully")
+        logger.info("[OK] Agent API Service initialized successfully")
         logger.info("🌐 Available endpoints:")
         logger.info("  - REST API: http://localhost:8001")
         logger.info("  - API Docs: http://localhost:8001/docs")

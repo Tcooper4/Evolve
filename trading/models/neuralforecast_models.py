@@ -30,7 +30,7 @@ try:
         NHITS
     )
     NEURALFORECAST_AVAILABLE = True
-    logger.info("✅ NeuralForecast available")
+    logger.info("[OK] NeuralForecast available")
 except ImportError:
     logger.warning("Neural forecasting models disabled (pip install neuralforecast to enable)")
     NEURALFORECAST_AVAILABLE = False

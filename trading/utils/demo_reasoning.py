@@ -200,7 +200,7 @@ def demo_basic_logging():
     for decision_data in decisions:
         decision_id = reasoning_logger.log_decision(**decision_data)
         decision_ids.append(decision_id)
-        logger.info(f"✅ Logged decision: {decision_id}")
+        logger.info(f"[OK] Logged decision: {decision_id}")
 
     return {
         "success": True,
@@ -357,7 +357,7 @@ def main():
         demo_search_and_filter()
 
         logger.info("\n" + "=" * 50)
-        logger.info("✅ Demo completed!")
+        logger.info("[OK] Demo completed!")
         logger.info("\n📚 Next steps:")
         logger.info("1. Integrate with your trading agents")
         logger.info(

@@ -39,7 +39,7 @@ try:
 
     YFINANCE_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ yfinance not available. Disabling Yahoo Finance data loading.")
+    print("[WARN] yfinance not available. Disabling Yahoo Finance data loading.")
     print(f"   Missing: {e}")
     yf = None
     YFINANCE_AVAILABLE = False
@@ -465,7 +465,7 @@ class DataLoader:
             try:
                 self.utils_validator = UtilsDataValidator()
                 self.pipeline = DataPipeline()
-                logger.info("✅ Enhanced data validation and pipeline initialized")
+                logger.info("[OK] Enhanced data validation and pipeline initialized")
             except Exception as e:
                 logger.warning(f"Could not initialize enhanced validation/pipeline: {e}")
                 self.utils_validator = None
@@ -550,7 +550,7 @@ class DataLoader:
                     normalize=False  # Don't normalize raw price data
                 )
                 
-                logger.info(f"✅ Data validated and processed: {len(data)} rows")
+                logger.info(f"[OK] Data validated and processed: {len(data)} rows")
             else:
                 # Fallback to original validation
                 is_valid, error_msg = self.validator.validate_market_data(

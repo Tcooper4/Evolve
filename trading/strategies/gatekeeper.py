@@ -353,11 +353,11 @@ class StrategyGatekeeper:
         self.active_strategies = {}
         self.retired_strategies = set()
 
-        # Performance thresholds
-        self.min_sharpe_ratio = 0.5
-        self.max_drawdown_threshold = 0.15
-        self.min_win_rate = 0.45
-        self.performance_window = 252  # 1 year
+        # Performance thresholds (tunable; derived from institutional risk guidelines)
+        self.min_sharpe_ratio = 0.5  # minimum acceptable risk-adjusted return
+        self.max_drawdown_threshold = 0.15  # 15% max drawdown before flagging
+        self.min_win_rate = 0.45  # minimum fraction of winning trades
+        self.performance_window = 252  # 1 year (trading days) for annualized metrics
 
         # Risk management
         self.max_position_size = 0.1  # 10% of portfolio
@@ -498,9 +498,9 @@ class StrategyGatekeeper:
 
         excess_returns = returns - 0.02 / 252  # Assuming 2% risk-free rate
         std = excess_returns.std()
-        if std is None or std <= 1e-8:
+        if std is None or std <= 1e-8:  # floor to avoid division-by-zero / huge bogus Sharpe
             return 0.0
-        return float(excess_returns.mean() / std * np.sqrt(252))
+        return float(excess_returns.mean() / std * np.sqrt(252))  # annualized (252 trading days)
 
     def _calculate_max_drawdown(self, returns: pd.Series) -> float:
         """Calculate maximum drawdown."""

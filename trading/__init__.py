@@ -26,7 +26,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Models import failed: {e}")
+    logger.warning(f"[WARN] Models import failed: {e}")
     MODELS_AVAILABLE = False
     raise ImportError("Model modules failed to load. Check logs.")
 
@@ -49,7 +49,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Data import failed: {e}")
+    logger.warning(f"[WARN] Data import failed: {e}")
     DATA_AVAILABLE = False
 
 try:
@@ -60,7 +60,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Backtesting import failed: {e}")
+    logger.warning(f"[WARN] Backtesting import failed: {e}")
     BACKTESTING_AVAILABLE = False
 
 try:
@@ -71,7 +71,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Optimization import failed: {e}")
+    logger.warning(f"[WARN] Optimization import failed: {e}")
     OPTIMIZATION_AVAILABLE = False
 
 try:
@@ -82,7 +82,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Risk import failed: {e}")
+    logger.warning(f"[WARN] Risk import failed: {e}")
     RISK_AVAILABLE = False
 
 try:
@@ -93,7 +93,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Portfolio import failed: {e}")
+    logger.warning(f"[WARN] Portfolio import failed: {e}")
     PORTFOLIO_AVAILABLE = False
 
 try:
@@ -104,7 +104,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Agents import failed: {e}")
+    logger.warning(f"[WARN] Agents import failed: {e}")
     AGENTS_AVAILABLE = False
 
 try:
@@ -115,7 +115,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Utils import failed: {e}")
+    logger.warning(f"[WARN] Utils import failed: {e}")
     UTILS_AVAILABLE = False
 
 # Version info
@@ -146,7 +146,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Market import failed: {e}")
+    logger.warning(f"[WARN] Market import failed: {e}")
     MARKET_AVAILABLE = False
 
 try:
@@ -157,7 +157,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Preprocessing import failed: {e}")
+    logger.warning(f"[WARN] Preprocessing import failed: {e}")
     PREPROCESSING_AVAILABLE = False
 
 try:
@@ -168,7 +168,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Updater import failed: {e}")
+    logger.warning(f"[WARN] Updater import failed: {e}")
     UPDATER_AVAILABLE = False
 
 try:
@@ -179,7 +179,7 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ NLP import failed: {e}")
+    logger.warning(f"[WARN] NLP import failed: {e}")
     NLP_AVAILABLE = False
 
 # Fix broken imports with proper error handling
@@ -196,25 +196,25 @@ except ImportError as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Evaluation metrics import failed: {e}")
+    logger.warning(f"[WARN] Evaluation metrics import failed: {e}")
     EVALUATION_AVAILABLE = False
 
     # Create fallback classes
     class RegressionMetrics:
         def __init__(self):
-            logger.warning("⚠️ Using fallback RegressionMetrics")
+            logger.warning("[WARN] Using fallback RegressionMetrics")
 
     class ClassificationMetrics:
         def __init__(self):
-            logger.warning("⚠️ Using fallback ClassificationMetrics")
+            logger.warning("[WARN] Using fallback ClassificationMetrics")
 
     class TimeSeriesMetrics:
         def __init__(self):
-            logger.warning("⚠️ Using fallback TimeSeriesMetrics")
+            logger.warning("[WARN] Using fallback TimeSeriesMetrics")
 
     class ModelEvaluator:
         def __init__(self):
-            logger.warning("⚠️ Using fallback ModelEvaluator")
+            logger.warning("[WARN] Using fallback ModelEvaluator")
 
 
 # Automatic module discovery for all subcomponents
@@ -296,13 +296,13 @@ def auto_import_subcomponents():
                 module_path = f"trading.{subdir}.{module_name}"
                 module = importlib.import_module(module_path)
                 imported_modules[subdir][module_name] = module
-                logger.debug(f"✅ Successfully imported {module_path}")
+                logger.debug(f"[OK] Successfully imported {module_path}")
 
             except ImportError as e:
-                logger.debug(f"⚠️ Failed to import {module_path}: {e}")
+                logger.debug(f"[WARN] Failed to import {module_path}: {e}")
                 continue
             except Exception as e:
-                logger.debug(f"⚠️ Error importing {module_path}: {e}")
+                logger.debug(f"[WARN] Error importing {module_path}: {e}")
                 continue
 
     return imported_modules
@@ -330,13 +330,13 @@ def import_subcomponent(subdir: str, module_name: str):
     try:
         module_path = f"trading.{subdir}.{module_name}"
         module = importlib.import_module(module_path)
-        logger.debug(f"✅ Successfully imported {module_path}")
+        logger.debug(f"[OK] Successfully imported {module_path}")
         return module
     except ImportError as e:
-        logger.warning(f"⚠️ Failed to import {module_path}: {e}")
+        logger.warning(f"[WARN] Failed to import {module_path}: {e}")
         return None
     except Exception as e:
-        logger.warning(f"⚠️ Error importing {module_path}: {e}")
+        logger.warning(f"[WARN] Error importing {module_path}: {e}")
         return None
 
 
@@ -349,7 +349,7 @@ except Exception as e:
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.warning(f"⚠️ Auto-discovery failed: {e}")
+    logger.warning(f"[WARN] Auto-discovery failed: {e}")
     AVAILABLE_SUBCOMPONENTS = {}
     IMPORTED_MODULES = {}
     AUTO_DISCOVERY_AVAILABLE = False

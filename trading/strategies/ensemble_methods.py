@@ -26,7 +26,7 @@ try:
 
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("⚠️ scikit-learn not available. Disabling ensemble voting capabilities.")
+    print("[WARN] scikit-learn not available. Disabling ensemble voting capabilities.")
     print(f"   Missing: {e}")
     VotingRegressor = None
     mean_squared_error = None

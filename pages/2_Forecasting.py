@@ -110,13 +110,14 @@ st.title("📈 Forecasting & Market Analysis")
 st.markdown("Advanced forecasting with AI model selection and comprehensive market analysis")
 
 # Create tabbed interface
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🚀 Quick Forecast",
-    "⚙️ Advanced Forecasting", 
+    "⚙️ Advanced Forecasting",
     "🤖 AI Model Selection",
     "📊 Model Comparison",
     "📈 Market Analysis",
-    "🔗 Multi-Asset (GNN)"  # NEW TAB
+    "🔗 Multi-Asset (GNN)",
+    "🎲 Monte Carlo",
 ])
 
 # Quick Forecast: fast models only (ARIMA, XGBoost, Ridge). No walk-forward, no auto-select.
@@ -217,31 +218,31 @@ with tab1:
                             # Show data quality metrics
                             try:
                                 from src.utils.data_validation import DataValidator
-                                
-                                validator = DataValidator()
-                                quality_metrics = validator.get_quality_metrics(data)
-                                
-                                with st.expander("📊 Data Quality Metrics", expanded=False):
-                                    col1, col2, col3, col4 = st.columns(4)
-                                    
-                                    with col1:
-                                        st.metric("Completeness", f"{quality_metrics['completeness']:.1%}")
-                                    with col2:
-                                        st.metric("Missing Values", quality_metrics['missing_count'])
-                                    with col3:
-                                        st.metric("Outliers Detected", quality_metrics['outliers'])
-                                    with col4:
-                                        quality_score = quality_metrics['overall_quality']
-                                        st.metric("Quality Score", f"{quality_score:.0f}/100")
-                                    
-                                    # Show issues if any
-                                    if quality_metrics['issues']:
-                                        st.warning("⚠️ Data Quality Issues:")
-                                        for issue in quality_metrics['issues']:
-                                            st.write(f"• {issue}")
-                            except Exception as e:
-                                # Silently fail if validation not available
-                                pass
+                            except ImportError:
+                                DataValidator = None
+                            if DataValidator is not None:
+                                try:
+                                    validator = DataValidator()
+                                    quality_metrics = validator.get_quality_metrics(data)
+                                except Exception as qe:
+                                    logger.debug("Data quality metrics failed: %s", qe)
+                                    quality_metrics = None
+                                if quality_metrics is not None:
+                                    with st.expander("📊 Data Quality Metrics", expanded=False):
+                                        col1, col2, col3, col4 = st.columns(4)
+                                        with col1:
+                                            st.metric("Completeness", f"{quality_metrics['completeness']:.1%}")
+                                        with col2:
+                                            st.metric("Missing Values", quality_metrics['missing_count'])
+                                        with col3:
+                                            st.metric("Outliers Detected", quality_metrics['outliers'])
+                                        with col4:
+                                            quality_score = quality_metrics['overall_quality']
+                                            st.metric("Quality Score", f"{quality_score:.0f}/100")
+                                        if quality_metrics['issues']:
+                                            st.warning("⚠️ Data Quality Issues:")
+                                            for issue in quality_metrics['issues']:
+                                                st.write(f"• {issue}")
                         
             except Exception as e:
                 st.error(f"Error loading data: {str(e)}")
@@ -251,16 +252,13 @@ with tab1:
     if st.session_state.get("forecast_data") is not None:
         data = st.session_state.get("forecast_data")
         
-        # Show data quality metrics
+        # Show data quality metrics (optional: src.utils.data_validation)
         try:
             from src.utils.data_validation import DataValidator
-            
             validator = DataValidator()
             quality_metrics = validator.get_quality_metrics(data)
-            
             with st.expander("📊 Data Quality Metrics", expanded=False):
                 col1, col2, col3, col4 = st.columns(4)
-                
                 with col1:
                     st.metric("Completeness", f"{quality_metrics['completeness']:.1%}")
                 with col2:
@@ -270,15 +268,14 @@ with tab1:
                 with col4:
                     quality_score = quality_metrics['overall_quality']
                     st.metric("Quality Score", f"{quality_score:.0f}/100")
-                
-                # Show issues if any
                 if quality_metrics['issues']:
                     st.warning("⚠️ Data Quality Issues:")
                     for issue in quality_metrics['issues']:
                         st.write(f"• {issue}")
-        except Exception as e:
-            # Silently fail if validation not available
+        except ImportError:
             pass
+        except Exception as e:
+            logger.debug("Data quality metrics unavailable: %s", e)
         
         st.markdown("---")
         st.subheader("📊 Data Preview")
@@ -424,6 +421,11 @@ with tab1:
                                 used_router = True
                                 forecast_values = np.asarray(router_result["forecast"]).ravel()
                                 forecast_dates = pd.date_range(start=data.index[-1] + timedelta(days=1), periods=horizon, freq="D")[:len(forecast_values)]
+                                if hasattr(forecast_dates, "tz_localize"):
+                                    try:
+                                        forecast_dates = forecast_dates.tz_localize(None)
+                                    except Exception:
+                                        pass
                                 st.session_state.current_forecast = pd.DataFrame({"forecast": forecast_values}, index=forecast_dates)
                                 st.session_state.current_model = selected_model or router_result.get("model", "unknown")
                                 st.session_state.current_forecast_result = {
@@ -954,10 +956,14 @@ with tab1:
                     # Show validation MAPE, confidence label, last actual vs first forecast
                     if forecast_data.get('validation_mape') is not None or forecast_data.get('last_actual_price') is not None:
                         with st.expander("📐 Accuracy & continuity", expanded=True):
-                            if forecast_data.get('validation_mape') is not None:
-                                st.metric("Walk-forward validation MAPE", f"{forecast_data['validation_mape']:.2f}%")
+                            mape_val = forecast_data.get('validation_mape') or forecast_data.get('in_sample_mape')
+                            if mape_val is not None:
+                                st.metric("Validation / in-sample MAPE", f"{mape_val:.2f}%")
                             if forecast_data.get('confidence_label'):
                                 st.metric("Confidence (based on MAPE)", forecast_data['confidence_label'])
+                            if mape_val is not None:
+                                confidence_pct = max(0.0, min(100.0, 100.0 - float(mape_val)))
+                                st.metric("Confidence score", f"{confidence_pct:.0f}%")
                             last_act = forecast_data.get('last_actual_price')
                             fvals = forecast_data.get('forecast', [])
                             first_fc = fvals[0] if fvals else None
@@ -1001,9 +1007,16 @@ with tab1:
                     )
                     st.plotly_chart(fig, use_container_width=True)
                     
-                    # Forecast table
+                    # Forecast table (format dates as YYYY-MM-DD, no timezone)
                     st.markdown("**Forecast Values:**")
                     display_df = forecast_df.copy()
+                    try:
+                        idx = pd.to_datetime(display_df.index)
+                        if hasattr(idx, "tz") and idx.tz is not None:
+                            idx = idx.tz_localize(None)
+                        display_df.index = idx.strftime("%Y-%m-%d")
+                    except Exception:
+                        pass
                     display_df['forecast'] = display_df['forecast'].apply(
                         lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
                     )
@@ -3261,6 +3274,73 @@ with tab6:
                 st.error(f"Error generating GNN forecast: {e}")
                 import traceback
                 st.code(traceback.format_exc())
+
+with tab7:
+    st.header("🎲 Monte Carlo Price Simulation")
+    st.markdown("Geometric Brownian Motion fan chart: 5th–95th percentile price paths and probability above/below levels.")
+    mc_symbol = st.text_input("Ticker (Monte Carlo)", value=st.session_state.get("symbol", "AAPL"), key="mc_symbol").upper()
+    horizon_days = st.slider("Horizon (days)", 5, 90, 30, key="mc_horizon")
+    n_simulations = st.slider("Simulations", 100, 5000, 1000, key="mc_n_sim")
+    if st.button("Run Monte Carlo", type="primary", key="mc_run"):
+        try:
+            from trading.data.data_loader import DataLoader, DataLoadRequest
+            from trading.data.providers.yfinance_provider import YFinanceProvider
+            from trading.analysis.monte_carlo import (
+                simulate_price_paths,
+                fan_chart_percentiles,
+                probability_above_below,
+            )
+            req = DataLoadRequest(
+                ticker=mc_symbol,
+                start_date=(datetime.now().date() - timedelta(days=365)).strftime("%Y-%m-%d"),
+                end_date=datetime.now().date().strftime("%Y-%m-%d"),
+            )
+            loader = DataLoader(provider=YFinanceProvider())
+            response = loader.load_market_data(req)
+            df = response.data if response.success and response.data is not None else None
+            if df is None or df.empty or "close" not in [c.lower() for c in df.columns]:
+                st.error("No price data for " + mc_symbol)
+            else:
+                close_col = "close" if "close" in df.columns else "Close"
+                close = df[close_col].dropna()
+                last_price = float(close.iloc[-1])
+                returns = close.pct_change().dropna()
+                mu = float(returns.mean() * 252)
+                sigma = float(returns.std() * np.sqrt(252))
+                if sigma < 1e-8:
+                    sigma = 0.20
+                paths = simulate_price_paths(last_price, mu, sigma, horizon_days=horizon_days, n_simulations=n_simulations)
+                bands = fan_chart_percentiles(paths, (5, 25, 50, 75, 95))
+                st.session_state.mc_paths = paths
+                st.session_state.mc_bands = bands
+                st.session_state.mc_last_price = last_price
+                st.session_state.mc_dates = pd.date_range(start=df.index[-1], periods=horizon_days + 1, freq="D")[1:]
+                st.session_state.mc_hist_dates = close.index
+                st.session_state.mc_hist_prices = close.values
+                st.success(f"Ran {n_simulations} paths. Last price ${last_price:.2f}, μ={mu:.2%}, σ={sigma:.2%}.")
+        except Exception as e:
+            st.error(f"Monte Carlo failed: {e}")
+            import traceback
+            st.code(traceback.format_exc())
+    if st.session_state.get("mc_bands") is not None:
+        from trading.analysis.monte_carlo import probability_above_below
+        bands = st.session_state.mc_bands
+        mc_dates = st.session_state.get("mc_dates")
+        last_price = st.session_state.get("mc_last_price")
+        fig = go.Figure()
+        hist_dates = st.session_state.get("mc_hist_dates")
+        hist_prices = st.session_state.get("mc_hist_prices")
+        if hist_dates is not None and hist_prices is not None:
+            fig.add_trace(go.Scatter(x=hist_dates, y=hist_prices, name="Historical", line=dict(color="blue", width=2)))
+        fig.add_vline(x=pd.Timestamp.now(), line_dash="dash", line_color="gray", annotation_text="Today")
+        for p, label in [(5, "5th %"), (95, "95th %"), (25, "25th %"), (75, "75th %"), (50, "50th %")]:
+            fig.add_trace(go.Scatter(x=mc_dates, y=bands[p], name=label, line=dict(width=2 if p == 50 else 1)))
+        fig.update_layout(title="Monte Carlo fan chart (5th–95th percentiles)", xaxis_title="Date", yaxis_title="Price ($)", height=450)
+        fig.update_yaxes(tickprefix="$")
+        st.plotly_chart(fig, use_container_width=True)
+        prob_above, _ = probability_above_below(st.session_state.mc_paths, last_price, day_index=-1)
+        st.metric("P(price ≥ last)", f"{prob_above:.1%}")
+        st.metric("30-day 95% interval", f"${bands[5][-1]:.2f} – ${bands[95][-1]:.2f}")
 
 render_page_assistant("Forecasting")
 

@@ -67,6 +67,14 @@ XlsxWriter==3.2.3
 # Sentiment
 vaderSentiment==3.3.2
 
+# Optional: technical indicators (fallbacks exist if not installed)
+pandas_ta>=0.3.14b
+
+# Optional: optimization and tuning (portfolio_optimizer uses PyPortfolioOpt when cvxpy missing)
+optuna>=3.0.0
+PyPortfolioOpt>=1.5.0
+# pyfolio-reloaded  # uncomment for tear sheet analytics if needed
+
 # Web / API
 Flask==3.0.2
 Flask-Cors==4.0.0

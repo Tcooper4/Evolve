@@ -263,8 +263,14 @@ def get_portfolio_data() -> Tuple[Optional[pd.Series], Optional[Dict[str, float]
         if not positions:
             return None, None, True
 
-        # TODO: get actual returns from portfolio manager / FallbackDataProvider / strategy logs
-        # For now, no synthetic returns: return placeholder so UI shows empty state
+        # Fallback: use backtest returns from session so Risk page can show metrics after a backtest
+        backtest_results = st.session_state.get("backtest_results")
+        if backtest_results:
+            eq = backtest_results.get("equity_curve")
+            if eq is not None and not (getattr(eq, "empty", True)) and "equity" in getattr(eq, "columns", []):
+                returns_series = eq["equity"].pct_change().dropna()
+                if not returns_series.empty:
+                    return returns_series, positions, False
         return None, positions, True
 
     except Exception as e:
@@ -325,7 +331,6 @@ with tab1:
         with col_refresh:
             auto_refresh = st.checkbox("🔄 Auto-refresh (30s)", value=False)
             if auto_refresh:
-                time.sleep(0.1)  # Small delay for demo
                 st.rerun()
         
         with col_limits:
@@ -529,15 +534,8 @@ with tab1:
         with col_heatmap:
             st.subheader("🔥 Portfolio Risk Heat Map")
             if positions:
-                # Create correlation matrix (simplified - would use real correlations in production)
-                symbols = list(positions.keys())
-                n = len(symbols)
-                correlation_matrix = np.random.rand(n, n)
-                correlation_matrix = (correlation_matrix + correlation_matrix.T) / 2
-                np.fill_diagonal(correlation_matrix, 1.0)
-                
-                df_corr = pd.DataFrame(correlation_matrix, index=symbols, columns=symbols)
-                
+                df_corr = calculate_correlation_matrix(returns, positions, window=60)
+                symbols = list(df_corr.columns)
                 fig_heatmap = px.imshow(
                     df_corr,
                     labels=dict(x="Symbol", y="Symbol", color="Correlation"),
@@ -545,7 +543,9 @@ with tab1:
                     y=symbols,
                     color_continuous_scale="RdBu",
                     aspect="auto",
-                    title="Position Correlation Matrix"
+                    title="Position Correlation Matrix",
+                    zmin=-1,
+                    zmax=1
                 )
                 fig_heatmap.update_layout(height=400)
                 st.plotly_chart(fig_heatmap, use_container_width=True)
@@ -1258,7 +1258,6 @@ with tab3:
                     
                     progress_bar.progress(100)
                     status_text.text("✅ Simulation complete!")
-                    time.sleep(0.5)
                     progress_bar.empty()
                     status_text.empty()
                     
@@ -2005,24 +2004,40 @@ with tab4:
                 st.rerun()
 
 # Helper functions for Advanced Analytics
-def calculate_correlation_matrix(returns: pd.Series, positions: Dict[str, float]) -> pd.DataFrame:
-    """Calculate correlation matrix for portfolio positions."""
-    if not positions or len(positions) < 2:
-        # Return sample correlation matrix
-        symbols = list(positions.keys()) if positions else ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA']
-        n = len(symbols)
-        corr_matrix = np.random.rand(n, n)
-        corr_matrix = (corr_matrix + corr_matrix.T) / 2
-        np.fill_diagonal(corr_matrix, 1.0)
-        return pd.DataFrame(corr_matrix, index=symbols, columns=symbols)
-    
-    # In production, you'd fetch actual returns for each symbol
-    # For now, generate sample correlations
-    symbols = list(positions.keys())
+def calculate_correlation_matrix(returns: pd.Series, positions: Dict[str, float], window: int = 60) -> pd.DataFrame:
+    """Calculate correlation matrix for portfolio positions from real price data when available."""
+    symbols = list(positions.keys()) if positions else []
+    if len(symbols) < 2:
+        n = max(len(symbols), 1)
+        syms = symbols or ["AAPL"]
+        corr_matrix = np.eye(n)
+        return pd.DataFrame(corr_matrix, index=syms, columns=syms)
+    try:
+        from trading.data.data_loader import DataLoader, DataLoadRequest
+        from trading.data.providers.yfinance_provider import YFinanceProvider
+        from trading.risk.risk_metrics import compute_correlation_matrix as compute_corr
+        from datetime import datetime, timedelta
+        loader = DataLoader(provider=YFinanceProvider())
+        start = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+        end = datetime.now().strftime("%Y-%m-%d")
+        prices_list = []
+        for sym in symbols:
+            req = DataLoadRequest(ticker=sym, start_date=start, end_date=end)
+            resp = loader.load_market_data(req)
+            if resp.success and resp.data is not None and not resp.data.empty:
+                close_col = "close" if "close" in resp.data.columns else "Close"
+                if close_col in resp.data.columns:
+                    s = resp.data[close_col].rename(sym)
+                    prices_list.append(s)
+        if len(prices_list) >= 2:
+            prices_df = pd.concat(prices_list, axis=1).dropna(how="all")
+            if len(prices_df) >= window:
+                return compute_corr(prices_df, window=window)
+            return prices_df.pct_change().dropna().corr()
+    except Exception:
+        pass
     n = len(symbols)
-    corr_matrix = np.random.rand(n, n)
-    corr_matrix = (corr_matrix + corr_matrix.T) / 2
-    np.fill_diagonal(corr_matrix, 1.0)
+    corr_matrix = np.eye(n)
     return pd.DataFrame(corr_matrix, index=symbols, columns=symbols)
 
 def calculate_factor_decomposition(returns: pd.Series) -> Dict[str, float]:
