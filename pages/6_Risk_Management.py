@@ -2612,7 +2612,6 @@ with tab5:
                                     st.write(f"   - Contribution to risk: {driver.get('risk_contribution', 0):.2%}")
                                     if 'description' in driver:
                                         st.caption(f"   {driver['description']}")
-                                    st.write("")
                                 
                                 # Visualize risk decomposition
                                 if len(risk_drivers) >= 2:

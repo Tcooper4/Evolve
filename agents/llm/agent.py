@@ -648,6 +648,7 @@ class PromptAgent:
         "then", "some", "more", "most", "other", "only", "just", "also",
         "very", "your", "our", "all", "any", "each", "both", "such", "here",
         "there", "out", "not", "but", "yes", "no", "see", "saw", "get", "got",
+        "give", "me", "you",
     })
 
     # Company name (lowercase) -> ticker
@@ -1099,7 +1100,10 @@ class PromptAgent:
         for company, ticker in self._COMPANY_TO_TICKER.items():
             if re.search(r"\b" + re.escape(company) + r"\b", prompt_lower):
                 return ticker
-        candidates = re.findall(r"\b([A-Z]{1,5})\b", prompt.upper())
+
+        # Prefer longer ticker-like tokens first (e.g., AAPL over A)
+        raw_candidates = re.findall(r"\b([A-Z]{1,5})\b", prompt.upper())
+        candidates = sorted(set(raw_candidates), key=len, reverse=True)
         for c in candidates:
             if c and c.lower() not in self._TICKER_STOPWORDS:
                 return c
@@ -1181,9 +1185,35 @@ class PromptAgent:
                 data=data, horizon=horizon, model_type=model.lower()
             )
 
-            # Create response
+            # Create response with explicit price quotes
             message = f"Forecast for {symbol} using {model} model:\n"
             message += f"Horizon: {timeframe}\n"
+
+            fc = np.asarray(forecast_result.get("forecast", []), dtype="float64").ravel()
+            last_price = None
+            try:
+                if "close" in data.columns:
+                    last_price = float(data["close"].iloc[-1])
+                elif "Close" in data.columns:
+                    last_price = float(data["Close"].iloc[-1])
+            except Exception:
+                last_price = None
+
+            if last_price is not None:
+                message += f"Last close: ${last_price:.2f}\n"
+
+            if fc.size:
+                # Quote a few concrete forecast points
+                first = float(fc[0])
+                mid = float(fc[min(2, fc.size - 1)])
+                last = float(fc[-1])
+                message += (
+                    "Sample forecast prices: "
+                    f"Day 1 ${first:.2f}, "
+                    f"Day {min(3, fc.size)} ${mid:.2f}, "
+                    f"Day {fc.size} ${last:.2f}\n"
+                )
+
             message += f"Confidence: {forecast_result['confidence']:.2%}\n"
 
             if "warnings" in forecast_result:

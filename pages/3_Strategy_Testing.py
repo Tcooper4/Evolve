@@ -504,7 +504,7 @@ with tab1:
                         else:
                             win_rate = 0.0
                         
-                        # Store results
+                        # Store results in a standard schema
                         results = {
                             'total_return': total_return / 100,
                             'sharpe_ratio': sharpe,
@@ -515,6 +515,15 @@ with tab1:
                             }, index=data.index),
                             'trades': signals_df[signals_df[signal_col] != 0].to_dict('records') if signal_col in signals_df.columns else []
                         }
+
+                        # Normalize keys for downstream pages (Performance, Reports, Portfolio)
+                        try:
+                            from trading.backtesting.backtester import Backtester
+
+                            results = Backtester.normalize_results(results)
+                        except Exception:
+                            # If normalization fails, continue with raw results
+                            pass
 
                         # AGENT_MEMORY_LAYER: Persist backtest outcome (long-term) — quality gate: only when metrics present
                         try:

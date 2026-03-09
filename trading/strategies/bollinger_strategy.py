@@ -101,7 +101,13 @@ class BollingerStrategy(BaseStrategy):
             raise ValueError("Not enough data after NaN cleaning")
 
         # Fallback for constant price series
-        if df_lower["close"].std() == 0:
+        close_values = df_lower["close"]
+        # Handle both Series and DataFrame (e.g., multi-asset inputs)
+        if isinstance(close_values, pd.DataFrame):
+            std_val = float(close_values.std().mean())
+        else:
+            std_val = float(close_values.std())
+        if std_val == 0.0:
             logger.warning(
                 "Constant price series detected (stddev=0); skipping signal generation."
             )
@@ -116,7 +122,7 @@ class BollingerStrategy(BaseStrategy):
             return signals
 
         # Handle NaN values
-        if df_lower["close"].isna().any():
+        if df_lower["close"].isna().any().any():
             # Only forward fill - never use backward fill in backtesting!
             df_lower["close"] = df_lower["close"].ffill()
             
@@ -127,7 +133,7 @@ class BollingerStrategy(BaseStrategy):
                 first_valid_value = df_lower["close"].loc[first_valid_idx]
                 df_lower["close"] = df_lower["close"].fillna(first_valid_value)
 
-        if df_lower["volume"].isna().any():
+        if df_lower["volume"].isna().any().any():
             df_lower["volume"] = df_lower["volume"].fillna(0)
 
         # Update config with kwargs if provided

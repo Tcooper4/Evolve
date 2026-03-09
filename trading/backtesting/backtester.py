@@ -136,6 +136,53 @@ class Backtester:
         # Setup logging
         self._setup_logging()
 
+    @staticmethod
+    def normalize_results(raw: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ensure results dict has standard keys regardless of internal naming.
+
+        This provides a stable schema for UI components (Performance, Reports,
+        Portfolio) even if different backtest engines return slightly different
+        field names.
+        """
+        if raw is None:
+            raw = {}
+
+        normalized: Dict[str, Any] = {
+            "total_return": raw.get(
+                "total_return",
+                raw.get("return", raw.get("total_pnl_pct", 0.0)),
+            ),
+            "sharpe_ratio": raw.get(
+                "sharpe_ratio",
+                raw.get("sharpe", 0.0),
+            ),
+            "max_drawdown": raw.get(
+                "max_drawdown",
+                raw.get("max_dd", raw.get("drawdown", 0.0)),
+            ),
+            "win_rate": raw.get(
+                "win_rate",
+                raw.get("win_pct", 0.0),
+            ),
+            "trades": raw.get(
+                "trades",
+                raw.get("trade_history", raw.get("orders", [])),
+            ),
+            "equity_curve": raw.get(
+                "equity_curve",
+                raw.get("portfolio_values", raw.get("equity", [])),
+            ),
+            "benchmark_curve": raw.get(
+                "benchmark_curve",
+                raw.get("benchmark", []),
+            ),
+        }
+
+        # Preserve all original keys as well
+        normalized.update(raw)
+        return normalized
+
     def _setup_logging(self) -> None:
         """Setup logging configuration."""
         self.logger = logging.getLogger(self.__class__.__name__)

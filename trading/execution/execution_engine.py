@@ -221,16 +221,41 @@ class ExecutionEngine:
             return {"success": False, "message": str(e)}
 
     def _get_simulated_price(self, symbol: str) -> float:
-        """Get simulated price for symbol."""
-        # Simple price simulation - in real implementation, this would use market data
+        """Get simulated price for symbol.
+
+        Tries live market data via yfinance first, then falls back to a simple
+        random walk-style simulation if live data is unavailable.
+        """
+        # Prefer real market data where possible
+        try:
+            import yfinance as yf
+
+            ticker = yf.Ticker(symbol)
+            price = None
+
+            fast = getattr(ticker, "fast_info", None)
+            if fast is not None:
+                price = getattr(fast, "last_price", None)
+
+            if price is None:
+                hist = ticker.history(period="1d")
+                if hist is not None and not hist.empty:
+                    price = float(hist["Close"].iloc[-1])
+
+            if price is not None and price > 0:
+                return float(price)
+        except Exception:
+            # Fall back to purely simulated pricing below
+            pass
+
+        # Fallback: simple simulated price
         import random
 
         base_price = 100.0
         if symbol.endswith("USD"):
             base_price = 50000.0  # Crypto prices
 
-        # Add some randomness
-        variation = random.uniform(-0.02, 0.02)  # Â±2% variation
+        variation = random.uniform(-0.02, 0.02)  # +/-2% variation
         return base_price * (1 + variation)
 
     def get_failure_summary(self) -> dict:
