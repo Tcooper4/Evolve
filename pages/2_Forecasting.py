@@ -859,7 +859,8 @@ with tab1:
                                 except Exception as e:
                                     st.error(f"Error generating insights: {e}")
                                     import traceback
-                                    st.code(traceback.format_exc())
+                                    if st.checkbox("Show technical details", key="nl_insights_trace"):
+                                        st.code(traceback.format_exc())
                             
                             # AI Commentary Service
                             if 'commentary_service' in st.session_state:
@@ -1227,7 +1228,7 @@ with tab2:
                 if st.session_state.get("advanced_best_model_scores"):
                     with st.expander("📊 Model validation scores (walk-forward)", expanded=False):
                         scores = st.session_state["advanced_best_model_scores"].get("scores", [])
-                        if scores:
+                        if scores is not None and len(scores) > 0:
                             import pandas as pd
                             tab_df = pd.DataFrame(scores)
                             st.dataframe(tab_df, use_container_width=True)

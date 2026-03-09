@@ -93,7 +93,7 @@ def _normalize_anthropic_key(raw: Optional[str]) -> Optional[str]:
     if s == "" or s.lower() == "null":
         return None
     if s and not s.startswith("sk-ant-"):
-        logger.warning(
+        logger.debug(
             "ANTHROPIC_API_KEY may be malformed — expected format: sk-ant-..."
         )
     return s

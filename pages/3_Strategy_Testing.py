@@ -23,6 +23,38 @@ from datetime import datetime, timedelta
 
 from ui.page_assistant import render_page_assistant
 
+
+def _normalize_trades(trades: list) -> list:
+    """Normalize trade records so downstream pages can rely on standard keys."""
+    normalized: list = []
+    for t in trades:
+        if not isinstance(t, dict):
+            continue
+        n = dict(t)
+        # Normalize PnL
+        if "pnl" not in n:
+            n["pnl"] = n.get(
+                "profit",
+                n.get("profit_loss", n.get("return", n.get("net_pnl", 0))),
+            )
+        # Normalize profit percentage
+        if "profit_pct" not in n:
+            n["profit_pct"] = n.get(
+                "return_pct",
+                n.get("pnl_pct", n.get("return", 0)),
+            )
+        # Normalize price
+        if "price" not in n:
+            n["price"] = n.get(
+                "fill_price",
+                n.get("execution_price", n.get("avg_price", 0)),
+            )
+        # Normalize side / direction
+        if "side" not in n:
+            n["side"] = n.get("direction", n.get("action", n.get("type", "")))
+        normalized.append(n)
+    return normalized
+
 st.set_page_config(
     page_title="Strategy Development & Testing",
     page_icon="🔄",
@@ -295,22 +327,15 @@ with tab1:
                         st.info(strategy_info.get("description", "No description available"))
                     else:
                         # Fallback if strategy not in registry
-                        strategy_name = st.selectbox(
-                            "Select Strategy",
-                            list(STRATEGY_REGISTRY.keys()),
-                            key="fallback_strategy"
-                        )
-                        strategy_info = STRATEGY_REGISTRY[strategy_name]
-                        st.info(strategy_info["description"])
+                        st.warning("Selected strategy not found in registry; using default configuration.")
+                        strategy_info = STRATEGY_REGISTRY[list(STRATEGY_REGISTRY.keys())[0]]
+                        strategy_name = list(STRATEGY_REGISTRY.keys())[0]
+                        st.info(strategy_info.get("description", "No description available"))
                 else:
                     # Fallback if component returns None
-                    strategy_name = st.selectbox(
-                        "Select Strategy",
-                        list(STRATEGY_REGISTRY.keys()),
-                        key="fallback_strategy"
-                    )
+                    strategy_name = list(STRATEGY_REGISTRY.keys())[0]
                     strategy_info = STRATEGY_REGISTRY[strategy_name]
-                    st.info(strategy_info["description"])
+                    st.info(strategy_info.get("description", "No description available"))
             except ImportError:
                 # Fallback to original code
                 strategy_name = st.selectbox(
@@ -515,6 +540,9 @@ with tab1:
                             }, index=data.index),
                             'trades': signals_df[signals_df[signal_col] != 0].to_dict('records') if signal_col in signals_df.columns else []
                         }
+
+                        # Normalize trade records for downstream pages
+                        results['trades'] = _normalize_trades(results.get('trades', []))
 
                         # Normalize keys for downstream pages (Performance, Reports, Portfolio)
                         try:

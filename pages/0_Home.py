@@ -128,6 +128,8 @@ Paragraph 3: What to watch for the rest of the day.
 Be specific; cite the actual % moves. Do NOT mention Apple unless it is actually one of the top movers."""
 
         response = agent.process_prompt(prompt)
+        if isinstance(response, dict):
+            return response.get("message", str(response))
         return response.message if hasattr(response, "message") else str(response)
     except Exception:
         return _fallback_briefing(market_pulse, top_movers)
@@ -408,6 +410,9 @@ if cards:
     for i, card in enumerate(cards[:4]):
         headline = card.get("headline", "Update")
         detail = card.get("detail", "")
+        if isinstance(detail, str):
+            # Minor cleanup for cramped phrases like "downfrom"
+            detail = detail.replace("downfrom", "down from ")
         card_type = card.get("card_type", "news")
         with cols[i % len(cols)]:
             with st.container(border=True):

@@ -34,6 +34,47 @@
 
 - Git tag **`v1.0.0`** created and pushed (`git push origin main --tags`).
 
+---
+
+## Session 10 — Browser polish and Model Lab fixes (2026-03-09)
+
+### Backtest engine and Strategy Testing
+
+- `tests/model_smoke_test.py`: **PASS** after Model Lab and Forecasting fixes (all core models including ARIMA/XGBoost/LSTM/Prophet/CatBoost/Ridge/TCN/Ensemble/GARCH pass smoke tests).
+- Quick Backtest results in `3_Strategy_Testing.py` now normalize trade records into standard `pnl`, `profit_pct`, `price`, and `side` keys before writing to `st.session_state["backtest_results"]`.
+- `trading/ui/strategy_components.create_performance_chart` handles scalar/dict-like equity inputs by wrapping them in a single-row DataFrame, eliminating the "If using all scalar values, you must pass an index" error when backtest results contain scalar metrics.
+
+### Performance and Reports
+
+- Performance page Top Trades section now guards against missing `pnl` by:
+  - Renaming alternative columns (`profit`, `profit_loss`, `net_pnl`, `return`) to `pnl` when present.
+  - Falling back to a zero-valued `pnl` column when no equivalent is found.
+- Strategy Components continue to compute performance metrics and plots from `equity_curve`, `returns`, `drawdown`, and `benchmark` with safer handling of Series/DataFrame vs scalar inputs.
+
+### Model Lab (Model Laboratory) fixes
+
+- **DuplicateWidgetID**: All `st.selectbox` widgets in `8_Model_Lab.py` now have explicit, unique `key` values (e.g. `modellab_quick_model_type`, `modellab_hyperopt_model_type`, `modellab_registry_action_model`), and tabs set `st.session_state["model_lab_tab"]` to disambiguate target-column widgets.
+- **Constructor mismatches**:
+  - LSTM now uses `LSTMForecaster` via `from trading.models.lstm_model import LSTMForecaster as LSTMModel` and is always constructed with a `config` dict (sequence length, hidden size, layers, dropout, learning rate, and target column).
+  - XGBoost, Prophet, and ARIMA are instantiated with `config={...}` instead of unsupported top-level kwargs; configs include `target_column` and, for Prophet, a nested `prophet_params` dict.
+  - Hyperparameter optimization’s objective function builds model instances using these same `config` dicts, eliminating `__init__` kwarg errors.
+- **Preprocessing API**: Model Configuration tab no longer calls non-existent `DataPreprocessor.standardize` / `normalize`; it now creates a `DataPreprocessor({"scaling_method": "standard"|"minmax"})` and uses `fit_transform`, matching the actual preprocessor API.
+
+### Forecasting page and AI model selection
+
+- Walk-forward validation scores panel now checks `if scores is not None and len(scores) > 0` before building a DataFrame, avoiding "truth value of array is ambiguous" errors in AI Model Selection.
+- GNN forecaster’s `forecast` path already normalizes outputs by converting any dict-like prediction into a NumPy array before reuse; this path remains stable and compatible with the Multi-Asset GNN tab.
+
+### Home, Chat, and Admin UX
+
+- Home page morning briefing:
+  - `generate_morning_briefing` now robustly extracts the `message` field from either an `AgentResponse` or a plain `dict`, preventing raw dicts from being rendered.
+  - "What to know" card details perform a light text cleanup (e.g. converting `"downfrom"` to `"down from "`), fixing cramped phrases like `257.46,downfrom264.72`.
+- Chat symbol resolution:
+  - `_COMPANY_TO_TICKER` has been extended to cover common commodities, indices, and crypto (e.g. `"oil" → "CL=F"`, `"gold" → "GC=F"`, `"btc" → "BTC-USD"`, `"s&p 500" → "SPY"`), so questions like "price of oil today" now resolve to valid tickers without additional UI wiring.
+- Admin Anthropic key warning:
+  - `_normalize_anthropic_key` now logs malformed key hints at `DEBUG` level instead of `WARNING`, preventing repeated visible warnings while keeping diagnostics available to developers.
+
 # VALIDATION_REPORT.md — Session 6
 
 ## Summary

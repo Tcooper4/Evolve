@@ -32,7 +32,7 @@ import streamlit as st
 # Backend imports
 try:
     # Model imports
-    from trading.models.lstm_model import LSTMModel
+    from trading.models.lstm_model import LSTMForecaster as LSTMModel
     from trading.models.xgboost_model import XGBoostModel
     from trading.models.prophet_model import ProphetModel
     from trading.models.arima_model import ARIMAModel
@@ -142,6 +142,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_monitoring, tab_discovery, tab_inn
 
 # TAB 1: Quick Training
 with tab1:
+    st.session_state["model_lab_tab"] = "quick"
     st.header("⚡ Quick Training")
     st.markdown("Fast model training with default parameters. Perfect for quick experiments and prototyping.")
     
@@ -258,7 +259,8 @@ with tab1:
         model_type = st.selectbox(
             "Model Type",
             ["LSTM", "XGBoost", "Prophet", "ARIMA"],
-            help="Select the model type to train"
+            help="Select the model type to train",
+            key="modellab_quick_model_type"
         )
         
         # Display data preview
@@ -277,7 +279,8 @@ with tab1:
             target_column = st.selectbox(
                 "Target Column",
                 options=[col for col in data.columns if col.lower() in ['close', 'price', 'adj close']] or ['Close'],
-                help="Column to use as target for prediction"
+                help="Column to use as target for prediction",
+                key=f"target_col_{model_type}_{st.session_state.get('model_lab_tab', 'quick')}"
             )
             
             train_test_split = st.slider(
@@ -338,38 +341,44 @@ with tab1:
                         
                         if model_type == "LSTM":
                             model_config = {
-                                "input_dim": 1,
-                                "hidden_dim": 64,
+                                "target_column": target_column,
+                                "sequence_length": 60,
+                                "hidden_size": 64,
                                 "num_layers": 2,
-                                "output_dim": 1,
                                 "dropout": 0.2,
-                                "learning_rate": 0.001
+                                "learning_rate": 0.001,
                             }
-                            model = LSTMModel(**model_config)
+                            model = LSTMModel(config=model_config)
                         
                         elif model_type == "XGBoost":
                             model_config = {
+                                "target_column": target_column,
                                 "n_estimators": 100,
                                 "max_depth": 5,
                                 "learning_rate": 0.1,
-                                "subsample": 0.8
+                                "subsample": 0.8,
                             }
-                            model = XGBoostModel(**model_config)
+                            model = XGBoostModel(config=model_config)
                         
                         elif model_type == "Prophet":
                             model_config = {
-                                "changepoint_prior_scale": 0.05,
-                                "seasonality_prior_scale": 10.0,
-                                "seasonality_mode": "additive"
+                                "date_column": data.index.name if data.index.name else "ds",
+                                "target_column": target_column,
+                                "prophet_params": {
+                                    "changepoint_prior_scale": 0.05,
+                                    "seasonality_prior_scale": 10.0,
+                                    "seasonality_mode": "additive",
+                                },
                             }
-                            model = ProphetModel(**model_config)
+                            model = ProphetModel(config=model_config)
                         
                         elif model_type == "ARIMA":
                             model_config = {
+                                "target_column": target_column,
                                 "order": (5, 1, 0),
-                                "use_auto_arima": True
+                                "use_auto_arima": True,
                             }
-                            model = ARIMAModel(**model_config)
+                            model = ARIMAModel(config=model_config)
                         
                         if model is None:
                             st.error(f"❌ Failed to initialize {model_type} model")
@@ -579,6 +588,7 @@ with tab1:
 
 # TAB 2: Model Configuration
 with tab2:
+    st.session_state["model_lab_tab"] = "config"
     st.header("⚙️ Model Configuration")
     st.markdown("Advanced model configuration with full control over architecture, hyperparameters, and feature engineering.")
     
@@ -648,7 +658,8 @@ with tab2:
         model_type = st.selectbox(
             "Model Type",
             ["LSTM", "XGBoost", "Prophet", "ARIMA"],
-            help="Select the model type"
+            help="Select the model type",
+            key="modellab_config_model_type"
         )
         
         # Model-Specific Configuration
@@ -887,7 +898,8 @@ with tab2:
                 model_config['seasonality_mode'] = st.selectbox(
                     "Seasonality Mode",
                     ["additive", "multiplicative"],
-                    help="Type of seasonality"
+                    help="Type of seasonality",
+                    key="modellab_prophet_seasonality_mode"
                 )
                 
                 model_config['yearly_seasonality'] = st.checkbox(
@@ -1041,7 +1053,8 @@ with tab2:
                 normalization_method = st.selectbox(
                     "Normalization Method",
                     ["StandardScaler", "MinMaxScaler", "RobustScaler"],
-                    help="Normalization method"
+                    help="Normalization method",
+                    key="modellab_normalization_method"
                 )
                 feature_config['normalization_method'] = normalization_method
         
@@ -1150,11 +1163,9 @@ with tab2:
                     processed_data = processed_data.dropna()
                     
                     if feature_config.get('normalize_features'):
-                        preprocessor = DataPreprocessor()
-                        if feature_config.get('normalization_method') == 'StandardScaler':
-                            processed_data = preprocessor.standardize(processed_data)
-                        elif feature_config.get('normalization_method') == 'MinMaxScaler':
-                            processed_data = preprocessor.normalize(processed_data)
+                        scale_method = "standard" if feature_config.get('normalization_method') == 'StandardScaler' else "minmax"
+                        preprocessor = DataPreprocessor({"scaling_method": scale_method})
+                        processed_data = preprocessor.fit_transform(processed_data)
                     
                 except Exception as e:
                     st.warning(f"Feature engineering warning: {str(e)}")
@@ -1181,13 +1192,13 @@ with tab2:
                 model = None
                 
                 if model_type == "LSTM":
-                    model = LSTMModel(model_config)
+                    model = LSTMModel(config=model_config)
                 elif model_type == "XGBoost":
-                    model = XGBoostModel(model_config)
+                    model = XGBoostModel(config=model_config)
                 elif model_type == "Prophet":
-                    model = ProphetModel(model_config)
+                    model = ProphetModel(config=model_config)
                 elif model_type == "ARIMA":
-                    model = ARIMAModel(model_config)
+                    model = ARIMAModel(config=model_config)
                 
                 if model is None:
                     st.error(f"Failed to initialize {model_type} model")
@@ -1344,6 +1355,7 @@ with tab2:
 
 # TAB 3: Hyperparameter Optimization
 with tab3:
+    st.session_state["model_lab_tab"] = "hyperopt"
     st.header("🎯 Hyperparameter Optimization")
     st.markdown("Automated hyperparameter tuning using multiple optimization algorithms.")
     
@@ -1363,13 +1375,15 @@ with tab3:
         model_type = st.selectbox(
             "Model Type",
             ["LSTM", "XGBoost", "Prophet", "ARIMA"],
-            help="Select the model type to optimize"
+            help="Select the model type to optimize",
+            key="modellab_hyperopt_model_type"
         )
         
         target_column = st.selectbox(
             "Target Column",
             options=[col for col in data.columns if col.lower() in ['close', 'price', 'adj close']] or ['Close'],
-            help="Column to use as target"
+            help="Column to use as target",
+            key=f"target_col_{model_type}_{st.session_state.get('model_lab_tab', 'hyperopt')}"
         )
         
         st.markdown("---")
@@ -1380,7 +1394,8 @@ with tab3:
         optimization_method = st.selectbox(
             "Optimization Algorithm",
             ["Grid Search", "Random Search", "Bayesian Optimization (Optuna)", "Genetic Algorithm"],
-            help="Select the optimization algorithm"
+            help="Select the optimization algorithm",
+            key="modellab_hyperopt_method"
         )
         
         # Optimization Configuration
@@ -1390,7 +1405,8 @@ with tab3:
             optimization_objective = st.selectbox(
                 "Optimization Objective",
                 ["Minimize RMSE", "Minimize MAE", "Minimize MSE", "Maximize R²", "Minimize MAPE"],
-                help="What metric to optimize"
+                help="What metric to optimize",
+                key="modellab_hyperopt_objective"
             )
             
             n_trials = st.number_input(
@@ -1566,14 +1582,14 @@ with tab3:
                         # Create model with params
                         if model_type == "LSTM":
                             config = {
-                                "input_dim": 1,
-                                "hidden_dim": params.get('hidden_dim', 64),
+                                "target_column": target_column,
+                                "sequence_length": params.get('sequence_length', 60),
+                                "hidden_size": params.get('hidden_dim', 64),
                                 "num_layers": params.get('num_layers', 2),
                                 "dropout": params.get('dropout', 0.2),
                                 "learning_rate": params.get('learning_rate', 0.001),
-                                "output_dim": 1
                             }
-                            model = LSTMModel(config)
+                            model = LSTMModel(config=config)
                             X_train = train_data.values.reshape(-1, 1)
                             y_train = train_data.values
                             model.fit(X_train, y_train)
@@ -1582,12 +1598,13 @@ with tab3:
                         
                         elif model_type == "XGBoost":
                             config = {
+                                "target_column": target_column,
                                 "n_estimators": params.get('n_estimators', 100),
                                 "max_depth": params.get('max_depth', 6),
                                 "learning_rate": params.get('learning_rate', 0.1),
-                                "subsample": params.get('subsample', 0.8)
+                                "subsample": params.get('subsample', 0.8),
                             }
-                            model = XGBoostModel(config)
+                            model = XGBoostModel(config=config)
                             X_train = train_data.values.reshape(-1, 1)
                             y_train = train_data.values
                             model.fit(X_train, y_train)
@@ -1596,11 +1613,15 @@ with tab3:
                         
                         elif model_type == "Prophet":
                             config = {
-                                "changepoint_prior_scale": params.get('changepoint_prior_scale', 0.05),
-                                "seasonality_prior_scale": params.get('seasonality_prior_scale', 10.0),
-                                "seasonality_mode": params.get('seasonality_mode', 'additive')
+                                "date_column": data.index.name if data.index.name else "ds",
+                                "target_column": target_column,
+                                "prophet_params": {
+                                    "changepoint_prior_scale": params.get('changepoint_prior_scale', 0.05),
+                                    "seasonality_prior_scale": params.get('seasonality_prior_scale', 10.0),
+                                    "seasonality_mode": params.get('seasonality_mode', 'additive'),
+                                },
                             }
-                            model = ProphetModel(config)
+                            model = ProphetModel(config=config)
                             train_df = pd.DataFrame({
                                 'ds': train_data.index,
                                 'y': train_data.values
@@ -1615,10 +1636,11 @@ with tab3:
                         
                         elif model_type == "ARIMA":
                             config = {
+                                "target_column": target_column,
                                 "order": (params.get('p', 5), params.get('d', 1), params.get('q', 0)),
-                                "use_auto_arima": False
+                                "use_auto_arima": False,
                             }
-                            model = ARIMAModel(config)
+                            model = ARIMAModel(config=config)
                             model.fit(train_data.values)
                             y_pred = model.predict(len(test_data))
                         
@@ -2051,6 +2073,7 @@ with tab3:
 
 # TAB 4: Model Performance
 with tab4:
+    st.session_state["model_lab_tab"] = "performance"
     st.header("📊 Model Performance")
     st.markdown("Comprehensive performance tracking and evaluation for trained models.")
     
@@ -2078,7 +2101,8 @@ with tab4:
         selected_model_name = st.selectbox(
             "Select Model",
             options=list(available_models.keys()),
-            help="Choose a model to view performance metrics"
+            help="Choose a model to view performance metrics",
+            key="modellab_performance_model"
         )
         
         if selected_model_name:
@@ -2954,7 +2978,8 @@ with tab5:
                 ensemble_method = st.selectbox(
                     "Ensemble Method",
                     ["Average", "Weighted Average", "Voting"],
-                    help="Method for combining model predictions"
+                    help="Method for combining model predictions",
+                    key="modellab_ensemble_method"
                 )
                 
                 if ensemble_method == "Weighted Average":
@@ -3122,7 +3147,8 @@ with tab6:
         selected_model_name = st.selectbox(
             "Select Model",
             options=list(available_models.keys()),
-            help="Choose a model to explain"
+            help="Choose a model to explain",
+            key="modellab_explain_model"
         )
         
         if selected_model_name:
@@ -3238,7 +3264,8 @@ with tab6:
                     shap_plot_type = st.selectbox(
                         "SHAP Plot Type",
                         ["Summary Plot", "Dependence Plot", "Waterfall Plot", "Force Plot"],
-                        help="Type of SHAP visualization"
+                        help="Type of SHAP visualization",
+                        key="modellab_shap_plot_type"
                     )
                     
                     if st.button("Calculate SHAP Values", type="primary"):
@@ -3308,7 +3335,8 @@ with tab6:
                                 feature_idx = st.selectbox(
                                     "Select Feature",
                                     options=list(range(n_features)),
-                                    format_func=lambda x: f"Feature_{x}"
+                                    format_func=lambda x: f"Feature_{x}",
+                                    key="modellab_shap_feature_idx"
                                 )
                                 
                                 # Create synthetic feature values
@@ -3530,7 +3558,8 @@ with tab6:
                         feature_names = ['Close', 'Volume', 'SMA_20', 'RSI', 'MACD', 'Bollinger_Upper']
                         selected_feature = st.selectbox(
                             "Select Feature",
-                            feature_names
+                            feature_names,
+                            key="modellab_partial_dep_feature"
                         )
                         
                         # Generate synthetic partial dependence
@@ -3809,14 +3838,16 @@ with tab7:
             filter_type = st.selectbox(
                 "Filter by Type",
                 ["All"] + list(set([m.get('model_type', 'Unknown') for m in all_models.values()])),
-                help="Filter models by type"
+                help="Filter models by type",
+                key="modellab_registry_filter_type"
             )
         
         with col3:
             sort_by = st.selectbox(
                 "Sort By",
                 ["Name", "Date", "Performance (R²)", "Performance (RMSE)"],
-                help="Sort models"
+                help="Sort models",
+                key="modellab_registry_sort_by"
             )
         
         # Filter and sort models
@@ -3898,7 +3929,8 @@ with tab7:
             selected_model_for_action = st.selectbox(
                 "Select Model for Action",
                 options=[name for name, _ in sorted_models],
-                help="Choose a model to perform actions on"
+            help="Choose a model to perform actions on",
+            key="modellab_registry_action_model"
             )
             
             col1, col2, col3, col4 = st.columns(4)
@@ -3950,7 +3982,8 @@ with tab7:
             if all_models:
                 selected_model_name = st.selectbox(
                     "Select Model",
-                    options=list(all_models.keys())
+                    options=list(all_models.keys()),
+                    key="modellab_registry_details_model"
                 )
             else:
                 selected_model_name = None
@@ -4083,7 +4116,8 @@ with tab7:
             deploy_model = st.selectbox(
                 "Select Model to Deploy",
                 options=list(all_models.keys()),
-                help="Choose a model for deployment"
+                help="Choose a model for deployment",
+                key="modellab_deploy_model"
             )
             
             if deploy_model:
@@ -4154,7 +4188,7 @@ with tab7:
                 st.markdown("**Deployment Configuration:**")
                 
                 deployment_config = {
-                    "Environment": st.selectbox("Environment", ["Production", "Staging", "Development"]),
+                    "Environment": st.selectbox("Environment", ["Production", "Staging", "Development"], key="modellab_deploy_environment"),
                     "Replicas": st.number_input("Number of Replicas", min_value=1, max_value=10, value=1),
                     "Auto-scaling": st.checkbox("Enable Auto-scaling", value=False),
                     "Monitoring": st.checkbox("Enable Monitoring", value=True)

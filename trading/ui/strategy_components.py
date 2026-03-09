@@ -379,21 +379,35 @@ def render_backtest_results(backtest_results: Dict[str, Any]) -> None:
         # Create performance DataFrame
         if equity_curve is not None:
             if isinstance(equity_curve, (list, np.ndarray)):
-                dates = backtest_results.get('dates', pd.date_range(end=datetime.now(), periods=len(equity_curve), freq='D'))
-                perf_df = pd.DataFrame({
-                    'equity': equity_curve,
-                    'returns': returns if returns is not None else np.diff(equity_curve) / equity_curve[:-1],
-                    'drawdown': drawdown if drawdown is not None else None,
-                    'benchmark': benchmark if benchmark is not None else None
-                }, index=dates[:len(equity_curve)])
+                dates = backtest_results.get(
+                    'dates',
+                    pd.date_range(end=datetime.now(), periods=len(equity_curve), freq='D')
+                )
+                perf_df = pd.DataFrame(
+                    {
+                        'equity': equity_curve,
+                        'returns': returns if returns is not None else np.diff(equity_curve) / equity_curve[:-1],
+                        'drawdown': drawdown if drawdown is not None else None,
+                        'benchmark': benchmark if benchmark is not None else None,
+                    },
+                    index=dates[:len(equity_curve)],
+                )
             else:
-                perf_df = pd.DataFrame({'equity': equity_curve})
-                if returns is not None:
-                    perf_df['returns'] = returns
-                if drawdown is not None:
-                    perf_df['drawdown'] = drawdown
-                if benchmark is not None:
-                    perf_df['benchmark'] = benchmark
+                # Handle Series/DataFrame vs scalar equity inputs
+                if isinstance(equity_curve, pd.DataFrame):
+                    perf_df = equity_curve.copy()
+                elif isinstance(equity_curve, pd.Series):
+                    perf_df = pd.DataFrame({'equity': equity_curve})
+                else:
+                    # Scalar or dict-like: wrap in single-row DataFrame
+                    row: Dict[str, Any] = {'equity': equity_curve}
+                    if returns is not None:
+                        row['returns'] = returns
+                    if drawdown is not None:
+                        row['drawdown'] = drawdown
+                    if benchmark is not None:
+                        row['benchmark'] = benchmark
+                    perf_df = pd.DataFrame([row])
         else:
             st.warning("No equity curve data available")
             return

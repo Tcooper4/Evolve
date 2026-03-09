@@ -557,6 +557,15 @@ try:
             trade_history = get_trade_history()
         
             if not trade_history.empty:
+                # Ensure we have a 'pnl' column for ranking
+                if "pnl" not in trade_history.columns:
+                    for col in ["profit", "profit_loss", "net_pnl", "return"]:
+                        if col in trade_history.columns:
+                            trade_history = trade_history.rename(columns={col: "pnl"})
+                            break
+                    else:
+                        trade_history["pnl"] = 0.0
+                
                 # Get top 10 trades
                 top_trades = trade_history.nlargest(10, 'pnl')
             

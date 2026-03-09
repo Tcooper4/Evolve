@@ -651,12 +651,46 @@ class PromptAgent:
         "give", "me", "you",
     })
 
-    # Company name (lowercase) -> ticker
+    # Company / index / commodity name (lowercase) -> ticker
     _COMPANY_TO_TICKER = {
-        "apple": "AAPL", "tesla": "TSLA", "nvidia": "NVDA", "microsoft": "MSFT",
-        "google": "GOOGL", "amazon": "AMZN", "meta": "META", "netflix": "NFLX",
-        "alphabet": "GOOGL", "amd": "AMD", "intel": "INTC", "ibm": "IBM",
-        "salesforce": "CRM", "oracle": "ORCL", "adobe": "ADBE", "cisco": "CSCO",
+        "apple": "AAPL",
+        "tesla": "TSLA",
+        "nvidia": "NVDA",
+        "microsoft": "MSFT",
+        "google": "GOOGL",
+        "amazon": "AMZN",
+        "meta": "META",
+        "netflix": "NFLX",
+        "alphabet": "GOOGL",
+        "amd": "AMD",
+        "intel": "INTC",
+        "ibm": "IBM",
+        "salesforce": "CRM",
+        "oracle": "ORCL",
+        "adobe": "ADBE",
+        "cisco": "CSCO",
+        # Common commodities and indices
+        "oil": "CL=F",
+        "crude": "CL=F",
+        "crude oil": "CL=F",
+        "wti": "CL=F",
+        "gold": "GC=F",
+        "silver": "SI=F",
+        "copper": "HG=F",
+        "natural gas": "NG=F",
+        "gas": "NG=F",
+        "wheat": "ZW=F",
+        "corn": "ZC=F",
+        "bitcoin": "BTC-USD",
+        "btc": "BTC-USD",
+        "ethereum": "ETH-USD",
+        "eth": "ETH-USD",
+        "s&p": "SPY",
+        "s&p 500": "SPY",
+        "sp500": "SPY",
+        "nasdaq": "QQQ",
+        "dow": "DIA",
+        "russell": "IWM",
     }
 
     def _extract_symbols_from_prompt(self, prompt: str) -> List[str]:
