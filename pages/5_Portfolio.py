@@ -65,13 +65,6 @@ def _empty_state(message: str, icon: str = "📊"):
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-# Page config
-st.set_page_config(
-    page_title="Portfolio & Positions",
-    page_icon="📊",
-    layout="wide"
-)
-
 # Initialize session state
 if "portfolio_manager" not in st.session_state:
     st.session_state.portfolio_manager = PortfolioManager()
@@ -1345,14 +1338,33 @@ with tab2:
                             max_value=90,
                             value=50,
                             step=10,
-                            key=f"partial_{position_key}"
+                            key=f"partial_pct_{position_key}"
                         )
                         partial_size = position.size * (partial_close_pct / 100)
-                        
-                        if st.button(f"📉 Close {partial_close_pct}%", key=f"partial_{position_key}", use_container_width=True):
-                            st.info(f"Partial close functionality: Would close {partial_size:.2f} shares at ${current_price:.2f}")
-                            # Note: Partial close would require modifying the position size
-                            # This is a placeholder for the actual implementation
+
+                        if st.button(f"📉 Close {partial_close_pct}%", key=f"partial_btn_{position_key}", use_container_width=True):
+                            _close_qty = position.size * (partial_close_pct / 100)
+                            try:
+                                portfolio.partial_close_position(position, current_price, _close_qty)
+                                st.success(f"Closed {partial_close_pct}% of {position.symbol}")
+                                st.rerun()
+                            except AttributeError:
+                                try:
+                                    _remaining = position.size - _close_qty
+                                    if _remaining <= 0:
+                                        portfolio.close_position(position, current_price)
+                                        st.success(f"Closed 100% of {position.symbol}")
+                                    else:
+                                        position.size = _remaining
+                                        portfolio.state.cash += _close_qty * current_price
+                                        portfolio.state.available_capital += _close_qty * current_price
+                                        portfolio.save()
+                                        st.success(f"Closed {partial_close_pct}% ({_close_qty:.0f} units) of {position.symbol}")
+                                    st.rerun()
+                                except Exception as _e:
+                                    st.error(f"Partial close failed: {_e}")
+                            except Exception as _e:
+                                st.error(f"Partial close failed: {_e}")
                     
                     with col_action3:
                         # Update stop loss / take profit
@@ -1372,8 +1384,16 @@ with tab2:
                             key=f"tp_{position_key}"
                         )
                         if st.button("💾 Update", key=f"update_risk_{position_key}", use_container_width=True):
-                            # Update would modify position object
-                            st.info("Risk level update functionality would be implemented here")
+                            try:
+                                if hasattr(position, "stop_loss"):
+                                    position.stop_loss = new_stop_loss
+                                if hasattr(position, "take_profit"):
+                                    position.take_profit = new_take_profit
+                                portfolio.save()
+                                st.success(f"Risk levels updated for {position.symbol}")
+                                st.rerun()
+                            except Exception as _e:
+                                st.error(f"Update failed: {_e}")
                 
                 st.markdown("---")
 

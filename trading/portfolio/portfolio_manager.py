@@ -79,6 +79,14 @@ class Position:
         pos_dict = asdict(self)
         if self.rationale:
             pos_dict["rationale"] = self.rationale.to_dict()
+        entry_date = self.entry_time.isoformat() if hasattr(self, "entry_time") and self.entry_time else None
+        exit_date = self.exit_time.isoformat() if hasattr(self, "exit_time") and self.exit_time else None
+        duration_days = None
+        if hasattr(self, "exit_time") and self.exit_time and hasattr(self, "entry_time") and self.entry_time:
+            duration_days = (self.exit_time - self.entry_time).days
+        pos_dict["entry_date"] = entry_date
+        pos_dict["exit_date"] = exit_date
+        pos_dict["duration_days"] = duration_days
         return pos_dict
 
     @classmethod

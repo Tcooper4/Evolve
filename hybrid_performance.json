@@ -45,134 +45,6 @@
   ],
   "arima": [
     {
-      "timestamp": "2026-03-02T04:13:57.251062",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T04:15:41.934623",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T04:17:20.946772",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T04:18:55.026412",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T04:20:38.801414",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T13:43:49.418349",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T13:55:54.070777",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-05T23:58:28.006006",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T00:04:01.872187",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T00:09:00.468325",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T00:10:45.316718",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T00:11:47.000819",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T00:13:56.162230",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T02:44:23.406100",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-07T20:14:35.671760",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-08T12:41:52.238686",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
       "timestamp": "2026-03-08T12:55:22.592115",
       "sharpe_ratio": -1.0,
       "win_rate": 0.0,
@@ -443,137 +315,137 @@
       "max_drawdown": -0.08344495342978174,
       "mse": 11.409747890694375,
       "total_return": -0.06547598034926194
+    },
+    {
+      "timestamp": "2026-03-10T02:37:14.619527",
+      "sharpe_ratio": 3.3305422683770294,
+      "win_rate": 0.5,
+      "max_drawdown": -0.04495936503159758,
+      "mse": 19.3701508995436,
+      "total_return": 0.03232877205417228
+    },
+    {
+      "timestamp": "2026-03-10T10:38:57.242746",
+      "sharpe_ratio": -8.908610120241041,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.07294866999680957,
+      "mse": 398.40280024583956,
+      "total_return": -0.08914890773128314
+    },
+    {
+      "timestamp": "2026-03-10T10:57:27.780868",
+      "sharpe_ratio": -18.37099469696248,
+      "win_rate": 0.16666666666666666,
+      "max_drawdown": -0.040160849014354544,
+      "mse": 1.0921043926340408,
+      "total_return": -0.052533709516611626
+    },
+    {
+      "timestamp": "2026-03-10T11:56:16.977821",
+      "sharpe_ratio": -10.878620802376757,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.026485091197183484,
+      "mse": 5.6975666647693055,
+      "total_return": -0.04714197386655705
+    },
+    {
+      "timestamp": "2026-03-10T12:07:50.557828",
+      "sharpe_ratio": -6.892109242220073,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.05173810619544226,
+      "mse": 7.566378836914702,
+      "total_return": -0.04902296084528601
+    },
+    {
+      "timestamp": "2026-03-10T17:45:50.820421",
+      "sharpe_ratio": 6.385035013677354,
+      "win_rate": 0.5,
+      "max_drawdown": -0.020307852221912955,
+      "mse": 6.584236050682688,
+      "total_return": 0.04967061461160971
+    },
+    {
+      "timestamp": "2026-03-10T17:47:15.747790",
+      "sharpe_ratio": 0.22818206388796394,
+      "win_rate": 0.5,
+      "max_drawdown": -0.022109676829666417,
+      "mse": 22.505765946897725,
+      "total_return": 0.0007427900995737868
+    },
+    {
+      "timestamp": "2026-03-10T17:53:23.422622",
+      "sharpe_ratio": 2.418275962249398,
+      "win_rate": 0.5,
+      "max_drawdown": -0.022371658597839326,
+      "mse": 258.21598761002275,
+      "total_return": 0.028728251335749633
+    },
+    {
+      "timestamp": "2026-03-10T18:02:42.704277",
+      "sharpe_ratio": -7.157762882447797,
+      "win_rate": 0.16666666666666666,
+      "max_drawdown": -0.025542451712619714,
+      "mse": 14.501206727651917,
+      "total_return": -0.034277098660347116
+    },
+    {
+      "timestamp": "2026-03-10T18:15:07.997447",
+      "sharpe_ratio": -3.568913884418203,
+      "win_rate": 0.5,
+      "max_drawdown": -0.03430033883182557,
+      "mse": 13.569799080705133,
+      "total_return": -0.026774781139777715
+    },
+    {
+      "timestamp": "2026-03-10T18:15:25.528398",
+      "sharpe_ratio": -2.5067350893220195,
+      "win_rate": 0.5,
+      "max_drawdown": -0.05886143353133442,
+      "mse": 14.379453628169626,
+      "total_return": -0.020151665356287096
+    },
+    {
+      "timestamp": "2026-03-10T18:29:39.193229",
+      "sharpe_ratio": 1.116656323929317,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.021169705968574586,
+      "mse": 8.082030772060142,
+      "total_return": 0.009619256476569138
+    },
+    {
+      "timestamp": "2026-03-10T18:29:46.577768",
+      "sharpe_ratio": 11.421448713180421,
+      "win_rate": 0.8333333333333334,
+      "max_drawdown": -0.018101340069206735,
+      "mse": 227.02350828336154,
+      "total_return": 0.09252791621412793
+    },
+    {
+      "timestamp": "2026-03-10T18:46:26.202764",
+      "sharpe_ratio": 5.186422958757788,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.008727720320347548,
+      "mse": 50.64479242915051,
+      "total_return": 0.03273004814062919
+    },
+    {
+      "timestamp": "2026-03-10T18:48:07.368894",
+      "sharpe_ratio": -4.7130604314716145,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.053041151621364475,
+      "mse": 5.306694283628288,
+      "total_return": -0.03483980160431399
+    },
+    {
+      "timestamp": "2026-03-10T19:01:57.948423",
+      "sharpe_ratio": -11.642064255156628,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.058102655588338326,
+      "mse": 53.82484486761816,
+      "total_return": -0.06823220928819373
     }
   ],
   "xgboost": [
-    {
-      "timestamp": "2026-03-02T04:13:58.979094",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T04:15:43.603355",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T04:17:22.644417",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T04:18:56.854302",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T04:20:40.669999",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T13:43:52.063217",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-02T13:55:56.868865",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-05T23:58:30.958294",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T00:04:02.034801",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T00:09:00.689179",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T00:10:45.598358",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T00:11:47.657388",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T00:13:56.394324",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-06T02:44:24.207921",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-07T20:14:35.860080",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-08T12:41:52.905844",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
     {
       "timestamp": "2026-03-08T12:55:23.158387",
       "sharpe_ratio": -1.0,
@@ -845,6 +717,134 @@
       "max_drawdown": -0.041384378243507366,
       "mse": 13.987217249595172,
       "total_return": -0.017684164449865647
+    },
+    {
+      "timestamp": "2026-03-10T02:37:15.111745",
+      "sharpe_ratio": 5.793936137849482,
+      "win_rate": 0.6666666666666666,
+      "max_drawdown": -0.018154267982205898,
+      "mse": 21.208108825499416,
+      "total_return": 0.05544434660310604
+    },
+    {
+      "timestamp": "2026-03-10T10:38:58.959071",
+      "sharpe_ratio": -9.662789014863852,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.10960386446263216,
+      "mse": 416.33166896570407,
+      "total_return": -0.09404417687390698
+    },
+    {
+      "timestamp": "2026-03-10T10:57:28.390019",
+      "sharpe_ratio": -1.0163047009798472,
+      "win_rate": 0.6666666666666666,
+      "max_drawdown": -0.019578223217005444,
+      "mse": 1.1405689252300368,
+      "total_return": -0.0051508064271357235
+    },
+    {
+      "timestamp": "2026-03-10T11:56:18.205185",
+      "sharpe_ratio": 2.5809844647783002,
+      "win_rate": 0.5,
+      "max_drawdown": -0.026854739167349508,
+      "mse": 4.3372648760503,
+      "total_return": 0.013515916197026412
+    },
+    {
+      "timestamp": "2026-03-10T12:07:52.163147",
+      "sharpe_ratio": 6.892109242220073,
+      "win_rate": 0.6666666666666666,
+      "max_drawdown": -0.010010230387933222,
+      "mse": 8.213391701524426,
+      "total_return": 0.04925605258908816
+    },
+    {
+      "timestamp": "2026-03-10T17:45:52.568806",
+      "sharpe_ratio": -4.177006263062627,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.041933938713665485,
+      "mse": 4.686647747341055,
+      "total_return": -0.03482000727369017
+    },
+    {
+      "timestamp": "2026-03-10T17:47:17.273186",
+      "sharpe_ratio": 13.493425973822713,
+      "win_rate": 0.6666666666666666,
+      "max_drawdown": -0.004653817476854902,
+      "mse": 11.19606665196453,
+      "total_return": 0.06250545164707111
+    },
+    {
+      "timestamp": "2026-03-10T17:53:23.906423",
+      "sharpe_ratio": -6.407884827638386,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.10759237330900794,
+      "mse": 287.93706237730987,
+      "total_return": -0.0767439003639
+    },
+    {
+      "timestamp": "2026-03-10T18:02:43.304761",
+      "sharpe_ratio": -6.370124400318798,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.025542451712619676,
+      "mse": 4.89798112664891,
+      "total_return": -0.031241317816331438
+    },
+    {
+      "timestamp": "2026-03-10T18:15:08.542992",
+      "sharpe_ratio": 6.446128754736635,
+      "win_rate": 0.6666666666666666,
+      "max_drawdown": -0.019668099987326302,
+      "mse": 32.09191798212395,
+      "total_return": 0.0443879811858825
+    },
+    {
+      "timestamp": "2026-03-10T18:15:25.986957",
+      "sharpe_ratio": -7.988500901372411,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.03034933761305825,
+      "mse": 13.171117300381715,
+      "total_return": -0.054183910012602254
+    },
+    {
+      "timestamp": "2026-03-10T18:29:39.710945",
+      "sharpe_ratio": 0.4427917409748466,
+      "win_rate": 0.6666666666666666,
+      "max_drawdown": -0.06103788372454218,
+      "mse": 14.47134437108396,
+      "total_return": 0.0026707516452499913
+    },
+    {
+      "timestamp": "2026-03-10T18:29:47.138410",
+      "sharpe_ratio": 11.421448713180421,
+      "win_rate": 0.8333333333333334,
+      "max_drawdown": -0.018101340069206735,
+      "mse": 212.40530930435457,
+      "total_return": 0.09252791621412793
+    },
+    {
+      "timestamp": "2026-03-10T18:46:26.801827",
+      "sharpe_ratio": -4.1540881446267734,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.03468463586775202,
+      "mse": 30.64575001080599,
+      "total_return": -0.027403739407374728
+    },
+    {
+      "timestamp": "2026-03-10T18:48:09.152417",
+      "sharpe_ratio": 4.7130604314716145,
+      "win_rate": 0.6666666666666666,
+      "max_drawdown": -0.02382746355350143,
+      "mse": 11.654859876833484,
+      "total_return": 0.03396023700075923
+    },
+    {
+      "timestamp": "2026-03-10T19:01:58.442768",
+      "sharpe_ratio": 10.761691477028004,
+      "win_rate": 0.8333333333333334,
+      "max_drawdown": -0.015963918343377653,
+      "mse": 68.20590027302845,
+      "total_return": 0.06744024101742263
     }
   ]
 }

@@ -39,56 +39,89 @@ COMPANY_NAMES = {
     "PLTR": "Palantir", "ARM": "ARM Holdings",
 }
 
-st.set_page_config(
-    page_title="Evolve Home",
-    page_icon="🏠",
-    layout="wide",
-    initial_sidebar_state="auto",
-)
-
 st.title("🏠 Good morning")
 st.caption("Your personalized briefing. Simple, jargon-free.")
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=900)
 def get_market_pulse() -> dict:
-    """Fetch live data for major market indicators."""
+    """Fetch live data for major market indicators using yfinance.fast_info."""
     try:
         import yfinance as yf
-        tickers = {"SPY": "S&P 500", "QQQ": "Nasdaq", "IWM": "Russell 2000", "^VIX": "VIX", "GLD": "Gold", "BTC-USD": "Bitcoin"}
-        results = {}
+        tickers = {
+            "SPY": "S&P 500",
+            "QQQ": "Nasdaq",
+            "IWM": "Russell 2000",
+            "^VIX": "VIX",
+            "GLD": "Gold",
+            "BTC-USD": "Bitcoin",
+        }
+        results: dict[str, dict] = {}
         for ticker, name in tickers.items():
             try:
-                hist = yf.Ticker(ticker).history(period="2d")
-                if len(hist) >= 2:
-                    last = hist["Close"].iloc[-1]
-                    prev = hist["Close"].iloc[-2]
-                    chg = (last - prev) / prev * 100
-                    results[ticker] = {"name": name, "price": last, "change": chg}
+                t = yf.Ticker(ticker)
+                fast = getattr(t, "fast_info", {}) or {}
+                price = fast.get("last_price")
+                if price is None:
+                    hist = t.history(period="1d")
+                    if not hist.empty:
+                        price = float(hist["Close"].iloc[-1])
+                if price is None:
+                    continue
+
+                prev_close = fast.get("previous_close")
+                if prev_close is None or prev_close == 0:
+                    hist = t.history(period="2d")
+                    if len(hist) >= 2:
+                        prev_close = float(hist["Close"].iloc[-2])
+
+                if prev_close is None or prev_close == 0:
+                    continue
+
+                chg = (float(price) - float(prev_close)) / float(prev_close) * 100
+                results[ticker] = {"name": name, "price": float(price), "change": chg}
             except Exception:
-                pass
+                # Gracefully skip tickers that fail to load
+                continue
         return results
     except Exception:
         return {}
 
 
+@st.cache_data(ttl=900)
 def get_prepost_price(symbol: str) -> dict:
-    """Get pre/post market price if available."""
+    """Get pre/post market price if available, using yfinance.fast_info."""
     try:
         import yfinance as yf
-        ticker = yf.Ticker(symbol)
-        info = ticker.info
-        regular = info.get("regularMarketPrice") or info.get("currentPrice")
-        pre = info.get("preMarketPrice")
-        post = info.get("postMarketPrice")
-        pre_chg = info.get("preMarketChangePercent")
-        post_chg = info.get("postMarketChangePercent")
+
+        t = yf.Ticker(symbol)
+        fast = getattr(t, "fast_info", {}) or {}
+
+        regular = fast.get("last_price")
+        if regular is None:
+            hist = t.history(period="1d")
+            if not hist.empty:
+                regular = float(hist["Close"].iloc[-1])
+
+        pre = fast.get("pre_market_price")
+        post = fast.get("post_market_price")
+
+        pre_chg_pct = None
+        post_chg_pct = None
+
+        prev_close = fast.get("previous_close")
+        if prev_close is not None and prev_close != 0:
+            if pre is not None:
+                pre_chg_pct = (float(pre) - float(prev_close)) / float(prev_close) * 100
+            if post is not None:
+                post_chg_pct = (float(post) - float(prev_close)) / float(prev_close) * 100
+
         return {
             "regular": regular,
             "pre": pre,
             "post": post,
-            "pre_chg_pct": pre_chg * 100 if pre_chg is not None else None,
-            "post_chg_pct": post_chg * 100 if post_chg is not None else None,
+            "pre_chg_pct": pre_chg_pct,
+            "post_chg_pct": post_chg_pct,
         }
     except Exception:
         return {
@@ -100,25 +133,180 @@ def get_prepost_price(symbol: str) -> dict:
         }
 
 
-@st.cache_data(ttl=600)
-def get_top_movers() -> list:
-    """Get today's top movers from a watchlist of major stocks."""
+TOP_MOVERS_UNIVERSE_OPTIONS = [
+    "S&P 100",
+    "S&P 500",
+    "S&P 500 + Nasdaq 100",
+    "Russell 1000",
+]
+
+
+@st.cache_data(ttl=86400)
+def load_universe_tickers(universe: str) -> list[str]:
+    """Load ticker universe for the Home page Top Movers section."""
     try:
-        import yfinance as yf
-        watchlist = ["AAPL", "NVDA", "MSFT", "TSLA", "AMZN", "META", "GOOGL", "AMD", "NFLX", "JPM"]
-        movers = []
-        for sym in watchlist:
+        import pandas as pd  # type: ignore
+
+        universe = universe or "S&P 100"
+        universe = universe.strip()
+
+        if universe == "S&P 100":
+            # Components as of latest published list (includes GOOG/GOOGL)
+            return [
+                "AAPL", "ABBV", "ABT", "ACN", "ADBE", "AIG", "AMD", "AMGN", "AMT",
+                "AMZN", "AVGO", "AXP", "BA", "BAC", "BK", "BKNG", "BLK", "BMY",
+                "BRK.B", "C", "CAT", "CL", "CMCSA", "COF", "COP", "COST", "CRM",
+                "CSCO", "CVS", "CVX", "DE", "DHR", "DIS", "DUK", "EMR", "FDX",
+                "GD", "GE", "GILD", "GM", "GOOG", "GOOGL", "GS", "HD", "HON",
+                "IBM", "INTC", "INTU", "ISRG", "JNJ", "JPM", "KO", "LIN", "LLY",
+                "LMT", "LOW", "MA", "MCD", "MDLZ", "MDT", "MET", "META", "MMM",
+                "MO", "MRK", "MS", "MSFT", "NEE", "NFLX", "NKE", "NOW", "NVDA",
+                "ORCL", "PEP", "PFE", "PG", "PLTR", "PM", "PYPL", "QCOM", "RTX",
+                "SBUX", "SCHW", "SO", "SPG", "T", "TGT", "TMO", "TMUS", "TSLA",
+                "TXN", "UBER", "UNH", "UNP", "UPS", "USB", "V", "VZ", "WFC",
+                "WMT", "XOM",
+            ]
+
+        # S&P 500 from Wikipedia
+        sp500: list[str] = []
+        try:
+            url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+            tables = pd.read_html(url)
+            if tables:
+                table = tables[0]
+                sp500 = (
+                    table["Symbol"]
+                    .astype(str)
+                    .str.replace(".", "-", regex=False)
+                    .str.upper()
+                    .tolist()
+                )
+        except Exception:
+            sp500 = []
+
+        if universe == "S&P 500":
+            return sp500
+
+        # Nasdaq 100 universe (hard-coded, current constituents)
+        nasdaq100 = [
+            "ATVI", "ADBE", "AMD", "ALGN", "AMZN", "ANSS", "AAPL", "AMAT",
+            "ASML", "AZN", "TEAM", "ADSK", "BIIB", "BKR", "BKNG", "AVGO",
+            "CDNS", "CDW", "CHTR", "CTAS", "CSCO", "CMCSA", "CPRT", "CSX",
+            "CTSH", "DDOG", "DXCM", "DOCU", "DLTR", "EA", "EXC", "FAST",
+            "FISV", "FTNT", "GILD", "GOOG", "GOOGL", "HON", "IDXX", "ILMN",
+            "INTC", "INTU", "ISRG", "JD", "KDP", "KLAC", "KHC", "LRCX",
+            "LULU", "MAR", "MELI", "META", "MCHP", "MU", "MSFT", "MRNA",
+            "MDLZ", "MNST", "NTES", "NFLX", "NVDA", "NXPI", "ORLY", "PCAR",
+            "PANW", "PAYX", "PYPL", "PEP", "PDD", "QCOM", "REGN", "ROST",
+            "SIRI", "SBUX", "SNPS", "SPLK", "SWKS", "TMUS", "TSLA", "TXN",
+            "TTWO", "VRSK", "VRSN", "VRSK", "VRTX", "WBA", "WDAY", "XEL",
+            "ZM",
+        ]
+
+        if universe == "S&P 500 + Nasdaq 100":
+            return sorted(set(sp500).union(nasdaq100))
+
+        if universe == "Russell 1000":
+            # Approximate Russell 1000 using the largest 1000 names from Russell 3000 components
             try:
-                hist = yf.Ticker(sym).history(period="2d")
-                if len(hist) >= 2:
-                    chg = (hist["Close"].iloc[-1] - hist["Close"].iloc[-2]) / hist["Close"].iloc[-2] * 100
-                    movers.append({"symbol": sym, "price": hist["Close"].iloc[-1], "change": chg})
+                url = "https://en.wikipedia.org/wiki/Russell_3000_Index"
+                tables = pd.read_html(url)
+                # Look for a table with a Ticker column
+                tickers: list[str] = []
+                for t in tables:
+                    cols = [c.lower() for c in t.columns.astype(str)]
+                    if any("ticker" in c or "symbol" in c for c in cols):
+                        for col in t.columns:
+                            col_lower = str(col).lower()
+                            if "ticker" in col_lower or "symbol" in col_lower:
+                                series = (
+                                    t[col]
+                                    .astype(str)
+                                    .str.replace(".", "-", regex=False)
+                                    .str.upper()
+                                )
+                                tickers.extend(series.tolist())
+                        break
+                tickers = [t for t in tickers if t and t != "nan"]
+                return tickers[:1000] if tickers else sp500
             except Exception:
-                pass
-        movers.sort(key=lambda x: abs(x["change"]), reverse=True)
-        return movers[:5]
+                # Fallback to S&P 500 if Russell 3000 components are unavailable
+                return sp500
+
+        # Fallback: return S&P 100 if nothing else matched
+        return load_universe_tickers("S&P 100")
     except Exception:
         return []
+
+
+@st.cache_data(ttl=900)
+def scan_top_movers(universe: str) -> dict:
+    """Scan for top movers (gainers/losers) in the selected universe."""
+    try:
+        import yfinance as yf  # type: ignore
+        import numpy as np  # type: ignore
+
+        tickers = load_universe_tickers(universe)
+        if not tickers:
+            return {"as_of": None, "gainers": [], "losers": []}
+
+        # Use batch download for efficiency
+        data = yf.download(
+            tickers,
+            period="1d",
+            interval="1d",
+            auto_adjust=False,
+            progress=False,
+            threads=True,
+        )
+
+        if data.empty:
+            return {"as_of": None, "gainers": [], "losers": []}
+
+        as_of_ts = None
+
+        movers = []
+        if isinstance(data.columns, pd.MultiIndex):
+            # Columns like ('Open', 'AAPL'), ('Close', 'AAPL'), ...
+            open_row = data["Open"].iloc[0]
+            close_row = data["Close"].iloc[-1]
+            as_of_ts = data.index[-1].to_pydatetime() if hasattr(data.index[-1], "to_pydatetime") else data.index[-1]
+            for sym in close_row.index:
+                try:
+                    o = float(open_row.get(sym, np.nan))
+                    c = float(close_row.get(sym, np.nan))
+                    if not np.isfinite(o) or not np.isfinite(c) or o == 0:
+                        continue
+                    chg = (c - o) / o * 100.0
+                    movers.append({"symbol": sym, "price": c, "change": chg})
+                except Exception:
+                    continue
+        else:
+            # Single-ticker case
+            try:
+                o = float(data["Open"].iloc[0])
+                c = float(data["Close"].iloc[-1])
+                as_of_ts = data.index[-1].to_pydatetime() if hasattr(data.index[-1], "to_pydatetime") else data.index[-1]
+                if o != 0:
+                    chg = (c - o) / o * 100.0
+                    movers.append({"symbol": tickers[0], "price": c, "change": chg})
+            except Exception:
+                pass
+
+        if not movers:
+            return {"as_of": as_of_ts, "gainers": [], "losers": []}
+
+        # Sort into gainers and losers
+        gainers = sorted([m for m in movers if m["change"] > 0], key=lambda x: x["change"], reverse=True)[:5]
+        losers = sorted([m for m in movers if m["change"] < 0], key=lambda x: x["change"])[:5]
+
+        return {
+            "as_of": as_of_ts.isoformat() if hasattr(as_of_ts, "isoformat") else str(as_of_ts),
+            "gainers": gainers,
+            "losers": losers,
+        }
+    except Exception:
+        return {"as_of": None, "gainers": [], "losers": []}
 
 
 def _fallback_briefing(market_pulse: dict, top_movers: list) -> str:
@@ -184,7 +372,7 @@ if pulse:
                 else:
                     st.caption(f"After-hrs: ${_pp['post']:.2f}")
 
-# Fear & Greed proxy + Top 5 Movers
+# Fear & Greed proxy + Top Movers
 vix = pulse.get("^VIX", {}).get("price", 20)
 if vix < 15:
     fg_label, fg_color = "Extreme Greed", "green"
@@ -197,21 +385,58 @@ elif vix < 30:
 else:
     fg_label, fg_color = "Extreme Fear", "red"
 st.markdown(f"**Market Sentiment:** VIX {vix:.1f} — :{fg_color}[{fg_label}]")
-movers = get_top_movers()
-if movers:
+
+# Determine Top Movers universe from preferences (default to S&P 100)
+session_id = st.session_state.get("evolve_session_id") or st.session_state.get("session_id", "")
+saved_prefs = load_user_preferences(session_id) if session_id else {}
+top_movers_universe = saved_prefs.get("home_top_movers_universe", TOP_MOVERS_UNIVERSE_OPTIONS[0])
+if top_movers_universe not in TOP_MOVERS_UNIVERSE_OPTIONS:
+    top_movers_universe = TOP_MOVERS_UNIVERSE_OPTIONS[0]
+
+current_movers = scan_top_movers(top_movers_universe)
+if (current_movers.get("gainers") or current_movers.get("losers")):
+    st.session_state["home_last_top_movers"] = current_movers
+
+movers_state = st.session_state.get("home_last_top_movers", current_movers)
+
+gainers = movers_state.get("gainers") or []
+losers = movers_state.get("losers") or []
+
+if gainers or losers:
     st.subheader("Today's Top Movers")
-    mcols = st.columns(5)
-    for i, mover in enumerate(movers):
-        with mcols[i]:
-            icon = "🔴" if mover["change"] < 0 else "🟢"
-            st.metric(f"{icon} {mover['symbol']}", f"${mover['price']:.2f}", f"{mover['change']:+.2f}%")
-            try:
-                from trading.analysis.ai_score import compute_ai_score
-                _score = compute_ai_score(mover["symbol"])
-                if _score.get("error") is None:
-                    st.caption(f"AI Score: {_score['overall_score']}/10 ({_score['grade']})")
-            except Exception:
-                pass
+    as_of = movers_state.get("as_of")
+    caption_parts = [f"Universe: {top_movers_universe}"]
+    if as_of:
+        caption_parts.append(f"as of {as_of}")
+    st.caption(" • ".join(caption_parts))
+
+    col_gainers, col_losers = st.columns(2)
+
+    def _render_mover_column(col, title, items, positive: bool):
+        with col:
+            st.markdown(f"**{title}**")
+            if not items:
+                st.caption("No data available.")
+                return
+            for mover in items:
+                icon = "🟢" if positive else "🔴"
+                st.metric(
+                    f"{icon} {mover['symbol']}",
+                    f"${mover['price']:.2f}",
+                    f"{mover['change']:+.2f}%",
+                )
+                try:
+                    from trading.analysis.ai_score import compute_ai_score
+
+                    _score = compute_ai_score(mover["symbol"])
+                    if _score.get("error") is None:
+                        st.caption(f"AI Score: {_score['overall_score']}/10 ({_score['grade']})")
+                except Exception:
+                    # If AI Score is unavailable, silently skip
+                    pass
+
+    _render_mover_column(col_gainers, "Top 5 Gainers", gainers[:5], positive=True)
+    _render_mover_column(col_losers, "Top 5 Losers", losers[:5], positive=False)
 
     st.markdown("---")
     st.markdown("#### 🔍 Quick Scan")
@@ -328,43 +553,6 @@ try:
 
 except Exception as _e:
     st.caption(f"Quick scan unavailable: {_e}")
-
-# ── NEWS-LINKED CANDLESTICK CHART ──────────────────────────────────────────
-st.markdown("---")
-st.subheader("Live Market Chart")
-
-# Chart controls
-chart_col1, chart_col2, chart_col3, chart_col4 = st.columns([2, 2, 2, 1])
-with chart_col1:
-    chart_symbol = st.selectbox(
-        "Symbol",
-        ["AAPL", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "SPY", "QQQ", "BTC-USD"],
-        key="home_chart_symbol",
-    )
-with chart_col2:
-    chart_period = st.selectbox(
-        "Period",
-        ["1mo", "3mo", "6mo", "1y", "2y"],
-        index=1,
-        key="home_chart_period",
-    )
-with chart_col3:
-    chart_interval = st.selectbox(
-        "Interval",
-        ["1d", "1wk"],
-        key="home_chart_interval",
-    )
-with chart_col4:
-    show_news = st.toggle("News", value=True, key="home_chart_news_toggle")
-
-from components.news_candle_chart import render_news_candle_chart
-
-render_news_candle_chart(
-    symbol=chart_symbol,
-    period=chart_period,
-    interval=chart_interval,
-    show_annotations=show_news,
-)
 
 # Session state for live market monitor
 if "last_scan_time" not in st.session_state:

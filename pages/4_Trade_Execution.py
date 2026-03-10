@@ -27,6 +27,7 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import yfinance as yf
+import asyncio
 
 # Backend imports
 # Import from execution package (handles availability checks)
@@ -71,12 +72,6 @@ def _empty_state(message: str, icon: str = "📊"):
 
 
 try:
-    st.set_page_config(
-        page_title="Trade Execution & Order Management",
-        page_icon="💰",
-        layout="wide"
-    )
-
     # Initialize session state
     if 'execution_mode' not in st.session_state:
         st.session_state.execution_mode = "paper"  # "paper" or "live"
@@ -94,24 +89,26 @@ try:
         st.session_state.trade_page_loaded = False
 
     @st.cache_data(ttl=60)  # Cache for 60 seconds
-    def get_current_price(ticker: str) -> float:
-        """Fetch current price for a ticker using yfinance.
-    
-        Args:
-            ticker: Stock ticker symbol
-        
-        Returns:
-            Current price or None if cannot fetch
-        """
+    def get_current_price(ticker: str) -> float | None:
+        """Fetch current price for a ticker using yfinance.fast_info with safe fallbacks."""
         try:
+            ticker = (ticker or "").strip()
+            if not ticker:
+                return None
+
             ticker_obj = yf.Ticker(ticker)
-            # Try multiple price fields
-            price = (ticker_obj.info.get('currentPrice') or 
-                    ticker_obj.info.get('regularMarketPrice') or
-                    ticker_obj.info.get('previousClose'))
-            return float(price) if price else None
-        except Exception as e:
-            st.warning(f"Could not fetch price for {ticker}: {e}")
+            fast = getattr(ticker_obj, "fast_info", {}) or {}
+
+            price = fast.get("last_price")
+
+            if price is None:
+                hist = ticker_obj.history(period="1d")
+                if not hist.empty:
+                    price = float(hist["Close"].iloc[-1])
+
+            return float(price) if price is not None else None
+        except Exception:
+            # Fail silently and let the UI fall back to manual entry
             return None
 
     def _current_price(ticker: str):
@@ -119,6 +116,83 @@ try:
         if not st.session_state.get("trade_page_loaded") or not (ticker or "").strip():
             return None
         return get_current_price((ticker or "").strip())
+
+    def _run_auto_execution_cycle(strategy_name: str, config: dict, data_loader, execution_agent) -> dict:
+        """Single execution cycle for one active strategy. Returns log entry."""
+        import time
+        log = {"time": time.strftime("%H:%M:%S"), "strategy": strategy_name, "action": "checked", "result": "no signal"}
+        try:
+            symbols = config.get("symbols", [])
+            if not symbols:
+                return {**log, "result": "no symbols configured"}
+            if st.session_state.get("emergency_stop"):
+                return {**log, "action": "skipped", "result": "emergency stop active"}
+            from trading.data.data_loader import DataLoader, DataLoadRequest
+            _loader = data_loader or DataLoader()
+            _registry = None
+            try:
+                from trading.strategies.registry import get_strategy_registry
+                _registry = get_strategy_registry()
+            except Exception:
+                return {**log, "result": "strategy registry unavailable"}
+            for symbol in symbols[:3]:
+                try:
+                    _req = DataLoadRequest(ticker=symbol, period="3mo")
+                    _resp = _loader.load_market_data(_req)
+                    if not getattr(_resp, "success", False):
+                        continue
+                    _data = getattr(_resp, "data", None)
+                    if _data is None or (hasattr(_data, "empty") and _data.empty):
+                        continue
+                    _strategy = _registry.get_strategy(strategy_name) if _registry else None
+                    if _strategy is None:
+                        return {**log, "result": f"strategy {strategy_name} not in registry"}
+                    _signals = _strategy.generate_signals(_data)
+                    if _signals is None or (hasattr(_signals, "empty") and _signals.empty):
+                        continue
+                    _latest = _signals.iloc[-1]
+                    _signal_val = _latest.get("signal", 0) if hasattr(_latest, "get") else (_latest.get("signal", 0) if "signal" in getattr(_latest, "index", []) else 0)
+                    _min_confidence = config.get("min_signal_confidence", 0.6)
+                    _confidence = abs(float(_signal_val)) if _signal_val is not None else 0
+                    if _confidence >= _min_confidence and execution_agent:
+                        _side = "buy" if float(_signal_val) > 0 else "sell"
+                        _max_pos_pct = config.get("max_position_size_pct", 5) / 100
+                        _qty = max(1, int(10000 * _max_pos_pct))
+                        _today = time.strftime("%Y-%m-%d")
+                        _today_orders = [
+                            o for o in st.session_state.get("order_history", [])
+                            if o.get("strategy") == strategy_name
+                            and (o.get("date") == _today or (o.get("timestamp") or "").startswith(_today))
+                        ]
+                        if len(_today_orders) >= config.get("max_orders_per_day", 5):
+                            return {**log, "result": f"daily order limit reached for {symbol}"}
+                        try:
+                            from execution.models import OrderSide, OrderType
+                            _side_enum = OrderSide.BUY if str(_side).lower() == "buy" else OrderSide.SELL
+                            _type_enum = OrderType.MARKET
+                            _result = asyncio.get_event_loop().run_until_complete(
+                                execution_agent.submit_order(
+                                    ticker=symbol, side=_side_enum, quantity=_qty, order_type=_type_enum
+                                )
+                            )
+                        except ImportError:
+                            _result = asyncio.get_event_loop().run_until_complete(
+                                execution_agent.submit_order(
+                                    ticker=symbol, side=_side, quantity=_qty, order_type="market"
+                                )
+                            )
+                        _res_dict = {"order_id": _result, "status": "submitted"} if isinstance(_result, str) else (_result if isinstance(_result, dict) else {})
+                        st.session_state.setdefault("order_history", []).append({
+                            "strategy": strategy_name, "date": _today, "symbol": symbol,
+                            "side": _side, "quantity": _qty, "status": _res_dict.get("status", "submitted"),
+                            "timestamp": datetime.now().isoformat(),
+                        })
+                        log = {**log, "action": f"{_side} {_qty} {symbol}", "result": str(_res_dict.get("status", "submitted"))}
+                except Exception as _sym_err:
+                    log = {**log, "result": f"error on {symbol}: {_sym_err}"}
+        except Exception as _cycle_err:
+            log = {**log, "result": f"cycle error: {_cycle_err}"}
+        return log
 
     # Main page title
     st.title("💰 Trade Execution & Order Management")
@@ -275,10 +349,17 @@ try:
     
         with col_calc2:
             # Fetch real-time price (only when connected)
-            fetched_price = _current_price(symbol) if symbol else None
+            fetched_price = None
+            if symbol:
+                with st.spinner("Fetching latest price..."):
+                    fetched_price = _current_price(symbol)
+
             current_price = limit_price or fetched_price
             if not current_price:
-                st.warning(f"⚠️ Cannot fetch price for {symbol}. Please enter manually.")
+                st.info(
+                    f"Live price data for {symbol or 'the selected symbol'} is unavailable. "
+                    "Please enter the current market price manually."
+                )
                 current_price = st.number_input(
                     "Current Price",
                     min_value=0.01,
@@ -954,12 +1035,30 @@ try:
                         "symbol": bracket_symbol,
                         "side": bracket_side,
                         "quantity": bracket_quantity,
+                        "order_type": bracket_entry_type.lower(),
                         "entry_price": bracket_entry_price,
                         "take_profit": take_profit_price if use_take_profit else None,
                         "stop_loss": stop_loss_price if use_stop_loss else None,
                         "timestamp": datetime.now().isoformat(),
                         "status": "submitted"
                     }
+                    if st.session_state.get("execution_agent"):
+                        try:
+                            _agent = st.session_state.execution_agent
+                            _submit_result = None
+                            if hasattr(_agent, "submit_bracket_order"):
+                                _submit_result = asyncio.get_event_loop().run_until_complete(
+                                    _agent.submit_bracket_order(bracket_order))
+                            elif hasattr(_agent, "submit_order"):
+                                _entry = {k: bracket_order[k] for k in ["symbol", "side", "quantity", "order_type"] if k in bracket_order}
+                                _entry["order_type"] = _entry.get("order_type", "market")
+                                _submit_result = asyncio.get_event_loop().run_until_complete(
+                                    _agent.submit_order(**_entry))
+                            if _submit_result:
+                                bracket_order["order_id"] = _submit_result if isinstance(_submit_result, str) else _submit_result.get("order_id", bracket_order.get("order_id"))
+                                bracket_order["status"] = _submit_result.get("status", "submitted") if isinstance(_submit_result, dict) else "submitted"
+                        except Exception as _exec_err:
+                            st.caption(f"Order stored locally (broker: {_exec_err})")
                     st.session_state.active_orders.append(bracket_order)
                     st.session_state.order_history.append(bracket_order)
                 
@@ -1007,6 +1106,7 @@ try:
                     "symbol": trailing_symbol,
                     "side": trailing_side,
                     "quantity": trailing_quantity,
+                    "order_type": "market",
                     "entry_price": trailing_entry_price,
                     "trailing_amount": trailing_amount or trailing_fixed,
                     "trailing_type": trailing_type,
@@ -1014,6 +1114,22 @@ try:
                     "timestamp": datetime.now().isoformat(),
                     "status": "submitted"
                 }
+                if st.session_state.get("execution_agent"):
+                    try:
+                        _agent = st.session_state.execution_agent
+                        _submit_result = None
+                        if hasattr(_agent, "submit_trailing_stop_order"):
+                            _submit_result = asyncio.get_event_loop().run_until_complete(
+                                _agent.submit_trailing_stop_order(trailing_order))
+                        elif hasattr(_agent, "submit_order"):
+                            _entry = {k: trailing_order[k] for k in ["symbol", "side", "quantity", "order_type"] if k in trailing_order}
+                            _submit_result = asyncio.get_event_loop().run_until_complete(
+                                _agent.submit_order(**_entry))
+                        if _submit_result:
+                            trailing_order["order_id"] = _submit_result if isinstance(_submit_result, str) else _submit_result.get("order_id", trailing_order.get("order_id"))
+                            trailing_order["status"] = _submit_result.get("status", "submitted") if isinstance(_submit_result, dict) else "submitted"
+                    except Exception as _exec_err:
+                        st.caption(f"Order stored locally (broker: {_exec_err})")
                 st.session_state.active_orders.append(trailing_order)
                 st.session_state.order_history.append(trailing_order)
 
@@ -1076,6 +1192,23 @@ try:
                     "timestamp": datetime.now().isoformat(),
                     "status": "pending"
                 }
+                if st.session_state.get("execution_agent"):
+                    try:
+                        _agent = st.session_state.execution_agent
+                        _submit_result = None
+                        if hasattr(_agent, "submit_conditional_order"):
+                            _submit_result = asyncio.get_event_loop().run_until_complete(
+                                _agent.submit_conditional_order(conditional_order))
+                        elif hasattr(_agent, "submit_order"):
+                            _act = conditional_order["action"]
+                            _entry = {"symbol": _act["symbol"], "side": _act["side"], "quantity": _act["quantity"], "order_type": _act.get("order_type", "market")}
+                            _submit_result = asyncio.get_event_loop().run_until_complete(
+                                _agent.submit_order(**_entry))
+                        if _submit_result:
+                            conditional_order["order_id"] = _submit_result if isinstance(_submit_result, str) else _submit_result.get("order_id", conditional_order.get("order_id"))
+                            conditional_order["status"] = _submit_result.get("status", "submitted") if isinstance(_submit_result, dict) else "submitted"
+                    except Exception as _exec_err:
+                        st.caption(f"Order stored locally (broker: {_exec_err})")
                 st.session_state.active_orders.append(conditional_order)
                 st.session_state.order_history.append(conditional_order)
 
@@ -1125,6 +1258,22 @@ try:
                     "timestamp": datetime.now().isoformat(),
                     "status": "pending"
                 }
+                if st.session_state.get("execution_agent"):
+                    try:
+                        _agent = st.session_state.execution_agent
+                        _submit_result = None
+                        if hasattr(_agent, "submit_oco_order"):
+                            _submit_result = asyncio.get_event_loop().run_until_complete(
+                                _agent.submit_oco_order(oco_order))
+                        elif hasattr(_agent, "submit_order"):
+                            _entry = {"symbol": oco_symbol, "side": oco_side1, "quantity": oco_quantity1, "order_type": oco_type1.lower()}
+                            _submit_result = asyncio.get_event_loop().run_until_complete(
+                                _agent.submit_order(**_entry))
+                        if _submit_result:
+                            oco_order["order_id"] = _submit_result if isinstance(_submit_result, str) else _submit_result.get("order_id", oco_order.get("order_id"))
+                            oco_order["status"] = _submit_result.get("status", "submitted") if isinstance(_submit_result, dict) else "submitted"
+                    except Exception as _exec_err:
+                        st.caption(f"Order stored locally (broker: {_exec_err})")
                 st.session_state.active_orders.append(oco_order)
                 st.session_state.order_history.append(oco_order)
 
@@ -1167,6 +1316,23 @@ try:
                     "timestamp": datetime.now().isoformat(),
                     "status": "pending"
                 }
+                if st.session_state.get("execution_agent"):
+                    try:
+                        _agent = st.session_state.execution_agent
+                        _submit_result = None
+                        if hasattr(_agent, "submit_multi_leg_order"):
+                            _submit_result = asyncio.get_event_loop().run_until_complete(
+                                _agent.submit_multi_leg_order(multileg_order))
+                        elif hasattr(_agent, "submit_order") and legs:
+                            _leg = legs[0]
+                            _entry = {"symbol": _leg["symbol"], "side": _leg["side"], "quantity": _leg["quantity"], "order_type": "limit"}
+                            _submit_result = asyncio.get_event_loop().run_until_complete(
+                                _agent.submit_order(**_entry))
+                        if _submit_result:
+                            multileg_order["order_id"] = _submit_result if isinstance(_submit_result, str) else _submit_result.get("order_id", multileg_order.get("order_id"))
+                            multileg_order["status"] = _submit_result.get("status", "submitted") if isinstance(_submit_result, dict) else "submitted"
+                    except Exception as _exec_err:
+                        st.caption(f"Order stored locally (broker: {_exec_err})")
                 st.session_state.active_orders.append(multileg_order)
                 st.session_state.order_history.append(multileg_order)
 
@@ -1534,6 +1700,28 @@ try:
                         st.rerun()
     else:
         st.info("No strategies are currently active")
+
+    # Auto-execution polling (runs on each Streamlit rerun if strategies active)
+    _active_strategies = {
+        k: v for k, v in st.session_state.get("auto_execution_active", {}).items() if v
+    }
+    if _active_strategies and not st.session_state.get("emergency_stop"):
+        import time as _time
+        _last_cycle = st.session_state.get("auto_exec_last_cycle", 0)
+        _check_interval = 60
+        if _last_cycle == 0:
+            st.session_state["auto_exec_last_cycle"] = _time.time()
+            _last_cycle = _time.time()
+        if _time.time() - _last_cycle > _check_interval:
+            _exec_agent = st.session_state.get("execution_agent")
+            for _strat_name in _active_strategies:
+                _config = st.session_state.get("auto_execution_configs", {}).get(_strat_name, {})
+                _log_entry = _run_auto_execution_cycle(_strat_name, _config, None, _exec_agent)
+                _msg = f"[{_log_entry.get('time')}] {_log_entry.get('strategy')}: {_log_entry.get('action')} - {_log_entry.get('result')}"
+                st.session_state.setdefault("auto_execution_logs", []).insert(
+                    0, {"timestamp": datetime.now().isoformat(), "level": "INFO", "message": _msg}
+                )
+            st.session_state["auto_exec_last_cycle"] = _time.time()
 
     st.markdown("---")
 

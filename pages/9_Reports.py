@@ -13,6 +13,7 @@ Features:
 - Email delivery
 """
 
+import asyncio
 import logging
 import sys
 from datetime import datetime, timedelta
@@ -46,13 +47,6 @@ def _empty_state(message: str, icon: str = "📊"):
     </div>
     """, unsafe_allow_html=True)
 
-
-# Page config
-st.set_page_config(
-    page_title="Reports & Exports",
-    page_icon="📄",
-    layout="wide"
-)
 
 # Initialize session state
 if 'report_generator' not in st.session_state:
@@ -631,11 +625,56 @@ To generate a report, run a backtest first:
                 
                     with export_col4:
                         # Email Delivery
-                        if st.button("📧 Email Report", use_container_width=True):
-                            email_address = st.text_input("Enter email address", placeholder="your@email.com")
-                            if email_address and st.button("Send", key="send_email"):
-                                st.info(f"Email delivery to {email_address} would be sent here. (Requires email configuration)")
-                            # In real implementation, this would use email service
+                        st.markdown("**📧 Email Report**")
+                        _recipients = st.text_input(
+                            "Recipients (comma-separated)",
+                            placeholder="user1@example.com, user2@example.com",
+                            key="reports_email_recipients",
+                        )
+                        _subject = st.text_input(
+                            "Subject",
+                            value=f"{report_type} Report — {start_date} to {end_date}",
+                            key="reports_email_subject",
+                        )
+                        _body = st.text_area(
+                            "Message / Report summary",
+                            value=f"{report_type} Report\nPeriod: {start_date} to {end_date}\n\n" + "\n".join(f"{k}: {v}" for k, v in (summary_metrics or {}).items()),
+                            height=100,
+                            key="reports_email_body",
+                        )
+                        if st.button("📧 Send Report", key="send_report_email", use_container_width=True):
+                            try:
+                                from system.infra.agents.notifications.notification_service import (
+                                    NotificationService,
+                                    NotificationChannel,
+                                    NotificationType,
+                                    NotificationPriority,
+                                )
+                                _ns = NotificationService()
+                                _rec_list = [r.strip() for r in _recipients.replace("\n", ",").split(",") if r.strip()]
+                                if not _rec_list:
+                                    st.error("Please enter at least one recipient.")
+                                else:
+                                    async def _send_all():
+                                        results = []
+                                        for _r in _rec_list:
+                                            await _ns.send_notification(
+                                                title=_subject,
+                                                message=_body,
+                                                type=NotificationType.INFO,
+                                                priority=NotificationPriority.LOW,
+                                                channel=NotificationChannel.EMAIL,
+                                                recipient=_r,
+                                            )
+                                            results.append(_r)
+                                        return results
+                                    _sent = asyncio.run(_send_all())
+                                    st.success(f"Report sent to {', '.join(_sent)}")
+                                    st.rerun()
+                            except ImportError as _ie:
+                                st.error("NotificationService not available — configure email in Admin → Notification Settings")
+                            except Exception as _email_err:
+                                st.error(f"Send failed: {_email_err}")
                 
         except Exception as e:
             st.error(f"Error generating report: {str(e)}")

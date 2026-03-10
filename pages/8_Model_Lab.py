@@ -57,15 +57,15 @@ except ImportError as e:
     MODEL_MODULES_AVAILABLE = False
     get_registry = None
 
+# Optional: SHAP for explainability (do not add to requirements.txt)
+try:
+    import shap
+    SHAP_AVAILABLE = True
+except ImportError:
+    SHAP_AVAILABLE = False
+
 # Setup logging
 logger = logging.getLogger(__name__)
-
-# Page config
-st.set_page_config(
-    page_title="Model Laboratory",
-    page_icon="🔬",
-    layout="wide"
-)
 
 # Initialize session state
 if 'model_registry' not in st.session_state:
@@ -126,7 +126,7 @@ st.markdown("Train, optimize, evaluate, and deploy machine learning models for t
 st.markdown("---")
 
 # Create tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_monitoring, tab_discovery, tab_innovation, tab_benchmark = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_research, tab_monitoring, tab_discovery, tab_innovation, tab_benchmark = st.tabs([
     "⚡ Quick Training",
     "⚙️ Model Configuration",
     "🎯 Hyperparameter Optimization",
@@ -134,6 +134,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_monitoring, tab_discovery, tab_inn
     "🔍 Model Comparison",
     "🧠 Explainability",
     "📚 Model Registry",
+    "📚 Research Browser",
     "📊 Model Monitoring",  # NEW TAB
     "🤖 AI Model Discovery",  # NEW TAB
     "🧪 Model Innovation",  # NEW TAB
@@ -396,11 +397,21 @@ with tab1:
                                     })
                                     model.fit(train_df)
                                 elif model_type == "ARIMA":
-                                    model.fit(train_data.values)
+                                    # Use pandas Series to preserve index and metadata
+                                    model.fit(train_data)
                                 else:
-                                    # LSTM and XGBoost
-                                    X_train = train_data.values.reshape(-1, 1)
-                                    y_train = train_data.values
+                                    # LSTM and XGBoost - pass DataFrames so downstream code can rely on DataFrame APIs
+                                    col_name = getattr(train_data, "name", None) or "value"
+                                    X_train = pd.DataFrame(
+                                        train_data.values,
+                                        index=train_data.index,
+                                        columns=[col_name],
+                                    )
+                                    y_train = pd.DataFrame(
+                                        train_data.values,
+                                        index=train_data.index,
+                                        columns=[col_name],
+                                    )
                                     model.fit(X_train, y_train)
                                 
                                 progress_bar.progress(0.7)
@@ -418,7 +429,12 @@ with tab1:
                                     predictions = model.predict(len(test_data))
                                     y_pred = predictions
                                 else:
-                                    X_test = test_data.values.reshape(-1, 1)
+                                    col_name = getattr(test_data, "name", None) or "value"
+                                    X_test = pd.DataFrame(
+                                        test_data.values,
+                                        index=test_data.index,
+                                        columns=[col_name],
+                                    )
                                     y_pred = model.predict(X_test)
                                 
                                 # Calculate metrics
@@ -1236,7 +1252,12 @@ with tab2:
                             predictions = model.predict(len(test_data))
                             y_pred = predictions
                         else:
-                            X_test = test_data.values.reshape(-1, 1)
+                            col_name = getattr(test_data, "name", None) or "value"
+                            X_test = pd.DataFrame(
+                                test_data.values,
+                                index=test_data.index,
+                                columns=[col_name],
+                            )
                             y_pred = model.predict(X_test)
                         
                         y_true = test_data.values
@@ -3252,15 +3273,9 @@ with tab6:
                 st.subheader("📈 SHAP Values")
                 st.markdown("SHAP (SHapley Additive exPlanations) values explain individual predictions.")
                 
-                # Check if SHAP is available
-                try:
-                    import shap
-                    SHAP_AVAILABLE = True
-                except ImportError:
-                    SHAP_AVAILABLE = False
-                    st.warning("⚠️ SHAP library not installed. Install with: `pip install shap`")
-                
-                if SHAP_AVAILABLE:
+                if not SHAP_AVAILABLE:
+                    st.info("Install SHAP for explainability: pip install shap")
+                elif SHAP_AVAILABLE:
                     shap_plot_type = st.selectbox(
                         "SHAP Plot Type",
                         ["Summary Plot", "Dependence Plot", "Waterfall Plot", "Force Plot"],
@@ -3270,78 +3285,85 @@ with tab6:
                     
                     if st.button("Calculate SHAP Values", type="primary"):
                         try:
-                            # Create sample data for SHAP
-                            # In real implementation, use actual training data
                             n_samples = 100
                             n_features = 5
-                            
-                            # Generate synthetic data
+                            feature_names = [f"Feature_{i}" for i in range(n_features)]
                             X_sample = np.random.randn(n_samples, n_features)
                             
                             if model_type == "XGBoost" and model is not None:
                                 try:
                                     explainer = shap.TreeExplainer(model)
                                     shap_values = explainer.shap_values(X_sample)
-                                except Exception as e:
-                                    st.warning("Could not create TreeExplainer. Using synthetic SHAP values for demonstration.")
-                                    shap_values = np.random.randn(n_samples, n_features)
+                                    if isinstance(shap_values, list):
+                                        shap_values = shap_values[0]
+                                except Exception:
+                                    st.warning("Could not create TreeExplainer. Using KernelExplainer on a small sample.")
+                                    try:
+                                        n_bg = min(50, n_samples)
+                                        explainer = shap.KernelExplainer(
+                                            model.predict if hasattr(model, "predict") else lambda x: np.array([model.predict(x[i:i + 1])[0] for i in range(len(x))]),
+                                            X_sample[:n_bg],
+                                        )
+                                        shap_values = explainer.shap_values(X_sample[: min(30, n_samples)], nsamples=50)
+                                    except Exception:
+                                        shap_values = np.random.randn(n_samples, n_features)
                             else:
-                                st.info("SHAP calculation for this model type requires model-specific implementation. Showing synthetic values for demonstration.")
-                                shap_values = np.random.randn(n_samples, n_features)
+                                try:
+                                    n_bg = min(50, n_samples)
+                                    pred_fn = getattr(model, "predict", None)
+                                    if pred_fn is not None:
+                                        explainer = shap.KernelExplainer(pred_fn, X_sample[:n_bg])
+                                        shap_values = explainer.shap_values(X_sample[: min(30, n_samples)], nsamples=50)
+                                    else:
+                                        shap_values = np.random.randn(n_samples, n_features)
+                                except Exception:
+                                    st.info("SHAP calculation for this model type requires model-specific implementation. Showing synthetic values for demonstration.")
+                                    shap_values = np.random.randn(n_samples, n_features)
+                            
+                            n_show = shap_values.shape[0] if hasattr(shap_values, "shape") else n_samples
+                            n_features = shap_values.shape[1] if hasattr(shap_values, "shape") and len(shap_values.shape) > 1 else 5
+                            n_samples = shap_values.shape[0] if hasattr(shap_values, "shape") else 100
+                            X_show = X_sample[:n_show] if n_show <= X_sample.shape[0] else X_sample
+                            if hasattr(shap_values, "shape") and shap_values.shape[0] != X_show.shape[0]:
+                                X_show = X_sample[: shap_values.shape[0]]
+                            feature_names = [f"Feature_{i}" for i in range(n_features)]
                             
                             if shap_plot_type == "Summary Plot":
-                                # Summary plot
-                                feature_names = [f"Feature_{i}" for i in range(n_features)]
+                                import matplotlib
+                                matplotlib.use("Agg")
+                                import matplotlib.pyplot as plt
+                                plt.figure(figsize=(10, 6))
+                                shap.summary_plot(shap_values, X_show, feature_names=feature_names[: shap_values.shape[1]], show=False)
+                                st.pyplot(plt.gcf())
+                                plt.clf()
                                 
-                                # Calculate mean absolute SHAP values
+                                st.markdown("**SHAP Values Distribution:**")
                                 mean_shap = np.mean(np.abs(shap_values), axis=0)
                                 sorted_idx = np.argsort(mean_shap)[::-1]
-                                
                                 fig = go.Figure()
                                 fig.add_trace(go.Bar(
                                     x=mean_shap[sorted_idx],
-                                    y=[feature_names[i] for i in sorted_idx],
-                                    orientation='h',
-                                    marker_color='steelblue'
+                                    y=[feature_names[i] for i in sorted_idx if i < len(feature_names)],
+                                    orientation="h",
+                                    marker_color="steelblue",
                                 ))
                                 fig.update_layout(
-                                    title="SHAP Summary Plot (Mean |SHAP value|)",
+                                    title="Mean |SHAP value| by feature",
                                     xaxis_title="Mean |SHAP value|",
                                     yaxis_title="Feature",
-                                    height=400
-                                )
-                                st.plotly_chart(fig)
-                                
-                                # SHAP values distribution
-                                st.markdown("**SHAP Values Distribution:**")
-                                fig = go.Figure()
-                                for i in range(min(5, n_features)):
-                                    fig.add_trace(go.Histogram(
-                                        x=shap_values[:, i],
-                                        name=f"Feature_{i}",
-                                        opacity=0.7
-                                    ))
-                                fig.update_layout(
-                                    title="SHAP Values Distribution",
-                                    xaxis_title="SHAP Value",
-                                    yaxis_title="Frequency",
-                                    barmode='overlay',
-                                    height=400
+                                    height=400,
                                 )
                                 st.plotly_chart(fig)
                             
                             elif shap_plot_type == "Dependence Plot":
-                                # Dependence plot (feature vs SHAP value)
                                 feature_idx = st.selectbox(
                                     "Select Feature",
                                     options=list(range(n_features)),
                                     format_func=lambda x: f"Feature_{x}",
                                     key="modellab_shap_feature_idx"
                                 )
-                                
-                                # Create synthetic feature values
-                                feature_values = X_sample[:, feature_idx]
-                                shap_for_feature = shap_values[:, feature_idx]
+                                feature_values = X_show[:, feature_idx] if feature_idx < X_show.shape[1] else X_show[:, 0]
+                                shap_for_feature = shap_values[:, feature_idx] if feature_idx < shap_values.shape[1] else shap_values[:, 0]
                                 
                                 fig = go.Figure()
                                 fig.add_trace(go.Scatter(
@@ -3694,6 +3716,90 @@ with tab6:
                 - **Feature Sensitivity:** {'High' if model_type == 'XGBoost' else 'Medium'}
                 - **Non-linearity:** {'High' if model_type in ['LSTM', 'XGBoost'] else 'Low'}
                 """)
+
+# TAB: Research Browser (ArxivResearchFetcher)
+with tab_research:
+    try:
+        from agents.implementations.research_fetcher import ArxivResearchFetcher
+        RESEARCH_AVAILABLE = True
+    except Exception as _re:
+        RESEARCH_AVAILABLE = False
+        st.caption(f"Research browser unavailable: {_re}")
+
+    if not RESEARCH_AVAILABLE:
+        st.info("Research browser requires agents.implementations.research_fetcher.")
+    else:
+        st.subheader("📚 arXiv Research Browser")
+        st.caption("Discover recent ML/finance papers and generate implementation code.")
+
+        _col1, _col2 = st.columns([3, 1])
+        with _col1:
+            _query = st.text_input(
+                "Search topic",
+                value="time series forecasting transformer",
+                key="research_query",
+            )
+        with _col2:
+            _days_back = st.selectbox(
+                "Lookback",
+                [7, 30, 90, 365],
+                index=1,
+                key="research_days",
+            )
+
+        if st.button("🔍 Search arXiv", key="research_search"):
+            with st.spinner("Fetching papers..."):
+                try:
+                    import asyncio
+                    _fetcher = ArxivResearchFetcher(days_back=_days_back)
+                    _papers = asyncio.run(_fetcher.fetch_papers_async(_query))
+                    st.session_state["research_papers"] = _papers
+                except Exception as _fetch_err:
+                    st.error(f"Fetch error: {_fetch_err}")
+
+        _papers = st.session_state.get("research_papers", [])
+        if _papers:
+            st.caption(f"{len(_papers)} papers found")
+            for _p in _papers[:10]:
+                _title = _p.title
+                _score = _p.relevance_score
+                _summary = _p.abstract or ""
+                _published = _p.published_date
+                _complexity = _p.implementation_complexity
+                _impact = _p.potential_impact
+                _arxiv_id = _p.arxiv_id
+                _url = f"https://arxiv.org/abs/{_arxiv_id}" if _arxiv_id else None
+                with st.expander(f"**{_title}** — relevance: {_score:.2f}"):
+                    st.write(_summary[:400] + ("..." if len(_summary) > 400 else ""))
+                    _col_a, _col_b = st.columns(2)
+                    with _col_a:
+                        st.caption(f"Published: {_published}")
+                        st.caption(f"Complexity: {_complexity}")
+                    with _col_b:
+                        st.caption(f"Impact: {_impact}")
+                        if _url:
+                            st.markdown(f"[View on arXiv]({_url})")
+
+                    _btn_key = f"impl_{_arxiv_id}"
+                    if st.button("⚙️ Generate Implementation", key=_btn_key):
+                        with st.spinner("Generating code..."):
+                            try:
+                                from agents.implementations.implementation_generator import ModelImplementationGenerator
+                                _gen = ModelImplementationGenerator()
+                                _candidate = _gen.generate_implementation(_p)
+                                if _candidate:
+                                    _code = _candidate.implementation_code
+                                    st.code(_code, language="python")
+                                    st.download_button(
+                                        "📥 Download",
+                                        _code,
+                                        file_name=f"research_impl_{_arxiv_id}.py",
+                                        key=f"dl_{_arxiv_id}_{id(_p)}",
+                                    )
+                                else:
+                                    st.warning("Could not generate implementation for this paper.")
+                            except Exception as _gen_err:
+                                st.error(f"Generation error: {_gen_err}")
 
 # TAB 8: Model Monitoring
 with tab_monitoring:

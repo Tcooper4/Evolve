@@ -7,6 +7,7 @@ performance tracking, agent management, and fundamental trading operations.
 
 import json
 import logging
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -58,7 +59,8 @@ def save_agent_registry(registry: Dict[str, Any]) -> bool:
 
 def initialize_core_system():
     """Initialize the core trading system components."""
-    logging.info("Initializing core trading system...")
+    if "streamlit" in sys.modules:
+        logging.info("Initializing core trading system...")
 
     # Setup logging
     setup_core_logging()
@@ -72,7 +74,8 @@ def initialize_core_system():
     for directory in directories:
         Path(directory).mkdir(exist_ok=True)
 
-    logging.info("Core trading system initialization completed")
+    if "streamlit" in sys.modules:
+        logging.info("Core trading system initialization completed")
 
     return {
         "agent_registry": agent_registry,
@@ -160,7 +163,8 @@ try:
     _initialization_data = initialize_core_system()
     _agent_registry = _initialization_data["agent_registry"]
     _system_initialized = True
-    logging.info("Core module initialized successfully")
+    if "streamlit" in sys.modules:
+        logging.info("Core module initialized successfully")
 except Exception as e:
     logging.error(f"Failed to initialize core module: {e}")
     _system_initialized = False

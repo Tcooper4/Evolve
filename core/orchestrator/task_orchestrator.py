@@ -48,10 +48,15 @@ from .task_conditions import TaskConditions
 from .task_executor import TaskExecutor
 
 # Modular imports
-from .task_models import TaskConfig, TaskType
+from .task_models import TaskConfig, TaskPriority, TaskType
 from .task_monitor import TaskMonitor
-from .task_providers import TaskProvider, create_task_provider
 from .task_scheduler import TaskScheduler
+
+try:
+    from .task_providers import TaskProvider, create_task_provider
+except ImportError:
+    TaskProvider = None
+    create_task_provider = None
 
 
 class TaskOrchestrator:
@@ -209,6 +214,9 @@ class TaskOrchestrator:
 
     def _initialize_task_providers(self):
         """Initialize task providers"""
+        if create_task_provider is None:
+            self.logger.warning("Task providers not available (optional dependency)")
+            return
         try:
             # Initialize agent task provider
             agent_provider = create_task_provider(
@@ -239,12 +247,18 @@ class TaskOrchestrator:
             task_graph = {}
 
             for task_name, task_data in tasks_config.items():
+                _priority = task_data.get("priority", "medium")
+                if isinstance(_priority, str):
+                    try:
+                        _priority = TaskPriority(_priority)
+                    except ValueError:
+                        _priority = TaskPriority.MEDIUM
                 task_config = TaskConfig(
                     name=task_name,
                     task_type=TaskType(task_name),
                     enabled=task_data.get("enabled", True),
                     interval_minutes=task_data.get("interval_minutes", 60),
-                    priority=task_data.get("priority", "medium"),
+                    priority=_priority,
                     dependencies=task_data.get("dependencies", []),
                     conditions=task_data.get("conditions", {}),
                     parameters=task_data.get("parameters", {}),

@@ -61,13 +61,6 @@ def _get_forecasting_backend():
         logger.warning(f"Forecasting backend not available: {e}")
         return None
 
-st.set_page_config(
-    page_title="Forecasting & Market Analysis",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
 # Global page-level error boundary (outermost catch)
 import os as _os
 import runpy as _runpy
@@ -2781,6 +2774,22 @@ with tab6:
             
             if st.button("🔮 Train GNN & Generate Forecast", type="primary", use_container_width=True):
                 try:
+                    # Type guards: ensure scalars (sliders can sometimes be dict in edge cases)
+                    _gnn_epochs = gnn_epochs
+                    _gnn_horizon = gnn_horizon
+                    _correlation_threshold = correlation_threshold
+                    if isinstance(_gnn_epochs, dict):
+                        _gnn_epochs = int(_gnn_epochs.get("value", _gnn_epochs.get("epochs", 50)))
+                    else:
+                        _gnn_epochs = int(_gnn_epochs)
+                    if isinstance(_gnn_horizon, dict):
+                        _gnn_horizon = int(_gnn_horizon.get("value", _gnn_horizon.get("horizon", 7)))
+                    else:
+                        _gnn_horizon = int(_gnn_horizon)
+                    if isinstance(_correlation_threshold, dict):
+                        _correlation_threshold = float(_correlation_threshold.get("value", _correlation_threshold.get("threshold", 0.5)))
+                    else:
+                        _correlation_threshold = float(_correlation_threshold)
                     with st.spinner(f"Training Graph Neural Network on {len(multi_df.columns)} assets..."):
                         from trading.models.advanced.gnn.gnn_model import GNNForecaster
                         
@@ -2794,18 +2803,18 @@ with tab6:
                             hidden_size=64,
                             num_layers=2,
                             seq_length=30,
-                            correlation_threshold=correlation_threshold
+                            correlation_threshold=_correlation_threshold
                         )
                         
                         # Train
-                        progress_text.text(f"Training for {gnn_epochs} epochs...")
-                        gnn.fit(multi_df, epochs=gnn_epochs, batch_size=32)
+                        progress_text.text(f"Training for {_gnn_epochs} epochs...")
+                        gnn.fit(multi_df, epochs=_gnn_epochs, batch_size=32)
                         
                         # Generate forecast
                         progress_text.text("Generating forecast...")
                         forecast_result = gnn.forecast(
                             multi_df,
-                            horizon=gnn_horizon,
+                            horizon=_gnn_horizon,
                             target_asset=target_asset
                         )
                         
@@ -2847,7 +2856,7 @@ with tab6:
                         col1, col2, col3, col4 = st.columns(4)
                         
                         with col1:
-                            st.metric("Forecast Horizon", f"{gnn_horizon} days")
+                            st.metric("Forecast Horizon", f"{_gnn_horizon} days")
                         with col2:
                             st.metric("Assets Used", len(multi_df.columns))
                         with col3:
@@ -2888,9 +2897,10 @@ with tab6:
                 except ImportError:
                     st.error("❌ GNN model not available. Make sure it has been recreated using the prompts.")
                 except Exception as e:
-                    st.error(f"Error generating GNN forecast: {e}")
                     import traceback
-                    st.code(traceback.format_exc())
+                    st.error(f"GNN error: {e}")
+                    with st.expander("Traceback"):
+                        st.code(traceback.format_exc(), language="python")
     except Exception as e:
         st.error(f"Tab error: {type(e).__name__}: {e}")
         import traceback

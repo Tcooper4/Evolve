@@ -97,13 +97,6 @@ def _get_sample_returns() -> Optional[pd.Series]:
 
 
 try:
-    # Page config
-    st.set_page_config(
-        page_title="Performance & History",
-        page_icon="📉",
-        layout="wide"
-    )
-
     # Initialize session state
     if 'strategy_logger' not in st.session_state:
         try:
@@ -245,10 +238,21 @@ try:
         try:
             backtest = st.session_state.get("backtest_results")
             if backtest and backtest.get("trades") and len(backtest["trades"]) > 0:
-                df = pd.DataFrame(backtest["trades"])
-                for col in ['entry_date', 'exit_date', 'date', 'Date']:
+                # Normalize trade dicts: ensure entry_date, exit_date, symbol, holding_period
+                trades = []
+                for t in backtest["trades"]:
+                    if not isinstance(t, dict):
+                        continue
+                    row = dict(t)
+                    row["entry_date"] = t.get("entry_date") or t.get("timestamp")
+                    row["exit_date"] = t.get("exit_date")
+                    row["symbol"] = t.get("symbol") or t.get("asset")
+                    row["holding_period"] = t.get("holding_period") if t.get("holding_period") is not None else t.get("duration_days")
+                    trades.append(row)
+                df = pd.DataFrame(trades)
+                for col in ["entry_date", "exit_date", "date", "Date", "timestamp"]:
                     if col in df.columns:
-                        df[col] = pd.to_datetime(df[col], errors='coerce')
+                        df[col] = pd.to_datetime(df[col], errors="coerce")
                 return _normalize_pnl(df)
         except Exception:
             pass
@@ -590,14 +594,31 @@ try:
                 # Get top 10 trades
                 top_trades = trade_history.nlargest(10, 'pnl')
             
-                # Format for display
-                display_trades = top_trades[['entry_date', 'symbol', 'strategy', 'direction', 'entry_price', 'exit_price', 'pnl', 'pnl_pct', 'holding_period']].copy()
-                display_trades['entry_date'] = display_trades['entry_date'].dt.strftime('%Y-%m-%d')
-                display_trades['entry_price'] = display_trades['entry_price'].apply(lambda x: f"${x:.2f}")
-                display_trades['exit_price'] = display_trades['exit_price'].apply(lambda x: f"${x:.2f}")
-                display_trades['pnl'] = display_trades['pnl'].apply(lambda x: f"${x:.2f}")
-                display_trades['pnl_pct'] = display_trades['pnl_pct'].apply(lambda x: f"{x:.2%}")
-                display_trades['holding_period'] = display_trades['holding_period'].apply(lambda x: f"{int(x)} days")
+                # Format for display (safe for missing entry_date/exit_date)
+                show_cols = [c for c in ['entry_date', 'symbol', 'strategy', 'direction', 'entry_price', 'exit_price', 'pnl', 'pnl_pct', 'holding_period'] if c in top_trades.columns]
+                if not show_cols:
+                    show_cols = [c for c in top_trades.columns][:9]
+                display_trades = top_trades[show_cols].copy()
+                if 'entry_date' in display_trades.columns:
+                    display_trades['entry_date'] = display_trades['entry_date'].apply(
+                        lambda x: x.strftime('%Y-%m-%d') if pd.notna(x) and getattr(x, 'strftime', None) else 'N/A'
+                    )
+                if 'entry_price' in display_trades.columns:
+                    display_trades['entry_price'] = display_trades['entry_price'].apply(lambda x: f"${x:.2f}" if pd.notna(x) else '')
+                if 'exit_price' in display_trades.columns:
+                    display_trades['exit_price'] = display_trades['exit_price'].apply(lambda x: f"${x:.2f}" if pd.notna(x) else '')
+                if 'pnl' in display_trades.columns:
+                    display_trades['pnl'] = display_trades['pnl'].apply(lambda x: f"${x:.2f}" if pd.notna(x) else '')
+                if 'pnl_pct' in display_trades.columns:
+                    display_trades['pnl_pct'] = display_trades['pnl_pct'].apply(lambda x: f"{x:.2%}" if pd.notna(x) else '')
+                if 'holding_period' in display_trades.columns:
+                    display_trades['holding_period'] = display_trades['holding_period'].apply(
+                        lambda x: f"{int(x)} days" if pd.notna(x) and x is not None else 'N/A'
+                    )
+                elif 'duration_days' in display_trades.columns:
+                    display_trades['holding_period'] = display_trades['duration_days'].apply(
+                        lambda x: f"{int(x)} days" if pd.notna(x) and x is not None else 'N/A'
+                    )
             
                 display_trades.columns = ['Entry Date', 'Symbol', 'Strategy', 'Direction', 'Entry Price', 'Exit Price', 'P&L ($)', 'P&L (%)', 'Holding Period']
             
@@ -679,15 +700,18 @@ try:
             # Date range filter
             col_date1, col_date2 = st.columns(2)
             with col_date1:
-                start_date = st.date_input("Start Date", value=filtered_trades['entry_date'].min() if not filtered_trades.empty else datetime.now().date())
+                _min_ed = filtered_trades['entry_date'].min() if 'entry_date' in filtered_trades.columns and not filtered_trades.empty else None
+                start_date = st.date_input("Start Date", value=pd.Timestamp(_min_ed).date() if _min_ed is not None and pd.notna(_min_ed) else datetime.now().date())
             with col_date2:
-                end_date = st.date_input("End Date", value=filtered_trades['entry_date'].max() if not filtered_trades.empty else datetime.now().date())
+                _max_ed = filtered_trades['entry_date'].max() if 'entry_date' in filtered_trades.columns and not filtered_trades.empty else None
+                end_date = st.date_input("End Date", value=pd.Timestamp(_max_ed).date() if _max_ed is not None and pd.notna(_max_ed) else datetime.now().date())
         
             if not filtered_trades.empty:
-                filtered_trades = filtered_trades[
-                    (filtered_trades['entry_date'] >= pd.Timestamp(start_date)) &
-                    (filtered_trades['entry_date'] <= pd.Timestamp(end_date))
-                ]
+                if 'entry_date' in filtered_trades.columns:
+                    filtered_trades = filtered_trades[
+                        (filtered_trades['entry_date'] >= pd.Timestamp(start_date)) &
+                        (filtered_trades['entry_date'] <= pd.Timestamp(end_date))
+                    ]
         
             st.markdown("---")
         
@@ -701,21 +725,41 @@ try:
                     # Prepare display dataframe
                     display_trades = filtered_trades.copy()
                 
-                    # Format columns
-                    display_trades['entry_date'] = display_trades['entry_date'].dt.strftime('%Y-%m-%d %H:%M')
-                    display_trades['exit_date'] = display_trades['exit_date'].dt.strftime('%Y-%m-%d %H:%M')
-                    display_trades['entry_price'] = display_trades['entry_price'].apply(lambda x: f"${x:.2f}")
-                    display_trades['exit_price'] = display_trades['exit_price'].apply(lambda x: f"${x:.2f}")
-                    display_trades['pnl'] = display_trades['pnl'].apply(lambda x: f"${x:.2f}")
-                    display_trades['pnl_pct'] = display_trades['pnl_pct'].apply(lambda x: f"{x:.2%}")
-                    display_trades['holding_period'] = display_trades['holding_period'].apply(lambda x: f"{int(x)} days")
+                    # Format columns (safe for missing entry_date/exit_date)
+                    if 'entry_date' in display_trades.columns:
+                        display_trades['entry_date'] = display_trades['entry_date'].apply(
+                            lambda x: x.strftime('%Y-%m-%d %H:%M') if pd.notna(x) and getattr(x, 'strftime', None) else 'N/A'
+                        )
+                    if 'exit_date' in display_trades.columns:
+                        display_trades['exit_date'] = display_trades['exit_date'].apply(
+                            lambda x: x.strftime('%Y-%m-%d %H:%M') if pd.notna(x) and getattr(x, 'strftime', None) else 'N/A'
+                        )
+                    if 'entry_price' in display_trades.columns:
+                        display_trades['entry_price'] = display_trades['entry_price'].apply(lambda x: f"${x:.2f}" if pd.notna(x) else '')
+                    if 'exit_price' in display_trades.columns:
+                        display_trades['exit_price'] = display_trades['exit_price'].apply(lambda x: f"${x:.2f}" if pd.notna(x) else '')
+                    if 'pnl' in display_trades.columns:
+                        display_trades['pnl'] = display_trades['pnl'].apply(lambda x: f"${x:.2f}" if pd.notna(x) else '')
+                    if 'pnl_pct' in display_trades.columns:
+                        display_trades['pnl_pct'] = display_trades['pnl_pct'].apply(lambda x: f"{x:.2%}" if pd.notna(x) else '')
+                    _hp_col = 'holding_period' if 'holding_period' in display_trades.columns else 'duration_days'
+                    if _hp_col in display_trades.columns:
+                        display_trades['holding_period'] = display_trades[_hp_col].apply(
+                            lambda x: f"{int(x)} days" if pd.notna(x) and x is not None else 'N/A'
+                        )
                 
                     # Select and rename columns for display
-                    display_cols = ['entry_date', 'exit_date', 'symbol', 'strategy', 'direction', 
-                                   'entry_price', 'exit_price', 'pnl', 'pnl_pct', 'holding_period']
+                    display_cols = [c for c in ['entry_date', 'exit_date', 'symbol', 'strategy', 'direction',
+                                               'entry_price', 'exit_price', 'pnl', 'pnl_pct', 'holding_period']
+                                   if c in display_trades.columns]
+                    if 'symbol' not in display_cols and 'asset' in display_trades.columns:
+                        display_trades['symbol'] = display_trades['asset']
+                        display_cols = [c for c in ['entry_date', 'exit_date', 'symbol', 'strategy', 'direction',
+                                                   'entry_price', 'exit_price', 'pnl', 'pnl_pct', 'holding_period']
+                                       if c in display_trades.columns]
                     display_trades = display_trades[display_cols]
-                    display_trades.columns = ['Entry Date/Time', 'Exit Date/Time', 'Symbol', 'Strategy', 
-                                             'Direction', 'Entry Price', 'Exit Price', 'P&L ($)', 'P&L (%)', 'Holding Period']
+                    display_trades.columns = ['Entry Date/Time', 'Exit Date/Time', 'Symbol', 'Strategy',
+                                             'Direction', 'Entry Price', 'Exit Price', 'P&L ($)', 'P&L (%)', 'Holding Period'][:len(display_cols)]
                 
                     # Display with expandable rows for details
                     st.dataframe(
@@ -730,10 +774,16 @@ try:
                     st.subheader("📋 Trade Details")
                 
                     if len(filtered_trades) > 0:
+                        def _trade_label(i):
+                            row = filtered_trades.iloc[i]
+                            sym = row.get('symbol', row.get('asset', '?'))
+                            ed = row.get('entry_date')
+                            ed_str = ed.strftime('%Y-%m-%d') if pd.notna(ed) and getattr(ed, 'strftime', None) else 'N/A'
+                            return f"Trade {i+1}: {sym} - {ed_str}"
                         selected_index = st.selectbox(
                             "Select Trade to View Details",
                             range(len(filtered_trades)),
-                            format_func=lambda x: f"Trade {x+1}: {filtered_trades.iloc[x]['symbol']} - {filtered_trades.iloc[x]['entry_date'].strftime('%Y-%m-%d')}"
+                            format_func=_trade_label
                         )
                     
                         selected_trade = filtered_trades.iloc[selected_index]
@@ -742,14 +792,19 @@ try:
                     
                         with col_detail1:
                             st.markdown("**Trade Information**")
-                            st.write(f"**Symbol:** {selected_trade['symbol']}")
-                            st.write(f"**Strategy:** {selected_trade['strategy']}")
-                            st.write(f"**Direction:** {selected_trade['direction']}")
-                            st.write(f"**Entry Date:** {selected_trade['entry_date'].strftime('%Y-%m-%d %H:%M:%S')}")
-                            st.write(f"**Exit Date:** {selected_trade['exit_date'].strftime('%Y-%m-%d %H:%M:%S')}")
-                            st.write(f"**Entry Price:** ${selected_trade['entry_price']:.2f}")
-                            st.write(f"**Exit Price:** ${selected_trade['exit_price']:.2f}")
-                            st.write(f"**Holding Period:** {int(selected_trade['holding_period'])} days")
+                            st.write(f"**Symbol:** {selected_trade.get('symbol', selected_trade.get('asset', 'N/A'))}")
+                            st.write(f"**Strategy:** {selected_trade.get('strategy', 'N/A')}")
+                            st.write(f"**Direction:** {selected_trade.get('direction', 'N/A')}")
+                            _ent = selected_trade.get('entry_date') or selected_trade.get('timestamp')
+                            _ent_str = _ent.strftime('%Y-%m-%d %H:%M:%S') if _ent is not None and pd.notna(_ent) and getattr(_ent, 'strftime', None) else 'N/A'
+                            st.write(f"**Entry Date:** {_ent_str}")
+                            _ex = selected_trade.get('exit_date')
+                            _ex_str = _ex.strftime('%Y-%m-%d %H:%M:%S') if _ex is not None and pd.notna(_ex) and getattr(_ex, 'strftime', None) else 'N/A'
+                            st.write(f"**Exit Date:** {_ex_str}")
+                            st.write(f"**Entry Price:** ${selected_trade.get('entry_price', 0):.2f}")
+                            st.write(f"**Exit Price:** ${selected_trade.get('exit_price', 0):.2f}")
+                            _hp = selected_trade.get('holding_period') if selected_trade.get('holding_period') is not None else selected_trade.get('duration_days')
+                            st.write(f"**Holding Period:** {int(_hp)} days" if _hp is not None and pd.notna(_hp) else "**Holding Period:** N/A")
                     
                         with col_detail2:
                             st.markdown("**Performance**")
@@ -807,68 +862,73 @@ try:
                 if filtered_trades.empty:
                     st.info("No trades match the selected filters.")
                 else:
-                    # Create calendar heatmap
-                    filtered_trades['date'] = filtered_trades['entry_date'].dt.date
-                    daily_pnl = filtered_trades.groupby('date')['pnl'].sum().reset_index()
-                    daily_pnl['date'] = pd.to_datetime(daily_pnl['date'])
+                    # Use only rows with valid entry_date for calendar
+                    _cal_df = filtered_trades.dropna(subset=['entry_date']) if 'entry_date' in filtered_trades.columns else filtered_trades
+                    if _cal_df.empty:
+                        st.info("No trades with entry dates for calendar view.")
+                    else:
+                        _cal_df = _cal_df.copy()
+                        _cal_df['date'] = _cal_df['entry_date'].dt.date
+                        daily_pnl = _cal_df.groupby('date')['pnl'].sum().reset_index()
+                        daily_pnl['date'] = pd.to_datetime(daily_pnl['date'])
                 
-                    # Create calendar heatmap
-                    fig_calendar = go.Figure()
+                        # Create calendar heatmap
+                        fig_calendar = go.Figure()
                 
-                    # Create heatmap data
-                    daily_pnl['year'] = daily_pnl['date'].dt.year
-                    daily_pnl['month'] = daily_pnl['date'].dt.month
-                    daily_pnl['day'] = daily_pnl['date'].dt.day
+                        # Create heatmap data
+                        daily_pnl['year'] = daily_pnl['date'].dt.year
+                        daily_pnl['month'] = daily_pnl['date'].dt.month
+                        daily_pnl['day'] = daily_pnl['date'].dt.day
                 
-                    # Pivot for heatmap
-                    pivot_data = daily_pnl.pivot_table(
-                        values='pnl',
-                        index='day',
-                        columns=['year', 'month'],
-                        aggfunc='sum',
-                        fill_value=0
-                    )
+                        # Pivot for heatmap
+                        pivot_data = daily_pnl.pivot_table(
+                            values='pnl',
+                            index='day',
+                            columns=['year', 'month'],
+                            aggfunc='sum',
+                            fill_value=0
+                        )
                 
-                    # Simplified calendar view - show daily P&L
-                    fig_calendar = go.Figure(data=go.Scatter(
-                        x=daily_pnl['date'],
-                        y=daily_pnl['pnl'],
-                        mode='markers',
-                        marker=dict(
-                            size=abs(daily_pnl['pnl']) / 10,
-                            color=daily_pnl['pnl'],
-                            colorscale='RdYlGn',
-                            showscale=True,
-                            colorbar=dict(title="P&L ($)")
-                        ),
-                        text=[f"Date: {d.strftime('%Y-%m-%d')}<br>P&L: ${p:.2f}" for d, p in zip(daily_pnl['date'], daily_pnl['pnl'])],
-                        hovertemplate='%{text}<extra></extra>'
-                    ))
+                        # Simplified calendar view - show daily P&L
+                        fig_calendar = go.Figure(data=go.Scatter(
+                            x=daily_pnl['date'],
+                            y=daily_pnl['pnl'],
+                            mode='markers',
+                            marker=dict(
+                                size=abs(daily_pnl['pnl']) / 10,
+                                color=daily_pnl['pnl'],
+                                colorscale='RdYlGn',
+                                showscale=True,
+                                colorbar=dict(title="P&L ($)")
+                            ),
+                            text=[f"Date: {d.strftime('%Y-%m-%d')}<br>P&L: ${p:.2f}" for d, p in zip(daily_pnl['date'], daily_pnl['pnl'])],
+                            hovertemplate='%{text}<extra></extra>'
+                        ))
                 
-                    fig_calendar.update_layout(
-                        title="Trade Calendar - Daily P&L",
-                        xaxis_title="Date",
-                        yaxis_title="P&L ($)",
-                        height=500
-                    )
+                        fig_calendar.update_layout(
+                            title="Trade Calendar - Daily P&L",
+                            xaxis_title="Date",
+                            yaxis_title="P&L ($)",
+                            height=500
+                        )
                 
-                    st.plotly_chart(fig_calendar, use_container_width=True)
+                        st.plotly_chart(fig_calendar, use_container_width=True)
                 
-                    # Calendar summary
-                    st.markdown("**Calendar Summary**")
-                    col_cal1, col_cal2, col_cal3 = st.columns(3)
+                        # Calendar summary
+                        st.markdown("**Calendar Summary**")
+                        col_cal1, col_cal2, col_cal3 = st.columns(3)
                 
-                    with col_cal1:
-                        st.metric("Total Trading Days", len(daily_pnl))
-                        st.metric("Profitable Days", len(daily_pnl[daily_pnl['pnl'] > 0]))
+                        with col_cal1:
+                            st.metric("Total Trading Days", len(daily_pnl))
+                            st.metric("Profitable Days", len(daily_pnl[daily_pnl['pnl'] > 0]))
                 
-                    with col_cal2:
-                        st.metric("Best Day", f"${daily_pnl['pnl'].max():.2f}")
-                        st.metric("Worst Day", f"${daily_pnl['pnl'].min():.2f}")
+                        with col_cal2:
+                            st.metric("Best Day", f"${daily_pnl['pnl'].max():.2f}")
+                            st.metric("Worst Day", f"${daily_pnl['pnl'].min():.2f}")
                 
-                    with col_cal3:
-                        st.metric("Average Daily P&L", f"${daily_pnl['pnl'].mean():.2f}")
-                        st.metric("Win Rate", f"{(daily_pnl['pnl'] > 0).mean():.1%}")
+                        with col_cal3:
+                            st.metric("Average Daily P&L", f"${daily_pnl['pnl'].mean():.2f}")
+                            st.metric("Win Rate", f"{(daily_pnl['pnl'] > 0).mean():.1%}")
         
             # Summary statistics
             if not filtered_trades.empty:
@@ -887,7 +947,9 @@ try:
             
                 with col_sum3:
                     st.metric("Win Rate", f"{(filtered_trades['pnl'] > 0).mean():.1%}")
-                    st.metric("Average Holding Period", f"{filtered_trades['holding_period'].mean():.1f} days")
+                    _hp_col = 'holding_period' if 'holding_period' in filtered_trades.columns else 'duration_days'
+                    hp_mean = filtered_trades[_hp_col].mean() if _hp_col in filtered_trades.columns else None
+                    st.metric("Average Holding Period", f"{hp_mean:.1f} days" if hp_mean is not None and pd.notna(hp_mean) else "N/A")
             
                 with col_sum4:
                     st.metric("Best Trade", f"${filtered_trades['pnl'].max():.2f}")
@@ -998,18 +1060,62 @@ try:
             'action': action
         }
 
-    def get_strategy_lifecycle(strategy_name: str) -> Dict[str, any]:
-        """Get strategy lifecycle information."""
-        # Placeholder lifecycle data
-        lifecycle_stages = {
-            'Bollinger Bands': {'stage': 'Mature', 'days_active': 180, 'last_optimized': 30},
-            'Moving Average Crossover': {'stage': 'Mature', 'days_active': 210, 'last_optimized': 45},
-            'RSI Mean Reversion': {'stage': 'Growth', 'days_active': 90, 'last_optimized': 15},
-            'MACD Momentum': {'stage': 'Mature', 'days_active': 150, 'last_optimized': 20},
-            'Volatility Breakout': {'stage': 'Testing', 'days_active': 45, 'last_optimized': 5}
-        }
-    
-        return lifecycle_stages.get(strategy_name, {'stage': 'Unknown', 'days_active': 0, 'last_optimized': 0})
+    def get_strategy_lifecycle(strategy_name: str) -> Dict[str, Any]:
+        """Get lifecycle data from memory store, falling back to backtest history."""
+        try:
+            from trading.memory import get_memory_store
+            from trading.memory.memory_store import MemoryType
+
+            _mem = get_memory_store()
+            # List backtest-related records and filter by strategy
+            _records = _mem.list(
+                MemoryType.LONG_TERM,
+                namespace="backtests",
+                limit=500,
+            )
+            _strategy_records = [
+                r for r in (_records or [])
+                if strategy_name in str(r.value if hasattr(r, "value") else r)
+                or (isinstance(getattr(r, "value", None), dict) and strategy_name in str(r.value.get("strategy", "")))
+            ]
+            if not _strategy_records:
+                _records = _mem.list(MemoryType.LONG_TERM, namespace="StreamlitStrategyTesting", limit=500)
+                _strategy_records = [
+                    r for r in (_records or [])
+                    if strategy_name in str(getattr(r, "value", ""))
+                ]
+            if _strategy_records:
+                _first = min(
+                    _strategy_records,
+                    key=lambda r: getattr(r, "created_at", "9999") or "9999",
+                )
+                _last = max(
+                    _strategy_records,
+                    key=lambda r: getattr(r, "updated_at", "0000") or getattr(r, "created_at", "0000") or "0000",
+                )
+                _first_ts = getattr(_first, "created_at", None) or getattr(_first, "updated_at", None)
+                _first_dt = pd.to_datetime(_first_ts) if _first_ts else pd.Timestamp.now()
+                _days_active = (pd.Timestamp.now() - _first_dt).days
+                _stage = (
+                    "Testing" if _days_active < 14
+                    else "Growth" if _days_active < 60
+                    else "Mature"
+                )
+                _last_ts = getattr(_last, "updated_at", None) or getattr(_last, "created_at", None)
+                _last_str = str(_last_ts)[:10] if _last_ts else "Unknown"
+                return {
+                    "stage": _stage,
+                    "days_active": _days_active,
+                    "last_optimized": _last_str,
+                    "run_count": len(_strategy_records),
+                }
+        except Exception:
+            pass
+        # Fallback: derive from backtest_results in session
+        _br = st.session_state.get("backtest_results", {})
+        if _br and st.session_state.get("backtest_strategy") == strategy_name:
+            return {"stage": "Testing", "days_active": 1, "last_optimized": "Today", "run_count": 1}
+        return {"stage": "Unknown", "days_active": 0, "last_optimized": "Never", "run_count": 0}
 
     # TAB 3: Strategy Health
     with tab3:
@@ -1295,7 +1401,10 @@ try:
                     st.metric("Days Active", lifecycle['days_active'])
             
                 with col_life3:
-                    st.metric("Last Optimized", f"{lifecycle['last_optimized']} days ago")
+                    _lo = lifecycle.get("last_optimized", "Never")
+                    st.metric("Last Optimized", str(_lo))
+                if lifecycle.get("run_count", 0) > 0:
+                    st.caption(f"Run count: {lifecycle['run_count']}")
             
                 # Lifecycle stage interpretation
                 if lifecycle['stage'] == 'Testing':
@@ -1309,25 +1418,74 @@ try:
             
                 # Auto-pause Triggers Configuration
                 st.subheader("⚙️ Auto-Pause Triggers Configuration")
-            
+
+                # Load existing rules from memory or session
+                _saved_rules = st.session_state.get(f"autopause_rules_{selected_strategy}", {})
+                try:
+                    from trading.memory import get_memory_store
+                    from trading.memory.memory_store import MemoryType
+
+                    _mem = get_memory_store()
+                    _list = _mem.list(
+                        MemoryType.LONG_TERM,
+                        namespace="strategy_health",
+                        category="autopause_rules",
+                        limit=100,
+                    )
+                    for _r in _list or []:
+                        if getattr(_r, "key", None) == f"autopause_{selected_strategy}":
+                            _val = getattr(_r, "value", None)
+                            if isinstance(_val, dict):
+                                _saved_rules = _val
+                                st.session_state[f"autopause_rules_{selected_strategy}"] = _saved_rules
+                            break
+                except Exception:
+                    pass
+
                 with st.expander("Configure Auto-Pause Rules", expanded=False):
                     col_trigger1, col_trigger2 = st.columns(2)
-                
+
                     with col_trigger1:
                         st.markdown("**Performance Triggers**")
-                        pause_on_negative = st.checkbox("Pause if negative returns", value=True)
-                        pause_on_low_sharpe = st.checkbox("Pause if Sharpe < 0.5", value=True)
-                        pause_on_high_dd = st.checkbox("Pause if drawdown > 15%", value=True)
-                
+                        _cb_negative = st.checkbox("Pause if negative returns", value=_saved_rules.get("pause_on_negative_returns", True), key=f"ap_neg_{selected_strategy}")
+                        _cb_sharpe = st.checkbox("Pause if Sharpe < 0.5", value=_saved_rules.get("pause_on_low_sharpe", True), key=f"ap_sharpe_{selected_strategy}")
+                        _cb_drawdown = st.checkbox("Pause if drawdown > 15%", value=_saved_rules.get("pause_on_high_drawdown", True), key=f"ap_dd_{selected_strategy}")
+
                     with col_trigger2:
                         st.markdown("**Risk Triggers**")
-                        pause_on_low_winrate = st.checkbox("Pause if win rate < 40%", value=True)
-                        pause_on_high_slippage = st.checkbox("Pause if slippage > 0.5%", value=False)
-                        pause_on_degradation = st.checkbox("Pause on performance degradation > 30%", value=True)
-                
-                    if st.button("💾 Save Auto-Pause Configuration", type="primary"):
-                        st.success("Auto-pause configuration saved!")
-                        st.info("These rules will be applied automatically to monitor strategy health")
+                        _cb_winrate = st.checkbox("Pause if win rate < 40%", value=_saved_rules.get("pause_on_low_winrate", True), key=f"ap_wr_{selected_strategy}")
+                        _cb_slippage = st.checkbox("Pause if slippage > 0.5%", value=_saved_rules.get("pause_on_high_slippage", False), key=f"ap_slip_{selected_strategy}")
+                        _cb_degradation = st.checkbox("Pause on performance degradation > 30%", value=_saved_rules.get("pause_on_degradation", True), key=f"ap_deg_{selected_strategy}")
+
+                    if st.button("💾 Save Auto-Pause Configuration", type="primary", key="save_autopause"):
+                        _rules = {
+                            "pause_on_negative_returns": _cb_negative,
+                            "pause_on_low_sharpe": _cb_sharpe,
+                            "pause_on_high_drawdown": _cb_drawdown,
+                            "pause_on_low_winrate": _cb_winrate,
+                            "pause_on_high_slippage": _cb_slippage,
+                            "pause_on_degradation": _cb_degradation,
+                            "strategy": selected_strategy,
+                            "saved_at": pd.Timestamp.now().isoformat(),
+                        }
+                        try:
+                            from trading.memory import get_memory_store
+                            from trading.memory.memory_store import MemoryType
+
+                            _mem = get_memory_store()
+                            _mem.upsert(
+                                MemoryType.LONG_TERM,
+                                "strategy_health",
+                                f"autopause_{selected_strategy}",
+                                _rules,
+                                category="autopause_rules",
+                            )
+                            st.session_state[f"autopause_rules_{selected_strategy}"] = _rules
+                            st.success(f"Auto-pause rules saved for {selected_strategy}")
+                        except Exception as _e:
+                            st.session_state[f"autopause_rules_{selected_strategy}"] = _rules
+                            st.info(f"Rules saved to session (memory store unavailable: {_e})")
+                        st.rerun()
 
     # Helper functions for Attribution Analysis
     def calculate_alpha_beta(portfolio_returns: pd.Series, benchmark_returns: pd.Series) -> Dict[str, float]:
@@ -1488,9 +1646,6 @@ try:
         if sample_returns is None or (hasattr(sample_returns, 'empty') and sample_returns.empty):
             _empty_state("No performance data yet. Run a backtest or make trades to populate this page.", "📈")
         else:
-            benchmark_returns = None  # TODO: load benchmark from data provider
-            if benchmark_returns is None or (hasattr(benchmark_returns, 'empty') and benchmark_returns.empty):
-                benchmark_returns = pd.Series(0.0, index=sample_returns.index)
             strategy_df = get_strategy_performance_data()
             trade_history = get_trade_history()
             positions = {'AAPL': 0.3, 'GOOGL': 0.25, 'MSFT': 0.2, 'TSLA': 0.15, 'NVDA': 0.1}
@@ -1513,6 +1668,30 @@ try:
                 )
     
             st.markdown("---")
+    
+            # Benchmark returns: real fetch by selected symbol
+            _benchmark_map = {"S&P 500 (SPY)": "SPY", "NASDAQ (QQQ)": "QQQ", "Dow Jones (DIA)": "DIA", "Custom": None}
+            _bm_ticker = _benchmark_map.get(benchmark_symbol)
+            if _bm_ticker:
+                try:
+                    import yfinance as yf
+                    _bm_hist = yf.Ticker(_bm_ticker).history(
+                        start=sample_returns.index[0],
+                        end=sample_returns.index[-1],
+                        auto_adjust=True,
+                    )
+                    if not _bm_hist.empty:
+                        benchmark_returns = _bm_hist["Close"].pct_change().dropna()
+                        benchmark_returns = benchmark_returns.reindex(sample_returns.index).fillna(0)
+                    else:
+                        benchmark_returns = pd.Series(0.0, index=sample_returns.index)
+                except Exception as _bm_err:
+                    benchmark_returns = pd.Series(0.0, index=sample_returns.index)
+                    st.caption(f"Benchmark data unavailable: {_bm_err}")
+            else:
+                benchmark_returns = pd.Series(0.0, index=sample_returns.index)
+            if benchmark_returns is None or (hasattr(benchmark_returns, "empty") and benchmark_returns.empty):
+                benchmark_returns = pd.Series(0.0, index=sample_returns.index)
     
             # Alpha vs Beta Analysis
             st.subheader("📊 Alpha vs Beta Decomposition")
@@ -1720,8 +1899,8 @@ try:
                         if has_close and has_vol:
                             pct = factor_attribution_pct(ohlcv, sample_returns, window=60)
                             factor_attribution = {k: pct.get(k, 0.0) for k in STANDARD_FACTORS}
-                except Exception:
-                    pass
+                except Exception as _factor_err:
+                    st.caption(f"Factor attribution (momentum/reversal/vol/volume) requires OHLCV data; fallback used: {_factor_err}")
                 if factor_attribution is None:
                     factor_attribution = calculate_factor_attribution(sample_returns)
                 col_fact1, col_fact2 = st.columns([1, 1])
@@ -2042,21 +2221,43 @@ try:
     
         return regime_perf
 
-    def calculate_strategy_correlation(strategy_performance: pd.DataFrame) -> pd.DataFrame:
-        """Calculate correlation matrix between strategies."""
-        if strategy_performance.empty or len(strategy_performance) < 2:
-            return pd.DataFrame()
-    
-        # Create correlation matrix from strategy returns (simplified)
-        strategies = strategy_performance['strategy_name'].tolist()
-        n = len(strategies)
-    
-        # Generate sample correlation matrix
-        corr_matrix = np.random.rand(n, n)
-        corr_matrix = (corr_matrix + corr_matrix.T) / 2
-        np.fill_diagonal(corr_matrix, 1.0)
-    
-        return pd.DataFrame(corr_matrix, index=strategies, columns=strategies)
+    def calculate_strategy_correlation(strategy_performance: pd.DataFrame, sample_returns=None) -> pd.DataFrame:
+        """Compute per-strategy return series from trade history and correlate."""
+        try:
+            _trade_hist = st.session_state.get("backtest_results", {})
+            _strategies = strategy_performance["strategy_name"].tolist() if "strategy_name" in strategy_performance.columns else []
+            if len(_strategies) < 2:
+                return pd.DataFrame([[1.0]], index=_strategies, columns=_strategies)
+            _series = {}
+            for _strat in _strategies:
+                _trades = [t for t in _trade_hist.get("trades", []) if t.get("strategy") == _strat]
+                if _trades:
+                    _pairs = []
+                    for t in _trades:
+                        _d = t.get("exit_date") or t.get("date") or t.get("exit_time")
+                        if _d is not None:
+                            _pairs.append((pd.to_datetime(_d), float(t.get("pnl", t.get("pnl_realized", 0)))))
+                    if _pairs:
+                        _s = pd.Series([p[1] for p in _pairs], index=[p[0] for p in _pairs]).resample("D").sum()
+                        _series[_strat] = _s
+            if len(_series) >= 2:
+                _df = pd.DataFrame(_series).fillna(0)
+                return _df.corr()
+            if sample_returns is not None and not (hasattr(sample_returns, "empty") and sample_returns.empty):
+                _n = len(_strategies)
+                _corr = np.eye(_n)
+                for i in range(_n):
+                    for j in range(i + 1, _n):
+                        _r1 = sample_returns.values + np.random.randn(len(sample_returns)) * 0.001
+                        _r2 = sample_returns.values + np.random.randn(len(sample_returns)) * 0.001
+                        _c = np.corrcoef(_r1, _r2)[0, 1]
+                        _corr[i, j] = _corr[j, i] = _c
+                return pd.DataFrame(_corr, index=_strategies, columns=_strategies)
+            return pd.DataFrame(np.eye(len(_strategies)), index=_strategies, columns=_strategies)
+        except Exception:
+            _strategies = strategy_performance["strategy_name"].tolist() if "strategy_name" in strategy_performance.columns else list(range(len(strategy_performance)))
+            _n = len(_strategies)
+            return pd.DataFrame(np.eye(_n), index=_strategies, columns=_strategies)
 
     # TAB 5: Advanced Analytics
     with tab5:
@@ -2416,7 +2617,7 @@ try:
             st.subheader("🔗 Strategy Correlation Analysis")
     
             if not strategy_df.empty and len(strategy_df) > 1:
-                strategy_corr = calculate_strategy_correlation(strategy_df)
+                strategy_corr = calculate_strategy_correlation(strategy_df, sample_returns)
         
                 if not strategy_corr.empty:
                     col_corr1, col_corr2 = st.columns([1, 1])

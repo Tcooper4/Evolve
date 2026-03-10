@@ -1,0 +1,401 @@
+## PAGE: 7_Performance.py
+
+### Tabs
+- **Main Tabs**:
+  - `📊 Performance Summary`
+  - `📜 Detailed History`
+  - `🏥 Strategy Health`
+  - `🔍 Attribution Analysis`
+  - `📈 Advanced Analytics`
+
+### Expanders
+- **Global**:
+  - `_empty_state(...)` helper renders a styled empty-state (no dedicated expanders).
+- **Performance Summary tab**:
+  - `📊 Detailed Commentary` – inside Performance Commentary section, shows strengths, improvements, recommendations, risk analysis, and market context from the commentary service.
+- **Detailed History tab**:
+  - No `st.expander`; uses `st.dataframe` and sections for details and exports.
+- **Strategy Health tab**:
+  - `Configure Auto-Pause Rules` – wraps configuration for auto-pause triggers.
+- **Attribution Analysis tab**:
+  - No expanders; uses headings and charts.
+- **Advanced Analytics tab**:
+  - No explicit expanders; uses headings, configuration section, and chart sections.
+
+### Sidebar
+- This page does **not** define any `st.sidebar` elements. All controls and filters are in the main layout (`st.columns`, `st.selectbox`, `st.radio`, etc.).
+
+### Major Features
+
+#### Initialization & Helpers
+- **Backend modules**:
+  - Attempts to import:
+    - `trading.memory.strategy_logger.StrategyLogger`.
+    - `trading.evaluation.metrics.PerformanceMetrics`.
+    - `trading.evaluation.model_evaluator.ModelEvaluator`.
+    - `trading.analytics.alpha_attribution_engine.AlphaAttributionEngine`.
+  - Sets `PERFORMANCE_MODULES_AVAILABLE` accordingly.
+- **Session state initialization**:
+  - `strategy_logger`: instance or `None` if module unavailable or initialization fails.
+  - `performance_metrics`: instance or `None`.
+  - `model_evaluator`: instance or `None`.
+  - `alpha_attribution`: instance or `None`.
+  - `trade_history`: initialized as empty list.
+  - `strategy_performance`: initialized as empty dict.
+- **Backtest access helpers**:
+  - `_get_sample_returns()`:
+    - Returns `st.session_state.backtest_returns` if present and non-empty.
+    - Otherwise derives returns from `st.session_state.backtest_results`:
+      - Prefers `results["returns"]` if available (Series, list, or ndarray).
+      - Else computes percent change of an `equity_curve` (DataFrame, Series, or list/ndarray).
+  - `get_strategy_performance_data()`:
+    - If `backtest_results` is a dict, builds a one-row DataFrame with:
+      - `strategy_name` (from `strategy_name` or `strategy` fields, default `"Backtest"`).
+      - `total_return`, `sharpe_ratio`, `win_rate`.
+      - `num_trades` (`len(backtest["trades"])`).
+      - `status = "active"`.
+  - `get_trade_history()`:
+    - Converts `backtest_results["trades"]` into a DataFrame if present and non-empty.
+    - Parses date columns (`entry_date`, `exit_date`, `date`, `Date`) to `datetime`.
+    - Calls `_normalize_pnl` to ensure there is a `pnl` column (renames from common alternatives or sets to 0.0).
+- **Other helpers**:
+  - `calculate_max_drawdown`, `calculate_current_drawdown`, `get_portfolio_metrics`, `generate_performance_trend`.
+  - Strategy health helpers (health score, degradation detection, lifecycle lookup).
+  - Attribution helpers (alpha/beta, decompose by strategy/asset/sector, factor and time attribution).
+  - Advanced analytics helpers (rolling Sharpe, rolling max drawdown, drawdown periods, recovery time, market regime classification, regime performance, strategy correlation).
+
+#### Tab 1 – `📊 Performance Summary`
+- **Purpose**: High-level portfolio performance, basic strategy comparison, trend chart, narrative/commentary, and top trades.
+- **User actions & outputs**:
+  - Chooses:
+    - `Date Range`: Last 30/90/365 days, All time, or Custom (with `Start Date` / `End Date` inputs).
+    - `Strategy Type`: All/Active/Paused.
+  - The tab:
+    - Loads `sample_returns` via `_get_sample_returns()`.
+    - If no returns:
+      - Calls `_empty_state("No performance data yet. Run a backtest or make trades to populate this page.", "📈")`.
+    - Else:
+      - Builds preliminary equity curve and warns if there is no movement.
+      - Computes portfolio metrics from `get_portfolio_metrics(sample_returns)` and shows:
+        - Total Return, Sharpe Ratio, Max Drawdown, Volatility as `st.metric`.
+      - Builds `strategy_df` from `get_strategy_performance_data()` and filters by `status` (Active/Paused) when applicable.
+      - Formats a `Strategy Comparison` table and displays it via `st.dataframe`.
+      - Shows best/worst performers by total return and Sharpe, with `st.success`/`st.error`/`st.info` messages.
+      - **Performance Trend**:
+        - `Trend Period` radio (Last 30/90/365 days).
+        - Uses `generate_performance_trend` and either:
+          - `utils.plotting_helper.create_performance_chart` (equity curve starting at 100 plus break-even line), or
+          - A basic `go.Figure` line chart with a break-even line at 0.
+      - **Natural Language Performance Summary**:
+        - Button: `Generate Performance Narrative` (`key="generate_perf_narrative"`).
+        - On click:
+          - Imports `nlp.natural_language_insights.NaturalLanguageInsights`.
+          - Creates `NaturalLanguageInsights` instance.
+          - Prepares equity curve, trades, metrics.
+          - Calls `generate_performance_narrative` and displays result in `st.info`.
+        - Errors:
+          - `ImportError`: `st.error("Natural Language Insights not available")`.
+          - Other exceptions: `st.error` and `st.code(traceback.format_exc())`.
+      - **Performance Commentary Service**:
+        - Only if `commentary_service` exists in `st.session_state`.
+        - `Reporting Period` selectbox (Last 30/90 Days, Last 6 Months, Last Year, All Time).
+        - Button: `Generate Performance Report` (`key="generate_perf_commentary"`).
+        - On click:
+          - Calls `commentary_service.generate_performance_commentary` with:
+            - Equity curve, `trades`, `metrics`, and `period`.
+          - Shows an executive summary or summary.
+          - `📊 Detailed Commentary` expander:
+            - Lists strengths, areas for improvement, recommendations, risk analysis, and market context when present.
+      - **Top Trades (by P&L)**:
+        - Uses `get_trade_history`.
+        - Ensures a `pnl` column exists (renaming from alternatives or defaulting to 0.0).
+        - Selects top 10 trades by `pnl`, formats them, and displays as `st.dataframe`.
+        - Plots a bar chart of P&L by symbol with colored bars (green/red), titled "Top 10 Trades by P&L".
+
+#### Tab 2 – `📜 Detailed History`
+- **Purpose**: Granular, filterable trade history with table and calendar views plus export and summary.
+- **User actions & outputs**:
+  - Loads `trade_history` via `get_trade_history()`.
+  - If empty:
+    - Message: Run a backtest on the Strategy Testing page to populate data.
+  - Else:
+    - **Filters**:
+      - `🔎 Search Symbol` text input.
+      - `Strategy` selectbox (All + unique values from `trade_history['strategy']`, if column exists).
+      - `Direction` selectbox: All, Long, Short.
+      - `View` radio: Table/Calendar.
+      - Date range:
+        - `Start Date`, `End Date` from `entry_date` range (or current date if empty).
+    - Applies filters to a copy of `trade_history`.
+    - **Table view**:
+      - Formats entry/exit timestamps, entry/exit price, P&L, P&L %, holding period.
+      - Displays table with renamed columns; no expanders or nested rows.
+      - **Trade Details**:
+        - `Select Trade to View Details` selectbox chooses an index.
+        - Shows "Trade Information" and "Performance" columns with textual detail and color-coded P&L values.
+        - Includes static "Trade Reasoning" and "Market Conditions" descriptions.
+      - **Export Data**:
+        - `📥 Download as CSV`: exports `filtered_trades.to_csv(...)`.
+        - `📊 Download as Excel`: uses `openpyxl` to write to an in-memory Excel file and offers `st.download_button`; shows info message if `openpyxl` not installed.
+    - **Calendar view**:
+      - Aggregates daily P&L (`groupby('date')['pnl'].sum()`).
+      - Builds a scatter chart for "Trade Calendar - Daily P&L" with color scale and marker size tied to P&L.
+      - Summary metrics:
+        - Total trading days, profitable days, best/worst day, average daily P&L, win rate.
+    - **Summary statistics**:
+      - If `filtered_trades` not empty:
+        - Total trades, winning trades.
+        - Total and average P&L.
+        - Win rate, average holding period.
+        - Best and worst trade P&L.
+
+#### Tab 3 – `🏥 Strategy Health`
+- **Purpose**: Compute strategy health scores, highlight issues, provide recommendations, and track lifecycle.
+- **User actions & outputs**:
+  - Loads `strategy_df` via `get_strategy_performance_data()`.
+  - If empty:
+    - Shows `st.warning("No strategy data available for health monitoring.")`.
+  - Else:
+    - Builds `health_scores` dict:
+      - For each strategy row:
+        - Optionally instantiates `StrategyLogger` (only to estimate drawdown; no actual logging integration is shown).
+        - Estimates `max_drawdown` if no data, then calls `calculate_health_score`.
+    - Summary metrics:
+      - Total strategies, counts for Healthy, Warning, and Critical statuses (with percentages as deltas).
+    - Strategy health table:
+      - Displays each strategy with:
+        - Health score, status (emoji + text), component scores, total return, Sharpe, win rate, and original status.
+    - **Detailed Health Analysis**:
+      - `Select Strategy for Detailed Analysis` selectbox.
+      - For selected strategy:
+        - Health gauge (Plotly `go.Indicator`) with thresholds.
+        - Component metrics for Performance, Risk Management, Execution, Data Quality.
+        - Health indicators:
+          - Performance degradation (using `detect_performance_degradation` with an estimated historical_perf).
+          - Win rate status (“Improving/Stable/Declining”).
+          - Drawdown severity assessment.
+          - Trade frequency category from `num_trades`.
+          - Slippage estimate derived from `execution_price`/`expected_price` or from entry price volatility or default.
+        - Lists detected issues and recommended actions (as `st.error`, `st.success`, `st.info`).
+        - **Strategy Lifecycle Tracker**:
+          - Uses `get_strategy_lifecycle` with hard-coded lifecycle data for several named strategies and default unknown.
+          - Displays lifecycle stage, days active, last optimized, and interpretation message (Testing/Growth/Mature).
+        - **Auto-Pause Triggers Configuration**:
+          - `Configure Auto-Pause Rules` expander.
+          - Checkboxes:
+            - Pause if negative returns, Sharpe < 0.5, drawdown > 15%.
+            - Pause if win rate < 40%, slippage > 0.5%, performance degradation > 30%.
+          - Button: `💾 Save Auto-Pause Configuration`:
+            - Shows success/info messages, but does not store settings in session state or call any backend monitoring engine.
+
+#### Tab 4 – `🔍 Attribution Analysis`
+- **Purpose**: Decompose returns by alpha/beta, strategy, asset, sector, factors, and time, and compare to benchmark.
+- **User actions & outputs**:
+  - Loads `sample_returns` from `_get_sample_returns()`.
+  - If no returns:
+    - Shows an `_empty_state` message.
+  - Else:
+    - Initializes `benchmark_returns` as a zero Series (TODO marker for real benchmark loading).
+    - Uses `strategy_df`, `trade_history`, and a static positions dict for sector attribution.
+    - **Configuration**:
+      - `Attribution Method`: Return Decomposition, Factor Attribution, Time-Based Attribution, Comprehensive.
+      - `Benchmark`: S&P 500 (SPY), NASDAQ (QQQ), Dow Jones (DIA), Custom (no custom loader implemented here).
+    - **Alpha vs Beta Decomposition**:
+      - Calls `calculate_alpha_beta(sample_returns, benchmark_returns)`.
+      - Displays alpha, beta, R-squared, and excess return via `st.metric`.
+      - Scatter chart of portfolio vs benchmark daily returns with regression line if numeric data is sufficient, otherwise safe-fails.
+    - **Return Decomposition** (when method is Return Decomposition or Comprehensive):
+      - **Strategy Contribution**:
+        - Builds equal-weight contributions from `strategy_df`.
+        - Displays table and bar chart of contributions and total returns per strategy.
+      - **Asset Contribution**:
+        - Using `decompose_by_asset(trade_history)`:
+          - Lists top 10 assets by absolute contribution with contributions and P&L.
+          - Bar chart of top 10 asset contributions.
+      - **Sector Contribution**:
+        - Uses `decompose_by_sector(positions)` with a fixed sector map for key tickers.
+        - Table of sectors with weights and contributions, plus donut chart for sector allocation.
+    - **Factor Attribution** (Factor Attribution or Comprehensive):
+      - Tries to import:
+        - `trading.analysis.factor_model.factor_attribution_pct`, `STANDARD_FACTORS`.
+        - Market data via `trading.data.data_loader.DataLoader` and `YFinanceProvider` to compute factor contributions on actual OHLCV and sample returns.
+      - On success:
+        - Builds `factor_attribution` from factor model outputs.
+      - On failure:
+        - Falls back to `calculate_factor_attribution(sample_returns)` which:
+          - Optionally tries to regress on SPY using `yfinance` and `sklearn.linear_model.LinearRegression`.
+          - Else uses hard-coded weights for Market/Size/Value/Momentum/Quality.
+      - Displays factor contributions as a table and bar chart.
+    - **Time-Based Attribution** (Time-Based Attribution or Comprehensive):
+      - `Time Period` selectbox: Daily, Weekly, Monthly.
+      - Uses `calculate_time_attribution` to resample returns.
+      - Bar chart of period returns, and metrics for best, worst, average return, standard deviation, positive periods, and win rate.
+    - **Attribution Waterfall Chart**:
+      - Constructs a `waterfall_data` dict:
+        - Starting Value, Alpha Contribution, Beta Contribution, Strategy Contribution, Factor Contribution, Ending Value.
+      - Creates a Plotly waterfall chart.
+    - **Benchmark Comparison**:
+      - Cumulative return chart:
+        - Portfolio vs benchmark.
+      - Performance comparison table (total and annualized returns, volatility, Sharpe, max drawdown for both).
+      - Highlights whether portfolio outperformed or underperformed by total excess return.
+
+#### Tab 5 – `📈 Advanced Analytics`
+- **Purpose**: Rolling performance metrics, drawdown period analysis, trade distributions, regime-based performance, strategy correlations, and advanced visualizations.
+- **User actions & outputs**:
+  - Uses `sample_returns` (from `_get_sample_returns`), `trade_history`, and `strategy_df`.
+  - **Configuration**:
+    - `Rolling Window (days)` slider (30–252, default 60).
+    - `Risk-Free Rate (%)` number input (0–10, default 2.0%).
+  - **Rolling Performance Metrics**:
+    - Computes rolling Sharpe and rolling max drawdown.
+    - If enough data:
+      - Prefer `utils.plotting_helper.create_rolling_stats_chart`.
+      - Else uses a two-row subplot with rolling Sharpe and max drawdown (with reference lines).
+    - If not enough history:
+      - Warns that at least the selected window size is needed.
+  - **Drawdown Periods Analysis**:
+    - Uses `analyze_drawdown_periods` and `calculate_recovery_time`.
+    - Equity curve from cumulative returns.
+    - Display:
+      - Table of drawdown periods with start/end dates, duration, max drawdown, recovery days (0 as placeholder).
+      - If `utils.plotting_helper.create_drawdown_chart` is available:
+        - Renders drawdown chart.
+      - Else uses a fallback timeline chart of drawdown segments.
+      - `Recovery Statistics` column displays total drawdowns and recovery-day metrics from `calculate_recovery_time`.
+  - **Trade Distribution Analysis**:
+    - If `trade_history` not empty:
+      - P&L Distribution:
+        - Uses `create_returns_distribution` on trade-level returns (P&L / entry price if available) when helper available.
+        - Else uses a P&L histogram with break-even line.
+        - P&L statistics (mean, median, std) via `st.caption`.
+      - Win/Loss Distribution:
+        - Pie chart for wins, losses, breakeven with win rate.
+      - Holding Period Distribution:
+        - Histogram of holding periods and textual mean/median.
+    - Else:
+      - Shows info message that no history is available.
+  - **Regime-Based Performance**:
+    - Uses `classify_market_regime` and `calculate_regime_performance`:
+      - Table of total and annualized returns, volatility, Sharpe, win rate, and periods per regime.
+      - Bar charts of mean return and Sharpe by regime.
+      - Regime timeline scatter plot with color-coded regimes over time.
+  - **Strategy Correlation Analysis**:
+    - If `strategy_df` has more than one strategy:
+      - Gets synthetic correlation matrix via `calculate_strategy_correlation` (random symmetric matrix with 1.0 on diagonal).
+      - Left column:
+        - Correlation heatmap using:
+          - `utils.plotting_helper.create_correlation_heatmap` on synthetic per-strategy return series constructed from `sample_returns` plus noise, or
+          - Fallback `px.imshow` with correlation values.
+      - Right column:
+        - Correlation statistics (average, max, min) and win/loss style messages on diversification.
+        - Histogram of pairwise correlation values.
+    - Else:
+      - Info message requiring at least 2 strategies.
+  - **Advanced Performance Visualization**:
+    - Tries to import `trading.core.performance.PerformanceVisualizer`.
+    - If available:
+      - Button: `🚀 Generate Performance Dashboard`.
+      - On click:
+        - Builds equity and benchmark curves, optional `trades_for_viz`, and calls `PerformanceVisualizer.create_performance_dashboard`.
+        - Displays equity chart, returns distribution, rolling Sharpe, monthly heatmap, and optional drawdown chart if present in dashboard.
+      - On error, prints traceback.
+    - If not available:
+      - Informational message about missing visualizer.
+    - **Fallback charts**:
+      - If `utils.plotting_helper.create_drawdown_chart` and `create_returns_distribution` are available:
+        - Shows drawdown chart and returns distribution regardless of `PerformanceVisualizer` availability.
+  - **Execution Replay**:
+    - Tries to import `trading.execution.execution_replay.ExecutionReplay`.
+    - If available:
+      - Shows section header and description.
+      - Date range (`Start date` and `End date`).
+      - Button: `Load Execution History`:
+        - Calls `ExecutionReplay.get_executions(start_date, end_date)`.
+        - If executions exist:
+          - Stores `st.session_state.execution_history`.
+          - Shows execution statistics (total executions, average slippage, execution time, fill rate).
+          - Slippage over time chart with marker size tied to order quantity and color to slippage.
+          - Execution details:
+            - Selectbox to pick an execution.
+            - Button: `▶️ Replay Execution`:
+              - Calls `ExecutionReplay.replay_execution(exec_id)` if ID present.
+              - Displays high-level execution info and, if frames are present:
+                - Frame slider.
+                - Frame metrics (time, filled vs order quantity, average price).
+                - Market state (best bid/ask, last price).
+                - Execution timeline chart with highlighted current frame.
+        - If no executions or errors occur:
+          - Displays `st.info`/`st.error` and optionally traceback.
+    - If `ExecutionReplay` cannot be imported:
+      - Error message instructing that the module must be available.
+
+### Buttons with Actions (Non-Cosmetic)
+- **Performance Summary tab**:
+  - `Generate Performance Narrative`:
+    - Calls `NaturalLanguageInsights.generate_performance_narrative`.
+    - Does **not** modify `st.session_state`.
+  - `Generate Performance Report`:
+    - Uses `commentary_service.generate_performance_commentary`.
+    - Does **not** modify `st.session_state`.
+- **Detailed History tab**:
+  - `📥 Download as CSV`:
+    - Exports filtered trades as CSV.
+  - `📊 Download as Excel`:
+    - Exports filtered trades as Excel if `openpyxl` is installed.
+- **Strategy Health tab**:
+  - `💾 Save Auto-Pause Configuration`:
+    - Shows confirmation messages only; no configuration is persisted in `st.session_state`.
+- **Attribution Analysis tab**:
+  - No `st.button` triggers heavy backend actions; configuration controls are selectboxes and sliders.
+- **Advanced Analytics tab**:
+  - `🚀 Generate Performance Dashboard`:
+    - If `PerformanceVisualizer` is available, calls `create_performance_dashboard`.
+  - `Load Execution History`:
+    - Calls `ExecutionReplay.get_executions` and sets `st.session_state.execution_history`.
+  - `▶️ Replay Execution`:
+    - Calls `ExecutionReplay.replay_execution(exec_id)` and displays replay.
+
+### Session State Keys
+- **Read and/or written**:
+  - Initialization:
+    - `strategy_logger`, `performance_metrics`, `model_evaluator`, `alpha_attribution`.
+    - `trade_history`, `strategy_performance`.
+  - Shared with other pages:
+    - `backtest_returns`, `backtest_results`, `backtest_symbol`.
+    - `commentary_service`.
+  - Used but not defined here:
+    - `execution_history` (set when execution history is loaded).
+- The page does **not** define any new global flags or use `st.session_state` to persist configuration toggles like auto-pause rules; those are local to the tab UI.
+
+### External Integrations
+- **Imports under `trading/`, `agents/`, `components/`, `system/`**:
+  - `trading.memory.strategy_logger.StrategyLogger` (used for health estimation only).
+  - `trading.evaluation.metrics.PerformanceMetrics` (instantiated but not directly called in this file).
+  - `trading.evaluation.model_evaluator.ModelEvaluator` (instantiated but not directly called).
+  - `trading.analytics.alpha_attribution_engine.AlphaAttributionEngine` (instantiated but not directly called).
+  - `trading.analysis.factor_model.factor_attribution_pct`, `STANDARD_FACTORS` (used for factor attribution when available).
+  - `trading.data.data_loader.DataLoader`, `DataLoadRequest` and `trading.data.providers.yfinance_provider.YFinanceProvider` (for factor attribution when OHLCV data is required).
+  - `trading.core.performance.PerformanceVisualizer` (optional; used to build advanced performance dashboard).
+  - `trading.execution.execution_replay.ExecutionReplay` (optional; used for execution replay).
+  - `ui.page_assistant.render_page_assistant("Performance")` (page assistant; wrapped in try/except).
+- **Other external libraries**:
+  - `nlp.natural_language_insights.NaturalLanguageInsights` for narrative generation.
+  - `yfinance`, `sklearn.linear_model.LinearRegression` for factor attribution fallback.
+  - `openpyxl` and `io.BytesIO` for Excel export.
+  - Plotly (`graph_objects`, `express`, `make_subplots`) for charts.
+
+### Stubs & Incomplete Features
+- **Benchmark integration**:
+  - `benchmark_returns` in Attribution Analysis is initialized as a zero Series with a `TODO` comment; actual loading from a real benchmark provider is not implemented here.
+- **Strategy lifecycle data**:
+  - `get_strategy_lifecycle` returns hard-coded stages and durations for a few named strategies and defaults to `Unknown`; it does not query any real registry or history.
+- **Auto-pause triggers**:
+  - Configuration checkboxes are UI-only; clicking `💾 Save Auto-Pause Configuration` does not persist rules to session state or call any monitoring backend.
+- **Factor attribution with factor model**:
+  - The `trading.analysis.factor_model` integration is optional; when missing or failing, the code falls back to approximate factor contributions.
+- **Strategy correlation**:
+  - `calculate_strategy_correlation` generates a random symmetric correlation matrix; it does not compute correlation from real per-strategy return series in this file.
+- **Execution replay**:
+  - Relies on `ExecutionReplay` being available; when absent, the feature is disabled with an error message.
+

@@ -23,7 +23,7 @@ class TaskExecutor:
         self.logger = logging.getLogger(__name__)
 
         # Execution management
-        self.executor = ThreadPoolExecutor(max_workers=config.get("max_workers", 10))
+        self.executor = ThreadPoolExecutor(max_workers=self.config.get("max_workers", 10))
         self.running_tasks: Dict[str, asyncio.Task] = {}
         self.task_queue = asyncio.Queue()
 

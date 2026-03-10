@@ -28,12 +28,12 @@ class TaskMonitor:
         self.success_rates = defaultdict(float)
 
         # Health monitoring
-        self.health_check_interval = config.get("health_check_interval_minutes", 5)
+        self.health_check_interval = self.config.get("health_check_interval_minutes", 5)
         self.last_health_check = datetime.utcnow()
 
         # Performance thresholds
-        self.performance_threshold = config.get("performance_threshold", 0.8)
-        self.error_threshold = config.get("error_threshold", 5)
+        self.performance_threshold = self.config.get("performance_threshold", 0.8)
+        self.error_threshold = self.config.get("error_threshold", 5)
 
     def update_task_performance(self, task_name: str, execution: TaskExecution) -> None:
         """Update performance metrics for a task."""

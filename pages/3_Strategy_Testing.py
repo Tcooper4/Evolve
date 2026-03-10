@@ -56,12 +56,6 @@ def _normalize_trades(trades: list) -> list:
         normalized.append(n)
     return normalized
 
-st.set_page_config(
-    page_title="Strategy Development & Testing",
-    page_icon="🔄",
-    layout="wide"
-)
-
 # Global page-level error boundary (outermost catch)
 import os as _os
 import runpy as _runpy

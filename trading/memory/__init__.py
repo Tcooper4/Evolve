@@ -3,6 +3,13 @@
 This module provides memory and logging capabilities for the trading system.
 """
 
+import sys
+import logging
+
+# Suppress root INFO when not in Streamlit (e.g. verify scripts, CLI)
+if "streamlit" not in sys.modules:
+    logging.getLogger("root").setLevel(logging.WARNING)
+
 from .agent_logger import (
     AgentAction,
     AgentLogEntry,

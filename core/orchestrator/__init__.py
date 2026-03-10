@@ -8,7 +8,7 @@ This package contains the modularized task orchestrator components:
 - Task monitor
 - Task conditions
 - Task models
-- Task providers
+- Task providers (optional)
 """
 
 from .task_conditions import TaskConditions
@@ -20,11 +20,16 @@ from .task_orchestrator import (
     create_task_orchestrator,
     start_orchestrator,
 )
-from .task_providers import AgentTaskProvider, TaskProvider
 from .task_scheduler import (
     TaskConfig,
     TaskScheduler,
 )
+
+try:
+    from .task_providers import AgentTaskProvider, TaskProvider
+except ImportError:
+    AgentTaskProvider = None
+    TaskProvider = None
 
 __all__ = [
     "TaskOrchestrator",

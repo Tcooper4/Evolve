@@ -33,11 +33,31 @@ Priority: High = blocks correctness or security; Medium = missing feature or dat
 - **RESOLVED**: TransformerForecaster missing — Session 14
 - **RESOLVED**: AI Score not wired — Session 16
 
+## Resolved (Sessions 23–28)
+
+- **RESOLVED**: GNN multi-asset tab crash
+- **RESOLVED**: SHAP explainability (wired, requires pip install shap)
+- **RESOLVED**: Trade.to_dict() missing entry/exit dates
+- **RESOLVED**: Benchmark returns zero Series
+- **RESOLVED**: Factor model unverified (confirmed working, wired)
+- **RESOLVED**: Placeholder liquidity/Greek/factor analytics
+- **RESOLVED**: Strategy correlation random matrix
+- **RESOLVED**: Onboarding Cloud session_id bug
+- **RESOLVED**: Advanced orders not wired to ExecutionAgent
+- **RESOLVED**: Automated execution loop missing
+- **RESOLVED**: Portfolio partial close/risk levels info-only
+- **RESOLVED**: Reports email not wired
+- **RESOLVED**: ArxivResearchFetcher not surfaced in UI
+- **RESOLVED**: Strategy lifecycle hard-coded
+- **RESOLVED**: Auto-pause rules not persisted
+- **RESOLVED**: Task Orchestrator not initialized
+
 ## Open (non-blocking)
 
-- **OPEN**: GNN multi-asset tab — int*dict error (non-blocking)
-- **OPEN**: SHAP explainability requires `pip install shap`
+- **OPEN**: Options flow overlay (requires data source decision)
+- **OPEN**: Chart pattern detection (head & shoulders, triangles, S/R levels)
+- **OPEN**: Startup noise via trading.memory direct import path (minor)
+- **OPEN**: Admin maintenance operations simulated (backup/restore/optimize)
 - **OPEN**: Ridge MAPE=100% warning (non-blocking)
 - **OPEN**: lru_cache replaced with TTL dict in `earnings_reaction`
-- **OPEN**: Admin Task Orchestrator not initialized
 - **OPEN**: `.cache/lstm` directory missing warning

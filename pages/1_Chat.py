@@ -19,13 +19,6 @@ import streamlit as st
 
 logger = logging.getLogger(__name__)
 
-st.set_page_config(
-    page_title="Evolve Chat",
-    page_icon="💬",
-    layout="wide",
-    initial_sidebar_state="auto",
-)
-
 st.title("💬 Evolve Chat")
 st.caption("Ask anything about your portfolio, strategies, risk, or ask for backtests and reports. Answers are personalized to your history and preferences.")
 

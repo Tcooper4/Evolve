@@ -60,13 +60,6 @@ def _empty_state(message: str, icon: str = "📊"):
     """, unsafe_allow_html=True)
 
 
-# Page config
-st.set_page_config(
-    page_title="Risk Management & Analysis",
-    page_icon="⚠️",
-    layout="wide"
-)
-
 # Initialize session state
 if 'risk_manager' not in st.session_state:
     try:
@@ -2117,43 +2110,86 @@ def calculate_correlation_matrix(returns: pd.Series, positions: Dict[str, float]
     return pd.DataFrame(corr_matrix, index=symbols, columns=symbols)
 
 def calculate_factor_decomposition(returns: pd.Series) -> Dict[str, float]:
-    """Calculate factor decomposition (simplified)."""
-    # In production, this would use PCA or factor models
-    # For now, return simplified metrics
-    market_factor = returns.mean() * 0.7  # Assume 70% market factor
-    idiosyncratic = returns.std() * 0.3  # 30% idiosyncratic
-    
-    return {
-        'market_factor': market_factor,
-        'idiosyncratic_factor': idiosyncratic,
-        'market_exposure': 0.7,
-        'idiosyncratic_exposure': 0.3
-    }
-
-def calculate_liquidity_risk(positions: Dict[str, float], portfolio_value: float) -> Dict[str, float]:
-    """Calculate liquidity risk metrics."""
-    if not positions:
-        return {}
-    
-    # Simplified liquidity risk calculation
-    # In production, you'd use actual volume data and bid-ask spreads
-    liquidity_scores = {}
-    total_value = sum(positions.values()) * portfolio_value if positions else portfolio_value
-    
-    for symbol, weight in positions.items():
-        # Simulate liquidity score (0-1, higher = more liquid)
-        liquidity_score = np.random.uniform(0.5, 1.0)  # Placeholder
-        position_value = weight * portfolio_value
-        days_to_liquidate = (1 - liquidity_score) * 10  # 0-10 days
-        
-        liquidity_scores[symbol] = {
-            'liquidity_score': liquidity_score,
-            'position_value': position_value,
-            'days_to_liquidate': days_to_liquidate,
-            'liquidity_risk': 'Low' if liquidity_score > 0.8 else 'Medium' if liquidity_score > 0.5 else 'High'
+    """Factor decomposition via factor_model.factor_attribution_pct, with SPY regression fallback."""
+    try:
+        from trading.analysis.factor_model import factor_attribution_pct
+        import yfinance as yf
+        if returns is None or returns.empty or len(returns) < 20:
+            return {"market_exposure": 0.7, "idiosyncratic_exposure": 0.3, "market_factor": 0.0, "idiosyncratic_factor": 0.0}
+        _start, _end = returns.index.min(), returns.index.max()
+        _spy = yf.Ticker("SPY").history(start=_start, end=_end, auto_adjust=True)
+        if _spy is None or _spy.empty or "Close" not in _spy.columns:
+            raise ValueError("no SPY data")
+        _attribution = factor_attribution_pct(_spy, returns, window=min(60, len(returns) - 1))
+        _total = sum(abs(v) for v in _attribution.values()) or 1
+        _normalized = {k: abs(v) / _total for k, v in _attribution.items()}
+        # Map to UI keys: provide market_exposure as sum of factor exposures, idiosyncratic as remainder
+        _market_exposure = _normalized.get("momentum", 0) + _normalized.get("short_term_reversal", 0) + 0.5 * (_normalized.get("volatility", 0) + _normalized.get("volume_trend", 0))
+        _market_exposure = min(1.0, _market_exposure)
+        _idio = 1.0 - _market_exposure
+        return {
+            "market_exposure": round(_market_exposure, 3),
+            "idiosyncratic_exposure": round(_idio, 3),
+            "market_factor": round(float(returns.mean() * 252 * _market_exposure), 4),
+            "idiosyncratic_factor": round(float(returns.std() * np.sqrt(252) * _idio), 4),
+            **_normalized,
         }
-    
-    return liquidity_scores
+    except Exception:
+        try:
+            import yfinance as yf
+            import numpy as np
+            if returns is None or returns.empty:
+                return {"market_exposure": 0.7, "idiosyncratic_exposure": 0.3, "market_factor": 0.0, "idiosyncratic_factor": 0.0}
+            _spy = yf.Ticker("SPY").history(start=returns.index[0], end=returns.index[-1])["Close"].pct_change().dropna()
+            _spy = _spy.reindex(returns.index).fillna(0)
+            _beta = np.cov(returns.values.ravel(), _spy.values.ravel())[0, 1] / np.var(_spy) if np.var(_spy) > 0 else 0.7
+            _market = min(1.0, max(0.0, abs(_beta)))
+            return {
+                "market_exposure": round(_market, 3),
+                "idiosyncratic_exposure": round(1 - _market, 3),
+                "market_factor": round(float(returns.mean() * 252 * _market), 4),
+                "idiosyncratic_factor": round(float(returns.std() * np.sqrt(252) * (1 - _market)), 4),
+            }
+        except Exception:
+            return {"market_exposure": 0.70, "idiosyncratic_exposure": 0.30, "market_factor": 0.0, "idiosyncratic_factor": 0.0}
+
+def calculate_liquidity_risk(positions: Dict[str, float], portfolio_value: float) -> Dict[str, dict]:
+    """Estimate liquidity risk from average daily volume vs position size."""
+    results = {}
+    for symbol, size in positions.items():
+        try:
+            import yfinance as yf
+            _hist = yf.Ticker(symbol).history(period="30d")
+            if _hist.empty:
+                raise ValueError("no data")
+            _avg_volume = _hist["Volume"].mean()
+            _avg_price = _hist["Close"].mean()
+            _adv_dollars = _avg_volume * _avg_price
+            _position_value = abs(size) * _avg_price
+            _pct_of_adv = _position_value / _adv_dollars if _adv_dollars > 0 else 1.0
+            _days_to_liquidate = max(1, _pct_of_adv * 10)
+            _liquidity_score = max(0, min(100, 100 - (_pct_of_adv * 200)))
+            _risk_class = "Low" if _pct_of_adv < 0.05 else "Medium" if _pct_of_adv < 0.20 else "High"
+            results[symbol] = {
+                "symbol": symbol,
+                "liquidity_score": round(_liquidity_score, 1),
+                "position_value": round(_position_value, 0),
+                "adv_dollars": round(_adv_dollars, 0),
+                "pct_of_adv": round(_pct_of_adv * 100, 2),
+                "days_to_liquidate": round(_days_to_liquidate, 1),
+                "liquidity_risk": _risk_class,
+            }
+        except Exception:
+            results[symbol] = {
+                "symbol": symbol,
+                "liquidity_score": 50.0,
+                "position_value": 0,
+                "adv_dollars": 0,
+                "pct_of_adv": 0,
+                "days_to_liquidate": 1,
+                "liquidity_risk": "Unknown",
+            }
+    return results
 
 def calculate_concentration_risk(positions: Dict[str, float]) -> Dict[str, float]:
     """Calculate concentration risk metrics."""
@@ -2190,22 +2226,59 @@ def calculate_concentration_risk(positions: Dict[str, float]) -> Dict[str, float
         'concentration_risk': 'High' if hhi > 0.25 else 'Medium' if hhi > 0.15 else 'Low'
     }
 
-def calculate_greek_exposure(positions: Dict[str, float]) -> Dict[str, float]:
-    """Calculate Greek exposure (for options - placeholder)."""
-    # This would calculate actual Greeks for options positions
-    # For now, return placeholder values
+def calculate_greek_exposure(positions: Dict[str, float]) -> Dict[str, dict]:
+    """Greek exposure: for equity positions delta=1.0 per share, others 0; for options use option chain when available."""
     greeks = {}
-    
     for symbol in positions.keys():
-        greeks[symbol] = {
-            'delta': np.random.uniform(-1, 1),  # Price sensitivity
-            'gamma': np.random.uniform(0, 0.1),  # Delta sensitivity
-            'theta': np.random.uniform(-0.1, 0),  # Time decay
-            'vega': np.random.uniform(0, 0.2),  # Volatility sensitivity
-            'rho': np.random.uniform(-0.1, 0.1)  # Interest rate sensitivity
-        }
-    
+        size = positions[symbol]
+        # Check if symbol looks like an option (e.g. AAPL230119C00150000 or contains strike/expiry pattern)
+        _is_option = (
+            symbol.upper().endswith("C") or symbol.upper().endswith("P")
+            or any(c.isdigit() and len(symbol) > 10 for c in symbol)
+        )
+        if _is_option:
+            try:
+                import yfinance as yf
+                # Assume underlying is first 4-6 letters for US options
+                _underlying = "".join(c for c in symbol if c.isalpha())
+                if not _underlying:
+                    _underlying = symbol[: symbol.index(next(c for c in symbol if c.isdigit()))]
+                _ticker = yf.Ticker(_underlying)
+                _expirations = _ticker.options
+                if _expirations:
+                    _chain = _ticker.option_chain(_expirations[0])
+                    _calls, _puts = _chain.calls, _chain.puts
+                    _all = pd.concat([_calls.assign(side="C"), _puts.assign(side="P")], ignore_index=True)
+                    _row = _all[_all["contractSymbol"] == symbol]
+                    if not _row.empty and "delta" in _row.columns:
+                        greeks[symbol] = {
+                            "delta": float(_row["delta"].iloc[0]),
+                            "gamma": float(_row.get("gamma", 0).iloc[0]) if "gamma" in _row.columns else 0.0,
+                            "theta": float(_row.get("theta", 0).iloc[0]) if "theta" in _row.columns else 0.0,
+                            "vega": float(_row.get("vega", 0).iloc[0]) if "vega" in _row.columns else 0.0,
+                            "rho": float(_row.get("rho", 0).iloc[0]) if "rho" in _row.columns else 0.0,
+                        }
+                    else:
+                        greeks[symbol] = _equity_greeks(size)
+                else:
+                    greeks[symbol] = _equity_greeks(size)
+            except Exception:
+                greeks[symbol] = _equity_greeks(size)
+        else:
+            greeks[symbol] = _equity_greeks(size)
     return greeks
+
+
+def _equity_greeks(size: float) -> dict:
+    """Pure equity: delta=1.0 per share, other Greeks 0."""
+    _sign = 1.0 if size >= 0 else -1.0
+    return {
+        "delta": _sign * 1.0,
+        "gamma": 0.0,
+        "theta": 0.0,
+        "vega": 0.0,
+        "rho": 0.0,
+    }
 
 def calculate_rolling_risk_metrics(returns: pd.Series, window: int = 60) -> pd.DataFrame:
     """Calculate rolling risk metrics."""
@@ -2491,8 +2564,8 @@ with tab5:
             
             df_greeks = pd.DataFrame(greek_data)
             st.dataframe(df_greeks, use_container_width=True, hide_index=True)
-            
-            st.caption("Note: Greek calculations are placeholders. Actual Greeks require options data.")
+
+            st.caption("Equity: delta=1 per share, other Greeks 0. Options: real Greeks when chain data available.")
         else:
             st.info("No positions available for Greek exposure analysis")
         

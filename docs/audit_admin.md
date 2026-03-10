@@ -1,0 +1,434 @@
+## PAGE: 11_Admin.py
+
+### Tabs
+- **Main Tabs**:
+  - `📊 System Dashboard`
+  - `⚙️ Configuration`
+  - `🤖 AI Agents`
+  - `📈 System Monitoring`
+  - `📜 Logs & Debugging`
+  - `🔧 Maintenance`
+  - `🗄️ Data Management`
+- **Task Orchestrator Sub-Tabs** (only when orchestrator is available):
+  - `📋 Active Tasks`
+  - `📅 Scheduled Tasks`
+  - `📊 Task History`
+
+### Expanders
+- **Global error boundary**:
+  - At file end, a try/except is not used; instead, errors are handled within individual sections. There is no single global `st.expander` for errors.
+- **System Dashboard (Tab 1)**:
+  - `📋 System Health Details` – shows component status (Database, API Connections, Broker Connections, Data Providers, AI Agents) and system metrics (CPU, memory, disk, uptime, active agents, health score).
+- **Configuration (Tab 2)**:
+  - `🌐 General Settings` – system name, timezone, base currency, trading hours.
+  - `🏠 Home Page Settings` – home page top-movers universe, persisted via `user_store`.
+  - `🔑 API Keys` – AI provider keys, trading keys, data provider keys, Reddit credentials.
+  - `🏦 Broker Connections` – Alpaca (paper/live), Binance, IBKR configuration.
+  - `🚩 Feature Flags` – manual toggles for core feature flags.
+  - `💾 Database Settings` – host, port, name, user.
+- **AI Agents (Tab 3)**:
+  - `⚙️ Configuration` (within a selected agent) – JSON configuration for the agent.
+  - `📜 Execution History` – last executions for a selected agent.
+  - `📊 Performance Metrics` – per-agent metrics chart.
+  - `Create New Agent` and `Build Custom Workflow` are separate expanders for adding agents and, in the Automation section embedded in Tab 1, for workflows.
+- **Logs & Debugging (Tab 5)**:
+  - `🔍 System Debug Information` – Python/Streamlit versions, session state keys, and `system_metrics`.
+- **Maintenance (Tab 6)**:
+  - `💾 Database Maintenance` – backup/restore/optimize/vacuum.
+  - `🗄️ Cache Management` – clear caches and show cache stats.
+  - `🧹 Data Cleanup` – delete/archieve logs and temp files.
+  - `🔄 System Updates` – version and update history.
+  - `⏰ Scheduled Maintenance` – backup and cleanup schedules.
+
+### Sidebar
+- This page does **not** define any `st.sidebar` UI. All admin controls live in the main layout using `st.tabs`, `st.expander`, and `st.columns`.
+
+### Major Features
+
+#### Admin Gate & Core Session Initialization
+- **Admin access**:
+  - `check_admin_access()`:
+    - Reads `st.session_state["user_role"]` (default `"admin"`).
+    - If not `"admin"`:
+      - Shows `🔒 Access Denied` message, guidance, and `st.stop()`.
+- **Initial session state keys**:
+  - `admin_settings`: general dict for admin-specific settings (unused elsewhere in this file).
+  - `system_health`:
+    - Initialized with:
+      - `overall_score` from `compute_health_score()`:
+        - Checks `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, SQLite connectivity to `data/users.db`, and existence of `data/memory_store.db` parent directory.
+      - Basic component statuses: database, API connections, broker connections, data providers; `agents_active` default 3.
+  - `system_events`: list of system event dicts (timestamp, type, message, component).
+  - `agent_registry`: dict of agent entries (populated later from `data/agent_registry.json`).
+  - `system_metrics`: simulated metrics (`cpu_usage`, `memory_usage`, `disk_usage`, `uptime`).
+  - `app_start_time`: timestamp when app started, for uptime calculations.
+  - Later sections add keys like `service_status`, `api_rate_limits`, `system_logs`, `performance_metrics`, `scheduled_maintenance`, `api_rate_limits`, `task_orchestrator`, `task_scheduler`, `task_monitor`, WebSocket state, AI assistant chat history, etc.
+
+#### Tab 1 – `📊 System Dashboard`
+- **System overview and health**:
+  - Uses `_get_system_dashboard_data()` to compute:
+    - `uptime_str` from `app_start_time`.
+    - `trades_today` from `trading.memory` (`namespace="trades"`, `category="orders"`).
+    - `active_strategies` from `config/strategies.yaml` (enabled definitions).
+    - `agents_active` from `data/agent_registry.json`.
+    - `recent_events` from tail of `logs/app.log`.
+  - Updates `st.session_state.system_health["agents_active"]`.
+  - Renders:
+    - Overall health gauge (`go.Indicator`) for `overall_score`.
+    - Enhanced System Health section:
+      - If `health_monitor` and `system_monitor` are present in session:
+        - `health_monitor.get_overall_health()` for status and alerts (with fallback).
+        - Component health from `health.check_all_components()` when available.
+        - System metrics from `system_monitor.get_system_metrics()` or default metrics.
+        - Performance metrics (`avg_response_time`, `requests_per_minute`, `error_rate`) from `system_monitor.get_performance_metrics()` or defaults.
+        - Optional performance history chart via `monitor.get_performance_history(hours=24)`.
+      - Else, falls back to `psutil` CPU/RAM/disk metrics if available; otherwise shows “Not configured”.
+- **Automation & Workflows (placeholder)**:
+  - Header: `🤖 Automation & Workflows`.
+  - A static `st.info` declares workflow automation as “coming in a future release”.
+  - Large automation section that refers to `auto_tab1/2/3`, `workflows`, and `automation` objects is included in this file but is **not guarded by imports** here; it appears to be partial/legacy code and is effectively stubbed unless those variables are injected elsewhere.
+- **Agent API service**:
+  - Checks `_port_open(8000)` using `socket`.
+  - If running:
+    - Shows status and optionally GETs `/health` via `requests` and displays JSON.
+  - If not running:
+    - Explains how to start via `python scripts/launch_agent_api.py`.
+    - Button `🚀 Start API Service`:
+      - Uses `subprocess.Popen` to run the launcher script in a new console/window (platform-specific).
+  - API Info: base URL, docs link, version.
+  - `🔍 Test API Connection` button:
+    - Tries GET `/health` via `requests`.
+- **API endpoints docs**:
+  - Displays a table of documented endpoints (e.g., `/health`, `/agents`, `/agents/{agent_id}/run`, `/forecast`, `/backtest`).
+  - Provides Python and cURL usage examples for calling the API.
+- **WebSocket real-time monitor**:
+  - Initializes `ws_client` as `utils.websocket_client.WebSocketClient` if importable; sets `ws_available`/`ws_connected` in session.
+  - UI:
+    - Status label (“Not configured”, “Real-time updates enabled”, etc.).
+    - Buttons to `🔌 Connect` and `🔌 Disconnect`:
+      - Run `ws_client.connect()`/`ws_client.disconnect()` in background threads with dedicated event loops.
+    - Uses `requests` to check `http://localhost:8001/health` and optionally start WebSocket service (`scripts/launch_websocket.py`) via `subprocess`.
+  - When connected:
+    - Registers callbacks (`on_agent_update`, `on_forecast_complete`, `on_trade_execution`, `on_risk_alert`) that prepend events into `st.session_state.recent_events`.
+    - Renders a live event feed with per-event containers and type-specific styling.
+- **AI Assistant**:
+  - Imports `trading.nlp.llm_processor.LLMProcessor` if available.
+  - Initializes `st.session_state.llm_processor`.
+  - Maintains `st.session_state.chat_history` (list of `{role, content}`).
+  - Chat UI:
+    - Displays past user/assistant messages via `st.chat_message`.
+    - Text input for new question, `Send` button to call `llm.process_query(query, context=st.session_state)`.
+    - `Clear` button to clear input.
+    - Quick Questions buttons to auto-send canned queries.
+- **Status indicators & quick stats**:
+  - Database/API/Broker/DataProviders/Agents statuses from `system_health`, with colored status chips and metrics.
+  - Quick stats: uptime, trades today, active strategies, system load metric.
+- **Recent system events**:
+  - Uses `_get_system_dashboard_data().recent_events` or `st.session_state.system_events` to display last ~10 events (with per-event containers).
+- **Quick actions**:
+  - `🔄 Restart Services`:
+    - Logs a “Services restart initiated” event into `system_events`.
+  - `🗑️ Clear Cache`:
+    - Clears `st.cache_data`, deletes `.cache` directory and recreates it, logs event, and reruns.
+  - `🏥 Run Health Check`:
+    - If `health_monitor`:
+      - Calls `health_monitor.check_system_health()`, updates `system_health["overall_score"]`, logs event.
+    - Else:
+      - Recomputes `overall_score` via `compute_health_score()` and logs.
+- **System health details expander**:
+  - Summarizes component health and system metrics in an expandable panel.
+
+#### Tab 2 – `⚙️ Configuration`
+- **AI Model Settings (global LLM selector)**:
+  - Imports:
+    - `config.llm_config.get_active_llm`, `set_active_llm`, `LLM_PROVIDERS`, `DEFAULT_MODELS`, `PROVIDER_DISPLAY_NAMES`, `HUGGINGFACE_MODES`.
+    - `agents.llm.active_llm_calls.get_provider_status`, `test_active_llm`.
+    - Includes a `sys.modules` cleanup for `config`.  
+  - UI:
+    - Provider selectbox (with display names).
+    - Model text input.
+    - HuggingFace mode radio (Inference API vs Local pipeline).
+    - Provider status display from `get_provider_status`.
+    - `💾 Save`:
+      - Calls `set_active_llm(provider, model, **options)` and displays success/error.
+    - `🔌 Test Connection`:
+      - Temporarily persists the test LLM config to `trading.memory` preferences (`get_memory_store().upsert_preference("active_llm", payload)`), runs `test_active_llm()`, then restores previous config.
+- **System configuration object**:
+  - `st.session_state.system_config` is initialized with:
+    - `general` settings (name, timezone, base currency, trading hours).
+    - `api_keys` from environment variables where available.
+    - `brokers` config for each supported broker.
+    - `feature_flags` with booleans (see Feature Flags section).
+    - `database` connection defaults.
+- **Home Page Settings**:
+  - Uses `config.user_store.load_user_preferences`/`save_user_preferences`.
+  - `home_page.top_movers_universe` selectbox:
+    - Universe options: S&P 100/500/etc.
+    - Persists selection both in session (`home_top_movers_universe`) and user preferences (if `evolve_session_id` or `session_id` found).
+- **API Keys**:
+  - AI provider keys:
+    - Uses `.env` modification with `dotenv.set_key` and `load_dotenv()` when installed.
+    - For each provider, shows status, input, Save, and Test (`get_provider_status`) buttons.
+  - Trading keys for Alpaca (API and Secret).
+  - Data providers keys for AlphaVantage, Finnhub, Polygon, OpenAI, NewsAPI, Reddit.
+  - Save API Keys button updates `os.environ` for NewsAPI and Reddit keys and notes that `.env` should be updated manually for persistence.
+- **Broker connections**:
+  - Alpaca (paper & live), Binance, IBKR each have:
+    - Enable checkbox (toggling `enabled` field).
+    - Credentials inputs.
+    - Status view (connected/connecting/disconnected).
+    - `🔌 Test` buttons that **only simulate** success and set `status="connected"`.
+- **Feature flags**:
+  - See next section “Feature Flag Checks”.
+- **Database settings**:
+  - Host, port, name, user inputs; values stored in `system_config.database`.
+- **Save configuration**:
+  - `💾 Save Configuration`:
+    - Writes updated `config` back to `st.session_state.system_config`.
+    - Logs a system event about configuration update.
+
+#### Tab 3 – `🤖 AI Agents`
+- **Agent registry loading**:
+  - On first render, loads `data/agent_registry.json` if present:
+    - Populates `agent_registry` with:
+      - `location` validity checks (sets `status="orphaned"` if file missing).
+      - Defaults for `last_run`, `performance_score`, `enabled`, `configuration`, `execution_history`, `performance_metrics`.
+  - On each render, revalidates agent `location` and updates `status` to `orphaned` if location file is missing.
+- **Agent registry table**:
+  - Filters:
+    - By `type` via selectbox.
+    - By `status` (All/active/paused/error/orphaned).
+  - Displays a data frame with agent name, type, status (emoji-coded), last run (formatted), performance score, and enabled indicator.
+- **Agent management**:
+  - `Select Agent` dropdown:
+    - For the chosen agent:
+      - Enable/disable via checkbox (updating `enabled` and `status`).
+      - `⚙️ Configure`: sets `configuring_agent` session key.
+      - `🧪 Test`: simulates a test run (updates `last_run`, `status`).
+      - `📜 View Logs`: sets `viewing_agent_logs`.
+      - `🗑️ Delete`: removes agent from registry.
+  - Details section:
+    - Displays metadata, description, metrics, last_run, etc.
+    - Expanders for Config, Execution History, and Performance Metrics chart.
+- **Add new agent**:
+  - `Create New Agent` expander:
+    - Inputs for name, type, description.
+    - `➕ Create Agent`:
+      - Adds agent to registry with default fields.
+    - `🔄 Reset` reruns the page.
+- **Agent logs & config editing**:
+  - If `viewing_agent_logs` present:
+    - Simulated log text shown with level filters.
+  - If `configuring_agent` present:
+    - JSON textarea for configuration.
+    - `💾 Save Configuration` updates agent configuration.
+    - `❌ Cancel` clears configuration mode.
+
+#### Tab 4 – `📈 System Monitoring`
+- **Auto-refresh**:
+  - `🔄 Auto-refresh (5 seconds)` checkbox:
+    - Manages timestamp-based rerun behavior via `admin_metrics_last_rerun`.
+- **Resource usage**:
+  - Real metrics:
+    - Uses `psutil` if available for CPU, memory, disk.
+  - Fallback metrics from `system_metrics`.
+  - Gauges:
+    - CPU, Memory, Disk usage as `go.Indicator` gauges with thresholds.
+  - Network I/O:
+    - `psutil.net_io_counters()` if available; fallback static values.
+  - Resource usage over time:
+    - Simulated CPU and memory history charts using random noise around current values.
+- **Service status**:
+  - Initializes `service_status` with web_server, database, cache, task_queue.
+  - Displays each with running/stopped status and uptime.
+- **API rate limits**:
+  - Initializes `api_rate_limits` for AlphaVantage, Finnhub, Polygon, OpenAI.
+  - Progress bars and metrics for usage and reset time.
+- **Performance metrics**:
+  - `performance_metrics` in session:
+    - `avg_response_time`, `avg_query_time`, `error_rate`, `requests_per_minute`; default values if missing.
+  - Displays them as metrics.
+  - Trend charts:
+    - Simulated response time and error rate over recent time points.
+- **Refresh Metrics**:
+  - `🔄 Refresh Metrics` triggers `st.rerun()`.
+
+#### Tab 5 – `📜 Logs & Debugging`
+- **System logs**:
+  - `View Recent Logs`:
+    - Reads `logs/trading_system.log` if present and shows last 100 lines in a textarea, with error handling if missing.
+- **Audit trail**:
+  - If `audit_logger` exists in session:
+    - Reads `logs/audit.log` and shows last 50 entries.
+    - Displays audit statistics (total entries, log file presence).
+  - Else:
+    - Shows that audit logger is unavailable.
+- **Log configuration**:
+  - Static description of log files and rotation policies.
+- **Log filters**:
+  - Controls:
+    - Log level, source, date, and search term.
+  - Initializes `system_logs` with a simulated list of logs if missing.
+  - Filters logs by level, source, date, and search.
+  - Displays a log viewer section with styled messages by level and source.
+  - Download logs:
+    - `📥 Download Logs` builds a text file of filtered logs with a download button.
+  - Clear logs:
+    - `🗑️ Clear Logs` + confirmation button `⚠️ Confirm Clear` to set `system_logs` to empty and rerun.
+- **Error summary**:
+  - Aggregates error and critical logs by component.
+  - Shows per-component counts, a table, and a simulated error trend chart.
+- **Debugging tools**:
+  - `🗑️ Clear Cache`:
+    - Clears caches and logs an event as in Tab 1.
+  - `🔄 Reset Session`:
+    - Clears all `st.session_state` keys except `system_health`, `system_metrics`, `system_config`, `agent_registry`.
+  - `🧹 Force GC`:
+    - Calls `gc.collect()`.
+  - `🔌 Test DB`:
+    - Simulates a DB connection test (no real DB calls here).
+- **System debug info**:
+  - Shows Python version, Streamlit version, session state keys, and `system_metrics`.
+
+#### Tab 6 – `🔧 Maintenance`
+- **Database maintenance**:
+  - `💾 Backup Database`:
+    - Simulates creation of a SQL backup file; logs an event.
+  - `📥 Restore from Backup`:
+    - Requires confirmation `⚠️ Confirm Restore`; simulates restoration and informs user.
+  - `⚡ Optimize Database` and `🧹 Vacuum Database`:
+    - Simulated operations that log success events.
+  - Database metrics:
+    - Static metrics for DB size, tables, and indexes.
+- **Cache management**:
+  - `🗑️ Clear All Cache`:
+    - Simulates clearing all caches; logs an event.
+  - `🗑️ Clear Selected Cache`:
+    - Allows clearing Data/Model/Strategy/Session caches; all operations are simulated.
+  - `Cache Statistics`:
+    - Attempts to use `utils.model_cache.get_cache_info()` for number and size of cache files; falls back to “—” if unavailable.
+- **Data cleanup**:
+  - `🗑️ Delete Old Logs`:
+    - Simulates deleting logs older than a configured number of days; logs an event.
+  - `📦 Archive Old Data`:
+    - Simulates archiving old data.
+  - `🧹 Clean Temp Files`:
+    - Simulates cleaning temporary files.
+  - Data statistics:
+    - Uses `Path("logs").rglob("*.log")` to count log files and compute total size.
+- **System updates**:
+  - Displays current version and update history entries.
+  - `🔍 Check for Updates`:
+    - Simulated; always reports system up to date.
+- **Scheduled maintenance**:
+  - `scheduled_maintenance` structure for:
+    - `backup`: enabled, frequency, time, retention days.
+    - `cleanup`: enabled, frequency, day (for weekly) or time, delete_logs_older_than.
+  - `💾 Save Schedule`:
+    - Writes updates to `st.session_state.scheduled_maintenance` and shows success info.
+- **Maintenance summary**:
+  - Summary metrics for last backup, backups this month, cache hit rate, system uptime (from `_get_system_dashboard_data()`).
+
+#### Tab 7 – `🗄️ Data Management`
+- **Cache & Storage Management** (defined in `tab_data_mgmt` earlier in the file):
+  - Imports:
+    - `trading.utils.data_manager.CACHE_CONFIG`, `cache_stats`, `cache_clear`, `cleanup_disk_cache`, `rotate_logs`, `get_yf_request_count`.
+  - Displays:
+    - Live cache stats (active/expired/total entries, yfinance calls/min).
+    - Buttons:
+      - `Clear In-Memory Cache`:
+        - Calls `cache_clear()`, shows cleared count.
+      - `Clean Disk Cache (>24h)`:
+        - Calls `cleanup_disk_cache(24)`, shows removed file count and freed MB.
+      - `Rotate Logs`:
+        - Calls `rotate_logs()` and shows rotated file count and freed KB.
+    - Cache TTL configuration:
+      - Displays a DataFrame for each cache type from `CACHE_CONFIG` with TTL and Max Entries.
+
+#### Task Orchestrator Management (Below Tabs)
+- **Availability**:
+  - Tries to import:
+    - `core.orchestrator.task_orchestrator.TaskOrchestrator`.
+    - `core.orchestrator.task_scheduler.TaskScheduler`.
+    - `core.orchestrator.task_monitor.TaskMonitor`.
+    - `core.orchestrator.task_models.TaskType`, `TaskPriority`, `TaskStatus`.
+  - If not importable:
+    - Shows “Not configured” and explains requirement.
+- **When available**:
+  - Initializes `task_orchestrator`, `task_scheduler`, `task_monitor` in session on demand.
+  - Sub-tabs:
+    - **Active Tasks**:
+      - Reads active tasks via `orchestrator.executor.get_active_tasks()`, `monitor.get_active_tasks()`, or `orchestrator.executor.running_tasks`.
+      - Per-task expander shows status, start time, progress bar, and `Cancel` button calling `orchestrator.cancel_task` or `executor.cancel_task`.
+      - `Create New Task`:
+        - Maps UI task types (Data Update, Model Retrain, Portfolio Rebalance, Generate Report, System Health Check) to `TaskType` enums.
+        - Uses `orchestrator.create_task`/`execute_task`/`executor.execute_task` to create tasks.
+    - **Scheduled Tasks**:
+      - Calls `scheduler.get_scheduled_tasks()` and shows each scheduled task’s next run, interval, enabled state, priority, and `Run Now`/`Remove` buttons.
+      - `Schedule New Task`:
+        - Maps schedule types to `TaskType` and interval minutes; wraps them in `TaskConfig` and calls `scheduler.add_task`.
+    - **Task History**:
+      - Gets history via `monitor.get_task_history(limit=50)` or monitors’ `task_history`.
+      - Displays summary metrics (total tasks, success rate, average duration, failures) and a table of tasks with status and duration.
+      - Shows a pie chart for task status distribution.
+- **Admin self-test**:
+  - `🧪 Run self-test` expander with button:
+    - Calls `run_admin_self_test()` which checks:
+      - `config.llm_config` active LLM.
+      - `trading.memory` `get_memory_store`.
+      - `agents.llm.active_llm_calls.get_provider_status`.
+      - `agents.llm.active_llm_calls.test_active_llm`.
+    - Displays per-check success/error and JSON summary.
+
+### Buttons with Actions (Non-Cosmetic)
+- This file defines many non-cosmetic buttons; they are covered in the feature descriptions above. None of them use `is_feature_enabled` to gate behavior.
+
+### Session State Keys
+- **Core**:
+  - `admin_settings`, `system_health`, `system_events`, `agent_registry`, `system_metrics`, `app_start_time`.
+- **Configuration**:
+  - `system_config`, LLM selector widget states (`admin_llm_provider`, `admin_llm_model`, `admin_llm_hf_mode`), `home_top_movers_universe`, various broker/API key widgets.
+- **System Monitoring**:
+  - `admin_metrics_last_rerun`, `service_status`, `api_rate_limits`, `performance_metrics`.
+- **Logs & Debugging**:
+  - `system_logs`.
+- **Maintenance**:
+  - `scheduled_maintenance`.
+- **Data Management**:
+  - No additional special keys beyond imported managers.
+- **WebSocket & AI Assistant**:
+  - `ws_client`, `ws_available`, `ws_connected`, `recent_events`.
+  - `llm_processor`, `chat_history`, `ai_assistant_input`.
+- **Task Orchestrator**:
+  - `task_orchestrator`, `task_scheduler`, `task_monitor`.
+
+### External Integrations
+- **Trading/system modules**:
+  - `trading.config.enhanced_settings.EnhancedSettings` (placeholder if missing).
+  - `trading.agents.agent_registry.AgentRegistry` (placeholder if missing).
+  - `trading.monitoring.health_check.SystemHealthMonitor` or `monitoring.health_check.HealthChecker`.
+  - `trading.utils.system_status.SystemStatus` (not heavily used in this file).
+  - `trading.memory.get_memory_store`, `trading.memory.memory_store.MemoryType`.
+  - `trading.utils.data_manager` (cache management).
+  - `trading.nlp.llm_processor.LLMProcessor`.
+- **Config & user data**:
+  - `config.llm_config` (LLM provider/model selection).
+  - `config.user_store.load_user_preferences`, `save_user_preferences`.
+- **Agents & LLM**:
+  - `agents.llm.active_llm_calls.get_provider_status`, `test_active_llm`.
+- **Data & cache utilities**:
+  - `utils.websocket_client.WebSocketClient`.
+  - `utils.model_cache.get_cache_info`.
+- **Task orchestrator**:
+  - `core.orchestrator.task_orchestrator.TaskOrchestrator`.
+  - `core.orchestrator.task_scheduler.TaskScheduler`.
+  - `core.orchestrator.task_monitor.TaskMonitor`.
+  - `core.orchestrator.task_models.TaskType`, `TaskPriority`, `TaskStatus`, `TaskConfig`.
+
+### Feature Flag Checks (`is_feature_enabled` / `get_feature_flags`)
+- A search for `is_feature_enabled` and `get_feature_flags` in `pages/11_Admin.py` found **no matches**.  
+- **Conclusion**:
+  - **This Admin page does not call `utils.feature_flags.is_feature_enabled` or `get_feature_flags` directly.**
+  - Feature flags are managed **locally** via the `system_config["feature_flags"]` structure and its UI toggles, but actual runtime checks for feature activation appear in other pages or modules, not in this file.
+  - Therefore, there are **no feature-flag-gated sections in `11_Admin.py` implemented via `is_feature_enabled` or `get_feature_flags`**; this page primarily **edits** configuration rather than **reading** central feature flag state from `utils.feature_flags`.
+

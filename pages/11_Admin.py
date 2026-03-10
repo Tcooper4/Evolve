@@ -75,13 +75,6 @@ except ImportError:
     logging.warning("SystemStatus not found, using placeholder")
     SystemStatus = None
 
-# Page configuration
-st.set_page_config(
-    page_title="System Administration",
-    page_icon="⚙️",
-    layout="wide"
-)
-
 # Authentication check (admin only)
 def check_admin_access() -> bool:
     """Check if current user has admin access."""
@@ -578,7 +571,7 @@ with tab1:
     st.header("🤖 Automation & Workflows")
     st.info("Workflow automation is coming in a future release. This section will manage scheduled jobs and automated runbooks once available.")
         
-        with auto_tab1:
+    with auto_tab1:
             st.subheader("Active Workflows")
             
             try:
@@ -657,7 +650,7 @@ with tab1:
             else:
                 st.info("No active workflows. Create one to get started.")
         
-        with auto_tab2:
+    with auto_tab2:
             st.subheader("Create New Workflow")
             
             # Predefined workflow templates
@@ -811,7 +804,7 @@ with tab1:
                         except Exception as e:
                             st.error(f"Error creating custom workflow: {e}")
         
-        with auto_tab3:
+    with auto_tab3:
             st.subheader("⚙️ Automation Settings")
             
             # Global automation settings
@@ -905,7 +898,7 @@ with tab1:
             with col4:
                 st.metric("Failed Today", stats.get('failed_today', 0))
     
-    else:
+    if not (automation and workflows and config):
         st.info("⚙️ Workflow automation is not yet implemented. Coming in a future release.")
     
     st.markdown("---")
@@ -1974,7 +1967,48 @@ with tab2:
                     help="End of trading hours"
                 )
                 config["general"]["trading_hours_end"] = trading_end.strftime("%H:%M")
-    
+
+    # Home Page Settings Section
+    with st.expander("🏠 Home Page Settings", expanded=False):
+        from config.user_store import load_user_preferences, save_user_preferences
+
+        home_config = config.setdefault("home_page", {})
+
+        universe_options = [
+            "S&P 100",
+            "S&P 500",
+            "S&P 500 + Nasdaq 100",
+            "Russell 1000",
+        ]
+
+        session_id = st.session_state.get("evolve_session_id") or st.session_state.get("session_id", "")
+        prefs = load_user_preferences(session_id) if session_id else {}
+
+        stored_universe = prefs.get("home_top_movers_universe") or home_config.get("top_movers_universe") or "S&P 100"
+        if stored_universe not in universe_options:
+            stored_universe = "S&P 100"
+
+        selected_universe = st.selectbox(
+            "Top Movers Universe",
+            universe_options,
+            index=universe_options.index(stored_universe),
+            help="Controls which universe is used for the Home page 'Today's Top Movers' section.",
+            key="home_top_movers_universe_admin",
+        )
+
+        home_config["top_movers_universe"] = selected_universe
+        st.session_state["home_top_movers_universe"] = selected_universe
+
+        if session_id and selected_universe != prefs.get("home_top_movers_universe"):
+            try:
+                save_user_preferences(
+                    session_id,
+                    {**prefs, "home_top_movers_universe": selected_universe},
+                )
+                st.caption("Home page universe preference saved.")
+            except Exception:
+                st.caption("Could not persist Home page settings; using in-session value only.")
+
     st.markdown("---")
     
     # API Keys Section
@@ -4010,41 +4044,67 @@ with tab6:
 st.markdown("---")
 st.header("⚙️ Task Orchestrator Management")
 
-# Check if orchestrator is available
+# Check if core.orchestrator is installable/available with detailed diagnostics
+_orch_status = {"available": False, "reason": "", "install_cmd": ""}
 try:
     from core.orchestrator.task_orchestrator import TaskOrchestrator
     from core.orchestrator.task_scheduler import TaskScheduler
     from core.orchestrator.task_monitor import TaskMonitor
-    from core.orchestrator.task_models import TaskType, TaskPriority, TaskStatus
-    
-    ORCHESTRATOR_AVAILABLE = True
-except ImportError as e:
-    logging.warning(f"Task Orchestrator not available: {e}")
-    ORCHESTRATOR_AVAILABLE = False
+    from core.orchestrator.task_models import TaskType, TaskPriority, TaskStatus, TaskConfig
 
-if not ORCHESTRATOR_AVAILABLE:
-    st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
-    st.caption("Task Orchestrator is not enabled. Install core.orchestrator modules to manage scheduled tasks.")
+    _orch_status["available"] = True
+except ImportError as _ie:
+    _missing = str(_ie).split("'")[1] if "'" in str(_ie) else str(_ie)
+    _orch_status["reason"] = f"Missing module: {_missing}"
+    import os
+
+    _orch_path = os.path.join("core", "orchestrator")
+    if os.path.exists(_orch_path):
+        _orch_status["reason"] = f"Module exists but import failed: {_ie}"
+        _orch_status["install_cmd"] = "Check core/orchestrator/__init__.py"
+    else:
+        _orch_status["install_cmd"] = "Task Orchestrator not installed in this project"
+
+if not _orch_status["available"]:
+    st.info(f"Task Orchestrator: {_orch_status['reason']}")
+    st.caption(_orch_status["install_cmd"])
+    import os
+
+    if os.path.exists("core/orchestrator"):
+        _files = os.listdir("core/orchestrator")
+        st.caption(f"Files found: {_files}")
 else:
-    # Get or init orchestrator from session state (on-demand init so app.py is not required)
-    orchestrator = st.session_state.get('task_orchestrator')
-    scheduler = st.session_state.get('task_scheduler')
-    monitor = st.session_state.get('task_monitor')
-    if orchestrator is None:
+    # Initialize orchestrator in session state if not already
+    if "task_orchestrator" not in st.session_state:
         try:
             from core.orchestrator.task_orchestrator import TaskOrchestrator
             from core.orchestrator.task_scheduler import TaskScheduler
             from core.orchestrator.task_monitor import TaskMonitor
+            from core.orchestrator.task_models import TaskConfig, TaskType, TaskPriority
+
             st.session_state.task_orchestrator = TaskOrchestrator()
             st.session_state.task_scheduler = TaskScheduler()
             st.session_state.task_monitor = TaskMonitor()
-            orchestrator = st.session_state.task_orchestrator
-            scheduler = st.session_state.task_scheduler
-            monitor = st.session_state.task_monitor
-        except Exception as e:
-            logging.warning(f"On-demand orchestrator init failed: {e}")
-    
-    if orchestrator and scheduler and monitor:
+            # Add default SystemHealthCheck every 60 minutes if not already present
+            _orch = st.session_state.task_orchestrator
+            if hasattr(_orch, "scheduler") and _orch.scheduler is not None:
+                if "SystemHealthCheck" not in getattr(_orch.scheduler, "tasks", {}):
+                    _health_task = TaskConfig(
+                        name="SystemHealthCheck",
+                        task_type=TaskType.SYSTEM_HEALTH,
+                        enabled=True,
+                        interval_minutes=60,
+                        priority=TaskPriority.MEDIUM,
+                    )
+                    _orch.scheduler.add_task(_health_task)
+            st.success("Task Orchestrator initialized")
+        except Exception as _init_err:
+            st.error(f"Orchestrator init failed: {_init_err}")
+
+    orchestrator = st.session_state.get("task_orchestrator")
+    scheduler = st.session_state.get("task_scheduler")
+    monitor = st.session_state.get("task_monitor")
+    if orchestrator is not None and scheduler is not None and monitor is not None:
         # Tabs for different views
         task_tab1, task_tab2, task_tab3 = st.tabs([
             "📋 Active Tasks",

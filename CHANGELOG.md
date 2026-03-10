@@ -57,3 +57,35 @@
 - Error visibility: all Forecasting tabs now surface tracebacks instead of silently failing
 - Page-level error boundary added to Forecasting, Strategy Testing, Performance pages
 
+## [1.3.0] — 2026-03-10
+
+### Fixed
+- Onboarding: session_id now derived from API key hash — Cloud iframe
+  localStorage restriction no longer causes key loss on page refresh
+- GNN multi-asset tab: try/except wrapper prevents page crash
+- Trade.to_dict(): entry_date, exit_date, duration_days now included
+- Performance Attribution: benchmark returns now fetched from yfinance
+  (SPY/QQQ/DIA) instead of zero Series
+- Startup noise: JSON INFO loggers suppressed in non-Streamlit contexts
+
+### Added
+- SHAP explainability wired in Model Lab (pip install shap to enable)
+- Advanced orders (bracket/trailing/OCO/conditional/multi-leg) wired
+  to ExecutionAgent with graceful degradation
+- Automated execution loop: polls active strategies on each rerun,
+  respects emergency stop, daily limits, confidence thresholds
+- ArxivResearchFetcher surfaced as Research Browser tab in Model Lab
+- Portfolio partial close and risk level updates now mutate positions
+- Reports email delivery wired to NotificationService
+- Factor model (factor_attribution_pct) wired into Risk page factor
+  decomposition with SPY regression fallback
+- Liquidity risk uses real ADV data from yfinance
+- Greek exposure uses real equity delta (1.0) instead of random values
+- Strategy correlation uses real trade history when available
+- Strategy lifecycle tracker queries memory store instead of hard-coded
+- Auto-pause rules persisted to memory store
+- Task Orchestrator activated (core/orchestrator modules initialized)
+
+### Changed
+- Model Lab: added Research Browser tab (12 tabs total)
+

@@ -81,8 +81,19 @@ class Trade:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert trade to dictionary for serialization."""
+        entry_date = self.timestamp.isoformat() if hasattr(self, "timestamp") and self.timestamp else None
+        exit_date = None  # Backtesting Trade has no exit_time
+        duration_days = None
+        if hasattr(self, "holding_period") and self.holding_period is not None:
+            try:
+                duration_days = int(float(self.holding_period))
+            except (TypeError, ValueError):
+                duration_days = None
         return {
             "timestamp": self.timestamp.isoformat(),
+            "entry_date": entry_date,
+            "exit_date": exit_date,
+            "duration_days": duration_days,
             "asset": self.asset,
             "quantity": self.quantity,
             "price": self.price,

@@ -41,6 +41,35 @@ class Trade:
     notes: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert trade to dictionary including entry_date, exit_date, duration_days."""
+        entry_date = self.entry_time.isoformat() if hasattr(self, "entry_time") and self.entry_time else None
+        exit_date = self.exit_time.isoformat() if hasattr(self, "exit_time") and self.exit_time else None
+        duration_days = None
+        if hasattr(self, "exit_time") and self.exit_time and hasattr(self, "entry_time") and self.entry_time:
+            duration_days = (self.exit_time - self.entry_time).days
+        return {
+            "trade_id": self.trade_id,
+            "symbol": self.symbol,
+            "side": self.side,
+            "quantity": self.quantity,
+            "entry_price": self.entry_price,
+            "exit_price": self.exit_price,
+            "entry_time": entry_date,
+            "exit_time": exit_date,
+            "entry_date": entry_date,
+            "exit_date": exit_date,
+            "duration_days": duration_days,
+            "commission": self.commission,
+            "slippage": self.slippage,
+            "pnl": self.pnl,
+            "pnl_percentage": self.pnl_percentage,
+            "status": self.status,
+            "strategy": self.strategy,
+            "notes": self.notes,
+            "metadata": self.metadata,
+        }
+
 
 @dataclass
 class TradeSummary:
@@ -515,29 +544,7 @@ class TradeJournal:
         try:
             trades_data = []
             for trade in self.trades.values():
-                trade_dict = {
-                    "trade_id": trade.trade_id,
-                    "symbol": trade.symbol,
-                    "side": trade.side,
-                    "quantity": trade.quantity,
-                    "entry_price": trade.entry_price,
-                    "exit_price": trade.exit_price,
-                    "entry_time": (
-                        trade.entry_time.isoformat() if trade.entry_time else None
-                    ),
-                    "exit_time": (
-                        trade.exit_time.isoformat() if trade.exit_time else None
-                    ),
-                    "commission": trade.commission,
-                    "slippage": trade.slippage,
-                    "pnl": trade.pnl,
-                    "pnl_percentage": trade.pnl_percentage,
-                    "status": trade.status,
-                    "strategy": trade.strategy,
-                    "notes": trade.notes,
-                    "metadata": trade.metadata,
-                }
-                trades_data.append(trade_dict)
+                trades_data.append(trade.to_dict())
 
             df = pd.DataFrame(trades_data)
 
@@ -564,28 +571,7 @@ class TradeJournal:
             trades_data = []
 
             for trade in self.trades.values():
-                trade_dict = {
-                    "trade_id": trade.trade_id,
-                    "symbol": trade.symbol,
-                    "side": trade.side,
-                    "quantity": trade.quantity,
-                    "entry_price": trade.entry_price,
-                    "exit_price": trade.exit_price,
-                    "entry_time": (
-                        trade.entry_time.isoformat() if trade.entry_time else None
-                    ),
-                    "exit_time": (
-                        trade.exit_time.isoformat() if trade.exit_time else None
-                    ),
-                    "commission": trade.commission,
-                    "slippage": trade.slippage,
-                    "pnl": trade.pnl,
-                    "pnl_percentage": trade.pnl_percentage,
-                    "status": trade.status,
-                    "strategy": trade.strategy,
-                    "notes": trade.notes,
-                    "metadata": trade.metadata,
-                }
+                trade_dict = trade.to_dict()
                 trades_data.append(trade_dict)
 
             with open(filepath, "w") as f:

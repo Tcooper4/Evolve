@@ -33,7 +33,6 @@ def _parse_json_text(text: str) -> Any:
         return t
 
 
-st.set_page_config(page_title="Memory", layout="wide")
 st.title("🧠 Memory Store")
 
 try:

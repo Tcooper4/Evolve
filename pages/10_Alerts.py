@@ -38,13 +38,6 @@ except ImportError as e:
 # Setup logging
 logger = logging.getLogger(__name__)
 
-# Page config
-st.set_page_config(
-    page_title="Alerts & Notifications",
-    page_icon="🔔",
-    layout="wide"
-)
-
 # Initialize session state
 if 'alert_manager' not in st.session_state:
     try:
@@ -1757,7 +1750,7 @@ with tab_watchlist:
             st.dataframe(df_hist, use_container_width=True, hide_index=True)
     except Exception as e:
         st.error(f"Watchlist Alerts unavailable: {e}")
-                    st.success("✅ Email settings saved!")
+        st.success("✅ Email settings saved!")
     
     # SMS Settings
     with st.expander("📱 SMS Settings", expanded=False):

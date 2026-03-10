@@ -10,6 +10,7 @@ technical trading signals, backtest strategies, and visualize performance.
 
 import importlib
 import logging
+import sys
 
 # Reduce noise from optional dependencies (expected when not installed)
 for _logger_name in [
@@ -17,6 +18,22 @@ for _logger_name in [
     "trading.agents.rl_trainer",
 ]:
     logging.getLogger(_logger_name).setLevel(logging.ERROR)
+
+# Suppress INFO noise when not in Streamlit (e.g. verify scripts)
+_QUIET_LOGGERS = [
+    "trading.agents.enhanced_prompt_router",
+    "trading.strategies.gatekeeper",
+    "trading.optimization.self_tuning_optimizer",
+    "trading.data.providers.base_provider.yfinance_fallback",
+    "trading.data.providers.base_provider.fallback",
+    "trading.strategies.custom_strategy_handler",
+    "trading.strategies.hybrid_engine",
+    "trading.utils.notification_system",
+    "agents.llm.agent",
+]
+if "streamlit" not in sys.modules:
+    for _ln in _QUIET_LOGGERS:
+        logging.getLogger(_ln).setLevel(logging.WARNING)
 
 __version__ = "2.1.0"
 __author__ = "Evolve Team"

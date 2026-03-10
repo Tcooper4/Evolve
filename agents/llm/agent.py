@@ -2159,7 +2159,7 @@ class PromptAgent:
                         try:
                             parts.append(
                                 f"Model consensus ({len(used)} models): {direction} at ${float(price):.2f} "
-                                f\"(conviction: {conviction})\"
+                                f"(conviction: {conviction})"
                             )
                         except Exception:
                             parts.append(
