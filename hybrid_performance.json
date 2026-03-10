@@ -45,14 +45,6 @@
   ],
   "arima": [
     {
-      "timestamp": "2026-03-08T12:55:22.592115",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
       "timestamp": "2026-03-08T12:57:28.233950",
       "sharpe_ratio": -1.0,
       "win_rate": 0.0,
@@ -443,17 +435,17 @@
       "max_drawdown": -0.058102655588338326,
       "mse": 53.82484486761816,
       "total_return": -0.06823220928819373
+    },
+    {
+      "timestamp": "2026-03-10T19:17:14.074933",
+      "sharpe_ratio": -2.119064223789691,
+      "win_rate": 0.5,
+      "max_drawdown": -0.05185597123572897,
+      "mse": 388.9652176934007,
+      "total_return": -0.023655206842458476
     }
   ],
   "xgboost": [
-    {
-      "timestamp": "2026-03-08T12:55:23.158387",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
     {
       "timestamp": "2026-03-08T12:57:28.801207",
       "sharpe_ratio": -1.0,
@@ -845,6 +837,14 @@
       "max_drawdown": -0.015963918343377653,
       "mse": 68.20590027302845,
       "total_return": 0.06744024101742263
+    },
+    {
+      "timestamp": "2026-03-10T19:17:14.596290",
+      "sharpe_ratio": 17.445970345716823,
+      "win_rate": 0.8333333333333334,
+      "max_drawdown": 0.0,
+      "mse": 414.059163012481,
+      "total_return": 0.12193711551633735
     }
   ]
 }

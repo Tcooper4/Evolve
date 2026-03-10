@@ -12,6 +12,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+# Suppress INFO in non-Streamlit contexts (verify scripts, CLI)
+if "streamlit" not in sys.modules:
+    logging.getLogger(__name__).setLevel(logging.WARNING)
+    logging.getLogger("root").setLevel(logging.WARNING)
+
 from utils.launch_utils import setup_logging
 
 from .agents import AgentManager, AgentStatus

@@ -113,7 +113,7 @@ class SentimentFetcher:
         limit_info["calls"] += 1
         return True
 
-    @cache_model_operation(ttl=300)  # Cache for 5 minutes
+    @cache_model_operation(model_type="sentiment", ttl_hours=5/60)  # Cache for 5 minutes
     def fetch_news_headlines(
         self, ticker: str, hours_back: int = 24
     ) -> List[SentimentData]:
@@ -224,7 +224,7 @@ class SentimentFetcher:
 
         return headlines
 
-    @cache_model_operation(ttl=600)  # Cache for 10 minutes
+    @cache_model_operation(model_type="sentiment", ttl_hours=10/60)  # Cache for 10 minutes
     def fetch_reddit_sentiment(
         self, ticker: str, hours_back: int = 24
     ) -> List[SentimentData]:
@@ -304,7 +304,7 @@ class SentimentFetcher:
 
         return reddit_posts
 
-    @cache_model_operation(ttl=300)  # Cache for 5 minutes
+    @cache_model_operation(model_type="sentiment", ttl_hours=5/60)  # Cache for 5 minutes
     def fetch_twitter_sentiment(
         self, ticker: str, hours_back: int = 24
     ) -> List[SentimentData]:

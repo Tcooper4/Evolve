@@ -89,3 +89,12 @@
 ### Changed
 - Model Lab: added Research Browser tab (12 tabs total)
 
+## [1.3.1] — 2026-03-10
+
+### Fixed
+- TaskOrchestrator: optional agent init failures no longer print warnings
+- TaskType: alert_manager added back as legacy compatibility value
+- SentimentFetcher: cache_model_operation ttl argument removed (use ttl_hours)
+- Startup noise: core trading system INFO logs suppressed in all
+  non-Streamlit import paths
+

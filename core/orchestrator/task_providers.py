@@ -44,8 +44,8 @@ class AgentTaskProvider(TaskProvider):
             self._initialize_execution_agent()
             self._initialize_explainer_agent()
 
-        except Exception as e:
-            self.logger.error(f"Failed to initialize agents: {e}")
+        except Exception:
+            pass  # Optional agent unavailable — orchestrator works without it
 
     def _initialize_model_innovation_agent(self) -> None:
         """Initialize ModelInnovationAgent."""
@@ -63,8 +63,8 @@ class AgentTaskProvider(TaskProvider):
 
             self.agents["model_innovation"] = create_model_innovation_agent()
             self.logger.info("Initialized ModelInnovationAgent")
-        except Exception as e:
-            self.logger.warning(f"Failed to initialize ModelInnovationAgent: {e}")
+        except Exception:
+            pass  # Optional agent unavailable
 
     def _initialize_strategy_research_agent(self) -> None:
         """Initialize StrategyResearchAgent."""
@@ -89,8 +89,8 @@ class AgentTaskProvider(TaskProvider):
 
             self.agents["strategy_research"] = create_strategy_research_agent()
             self.logger.info("Initialized StrategyResearchAgent")
-        except Exception as e:
-            self.logger.warning(f"Failed to initialize StrategyResearchAgent: {e}")
+        except Exception:
+            pass  # Optional agent unavailable
 
     def _initialize_sentiment_fetcher(self) -> None:
         """Initialize SentimentFetcher."""
@@ -107,8 +107,8 @@ class AgentTaskProvider(TaskProvider):
 
             self.agents["sentiment_fetch"] = create_sentiment_fetcher()
             self.logger.info("Initialized SentimentFetcher")
-        except Exception as e:
-            self.logger.warning(f"Failed to initialize SentimentFetcher: {e}")
+        except Exception:
+            pass  # Optional agent unavailable
 
     def _initialize_meta_controller(self) -> None:
         """Initialize MetaController."""
@@ -122,8 +122,8 @@ class AgentTaskProvider(TaskProvider):
 
             self.agents["meta_control"] = create_meta_controller()
             self.logger.info("Initialized MetaController")
-        except Exception as e:
-            self.logger.warning(f"Failed to initialize MetaController: {e}")
+        except Exception:
+            pass  # Optional agent unavailable
 
     def _initialize_risk_manager(self) -> None:
         """Initialize RiskManager."""

@@ -45,6 +45,7 @@ class TaskType(Enum):
     PERFORMANCE_ANALYSIS = "performance_analysis"
     PORTFOLIO_REBALANCING = "portfolio_rebalancing"  # Added for config compatibility
     MARKET_ANALYSIS = "market_analysis"  # Added for config compatibility
+    ALERT_MANAGER = "alert_manager"  # Legacy compatibility (saved task configs)
 
 
 @dataclass
