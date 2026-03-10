@@ -68,6 +68,25 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Global page-level error boundary (outermost catch)
+import os as _os
+import runpy as _runpy
+_guard_key = "EVOLVE_PAGE_GUARD_FORECASTING"
+if _os.environ.get(_guard_key) != "1":
+    _os.environ[_guard_key] = "1"
+    try:
+        _runpy.run_path(__file__, run_name="__main__")
+    except Exception as _page_error:
+        import traceback
+        st.error(f"⚠️ Page error: {type(_page_error).__name__}: {_page_error}")
+        with st.expander("Developer details"):
+            st.code(traceback.format_exc(), language="python")
+        st.info("Try refreshing the page or selecting a different symbol.")
+        st.stop()
+    finally:
+        _os.environ.pop(_guard_key, None)
+    st.stop()
+
 # Lazy init: resolve backend when Forecasting page is first rendered (not at app startup)
 if "forecasting_backend" not in st.session_state:
     st.session_state.forecasting_backend = _get_forecasting_backend()
@@ -113,7 +132,7 @@ st.title("📈 Forecasting & Market Analysis")
 st.markdown("Advanced forecasting with AI model selection and comprehensive market analysis")
 
 # Create tabbed interface
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_insider = st.tabs(
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_insider, tab_earnings = st.tabs(
     [
         "🚀 Quick Forecast",
         "⚙️ Advanced Forecasting",
@@ -123,6 +142,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_insider = st.tabs(
         "🔗 Multi-Asset (GNN)",
         "🎲 Monte Carlo",
         "🕵️ Insider Flow",
+        "📅 Earnings",
     ]
 )
 
@@ -319,6 +339,54 @@ with tab1:
             volatility = data['close'].pct_change().std() * np.sqrt(252) * 100
             st.metric("Annualized Volatility", f"{volatility:.2f}%")
         
+        # AI Score panel
+        try:
+            from trading.analysis.ai_score import compute_ai_score
+            _sym = st.session_state.get("symbol") or symbol
+            if _sym:
+                _hist = data.copy()
+                if "close" in _hist.columns and "Close" not in _hist.columns:
+                    _hist = _hist.rename(columns={"close": "Close"})
+                if "volume" in _hist.columns and "Volume" not in _hist.columns:
+                    _hist = _hist.rename(columns={"volume": "Volume"})
+                with st.spinner("Computing AI Score..."):
+                    ai_score = compute_ai_score(_sym, _hist)
+                if ai_score.get("error") is None:
+                    score = ai_score["overall_score"]
+                    grade = ai_score["grade"]
+                    st.markdown("### 🤖 AI Score")
+                    col_score, col_tech, col_mom, col_sent, col_fund = st.columns(5)
+                    col_score.metric("Overall", f"{score}/10", delta=grade, delta_color="normal" if score >= 5 else "inverse")
+                    col_tech.metric("Technical", f"{ai_score['technical_score']}/10")
+                    col_mom.metric("Momentum", f"{ai_score['momentum_score']}/10")
+                    col_sent.metric("Sentiment", f"{ai_score['sentiment_score']}/10")
+                    col_fund.metric("Fundamental", f"{ai_score['fundamental_score']}/10")
+                    st.caption(ai_score["summary"])
+                    with st.expander("📊 Signal Breakdown", expanded=False):
+                        signals = ai_score.get("signals", [])
+                        if signals:
+                            sig_df = pd.DataFrame(signals)[["name", "value", "impact", "description"]]
+                            sig_df.columns = ["Signal", "Value", "Impact", "Description"]
+                            def _color_impact(val):
+                                colors = {"positive": "background-color: #d4edda", "negative": "background-color: #f8d7da", "neutral": "background-color: #fff3cd"}
+                                return colors.get(val, "")
+                            try:
+                                styler = sig_df.style.applymap(_color_impact, subset=["Impact"])
+                                st.dataframe(styler, use_container_width=True)
+                            except Exception:
+                                st.dataframe(sig_df, use_container_width=True)
+        except Exception as _e:
+            st.caption(f"AI Score unavailable: {_e}")
+
+        # Multi-timeframe chart
+        with st.expander("📈 Multi-Timeframe Chart", expanded=False):
+            try:
+                from components.multi_timeframe_chart import render_multi_timeframe_chart
+                _sym = st.session_state.get("symbol") or symbol
+                render_multi_timeframe_chart(_sym, hist_daily=data)
+            except Exception as _e:
+                st.caption(f"Chart unavailable: {_e}")
+
         # Price chart - use advanced candlestick chart if OHLCV data available
         try:
             from utils.plotting_helper import create_candlestick_chart
@@ -945,7 +1013,7 @@ with tab1:
                     st.code(traceback.format_exc())
                     st.info("Try adjusting the date range or selecting a different model.")
             
-            # Display consensus forecast above individual model results
+            # Display consensus view using the ForecastRouter
             try:
                 hist_data_cons = st.session_state.get("forecast_data")
                 if hist_data_cons is not None and len(hist_data_cons) >= 2:
@@ -957,75 +1025,77 @@ with tab1:
                         hist_data_cons, horizon=horizon
                     )
                     if "error" not in consensus:
-                        st.subheader("Model Consensus")
-                        c1, c2, c3, c4 = st.columns(4)
-                        chg = consensus.get("consensus_7d_change_pct", 0.0)
-                        c1.metric(
-                            f"Consensus {horizon}d Target",
-                            f"${consensus['consensus_forecast'][-1]:.2f}",
-                            f"{chg:+.1f}%",
-                        )
-                        c2.metric("Direction", consensus.get("direction", "UNKNOWN"))
-                        c3.metric(
-                            "Model Agreement",
-                            f"{consensus.get('model_agreement', 0.0) * 100:.0f}%",
-                        )
-                        c4.metric("Conviction", consensus.get("conviction", "LOW"))
+                        with st.expander("🎯 Model Consensus", expanded=True):
+                            direction = consensus.get("direction", "NEUTRAL")
+                            conviction = consensus.get("conviction", "INSUFFICIENT")
+                            last_price = float(consensus.get("last_price") or 0.0)
+                            consensus_price = float(
+                                consensus.get("consensus_price")
+                                or consensus.get("consensus_forecast", [0.0])[-1]
+                            )
+                            price_targets = consensus.get("price_targets") or {}
+                            models_failed = consensus.get("models_failed") or []
 
-                        days = list(range(1, horizon + 1))
-                        fig = go.Figure()
-                        fig.add_trace(
-                            go.Scatter(
-                                x=days,
-                                y=consensus["upper_bound"],
-                                fill=None,
-                                mode="lines",
-                                line_color="rgba(0,212,170,0.2)",
-                                showlegend=False,
+                            # Row 1: direction, conviction, consensus price
+                            col1, col2, col3 = st.columns(3)
+                            direction_emoji = (
+                                "📈"
+                                if direction == "BULLISH"
+                                else "📉"
+                                if direction == "BEARISH"
+                                else "➡️"
                             )
-                        )
-                        fig.add_trace(
-                            go.Scatter(
-                                x=days,
-                                y=consensus["lower_bound"],
-                                fill="tonexty",
-                                mode="lines",
-                                fillcolor="rgba(0,212,170,0.12)",
-                                line_color="rgba(0,212,170,0.2)",
-                                name="Uncertainty Band",
-                            )
-                        )
-                        fig.add_trace(
-                            go.Scatter(
-                                x=days,
-                                y=consensus["consensus_forecast"],
-                                mode="lines+markers",
-                                line=dict(color="#00D4AA", width=2.5),
-                                name="Consensus",
-                            )
-                        )
-                        fig.add_hline(
-                            y=consensus["last_price"],
-                            line_dash="dash",
-                            line_color="gray",
-                            annotation_text=f"Last ${consensus['last_price']:.2f}",
-                        )
-                        fig.update_layout(
-                            template="plotly_dark",
-                            title=f"{st.session_state.symbol} Consensus ({len(consensus.get('models_used', []))} models)",
-                            xaxis_title="Days Ahead",
-                            yaxis_title="Price ($)",
-                            height=350,
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                        st.caption(
-                            "Models: "
-                            + ", ".join(consensus.get("models_used") or [])
-                            + " | Failed: "
-                            + (", ".join(consensus.get("models_failed") or []) or "none")
-                        )
-            except Exception as e:
-                st.caption(f"Consensus unavailable: {e}")
+                            with col1:
+                                col1.metric(
+                                    "Consensus Direction",
+                                    f"{direction_emoji} {direction}",
+                                )
+                            with col2:
+                                col2.metric("Conviction", conviction)
+                            with col3:
+                                delta_pct = (
+                                    (consensus_price / last_price - 1.0) * 100.0
+                                    if last_price
+                                    else 0.0
+                                )
+                                col3.metric(
+                                    f"Consensus Price (Day {horizon})",
+                                    f"${consensus_price:.2f}",
+                                    delta=f"{delta_pct:+.2f}%",
+                                )
+
+                            # Row 2: per-model price targets table
+                            if price_targets:
+                                targets_df = pd.DataFrame(
+                                    [
+                                        {
+                                            "Model": k,
+                                            "Day 7 Price": f"${v:.2f}",
+                                            "vs Current": (
+                                                f"{((v/last_price)-1)*100:.1f}%"
+                                                if last_price
+                                                else "N/A"
+                                            ),
+                                        }
+                                        for k, v in price_targets.items()
+                                    ]
+                                )
+                                st.dataframe(
+                                    targets_df,
+                                    use_container_width=True,
+                                    hide_index=True,
+                                )
+
+                            # Row 3: failed models (optional)
+                            if models_failed:
+                                with st.expander(
+                                    f"⚠️ {len(models_failed)} model(s) excluded",
+                                    expanded=False,
+                                ):
+                                    for f in models_failed:
+                                        st.caption(f"• {f}")
+            except Exception:
+                st.warning("Consensus forecast temporarily unavailable.")
 
             # Display forecast using UI components
             if st.session_state.get('current_forecast') is not None:
@@ -2101,9 +2171,9 @@ with tab3:
                             st.session_state.ai_recommendation = recommendation
                         
                         except Exception as e:
-                            st.error(f"Analysis failed: {str(e)}")
+                            st.error(f"Tab error: {type(e).__name__}: {e}")
                             import traceback
-                            st.code(traceback.format_exc())
+                            st.code(traceback.format_exc(), language="python")
             
             with col2:
                 st.subheader("💡 AI Recommendation")
@@ -2224,860 +2294,317 @@ with tab3:
                     st.error(f"Error using hybrid selector: {e}")
                     import traceback
                     st.code(traceback.format_exc())
+
+            # Model comparison table — run all registered models via ForecastRouter
+            st.markdown("---")
+            st.subheader("📋 Model Comparison Table")
+            st.caption("Run each registered model and compare MAPE / 7-day forecast. Load data in Quick Forecast first.")
+            if st.session_state.get("forecast_data") is not None:
+                _hist = st.session_state.get("forecast_data").copy()
+                if "Close" not in _hist.columns and "close" in _hist.columns:
+                    _hist["Close"] = _hist["close"]
+                _horizon = st.session_state.get("forecast_horizon", 7)
+                try:
+                    from trading.models.forecast_router import ForecastRouter
+                    from trading.models.model_registry import get_registry
+
+                    _registry = get_registry()
+                    _router = ForecastRouter()
+                    _model_names = (
+                        _registry.list_models()
+                        if hasattr(_registry, "list_models")
+                        else list(getattr(_registry, "_models", {}).keys())
+                    )
+                    if not _model_names:
+                        _model_names = list(_router.model_registry.keys())
+
+                    _comparison_rows = []
+                    _progress = st.progress(0.0, text="Running model comparison...")
+
+                    for _i, _model_name in enumerate(_model_names):
+                        _pct = (_i + 1) / max(len(_model_names), 1)
+                        _progress.progress(_pct, text=f"Testing {_model_name}...")
+                        try:
+                            _result = _router.get_forecast(
+                                _hist,
+                                model_type=_model_name.lower(),
+                                horizon=_horizon,
+                                run_walk_forward=False,
+                            )
+                            _fc = _result.get("forecast", [])
+                            _fc_valid = (
+                                _fc is not None
+                                and hasattr(_fc, "__len__")
+                                and len(_fc) > 0
+                            )
+                            _mape = (
+                                _result.get("validation_mape")
+                                or _result.get("in_sample_mape")
+                                or _result.get("mape")
+                                or _result.get("score")
+                                or _result.get("error_pct")
+                            )
+                            _last_fc = (
+                                round(float(_fc[-1]), 2) if _fc_valid else None
+                            )
+
+                            _comparison_rows.append({
+                                "Model": _model_name,
+                                "Status": "✅" if _fc_valid else "⚠️",
+                                "MAPE": (
+                                    round(float(_mape), 2)
+                                    if _mape is not None
+                                    else None
+                                ),
+                                "7d Forecast": (
+                                    f"${_last_fc:.2f}" if _last_fc else "—"
+                                ),
+                                "Notes": _result.get("error", "") or "",
+                            })
+                        except Exception as _e:
+                            _comparison_rows.append({
+                                "Model": _model_name,
+                                "Status": "❌",
+                                "MAPE": None,
+                                "7d Forecast": "—",
+                                "Notes": f"{type(_e).__name__}: {str(_e)[:80]}",
+                            })
+
+                    _progress.empty()
+                    if _comparison_rows:
+                        _df = pd.DataFrame(_comparison_rows)
+                        st.dataframe(_df, use_container_width=True)
+                        _working = sum(
+                            1 for r in _comparison_rows if r["Status"] == "✅"
+                        )
+                        st.caption(
+                            f"{_working}/{len(_comparison_rows)} models produced valid forecasts"
+                        )
+                except Exception as _e:
+                    st.error(f"Comparison failed: {type(_e).__name__}: {_e}")
+                    import traceback
+                    st.code(traceback.format_exc())
+
     except Exception as e:
+        st.error(f"Tab error: {type(e).__name__}: {e}")
         import traceback
-        st.error(f"Tab error: {e}")
-        st.code(traceback.format_exc())
+        st.code(traceback.format_exc(), language="python")
 
 with tab4:
     try:
         st.header("Model Comparison")
-        st.markdown("Compare multiple models side-by-side and create ensemble forecasts")
-        
+        st.markdown("Compare multiple models side-by-side on a single chart.")
         if st.session_state.get("forecast_data") is None:
             st.warning("⚠️ Please load data first in the Quick Forecast tab")
         else:
-            col1, col2 = st.columns([1, 2])
-            
-            with col1:
-                st.subheader("📊 Select Models")
-                
-                from trading.models.forecast_router import ForecastRouter
-                _router_for_names = ForecastRouter()
-                try:
-                    available_models = list(_router_for_names.model_registry.keys())
-                except Exception:
-                    available_models = [
-                        "lstm",
-                        "xgboost",
-                        "prophet",
-                        "arima",
-                        "ridge",
-                        "tcn",
-                        "catboost",
-                        "ensemble",
-                        "hybrid",
-                    ]
-                display_models = [
-                    "LSTM",
-                    "XGBoost",
-                    "Prophet",
-                    "ARIMA",
-                    "Ridge",
-                    "TCN",
-                    "CatBoost",
-                    "Ensemble",
-                    "Hybrid",
+            from trading.models.forecast_router import ForecastRouter
+            import plotly.graph_objects as go
+
+            _router = ForecastRouter()
+            _hist = st.session_state.get("forecast_data").copy()
+            if "Close" not in _hist.columns and "close" in _hist.columns:
+                _hist["Close"] = _hist["close"]
+            if "close" not in _hist.columns and "Close" in _hist.columns:
+                _hist["close"] = _hist["Close"]
+            _symbol = st.session_state.get("symbol", "Symbol")
+
+            _models_to_compare = st.multiselect(
+                "Select models to compare",
+                options=["arima", "xgboost", "lstm", "prophet", "catboost", "ridge", "tcn", "ensemble"],
+                default=["arima", "xgboost", "lstm"],
+                key="model_comparison_select",
+            )
+            _horizon = st.slider(
+                "Forecast horizon (days)", 5, 30, 7, key="comparison_horizon"
+            )
+
+            if st.button("Compare Models", key="run_comparison"):
+                _fig = go.Figure()
+                _last_price = float(_hist["Close"].iloc[-1])
+                _ylen = min(21, len(_hist))
+                _y_hist = _hist["Close"].values[-_ylen:].tolist()
+                _x_hist = list(range(-_ylen + 1, 1))
+
+                _fig.add_trace(
+                    go.Scatter(
+                        x=_x_hist,
+                        y=_y_hist,
+                        mode="lines",
+                        name="Historical",
+                        line=dict(color="white", width=2),
+                    )
+                )
+                _colors = [
+                    "#00D4AA",
+                    "#FF6B6B",
+                    "#4FC3F7",
+                    "#FFA500",
+                    "#B39DDB",
+                    "#80CBC4",
+                    "#FFCC02",
+                    "#EF9A9A",
                 ]
-                # Filter to models actually available in the router when possible
-                display_models = [
-                    m for m in display_models if m.lower() in available_models
-                ] or display_models
-
-                models_to_compare = st.multiselect(
-                    "Choose models to compare:",
-                    display_models,
-                    default=[m for m in display_models if m in ["LSTM", "XGBoost"]][:2],
-                    help="Select 2-5 models to compare",
-                )
-                
-                if len(models_to_compare) < 2:
-                    st.warning("Please select at least 2 models")
-                elif len(models_to_compare) > 5:
-                    st.warning("Please select 5 or fewer models for comparison")
-                
-                create_ensemble = st.checkbox("Create Ensemble Forecast", value=True)
-                
-                compare_button = st.button(
-                    "🚀 Compare Models",
-                    type="primary",
-                    disabled=len(models_to_compare) < 2
-                )
-            
-            with col2:
-                st.subheader("📈 Comparison Results")
-                
-                if compare_button and len(models_to_compare) >= 2:
-                    if len(models_to_compare) > 5:
-                        st.warning("Please select 5 or fewer models for comparison")
-                        st.stop()
-
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
-                    
+                for _ci, _mn in enumerate(_models_to_compare):
                     try:
-                        data = st.session_state.get("forecast_data")
-                        if data is None:
-                            raise RuntimeError("No forecast_data in session_state; please load data first.")
-                        data = data.copy()
-                        horizon = st.session_state.forecast_horizon
-                        
-                        # Ensure proper format
-                        if not isinstance(data.index, pd.DatetimeIndex):
-                            data.index = pd.to_datetime(data.index)
-
-                        # Router expects lowercase OHLCV when possible
-                        if "Close" in data.columns and "close" not in data.columns:
-                            data = data.rename(
-                                columns={
-                                    "Close": "close",
-                                    "Open": "open",
-                                    "High": "high",
-                                    "Low": "low",
-                                    "Volume": "volume",
-                                }
+                        _r = _router.get_forecast(
+                            _hist, model_type=_mn, horizon=_horizon, run_walk_forward=False
+                        )
+                        _fc = _r.get("forecast", [])
+                        if (
+                            _fc is None
+                            or not hasattr(_fc, "__len__")
+                            or len(_fc) == 0
+                        ):
+                            st.caption(f"{_mn}: no forecast output")
+                            continue
+                        _fc = [float(v) for v in _fc]
+                        if not all(
+                            _last_price * 0.5 < v < _last_price * 2.0 for v in _fc
+                        ):
+                            st.caption(f"{_mn}: forecast out of range, skipped")
+                            continue
+                        _fig.add_trace(
+                            go.Scatter(
+                                x=list(range(1, len(_fc) + 1)),
+                                y=_fc,
+                                mode="lines+markers",
+                                name=_mn.upper(),
+                                line=dict(
+                                    color=_colors[_ci % len(_colors)], width=1.5
+                                ),
+                                marker=dict(size=4),
                             )
-                        
-                        forecasts = {}
-                        model_configs = {}
-                        
-                        # Forecast via ForecastRouter (single canonical invocation path)
-                        from trading.models.forecast_router import ForecastRouter
-                        _router = ForecastRouter()
-
-                        # Train and forecast for each model
-                        total_models = len(models_to_compare)
-                        for idx, model_name in enumerate(models_to_compare):
-                            status_text.text(f"Running {model_name} ({idx+1}/{total_models})...")
-                            progress_bar.progress((idx) / (total_models + 1))
-                            
-                            try:
-                                model_key = str(model_name).strip().lower()
-                                router_result = _router.get_forecast(
-                                    data,
-                                    horizon=horizon,
-                                    model_type=model_key,
-                                    run_walk_forward=False,
-                                )
-
-                                forecast_values = np.asarray(
-                                    (router_result or {}).get("forecast", []),
-                                    dtype="float64",
-                                ).ravel()
-                                if forecast_values.size == 0:
-                                    raise ValueError("Router returned empty forecast")
-
-                                forecast_dates = pd.date_range(
-                                    start=data.index[-1] + timedelta(days=1),
-                                    periods=len(forecast_values),
-                                    freq="D",
-                                )
-                                
-                                forecasts[model_name] = {
-                                    'values': forecast_values,
-                                    'dates': forecast_dates[:len(forecast_values)]
-                                }
-                                
-                            except Exception as e:
-                                st.warning(f"Failed to train {model_name}: {str(e)}")
-                                continue
-                        
-                        progress_bar.progress(0.9)
-                        
-                        # Create ensemble if requested
-                        if create_ensemble and len(forecasts) >= 2:
-                            status_text.text("Creating ensemble forecast...")
-                            ensemble_values = []
-                            for i in range(horizon):
-                                values_at_step = [f['values'][i] for f in forecasts.values() if i < len(f['values'])]
-                                if values_at_step:
-                                    ensemble_values.append(np.mean(values_at_step))
-                                else:
-                                    ensemble_values.append(0)
-                            
-                            forecasts['Ensemble'] = {
-                                'values': np.array(ensemble_values),
-                                'dates': forecasts[list(forecasts.keys())[0]]['dates']
-                            }
-                        
-                        progress_bar.progress(1.0)
-                        status_text.text("Complete!")
-                        
-                        # Store results
-                        st.session_state.comparison_results = forecasts
-                        
-                        st.success(f"✅ Compared {len(forecasts)} models successfully!")
-                        
-                        # Display comparison chart
-                        fig = go.Figure()
-                        
-                        # Historical data
-                        hist_data = st.session_state.get("forecast_data")
-                        fig.add_trace(go.Scatter(
-                            x=hist_data.index,
-                            y=hist_data['close'],
-                            mode='lines',
-                            name='Historical',
-                            line=dict(color='black', width=2)
-                        ))
-                        
-                        # Forecasts from each model
-                        colors = ['red', 'blue', 'green', 'orange', 'purple']
-                        for idx, (model_name, forecast_data) in enumerate(forecasts.items()):
-                            fig.add_trace(go.Scatter(
-                                x=forecast_data['dates'],
-                                y=forecast_data['values'],
-                                mode='lines+markers',
-                                name=model_name,
-                                line=dict(color=colors[idx % len(colors)], width=2, dash='dash' if model_name == 'Ensemble' else None),
-                                marker=dict(size=6)
-                            ))
-                        
-                        fig.update_layout(
-                            title=f"{st.session_state.symbol} - Model Comparison",
-                            xaxis_title="Date",
-                            yaxis_title="Price ($)",
-                            hovermode='x unified',
-                            height=600
                         )
-                        
-                        st.plotly_chart(fig)
-                        
-                        # Metrics table
-                        st.markdown("---")
-                        st.subheader("📊 Performance Metrics")
-                        
-                        metrics_data = []
-                        for model_name, forecast_data in forecasts.items():
-                            if model_name == 'Ensemble':
-                                continue
-                            
-                            # Calculate simple metrics
-                            forecast_vals = forecast_data['values']
-                            last_price = hist_data['close'].iloc[-1]
-                            
-                            # Mean forecast
-                            mean_forecast = np.mean(forecast_vals)
-                            
-                            # Forecast range
-                            forecast_range = np.max(forecast_vals) - np.min(forecast_vals)
-                            
-                            # Trend (first vs last)
-                            trend = (forecast_vals[-1] - forecast_vals[0]) / forecast_vals[0] * 100 if len(forecast_vals) > 1 else 0
-                            
-                            metrics_data.append({
-                                'Model': model_name,
-                                'Mean Forecast': f"${mean_forecast:.2f}",
-                                'Range': f"${forecast_range:.2f}",
-                                'Trend (%)': f"{trend:.2f}%",
-                                'Std Dev': f"${np.std(forecast_vals):.2f}"
-                            })
-                        
-                        if metrics_data:
-                            metrics_df = pd.DataFrame(metrics_data)
-                            st.dataframe(metrics_df)
-                        
-                        # Forecast table
-                        st.markdown("---")
-                        st.subheader("📋 Forecast Values")
-                        
-                        # Create comparison DataFrame
-                        comparison_df = pd.DataFrame({
-                            'Date': forecasts[list(forecasts.keys())[0]]['dates']
-                        })
-                        
-                        for model_name, forecast_data in forecasts.items():
-                            comparison_df[model_name] = forecast_data['values'][:len(comparison_df)]
-                        
-                        # Format for display
-                        display_df = comparison_df.copy()
-                        for col in display_df.columns:
-                            if col != 'Date' and col in forecasts:
-                                display_df[col] = display_df[col].apply(
-                                    lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
-                                )
-                        
-                        st.dataframe(display_df)
-                        
-                        # Download button
-                        csv = comparison_df.to_csv(index=False)
-                        st.download_button(
-                            label="📥 Download Comparison CSV",
-                            data=csv,
-                            file_name=f"{st.session_state.symbol}_model_comparison.csv",
-                            mime="text/csv"
-                        )
-                    
-                    except Exception as e:
-                        st.error(f"Comparison failed: {str(e)}")
-                        import traceback
-                        st.code(traceback.format_exc())
-                    finally:
-                        progress_bar.empty()
-                        status_text.empty()
-                
-                # Display previous comparison if exists
-                if st.session_state.get('comparison_results'):
-                    st.markdown("---")
-                    st.markdown("**Previous Comparison Results**")
-                    prev_results = st.session_state.comparison_results
-                    st.info(f"Compared {len(prev_results)} models in previous run")
+                    except Exception as _e:
+                        st.caption(f"{_mn}: {type(_e).__name__}")
+
+                _fig.add_vline(
+                    x=0, line_dash="dash", line_color="gray", annotation_text="Today"
+                )
+                _fig.add_hline(
+                    y=_last_price,
+                    line_dash="dot",
+                    line_color="gray",
+                    annotation_text=f"Last: ${_last_price:.2f}",
+                )
+                _fig.update_layout(
+                    title=f"{_symbol} — Model Forecast Comparison",
+                    template="plotly_dark",
+                    xaxis_title="Days (negative=historical, positive=forecast)",
+                    yaxis_title="Price ($)",
+                    height=450,
+                )
+                st.plotly_chart(_fig, use_container_width=True)
     except Exception as e:
+        st.error(f"Tab error: {type(e).__name__}: {e}")
         import traceback
-        st.error(f"Tab error: {e}")
-        st.code(traceback.format_exc())
+        st.code(traceback.format_exc(), language="python")
 
 with tab5:
     try:
-        st.header("Market Analysis")
-        st.markdown("Technical indicators, market regime detection, trend analysis, and correlation tools")
-        
+        st.header("📊 Market Analysis")
+        st.markdown("Rolling correlation vs SPY and volatility regime. Load data in Quick Forecast first.")
         if st.session_state.get("forecast_data") is None:
             st.warning("⚠️ Please load data first in the Quick Forecast tab")
         else:
-            # Analysis options
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                show_technical = st.checkbox("Technical Indicators", value=True)
-            with col2:
-                show_regime = st.checkbox("Market Regime", value=True)
-            with col3:
-                show_trend = st.checkbox("Trend Analysis", value=True)
-            
-            analyze_button = st.button("🔍 Run Analysis", type="primary")
-            
-            if analyze_button:
-                data = st.session_state.get("forecast_data")
-                if data is None:
-                    raise RuntimeError("No forecast_data in session_state; please load data first.")
-                data = data.copy()
-                
-                # Ensure proper column names
-                if 'close' in data.columns:
-                    data['Close'] = data['close']
-                if 'open' in data.columns:
-                    data['Open'] = data['open']
-                if 'high' in data.columns:
-                    data['High'] = data['high']
-                if 'low' in data.columns:
-                    data['Low'] = data['low']
-                if 'volume' in data.columns:
-                    data['Volume'] = data['volume']
-                
-                # Ensure required columns exist
-                if 'Open' not in data.columns:
-                    data['Open'] = data['Close']
-                if 'High' not in data.columns:
-                    data['High'] = data['Close']
-                if 'Low' not in data.columns:
-                    data['Low'] = data['Close']
-                if 'Volume' not in data.columns:
-                    data['Volume'] = 1000000
-                
-                # Technical Indicators
-                if show_technical:
-                    st.markdown("---")
-                    st.subheader("📊 Technical Indicators")
-                    
+            _symbol = st.session_state.get("symbol", "Symbol")
+            hist = st.session_state.get("forecast_data").copy()
+            if "Close" not in hist.columns and "close" in hist.columns:
+                hist["Close"] = hist["close"]
+
+            st.subheader(f"📊 {_symbol} Market Analysis")
+            try:
+                import yfinance as yf
+                import plotly.graph_objects as go
+                import numpy as np
+
+                _col1, _col2 = st.columns(2)
+                with _col1:
+                    st.markdown("**Rolling 60-Day Correlation vs SPY**")
                     try:
-                        fe = FeatureEngineering()
-                        
-                        # Calculate indicators
-                        indicators_data = {}
-                        
-                        # Moving Averages
-                        ma_data = fe.calculate_moving_averages(data)
-                        indicators_data.update(ma_data.to_dict('series'))
-                        
-                        # RSI
-                        rsi_data = fe.calculate_rsi(data)
-                        indicators_data.update(rsi_data.to_dict('series'))
-                        
-                        # MACD
-                        macd_data = fe.calculate_macd(data)
-                        indicators_data.update(macd_data.to_dict('series'))
-                        
-                        # Bollinger Bands
-                        bb_data = fe.calculate_bollinger_bands(data)
-                        indicators_data.update(bb_data.to_dict('series'))
-                        
-                        # Create indicators DataFrame
-                        indicators_df = pd.DataFrame(indicators_data, index=data.index)
-                        
-                        # Display key indicators
-                        col1, col2, col3, col4 = st.columns(4)
-                        
-                        with col1:
-                            if 'RSI' in indicators_df.columns:
-                                current_rsi = indicators_df['RSI'].iloc[-1]
-                                st.metric("RSI", f"{current_rsi:.2f}")
-                                if current_rsi > 70:
-                                    st.warning("Overbought")
-                                elif current_rsi < 30:
-                                    st.info("Oversold")
-                        
-                        with col2:
-                            if 'SMA_20' in indicators_df.columns:
-                                sma_20 = indicators_df['SMA_20'].iloc[-1]
-                                current_price = data['Close'].iloc[-1]
-                                st.metric("SMA(20)", f"${sma_20:.2f}")
-                                if current_price > sma_20:
-                                    st.success("Above SMA")
-                                else:
-                                    st.error("Below SMA")
-                        
-                        with col3:
-                            if 'MACD' in indicators_df.columns and 'MACD_Signal' in indicators_df.columns:
-                                macd_val = indicators_df['MACD'].iloc[-1]
-                                signal_val = indicators_df['MACD_Signal'].iloc[-1]
-                                st.metric("MACD", f"{macd_val:.2f}")
-                                if macd_val > signal_val:
-                                    st.success("Bullish")
-                                else:
-                                    st.error("Bearish")
-                        
-                        with col4:
-                            if 'BB_Upper' in indicators_df.columns and 'BB_Lower' in indicators_df.columns:
-                                upper = indicators_df['BB_Upper'].iloc[-1]
-                                lower = indicators_df['BB_Lower'].iloc[-1]
-                                current = data['Close'].iloc[-1]
-                                st.metric("Bollinger Position", f"{((current - lower) / (upper - lower) * 100):.1f}%")
-                        
-                        # Chart with indicators
-                        fig = make_subplots(
-                            rows=3, cols=1,
-                            subplot_titles=("Price with Moving Averages", "RSI", "MACD"),
-                            vertical_spacing=0.1,
-                            row_heights=[0.5, 0.25, 0.25]
-                        )
-                        
-                        # Price and MAs
-                        fig.add_trace(go.Scatter(
-                            x=data.index,
-                            y=data['Close'],
-                            mode='lines',
-                            name='Close Price',
-                            line=dict(color='blue', width=2)
-                        ), row=1, col=1)
-                        
-                        if 'SMA_20' in indicators_df.columns:
-                            fig.add_trace(go.Scatter(
-                                x=indicators_df.index,
-                                y=indicators_df['SMA_20'],
-                                mode='lines',
-                                name='SMA(20)',
-                                line=dict(color='orange', width=1, dash='dash')
-                            ), row=1, col=1)
-                        
-                        if 'SMA_50' in indicators_df.columns:
-                            fig.add_trace(go.Scatter(
-                                x=indicators_df.index,
-                                y=indicators_df['SMA_50'],
-                                mode='lines',
-                                name='SMA(50)',
-                                line=dict(color='red', width=1, dash='dash')
-                            ), row=1, col=1)
-                        
-                        # Bollinger Bands
-                        if 'BB_Upper' in indicators_df.columns:
-                            fig.add_trace(go.Scatter(
-                                x=indicators_df.index,
-                                y=indicators_df['BB_Upper'],
-                                mode='lines',
-                                name='BB Upper',
-                                line=dict(color='gray', width=1, dash='dot'),
-                                showlegend=False
-                            ), row=1, col=1)
-                            
-                            fig.add_trace(go.Scatter(
-                                x=indicators_df.index,
-                                y=indicators_df['BB_Lower'],
-                                mode='lines',
-                                name='BB Lower',
-                                line=dict(color='gray', width=1, dash='dot'),
-                                fill='tonexty',
-                                fillcolor='rgba(128,128,128,0.1)',
-                                showlegend=False
-                            ), row=1, col=1)
-                        
-                        # RSI
-                        if 'RSI' in indicators_df.columns:
-                            fig.add_trace(go.Scatter(
-                                x=indicators_df.index,
-                                y=indicators_df['RSI'],
-                                mode='lines',
-                                name='RSI',
-                                line=dict(color='purple', width=2)
-                            ), row=2, col=1)
-                            
-                            # Add overbought/oversold lines
-                            fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
-                            fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
-                        
-                        # MACD
-                        if 'MACD' in indicators_df.columns:
-                            fig.add_trace(go.Scatter(
-                                x=indicators_df.index,
-                                y=indicators_df['MACD'],
-                                mode='lines',
-                                name='MACD',
-                                line=dict(color='blue', width=2)
-                            ), row=3, col=1)
-                            
-                            if 'MACD_Signal' in indicators_df.columns:
-                                fig.add_trace(go.Scatter(
-                                    x=indicators_df.index,
-                                    y=indicators_df['MACD_Signal'],
-                                    mode='lines',
-                                    name='Signal',
-                                    line=dict(color='red', width=2)
-                                ), row=3, col=1)
-                        
-                        fig.update_layout(height=800, showlegend=True, hovermode='x unified')
-                        fig.update_xaxes(title_text="Date", row=3, col=1)
-                        fig.update_yaxes(title_text="Price ($)", row=1, col=1)
-                        fig.update_yaxes(title_text="RSI", row=2, col=1)
-                        fig.update_yaxes(title_text="MACD", row=3, col=1)
-                        
-                        st.plotly_chart(fig)
-                        
-                        # Indicators table
-                        with st.expander("📋 View All Indicators"):
-                            st.dataframe(indicators_df.tail(50))
-                    
-                    except Exception as e:
-                        st.error(f"Error calculating indicators: {str(e)}")
-                
-                # Market Regime Detection
-                if show_regime:
-                    st.markdown("---")
-                    st.subheader("🎯 Market Regime Detection")
-                    
-                    try:
-                        import pandas as pd
-                        analyzer = MarketAnalyzer()
-                        # Ensure data is DataFrame with Close column (log_metrics fix: do not pass dict as path)
-                        regime_data = data.copy() if isinstance(data, pd.DataFrame) else pd.DataFrame(data)
-                        if 'Close' not in regime_data.columns and 'close' in regime_data.columns:
-                            regime_data['Close'] = regime_data['close']
-                        if 'Close' not in regime_data.columns:
-                            st.warning("No Close price column for regime detection.")
-                        else:
-                            # Detect trend regime
-                            trend_regime = analyzer.detect_market_regime(regime_data, "trend")
-                            
-                            # Detect volatility regime
-                            volatility_regime = analyzer.detect_market_regime(regime_data, "volatility")
-                        
-                            # Display regime information
-                            col1, col2 = st.columns(2)
-                            
-                            with col1:
-                                st.markdown("**Trend Regime**")
-                                regime = trend_regime.get('regime', 'unknown')
-                                strength = trend_regime.get('strength', 0)
-                                
-                                if regime == 'up':
-                                    st.success(f"📈 Uptrend (Strength: {strength:.2%})")
-                                elif regime == 'down':
-                                    st.error(f"📉 Downtrend (Strength: {abs(strength):.2%})")
-                                else:
-                                    st.info(f"➡️ Sideways")
-                                
-                                st.metric("MA Short (20)", f"${trend_regime.get('ma_short', 0):.2f}")
-                                st.metric("MA Long (50)", f"${trend_regime.get('ma_long', 0):.2f}")
-                            
-                            with col2:
-                                st.markdown("**Volatility Regime**")
-                                vol_regime = volatility_regime.get('regime', 'unknown')
-                                current_vol = volatility_regime.get('current_volatility', 0)
-                                
-                                if 'high' in vol_regime:
-                                    st.warning(f"⚡ High Volatility ({current_vol:.2%})")
-                                elif 'low' in vol_regime:
-                                    st.success(f"🔇 Low Volatility ({current_vol:.2%})")
-                                else:
-                                    st.info(f"📊 Normal Volatility ({current_vol:.2%})")
-                                
-                                st.metric("Volatility Rank", f"{volatility_regime.get('volatility_rank', 0):.2%}")
-                                st.metric("Volatility Trend", volatility_regime.get('volatility_trend', 'unknown'))
-                            
-                            # Store regime in session state
-                            st.session_state.market_regime = {
-                                'trend': trend_regime,
-                                'volatility': volatility_regime
-                            }
-                    
-                    except Exception as e:
-                        st.error(f"Error detecting market regime: {str(e)}")
-                
-                # Trend Analysis
-                if show_trend:
-                    st.markdown("---")
-                    st.subheader("📈 Trend Analysis")
-                    
-                    try:
-                        # Calculate trend metrics
-                        returns = data['Close'].pct_change()
-                        
-                        # Short-term trend (5 days)
-                        short_trend = (data['Close'].iloc[-1] / data['Close'].iloc[-6] - 1) * 100 if len(data) >= 6 else 0
-                        
-                        # Medium-term trend (20 days)
-                        medium_trend = (data['Close'].iloc[-1] / data['Close'].iloc[-21] - 1) * 100 if len(data) >= 21 else 0
-                        
-                        # Long-term trend (full period)
-                        long_trend = (data['Close'].iloc[-1] / data['Close'].iloc[0] - 1) * 100
-                        
-                        # Volatility
-                        volatility = returns.std() * np.sqrt(252) * 100
-                        
-                        # Display metrics
-                        col1, col2, col3, col4 = st.columns(4)
-                        
-                        with col1:
-                            st.metric("Short-term (5d)", f"{short_trend:.2f}%", 
-                                    delta=f"{short_trend:.2f}%")
-                        
-                        with col2:
-                            st.metric("Medium-term (20d)", f"{medium_trend:.2f}%",
-                                    delta=f"{medium_trend:.2f}%")
-                        
-                        with col3:
-                            st.metric("Long-term (Full)", f"{long_trend:.2f}%",
-                                    delta=f"{long_trend:.2f}%")
-                        
-                        with col4:
-                            st.metric("Annualized Volatility", f"{volatility:.2f}%")
-                        
-                        # Trend chart
-                        fig = go.Figure()
-                        
-                        # Price
-                        fig.add_trace(go.Scatter(
-                            x=data.index,
-                            y=data['Close'],
-                            mode='lines',
-                            name='Price',
-                            line=dict(color='blue', width=2)
-                        ))
-                        
-                        # Trend lines
-                        if len(data) >= 20:
-                            # 20-day moving average
-                            ma20 = data['Close'].rolling(20).mean()
-                            fig.add_trace(go.Scatter(
-                                x=ma20.index,
-                                y=ma20.values,
-                                mode='lines',
-                                name='MA(20)',
-                                line=dict(color='orange', width=1, dash='dash')
-                            ))
-                        
-                        if len(data) >= 50:
-                            # 50-day moving average
-                            ma50 = data['Close'].rolling(50).mean()
-                            fig.add_trace(go.Scatter(
-                                x=ma50.index,
-                                y=ma50.values,
-                                mode='lines',
-                                name='MA(50)',
-                                line=dict(color='red', width=1, dash='dash')
-                            ))
-                        
-                        fig.update_layout(
-                            title=f"{st.session_state.symbol} - Trend Analysis",
-                            xaxis_title="Date",
-                            yaxis_title="Price ($)",
-                            hovermode='x unified',
-                            height=400
-                        )
-                        
-                        st.plotly_chart(fig)
-                    
-                    except Exception as e:
-                        st.error(f"Error analyzing trend: {str(e)}")
-                
-                # Correlation Analysis (if multiple symbols available)
-                st.markdown("---")
-                st.subheader("🔗 Correlation Analysis")
-                st.info("Correlation analysis requires multiple symbols. Load additional data to compare.")
-                
-                # News Sentiment Analysis
-                st.markdown("---")
-                st.subheader("📰 News Sentiment Analysis")
-                
-                symbol_for_sentiment = st.text_input(
-                    "Symbol for sentiment", 
-                    value=st.session_state.get('symbol', 'AAPL'),
-                    key="sentiment_symbol"
-                )
-                
-                # Display cached sentiment result so it persists across reruns
-                if st.session_state.get('sentiment_analysis_result') is not None:
-                    sentiment_result = st.session_state.sentiment_analysis_result
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        sentiment_score = sentiment_result.get('overall_sentiment', 0)
-                        if sentiment_score > 0.3:
-                            st.success(f"😊 Positive: {sentiment_score:.2f}")
-                        elif sentiment_score < -0.3:
-                            st.error(f"😞 Negative: {sentiment_score:.2f}")
-                        else:
-                            st.info(f"😐 Neutral: {sentiment_score:.2f}")
-                    with col2:
-                        st.metric("Articles Analyzed", sentiment_result.get('num_articles', 0))
-                    with col3:
-                        st.metric("Sentiment Confidence", f"{sentiment_result.get('confidence', 0):.1%}")
-                    if 'sentiment_history' in sentiment_result:
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(
-                            x=sentiment_result.get('dates', []),
-                            y=sentiment_result['sentiment_history'],
-                            name='Sentiment',
-                            line=dict(color='purple')
-                        ))
-                        fig.update_layout(title='Sentiment Over Time', xaxis_title='Date', yaxis_title='Sentiment Score', height=400)
-                        st.plotly_chart(fig, use_container_width=True)
-                    st.subheader("📰 Recent Headlines")
-                    for article in sentiment_result.get('articles', [])[:10]:
-                        sentiment_emoji = "😊" if article.get('sentiment', 0) > 0 else "😞" if article.get('sentiment', 0) < 0 else "😐"
-                        st.write(f"{sentiment_emoji} **{article.get('title', '')}**")
-                        st.caption(f"Sentiment: {article.get('sentiment', 0):.2f} | {article.get('date', '')}")
-                    if st.button("Clear sentiment result", key="clear_sentiment"):
-                        st.session_state.sentiment_analysis_result = None
-                        st.rerun()
-                
-                if st.button("Analyze News Sentiment", key="analyze_sentiment"):
-                    try:
-                        from trading.nlp.sentiment_classifier import SentimentClassifier
-                        classifier = SentimentClassifier()
-                        with st.spinner("Analyzing news sentiment..."):
-                            sentiment_result = classifier.analyze_symbol_sentiment(
-                                symbol=symbol_for_sentiment,
-                                lookback_days=7
+                        _spy = yf.Ticker("SPY").history(period="1y")["Close"]
+                        _sym_ret = hist["Close"].pct_change().dropna()
+                        _spy_ret = _spy.pct_change().dropna()
+                        _sym_aligned, _spy_aligned = _sym_ret.align(_spy_ret, join="inner")
+                        _rolling_corr = _sym_aligned.rolling(60).corr(_spy_aligned).dropna()
+                        _fig_corr = go.Figure(
+                            go.Scatter(
+                                x=_rolling_corr.index,
+                                y=_rolling_corr.values,
+                                mode="lines",
+                                line=dict(color="#00D4AA"),
+                                name="60d Correlation",
                             )
-                            st.session_state.sentiment_analysis_result = sentiment_result
-                            st.rerun()
-                    except ImportError:
-                        st.error("Sentiment classifier not available")
-                    except Exception as e:
-                        st.error(f"Error: {e}")
-                        import traceback
-                        st.code(traceback.format_exc())
-                
-                # Causal Analysis
-                st.markdown("---")
-                st.subheader("🔬 Causal Analysis")
-                
-                st.write("""
-                Understand what actually drives price movements using causal inference.
-                Goes beyond correlation to identify true causal relationships.
-                """)
-                
-                # Display cached causal result so it persists across reruns
-                if st.session_state.get('causal_analysis_result') is not None:
-                    cached = st.session_state.causal_analysis_result
-                    causal_graph = cached.get('causal_graph', {})
-                    drivers = cached.get('drivers', {})
-                    symbol = cached.get('symbol', '')
-                    st.subheader("📊 Causal Graph")
-                    if causal_graph.get('graph_visualization') is not None:
-                        st.image(causal_graph['graph_visualization'])
-                    else:
-                        st.write("**Causal Relationships:**")
-                        if causal_graph.get('relationships'):
-                            for r in causal_graph['relationships']:
-                                st.write(f"• {r.get('cause')} → {r.get('effect')} (strength: {r.get('strength', 0):.2f})")
-                        else:
-                            st.info("Causal relationships will be displayed here")
-                    st.subheader("🎯 Key Price Drivers")
-                    if drivers.get('drivers'):
-                        drivers_df = pd.DataFrame(drivers['drivers']).sort_values('importance', ascending=False)
-                        fig = px.bar(drivers_df, x='importance', y='driver', orientation='h',
-                            title='Price Drivers (Ranked by Causal Impact)', labels={'importance': 'Causal Impact', 'driver': 'Driver'})
-                        st.plotly_chart(fig, use_container_width=True)
-                        top_driver = drivers_df.iloc[0]
-                        st.info(f"**Primary Driver:** {top_driver['driver']}. Strongest causal impact on {symbol} (importance: {top_driver['importance']:.2f}).")
-                        with st.expander("📊 Detailed Driver Analysis"):
-                            for _, d in drivers_df.iterrows():
-                                st.write(f"**{d['driver']}** - Importance: {d['importance']:.2f}")
-                    if st.button("Clear causal result", key="clear_causal"):
-                        st.session_state.causal_analysis_result = None
-                        st.rerun()
-                
-                if st.button("Run Causal Analysis", key="run_causal_analysis"):
-                    if st.session_state.get("forecast_data") is None:
-                        st.error("Please load data first")
-                    else:
-                        try:
-                            from causal.causal_model import CausalModel
-                            from causal.driver_analysis import DriverAnalysis
-                            data = st.session_state.get("forecast_data")
-                            if data is None:
-                                raise RuntimeError("No forecast_data in session_state; please load data first.")
-                            data = data.copy()
-                            symbol = st.session_state.get("symbol", "AAPL")
-                            if 'close' in data.columns:
-                                data['Close'] = data['close']
-                            if 'open' in data.columns:
-                                data['Open'] = data['open']
-                            if 'high' in data.columns:
-                                data['High'] = data['high']
-                            if 'low' in data.columns:
-                                data['Low'] = data['low']
-                            if 'volume' in data.columns:
-                                data['Volume'] = data['volume']
-                            if 'Open' not in data.columns:
-                                data['Open'] = data['Close']
-                            if 'High' not in data.columns:
-                                data['High'] = data['Close']
-                            if 'Low' not in data.columns:
-                                data['Low'] = data['Close']
-                            if 'Volume' not in data.columns:
-                                data['Volume'] = 1000000
-                            with st.spinner("Performing causal analysis..."):
-                                causal_model = CausalModel()
-                                driver_analysis = DriverAnalysis()
-                                causal_graph = causal_model.build_causal_graph(
-                                    data=data, target='Close', features=['Volume', 'High', 'Low', 'Open']
-                                )
-                                drivers = driver_analysis.identify_drivers(data=data, target='Close')
-                                st.session_state.causal_analysis_result = {
-                                    'causal_graph': causal_graph,
-                                    'drivers': drivers,
-                                    'symbol': symbol,
-                                    'data': data,
-                                }
-                                st.success("✅ Causal analysis complete!")
-                                st.rerun()
-                        except ImportError:
-                            st.error("Causal analysis modules not available")
-                        except Exception as e:
-                            st.error(f"Error in causal analysis: {e}")
-                            import traceback
-                            st.code(traceback.format_exc())
-                
-                # Summary
-                st.markdown("---")
-                st.subheader("📋 Analysis Summary")
-                
-                summary_data = {
-                    'Metric': [],
-                    'Value': []
-                }
-                
-                if show_technical and 'RSI' in locals() and 'indicators_df' in locals():
-                    summary_data['Metric'].append('Current RSI')
-                    summary_data['Value'].append(f"{indicators_df['RSI'].iloc[-1]:.2f}")
-                
-                if show_regime and 'trend_regime' in locals():
-                    summary_data['Metric'].append('Market Regime')
-                    summary_data['Value'].append(trend_regime.get('regime', 'unknown').upper())
-                
-                if show_trend:
-                    summary_data['Metric'].append('Overall Trend')
-                    trend_direction = "UP" if long_trend > 0 else "DOWN"
-                    summary_data['Value'].append(f"{trend_direction} ({long_trend:.2f}%)")
-                
-                if summary_data['Metric']:
-                    summary_df = pd.DataFrame(summary_data)
-                    st.dataframe(summary_df, hide_index=True)
+                        )
+                        _fig_corr.add_hline(y=0, line_dash="dash", line_color="gray")
+                        _fig_corr.update_layout(
+                            template="plotly_dark",
+                            height=250,
+                            yaxis=dict(range=[-1, 1]),
+                            margin=dict(l=20, r=20, t=20, b=20),
+                        )
+                        st.plotly_chart(_fig_corr, use_container_width=True)
+                        _current_corr = float(_rolling_corr.iloc[-1])
+                        st.caption(
+                            f"Current 60d correlation with SPY: {_current_corr:.2f}"
+                        )
+                    except Exception as _e:
+                        st.caption(f"Correlation unavailable: {_e}")
+
+                with _col2:
+                    st.markdown("**Volatility Regime**")
+                    try:
+                        _close = hist["Close"].values.astype(float)
+                        _returns = np.diff(_close) / _close[:-1]
+                        _vol_20d = float(
+                            np.std(_returns[-20:]) * np.sqrt(252) * 100
+                        )
+                        _vol_60d = (
+                            float(np.std(_returns[-60:]) * np.sqrt(252) * 100)
+                            if len(_returns) >= 60
+                            else _vol_20d
+                        )
+                        _vol_1y = float(np.std(_returns) * np.sqrt(252) * 100)
+                        _regime = (
+                            "HIGH"
+                            if _vol_20d > _vol_1y * 1.3
+                            else "LOW"
+                            if _vol_20d < _vol_1y * 0.7
+                            else "NORMAL"
+                        )
+                        _c1, _c2, _c3 = st.columns(3)
+                        _c1.metric("20d Vol", f"{_vol_20d:.1f}%")
+                        _c2.metric("60d Vol", f"{_vol_60d:.1f}%")
+                        _c3.metric("1Y Vol", f"{_vol_1y:.1f}%")
+                        _color = {"HIGH": "🔴", "LOW": "🟢", "NORMAL": "🟡"}.get(
+                            _regime, "⚪"
+                        )
+                        st.markdown(
+                            f"**Volatility Regime: {_color} {_regime}**"
+                        )
+                        if _regime == "HIGH":
+                            st.caption(
+                                "Current volatility significantly above 1-year average — elevated risk."
+                            )
+                        elif _regime == "LOW":
+                            st.caption(
+                                "Current volatility below average — potential for mean reversion."
+                            )
+                    except Exception as _e:
+                        st.caption(
+                            f"Volatility analysis unavailable: {_e}"
+                        )
+
+            except Exception as _e:
+                st.error(
+                    f"Market Analysis error: {type(_e).__name__}: {_e}"
+                )
+                import traceback
+                st.code(traceback.format_exc())
     except Exception as e:
+        st.error(f"Tab error: {type(e).__name__}: {e}")
         import traceback
-        st.error(f"Tab error: {e}")
-        st.code(traceback.format_exc())
+        st.code(traceback.format_exc(), language="python")
 
 with tab6:
     try:
@@ -3365,82 +2892,167 @@ with tab6:
                     import traceback
                     st.code(traceback.format_exc())
     except Exception as e:
+        st.error(f"Tab error: {type(e).__name__}: {e}")
         import traceback
-        st.error(f"Tab error: {e}")
-        st.code(traceback.format_exc())
+        st.code(traceback.format_exc(), language="python")
 
 with tab7:
     try:
         st.header("🎲 Monte Carlo Price Simulation")
-        st.markdown("Geometric Brownian Motion fan chart: 5th–95th percentile price paths and probability above/below levels.")
-        mc_input = st.text_input("Ticker (Monte Carlo)", value=st.session_state.get("symbol", "AAPL") or "AAPL", key="mc_symbol")
-        mc_symbol = (mc_input or "AAPL").upper()
-        horizon_days = st.slider("Horizon (days)", 5, 90, 30, key="mc_horizon")
-        n_simulations = st.slider("Simulations", 100, 5000, 1000, key="mc_n_sim")
-        if st.button("Run Monte Carlo", type="primary", key="mc_run"):
-            try:
-                from trading.data.data_loader import DataLoader, DataLoadRequest
-                from trading.data.providers.yfinance_provider import YFinanceProvider
-                from trading.analysis.monte_carlo import (
-                    simulate_price_paths,
-                    fan_chart_percentiles,
-                    probability_above_below,
-                )
-                req = DataLoadRequest(
-                    ticker=mc_symbol,
-                    start_date=(datetime.now().date() - timedelta(days=365)).strftime("%Y-%m-%d"),
-                    end_date=datetime.now().date().strftime("%Y-%m-%d"),
-                )
-                loader = DataLoader(provider=YFinanceProvider())
-                response = loader.load_market_data(req)
-                df = response.data if response.success and response.data is not None else None
-                if df is None or df.empty or "close" not in [c.lower() for c in df.columns]:
-                    st.error("No price data for " + mc_symbol)
-                else:
-                    close_col = "close" if "close" in df.columns else "Close"
-                    close = df[close_col].dropna()
-                    last_price = float(close.iloc[-1])
-                    returns = close.pct_change().dropna()
-                    mu = float(returns.mean() * 252)
-                    sigma = float(returns.std() * np.sqrt(252))
-                    if sigma < 1e-8:
-                        sigma = 0.20
-                    paths = simulate_price_paths(last_price, mu, sigma, horizon_days=horizon_days, n_simulations=n_simulations)
-                    bands = fan_chart_percentiles(paths, (5, 25, 50, 75, 95))
-                    st.session_state.mc_paths = paths
-                    st.session_state.mc_bands = bands
-                    st.session_state.mc_last_price = last_price
-                    st.session_state.mc_dates = pd.date_range(start=df.index[-1], periods=horizon_days + 1, freq="D")[1:]
-                    st.session_state.mc_hist_dates = close.index
-                    st.session_state.mc_hist_prices = close.values
-                    st.success(f"Ran {n_simulations} paths. Last price ${last_price:.2f}, μ={mu:.2%}, σ={sigma:.2%}.")
-            except Exception as e:
-                st.error(f"Monte Carlo failed: {e}")
-                import traceback
-                st.code(traceback.format_exc())
-        if st.session_state.get("mc_bands") is not None:
-            from trading.analysis.monte_carlo import probability_above_below
-            bands = st.session_state.mc_bands
-            mc_dates = st.session_state.get("mc_dates")
-            last_price = st.session_state.get("mc_last_price")
-            fig = go.Figure()
-            hist_dates = st.session_state.get("mc_hist_dates")
-            hist_prices = st.session_state.get("mc_hist_prices")
-            if hist_dates is not None and hist_prices is not None:
-                fig.add_trace(go.Scatter(x=hist_dates, y=hist_prices, name="Historical", line=dict(color="blue", width=2)))
-            fig.add_vline(x=pd.Timestamp.now(), line_dash="dash", line_color="gray", annotation_text="Today")
-            for p, label in [(5, "5th %"), (95, "95th %"), (25, "25th %"), (75, "75th %"), (50, "50th %")]:
-                fig.add_trace(go.Scatter(x=mc_dates, y=bands[p], name=label, line=dict(width=2 if p == 50 else 1)))
-            fig.update_layout(title="Monte Carlo fan chart (5th–95th percentiles)", xaxis_title="Date", yaxis_title="Price ($)", height=450)
-            fig.update_yaxes(tickprefix="$")
-            st.plotly_chart(fig, use_container_width=True)
-            prob_above, _ = probability_above_below(st.session_state.mc_paths, last_price, day_index=-1)
-            st.metric("P(price ≥ last)", f"{prob_above:.1%}")
-            st.metric("30-day 95% interval", f"${bands[5][-1]:.2f} – ${bands[95][-1]:.2f}")
+        st.markdown("Self-contained monte_carlo simulation: percentile fan chart and P(price > today). Load data in Quick Forecast first.")
+        if st.session_state.get("forecast_data") is None:
+            st.warning("⚠️ Please load data first in the Quick Forecast tab")
+        else:
+            _symbol = st.session_state.get("symbol", "Symbol")
+            hist = st.session_state.get("forecast_data").copy()
+            if "Close" not in hist.columns and "close" in hist.columns:
+                hist["Close"] = hist["close"]
+
+            _mc_sims = st.slider(
+                "Simulations", 100, 2000, 500, step=100, key="mc_sims"
+            )
+            _mc_horizon = st.slider(
+                "Horizon (days)", 5, 90, 30, key="mc_horizon"
+            )
+
+            if st.button("Run Monte Carlo", key="run_mc"):
+                try:
+                    import numpy as np
+                    import plotly.graph_objects as go
+
+                    _close = hist["Close"].values.astype(float)
+                    _returns = np.diff(_close) / _close[:-1]
+                    _mu = float(np.mean(_returns))
+                    _sigma = float(np.std(_returns))
+                    _last = float(_close[-1])
+
+                    _rng = np.random.default_rng(42)
+                    _sims = _rng.normal(_mu, _sigma, (_mc_sims, _mc_horizon))
+                    _paths = np.zeros((_mc_sims, _mc_horizon + 1))
+                    _paths[:, 0] = _last
+                    for _t in range(_mc_horizon):
+                        _paths[:, _t + 1] = _paths[:, _t] * (1 + _sims[:, _t])
+
+                    _final = _paths[:, -1]
+                    _p5, _p25, _p50, _p75, _p95 = np.percentile(
+                        _final, [5, 25, 50, 75, 95]
+                    )
+                    _days = list(range(_mc_horizon + 1))
+
+                    _fig = go.Figure()
+                    _p5_path = np.percentile(_paths, 5, axis=0)
+                    _p95_path = np.percentile(_paths, 95, axis=0)
+                    _p25_path = np.percentile(_paths, 25, axis=0)
+                    _p75_path = np.percentile(_paths, 75, axis=0)
+                    _median_path = np.percentile(_paths, 50, axis=0)
+
+                    _fig.add_trace(
+                        go.Scatter(
+                            x=_days,
+                            y=_p95_path,
+                            mode="lines",
+                            line=dict(color="rgba(0,212,170,0.2)"),
+                            name="95th pct",
+                        )
+                    )
+                    _fig.add_trace(
+                        go.Scatter(
+                            x=_days,
+                            y=_p5_path,
+                            mode="lines",
+                            fill="tonexty",
+                            fillcolor="rgba(0,212,170,0.1)",
+                            line=dict(color="rgba(0,212,170,0.2)"),
+                            name="5th pct",
+                        )
+                    )
+                    _fig.add_trace(
+                        go.Scatter(
+                            x=_days,
+                            y=_p75_path,
+                            mode="lines",
+                            line=dict(color="rgba(0,212,170,0.4)"),
+                            name="75th pct",
+                        )
+                    )
+                    _fig.add_trace(
+                        go.Scatter(
+                            x=_days,
+                            y=_p25_path,
+                            mode="lines",
+                            fill="tonexty",
+                            fillcolor="rgba(0,212,170,0.2)",
+                            line=dict(color="rgba(0,212,170,0.4)"),
+                            name="25th pct",
+                        )
+                    )
+                    _fig.add_trace(
+                        go.Scatter(
+                            x=_days,
+                            y=_median_path,
+                            mode="lines",
+                            line=dict(color="#00D4AA", width=2.5),
+                            name="Median",
+                        )
+                    )
+                    _fig.add_hline(
+                        y=_last,
+                        line_dash="dash",
+                        line_color="gray",
+                        annotation_text=f"Today: ${_last:.2f}",
+                    )
+
+                    _fig.update_layout(
+                        title=f"{_symbol} — {_mc_sims} Path Monte Carlo ({_mc_horizon}d)",
+                        template="plotly_dark",
+                        height=400,
+                        xaxis_title="Days",
+                        yaxis_title="Price ($)",
+                    )
+                    st.plotly_chart(_fig, use_container_width=True)
+
+                    _c1, _c2, _c3, _c4, _c5 = st.columns(5)
+                    _c1.metric(
+                        "5th Pct",
+                        f"${_p5:.2f}",
+                        f"{(_p5 / _last - 1) * 100:+.1f}%",
+                    )
+                    _c2.metric(
+                        "25th Pct",
+                        f"${_p25:.2f}",
+                        f"{(_p25 / _last - 1) * 100:+.1f}%",
+                    )
+                    _c3.metric(
+                        "Median",
+                        f"${_p50:.2f}",
+                        f"{(_p50 / _last - 1) * 100:+.1f}%",
+                    )
+                    _c4.metric(
+                        "75th Pct",
+                        f"${_p75:.2f}",
+                        f"{(_p75 / _last - 1) * 100:+.1f}%",
+                    )
+                    _c5.metric(
+                        "95th Pct",
+                        f"${_p95:.2f}",
+                        f"{(_p95 / _last - 1) * 100:+.1f}%",
+                    )
+                    _prob_up = float(np.mean(_final > _last) * 100)
+                    st.metric(
+                        f"P(price > ${_last:.0f} in {_mc_horizon}d)",
+                        f"{_prob_up:.1f}%",
+                    )
+
+                except Exception as _e:
+                    st.error(
+                        f"Monte Carlo error: {type(_e).__name__}: {_e}"
+                    )
+                    import traceback
+                    st.code(traceback.format_exc())
     except Exception as e:
-        st.error(f"Monte Carlo tab error: {e}")
+        st.error(f"Tab error: {type(e).__name__}: {e}")
         import traceback
-        st.code(traceback.format_exc())
+        st.code(traceback.format_exc(), language="python")
 
 with tab_insider:
     try:
@@ -3484,6 +3096,90 @@ with tab_insider:
                 st.info("No insider transactions found in the last 90 days.")
     except Exception as e:
         st.error(f"Insider Flow tab error: {e}")
+
+with tab_earnings:
+    try:
+        from trading.data.earnings_reaction import get_earnings_reactions
+        import plotly.graph_objects as go
+
+        symbol = st.session_state.get("symbol") or "AAPL"
+        with st.spinner("Loading earnings history..."):
+            er = get_earnings_reactions(symbol)
+
+        if er.get("error") and not er["reactions"]:
+            st.info(f"Earnings data unavailable: {er['error']}")
+        else:
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Avg 1-Day Move", f"±{er['avg_move_1d']:.1f}%")
+            c2.metric("EPS Beat Rate", f"{er['beat_rate']:.0f}%")
+            c3.metric(
+                "Positive Reaction",
+                f"{er['positive_reaction_rate']:.0f}%",
+                help="% of beats where stock rose the next day",
+            )
+            c4.metric(
+                "Typical Range",
+                f"{er['typical_range'][0]:+.1f}% to {er['typical_range'][1]:+.1f}%",
+            )
+
+            ne = er.get("next_earnings")
+            if ne and ne.get("next_earnings_date"):
+                days = ne.get("days_until", "?")
+                st.info(
+                    f"📅 Next earnings: **{ne['next_earnings_date']}** "
+                    f"({days} days away) | "
+                    f"EPS est: ${ne.get('eps_estimate') or '?'}"
+                )
+
+            if er["reactions"]:
+                df_r = pd.DataFrame(er["reactions"])
+                fig = go.Figure()
+                colors = [
+                    "#00D4AA" if d == "UP" else "#FF4B4B"
+                    for d in df_r["direction"]
+                ]
+                fig.add_trace(
+                    go.Bar(
+                        x=df_r["date"],
+                        y=df_r["move_1d"],
+                        marker_color=colors,
+                        text=[
+                            f"{v:+.1f}%"
+                            for v in df_r["move_1d"].fillna(0)
+                        ],
+                        textposition="outside",
+                        name="1-Day Move",
+                    )
+                )
+                fig.add_hline(y=0, line_color="gray", line_dash="dash")
+                fig.update_layout(
+                    title=f"{symbol} — Earnings Day Price Reactions",
+                    template="plotly_dark",
+                    xaxis_title="Earnings Date",
+                    yaxis_title="1-Day Price Change (%)",
+                    height=350,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                with st.expander("Historical earnings detail"):
+                    st.dataframe(
+                        df_r[
+                            [
+                                "date",
+                                "eps_estimate",
+                                "eps_actual",
+                                "surprise_pct",
+                                "move_1d",
+                                "move_3d",
+                                "move_5d",
+                            ]
+                        ],
+                        use_container_width=True,
+                    )
+    except Exception as e:
+        st.error(f"Earnings tab error: {type(e).__name__}: {e}")
+        import traceback
+        st.code(traceback.format_exc())
 
 render_page_assistant("Forecasting")
 

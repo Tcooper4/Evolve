@@ -76,12 +76,13 @@ st.markdown("Configure and manage trading alerts with multi-channel notification
 st.markdown("---")
 
 # Create tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab_watchlist = st.tabs([
     "📊 Active Alerts",
     "➕ Create Alert",
     "📋 Alert Templates",
     "📜 Alert History",
-    "⚙️ Notification Settings"
+    "⚙️ Notification Settings",
+    "📈 Watchlist Alerts",
 ])
 
 # TAB 1: Active Alerts
@@ -1448,7 +1449,7 @@ with tab5:
             st.session_state.notification_system = None
     notification_service = st.session_state.get('notification_system')
     if notification_service:
-        
+        st.success("✅ Notification service active")
         st.subheader("📧 Configure Notifications")
         
         # Email notifications
@@ -1621,7 +1622,7 @@ with tab5:
                 st.error(f"Error loading history: {e}")
     
     else:
-        st.warning("⚠️ Notification system unavailable. Check that trading.utils.notification_system is available.")
+        st.warning("Notification service unavailable. Enable trading.utils.notification_system or check configuration.")
     
     # Keep existing notification settings UI below
     st.markdown("---")
@@ -1740,6 +1741,22 @@ with tab5:
             with col2:
                 if st.button("💾 Save Email Settings", use_container_width=True):
                     st.session_state.notification_settings["email"] = settings["email"]
+
+with tab_watchlist:
+    st.header("📈 Watchlist Alerts")
+    st.markdown("View triggered alerts for your watchlist-based price and RSI alerts.")
+    try:
+        from trading.data.watchlist import WatchlistManager
+
+        mgr = WatchlistManager()
+        history = mgr.get_alert_history()
+        if not history:
+            st.info("No watchlist alerts have been triggered yet.")
+        else:
+            df_hist = pd.DataFrame(history)
+            st.dataframe(df_hist, use_container_width=True, hide_index=True)
+    except Exception as e:
+        st.error(f"Watchlist Alerts unavailable: {e}")
                     st.success("✅ Email settings saved!")
     
     # SMS Settings

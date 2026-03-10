@@ -40,8 +40,18 @@ class LoggingConfig:
             Default configuration dictionary
         """
         app_config = get_config()
+        _in_streamlit = "streamlit" in sys.modules
+        _configured_level = app_config.logging.level
+        _default_level = logging.INFO if _in_streamlit else logging.WARNING
+        # Only override when the configured level is the default INFO.
+        # If the user configured DEBUG/ERROR/etc, respect it.
+        if isinstance(_configured_level, int):
+            level_value = _default_level if _configured_level == logging.INFO else _configured_level
+        else:
+            level_str = str(_configured_level).upper() if _configured_level is not None else "INFO"
+            level_value = "WARNING" if (not _in_streamlit and level_str == "INFO") else level_str
         return {
-            "level": app_config.logging.level,
+            "level": level_value,
             "format": app_config.logging.format,
             "file": app_config.logging.file,
             "max_size": app_config.logging.max_size,
@@ -59,7 +69,11 @@ class LoggingConfig:
 
             # Configure root logger
             root_logger = logging.getLogger()
-            root_logger.setLevel(self._get_log_level())
+            level = self._get_log_level()
+            # In non-Streamlit contexts default to WARNING to reduce noise.
+            if "streamlit" not in sys.modules and level == logging.INFO:
+                level = logging.WARNING
+            root_logger.setLevel(level)
 
             # Clear existing handlers
             root_logger.handlers.clear()
@@ -85,7 +99,7 @@ class LoggingConfig:
             audit_handler = self._create_audit_handler()
             root_logger.addHandler(audit_handler)
 
-            logging.info("Logging configuration initialized successfully")
+            logging.debug("Logging configuration initialized successfully")
 
         except Exception as e:
             # Use basic logging for error since logging setup failed

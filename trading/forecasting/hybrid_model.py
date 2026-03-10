@@ -132,12 +132,13 @@ class HybridModel:
                     except TypeError:
                         res = model.forecast(series, horizon=horizon)
                     if isinstance(res, dict):
-                        raw = (
-                            res.get("forecast")
-                            or res.get("values")
-                            or res.get("predictions")
-                            or res.get("forecast_values")
-                        )
+                        raw = res.get("forecast")
+                        if raw is None or (hasattr(raw, "__len__") and len(raw) == 0):
+                            raw = res.get("values")
+                        if raw is None or (hasattr(raw, "__len__") and len(raw) == 0):
+                            raw = res.get("predictions")
+                        if raw is None or (hasattr(raw, "__len__") and len(raw) == 0):
+                            raw = res.get("forecast_values")
                     else:
                         raw = res
                     preds = np.asarray(raw, dtype="float64").ravel()
@@ -745,7 +746,11 @@ class HybridModel:
                         except TypeError:
                             res = model.forecast(series, horizon=min(30, len(data)))
                         if isinstance(res, dict):
-                            pred = res.get("forecast") or res.get("predictions") or res.get("values")
+                            pred = res.get("forecast")
+                            if pred is None or (hasattr(pred, "__len__") and len(pred) == 0):
+                                pred = res.get("predictions")
+                            if pred is None or (hasattr(pred, "__len__") and len(pred) == 0):
+                                pred = res.get("values")
                         else:
                             pred = res
                         pred = np.asarray(pred, dtype="float64").ravel()

@@ -401,11 +401,17 @@ class GNNForecaster:
         with torch.no_grad():
             predictions = self.model(x, self.adjacency_matrix, temporal=True)
         
-        # Inverse transform
+        # Inverse transform and ensure we always return a 1D numpy array
         predictions = predictions.numpy()
         predictions = self.scaler.inverse_transform(predictions)
+
+        # Normalize to array in case callers expect numpy semantics
+        if isinstance(predictions, dict):
+            predictions = np.array(list(predictions.values()), dtype=float)
+        elif not isinstance(predictions, np.ndarray):
+            predictions = np.array(predictions, dtype=float)
         
-        return predictions.flatten()
+        return np.asarray(predictions, dtype=float).ravel()
     
     def forecast(
         self,

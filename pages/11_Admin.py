@@ -558,25 +558,25 @@ with tab1:
             st.warning(f"⚠️ Health monitoring not fully available: {e}")
             st.info("Some health monitoring features may not be accessible.")
     else:
-        st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
-        st.caption("Health monitoring is not enabled. Enable SystemHealthMonitor in app to use this section.")
+        # Fallback: show basic psutil-based system metrics when dedicated monitor is unavailable
+        try:
+            import psutil
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("CPU Usage", f"{psutil.cpu_percent()}%")
+            with col2:
+                st.metric("RAM Usage", f"{psutil.virtual_memory().percent}%")
+            with col3:
+                st.metric("Disk Usage", f"{psutil.disk_usage('/').percent}%")
+        except Exception:
+            st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
+            st.caption("Basic system health metrics unavailable (psutil missing).")
     
     st.markdown("---")
     
-    # Automation & Workflows
+    # Automation & Workflows (placeholder until automation system is implemented)
     st.header("🤖 Automation & Workflows")
-    
-    if 'automation_core' in st.session_state and 'workflow_manager' in st.session_state:
-        automation = st.session_state.automation_core
-        workflows = st.session_state.workflow_manager
-        config = st.session_state.automation_config
-        
-        # Tabs for automation management
-        auto_tab1, auto_tab2, auto_tab3 = st.tabs([
-            "📋 Active Workflows",
-            "➕ Create Workflow",
-            "⚙️ Settings"
-        ])
+    st.info("Workflow automation is coming in a future release. This section will manage scheduled jobs and automated runbooks once available.")
         
         with auto_tab1:
             st.subheader("Active Workflows")
@@ -906,8 +906,7 @@ with tab1:
                 st.metric("Failed Today", stats.get('failed_today', 0))
     
     else:
-        st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
-        st.caption("Automation system is not configured for this session.")
+        st.info("⚙️ Workflow automation is not yet implemented. Coming in a future release.")
     
     st.markdown("---")
     
@@ -919,57 +918,51 @@ with tab1:
     Use it to integrate with external systems or build custom interfaces.
     """)
     
-    # API status
+    # API status (port check)
+    def _port_open(port: int) -> bool:
+        try:
+            import socket
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                return s.connect_ex(('localhost', port)) == 0
+        except Exception:
+            return False
+
     col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("API Status")
         
-        try:
-            import requests
+        if _port_open(8000):
+            st.success("🟢 Agent API running — http://localhost:8000")
             try:
+                import requests
                 response = requests.get('http://localhost:8000/health', timeout=2)
-                if response.status_code == 200:
-                    st.success("✅ API is running")
-                    api_data = response.json() if response.content else {}
-                    if api_data:
-                        st.json(api_data)
-                else:
-                    st.error(f"❌ API returned error: {response.status_code}")
-            except requests.exceptions.ConnectionError:
-                st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
-                st.caption("Agent API is not running. Start it with: python scripts/launch_agent_api.py")
-                
-                if st.button("🚀 Start API Service", key="start_api_service"):
-                    try:
-                        import subprocess
-                        import os
-                        from pathlib import Path
-                        
-                        # Get script path
-                        script_path = Path(__file__).parent.parent / "scripts" / "launch_agent_api.py"
-                        
-                        if script_path.exists():
-                            # Start API service in background
-                            if os.name == 'nt':  # Windows
-                                subprocess.Popen(['python', str(script_path)], creationflags=subprocess.CREATE_NEW_CONSOLE)
-                            else:  # Unix/Linux/Mac
-                                subprocess.Popen(['python', str(script_path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                            
-                            st.success("API service started! Check status in a few seconds.")
-                            st.info("The API will be available at http://localhost:8000")
+                if response.status_code == 200 and response.content:
+                    st.json(response.json())
+            except Exception:
+                pass
+        else:
+            st.info("Agent API not running. Start with:\n`python scripts/launch_agent_api.py`")
+            if st.button("🚀 Start API Service", key="start_api_service"):
+                try:
+                    import subprocess
+                    import os
+                    from pathlib import Path
+                    script_path = Path(__file__).parent.parent / "scripts" / "launch_agent_api.py"
+                    if script_path.exists():
+                        if os.name == 'nt':
+                            subprocess.Popen(['python', str(script_path)], creationflags=subprocess.CREATE_NEW_CONSOLE)
                         else:
-                            st.error(f"API launcher script not found at: {script_path}")
-                    except Exception as e:
-                        st.error(f"Error starting API service: {e}")
-                        import traceback
-                        st.code(traceback.format_exc())
-            except requests.exceptions.Timeout:
-                st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
-                st.caption("Agent API health check timed out.")
-        except ImportError:
-            st.markdown('<span style="background:#e0e0e0;color:#555;padding:4px 10px;border-radius:4px;">Not configured</span>', unsafe_allow_html=True)
-            st.caption("Install requests to check API: pip install requests")
+                            subprocess.Popen(['python', str(script_path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        st.success("API service started! Check status in a few seconds.")
+                        st.info("The API will be available at http://localhost:8000")
+                    else:
+                        st.error(f"API launcher script not found at: {script_path}")
+                except Exception as e:
+                    st.error(f"Error starting API service: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
             st.info("You can still start the API service manually using: python scripts/launch_agent_api.py")
     
     with col2:

@@ -22,6 +22,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 from ui.page_assistant import render_page_assistant
+from trading.models.walk_forward_validator import WalkForwardValidator
 
 
 def _normalize_trades(trades: list) -> list:
@@ -60,6 +61,25 @@ st.set_page_config(
     page_icon="🔄",
     layout="wide"
 )
+
+# Global page-level error boundary (outermost catch)
+import os as _os
+import runpy as _runpy
+_guard_key = "EVOLVE_PAGE_GUARD_STRATEGY_TESTING"
+if _os.environ.get(_guard_key) != "1":
+    _os.environ[_guard_key] = "1"
+    try:
+        _runpy.run_path(__file__, run_name="__main__")
+    except Exception as _page_error:
+        import traceback
+        st.error(f"⚠️ Page error: {type(_page_error).__name__}: {_page_error}")
+        with st.expander("Developer details"):
+            st.code(traceback.format_exc(), language="python")
+        st.info("Try refreshing the page or selecting a different symbol.")
+        st.stop()
+    finally:
+        _os.environ.pop(_guard_key, None)
+    st.stop()
 
 # Backend: lazy load when Strategy page is opened (not at app startup)
 def _get_strategy_backend():
@@ -337,13 +357,13 @@ with tab1:
                     strategy_info = STRATEGY_REGISTRY[strategy_name]
                     st.info(strategy_info.get("description", "No description available"))
             except ImportError:
-                # Fallback to original code
+                # Fallback to original code when shared strategy selector is unavailable
                 strategy_name = st.selectbox(
                     "Select Strategy",
                     list(STRATEGY_REGISTRY.keys())
                 )
                 strategy_info = STRATEGY_REGISTRY[strategy_name]
-                st.info(strategy_info["description"])
+                st.info(strategy_info.get("description", "No description available"))
             
             # Dynamic parameter inputs
             st.markdown("**Parameters:**")
@@ -776,8 +796,6 @@ with tab1:
                     
                     if st.button("Run Walk-Forward Analysis", key="run_walk_forward", type="primary"):
                         try:
-                            from trading.validation.walk_forward_utils import WalkForwardValidator
-                            
                             validator = WalkForwardValidator()
                             
                             # Get strategy and data
@@ -850,12 +868,17 @@ with tab1:
                                                 st.metric("Win Rate", f"{win_rate:.1%}")
                                             
                                             with col4:
-                                                num_iter = len(results.get('iterations', []))
-                                                st.metric("Iterations", num_iter)
+                                                num_iter = results.get('num_iterations') or results.get('num_windows') or len(results.get('returns', []))
+                                                st.metric("Iterations", int(num_iter) if num_iter is not None else 0)
                                             
                                             # Iteration results
-                                            if 'iterations' in results and len(results['iterations']) > 0:
-                                                iterations_df = pd.DataFrame(results['iterations'])
+                                            if 'returns' in results and results.get('returns'):
+                                                iterations_df = pd.DataFrame(
+                                                    {
+                                                        "iteration": list(range(1, len(results['returns']) + 1)),
+                                                        "return": results['returns'],
+                                                    }
+                                                )
                                                 
                                                 # Chart of returns by iteration
                                                 fig = go.Figure()
@@ -2554,11 +2577,11 @@ with tab6:
                 )
             
             with col2:
-                # Strategy selection for walk-forward
+                # Strategy selection for walk-forward (use full registry for consistency)
                 st.markdown("**Strategy Selection:**")
                 strategy_for_wf = st.selectbox(
                     "Select Strategy",
-                    ["Bollinger Bands", "MACD", "RSI", "SMA Crossover"],
+                    list(STRATEGY_REGISTRY.keys()),
                     key="wf_strategy"
                 )
                 
@@ -2748,7 +2771,7 @@ with tab6:
                 st.markdown("**Strategy Selection:**")
                 strategy_for_mc = st.selectbox(
                     "Select Strategy",
-                    ["Bollinger Bands", "MACD", "RSI", "SMA Crossover"],
+                    list(STRATEGY_REGISTRY.keys()),
                     key="mc_strategy"
                 )
                 
@@ -2878,7 +2901,7 @@ with tab6:
             
             strategy_for_sens = st.selectbox(
                 "Select Strategy",
-                ["Bollinger Bands", "MACD", "RSI", "SMA Crossover"],
+                list(STRATEGY_REGISTRY.keys()),
                 key="sens_strategy"
             )
             
@@ -2936,7 +2959,7 @@ with tab6:
             
             strategy_for_opt = st.selectbox(
                 "Select Strategy",
-                ["Bollinger Bands", "MACD", "RSI", "SMA Crossover"],
+                list(STRATEGY_REGISTRY.keys()),
                 key="opt_strategy"
             )
             

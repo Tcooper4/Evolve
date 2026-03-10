@@ -163,6 +163,9 @@ class WalkForwardValidator:
         """
         Run walk-forward backtest: roll train/test windows, collect returns, aggregate metrics.
         Compatible with Strategy Testing page (strategy, data, train_window, test_window, step_size, num_iterations).
+
+        Returns:
+            Dict with avg_return, consistency_score, win_rate, num_iterations, returns.
         """
         try:
             if data is None or len(data) < train_window + test_window:
@@ -217,6 +220,7 @@ class WalkForwardValidator:
                 "avg_return": avg_return,
                 "consistency_score": consistency_score,
                 "win_rate": win_rate,
+                "num_iterations": total,
                 "num_windows": total,
                 "returns": returns_list,
             }

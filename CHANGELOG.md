@@ -32,3 +32,28 @@
 - All Forecasting tabs now surface errors instead of going blank
 - Stack traces hidden behind "Show technical details" toggles for end users
 
+## [1.2.0] — 2026-03-10
+
+### Added
+- AI Score composite signal (Technical 30%, Momentum 35%, Sentiment 20%, Fundamental 15%) wired into Forecasting and Chat
+- Market Scanner (`pages/13_Scanner.py`) — 6 filter types, 58-stock universe, AI Score ranking, drill-down panel
+- Multi-timeframe chart component (Daily/Weekly/Monthly)
+- Earnings reaction tracker — historical EPS surprise vs price reaction for up to 8 quarters
+- Pre/post market prices on Home page Market Pulse tiles
+- Home page "Top Opportunities" quick scan (cached 15min)
+- Performance Attribution panel in Reports (P&L distribution, profit factor, trade duration)
+- Walk-forward validator wired into Strategy Testing
+
+### Fixed
+- Forecasting page: AI Model Selection, Model Comparison, Market Analysis, and Monte Carlo tabs no longer render blank
+- Reports page: removed hardcoded fake return/trade data; now shows session_state backtest results or empty state
+- Performance page: pnl column normalization guard; polyfit SVD error wrapped
+- Alerts page: inline NotificationSystem initialization
+- Admin page: psutil system health metrics; port check for Agent API
+- earnings_reaction: replaced lru_cache with TTL dict cache
+- Home page scan: cached in session_state (15min TTL) to prevent re-downloading on every page refresh
+
+### Changed
+- Error visibility: all Forecasting tabs now surface tracebacks instead of silently failing
+- Page-level error boundary added to Forecasting, Strategy Testing, Performance pages
+

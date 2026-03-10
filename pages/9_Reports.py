@@ -224,15 +224,22 @@ with tab1:
                 
                 st.markdown("---")
                 
-                # Real report data: from backtest, portfolio, or forecast in session
-                has_report_data = bool(
-                    st.session_state.get("backtest_results")
-                    or st.session_state.get("portfolio_manager")
-                    or st.session_state.get("current_forecast") is not None
-                )
-                if not has_report_data:
-                    _empty_state("No report data yet. Complete a backtest or trading session to generate reports.", "📋")
-                else:
+                # Real report data: from backtest only (no fake data)
+                results = st.session_state.get("backtest_results", None)
+                if results is None or not isinstance(results, dict):
+                    st.info("""
+📊 **No backtest results available.**
+
+To generate a report, run a backtest first:
+1. Go to **Strategy Testing**
+2. Configure and run a Quick Backtest
+3. Return here to generate your report
+                    """)
+                    st.stop()
+                # Use results (backtest_results) for the report
+                backtest_results = results
+                has_report_data = True
+                if has_report_data:
                     # Executive Summary — use real backtest data when available
                     st.markdown("### Executive Summary")
                     backtest_results = st.session_state.get("backtest_results")
@@ -247,13 +254,38 @@ with tab1:
                         win_rate_str = f"{win_rate * 100:.1f}%" if isinstance(win_rate, (int, float)) else str(win_rate or "N/A")
                         trades_list = backtest_results.get("trades", [])
                         n_trades = len(trades_list) if isinstance(trades_list, list) else 0
+                        try:
+                            trades_df = pd.DataFrame(trades_list) if trades_list else pd.DataFrame()
+                            _pnl_col = next(
+                                (
+                                    c
+                                    for c in trades_df.columns
+                                    if c.lower()
+                                    in [
+                                        "pnl",
+                                        "profit",
+                                        "profit_loss",
+                                        "net_pnl",
+                                        "gain_loss",
+                                    ]
+                                ),
+                                None,
+                            )
+                            avg_pnl = (
+                                float(trades_df[_pnl_col].mean())
+                                if _pnl_col and not trades_df.empty and _pnl_col in trades_df.columns
+                                else 0.0
+                            )
+                            avg_pnl_str = f"${avg_pnl:,.2f}" if avg_pnl != 0 else "$0.00"
+                        except Exception:
+                            avg_pnl_str = "$0.00"
                         summary_metrics = {
                             "Total Return": total_return_str,
                             "Sharpe Ratio": sharpe_str,
                             "Max Drawdown": max_dd_str,
                             "Win Rate": win_rate_str,
                             "Total Trades": str(n_trades),
-                            "Average Trade P&L": "$—"  # optional: compute from trades
+                            "Average Trade P&L": avg_pnl_str,
                         }
                     else:
                         summary_metrics = {
@@ -276,7 +308,81 @@ with tab1:
                     with col3:
                         st.metric("Total Trades", summary_metrics["Total Trades"])
                         st.metric("Avg Trade P&L", summary_metrics["Average Trade P&L"])
-                    
+
+                    st.markdown("### 📊 Performance Attribution")
+                    try:
+                        trades = backtest_results.get("trades", [])
+                        if trades:
+                            tdf = pd.DataFrame(trades)
+                            for _a in [
+                                "profit",
+                                "profit_loss",
+                                "net_pnl",
+                                "return",
+                                "gain_loss",
+                                "pnl",
+                            ]:
+                                if _a in tdf.columns and "pnl" not in tdf.columns:
+                                    tdf = tdf.rename(columns={_a: "pnl"})
+                                    break
+                            if "pnl" not in tdf.columns:
+                                tdf["pnl"] = 0.0
+
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.markdown("**P&L Distribution**")
+                                winners = tdf[tdf["pnl"] > 0]
+                                losers = tdf[tdf["pnl"] < 0]
+                                st.metric(
+                                    "Winning Trades",
+                                    len(winners),
+                                    f"Avg: ${winners['pnl'].mean():.2f}"
+                                    if len(winners) > 0
+                                    else "",
+                                )
+                                st.metric(
+                                    "Losing Trades",
+                                    len(losers),
+                                    f"Avg: ${losers['pnl'].mean():.2f}"
+                                    if len(losers) > 0
+                                    else "",
+                                )
+                                if len(winners) > 0 and len(losers) > 0:
+                                    profit_factor = winners["pnl"].sum() / abs(
+                                        losers["pnl"].sum()
+                                    )
+                                    st.metric(
+                                        "Profit Factor",
+                                        f"{profit_factor:.2f}",
+                                        help="Gross profit / Gross loss. >1.5 is good.",
+                                    )
+                            with col2:
+                                st.markdown("**Trade Duration**")
+                                if "entry_date" in tdf.columns and "exit_date" in tdf.columns:
+                                    try:
+                                        tdf["duration"] = (
+                                            pd.to_datetime(tdf["exit_date"])
+                                            - pd.to_datetime(tdf["entry_date"])
+                                        ).dt.days
+                                        st.metric(
+                                            "Avg Hold (days)",
+                                            f"{tdf['duration'].mean():.1f}",
+                                        )
+                                        st.metric(
+                                            "Longest Trade",
+                                            f"{tdf['duration'].max()} days",
+                                        )
+                                    except Exception:
+                                        st.caption("Duration data unavailable")
+                                else:
+                                    st.caption(
+                                        "Entry/exit dates not in trade records"
+                                    )
+                        else:
+                            st.caption("No trade records in backtest results.")
+                    except Exception as _e:
+                        st.caption(f"Attribution unavailable: {_e}")
+
                     # Performance Metrics (real data only)
                     st.markdown("---")
                     st.markdown("### Performance Metrics")
@@ -722,6 +828,17 @@ with tab2:
                             sharpe_str = f"{_sharpe:.2f}" if isinstance(_sharpe, (int, float)) else "—"
                             max_dd_str = f"{_max_dd * 100:.1f}%" if isinstance(_max_dd, (int, float)) else "—"
                             win_rate_str = f"{_win_rate * 100:.1f}%" if isinstance(_win_rate, (int, float)) else "—"
+                            try:
+                                _trades_df = pd.DataFrame(_trades) if _trades else pd.DataFrame()
+                                _pnl_col = next(
+                                    (c for c in _trades_df.columns
+                                     if c.lower() in ["pnl", "profit", "profit_loss", "net_pnl", "gain_loss"]),
+                                    None,
+                                )
+                                _avg_pnl = float(_trades_df[_pnl_col].mean()) if _pnl_col and not _trades_df.empty and _pnl_col in _trades_df.columns else 0.0
+                                _avg_pnl_str = f"${_avg_pnl:,.2f}" if _avg_pnl != 0 else "$0.00"
+                            except Exception:
+                                _avg_pnl_str = "$0.00"
                             with col1:
                                 st.metric("Total Return", total_return_str)
                                 st.metric("Sharpe Ratio", sharpe_str)
@@ -730,7 +847,7 @@ with tab2:
                                 st.metric("Win Rate", win_rate_str)
                             with col3:
                                 st.metric("Total Trades", str(_n_trades))
-                                st.metric("Avg Trade P&L", "—")
+                                st.metric("Avg Trade P&L", _avg_pnl_str)
                         
                         elif section == "Performance Metrics":
                             config = section_configs.get(section, {})

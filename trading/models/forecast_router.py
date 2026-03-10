@@ -134,7 +134,27 @@ class ForecastRouter:
 
                 registry = get_model_registry()
                 # ModelRegistry exposes .registry (property) or ._models
-                self.model_registry = getattr(registry, "registry", None) or getattr(registry, "_models", None) or {}
+                raw_registry = (
+                    getattr(registry, "registry", None)
+                    or getattr(registry, "_models", None)
+                    or {}
+                )
+
+                # Deduplicate and normalize: use lowercase keys as canonical form
+                deduped: Dict[str, Any] = {}
+                for name, model_cls in raw_registry.items():
+                    key = str(name).strip().lower()
+                    # First writer wins; log if we see a duplicate alias
+                    if key in deduped:
+                        logger.debug(
+                            "Deduplicating model registry alias '%s' -> '%s'",
+                            name,
+                            key,
+                        )
+                        continue
+                    deduped[key] = model_cls
+
+                self.model_registry = deduped
 
                 if not self.model_registry:
                     self._load_default_models()
@@ -889,12 +909,13 @@ class ForecastRouter:
                     continue
                 # Normalize dict outputs from models (TCN/Ridge/CatBoost/etc.)
                 if isinstance(fc, dict):
-                    raw_vals = (
-                        fc.get("predictions")
-                        or fc.get("forecast")
-                        or fc.get("values")
-                        or fc.get("forecast_values")
-                    )
+                    raw_vals = fc.get("predictions")
+                    if raw_vals is None or (hasattr(raw_vals, "__len__") and len(raw_vals) == 0):
+                        raw_vals = fc.get("forecast")
+                    if raw_vals is None or (hasattr(raw_vals, "__len__") and len(raw_vals) == 0):
+                        raw_vals = fc.get("values")
+                    if raw_vals is None or (hasattr(raw_vals, "__len__") and len(raw_vals) == 0):
+                        raw_vals = fc.get("forecast_values")
                 else:
                     raw_vals = fc
                 pred = np.asarray(raw_vals, dtype="float64").ravel()[:val_size]
@@ -923,27 +944,60 @@ class ForecastRouter:
         models: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
-        Run multiple models and build a consensus forecast with uncertainty band.
+        Run multiple models and build a consensus forecast.
 
-        Returns a dict with consensus series, upper/lower bounds, agreement metrics,
-        and which models succeeded/failed.
+        Returns a dict containing:
+        - consensus_forecast: mean path across models
+        - upper_bound / lower_bound: mean ± std band
+        - consensus_price: day-horizon consensus price
+        - price_targets: per-model day-horizon prices
+        - direction: BULLISH / BEARISH / NEUTRAL
+        - conviction: HIGH / MEDIUM / LOW / INSUFFICIENT
+        - models_used / models_failed
+        - last_price: last observed close
         """
         if data is None or data.empty:
             return {"error": "No data provided", "models_failed": []}
 
-        # Determine price column
-        price_col = None
-        for col in ("Close", "close", "price", "Price"):
-            if col in data.columns:
-                price_col = col
-                break
-        if price_col is None:
-            numeric = data.select_dtypes(include=[np.number])
+        # Clean and normalize input data for all models
+        df = data.copy()
+        if not isinstance(df.index, pd.DatetimeIndex):
+            try:
+                df.index = pd.to_datetime(df.index, errors="coerce")
+            except Exception:
+                pass
+        df = df.sort_index()
+        if isinstance(df.index, pd.DatetimeIndex) and getattr(df.index, "tz", None) is not None:
+            try:
+                df.index = df.index.tz_convert(None)
+            except Exception:
+                # Best effort; if tz conversion fails, continue with original index
+                pass
+
+        # Ensure we have a Close column
+        if "Close" not in df.columns and "close" in df.columns:
+            df["Close"] = df["close"]
+        if "Close" not in df.columns:
+            numeric = df.select_dtypes(include=[np.number])
             if numeric.empty:
                 return {"error": "No numeric price column found", "models_failed": []}
-            price_col = numeric.columns[0]
+            df["Close"] = numeric.iloc[:, 0]
 
-        last_price = float(pd.to_numeric(data[price_col], errors="coerce").dropna().iloc[-1])
+        df = df.dropna(subset=["Close"])
+        if df.empty:
+            return {"error": "No price data after cleaning", "models_failed": []}
+
+        last_price_series = pd.to_numeric(df["Close"], errors="coerce").dropna()
+        if last_price_series.empty:
+            return {"error": "No valid closing prices", "models_failed": []}
+        last_price = float(last_price_series.iloc[-1])
+
+        try:
+            horizon_int = int(horizon)
+        except Exception:
+            horizon_int = 7
+        if horizon_int <= 0:
+            horizon_int = 7
 
         if models is None:
             models = ["arima", "xgboost", "ridge", "catboost", "prophet"]
@@ -951,21 +1005,33 @@ class ForecastRouter:
         all_forecasts: List[np.ndarray] = []
         used: List[str] = []
         failed: List[str] = []
+        price_targets: Dict[str, float] = {}
 
         for name in models:
             try:
                 result = self.get_forecast(
-                    data,
+                    df,
                     model_type=name,
-                    horizon=horizon,
+                    horizon=horizon_int,
                     run_walk_forward=False,
                 )
-                fc = np.asarray(result.get("forecast", []), dtype="float64").ravel()
-                if fc.size == horizon and (fc.min(initial=0) > last_price * 0.5):
-                    all_forecasts.append(fc)
-                    used.append(name)
-                else:
-                    failed.append(f"{name}(bad_output)")
+                fc = np.asarray((result or {}).get("forecast", []), dtype="float64").ravel()
+                if fc.size < horizon_int:
+                    raise ValueError("forecast shorter than horizon")
+
+                # Sanity: require some finite values within a broad multiple of last price
+                finite = fc[np.isfinite(fc)]
+                if finite.size == 0:
+                    raise ValueError("no finite forecast values")
+                lo, hi = float(finite.min()), float(finite.max())
+                if last_price > 0:
+                    if hi < last_price * 0.3 or lo > last_price * 3.0:
+                        raise ValueError("forecast outside sanity band")
+
+                target_idx = horizon_int - 1
+                price_targets[name] = float(fc[target_idx])
+                all_forecasts.append(fc[:horizon_int])
+                used.append(name)
             except Exception as e:  # pragma: no cover - defensive guard
                 failed.append(f"{name}({e})")
 
@@ -976,34 +1042,77 @@ class ForecastRouter:
         consensus = stacked.mean(axis=0)
         std = stacked.std(axis=0)
 
-        directions = [1 if fc[-1] > last_price else -1 for fc in all_forecasts]
-        total_dir = sum(directions)
-        agreement = abs(total_dir) / len(directions)
-        if total_dir > 0:
-            direction = "BULLISH"
-        elif total_dir < 0:
-            direction = "BEARISH"
-        else:
-            direction = "NEUTRAL"
-
-        conviction = (
-            "HIGH"
-            if agreement >= 0.8
-            else ("MODERATE" if agreement >= 0.6 else "LOW")
+        # Consensus price at horizon
+        consensus_price = float(consensus[horizon_int - 1])
+        change_pct = (
+            float((consensus_price / last_price - 1) * 100.0) if last_price else 0.0
         )
 
-        change_pct = float((consensus[-1] / last_price - 1) * 100) if last_price else 0.0
+        # Per-model direction at horizon
+        model_dirs: Dict[str, int] = {}
+        non_neutral_dirs: List[int] = []
+        for name in used:
+            target = price_targets.get(name)
+            if target is None or not np.isfinite(target) or last_price <= 0:
+                d = 0
+            else:
+                if target > last_price * 1.005:
+                    d = 1
+                elif target < last_price * 0.995:
+                    d = -1
+                else:
+                    d = 0
+            model_dirs[name] = d
+            if d != 0:
+                non_neutral_dirs.append(d)
+
+        if non_neutral_dirs:
+            total_dir = sum(non_neutral_dirs)
+            if total_dir > 0:
+                direction = "BULLISH"
+            elif total_dir < 0:
+                direction = "BEARISH"
+            else:
+                direction = "NEUTRAL"
+            majority_count = max(
+                non_neutral_dirs.count(1), non_neutral_dirs.count(-1)
+            )
+            valid_models = len(used)
+        else:
+            direction = "NEUTRAL"
+            majority_count = 0
+            valid_models = len(used)
+
+        if valid_models < 2:
+            conviction = "INSUFFICIENT"
+        else:
+            if majority_count >= 4:
+                conviction = "HIGH"
+            elif majority_count >= 3:
+                conviction = "MEDIUM"
+            elif majority_count >= 2:
+                conviction = "LOW"
+            else:
+                conviction = "INSUFFICIENT"
+
+        # Simple agreement metric based on majority vs total non-neutral
+        if non_neutral_dirs and majority_count > 0:
+            model_agreement = round(majority_count / len(non_neutral_dirs), 2)
+        else:
+            model_agreement = 0.0
 
         return {
             "consensus_forecast": consensus.tolist(),
             "upper_bound": (consensus + std).tolist(),
             "lower_bound": (consensus - std).tolist(),
-            "model_agreement": round(float(agreement), 2),
+            "model_agreement": model_agreement,
             "conviction": conviction,
             "direction": direction,
             "models_used": used,
             "models_failed": failed,
             "last_price": last_price,
             "consensus_7d_change_pct": round(change_pct, 2),
+            "consensus_price": consensus_price,
+            "price_targets": price_targets,
         }
 

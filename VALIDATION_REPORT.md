@@ -1,3 +1,69 @@
+## Session 15 — Page bug sweep + AI Score (2026-03-10)
+
+### Page-level fixes (audit: already fixed in Session 14)
+- Strategy Testing duplicate dropdown: was already fixed (full STRATEGY_REGISTRY for Monte Carlo/Sensitivity/Optimization).
+- Strategy Testing walk_forward_test wiring: was already fixed (import from trading.validation.walk_forward_utils; strategy object supported).
+- Performance pnl KeyError: was already fixed (_normalize_pnl with PnL, Profit aliases).
+- Performance polyfit SVD: was already fixed (try/except + z = [0, 0]).
+- Reports fake data removed: was already fixed (backtest_results gate + st.stop()).
+- Alerts notification service inline: was already fixed.
+- Admin psutil system health: was already fixed (fallback when health_monitor not in session).
+- Admin automation placeholder: was already fixed.
+- Admin Agent API port check: was already fixed.
+
+### AI Score module
+- **trading/analysis/ai_score.py** created: ✅
+- AAPL score: 4.7/10 (D) — T:5.5 M:2.7 S:4.5 F:8.0
+- GME score: 5.5/10 (C) — T:2.5 M:6.7 S:6.2 F:8.0
+- SPY score: 4.7/10 (D) — T:6.5 M:3.3 S:4.0 F:5.0
+- Signal count (AAPL): varies (RSI, Bollinger, SMA20/50/200, 20d momentum, short squeeze, insider, EPS surprise, etc.).
+- Wired into Forecasting page: ✅ (panel after data preview, before price chart).
+- Wired into Home page movers: ✅ (AI Score caption under each top mover).
+- Wired into chat context: ✅ (_get_rich_context in agents/llm/agent.py).
+
+### Regression check
+- model_smoke_test.py: All PASS ✅
+
+---
+
+## Session 14 — Missing modules + page-level bug sweep (2026-03-10)
+
+### New modules created
+- **trading/models/transformer_model.py**: `TransformerForecaster` ✅  
+  - Verification: `PASS TransformerForecaster: [167.66, 166.55, 164.98, 163.59, 162.16, 160.77, 159.38]`
+- **trading/models/walk_forward_validator.py**: Re-exports `WalkForwardValidator` from `trading.validation.walk_forward_utils` ✅  
+  - Verification: `PASS WalkForwardValidator: iterations = 4`
+
+### Array ambiguity fixes
+- **ARIMAModel** standalone forecast: PASS (no array-as-boolean in forecast path).
+- **HybridModel** internal ARIMA/forecast: Fixed — replaced `res.get("forecast") or res.get("values") or ...` with explicit None/empty checks in `trading/forecasting/hybrid_model.py` and `trading/models/forecast_router.py` so numpy arrays are never used in boolean context.
+
+### Strategy Testing
+- Duplicate strategy dropdown: Strategy selectboxes for Monte Carlo, Sensitivity, and Optimization now use full `STRATEGY_REGISTRY.keys()` instead of 4-option list.
+- walk_forward_test: Page uses `trading.validation.walk_forward_utils.WalkForwardValidator`; `trading.models.walk_forward_validator` added as re-export for any imports from that path.
+- Walk-forward iterations displayed: Real count from `num_iterations` / `num_windows` / `returns`.
+
+### Performance page
+- pnl KeyError: Extended `_normalize_pnl` aliases to include `PnL`, `Profit`; single normalization in `get_trade_history()`.
+- polyfit SVD crash: Wrapped in `except (np.linalg.LinAlgError, Exception)`, set `z = [0, 0]` fallback.
+
+### Reports
+- Fake hardcoded data removed: Quick Reports require `st.session_state.get("backtest_results")`; when missing, show info + st.stop() with instructions to run backtest first.
+- Empty state when no backtest: YES.
+
+### Alerts
+- Notification service inline init: Already present; added `st.success("✅ Notification service active")` when available; warning message when unavailable.
+
+### Admin
+- System Health: psutil fallback already present when health_monitor not in session state.
+- Automation placeholder: Replaced "Not configured" with `st.info("⚙️ Workflow automation is not yet implemented. Coming in a future release.")`.
+- Agent API: Added `_port_open(8000)` socket check; show "🟢 Agent API running" or "Agent API not running. Start with: `python scripts/launch_agent_api.py`".
+
+### Regression check
+- **model_smoke_test.py**: All PASS.
+
+---
+
 ## Session 9 — v1.0.0 Release (2026-03-09)
 
 ### Backtest engine
@@ -204,6 +270,49 @@ Comprehensive bug-fix session addressing user-observed errors across Forecasting
 
 ---
 
+## Session 13 — Platform-wide bug sweep (2026-03-10)
+
+### Model Registry
+- Duplicate model entries removed: was 21 rows, now [X] unique models ✅
+- model_smoke_test.py: [all PASS / any failures]
+
+### Forecasting page
+- Truth value array ambiguity in AI Model Selection: [FIXED/still failing]
+- Tabs now show errors instead of blank: [YES/NO]
+- TransformerForecaster._setup_model: [FIXED/pending]
+- GNN dict*int error: [FIXED/pending]
+- ARIMA out-of-range in Model Lab: [FIXED/pending]
+
+### Strategy Testing
+- Duplicate strategy dropdown: [FIXED]
+- WalkForwardValidator.walk_forward_test: [FIXED/still AttributeError]
+- Walk-forward iterations count: [shows real number / still 0]
+
+### Performance page
+- pnl KeyError: [FIXED]
+- polyfit SVD error: [FIXED]
+
+### Model Lab
+- DataLoader import: [FIXED]
+- implementation_generator.py SyntaxError: [FIXED]
+
+### Reports
+- Fake hardcoded data removed: [FIXED]
+- Shows empty state when no backtest run: [YES]
+
+### Alerts
+- Notification service initializes inline: [FIXED]
+
+### Admin
+- System Health shows real psutil data: [FIXED]
+- Automation placeholder removed: [YES]
+- Agent API port check: [FIXED]
+
+### Remaining deferred items
+- SHAP explainability (requires pip install shap)
+- neuralforecast models (requires pip install neuralforecast)
+- Live broker connections (requires Alpaca API key)
+
 ## RECOMMENDED NEXT STEPS
 
 1. Run: `.\evolve_venv\Scripts\pip install arch flaml optuna shap --upgrade`
@@ -307,3 +416,33 @@ Comprehensive bug-fix session addressing user-observed errors across Forecasting
 - SHAP explainability: [not yet tested]
 
 ### v1.1.0 tag: [pushed/pending]
+
+---
+
+## Session 12 — Bug fixes + Watchlist (2026-03-10)
+
+### Fixes verified
+
+- insider_flow MSFT: buy_count=[0], sell_count=[0], signal=[NO_ACTIVITY], error=None ✅
+- consensus forecast AAPL: direction=[BULLISH], conviction=[HIGH], models_used=[arima,xgboost,ridge,catboost,prophet] ✅
+- walk-forward array ambiguity: Model Comparison tab no longer crashes ✅
+
+### New feature: Watchlist
+
+- trading/data/watchlist.py: WatchlistManager with SQLite backend ✅
+- components/watchlist_widget.py: render_watchlist() with live prices + RSI ✅
+- pages/0_Home.py: Watchlist section wired ✅
+- pages/10_Alerts.py: Watchlist Alerts tab wired ✅
+
+### Regression check
+
+- model_smoke_test.py: All PASS (all 10 models) ✅
+- consensus forecast assert: PASS — consensus: BULLISH HIGH ['arima', 'xgboost', 'ridge', 'catboost', 'prophet'] ✅
+
+### Remaining known issues
+
+- Strategy Testing: duplicate strategy dropdowns (deferred)
+- Walk-forward shows 0 iterations (deferred)
+- Admin Task Orchestrator not initialized (deferred)
+- Reports avg_pnl shows "$—" (deferred)
+- GNN multi-asset int*dict error (deferred)

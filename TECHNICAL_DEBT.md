@@ -18,3 +18,26 @@ Generated from codebase grep for TODO, FIXME, HACK, XXX, TEMP, temporary, placeh
 | trading/backtesting/enhanced_backtester.py | 570 | _unused_var = trade  # Placeholder, flake8 ignore | Low |
 
 Priority: High = blocks correctness or security; Medium = missing feature or data source; Low = cosmetic or placeholder.
+
+---
+
+## Resolved (Sessions 1–19)
+
+- **RESOLVED**: RSI calculation (Wilder's smoothing) — Sessions 1–5
+- **RESOLVED**: Look-ahead bias in backtester
+- **RESOLVED**: Division by zero across 83+ files
+- **RESOLVED**: Reports fake data — Session 15
+- **RESOLVED**: Walk-forward wiring — Session 15
+- **RESOLVED**: Forecasting page blank tabs — Session 19
+- **RESOLVED**: Model registry duplicates — Session 14
+- **RESOLVED**: TransformerForecaster missing — Session 14
+- **RESOLVED**: AI Score not wired — Session 16
+
+## Open (non-blocking)
+
+- **OPEN**: GNN multi-asset tab — int*dict error (non-blocking)
+- **OPEN**: SHAP explainability requires `pip install shap`
+- **OPEN**: Ridge MAPE=100% warning (non-blocking)
+- **OPEN**: lru_cache replaced with TTL dict in `earnings_reaction`
+- **OPEN**: Admin Task Orchestrator not initialized
+- **OPEN**: `.cache/lstm` directory missing warning

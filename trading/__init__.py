@@ -9,6 +9,14 @@ technical trading signals, backtest strategies, and visualize performance.
 """
 
 import importlib
+import logging
+
+# Reduce noise from optional dependencies (expected when not installed)
+for _logger_name in [
+    "trading.models.neuralforecast_models",
+    "trading.agents.rl_trainer",
+]:
+    logging.getLogger(_logger_name).setLevel(logging.ERROR)
 
 __version__ = "2.1.0"
 __author__ = "Evolve Team"

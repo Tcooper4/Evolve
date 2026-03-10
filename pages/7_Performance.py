@@ -219,6 +219,27 @@ try:
             pass
         return pd.DataFrame()
 
+    def _normalize_pnl(trade_history: pd.DataFrame) -> pd.DataFrame:
+        """Normalize P&L column name across different backtest outputs."""
+        if trade_history is None or trade_history.empty:
+            return trade_history
+        alt_names = [
+            "profit",
+            "profit_loss",
+            "net_pnl",
+            "return",
+            "gain_loss",
+            "realized_pnl",
+            "PnL",
+            "Profit",
+        ]
+        for alt in alt_names:
+            if alt in trade_history.columns and "pnl" not in trade_history.columns:
+                trade_history = trade_history.rename(columns={alt: "pnl"})
+        if "pnl" not in trade_history.columns:
+            trade_history["pnl"] = 0.0
+        return trade_history
+
     def get_trade_history() -> pd.DataFrame:
         """Get trade history from backtest_results when available; otherwise empty (no fake data)."""
         try:
@@ -228,7 +249,7 @@ try:
                 for col in ['entry_date', 'exit_date', 'date', 'Date']:
                     if col in df.columns:
                         df[col] = pd.to_datetime(df[col], errors='coerce')
-                return df
+                return _normalize_pnl(df)
         except Exception:
             pass
         return pd.DataFrame()
@@ -1532,23 +1553,25 @@ try:
             ))
     
             # Regression line (guard against NaN/inf/constant inputs to avoid LinAlgError)
-            if len(benchmark_returns) > 1:
-                try:
+            try:
+                if len(benchmark_returns) >= 3 and len(sample_returns) >= 3:
                     mask = np.isfinite(benchmark_returns) & np.isfinite(sample_returns)
-                    if mask.sum() < 3:
-                        raise ValueError("Not enough clean data points")
-                    z = np.polyfit(benchmark_returns[mask], sample_returns[mask], 1)
-                    p = np.poly1d(z)
-                    x_line = np.linspace(benchmark_returns.min(), benchmark_returns.max(), 100)
-                    fig_ab.add_trace(go.Scatter(
-                        x=x_line,
-                        y=p(x_line),
-                        mode='lines',
-                        name=f'Beta = {alpha_beta["beta"]:.2f}',
-                        line=dict(color='red', width=2, dash='dash')
-                    ))
-                except (np.linalg.LinAlgError, ValueError) as e:
-                    logger.warning(f"Beta regression line failed: {e}")
+                    if mask.sum() >= 3:
+                        z = np.polyfit(benchmark_returns[mask], sample_returns[mask], 1)
+                        p = np.poly1d(z)
+                        x_line = np.linspace(benchmark_returns.min(), benchmark_returns.max(), 100)
+                        fig_ab.add_trace(go.Scatter(
+                            x=x_line,
+                            y=p(x_line),
+                            mode='lines',
+                            name=f'Beta = {alpha_beta["beta"]:.2f}',
+                            line=dict(color='red', width=2, dash='dash')
+                        ))
+                else:
+                    z = [0, 0]
+            except (np.linalg.LinAlgError, Exception) as e:
+                logger.warning(f"Beta regression line failed: {e}")
+                z = [0, 0]
         
             fig_ab.update_layout(
                 title="Portfolio vs Benchmark Returns (Alpha/Beta Analysis)",
@@ -2797,5 +2820,9 @@ try:
         pass
 
 
-except Exception:
-    st.error(traceback.format_exc())
+except Exception as _page_error:
+    st.error(f"⚠️ Page error: {type(_page_error).__name__}: {_page_error}")
+    with st.expander("Developer details"):
+        st.code(traceback.format_exc(), language="python")
+    st.info("Try refreshing the page or selecting a different symbol.")
+    st.stop()

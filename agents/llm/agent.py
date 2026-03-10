@@ -42,6 +42,7 @@ from trading.data.earnings_calendar import get_upcoming_earnings
 from trading.data.insider_flow import get_insider_flow
 from trading.data.news_aggregator import get_news
 from trading.data.short_interest import get_short_interest
+from trading.utils.data_manager import disk_cache_get, disk_cache_set
 from trading.execution.trade_execution_simulator import TradeExecutionSimulator
 from trading.models.forecast_router import ForecastRouter
 from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer
@@ -2083,12 +2084,27 @@ class PromptAgent:
                 insider = get_insider_flow(symbol)
                 buys = insider.get("buy_count", 0)
                 sells = insider.get("sell_count", 0)
-                if buys + sells > 0:
-                    line = f"Insider Activity (90d): {buys} buys, {sells} sells"
-                    sig = insider.get("signal")
-                    if sig in ("INSIDER_BUYING", "INSIDER_SELLING"):
-                        line += f" [{sig.replace('_', ' ')}]"
+                sig = insider.get("signal")
+                if buys + sells > 0 and sig not in ("NO_ACTIVITY", None):
+                    line = f"Insider activity (90d): {buys} buys, {sells} sells → {sig}"
                     parts.append(line)
+            except Exception:
+                pass
+            # AI Score
+            try:
+                from trading.analysis.ai_score import compute_ai_score
+                _hist = None
+                if data is not None and not data.empty and close_col and len(df) >= 20:
+                    _hist = df.rename(columns={close_col: "Close"}).copy()
+                    if "volume" in _hist.columns:
+                        _hist = _hist.rename(columns={"volume": "Volume"})
+                _ai = compute_ai_score(symbol, _hist)
+                if _ai.get("error") is None:
+                    parts.append(
+                        f"AI Score: {_ai['overall_score']}/10 ({_ai['grade']}) — "
+                        f"Technical {_ai['technical_score']}, Momentum {_ai['momentum_score']}, "
+                        f"Sentiment {_ai['sentiment_score']}, Fundamental {_ai['fundamental_score']}"
+                    )
             except Exception:
                 pass
             # Recent news headlines (multi-source aggregator)
@@ -2114,6 +2130,41 @@ class PromptAgent:
                             f"- [{item.get('source','?')}]"
                             f"{age}: {item.get('title','')}"
                         )
+            except Exception:
+                pass
+            # Consensus forecast snapshot (cached; avoid heavy recompute every call)
+            try:
+                cache_key = f"consensus:{symbol}:7d"
+                consensus = disk_cache_get(cache_key)
+                if consensus is None:
+                    from trading.models.forecast_router import ForecastRouter
+                    import yfinance as yf
+
+                    hist = yf.Ticker(symbol).history(period="6mo")
+                    if hist is not None and not hist.empty:
+                        router = ForecastRouter()
+                        consensus = router.get_consensus_forecast(hist, horizon=7)
+                        # Only cache successful results
+                        if consensus and not consensus.get("error"):
+                            disk_cache_set(cache_key, consensus, ttl=300)
+                if consensus and not consensus.get("error"):
+                    used = consensus.get("models_used") or []
+                    direction = consensus.get("direction", "NEUTRAL")
+                    conviction = consensus.get("conviction", "INSUFFICIENT")
+                    price = consensus.get("consensus_price")
+                    if price is None:
+                        series = consensus.get("consensus_forecast") or []
+                        price = series[-1] if series else None
+                    if price is not None:
+                        try:
+                            parts.append(
+                                f"Model consensus ({len(used)} models): {direction} at ${float(price):.2f} "
+                                f\"(conviction: {conviction})\"
+                            )
+                        except Exception:
+                            parts.append(
+                                f"Model consensus ({len(used)} models): {direction} (conviction: {conviction})"
+                            )
             except Exception:
                 pass
             try:

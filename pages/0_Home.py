@@ -72,6 +72,34 @@ def get_market_pulse() -> dict:
         return {}
 
 
+def get_prepost_price(symbol: str) -> dict:
+    """Get pre/post market price if available."""
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+        regular = info.get("regularMarketPrice") or info.get("currentPrice")
+        pre = info.get("preMarketPrice")
+        post = info.get("postMarketPrice")
+        pre_chg = info.get("preMarketChangePercent")
+        post_chg = info.get("postMarketChangePercent")
+        return {
+            "regular": regular,
+            "pre": pre,
+            "post": post,
+            "pre_chg_pct": pre_chg * 100 if pre_chg is not None else None,
+            "post_chg_pct": post_chg * 100 if post_chg is not None else None,
+        }
+    except Exception:
+        return {
+            "regular": None,
+            "pre": None,
+            "post": None,
+            "pre_chg_pct": None,
+            "post_chg_pct": None,
+        }
+
+
 @st.cache_data(ttl=600)
 def get_top_movers() -> list:
     """Get today's top movers from a watchlist of major stocks."""
@@ -144,6 +172,17 @@ if pulse:
         with cols[i]:
             fmt = f"{data['price']:.1f}" if ticker == "^VIX" else f"${data['price']:.2f}"
             st.metric(data["name"], fmt, f"{data['change']:+.2f}%")
+            _pp = get_prepost_price(ticker)
+            if _pp.get("pre") is not None:
+                if _pp.get("pre_chg_pct") is not None:
+                    st.caption(f"Pre-mkt: ${_pp['pre']:.2f} ({_pp['pre_chg_pct']:+.2f}%)")
+                else:
+                    st.caption(f"Pre-mkt: ${_pp['pre']:.2f}")
+            elif _pp.get("post") is not None:
+                if _pp.get("post_chg_pct") is not None:
+                    st.caption(f"After-hrs: ${_pp['post']:.2f} ({_pp['post_chg_pct']:+.2f}%)")
+                else:
+                    st.caption(f"After-hrs: ${_pp['post']:.2f}")
 
 # Fear & Greed proxy + Top 5 Movers
 vix = pulse.get("^VIX", {}).get("price", 20)
@@ -166,6 +205,18 @@ if movers:
         with mcols[i]:
             icon = "🔴" if mover["change"] < 0 else "🟢"
             st.metric(f"{icon} {mover['symbol']}", f"${mover['price']:.2f}", f"{mover['change']:+.2f}%")
+            try:
+                from trading.analysis.ai_score import compute_ai_score
+                _score = compute_ai_score(mover["symbol"])
+                if _score.get("error") is None:
+                    st.caption(f"AI Score: {_score['overall_score']}/10 ({_score['grade']})")
+            except Exception:
+                pass
+
+    st.markdown("---")
+    st.markdown("#### 🔍 Quick Scan")
+    if st.button("Run Top AI Score Scan", key="home_quick_scan"):
+        st.switch_page("pages/13_Scanner.py")
 
     # Upcoming earnings for a core watchlist
     try:
@@ -207,6 +258,76 @@ if movers:
                         c4.write("—")
     except Exception:
         pass
+
+# Watchlist section
+st.markdown("---")
+st.subheader("Watchlist")
+with st.expander("Watchlist", expanded=True):
+    try:
+        from components.watchlist_widget import render_watchlist
+
+        render_watchlist()
+    except Exception as e:
+        st.caption(f"Watchlist unavailable: {e}")
+
+# Top Opportunities — quick AI Score scan on watchlist
+st.markdown("---")
+st.markdown("### 🎯 Top Opportunities")
+st.caption("Stocks from your watchlist ranked by AI Score")
+
+try:
+    from trading.analysis.market_scanner import scan_market
+
+    _quick_universe = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META",
+                       "TSLA", "JPM", "BAC", "SPY", "QQQ", "GLD"]
+    import time as _time
+    _scan_key = "home_scan_result"
+    _scan_ts_key = "home_scan_ts"
+    _scan_ttl = 900  # 15 minutes
+
+    _now = _time.time()
+    _cached = st.session_state.get(_scan_key)
+    _cached_ts = st.session_state.get(_scan_ts_key, 0)
+
+    if _cached is None or (_now - _cached_ts) > _scan_ttl:
+        with st.spinner("Refreshing opportunities..."):
+            _cached = scan_market(
+                filters=["top_ai_score"],
+                universe=_quick_universe,
+                max_results=5,
+            )
+        st.session_state[_scan_key] = _cached
+        st.session_state[_scan_ts_key] = _now
+
+    _scan = _cached
+    _cache_age_min = int((_now - _cached_ts) / 60) if _cached_ts else 0
+
+    _refresh_col, _age_col = st.columns([1, 4])
+    with _refresh_col:
+        if st.button("🔄 Refresh", key="home_scan_refresh"):
+            st.session_state.pop(_scan_key, None)
+            st.rerun()
+    with _age_col:
+        if _cached_ts > 0:
+            st.caption(f"Last scanned {_cache_age_min}m ago")
+
+    if _scan.get('error') is None and _scan.get('results'):
+        _cols = st.columns(min(5, len(_scan['results'])))
+        for _idx, _res in enumerate(_scan['results']):
+            with _cols[_idx]:
+                _grade_color = {'A': '🟢', 'B': '🔵', 'C': '🟡', 'D': '🟠', 'F': '🔴'}
+                st.metric(
+                    label=f"{_grade_color.get(_res.get('ai_grade', ''), '⚪')} {_res.get('symbol', '')}",
+                    value=f"${_res.get('price', 0):,.2f}",
+                    delta=f"AI {_res.get('ai_score', 0)}/10 ({_res.get('ai_grade', '')})",
+                )
+    elif _scan.get('passed', 0) == 0:
+        st.caption("No stocks above AI Score 7.0 in watchlist right now.")
+    else:
+        st.caption(f"Scanner: {_scan.get('error', 'no results')}")
+
+except Exception as _e:
+    st.caption(f"Quick scan unavailable: {_e}")
 
 # ── NEWS-LINKED CANDLESTICK CHART ──────────────────────────────────────────
 st.markdown("---")

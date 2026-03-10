@@ -15,6 +15,8 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 
+_log = logging.getLogger(__name__)
+
 # Import RL libraries with fallback handling
 try:
     import gymnasium as gym
@@ -23,7 +25,7 @@ try:
     GYMNASIUM_AVAILABLE = True
 except ImportError:
     GYMNASIUM_AVAILABLE = False
-    logging.warning(
+    _log.warning(
         "Reinforcement learning disabled (pip install gymnasium stable-baselines3 to enable)"
     )
 
@@ -36,7 +38,7 @@ try:
 except ImportError:
     STABLE_BASELINES3_AVAILABLE = False
     if GYMNASIUM_AVAILABLE:
-        logging.warning(
+        _log.warning(
             "Reinforcement learning disabled (pip install gymnasium stable-baselines3 to enable)"
         )
 
