@@ -568,7 +568,12 @@ with tab1:
     # Automation & Workflows (placeholder until automation system is implemented)
     st.header("🤖 Automation & Workflows")
     st.info("Workflow automation is coming in a future release. This section will manage scheduled jobs and automated runbooks once available.")
-        
+
+    # Sub-tabs for automation (active, create, settings)
+    auto_tab1, auto_tab2, auto_tab3 = st.tabs(
+        ["▶️ Active Workflows", "➕ Create Workflow", "⚙️ Settings"]
+    )
+
     with auto_tab1:
             st.subheader("Active Workflows")
             
