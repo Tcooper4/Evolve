@@ -75,8 +75,8 @@ def _render_onboarding_form(session_id: Optional[str]) -> bool:
         if not openai_key and not anthropic_key:
             st.error("Please provide at least one of OpenAI or Anthropic API key.")
             return False
-        # Derive stable session_id from whichever key was provided (OpenAI preferred, Anthropic fallback)
-        api_key = (openai_key or anthropic_key or "").strip()[:16]
+        # Derive stable session_id from full key hash (no truncation — preserves entropy, avoids collisions)
+        api_key = (openai_key or anthropic_key or "").strip()
         session_id = hashlib.sha256(api_key.encode()).hexdigest()[:16]
         keys = {
             "OPENAI_API_KEY": (openai_key or "").strip(),

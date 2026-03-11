@@ -98,3 +98,21 @@
 - Startup noise: core trading system INFO logs suppressed in all
   non-Streamlit import paths
 
+## [1.3.2] — 2026-03-10
+
+### Fixed
+- TaskOrchestrator: __init__ now completes in <1s (was 39s);
+  heavy initialization deferred to explicit start() / ensure_initialized() call
+- Onboarding: session_id entropy bug — was hashing only first 16
+  chars of API key (2 chars of entropy for Anthropic keys);
+  now hashes full key before truncating hash output
+- yfinance: DatetimeArray type coercion in yfinance_provider.py
+  and data_loader.py prevents date range errors
+- SentimentFetcher: cache_model_operation ttl_hours now float-typed;
+  per-entry TTL stored in .meta sidecar files
+- Startup noise: INFO log calls changed to DEBUG at source in
+  trading.config.settings, trading.config.enhanced_settings,
+  and trading core init — 0 INFO lines in non-Streamlit contexts
+- TaskType: added cache_management, model_validation,
+  strategy_backtesting for legacy task compatibility
+

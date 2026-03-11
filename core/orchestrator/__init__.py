@@ -25,11 +25,9 @@ from .task_scheduler import (
     TaskScheduler,
 )
 
-try:
-    from .task_providers import AgentTaskProvider, TaskProvider
-except ImportError:
-    AgentTaskProvider = None
-    TaskProvider = None
+# Lazy: task_providers pulls in agents/sentiment — import from .task_providers when needed
+AgentTaskProvider = None
+TaskProvider = None
 
 __all__ = [
     "TaskOrchestrator",

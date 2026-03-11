@@ -52,6 +52,15 @@ Priority: High = blocks correctness or security; Medium = missing feature or dat
 - **RESOLVED**: Auto-pause rules not persisted
 - **RESOLVED**: Task Orchestrator not initialized
 
+## Resolved (Sessions 29–33)
+
+- **RESOLVED**: TaskOrchestrator slow init (39s → <1s lazy init)
+- **RESOLVED**: session_id entropy bug (full key hash, no truncation)
+- **RESOLVED**: yfinance DatetimeArray type error
+- **RESOLVED**: SentimentFetcher cache_model_operation ttl signature
+- **RESOLVED**: Startup noise (all INFO→DEBUG at source)
+- **RESOLVED**: cache_management, model_validation, strategy_backtesting added to TaskType
+
 ## Open (non-blocking)
 
 - **OPEN**: Options flow overlay (requires data source decision)

@@ -175,13 +175,18 @@ class ModelCache:
         """
         return self.config.cache_dir / model_type / f"{cache_key}.joblib"
 
-    def get(self, cache_key: str, model_type: str = "other") -> Optional[Any]:
+    def _get_meta_path(self, cache_path: Path) -> Path:
+        """Path for optional per-entry TTL metadata."""
+        return cache_path.with_suffix(cache_path.suffix + ".meta")
+
+    def get(self, cache_key: str, model_type: str = "other", ttl_hours_override: Optional[float] = None) -> Optional[Any]:
         """
         Get cached result.
 
         Args:
             cache_key: Cache key
             model_type: Type of model
+            ttl_hours_override: If provided, used for expiration check (overrides per-entry meta and config)
 
         Returns:
             Cached result or None if not found/expired
@@ -195,10 +200,25 @@ class ModelCache:
             self._record_miss()
             return None
 
+        # Per-entry TTL from .meta file (written by set(..., ttl_hours=...))
+        ttl_hours = ttl_hours_override
+        if ttl_hours is None:
+            meta_path = self._get_meta_path(cache_path)
+            if meta_path.exists():
+                try:
+                    with open(meta_path, "r") as f:
+                        meta = json.load(f)
+                    ttl_hours = meta.get("ttl_hours")
+                except Exception:
+                    pass
+        if ttl_hours is None:
+            ttl_hours = self.config.ttl_hours
+
         # Check if cache is expired
-        if self._is_expired(cache_path):
+        if self._is_expired(cache_path, ttl_hours=ttl_hours):
             self._record_miss()
             cache_path.unlink(missing_ok=True)
+            self._get_meta_path(cache_path).unlink(missing_ok=True)
             return None
 
         try:
@@ -211,9 +231,16 @@ class ModelCache:
             self.logger.warning(f"Failed to load cache {cache_key}: {e}")
             self._record_miss()
             cache_path.unlink(missing_ok=True)
+            self._get_meta_path(cache_path).unlink(missing_ok=True)
             return None
 
-    def set(self, cache_key: str, result: Any, model_type: str = "other") -> bool:
+    def set(
+        self,
+        cache_key: str,
+        result: Any,
+        model_type: str = "other",
+        ttl_hours: Optional[float] = None,
+    ) -> bool:
         """
         Cache a result.
 
@@ -221,6 +248,7 @@ class ModelCache:
             cache_key: Cache key
             result: Result to cache
             model_type: Type of model
+            ttl_hours: Optional TTL in hours for this entry (overrides config default)
 
         Returns:
             True if successfully cached
@@ -243,6 +271,12 @@ class ModelCache:
                 protocol=pickle.HIGHEST_PROTOCOL,
             )
 
+            # Write per-entry TTL metadata so get() can expire correctly
+            if ttl_hours is not None:
+                meta_path = self._get_meta_path(cache_path)
+                with open(meta_path, "w") as f:
+                    json.dump({"ttl_hours": ttl_hours}, f)
+
             # Update statistics
             self._update_size_stats()
 
@@ -253,13 +287,14 @@ class ModelCache:
             self.logger.error(f"Failed to cache result {cache_key}: {e}")
             return False
 
-    def _is_expired(self, cache_path: Path) -> bool:
+    def _is_expired(self, cache_path: Path, ttl_hours: Optional[float] = None) -> bool:
         """Check if cache file is expired."""
         if not cache_path.exists():
             return True
 
+        hours = ttl_hours if ttl_hours is not None else self.config.ttl_hours
         file_age = datetime.now() - datetime.fromtimestamp(cache_path.stat().st_mtime)
-        return file_age > timedelta(hours=self.config.ttl_hours)
+        return file_age > timedelta(hours=hours)
 
     def _should_evict(self) -> bool:
         """Check if cache eviction is needed."""
@@ -369,14 +404,24 @@ class ModelCache:
         return stats
 
     def cleanup(self):
-        """Clean up expired cache files."""
+        """Clean up expired cache files (respects per-entry TTL from .meta when present)."""
         try:
             cleaned_count = 0
             for model_type_dir in self.config.cache_dir.iterdir():
                 if model_type_dir.is_dir():
                     for cache_file in model_type_dir.glob("*.joblib"):
-                        if self._is_expired(cache_file):
-                            cache_file.unlink()
+                        ttl_hours = None
+                        meta_path = self._get_meta_path(cache_file)
+                        if meta_path.exists():
+                            try:
+                                with open(meta_path, "r") as f:
+                                    meta = json.load(f)
+                                ttl_hours = meta.get("ttl_hours")
+                            except Exception:
+                                pass
+                        if self._is_expired(cache_file, ttl_hours=ttl_hours):
+                            cache_file.unlink(missing_ok=True)
+                            meta_path.unlink(missing_ok=True)
                             cleaned_count += 1
 
             if cleaned_count > 0:
@@ -404,7 +449,7 @@ def get_model_cache() -> ModelCache:
 
 def cache_model_operation(
     model_type: str = "other",
-    ttl_hours: Optional[int] = None,
+    ttl_hours: Optional[float] = None,
     key_prefix: Optional[str] = None,
 ):
     """
@@ -412,7 +457,7 @@ def cache_model_operation(
 
     Args:
         model_type: Type of model
-        ttl_hours: Time-to-live in hours (overrides default)
+        ttl_hours: Time-to-live in hours (overrides config default; e.g. 5/60 for 5 minutes)
         key_prefix: Prefix for cache key
     """
 
@@ -426,16 +471,18 @@ def cache_model_operation(
             func_name = key_prefix or func.__name__
             cache_key = cache._generate_cache_key(func_name, args, kwargs)
 
-            # Try to get from cache
-            cached_result = cache.get(cache_key, model_type)
+            # Try to get from cache (pass ttl so expiration uses per-decorator TTL)
+            cached_result = cache.get(
+                cache_key, model_type, ttl_hours_override=ttl_hours
+            )
             if cached_result is not None:
                 return cached_result
 
             # Execute function
             result = func(*args, **kwargs)
 
-            # Cache result
-            cache.set(cache_key, result, model_type)
+            # Cache result with optional per-entry TTL
+            cache.set(cache_key, result, model_type, ttl_hours=ttl_hours)
 
             return result
 

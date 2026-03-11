@@ -46,6 +46,9 @@ class TaskType(Enum):
     PORTFOLIO_REBALANCING = "portfolio_rebalancing"  # Added for config compatibility
     MARKET_ANALYSIS = "market_analysis"  # Added for config compatibility
     ALERT_MANAGER = "alert_manager"  # Legacy compatibility (saved task configs)
+    CACHE_MANAGEMENT = "cache_management"  # Legacy compatibility
+    MODEL_VALIDATION = "model_validation"  # Legacy compatibility
+    STRATEGY_BACKTESTING = "strategy_backtesting"  # Legacy compatibility
 
 
 @dataclass

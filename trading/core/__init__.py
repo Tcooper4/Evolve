@@ -12,10 +12,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-# Suppress INFO in non-Streamlit contexts (verify scripts, CLI)
+# Suppress root logger INFO in non-Streamlit contexts (verify scripts, tests).
+# Bare logging.info() uses logging.root; getLogger('root') is a different object.
 if "streamlit" not in sys.modules:
-    logging.getLogger(__name__).setLevel(logging.WARNING)
-    logging.getLogger("root").setLevel(logging.WARNING)
+    logging.root.setLevel(logging.WARNING)
 
 from utils.launch_utils import setup_logging
 
@@ -65,7 +65,7 @@ def save_agent_registry(registry: Dict[str, Any]) -> bool:
 def initialize_core_system():
     """Initialize the core trading system components."""
     if "streamlit" in sys.modules:
-        logging.info("Initializing core trading system...")
+        logging.debug("Initializing core trading system...")
 
     # Setup logging
     setup_core_logging()
@@ -80,7 +80,7 @@ def initialize_core_system():
         Path(directory).mkdir(exist_ok=True)
 
     if "streamlit" in sys.modules:
-        logging.info("Core trading system initialization completed")
+        logging.debug("Core trading system initialization completed")
 
     return {
         "agent_registry": agent_registry,
@@ -169,7 +169,7 @@ try:
     _agent_registry = _initialization_data["agent_registry"]
     _system_initialized = True
     if "streamlit" in sys.modules:
-        logging.info("Core module initialized successfully")
+        logging.debug("Core module initialized successfully")
 except Exception as e:
     logging.error(f"Failed to initialize core module: {e}")
     _system_initialized = False

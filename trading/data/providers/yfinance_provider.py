@@ -257,11 +257,23 @@ class YFinanceProvider(BaseDataProvider):
             # Create Ticker object
             ticker = yf.Ticker(symbol)
 
+            # Coerce start/end to string to avoid DatetimeArray errors (e.g. from date pickers)
+            start = kwargs.get("start_date")
+            end = kwargs.get("end_date")
+            if start is not None and not isinstance(start, str):
+                start = pd.Timestamp(
+                    start[0] if hasattr(start, "__len__") and len(start) else start
+                ).strftime("%Y-%m-%d")
+            if end is not None and not isinstance(end, str):
+                end = pd.Timestamp(
+                    end[0] if hasattr(end, "__len__") and len(end) else end
+                ).strftime("%Y-%m-%d")
+
             # Download data
             self.logger.info(f"Fetching data for {symbol}")
             data = ticker.history(
-                start=kwargs.get("start_date"),
-                end=kwargs.get("end_date"),
+                start=start,
+                end=end,
                 interval=interval,
             )
 

@@ -607,7 +607,7 @@ class EnhancedSettings:
         for name, value in validated_values.items():
             self._values[name.lower()] = value
 
-        logger.info("Configuration validation completed successfully")
+        logger.debug("Configuration validation completed successfully")
 
     # Environment settings
     @property

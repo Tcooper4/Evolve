@@ -15,33 +15,9 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-# Local imports
-try:
-    from utils.cache_utils import cache_result
-except ImportError:
-    def cache_result(func):
-        return func
-
-try:
-    from utils.common_helpers import load_config, safe_json_save
-    # Adjust load_config to match expected signature (returns dict directly, not wrapped)
-    def load_config_wrapper(config_path: str) -> Dict[str, Any]:
-        result = load_config(config_path)
-        if isinstance(result, dict) and "result" in result:
-            return result["result"] if result.get("success") else {}
-        return result if isinstance(result, dict) else {}
-    load_config = load_config_wrapper
-except ImportError:
-    # Fallback implementations if utils not available
-    def safe_json_save(file_path: str, data: Any):
-        with open(file_path, "w") as f:
-            json.dump(data, f, indent=2, default=str)
-
-    def load_config(config_path: str) -> Dict[str, Any]:
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                return yaml.safe_load(f)
-        return {}
+# Avoid top-level utils import — utils/__init__.py pulls in trading (slow)
+def cache_result(func):
+    return func
 
 
 from .task_conditions import TaskConditions
@@ -52,49 +28,59 @@ from .task_models import TaskConfig, TaskPriority, TaskType
 from .task_monitor import TaskMonitor
 from .task_scheduler import TaskScheduler
 
-try:
-    from .task_providers import TaskProvider, create_task_provider
-except ImportError:
-    TaskProvider = None
-    create_task_provider = None
+# task_providers imported lazily in _initialize_task_providers() to avoid pulling in trading/agents
 
 
 class TaskOrchestrator:
     """
-    Centralized task orchestration system for Evolve platform
+    Centralized task orchestration system for Evolve platform.
+    Heavy initialization (providers, tasks, scheduler) is deferred to ensure_initialized()
+    or start() so __init__ completes in under 1 second.
     """
 
     def __init__(self, config_path: str = "config/task_schedule.yaml"):
-        # Load configuration
+        # Fast init only — no network, no heavy imports, no thread starts
         self.config_path = config_path
         self.config = self._load_task_config()
 
-        # Initialize logging
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
 
-        # Create logs directory
         self.logs_dir = Path("logs/orchestrator")
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
-        # Initialize components
+        self.is_running = False
+        self._preload_enabled = False
+
+        # Lazy — created in ensure_initialized()
+        self.scheduler = None
+        self.executor = None
+        self.monitor = None
+        self.conditions = None
+        self.task_providers: Dict[str, Any] = {}
+        self.execution_order: List[List[str]] = []
+        self._tasks_loaded = False
+
+    def ensure_initialized(self) -> None:
+        """
+        Lazy init of scheduler, executor, monitor, task providers, and task configs.
+        Called by start() or by Admin when user activates the orchestrator.
+        Idempotent.
+        """
+        if self._tasks_loaded:
+            return
+
+        # Create components (lightweight classes from this package)
         self.scheduler = TaskScheduler(self.config.get("scheduler_config", {}))
         self.executor = TaskExecutor(self.config.get("executor_config", {}))
         self.monitor = TaskMonitor(self.config.get("monitor_config", {}))
         self.conditions = TaskConditions(self.config.get("conditions_config", {}))
 
-        # Initialize task providers
-        self.task_providers: Dict[str, TaskProvider] = {}
         self._initialize_task_providers()
-
-        # Execution state
-        self.is_running = False
-
-        # Load task configurations
         self._load_tasks()
-
-        # Initialize scheduling
         self._initialize_scheduling()
+
+        self._tasks_loaded = True
 
     def _load_task_config(self) -> Dict[str, Any]:
         """Load task configuration from YAML file"""
@@ -213,8 +199,10 @@ class TaskOrchestrator:
             self.logger.error(f"Failed to save task config: {e}")
 
     def _initialize_task_providers(self):
-        """Initialize task providers"""
-        if create_task_provider is None:
+        """Initialize task providers (lazy import to avoid pulling in trading/agents at module load)."""
+        try:
+            from .task_providers import create_task_provider
+        except ImportError:
             self.logger.warning("Task providers not available (optional dependency)")
             return
         try:
@@ -352,8 +340,9 @@ class TaskOrchestrator:
             self.logger.error(f"Failed to initialize scheduling: {e}")
 
     async def start(self):
-        """Start the orchestrator"""
+        """Start the orchestrator. Call ensure_initialized() then set is_running and start async loops."""
         try:
+            self.ensure_initialized()
             self.is_running = True
             self.logger.info("Starting Task Orchestrator")
 
@@ -370,15 +359,17 @@ class TaskOrchestrator:
         """Stop the orchestrator"""
         try:
             self.is_running = False
-            self.scheduler.stop()
-            self.executor.executor.shutdown(wait=True)
+            if self.scheduler is not None:
+                self.scheduler.stop()
+            if self.executor is not None and getattr(self.executor, "executor", None) is not None:
+                self.executor.executor.shutdown(wait=True)
             self.logger.info("Task Orchestrator stopped")
         except Exception as e:
             self.logger.error(f"Failed to stop orchestrator: {e}")
 
     async def _health_monitor_loop(self):
         """Health monitoring loop"""
-        while self.is_running:
+        while self.is_running and self.monitor is not None:
             try:
                 health_status = await self.monitor.check_system_health()
 
@@ -395,7 +386,7 @@ class TaskOrchestrator:
 
     async def _performance_monitor_loop(self):
         """Performance monitoring loop"""
-        while self.is_running:
+        while self.is_running and self.monitor is not None:
             try:
                 await self.monitor.update_performance_metrics()
                 await asyncio.sleep(300)  # 5 minutes
@@ -407,6 +398,7 @@ class TaskOrchestrator:
         self, task_name: str, parameters: Optional[Dict[str, Any]] = None
     ) -> str:
         """Execute a task immediately"""
+        self.ensure_initialized()
         try:
             task_id = await self.executor.execute_task_now(task_name, parameters)
             self.logger.info(f"Executed task immediately: {task_name} (ID: {task_id})")
@@ -417,10 +409,22 @@ class TaskOrchestrator:
 
     def get_task_status(self, task_name: str) -> Optional[Dict[str, Any]]:
         """Get status of a task"""
+        if not self._tasks_loaded or self.executor is None:
+            return None
         return self.executor.get_task_status(task_name)
 
     def get_system_status(self) -> Dict[str, Any]:
         """Get overall system status"""
+        if not self._tasks_loaded:
+            return {
+                "orchestrator_status": "stopped",
+                "scheduled_tasks": {},
+                "current_executions": {},
+                "agent_status": {},
+                "performance_summary": {},
+                "system_health": {},
+                "timestamp": datetime.utcnow().isoformat(),
+            }
         try:
             return {
                 "orchestrator_status": "running" if self.is_running else "stopped",
@@ -437,6 +441,8 @@ class TaskOrchestrator:
 
     def update_task_config(self, task_name: str, updates: Dict[str, Any]):
         """Update task configuration"""
+        if not self._tasks_loaded or self.scheduler is None:
+            return
         try:
             self.scheduler.update_task(task_name, updates)
             self.logger.info(f"Updated task configuration: {task_name}")
@@ -445,6 +451,8 @@ class TaskOrchestrator:
 
     def export_status_report(self) -> str:
         """Export status report"""
+        if not self._tasks_loaded:
+            return ""
         try:
             report_data = self.get_system_status()
 
@@ -452,6 +460,12 @@ class TaskOrchestrator:
                 self.logs_dir
                 / f"orchestrator_status_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
             )
+            try:
+                from utils.common_helpers import safe_json_save
+            except ImportError:
+                def safe_json_save(path, data):
+                    with open(path, "w") as f:
+                        json.dump(data, f, indent=2, default=str)
             safe_json_save(str(report_file), report_data)
 
             self.logger.info(f"Exported status report: {report_file}")

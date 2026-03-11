@@ -501,10 +501,22 @@ class DataLoader:
             # Load data from YFinance
             ticker_obj = yf.Ticker(request.ticker)
 
+            # Coerce start/end to string to avoid DatetimeArray errors (e.g. from date pickers)
+            start_date = request.start_date
+            end_date = request.end_date
+            if start_date is not None and not isinstance(start_date, str):
+                start_date = pd.Timestamp(
+                    start_date[0] if hasattr(start_date, "__len__") and len(start_date) else start_date
+                ).strftime("%Y-%m-%d")
+            if end_date is not None and not isinstance(end_date, str):
+                end_date = pd.Timestamp(
+                    end_date[0] if hasattr(end_date, "__len__") and len(end_date) else end_date
+                ).strftime("%Y-%m-%d")
+
             if request.start_date and request.end_date:
                 data = ticker_obj.history(
-                    start=request.start_date,
-                    end=request.end_date,
+                    start=start_date,
+                    end=end_date,
                     interval=request.interval,
                     auto_adjust=request.auto_adjust,
                     prepost=request.prepost,

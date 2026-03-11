@@ -578,7 +578,7 @@ settings = _SettingsNamespace()
 # Validate configuration on import
 try:
     validate_config()
-    logger.info("Configuration validation completed successfully")
+    logger.debug("Configuration validation completed successfully")
 except Exception as e:
     logger.error(f"Configuration validation failed: {e}")
     if ENV == "production":

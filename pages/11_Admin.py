@@ -4074,20 +4074,31 @@ if not _orch_status["available"]:
         _files = os.listdir("core/orchestrator")
         st.caption(f"Files found: {_files}")
 else:
-    # Initialize orchestrator in session state if not already
+    # Imports for orchestrator (needed for Initialize button and tabs)
+    from core.orchestrator.task_orchestrator import TaskOrchestrator
+    from core.orchestrator.task_scheduler import TaskScheduler
+    from core.orchestrator.task_monitor import TaskMonitor
+    from core.orchestrator.task_models import TaskConfig, TaskType, TaskPriority
+
+    # Initialize orchestrator in session state if not already (fast — no heavy init)
     if "task_orchestrator" not in st.session_state:
         try:
-            from core.orchestrator.task_orchestrator import TaskOrchestrator
-            from core.orchestrator.task_scheduler import TaskScheduler
-            from core.orchestrator.task_monitor import TaskMonitor
-            from core.orchestrator.task_models import TaskConfig, TaskType, TaskPriority
-
             st.session_state.task_orchestrator = TaskOrchestrator()
-            st.session_state.task_scheduler = TaskScheduler()
-            st.session_state.task_monitor = TaskMonitor()
-            # Add default SystemHealthCheck every 60 minutes if not already present
-            _orch = st.session_state.task_orchestrator
-            if hasattr(_orch, "scheduler") and _orch.scheduler is not None:
+            st.session_state.task_scheduler = None
+            st.session_state.task_monitor = None
+            st.success("Task Orchestrator created (click Initialize to load tasks)")
+        except Exception as _init_err:
+            st.error(f"Orchestrator init failed: {_init_err}")
+
+    _orch = st.session_state.get("task_orchestrator")
+    # Lazy init: when user clicks "Initialize Orchestrator", run heavy setup
+    if _orch is not None and not getattr(_orch, "_tasks_loaded", False):
+        if st.button("Initialize Orchestrator", key="orch_init_btn"):
+            try:
+                _orch.ensure_initialized()
+                st.session_state.task_scheduler = _orch.scheduler
+                st.session_state.task_monitor = _orch.monitor
+                # Add default SystemHealthCheck if not already present
                 if "SystemHealthCheck" not in getattr(_orch.scheduler, "tasks", {}):
                     _health_task = TaskConfig(
                         name="SystemHealthCheck",
@@ -4097,9 +4108,17 @@ else:
                         priority=TaskPriority.MEDIUM,
                     )
                     _orch.scheduler.add_task(_health_task)
-            st.success("Task Orchestrator initialized")
-        except Exception as _init_err:
-            st.error(f"Orchestrator init failed: {_init_err}")
+                st.success("Orchestrator initialized — tasks loaded")
+                st.rerun()
+            except Exception as _e:
+                st.error(f"Initialize failed: {_e}")
+        st.caption("Initialize loads task providers and schedules (may take a few seconds).")
+        # Skip rendering tabs until initialized
+        _orch = None
+
+    if _orch is not None and getattr(_orch, "_tasks_loaded", False):
+        st.session_state.task_scheduler = _orch.scheduler
+        st.session_state.task_monitor = _orch.monitor
 
     orchestrator = st.session_state.get("task_orchestrator")
     scheduler = st.session_state.get("task_scheduler")
