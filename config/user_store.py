@@ -85,3 +85,25 @@ def load_user_preferences(session_id: str) -> dict:
     if not row or not row[0]:
         return {}
     return json.loads(row[0])
+
+
+def inject_user_keys_to_env(session_id: str) -> None:
+    """
+    Load stored API keys for the given session and set them in os.environ.
+    Does not overwrite keys already set in the environment (env takes precedence).
+    Idempotent; safe to call multiple times.
+    """
+    if not session_id:
+        return
+    try:
+        keys = load_user_keys(session_id)
+        if not keys:
+            return
+        for key, value in keys.items():
+            if not value or not isinstance(value, str):
+                continue
+            if key in os.environ and os.environ[key]:
+                continue  # Do not overwrite existing env
+            os.environ[key] = value
+    except Exception:
+        pass

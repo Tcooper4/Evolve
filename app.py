@@ -83,16 +83,13 @@ st.set_page_config(
 )
 
 # Per-user onboarding: init DB, check keys; inject into env if complete
-from config.user_store import init_user_db, load_user_keys
+from config.user_store import init_user_db, load_user_keys, inject_user_keys_to_env
 from components.onboarding import check_onboarding
 
 init_user_db()
 session_id = check_onboarding()
 if session_id:
-    user_keys = load_user_keys(session_id)
-    for key, value in user_keys.items():
-        if value:
-            os.environ[key] = value
+    inject_user_keys_to_env(session_id)
 else:
     st.stop()
 

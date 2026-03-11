@@ -1221,7 +1221,7 @@ try:
                 strategy_row = match_df.iloc[0] if not match_df.empty else None
                 if strategy_row is None:
                     st.warning(f"No data for strategy '{selected_strategy}'.")
-                    return
+                    st.stop()
                 lifecycle = get_strategy_lifecycle(selected_strategy)
             
                 # Health score visualization

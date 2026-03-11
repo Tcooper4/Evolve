@@ -401,6 +401,7 @@ movers_state = st.session_state.get("home_last_top_movers", current_movers)
 
 gainers = movers_state.get("gainers") or []
 losers = movers_state.get("losers") or []
+movers = gainers + losers
 
 if gainers or losers:
     st.subheader("Today's Top Movers")
@@ -669,7 +670,9 @@ seconds_left = max(0, int(POLL_INTERVAL_SECONDS - time_since_scan))
 st.markdown("---")
 
 # Generate briefing if not cached
+movers = []
 if st.session_state.home_briefing_text is None:
+    movers = gainers + losers
     with st.spinner("Preparing your briefing..."):
         try:
             from trading.memory import get_memory_store

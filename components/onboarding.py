@@ -10,7 +10,7 @@ from typing import Optional
 import streamlit as st
 import streamlit.components.v1 as components
 
-from config.user_store import load_user_keys, save_user_keys, save_user_preferences
+from config.user_store import load_user_keys, save_user_keys, save_user_preferences, inject_user_keys_to_env
 
 
 def _ensure_session_id() -> Optional[str]:
@@ -89,6 +89,7 @@ def _render_onboarding_form(session_id: Optional[str]) -> bool:
         st.query_params["sid"] = session_id
         st.session_state["evolve_show_form"] = False
         st.session_state["evolve_onboarding_done"] = True
+        inject_user_keys_to_env(session_id)
         st.success("Your keys are saved. You won't need to enter them again on this device.")
         st.caption("Bookmark this URL to return without re-entering your keys.")
         return True

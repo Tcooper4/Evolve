@@ -223,6 +223,20 @@ def run_admin_self_test() -> Dict[str, Dict[str, Any]]:
     return results
 
 
+# Page header and tab structure (must be defined before any "with tab_*" block)
+st.title("⚙️ System Administration")
+st.markdown("Manage system configuration, monitor health, and administer AI agents.")
+
+tab1, tab2, tab3, tab4, tab5, tab6, tab_data_mgmt = st.tabs([
+    "📊 System Dashboard",
+    "⚙️ Configuration",
+    "🤖 AI Agents",
+    "📈 System Monitoring",
+    "📜 Logs & Debugging",
+    "🔧 Maintenance",
+    "🗄️ Data Management",
+])
+
 with tab_data_mgmt:
     st.subheader("Cache & Storage Management")
     from trading.utils.data_manager import (
@@ -278,8 +292,8 @@ with tab_data_mgmt:
     if ttl_data:
         ttl_df = pd.DataFrame(ttl_data)
         st.dataframe(ttl_df, use_container_width=True, hide_index=True)
-
-
+    
+    
 def _get_system_dashboard_data() -> Dict[str, Any]:
     """Return real data for System Dashboard: uptime, trades today, active strategies, active agents, recent events."""
     out = {
@@ -355,23 +369,6 @@ def _get_system_dashboard_data() -> Dict[str, Any]:
         logger.debug(f"Health check component failed: {_e}")
     return out
 
-
-# Page header
-st.title("⚙️ System Administration")
-st.markdown("Manage system configuration, monitor health, and administer AI agents.")
-
-# Tab structure
-tab1, tab2, tab3, tab4, tab5, tab6, tab_data_mgmt = st.tabs(
-    [
-        "📊 System Dashboard",
-        "⚙️ Configuration",
-        "🤖 AI Agents",
-        "📈 System Monitoring",
-        "📜 Logs & Debugging",
-        "🔧 Maintenance",
-        "🗄️ Data Management",
-    ]
-)
 
 # TAB 1: System Dashboard
 with tab1:
