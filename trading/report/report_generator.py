@@ -343,7 +343,11 @@ class ReportGenerator:
             # Calculate drawdown
             cumulative_returns = np.cumprod(1 + returns)
             running_max = np.maximum.accumulate(cumulative_returns)
-            drawdown = (running_max - cumulative_returns) / running_max
+            drawdown = np.where(
+                running_max != 0,
+                (running_max - cumulative_returns) / running_max,
+                0.0,
+            )
             max_drawdown = np.max(drawdown) if len(drawdown) > 0 else 0.0
 
             # Calculate accuracy metrics

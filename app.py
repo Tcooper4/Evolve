@@ -38,13 +38,13 @@ def _shutdown():
     try:
         from trading.database.connection import close_database
         close_database()
-    except Exception:
-        pass
+    except Exception as _e:
+        print(f"Shutdown warning: {_e}", file=sys.stderr)
     try:
         from trading.memory import close_memory_store
         close_memory_store()
-    except Exception:
-        pass
+    except Exception as _e:
+        print(f"Shutdown warning: {_e}", file=sys.stderr)
 
 
 atexit.register(_shutdown)

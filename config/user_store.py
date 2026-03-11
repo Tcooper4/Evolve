@@ -60,8 +60,12 @@ def load_user_keys(session_id: str) -> dict:
         ).fetchone()
     if not row or not row[0]:
         return {}
-    cipher = _get_cipher()
-    return json.loads(cipher.decrypt(row[0].encode()).decode())
+    try:
+        cipher = _get_cipher()
+        return json.loads(cipher.decrypt(row[0].encode()).decode())
+    except Exception:
+        # Corrupted data or wrong key — return empty rather than crash
+        return {}
 
 
 def save_user_preferences(session_id: str, prefs: dict):

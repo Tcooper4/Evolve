@@ -470,6 +470,28 @@ class Backtester:
         equity_curve["returns"] = equity_curve["equity_curve"].pct_change()
         return equity_curve
 
+    def get_performance_metrics(self) -> Dict[str, Any]:
+        """Return performance metrics dict for plotting and reporting."""
+        summary = self.get_trade_summary()
+        if not summary:
+            return {}
+        # Scalar metrics only for plot_risk_metrics (bar chart)
+        scalar_keys = ("total_trades", "winning_trades", "losing_trades", "win_rate", "total_pnl", "avg_pnl", "final_portfolio_value", "total_return")
+        return {k: summary[k] for k in scalar_keys if k in summary}
+
+    def run(self) -> Dict[str, Any]:
+        """Return current backtest results (trades, equity curve, metrics).
+        Callers are expected to run the strategy loop (e.g. call execute_trade in a loop)
+        before calling run(); this method returns the accumulated state.
+        """
+        equity_curve = self._calculate_equity_curve()
+        metrics = self.get_performance_metrics()
+        return {
+            "trades": self.trade_log,
+            "equity_curve": equity_curve,
+            "metrics": metrics,
+        }
+
     def process_signals_dataframe(
         self, signals_df: pd.DataFrame, fill_method: str = "ffill"
     ) -> pd.DataFrame:
@@ -608,7 +630,9 @@ class Backtester:
             "total_pnl": total_pnl,
             "avg_pnl": avg_pnl,
             "final_portfolio_value": self._calculate_portfolio_value(),
-            "total_return": (self._calculate_portfolio_value() / self.initial_cash) - 1,
+            "total_return": (self._calculate_portfolio_value() / self.initial_cash) - 1
+            if self.initial_cash > 0
+            else 0.0,
         }
 
     def reset(self) -> None:

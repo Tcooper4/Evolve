@@ -8,6 +8,8 @@ Compatible with the new async agent interface.
 import asyncio
 import json
 import logging
+import os
+import secrets
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -116,7 +118,7 @@ class AgentAPIService:
             self.config = {
                 "host": "0.0.0.0",
                 "port": 8001,
-                "secret_key": "your-secret-key-change-in-production",
+                "secret_key": os.environ.get("EVOLVE_API_SECRET", secrets.token_hex(32)),
                 "cors_origins": ["*"],
                 "max_agents": 100,
                 "default_timeout": 30,

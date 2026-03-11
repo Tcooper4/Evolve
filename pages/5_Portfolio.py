@@ -1207,7 +1207,7 @@ with tab2:
                             y=pnl_series,
                             mode='lines',
                             name='P&L',
-                            line=dict(color='green' if pnl_series.iloc[-1] > 0 else 'red', width=2)
+                            line=dict(color='green' if (len(pnl_series) > 0 and pnl_series.iloc[-1] > 0) else 'red', width=2)
                         ))
                         fig_pos.add_hline(
                             y=0,
@@ -1436,7 +1436,10 @@ with tab3:
         if portfolio_history:
             portfolio_df = pd.DataFrame(portfolio_history)
             portfolio_df = portfolio_df.sort_values("date")
-            portfolio_df["cumulative_return"] = (portfolio_df["value"] / portfolio_df["value"].iloc[0] - 1) * 100
+            if not portfolio_df.empty and portfolio_df["value"].iloc[0] != 0:
+                portfolio_df["cumulative_return"] = (portfolio_df["value"] / portfolio_df["value"].iloc[0] - 1) * 100
+            else:
+                portfolio_df["cumulative_return"] = 0.0
             
             # Historical Portfolio Value Chart
             st.subheader("📈 Historical Portfolio Value")
@@ -1564,10 +1567,15 @@ with tab3:
                 if benchmark_data is not None and not benchmark_data.empty and 'Close' in benchmark_data.columns:
                     benchmark_data.index = pd.to_datetime(benchmark_data.index)
                     benchmark_data = benchmark_data.sort_index()
-                    
-                    # Normalize both to start at 100
-                    portfolio_normalized = (portfolio_df["value"] / portfolio_df["value"].iloc[0]) * 100
-                    benchmark_normalized = (benchmark_data['Close'] / benchmark_data['Close'].iloc[0]) * 100
+                    # Normalize both to start at 100 (guard empty or zero first value)
+                    p0 = portfolio_df["value"].iloc[0] if not portfolio_df.empty else 0
+                    b0 = float(benchmark_data['Close'].iloc[0]) if len(benchmark_data) > 0 else 0
+                    if p0 != 0 and b0 != 0:
+                        portfolio_normalized = (portfolio_df["value"] / p0) * 100
+                        benchmark_normalized = (benchmark_data['Close'] / b0) * 100
+                    else:
+                        portfolio_normalized = pd.Series(dtype=float)
+                        benchmark_normalized = pd.Series(dtype=float)
                     
                     # Align dates
                     common_dates = portfolio_normalized.index.intersection(benchmark_normalized.index)
@@ -1599,9 +1607,11 @@ with tab3:
                         )
                         st.plotly_chart(fig_bench, use_container_width=True)
                         
-                        # Calculate outperformance
-                        portfolio_return = (portfolio_aligned.iloc[-1] / portfolio_aligned.iloc[0] - 1) * 100
-                        benchmark_return = (benchmark_aligned.iloc[-1] / benchmark_aligned.iloc[0] - 1) * 100
+                        # Calculate outperformance (guard division by zero)
+                        pa0, pa1 = (portfolio_aligned.iloc[0], portfolio_aligned.iloc[-1]) if len(portfolio_aligned) > 0 else (1.0, 1.0)
+                        ba0, ba1 = (benchmark_aligned.iloc[0], benchmark_aligned.iloc[-1]) if len(benchmark_aligned) > 0 else (1.0, 1.0)
+                        portfolio_return = (pa1 / pa0 - 1) * 100 if pa0 != 0 else 0.0
+                        benchmark_return = (ba1 / ba0 - 1) * 100 if ba0 != 0 else 0.0
                         outperformance = portfolio_return - benchmark_return
                         
                         col_perf1, col_perf2, col_perf3 = st.columns(3)

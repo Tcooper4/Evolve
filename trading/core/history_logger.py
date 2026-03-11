@@ -209,25 +209,24 @@ class HistoryLogger:
             True if successful, False otherwise
         """
         try:
-            conn = sqlite3.connect(str(self.db_path))
-            cursor = conn.cursor()
+            with sqlite3.connect(str(self.db_path)) as conn:
+                cursor = conn.cursor()
 
-            # Insert data into events table
-            cursor.execute(
-                """
-                INSERT INTO events (timestamp, event_type, data_json, created_at)
-                VALUES (?, ?, ?, ?)
-            """,
-                (
-                    data.get("timestamp", datetime.now().isoformat()),
-                    data.get("event_type", "unknown"),
-                    json.dumps(data.get("data", {})),
-                    datetime.now().isoformat(),
-                ),
-            )
+                # Insert data into events table
+                cursor.execute(
+                    """
+                    INSERT INTO events (timestamp, event_type, data_json, created_at)
+                    VALUES (?, ?, ?, ?)
+                """,
+                    (
+                        data.get("timestamp", datetime.now().isoformat()),
+                        data.get("event_type", "unknown"),
+                        json.dumps(data.get("data", {})),
+                        datetime.now().isoformat(),
+                    ),
+                )
 
-            conn.commit()
-            conn.close()
+                conn.commit()
 
             logger.debug(
                 f"Logged data to database: {data.get('event_type', 'unknown')}"
@@ -532,39 +531,38 @@ class HistoryLogger:
     def _init_database(self):
         """Initialize the SQLite database."""
         try:
-            conn = sqlite3.connect(str(self.db_path))
-            cursor = conn.cursor()
+            with sqlite3.connect(str(self.db_path)) as conn:
+                cursor = conn.cursor()
 
-            # Create events table
-            cursor.execute(
+                # Create events table
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp TEXT NOT NULL,
+                        event_type TEXT NOT NULL,
+                        data_json TEXT,
+                        created_at TEXT NOT NULL
+                    )
                 """
-                CREATE TABLE IF NOT EXISTS events (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp TEXT NOT NULL,
-                    event_type TEXT NOT NULL,
-                    data_json TEXT,
-                    created_at TEXT NOT NULL
                 )
-            """
-            )
 
-            # Create index for faster queries
-            cursor.execute(
+                # Create index for faster queries
+                cursor.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_events_timestamp
+                    ON events(timestamp)
                 """
-                CREATE INDEX IF NOT EXISTS idx_events_timestamp
-                ON events(timestamp)
-            """
-            )
+                )
 
-            cursor.execute(
+                cursor.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_events_type
+                    ON events(event_type)
                 """
-                CREATE INDEX IF NOT EXISTS idx_events_type
-                ON events(event_type)
-            """
-            )
+                )
 
-            conn.commit()
-            conn.close()
+                conn.commit()
 
         except Exception as e:
             logger.error(f"Error initializing database: {e}")

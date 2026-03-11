@@ -133,7 +133,7 @@ def get_available_strategies() -> List[str]:
     return ["rsi", "bollinger", "macd", "sma", "cci", "atr", "ensemble"]
 
 
-@functools.lru_cache(maxsize=32)
+# Not safe to cache a factory function with variable **kwargs — different kwargs would return same cached instance
 def create_strategy(strategy_name: str, **kwargs) -> Any:
     """Create a strategy instance.
 

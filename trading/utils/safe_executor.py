@@ -356,6 +356,10 @@ class SafeExecutor:
         self, model_code: str, input_data: Dict[str, Any]
     ) -> str:
         """Create a wrapper script for safe execution."""
+        # model_code is from the internal ML pipeline (ModelInnovationAgent / safe executor
+        # flow only), not from arbitrary user-supplied text. Guard against misuse.
+        assert isinstance(model_code, str), "model_code must be a string"
+        assert len(model_code) < 50000, "model_code exceeds maximum allowed size (50000 chars)"
         wrapper = f'''#!/usr/bin/env python3
 """
 Safe execution wrapper for user-defined model.

@@ -1,7 +1,7 @@
 {
     "model_strategy_patterns": {
         "neutral": {
-            "timestamp": "2026-03-10T20:32:17.285283",
+            "timestamp": "2026-03-10T21:36:12.834771",
             "model_confidences": {
                 "Ridge": 1.0,
                 "XGBoost": 1.0
@@ -9,7 +9,7 @@
             "best_model": "Ridge"
         },
         "bull": {
-            "timestamp": "2026-03-10T18:29:49.518293",
+            "timestamp": "2026-03-10T21:16:37.348260",
             "model_confidences": {
                 "Ridge": 1.0,
                 "XGBoost": 1.0

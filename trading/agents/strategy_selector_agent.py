@@ -566,7 +566,7 @@ class StrategySelectorAgent(BaseAgent):
             negative_returns = abs(strategy_returns[strategy_returns < 0].sum())
             profit_factor = (
                 positive_returns / negative_returns
-                if negative_returns > 0
+                if negative_returns != 0
                 else float("inf")
             )
 

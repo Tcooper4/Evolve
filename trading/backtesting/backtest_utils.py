@@ -172,9 +172,11 @@ class BacktestUtils:
         """Calculate total return from backtest data."""
         if "Close" not in df.columns:
             return 0.0
-
-        initial_price = df["Close"].iloc[0]
-        final_price = df["Close"].iloc[-1]
+        close = df["Close"]
+        if close.empty or len(close) == 0:
+            return 0.0
+        initial_price = close.iloc[0]
+        final_price = close.iloc[-1]
 
         if initial_price == 0:
             return 0.0
@@ -269,10 +271,14 @@ class BacktestUtils:
         """Generate equity curve from backtest data."""
         if "Close" not in df.columns:
             return pd.Series()
-
+        close = df["Close"]
+        if close.empty or len(close) == 0:
+            return pd.Series()
         # Simple equity curve based on price changes
-        initial_price = df["Close"].iloc[0]
-        equity_curve = df["Close"] / initial_price
+        initial_price = float(close.iloc[0])
+        if initial_price == 0:
+            return pd.Series()
+        equity_curve = close / initial_price
 
         return equity_curve
 

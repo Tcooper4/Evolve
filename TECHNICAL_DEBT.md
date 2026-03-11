@@ -61,8 +61,16 @@ Priority: High = blocks correctness or security; Medium = missing feature or dat
 - **RESOLVED**: Startup noise (all INFO→DEBUG at source)
 - **RESOLVED**: cache_management, model_validation, strategy_backtesting added to TaskType
 
+## Resolved (Sessions 34–36, v1.4.0 audit)
+
+- **RESOLVED**: All 14 HIGH severity audit findings
+- **RESOLVED**: All MEDIUM severity audit findings (iloc guards, set_page_config,
+  lru_cache, decrypt safety, bare excepts in Admin, app shutdown, execution_engine)
+
 ## Open (non-blocking)
 
+- **OPEN**: pickle.load from cache files (accepted risk — internal paths only)
+- **OPEN**: SQLite __del__ in strategy_switcher.py and task_memory.py (low risk singletons)
 - **OPEN**: Options flow overlay (requires data source decision)
 - **OPEN**: Chart pattern detection (head & shoulders, triangles, S/R levels)
 - **OPEN**: Startup noise via trading.memory direct import path (minor)

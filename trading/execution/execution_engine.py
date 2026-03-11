@@ -17,7 +17,7 @@ try:
 
     CCXT_AVAILABLE = True
 except ImportError:
-    CCXT_AVAILABLE = True
+    CCXT_AVAILABLE = False
     ccxt = None
 
 # Import from trading package
@@ -239,14 +239,14 @@ class ExecutionEngine:
 
             if price is None:
                 hist = ticker.history(period="1d")
-                if hist is not None and not hist.empty:
+                if hist is not None and not hist.empty and len(hist) > 0:
                     price = float(hist["Close"].iloc[-1])
 
             if price is not None and price > 0:
                 return float(price)
-        except Exception:
-            # Fall back to purely simulated pricing below
-            pass
+        except Exception as _e:
+            logger.debug(f"Simulated price fetch failed for {symbol}: {_e}")
+            return None
 
         # Fallback: simple simulated price
         import random
@@ -370,15 +370,16 @@ class ExecutionEngine:
 
         total_orders = len(self.execution_history)
         successful_orders = sum(
-            1 for ex in self.execution_history if ex["result"]["status"] == "success"
+            1 for ex in self.execution_history
+            if (ex.get("result") or {}).get("status", "unknown") == "success"
         )
         failed_orders = total_orders - successful_orders
 
         total_volume = sum(
-            ex["result"].get("filled_quantity", 0)
-            * ex["result"].get("average_price", 0)
+            (ex.get("result") or {}).get("filled_quantity", 0)
+            * (ex.get("result") or {}).get("average_price", 0)
             for ex in self.execution_history
-            if ex["result"]["status"] == "success"
+            if (ex.get("result") or {}).get("status", "unknown") == "success"
         )
 
         return {

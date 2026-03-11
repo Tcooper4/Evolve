@@ -277,7 +277,8 @@ class PositionSizingEngine:
             )
 
         returns = data[asset].pct_change().dropna()
-        volatility = returns.rolling(window=20).std().iloc[-1]
+        roll_std = returns.rolling(window=20).std()
+        volatility = float(roll_std.iloc[-1]) if len(roll_std) > 0 and not pd.isna(roll_std.iloc[-1]) else np.nan
 
         if np.isnan(volatility) or volatility == 0:
             return self._calculate_equal_weighted_size(
@@ -631,7 +632,8 @@ class PositionSizingEngine:
                 asset, price, strategy, signal, data, positions
             )
 
-        momentum = returns.rolling(window=20).mean().iloc[-1]
+        _mom = returns.rolling(window=20).mean()
+        momentum = _mom.iloc[-1] if len(_mom) > 0 and pd.notna(_mom.iloc[-1]) else np.nan
 
         if np.isnan(momentum):
             return self._calculate_equal_weighted_size(
@@ -1059,9 +1061,12 @@ class PositionSizingEngine:
             )
 
         # Calculate regime indicators
-        volatility = returns.rolling(window=20).std().iloc[-1]
-        momentum = returns.rolling(window=20).mean().iloc[-1]
-        skewness = returns.rolling(window=60).skew().iloc[-1]
+        _vol = returns.rolling(window=20).std()
+        _mom = returns.rolling(window=20).mean()
+        _skew = returns.rolling(window=60).skew()
+        volatility = _vol.iloc[-1] if len(_vol) > 0 and pd.notna(_vol.iloc[-1]) else np.nan
+        momentum = _mom.iloc[-1] if len(_mom) > 0 and pd.notna(_mom.iloc[-1]) else np.nan
+        skewness = _skew.iloc[-1] if len(_skew) > 0 and pd.notna(_skew.iloc[-1]) else np.nan
 
         if np.isnan(volatility) or np.isnan(momentum) or np.isnan(skewness):
             return self._calculate_equal_weighted_size(
@@ -1124,8 +1129,10 @@ class PositionSizingEngine:
             )
 
         # Value factor (inverse of price relative to moving average)
-        sma_20 = data[asset].rolling(window=20).mean().iloc[-1]
-        sma_60 = data[asset].rolling(window=60).mean().iloc[-1]
+        _sma20 = data[asset].rolling(window=20).mean()
+        _sma60 = data[asset].rolling(window=60).mean()
+        sma_20 = _sma20.iloc[-1] if len(_sma20) > 0 and pd.notna(_sma20.iloc[-1]) else np.nan
+        sma_60 = _sma60.iloc[-1] if len(_sma60) > 0 and pd.notna(_sma60.iloc[-1]) else np.nan
 
         # Use safe_price_momentum for ratio calculation
         # Note: safe_price_momentum calculates (current - reference) / reference
@@ -1133,17 +1140,21 @@ class PositionSizingEngine:
         value_factor = 1.0 + safe_price_momentum(sma_60, sma_20)
 
         # Momentum factor
-        momentum_factor = returns.rolling(window=20).mean().iloc[-1]
+        _mom = returns.rolling(window=20).mean()
+        momentum_factor = _mom.iloc[-1] if len(_mom) > 0 and pd.notna(_mom.iloc[-1]) else np.nan
         if np.isnan(momentum_factor):
             momentum_factor = 0
 
         # Volatility factor (inverse)
-        volatility_factor = 1 / (1 + returns.rolling(window=20).std().iloc[-1])
+        _vol = returns.rolling(window=20).std()
+        _vol_last = _vol.iloc[-1] if len(_vol) > 0 and pd.notna(_vol.iloc[-1]) else np.nan
+        volatility_factor = 1 / (1 + _vol_last) if not np.isnan(_vol_last) else 1.0
         if np.isnan(volatility_factor):
             volatility_factor = 1.0
 
         # Quality factor (based on return consistency)
-        positive_returns = (returns > 0).rolling(window=20).mean().iloc[-1]
+        _pos = (returns > 0).rolling(window=20).mean()
+        positive_returns = _pos.iloc[-1] if len(_pos) > 0 and pd.notna(_pos.iloc[-1]) else np.nan
         if np.isnan(positive_returns):
             positive_returns = 0.5
         quality_factor = positive_returns
@@ -1194,9 +1205,11 @@ class PositionSizingEngine:
                 )
 
             # Calculate technical features
+            _vol = returns.rolling(window=20).std()
+            _mom = returns.rolling(window=20).mean()
             features = {
-                "volatility": returns.rolling(window=20).std().iloc[-1],
-                "momentum": returns.rolling(window=20).mean().iloc[-1],
+                "volatility": _vol.iloc[-1] if len(_vol) > 0 and pd.notna(_vol.iloc[-1]) else np.nan,
+                "momentum": _mom.iloc[-1] if len(_mom) > 0 and pd.notna(_mom.iloc[-1]) else np.nan,
                 "rsi": self._calculate_rsi(returns),
                 "signal": signal,
                 "price": price,
@@ -1246,8 +1259,10 @@ class PositionSizingEngine:
         gains = returns.where(returns > 0, 0)
         losses = -returns.where(returns < 0, 0)
 
-        avg_gain = gains.rolling(window=period).mean().iloc[-1]
-        avg_loss = losses.rolling(window=period).mean().iloc[-1]
+        _ag = gains.rolling(window=period).mean()
+        _al = losses.rolling(window=period).mean()
+        avg_gain = _ag.iloc[-1] if len(_ag) > 0 and pd.notna(_ag.iloc[-1]) else 0.0
+        avg_loss = _al.iloc[-1] if len(_al) > 0 and pd.notna(_al.iloc[-1]) else 0.0
 
         # Use safe_divide to handle zero avg_loss
         rs = safe_divide(avg_gain, avg_loss, default=0.0)

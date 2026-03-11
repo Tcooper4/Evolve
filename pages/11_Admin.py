@@ -105,14 +105,15 @@ def compute_health_score() -> int:
             sqlite3.connect(str(db_path)).close()
         else:
             score -= 5
-    except Exception:
+    except Exception as _e:
+        logger.debug(f"Health check component failed: {_e}")
         score -= 10
     try:
         mem_path = Path(__file__).resolve().parent.parent / "data" / "memory_store.db"
         if not mem_path.parent.exists():
             score -= 5
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug(f"Health check component failed: {_e}")
     return max(0, score)
 
 
@@ -298,8 +299,8 @@ def _get_system_dashboard_data() -> Dict[str, Any]:
                 out["uptime_str"] = f"{days} day{'s' if days != 1 else ''}, {hours} hour{'s' if hours != 1 else ''}"
             else:
                 out["uptime_str"] = f"{hours} hour{'s' if hours != 1 else ''}"
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug(f"Health check component failed: {_e}")
     try:
         from trading.memory import get_memory_store
         from trading.memory.memory_store import MemoryType
@@ -312,8 +313,8 @@ def _get_system_dashboard_data() -> Dict[str, Any]:
                 ts = v.get("timestamp") or getattr(r, "created_at", "")
                 if ts and today in str(ts):
                     out["trades_today"] += 1
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug(f"Health check component failed: {_e}")
     try:
         import yaml
         strat_path = Path(__file__).parent.parent / "config" / "strategies.yaml"
@@ -324,8 +325,8 @@ def _get_system_dashboard_data() -> Dict[str, Any]:
             defs = (strat_root or {}).get("definitions") or {}
             if isinstance(defs, dict):
                 out["active_strategies"] = len([k for k, v in defs.items() if isinstance(v, dict) and v.get("enabled", True)])
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug(f"Health check component failed: {_e}")
     try:
         reg_path = Path(__file__).parent.parent / "data" / "agent_registry.json"
         if reg_path.exists():
@@ -334,8 +335,8 @@ def _get_system_dashboard_data() -> Dict[str, Any]:
             agents = (data.get("agents") or data) if isinstance(data, dict) else {}
             if isinstance(agents, dict):
                 out["agents_active"] = sum(1 for a in agents.values() if isinstance(a, dict) and (a.get("status") or "").lower() == "active")
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug(f"Health check component failed: {_e}")
     try:
         log_path = Path(__file__).parent.parent / "logs" / "app.log"
         if log_path.exists():
@@ -350,8 +351,8 @@ def _get_system_dashboard_data() -> Dict[str, Any]:
                     if len(out["recent_events"]) >= 5:
                         break
         out["recent_events"] = out["recent_events"][-5:]
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.debug(f"Health check component failed: {_e}")
     return out
 
 

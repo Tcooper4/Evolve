@@ -34,13 +34,7 @@ class InstitutionalDashboard:
         self.system = None
         self.initialize_system()
 
-        # Configure page
-        st.set_page_config(
-            page_title="Institutional Trading System",
-            page_icon="📈",
-            layout="wide",
-            initial_sidebar_state="expanded",
-        )
+        # Page config is set only in app.py when this is run as main page.
 
         # Custom CSS
         self.setup_custom_css()

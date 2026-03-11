@@ -102,9 +102,10 @@ class MarketAnalyzer:
         if len(trend_strength.dropna()) == 0:
             raise ValueError("Insufficient data for trend analysis")
 
+        last_strength = float(trend_strength.dropna().iloc[-1]) if len(trend_strength.dropna()) > 0 else 0.0
         current_trend = (
             "up"
-            if trend_strength.iloc[-1] > self.config.get("trend_threshold", 0)
+            if last_strength > self.config.get("trend_threshold", 0)
             else "down"
         )
         trend_changes = np.diff(np.signbit(trend_strength.dropna()))
@@ -116,7 +117,7 @@ class MarketAnalyzer:
         result = {
             "regime_type": "trend",
             "regime": current_trend,
-            "strength": float(trend_strength.iloc[-1]),
+            "strength": last_strength,
             "duration": int(trend_duration),
             "ma_short": float(ma_short.iloc[-1]) if len(ma_short.dropna()) else 0.0,
             "ma_long": float(ma_long.iloc[-1]) if len(ma_long.dropna()) else 0.0,
@@ -169,7 +170,7 @@ class MarketAnalyzer:
             "current_volatility": float(current_volatility),
             "volatility_rank": float(volatility_rank),
             "volatility_trend": volatility_trend,
-            "historical_volatility": float(historical_volatility.iloc[-1]),
+            "historical_volatility": float(historical_volatility.iloc[-1]) if len(historical_volatility) > 0 and not pd.isna(historical_volatility.iloc[-1]) else 0.0,
         }
 
         log_metrics({**result, "metric_type": "volatility_regime"})

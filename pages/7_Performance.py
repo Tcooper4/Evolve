@@ -167,8 +167,8 @@ try:
         returns = strategy_data['returns']
         cumulative = (1 + returns).cumprod()
         running_max = cumulative.max()
-        current_value = cumulative.iloc[-1]
-        return float((current_value - running_max) / running_max)
+        current_value = cumulative.iloc[-1] if len(cumulative) > 0 else 0.0
+        return float((current_value - running_max) / running_max) if running_max and running_max != 0 else -0.05
 
     def get_portfolio_metrics(returns: pd.Series) -> Dict[str, float]:
         """Calculate overall portfolio metrics."""
@@ -1217,7 +1217,11 @@ try:
         
             if selected_strategy:
                 health = health_scores[selected_strategy]
-                strategy_row = strategy_df[strategy_df['strategy_name'] == selected_strategy].iloc[0]
+                match_df = strategy_df[strategy_df['strategy_name'] == selected_strategy]
+                strategy_row = match_df.iloc[0] if not match_df.empty else None
+                if strategy_row is None:
+                    st.warning(f"No data for strategy '{selected_strategy}'.")
+                    return
                 lifecycle = get_strategy_lifecycle(selected_strategy)
             
                 # Health score visualization

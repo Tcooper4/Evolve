@@ -116,3 +116,20 @@
 - TaskType: added cache_management, model_validation,
   strategy_backtesting for legacy task compatibility
 
+## [1.4.0] — 2026-03-10
+
+### Security & Stability (audit-driven)
+- Fixed CCXT_AVAILABLE logic inversion on ImportError
+- Removed hardcoded JWT secret — now env var with secrets.token_hex fallback
+- Guarded exec() in safe_executor with assertion + trust documentation
+- Fixed Backtester.run() — method was missing, causing silent backtest failures
+- Fixed execution_engine get_execution_summary() KeyError on missing result key
+- Added zero guards: report_generator running_max, backtester initial_cash,
+  strategy_selector negative_returns division
+- SQLite connections in history_logger now use context managers
+- Removed st.set_page_config() from leaderboard_dashboard and institutional_dashboard
+- Fixed create_strategy lru_cache — kwargs no longer cause cache collisions
+- Wrapped cipher.decrypt in try/except — corrupted keys return empty gracefully
+- Replaced bare except: pass in Admin, execution_engine, app.py shutdown
+- Added iloc empty guards across backtest_utils, market_analyzer, portfolio,
+  performance, forecast_router, strategy_fallback, position_sizing, agent

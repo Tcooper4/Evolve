@@ -1298,9 +1298,13 @@ with tab3:
                     status_text.text("Calculating statistics...")
                     progress_bar.progress(90)
                     
-                    # Calculate additional metrics
-                    final_values = simulated_paths.iloc[-1]
-                    final_returns = (final_values - initial_capital) / initial_capital
+                    # Calculate additional metrics (guard empty paths and division by zero)
+                    if not simulated_paths.empty:
+                        final_values = simulated_paths.iloc[-1]
+                        final_returns = (final_values - initial_capital) / initial_capital if initial_capital else pd.Series(dtype=float)
+                    else:
+                        final_values = pd.Series(dtype=float)
+                        final_returns = pd.Series(dtype=float)
                     
                     # Drawdown distribution
                     drawdown_dist = calculate_drawdown_distribution(simulated_paths)

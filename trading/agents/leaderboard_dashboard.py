@@ -24,13 +24,7 @@ class LeaderboardDashboard:
         self.manager = AgentManager()
         self.leaderboard = self.manager.leaderboard
 
-        # Page configuration
-        st.set_page_config(
-            page_title="Agent Leaderboard",
-            page_icon="🏆",
-            layout="wide",
-            initial_sidebar_state="expanded",
-        )
+        # Page config is set only in app.py when this is run as main page.
 
     def run(self):
         """Run the dashboard."""

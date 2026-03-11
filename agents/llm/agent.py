@@ -1231,10 +1231,12 @@ class PromptAgent:
             fc = np.asarray(forecast_result.get("forecast", []), dtype="float64").ravel()
             last_price = None
             try:
-                if "close" in data.columns:
+                if not getattr(data, "empty", True) and "close" in data.columns:
                     last_price = float(data["close"].iloc[-1])
-                elif "Close" in data.columns:
+                elif not getattr(data, "empty", True) and "Close" in data.columns:
                     last_price = float(data["Close"].iloc[-1])
+                else:
+                    last_price = None
             except Exception:
                 last_price = None
 
@@ -2224,7 +2226,7 @@ class PromptAgent:
                         result = router.get_forecast(data, horizon=7, model_type="auto")
                         fc = result.get("forecast")
                         if fc is not None and len(fc) > 0:
-                            last_p = getattr(router, "_last_price_used", None) or (float(data["close"].iloc[-1]) if "close" in data.columns else None)
+                            last_p = getattr(router, "_last_price_used", None) or (float(data["close"].iloc[-1]) if "close" in data.columns and len(data) > 0 else None)
                             summary = f"7-day forecast for {symbol}: last price ${last_p:.2f}; forecast (next 7 days): " + ", ".join(f"${x:.2f}" for x in fc[:7])
                             return AgentResponse(success=True, message=summary, data=result, recommendations=[], next_actions=[])
                 except Exception as e:

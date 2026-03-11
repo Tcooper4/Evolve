@@ -373,8 +373,11 @@ class ForecastRouter:
         last = 0.0
         if data is not None and not data.empty:
             numeric = data.select_dtypes(include=[np.number])
-            if not numeric.empty:
-                last = float(numeric.iloc[-1].mean())
+            if not numeric.empty and len(numeric) > 0:
+                last_val = numeric.iloc[-1].mean()
+                last = float(last_val) if pd.notna(last_val) else 0.0
+            else:
+                last = 0.0
         return {
             "model": "fallback",
             "forecast": np.full(horizon, last),
@@ -410,8 +413,9 @@ class ForecastRouter:
         for col in ("Close", "close", "price", "Price"):
             if col in data.columns:
                 try:
-                    last = float(pd.to_numeric(data[col], errors="coerce").dropna().iloc[-1])
-                    if np.isfinite(last):
+                    s = pd.to_numeric(data[col], errors="coerce").dropna()
+                    last = float(s.iloc[-1]) if len(s) > 0 and not pd.isna(s.iloc[-1]) else None
+                    if last is not None and np.isfinite(last):
                         return np.full(horizon, last, dtype="float64")
                 except Exception:
                     pass
@@ -752,7 +756,7 @@ class ForecastRouter:
                 # Enforce that outputs are in price space and roughly anchored to last close.
                 try:
                     last_close = None
-                    if isinstance(data, pd.DataFrame):
+                    if isinstance(data, pd.DataFrame) and not data.empty:
                         if "Close" in data.columns:
                             last_close = float(data["Close"].iloc[-1])
                         elif "close" in data.columns:
