@@ -45,22 +45,6 @@
   ],
   "arima": [
     {
-      "timestamp": "2026-03-09T23:44:28.869554",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-10T00:02:24.781242",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
       "timestamp": "2026-03-10T00:28:30.002990",
       "sharpe_ratio": 1.9760811402093283,
       "win_rate": 0.5,
@@ -443,25 +427,25 @@
       "max_drawdown": -0.043763670175799615,
       "mse": 18.17135353110694,
       "total_return": 0.01772186397292197
+    },
+    {
+      "timestamp": "2026-03-10T21:38:37.422795",
+      "sharpe_ratio": 1.2979012202942815,
+      "win_rate": 0.3333333333333333,
+      "max_drawdown": -0.02529886640385732,
+      "mse": 12.118393859371778,
+      "total_return": 0.009500078565112702
+    },
+    {
+      "timestamp": "2026-03-10T21:39:59.969108",
+      "sharpe_ratio": -5.25838328629527,
+      "win_rate": 0.5,
+      "max_drawdown": -0.06542627602628918,
+      "mse": 36.63505854719517,
+      "total_return": -0.04615411657095547
     }
   ],
   "xgboost": [
-    {
-      "timestamp": "2026-03-09T23:44:30.303173",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
-    {
-      "timestamp": "2026-03-10T00:02:26.340865",
-      "sharpe_ratio": -1.0,
-      "win_rate": 0.0,
-      "max_drawdown": -1.0,
-      "mse": Infinity,
-      "total_return": -10
-    },
     {
       "timestamp": "2026-03-10T00:28:30.566397",
       "sharpe_ratio": -11.063773468226282,
@@ -845,6 +829,22 @@
       "max_drawdown": -0.022220263352970386,
       "mse": 21.054357701447508,
       "total_return": 0.0403989262109854
+    },
+    {
+      "timestamp": "2026-03-10T21:38:38.298938",
+      "sharpe_ratio": 8.347852163678288,
+      "win_rate": 0.6666666666666666,
+      "max_drawdown": -0.00954392693141078,
+      "mse": 10.549139015355724,
+      "total_return": 0.05992388385315972
+    },
+    {
+      "timestamp": "2026-03-10T21:40:00.603572",
+      "sharpe_ratio": 9.810843237739647,
+      "win_rate": 0.6666666666666666,
+      "max_drawdown": -0.014950162239514935,
+      "mse": 38.15593036701413,
+      "total_return": 0.0764706457509643
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
-  "target_column": 0.25,
-  "feature_columns": 0.25,
-  "arima": 0.25,
-  "xgboost": 0.25
+  "target_column": 0.027563950779931484,
+  "feature_columns": 0.027563950779931484,
+  "arima": 0.09325342589116827,
+  "xgboost": 0.8516186725489687
 }
