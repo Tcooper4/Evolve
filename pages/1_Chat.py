@@ -141,24 +141,32 @@ if prompt:
                     "action_data": None,
                 })
 
-# Live news for current chat symbol
-_chat_symbol = st.session_state.get("last_symbol_mentioned", "SPY")
-with st.expander(f"Live News: {_chat_symbol}", expanded=False):
+# Live news for current chat symbol using yfinance
+default_symbol = st.session_state.get("last_symbol_mentioned", "SPY") or "SPY"
+news_symbol = st.text_input("News symbol", value=default_symbol, key="chat_news_symbol").strip().upper()
+with st.expander(f"Live News: {news_symbol}", expanded=False):
     try:
-        from trading.data.news_aggregator import get_news
+        import yfinance as yf
 
-        _news = get_news(_chat_symbol, max_items=8)
-        for item in _news:
-            title = item.get("title", "")
-            url = item.get("url", "")
-            source = item.get("source", "")
-            st.markdown(f"**[{source}]** [{title}]({url})")
-            summary = item.get("summary")
-            if summary:
-                st.caption(summary[:150])
-            st.divider()
-    except Exception as e:
-        st.caption(f"News unavailable: {e}")
+        if news_symbol:
+            ticker = yf.Ticker(news_symbol)
+            items = ticker.news or []
+            if not items:
+                st.info("News temporarily unavailable")
+            else:
+                for item in items[:10]:
+                    title = item.get("title", "")
+                    publisher = item.get("publisher", "")
+                    link = item.get("link", "")
+                    if not title or not link:
+                        continue
+                    st.markdown(f"**{title}** — {publisher}")
+                    st.caption(f"[Read more]({link})")
+                    st.divider()
+        else:
+            st.info("Enter a symbol to view news.")
+    except Exception:
+        st.info("News temporarily unavailable")
 with st.sidebar:
     # Multi-agent orchestration toggle
     agent_mode = st.toggle(

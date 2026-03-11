@@ -612,15 +612,9 @@ with st.sidebar:
         help="Minimum volume multiple over 20-period average to trigger alert",
     )
     price_threshold = st.slider("Min price move %", 0.5, 5.0, 2.0, 0.5)
-    custom_watchlist = st.text_input(
-        "Watchlist (comma separated)",
-        default_watchlist,
-        key="watchlist_input",
-    )
-if custom_watchlist.strip() != default_watchlist.strip() and session_id:
-    save_user_preferences(session_id, {**saved_prefs, "watchlist": custom_watchlist.strip()})
 
-watchlist = [s.strip().upper() for s in custom_watchlist.split(",") if s.strip()]
+watchlist_pref = saved_prefs.get("watchlist", default_watchlist)
+watchlist = [s.strip().upper() for s in watchlist_pref.split(",") if s.strip()]
 if not watchlist:
     watchlist = DEFAULT_WATCHLIST
 
@@ -692,23 +686,7 @@ if st.session_state.home_briefing_text is None:
 
 market_data = st.session_state.home_briefing_market_data
 
-# Metric row: SPY and AAPL price + weekly change %
-if market_data:
-    m1, m2 = st.columns(2)
-    for col, symbol in zip([m1, m2], ["SPY", "AAPL"]):
-        if symbol in market_data:
-            data = market_data[symbol]
-            cur = data.get("current")
-            week_ago = data.get("week_ago")
-            with col:
-                if cur is not None:
-                    delta = None
-                    if week_ago is not None and week_ago != 0:
-                        pct = ((cur - week_ago) / week_ago) * 100
-                        delta = f"{pct:+.1f}% vs 1w"
-                    st.metric(label=symbol, value=f"${cur:,.2f}", delta=delta)
-
-st.markdown("---")
+# Remove duplicate SPY/AAPL weekly metric row; briefing and top index metrics already cover this section.
 with st.container(border=True):
     st.markdown(st.session_state.home_briefing_text)
 

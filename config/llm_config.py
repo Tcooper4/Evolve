@@ -109,10 +109,6 @@ def get_llm_config() -> LLMConfig:
 
         get_config()  # ensure config loaded
         openai_key = _normalize_openai_key(os.getenv("OPENAI_API_KEY"))
-        if openai_key and not openai_key.startswith("sk-"):
-            logger.warning(
-                "OPENAI_API_KEY may be malformed — expected format: sk-..."
-            )
         anthropic_key = _normalize_anthropic_key(os.getenv("ANTHROPIC_API_KEY"))
         google_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or None
         hf_key = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("HF_TOKEN") or None
@@ -130,10 +126,6 @@ def get_llm_config() -> LLMConfig:
     except Exception as e:
         logger.warning(f"Could not load app config for LLM, using env only: {e}")
         openai_key = _normalize_openai_key(os.getenv("OPENAI_API_KEY"))
-        if openai_key and not openai_key.startswith("sk-"):
-            logger.warning(
-                "OPENAI_API_KEY may be malformed — expected format: sk-..."
-            )
         _config = LLMConfig(
             openai_api_key=openai_key,
             anthropic_api_key=_normalize_anthropic_key(os.getenv("ANTHROPIC_API_KEY")),

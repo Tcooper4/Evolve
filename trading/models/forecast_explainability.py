@@ -18,15 +18,12 @@ warnings.filterwarnings("ignore")
 
 # Try to import SHAP
 try:
-    try:
     import shap
     HAS_SHAP = True
+    SHAP_AVAILABLE = True
 except ImportError:
     shap = None
     HAS_SHAP = False
-
-    SHAP_AVAILABLE = True
-except ImportError:
     SHAP_AVAILABLE = False
 
 

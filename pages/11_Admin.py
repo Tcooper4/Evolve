@@ -575,15 +575,20 @@ with tab1:
     )
 
     with auto_tab1:
-            st.subheader("Active Workflows")
-            
-            try:
-                active_workflows = workflows.get_active_workflows()
-            except Exception:
-                active_workflows = []
-            
-            if active_workflows:
-                for workflow in active_workflows:
+        st.subheader("Active Workflows")
+        try:
+            from trading.automation import workflows, automation
+        except Exception as e:
+            st.caption(f"Workflow automation unavailable: {e}")
+            workflows = None
+            automation = None
+        try:
+            active_workflows = workflows.get_active_workflows() if workflows else []
+        except Exception:
+            active_workflows = []
+
+        if active_workflows:
+            for workflow in active_workflows:
                     with st.expander(f"🔄 {workflow.get('name', 'Unknown')}", expanded=True):
                         col1, col2, col3 = st.columns(3)
                         
@@ -602,56 +607,71 @@ with tab1:
                         
                         # Actions
                         col_a, col_b, col_c = st.columns(3)
-                        
+
                         with col_a:
                             if st.button("▶️ Run Now", key=f"run_{workflow.get('id', 'unknown')}"):
                                 try:
-                                    automation.run_workflow(workflow.get('id'))
-                                    st.success("Workflow started!")
-                                    st.rerun()
+                                    if automation:
+                                        automation.run_workflow(workflow.get('id'))
+                                        st.success("Workflow started!")
+                                        st.rerun()
+                                    else:
+                                        st.caption("Automation engine unavailable.")
                                 except Exception as e:
-                                    st.error(f"Error: {e}")
+                                    st.caption(f"Feature unavailable: {e}")
                         
                         with col_b:
                             if workflow.get('status') == 'running':
                                 if st.button("⏸️ Pause", key=f"pause_{workflow.get('id', 'unknown')}"):
                                     try:
-                                        automation.pause_workflow(workflow.get('id'))
-                                        st.success("Workflow paused")
-                                        st.rerun()
+                                        if automation:
+                                            automation.pause_workflow(workflow.get('id'))
+                                            st.success("Workflow paused")
+                                            st.rerun()
+                                        else:
+                                            st.caption("Automation engine unavailable.")
                                     except Exception as e:
-                                        st.error(f"Error: {e}")
+                                        st.caption(f"Feature unavailable: {e}")
                             else:
                                 if st.button("▶️ Resume", key=f"resume_{workflow.get('id', 'unknown')}"):
                                     try:
-                                        automation.resume_workflow(workflow.get('id'))
-                                        st.success("Workflow resumed")
-                                        st.rerun()
+                                        if automation:
+                                            automation.resume_workflow(workflow.get('id'))
+                                            st.success("Workflow resumed")
+                                            st.rerun()
+                                        else:
+                                            st.caption("Automation engine unavailable.")
                                     except Exception as e:
-                                        st.error(f"Error: {e}")
+                                        st.caption(f"Feature unavailable: {e}")
                         
                         with col_c:
                             if st.button("🗑️ Delete", key=f"delete_{workflow.get('id', 'unknown')}"):
                                 try:
-                                    automation.delete_workflow(workflow.get('id'))
-                                    st.success("Workflow deleted")
-                                    st.rerun()
+                                    if automation:
+                                        automation.delete_workflow(workflow.get('id'))
+                                        st.success("Workflow deleted")
+                                        st.rerun()
+                                    else:
+                                        st.caption("Automation engine unavailable.")
                                 except Exception as e:
-                                    st.error(f"Error: {e}")
+                                    st.caption(f"Feature unavailable: {e}")
                         
                         # Execution history
                         if st.checkbox("Show history", key=f"history_{workflow.get('id', 'unknown')}"):
                             try:
-                                history = automation.get_workflow_history(workflow.get('id'), limit=10)
-                                if history:
-                                    history_df = pd.DataFrame(history)
-                                    st.dataframe(history_df, use_container_width=True)
+                                if automation:
+                                    history = automation.get_workflow_history(workflow.get('id'), limit=10)
+                                    if history:
+                                        history_df = pd.DataFrame(history)
+                                        st.dataframe(history_df, use_container_width=True)
+                                    else:
+                                        st.info("No execution history available")
                                 else:
-                                    st.info("No execution history available")
+                                    st.caption("Automation engine unavailable.")
                             except Exception as e:
-                                st.warning(f"Could not load history: {e}")
-            else:
-                st.info("No active workflows. Create one to get started.")
+                                st.caption(f"Feature unavailable: {e}")
+        else:
+            st.info("No active workflows. Create one to get started.")
         
     with auto_tab2:
             st.subheader("Create New Workflow")

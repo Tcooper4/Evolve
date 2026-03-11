@@ -79,6 +79,8 @@ if PROPHET_AVAILABLE:
 
                 # Initialize Prophet model with error handling
                 try:
+                    from prophet import Prophet
+
                     self.model = Prophet(**prophet_params)
                     self.fitted = False
                     self.is_fitted = False
@@ -87,10 +89,10 @@ if PROPHET_AVAILABLE:
                 except Exception as e:
                     logger.error(f"Failed to initialize Prophet model: {e}")
                     self.model = None
+                    self.available = False
                     self.fitted = False
                     self.is_fitted = False
                     logger.warning("Prophet model unavailable (init failure): %s", e)
-                    # Don't set available to False here as we can still register
 
             except Exception as e:
                 logger.error(f"Failed to initialize ProphetModel: {e}")

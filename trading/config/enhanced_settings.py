@@ -208,7 +208,7 @@ ENVIRONMENT_SCHEMAS = [
     ValidationSchema(
         name="OPENAI_API_KEY",
         required=False,
-        pattern=r"^sk-[A-Za-z0-9]{32,}$",
+        pattern=r"^sk-[A-Za-z0-9\-_]{20,}$",
         description="OpenAI API key",
     ),
     ValidationSchema(
