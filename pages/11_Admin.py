@@ -901,9 +901,6 @@ with tab1:
             with col4:
                 st.metric("Failed Today", stats.get('failed_today', 0))
     
-    if not (automation and workflows and config):
-        st.info("⚙️ Workflow automation is not yet implemented. Coming in a future release.")
-    
     st.markdown("---")
     
     # Agent API Service
