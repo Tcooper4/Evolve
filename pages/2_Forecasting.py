@@ -1209,7 +1209,10 @@ with tab1:
                 
                 with st.expander("View Feature Importance & Explanations", expanded=False):
                     try:
-                        from trading.models.forecast_explainability import ForecastExplainability
+                        from trading.analytics.forecast_explainability import (
+                            IntelligentForecastExplainability,
+                        )
+                        ForecastExplainability = IntelligentForecastExplainability
                         
                         # Display cached explanation so it persists across reruns
                         if st.session_state.get('forecast_explanation') is not None:
@@ -1270,10 +1273,10 @@ with tab1:
                                     import traceback
                                     st.code(traceback.format_exc())
                     
-                    except ImportError:
-                        st.warning("Forecast explainability requires SHAP library. Install with: pip install shap")
+                    except ImportError as e:
+                        st.caption(f"Feature unavailable: Forecast explainability requires SHAP (pip install shap). Details: {e}")
                     except Exception as e:
-                        st.error(f"Error initializing explainability: {e}")
+                        st.caption(f"Feature unavailable: {e}")
                 
                 # AI Commentary section
                 st.markdown("---")

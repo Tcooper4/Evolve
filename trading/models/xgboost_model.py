@@ -490,6 +490,13 @@ class XGBoostModel(BaseModel):
             target = target.loc[common_index]
 
             if features.empty or target.empty:
+                # Provide a clearer error when called with very short histories
+                original_len = len(data)
+                if original_len < 50:
+                    raise ValueError(
+                        f"Insufficient data for XGBoost features: "
+                        f"{original_len} rows provided, need at least 50"
+                    )
                 raise ValueError("No valid data after feature preparation")
 
             return features, target

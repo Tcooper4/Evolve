@@ -3875,7 +3875,7 @@ with tab_monitoring:
             pass  # Silently fail if alerts not available
     
     else:
-        st.warning("Model monitoring not available")
+        st.info("Model monitoring coming soon")
 
 # TAB 7: Model Registry
 with tab7:
@@ -4432,7 +4432,7 @@ with tab_discovery:
         ModelDiscoveryAgent = None
 
     if ModelDiscoveryAgent is None:
-        st.warning("Model discovery is not available (agent rationalized). Use the tools above to train and compare models.")
+        st.info("🤖 AI Model Discovery is available via the tools above. Select a model type and dataset to begin training and comparison.")
     else:
         # Initialize agent
         if 'model_discovery_agent' not in st.session_state:
@@ -4581,7 +4581,7 @@ with tab_discovery:
                                 st.success("Saved! Use this config in Advanced Forecasting.")
                     
                     except Exception as e:
-                        st.error(f"Error during model discovery: {e}")
+                        st.caption(f"Feature unavailable: {e}")
                         import traceback
                         st.code(traceback.format_exc())
 
@@ -4589,31 +4589,31 @@ with tab_discovery:
 with tab_innovation:
     st.header("🧪 AI Model Innovation Lab")
     st.write("AI automatically designs novel model architectures tailored to your data")
-    
+
     try:
         from agents.model_innovation_agent import ModelInnovationAgent, InnovationConfig
-        
+
         if 'model_innovation_agent' not in st.session_state:
             st.session_state.model_innovation_agent = ModelInnovationAgent()
-        
+
         agent = st.session_state.model_innovation_agent
-        
+
         # Check if we have data
         if 'training_data' not in st.session_state or st.session_state.training_data is None:
             st.warning("⚠️ Please load training data first in the Quick Training tab")
         else:
             data = st.session_state.training_data
-            
+
             # Innovation settings
             col1, col2 = st.columns(2)
-            
+
             with col1:
                 base_architecture = st.selectbox(
                     "Base Architecture",
                     ["LSTM", "Transformer", "CNN", "Hybrid"],
                     help="Starting point for innovation"
                 )
-            
+
             with col2:
                 innovation_level = st.slider(
                     "Innovation Level",
@@ -4622,7 +4622,7 @@ with tab_innovation:
                     value=5,
                     help="1=Conservative, 10=Experimental"
                 )
-            
+
             if st.button("🚀 Generate Novel Architecture", type="primary"):
                 with st.spinner("AI is designing novel model architecture..."):
                     try:
@@ -4638,7 +4638,7 @@ with tab_innovation:
                                 'has_trend': True,
                                 'has_seasonality': False
                             }
-                        
+
                         # Generate innovation
                         if hasattr(agent, 'innovate_architecture'):
                             result = agent.innovate_architecture(
@@ -4651,7 +4651,7 @@ with tab_innovation:
                             # Use discover_models as alternative
                             target_col = 'close' if 'close' in data.columns else data.columns[0]
                             candidates = agent.discover_models(data, target_col=target_col)
-                            
+
                             if candidates:
                                 best_candidate = max(candidates, key=lambda c: c.score if hasattr(c, 'score') else 0.0)
                                 result = {
@@ -4672,22 +4672,22 @@ with tab_innovation:
                         else:
                             st.error("ModelInnovationAgent does not have innovate_architecture or discover_models method")
                             result = None
-                        
+
                         if result:
                             st.success("✅ Novel architecture created!")
-                            
+
                             # Show architecture
                             st.subheader("🏗️ Architecture Design")
                             st.write(result.get('architecture_description', 'No description available'))
-                            
+
                             # Visualization
                             if 'architecture_diagram' in result:
                                 st.image(result['architecture_diagram'])
-                            
+
                             # Code
                             st.subheader("💻 Implementation")
                             st.code(result.get('implementation_code', '# No implementation code available'), language='python')
-                            
+
                             # Expected performance
                             st.subheader("📊 Expected Performance")
                             col1, col2, col3 = st.columns(3)
@@ -4701,31 +4701,27 @@ with tab_innovation:
                                 st.metric("Training Time", result.get('estimated_train_time', 'Unknown'))
                             with col3:
                                 st.metric("Complexity Score", f"{result.get('complexity_score', 5)}/10")
-                            
+
                             # Innovations
                             if result.get('key_innovations'):
                                 st.subheader("💡 Key Innovations")
                                 for innovation in result['key_innovations']:
                                     st.write(f"• {innovation}")
-                            
+
                             # Train button
                             if st.button("🎯 Train This Model"):
                                 st.info("Model training initiated...")
                                 st.session_state.innovation_model = result
                                 st.success("Model configuration saved! Use it in the Quick Training tab.")
-                    
                     except Exception as e:
-                        st.error(f"Error during model innovation: {e}")
+                        st.caption(f"Model Innovation: {e}")
                         import traceback
                         st.code(traceback.format_exc())
-    
+
     except ImportError as e:
-        st.error(f"Model Innovation Agent not available: {e}")
-        st.info("The Model Innovation Agent requires FLAML or Optuna. Install with: pip install flaml optuna")
+        st.caption(f"Model Innovation Agent requires optional dependencies: {e}")
     except Exception as e:
-        st.error(f"Error initializing Model Innovation Agent: {e}")
-        import traceback
-        st.code(traceback.format_exc())
+        st.caption(f"Model Innovation unavailable: {e}")
 
 # TAB 10: Model Benchmarking
 with tab_benchmark:

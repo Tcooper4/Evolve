@@ -49,6 +49,23 @@ from .base_model import BaseModel, ModelError, ModelRegistry, ValidationError
 logger = logging.getLogger(__name__)
 
 
+def _safe_mape(actual: np.ndarray, predicted: np.ndarray) -> Optional[float]:
+    """
+    Calculate MAPE with protection against division by zero and degenerate cases.
+    Returns None if no valid non-zero actual values are available.
+    """
+    if actual is None or predicted is None:
+        return None
+    actual = np.asarray(actual, dtype=float)
+    predicted = np.asarray(predicted, dtype=float)
+    if actual.shape != predicted.shape or actual.size == 0:
+        return None
+    mask = actual != 0
+    if not np.any(mask):
+        return None
+    return float(np.mean(np.abs((actual[mask] - predicted[mask]) / actual[mask])) * 100.0)
+
+
 @ModelRegistry.register("ridge")
 class RidgeModel(BaseModel):
     """
@@ -421,10 +438,15 @@ class RidgeModel(BaseModel):
                     np.sqrt(mean_squared_error(target, predictions))
                 ),
                 "mean_absolute_error": float(mean_absolute_error(target, predictions)),
-                "mean_absolute_percentage_error": float(
-                    np.mean(np.abs((target - predictions) / (target + 1e-10))) * 100
-                ),
             }
+
+            mape = _safe_mape(target, predictions)
+            if mape is not None:
+                metrics["mean_absolute_percentage_error"] = mape
+            else:
+                logger.debug(
+                    "MAPE could not be computed for Ridge training (no non-zero actuals)."
+                )
 
             return metrics
 
@@ -621,10 +643,15 @@ class RidgeModel(BaseModel):
                     np.sqrt(mean_squared_error(target, predictions))
                 ),
                 "mean_absolute_error": float(mean_absolute_error(target, predictions)),
-                "mean_absolute_percentage_error": float(
-                    np.mean(np.abs((target - predictions) / (target + 1e-10))) * 100
-                ),
             }
+
+            mape = _safe_mape(target, predictions)
+            if mape is not None:
+                metrics["mean_absolute_percentage_error"] = mape
+            else:
+                logger.debug(
+                    "MAPE could not be computed for Ridge evaluation (no non-zero actuals)."
+                )
 
             logger.info(f"Ridge model evaluation completed: {metrics}")
             return metrics

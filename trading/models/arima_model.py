@@ -628,6 +628,70 @@ class ARIMAModel(BaseModel):
                 "timestamp": pd.Timestamp.now().isoformat(),
             }
 
+    def predict(self, data_or_steps=1, confidence_level: float = 0.95):
+        """
+        Predict wrapper compatible with both BaseModel-style and ensemble calls.
+
+        If called with a DataFrame (e.g. from EnsembleModel), infer a reasonable
+        horizon from the length and return a 1D numpy array of floats.
+        """
+        # Ensemble compatibility: called with a DataFrame instead of steps
+        if isinstance(data_or_steps, pd.DataFrame):
+            df = data_or_steps
+            steps = min(30, max(1, len(df) // 5))
+            if not self.is_fitted:
+                # Best-effort: fit on the provided close/Close series if available
+                close_col = (
+                    "Close"
+                    if "Close" in df.columns
+                    else "close"
+                    if "close" in df.columns
+                    else df.select_dtypes(include=[np.number]).columns[-1]
+                    if not df.select_dtypes(include=[np.number]).empty
+                    else None
+                )
+                if close_col is not None:
+                    try:
+                        series = df[close_col].astype(float)
+                        self.fit(series)
+                    except Exception:
+                        return np.full(steps, float("nan"))
+                else:
+                    return np.full(steps, float("nan"))
+            try:
+                # Use underlying fitted model's predict/forecast API
+                if hasattr(self.fitted_model, "predict") and not hasattr(
+                    self.fitted_model, "forecast"
+                ):
+                    fc = self.fitted_model.predict(n_periods=steps)
+                elif hasattr(self.fitted_model, "forecast"):
+                    fc = self.fitted_model.forecast(steps=steps)
+                else:
+                    fc = self.fitted_model.predict(n_periods=steps)
+                arr = (
+                    fc.values
+                    if hasattr(fc, "values")
+                    else np.asarray(fc, dtype="float64")
+                )
+                return np.asarray(arr, dtype="float64").ravel()
+            except Exception:
+                return np.full(steps, float("nan"))
+
+        # Fallback: original semantics with steps argument
+        steps = int(data_or_steps)
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before prediction")
+        if hasattr(self.fitted_model, "predict") and not hasattr(
+            self.fitted_model, "forecast"
+        ):
+            fc = self.fitted_model.predict(n_periods=steps)
+        elif hasattr(self.fitted_model, "forecast"):
+            fc = self.fitted_model.forecast(steps=steps)
+        else:
+            fc = self.fitted_model.predict(n_periods=steps)
+        arr = fc.values if hasattr(fc, "values") else np.asarray(fc, dtype="float64")
+        return np.asarray(arr, dtype="float64").ravel()
+
     @safe_forecast(max_retries=2, retry_delay=0.5, log_errors=True)
     def forecast(self, data: pd.Series, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.

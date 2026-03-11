@@ -316,6 +316,17 @@ class GNNForecaster:
         Returns:
             self
         """
+        # Basic input validation to guard against wrong types (e.g. dict instead of DataFrame)
+        if isinstance(data, dict):
+            try:
+                data = pd.DataFrame(data)
+            except Exception as e:
+                raise ValueError(f"GNNForecaster.fit expected DataFrame or dict of Series; got invalid dict: {e}")
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError(f"GNNForecaster.fit expected pandas DataFrame, got {type(data).__name__}")
+        if data.empty:
+            raise ValueError("GNNForecaster.fit received empty data frame")
+
         # Build adjacency matrix from correlations
         self.adjacency_matrix = self._build_adjacency_matrix(data)
         
@@ -429,6 +440,20 @@ class GNNForecaster:
         Returns:
             Forecast dictionary
         """
+        # Validate input types early to avoid confusing errors (e.g. int * dict)
+        if isinstance(data, dict):
+            try:
+                data = pd.DataFrame(data)
+            except Exception as e:
+                raise ValueError(f"GNNForecaster.forecast expected DataFrame or dict of Series; got invalid dict: {e}")
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError(f"GNNForecaster.forecast expected pandas DataFrame, got {type(data).__name__}")
+        try:
+            horizon = int(horizon)
+        except Exception as e:
+            raise ValueError(f"GNNForecaster.forecast expected integer horizon, got {horizon!r}: {e}")
+        if horizon <= 0:
+            raise ValueError("GNNForecaster.forecast horizon must be positive")
         # For simplicity, do multi-step forecasting by iterating
         predictions = []
         current_data = data.copy()

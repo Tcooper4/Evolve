@@ -10,8 +10,8 @@ interface and uses flaml/optuna only when available.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 try:
     import flaml  # type: ignore
@@ -31,6 +31,21 @@ class ModelInnovationResult:
     best_params: Optional[Dict[str, Any]] = None
     best_score: Optional[float] = None
     search_space: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class InnovationConfig:
+    """
+    Configuration for model innovation runs.
+
+    This mirrors the minimal fields expected by tests and the Model Lab UI,
+    without enforcing any specific AutoML backend.
+    """
+
+    max_models: int = 10
+    evaluation_window: int = 30
+    min_improvement: float = 0.01
+    enabled_model_types: List[str] = field(default_factory=list)
 
 
 class ModelInnovationAgent:

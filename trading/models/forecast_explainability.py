@@ -18,7 +18,12 @@ warnings.filterwarnings("ignore")
 
 # Try to import SHAP
 try:
+    try:
     import shap
+    HAS_SHAP = True
+except ImportError:
+    shap = None
+    HAS_SHAP = False
 
     SHAP_AVAILABLE = True
 except ImportError:
@@ -274,7 +279,12 @@ class ForecastExplainability:
                     logger.warning(f"LIME calculation failed: {e}")
             elif method.lower() == "shap":
                 try:
-                    import shap
+                    try:
+    import shap
+    HAS_SHAP = True
+except ImportError:
+    shap = None
+    HAS_SHAP = False
                 except ImportError:
                     shap = None
                 if shap is not None and hasattr(model, "predict"):

@@ -4086,7 +4086,7 @@ else:
             st.session_state.task_monitor = None
             st.success("Task Orchestrator created (click Initialize to load tasks)")
         except Exception as _init_err:
-            st.error(f"Orchestrator init failed: {_init_err}")
+            st.caption(f"Task Orchestrator unavailable: {_init_err}")
 
     _orch = st.session_state.get("task_orchestrator")
     # Lazy init: when user clicks "Initialize Orchestrator", run heavy setup
@@ -4109,7 +4109,7 @@ else:
                 st.success("Orchestrator initialized — tasks loaded")
                 st.rerun()
             except Exception as _e:
-                st.error(f"Initialize failed: {_e}")
+                st.caption(f"Task Orchestrator unavailable: {_e}")
         st.caption("Initialize loads task providers and schedules (may take a few seconds).")
         # Skip rendering tabs until initialized
         _orch = None

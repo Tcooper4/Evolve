@@ -81,10 +81,42 @@ class Trade:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert trade to dictionary for serialization."""
-        entry_date = self.timestamp.isoformat() if hasattr(self, "timestamp") and self.timestamp else None
-        exit_date = None  # Backtesting Trade has no exit_time
+        entry_date = (
+            self.timestamp.isoformat()
+            if hasattr(self, "timestamp") and self.timestamp
+            else None
+        )
+        exit_date = None
+        if hasattr(self, "exit_time") and getattr(self, "exit_time"):
+            try:
+                exit_date = self.exit_time.isoformat()
+            except Exception:
+                exit_date = None
+        elif hasattr(self, "exit_date") and getattr(self, "exit_date"):
+            try:
+                exit_date = self.exit_date.isoformat()
+            except Exception:
+                exit_date = None
+        elif hasattr(self, "exit_timestamp") and getattr(self, "exit_timestamp"):
+            try:
+                exit_date = self.exit_timestamp.isoformat()
+            except Exception:
+                exit_date = None
+
         duration_days = None
-        if hasattr(self, "holding_period") and self.holding_period is not None:
+        # Prefer actual entry/exit dates when available
+        if entry_date and exit_date:
+            try:
+                from datetime import datetime
+
+                entry_dt = datetime.fromisoformat(entry_date)
+                exit_dt = datetime.fromisoformat(exit_date)
+                duration_days = (exit_dt - entry_dt).days
+            except Exception:
+                duration_days = None
+
+        # Fallback to holding_period if duration_days still unknown
+        if duration_days is None and hasattr(self, "holding_period") and self.holding_period is not None:
             try:
                 duration_days = int(float(self.holding_period))
             except (TypeError, ValueError):

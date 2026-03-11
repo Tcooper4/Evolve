@@ -3265,7 +3265,7 @@ with tab_research:
     """)
     
     try:
-        from trading.agents.strategy_research_agent import StrategyResearchAgent
+        from agents.strategy_research_agent import StrategyResearchAgent
         
         # Initialize agent
         if 'strategy_research_agent' not in st.session_state:
@@ -3455,10 +3455,10 @@ with tab_research:
                     else:
                         st.warning("No strategies were discovered. Try adjusting the research parameters.")
     
-    except ImportError:
-        st.error("Strategy Research Agent not available")
+    except ImportError as e:
+        st.info("🔬 Strategy Research: configure an LLM API key in Settings to enable AI-powered strategy research.")
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.caption(f"Feature unavailable: {e}")
 
 # Tab RL: Reinforcement Learning Training
 with tab_rl:

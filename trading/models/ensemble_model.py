@@ -252,6 +252,7 @@ class EnsembleModel(BaseModel):
             data: Recent data for performance calculation
         """
         window = self.config["weight_window"]
+        # Use a slightly longer window for models that require more history (e.g., XGBoost)
         recent_data = data.iloc[-window:]
 
         # Robustly obtain actual price series (handles Close/close and numeric fallback)
@@ -265,8 +266,14 @@ class EnsembleModel(BaseModel):
 
         for model_name, model in self.models.items():
             try:
-                # Get model predictions
-                raw_preds = model.predict(recent_data)
+                # Get model predictions (ensure sufficient history for models like XGBoost)
+                if hasattr(model, "__class__") and model.__class__.__name__.lower().startswith("xgboost"):
+                    _recent = (
+                        data.iloc[-100:] if len(data) >= 100 else data
+                    )
+                else:
+                    _recent = recent_data
+                raw_preds = model.predict(_recent)
                 preds = self._normalize_submodel_output(raw_preds)
                 if preds.size == 0:
                     raise ValueError("Empty prediction array from sub-model")
@@ -428,8 +435,12 @@ class EnsembleModel(BaseModel):
         trend_weights = {}
         for model_name, model in self.models.items():
             try:
-                # Get model's trend prediction
-                raw_preds = model.predict(data.iloc[-20:])
+                # Get model's trend prediction; ensure sufficient history for XGBoost
+                if hasattr(model, "__class__") and model.__class__.__name__.lower().startswith("xgboost"):
+                    _recent = data.iloc[-100:] if len(data) >= 100 else data
+                else:
+                    _recent = data.iloc[-20:]
+                raw_preds = model.predict(_recent)
                 preds = self._normalize_submodel_output(raw_preds)
                 if preds.size == 0:
                     raise ValueError("Empty prediction array from sub-model")
@@ -546,7 +557,12 @@ class EnsembleModel(BaseModel):
         confidences = {}
         for model_name, model in self.models.items():
             try:
-                preds = model.predict(data.iloc[-20:])  # Use last 20 points
+                # Use a longer slice for models like XGBoost that need more history
+                if hasattr(model, "__class__") and model.__class__.__name__.lower().startswith("xgboost"):
+                    _recent = data.iloc[-100:] if len(data) >= 100 else data
+                else:
+                    _recent = data.iloc[-20:]
+                preds = model.predict(_recent)
                 confidences[model_name] = (
                     model.calculate_confidence(preds)
                     if hasattr(model, "calculate_confidence")
