@@ -21,12 +21,12 @@ catboost==1.2.10
 prophet==1.1.7
 pmdarima==2.0.3
 torch==2.1.2
-# torchaudio==2.1.2
-# torchvision==0.16.2
+# torchaudio==2.1.2       # not needed
+# torchvision==0.16.2     # not needed
 statsmodels==0.14.1
 scipy==1.15.3
 numba==0.61.2
-# neuralforecast - too large for free tier
+# neuralforecast          # too large for free tier
 
 # LLM / AI
 openai==1.88.0
@@ -67,15 +67,15 @@ XlsxWriter==3.2.3
 # Sentiment
 vaderSentiment==3.3.2
 
-# Optional: technical indicators (fallbacks exist if not installed)
-# pandas_ta>=0.3.14b
+# Technical indicators — fallback RSI active, pandas_ta not needed
+# pandas_ta>=0.3.14b      # requires Python>=3.12, incompatible with Cloud (3.10)
 
-# Optional: optimization and tuning (portfolio_optimizer uses PyPortfolioOpt when cvxpy missing)
+# Optimization and tuning
 optuna>=3.0.0
 flaml>=2.5.0
 arch>=8.0.0
 PyPortfolioOpt>=1.5.0
-# pyfolio-reloaded  # uncomment for tear sheet analytics if needed
+# pyfolio-reloaded        # uncomment for tear sheet analytics if needed
 
 # Web / API
 Flask==3.0.2
@@ -87,12 +87,16 @@ websocket-client==1.8.0
 ccxt==4.4.90
 backtrader==1.9.78.123
 
+# Data providers
 fredapi
 wbdata
 textblob
 feedparser>=6.0.0
 praw>=7.0.0
+
+# NLP / Embeddings
 sentence-transformers>=3.0.1,<4.0
 tiktoken
-# pyttsx3
+
+# Model explainability — conditional import, shows install message if missing
 shap
