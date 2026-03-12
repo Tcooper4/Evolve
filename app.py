@@ -88,9 +88,15 @@ from components.onboarding import check_onboarding
 
 init_user_db()
 session_id = check_onboarding()
-if session_id:
-    inject_user_keys_to_env(session_id)
-else:
+
+# Always inject API keys from user store into os.environ on every run
+try:
+    inject_user_keys_to_env(session_id or st.session_state.get("evolve_session_id", "") or "")
+except Exception:
+    # Keys may not be set yet; continue without failing
+    pass
+
+if not session_id:
     st.stop()
 
 # Sidebar branding

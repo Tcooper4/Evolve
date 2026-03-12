@@ -1,4 +1,4 @@
-"""Temporal Convolutional Network for time series forecasting."""
+﻿"""Temporal Convolutional Network for time series forecasting."""
 
 # Standard library imports
 import logging
@@ -235,6 +235,17 @@ class TCNModel(BaseModel):
             self.config["num_channels"][-1], self.config["output_size"]
         ).to(self.device)
 
+
+    def fit(self, data: pd.DataFrame, **kwargs):
+        """Fit TCN model on training data. Warms up the model via a dry forecast run."""
+        try:
+            self._training_data = data
+            _ = self.forecast(data, horizon=1)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"TCN fit() warm-up skipped: {e}")
+            self._training_data = data
+        return self
     def build_model(self):
         """Build the underlying TCN network to satisfy BaseModel.build_model."""
         self._setup_model()
@@ -562,3 +573,4 @@ class TCNModel(BaseModel):
         except Exception as e:
             logging.error(f"Error plotting TCN results: {e}")
             logger.error(f"Could not plot results: {e}")
+

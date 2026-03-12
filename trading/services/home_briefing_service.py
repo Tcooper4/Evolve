@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 # Default symbols when none from memory/preferences
-DEFAULT_SYMBOLS = ["SPY", "AAPL"]
+DEFAULT_SYMBOLS = ["SPY"]
 
 
 def _get_memory_context(store: Any, limit_lt: int = 30, limit_pref: int = 20) -> str:
@@ -53,20 +53,46 @@ def _safe_str(v: Any, max_len: int = 1500) -> str:
 
 
 def _get_key_symbols(store: Any) -> List[str]:
-    """Derive key symbols from preferences/memory or return defaults."""
+    """Derive key symbols from watchlist, portfolio, and memory; avoid hardcoded single names."""
     from trading.memory.memory_store import MemoryType
 
-    symbols = []
+    symbols: List[str] = []
+
+    # 1) Watchlist preferences (primary)
     try:
-        pref = store.list(MemoryType.PREFERENCE, limit=50)
+        pref = store.list(MemoryType.PREFERENCE, limit=100)
         for r in pref:
             key = (getattr(r, "key", None) or (r.get("key") if isinstance(r, dict) else None)) or ""
-            if "symbol" in key.lower() or "ticker" in key.lower():
-                v = r.value if hasattr(r, "value") else r.get("value", r)
+            v = r.value if hasattr(r, "value") else r.get("value", r)
+            if key.lower().endswith("watchlist") and isinstance(v, (str, list)):
+                if isinstance(v, str):
+                    candidates = [s.strip().upper() for s in v.split(",") if s.strip()]
+                else:
+                    candidates = [str(s).upper() for s in v if isinstance(s, str)]
+                symbols.extend(candidates[:20])
+            elif "symbol" in key.lower() or "ticker" in key.lower():
                 if isinstance(v, str) and len(v) <= 10:
                     symbols.append(v.upper())
     except Exception:
         pass
+
+    # 2) Portfolio positions
+    try:
+        from trading.portfolio.portfolio_manager import PortfolioManager
+        pm = PortfolioManager()
+        positions = getattr(pm, "state", None) and getattr(pm.state, "positions", None) or []
+        for pos in positions or []:
+            sym = (
+                pos.get("symbol")
+                if isinstance(pos, dict)
+                else getattr(pos, "symbol", None)
+            )
+            if isinstance(sym, str) and sym:
+                symbols.append(sym.upper())
+    except Exception:
+        pass
+
+    # 3) Memory-derived symbols (fallback)
     try:
         lt = store.list(MemoryType.LONG_TERM, limit=50)
         for r in lt:
@@ -84,11 +110,31 @@ def _get_key_symbols(store: Any) -> List[str]:
     except Exception:
         pass
     seen = set()
-    out = []
+    out: List[str] = []
     for s in symbols:
         if s not in seen and len(s) <= 6:
             seen.add(s)
             out.append(s)
+    # If still empty, use top movers from session_state if available
+    if not out:
+        try:
+            import streamlit as st  # type: ignore
+            movers_state = st.session_state.get("home_last_top_movers") or {}
+            gainers = movers_state.get("gainers") or []
+            losers = movers_state.get("losers") or []
+            for m in list(gainers) + list(losers):
+                sym = m.get("symbol") if isinstance(m, dict) else None
+                if isinstance(sym, str) and sym:
+                    if sym.upper() not in seen and len(sym) <= 6:
+                        seen.add(sym.upper())
+                        out.append(sym.upper())
+        except Exception:
+            pass
+
+    # Always include SPY as a market overview card if not already present
+    if "SPY" not in out:
+        out.insert(0, "SPY")
+
     return out[:8] if out else DEFAULT_SYMBOLS
 
 

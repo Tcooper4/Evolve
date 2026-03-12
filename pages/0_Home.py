@@ -250,7 +250,7 @@ def scan_top_movers(universe: str) -> dict:
         if not tickers:
             return {"as_of": None, "gainers": [], "losers": []}
 
-        # Use batch download for efficiency
+        # Use batch download for efficiency (1d for same-day change)
         data = yf.download(
             tickers,
             period="1d",
@@ -292,6 +292,51 @@ def scan_top_movers(universe: str) -> dict:
                     movers.append({"symbol": tickers[0], "price": c, "change": chg})
             except Exception:
                 pass
+
+        # Add volume_ratio for filtering: 5d download to get volume history
+        if movers and len(tickers) > 1:
+            try:
+                vol_data = yf.download(
+                    tickers,
+                    period="5d",
+                    interval="1d",
+                    auto_adjust=False,
+                    progress=False,
+                    threads=True,
+                    group_by="ticker",
+                )
+                # With group_by="ticker", columns are (Ticker, Field): level 0 = tickers, level 1 = Open/Close/Volume
+                has_vol = not vol_data.empty and (
+                    ("Volume" in vol_data.columns) if not isinstance(vol_data.columns, pd.MultiIndex) else ("Volume" in vol_data.columns.get_level_values(1))
+                )
+                if has_vol:
+                    for m in movers:
+                        sym = m["symbol"]
+                        try:
+                            if isinstance(vol_data.columns, pd.MultiIndex) and sym in vol_data["Volume"].columns:
+                                vol_series = vol_data["Volume"][sym].dropna()
+                            elif not isinstance(vol_data.columns, pd.MultiIndex):
+                                vol_series = vol_data["Volume"].dropna()
+                            else:
+                                m["volume_ratio"] = 1.0
+                                continue
+                            if len(vol_series) >= 2:
+                                last_vol = float(vol_series.iloc[-1])
+                                avg_vol = float(vol_series.iloc[:-1].mean())
+                                m["volume_ratio"] = round(last_vol / avg_vol, 2) if avg_vol and avg_vol > 0 else 1.0
+                            else:
+                                m["volume_ratio"] = 1.0
+                        except Exception:
+                            m["volume_ratio"] = 1.0
+                else:
+                    for m in movers:
+                        m["volume_ratio"] = 1.0
+            except Exception:
+                for m in movers:
+                    m["volume_ratio"] = 1.0
+        else:
+            for m in movers:
+                m["volume_ratio"] = 1.0
 
         if not movers:
             return {"as_of": as_of_ts, "gainers": [], "losers": []}
@@ -393,6 +438,35 @@ top_movers_universe = saved_prefs.get("home_top_movers_universe", TOP_MOVERS_UNI
 if top_movers_universe not in TOP_MOVERS_UNIVERSE_OPTIONS:
     top_movers_universe = TOP_MOVERS_UNIVERSE_OPTIONS[0]
 
+# Monitor settings in sidebar (early so vol/price thresholds available for Volume & News section)
+with st.sidebar:
+    st.markdown("### ⚙️ Monitor Settings")
+    vol_threshold = st.slider(
+        "Volume spike threshold",
+        1.5, 5.0, 3.0, 0.5,
+        help="Minimum volume multiple over 20-period average to trigger alert",
+    )
+    price_threshold = st.slider("Min price move %", 0.5, 5.0, 2.0, 0.5)
+
+# Top Movers universe selectbox: show count, persist to user_store
+@st.cache_data(ttl=3600)
+def _universe_stock_count(universe: str) -> int:
+    return len(load_universe_tickers(universe))
+
+_universe_opts = TOP_MOVERS_UNIVERSE_OPTIONS
+_universe_idx = _universe_opts.index(top_movers_universe) if top_movers_universe in _universe_opts else 0
+_selected_universe = st.selectbox(
+    "Top Movers universe",
+    options=_universe_opts,
+    index=_universe_idx,
+    format_func=lambda u: f"{u} ({_universe_stock_count(u)} stocks)",
+    key="home_top_movers_universe_select",
+)
+if _selected_universe != top_movers_universe:
+    save_user_preferences(session_id, {**saved_prefs, "home_top_movers_universe": _selected_universe})
+    st.rerun()
+top_movers_universe = _selected_universe
+
 current_movers = scan_top_movers(top_movers_universe)
 if (current_movers.get("gainers") or current_movers.get("losers")):
     st.session_state["home_last_top_movers"] = current_movers
@@ -408,7 +482,18 @@ if gainers or losers:
     as_of = movers_state.get("as_of")
     caption_parts = [f"Universe: {top_movers_universe}"]
     if as_of:
-        caption_parts.append(f"as of {as_of}")
+        try:
+            ts = as_of
+            if isinstance(ts, str) and "T" in ts:
+                dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                if getattr(dt, "tzinfo", None):
+                    dt = dt.replace(tzinfo=None)
+                as_of_fmt = dt.strftime("%b %d, %Y") if dt.date() != datetime.now().date() else "today"
+            else:
+                as_of_fmt = str(ts)[:10] if ts else "today"
+        except Exception:
+            as_of_fmt = "today"
+        caption_parts.append(f"as of {as_of_fmt}")
     st.caption(" • ".join(caption_parts))
 
     col_gainers, col_losers = st.columns(2)
@@ -485,6 +570,38 @@ if gainers or losers:
     except Exception:
         pass
 
+# 📊 Volume & News Events — 2×2 grid from top movers meeting volume/price thresholds
+st.markdown("---")
+st.subheader("📊 Volume & News Events")
+_vol_th = vol_threshold
+_price_th = price_threshold
+_all_movers = (movers_state.get("gainers") or []) + (movers_state.get("losers") or [])
+_qualified = [
+    m for m in _all_movers
+    if m.get("volume_ratio", 1.0) >= _vol_th and abs(m.get("change", 0)) >= _price_th
+]
+_qualified.sort(key=lambda x: x.get("volume_ratio", 0), reverse=True)
+_top4 = _qualified[:4]
+try:
+    from components.news_candle_chart import render_news_candle_chart
+except Exception:
+    render_news_candle_chart = None
+
+if render_news_candle_chart:
+    _row1_cols = st.columns(2)
+    _row2_cols = st.columns(2)
+    for _idx in range(4):
+        _col = _row1_cols[_idx % 2] if _idx < 2 else _row2_cols[_idx % 2]
+        with _col:
+            if _idx < len(_top4):
+                _sym = _top4[_idx].get("symbol", "")
+                try:
+                    render_news_candle_chart(_sym, period="3mo", interval="1d", show_annotations=True)
+                except Exception as _e:
+                    st.caption(f"Chart unavailable for {_sym}")
+            else:
+                st.info("No additional volume events detected")
+
 # Watchlist section
 st.markdown("---")
 st.subheader("Watchlist")
@@ -495,6 +612,24 @@ with st.expander("Watchlist", expanded=True):
         render_watchlist()
     except Exception as e:
         st.caption(f"Watchlist unavailable: {e}")
+
+    # 📈 Watchlist Chart — select one ticker from watchlist
+    st.markdown("#### 📈 Watchlist Chart")
+    try:
+        from trading.data.watchlist import WatchlistManager
+        _wm = WatchlistManager()
+        _tickers = [e.get("symbol", "").upper() for e in (_wm.get_all() or []) if e.get("symbol")]
+        if not _tickers:
+            st.info("Add tickers to your watchlist above to see their chart here.")
+        else:
+            _sel = st.selectbox("Ticker", _tickers, key="home_watchlist_chart_ticker")
+            if _sel:
+                try:
+                    render_news_candle_chart(_sel, period="6mo", show_annotations=True)
+                except Exception as _e:
+                    st.caption(f"Chart unavailable for {_sel}")
+    except Exception as _e:
+        st.caption(f"Watchlist chart unavailable: {_e}")
 
 # Top Opportunities — quick AI Score scan on watchlist
 st.markdown("---")
@@ -602,16 +737,6 @@ default_watchlist = saved_prefs.get(
     "watchlist",
     "AAPL,NVDA,MSFT,TSLA,AMZN,META,GOOGL,SPY,QQQ,JPM,AMD,NFLX",
 )
-
-# Monitor settings in sidebar
-with st.sidebar:
-    st.markdown("### ⚙️ Monitor Settings")
-    vol_threshold = st.slider(
-        "Volume spike threshold",
-        1.5, 5.0, 3.0, 0.5,
-        help="Minimum volume multiple over 20-period average to trigger alert",
-    )
-    price_threshold = st.slider("Min price move %", 0.5, 5.0, 2.0, 0.5)
 
 watchlist_pref = saved_prefs.get("watchlist", default_watchlist)
 watchlist = [s.strip().upper() for s in watchlist_pref.split(",") if s.strip()]

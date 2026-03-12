@@ -141,32 +141,75 @@ if prompt:
                     "action_data": None,
                 })
 
-# Live news for current chat symbol using yfinance
-default_symbol = st.session_state.get("last_symbol_mentioned", "SPY") or "SPY"
-news_symbol = st.text_input("News symbol", value=default_symbol, key="chat_news_symbol").strip().upper()
-with st.expander(f"Live News: {news_symbol}", expanded=False):
+# News Feed: default SPY on first load; ticker input + Get News button
+if "chat_news_results" not in st.session_state:
     try:
-        import yfinance as yf
-
-        if news_symbol:
-            ticker = yf.Ticker(news_symbol)
-            items = ticker.news or []
-            if not items:
-                st.info("News temporarily unavailable")
-            else:
-                for item in items[:10]:
-                    title = item.get("title", "")
-                    publisher = item.get("publisher", "")
-                    link = item.get("link", "")
-                    if not title or not link:
-                        continue
-                    st.markdown(f"**{title}** — {publisher}")
-                    st.caption(f"[Read more]({link})")
-                    st.divider()
-        else:
-            st.info("Enter a symbol to view news.")
+        from trading.data.news_aggregator import get_news
+        st.session_state.chat_news_results = get_news("SPY", max_items=10)
+        st.session_state.chat_news_ticker = "SPY"
     except Exception:
-        st.info("News temporarily unavailable")
+        st.session_state.chat_news_results = []
+        st.session_state.chat_news_ticker = "SPY"
+
+def _fetch_and_store_news(ticker: str):
+    ticker = (ticker or "SPY").strip().upper() or "SPY"
+    try:
+        from trading.data.news_aggregator import get_news
+        st.session_state.chat_news_results = get_news(ticker, max_items=10)
+        st.session_state.chat_news_ticker = ticker
+    except Exception as e:
+        st.session_state.chat_news_results = []
+        st.caption(f"News unavailable: {e}")
+
+with st.expander("📰 News Feed", expanded=True):
+    col_ticker, col_btn = st.columns([3, 1])
+    with col_ticker:
+        news_ticker = st.text_input(
+            "Ticker",
+            value=st.session_state.get("chat_news_ticker", "SPY"),
+            key="chat_news_ticker_input",
+            placeholder="e.g. SPY, AAPL",
+        ).strip().upper() or "SPY"
+    with col_btn:
+        get_news_clicked = st.button("Get News", key="chat_get_news")
+    if get_news_clicked:
+        _fetch_and_store_news(news_ticker)
+        st.rerun()
+    # Display label: Market News when SPY, else "News for {ticker}"
+    section_label = "📰 Market News" if (st.session_state.get("chat_news_ticker") or "SPY") == "SPY" else f"News for {st.session_state.get('chat_news_ticker', 'SPY')}"
+    st.caption(section_label)
+    try:
+        items = st.session_state.get("chat_news_results") or []
+        if not items:
+            st.info("News temporarily unavailable")
+        else:
+            for i, item in enumerate(items[:10]):
+                title = item.get("title") or item.get("headline", "")
+                publisher = item.get("source") or item.get("publisher", "")
+                link = item.get("url") or item.get("link", "")
+                published = item.get("published", "")
+                if not title:
+                    continue
+                st.markdown(f"**{title}** — {publisher}")
+                if link:
+                    st.caption(f"[Read more]({link})")
+                if published:
+                    try:
+                        from datetime import datetime
+                        ps = str(published).replace("Z", "+00:00")
+                        dt = datetime.fromisoformat(ps) if "+" in ps else datetime.fromisoformat(ps)
+                        if getattr(dt, "tzinfo", None):
+                            now = datetime.now(dt.tzinfo)
+                        else:
+                            now = datetime.utcnow()
+                            dt = dt.replace(tzinfo=None) if hasattr(dt, "replace") else dt
+                        age_h = (now - dt).total_seconds() / 3600.0
+                        st.caption(f"{max(0, int(age_h))}h ago")
+                    except Exception:
+                        pass
+                st.divider()
+    except Exception as e:
+        st.caption(f"News feed unavailable: {e}")
 with st.sidebar:
     # Multi-agent orchestration toggle
     agent_mode = st.toggle(

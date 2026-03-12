@@ -1216,6 +1216,11 @@ class LSTMForecaster(BaseModel):
             logger.error(traceback.format_exc())
             raise ModelTrainingError(f"LSTM training failed: {str(e)}")
 
+    def train_model(self, data, target=None, epochs=50, batch_size=32,
+                    learning_rate=0.001, **kwargs):
+        """Alias for fit() to match router interface."""
+        return self.fit(data)
+
     def predict(self, data: pd.DataFrame, batch_size: int = 32) -> np.ndarray:
         """Predict using the LSTM model with input validation, logging, and batch-wise evaluation."""
         if not self.available:

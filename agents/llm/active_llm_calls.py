@@ -477,8 +477,18 @@ def call_active_llm_simple(prompt: str, *, max_tokens: int = 2048) -> str:
     """
     Single prompt → response using the app's active LLM (from Admin preference).
     Raises on failure; no silent fallback.
+    Routes to all six providers: claude, gpt4, gemini, ollama, kimi, huggingface.
     """
-    # Allow env to override active provider for diagnostics and flexibility
+    # Ensure env has latest keys from user store if missing
+    try:
+        from config.user_store import inject_user_keys_to_env
+        from streamlit import session_state as st_session_state  # type: ignore
+        session_id = st_session_state.get("evolve_session_id", "") or st_session_state.get("session_id", "")
+        if session_id:
+            inject_user_keys_to_env(str(session_id))
+    except Exception:
+        pass
+
     env_provider = os.getenv("LLM_PROVIDER", "").strip().lower()
     provider, model, options = get_active_llm()
     if env_provider in {"openai", "anthropic", "huggingface"}:
@@ -493,14 +503,18 @@ def call_active_llm_simple(prompt: str, *, max_tokens: int = 2048) -> str:
                 return _call_huggingface_local_simple(prompt, model, max_tokens=max_tokens)
             return _call_huggingface_simple(prompt, model, max_tokens=max_tokens)
 
-    # Default: use active provider selection with Anthropic-first, then OpenAI, then others
     if provider == "claude":
         try:
             return _call_claude_simple(prompt, model, max_tokens=max_tokens)
         except Exception as e:
             if _is_anthropic_401(e):
                 logger.warning("Anthropic key invalid, falling back to OpenAI")
-                return _call_gpt4_simple(prompt, "gpt-4o", max_tokens=max_tokens)
+                try:
+                    from config.llm_config import DEFAULT_MODELS
+                    openai_model = DEFAULT_MODELS.get("gpt4", "gpt-4o")
+                except Exception:
+                    openai_model = "gpt-4o"
+                return _call_gpt4_simple(prompt, openai_model, max_tokens=max_tokens)
             raise
     if provider == "gpt4":
         return _call_gpt4_simple(prompt, model, max_tokens=max_tokens)
@@ -529,8 +543,31 @@ def call_active_llm_chat(
     """
     Chat (system + context + history + user message) using the app's active LLM.
     Raises on failure; no silent fallback.
+    Routes to all six providers: claude, gpt4, gemini, ollama, kimi, huggingface.
     """
+    try:
+        from config.user_store import inject_user_keys_to_env
+        from streamlit import session_state as st_session_state  # type: ignore
+        session_id = st_session_state.get("evolve_session_id", "") or st_session_state.get("session_id", "")
+        if session_id:
+            inject_user_keys_to_env(str(session_id))
+    except Exception:
+        pass
+
+    env_provider = os.getenv("LLM_PROVIDER", "").strip().lower()
     provider, model, options = get_active_llm()
+    if env_provider in {"openai", "anthropic", "huggingface"}:
+        logger.info("LLM_PROVIDER override active: %s", env_provider)
+        if env_provider == "anthropic":
+            return _call_claude_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
+        if env_provider == "openai":
+            return _call_gpt4_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
+        if env_provider == "huggingface":
+            hf_mode = options.get("huggingface_mode", "inference")
+            if hf_mode == "local":
+                return _call_huggingface_local_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
+            return _call_huggingface_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
+
     if provider == "claude":
         return _call_claude_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
     if provider == "gpt4":
