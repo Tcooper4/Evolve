@@ -14,6 +14,14 @@ except Exception as e:
     st.error(f"Scanner unavailable: {e}")
     scanner_available = False
 
+RUSSELL_1000_FALLBACK = [
+    "AAPL","MSFT","NVDA","AMZN","META","GOOGL","GOOG","BRK-B","LLY","AVGO",
+    "TSLA","WMT","JPM","V","XOM","UNH","ORCL","MA","COST","HD",
+    "PG","JNJ","ABBV","NFLX","BAC","CRM","CVX","MRK","AMD","PEP",
+    "TMO","ADBE","ACN","LIN","MCD","CSCO","ABT","GE","TXN","DHR",
+    "PM","CAT","ISRG","INTU","AMGN","VZ","NOW","MS","GS","RTX",
+]
+
 if not scanner_available:
     st.stop()
 
@@ -49,7 +57,9 @@ def _load_scanner_universe(universe_label: str) -> list[str]:
             if tables:
                 table = tables[0]
                 sp500 = (
-                    table["Symbol"]
+                    table[
+                        [c for c in table.columns if str(c).lower() in ("symbol", "ticker")][0]
+                    ]
                     .astype(str)
                     .str.replace(".", "-", regex=False)
                     .str.upper()
@@ -101,7 +111,7 @@ def _load_scanner_universe(universe_label: str) -> list[str]:
                                 tickers.extend(series.tolist())
                         break
                 tickers = [t for t in tickers if t and t != "nan"]
-                return tickers[:1000] if tickers else sp500
+                return tickers[:1000] if tickers else RUSSELL_1000_FALLBACK
             except Exception:
                 return sp500
 
@@ -125,7 +135,7 @@ def _load_scanner_universe(universe_label: str) -> list[str]:
                                 tickers.extend(series.tolist())
                         break
                 tickers = [t for t in tickers if t and t != "nan"]
-                return tickers if tickers else sp500
+                return tickers if tickers else RUSSELL_1000_FALLBACK
             except Exception:
                 # Fall back to Russell 1000 approximation if 3000 unavailable
                 return _load_scanner_universe("Russell 1000 (~1000, slow)")
@@ -288,6 +298,7 @@ if st.button("🚀 Run Scan", type="primary", use_container_width=False):
         try:
             import yfinance as yf
             from trading.analysis.ai_score import compute_ai_score
+
             _hist = yf.Ticker(selected_sym).history(period="6mo")
             _ai = compute_ai_score(selected_sym, _hist)
             if _ai.get("error") is None:

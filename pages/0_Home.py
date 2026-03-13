@@ -27,6 +27,14 @@ from trading.analysis.news_ranker import rank_news_by_relevance
 from trading.analysis.chart_builder import build_event_chart
 from trading.data.earnings_calendar import get_upcoming_earnings
 
+RUSSELL_1000_FALLBACK = [
+    "AAPL","MSFT","NVDA","AMZN","META","GOOGL","GOOG","BRK-B","LLY","AVGO",
+    "TSLA","WMT","JPM","V","XOM","UNH","ORCL","MA","COST","HD",
+    "PG","JNJ","ABBV","NFLX","BAC","CRM","CVX","MRK","AMD","PEP",
+    "TMO","ADBE","ACN","LIN","MCD","CSCO","ABT","GE","TXN","DHR",
+    "PM","CAT","ISRG","INTU","AMGN","VZ","NOW","MS","GS","RTX",
+]
+
 logger = logging.getLogger(__name__)
 
 POLL_INTERVAL_SECONDS = 60
@@ -175,7 +183,9 @@ def load_universe_tickers(universe: str) -> list[str]:
             if tables:
                 table = tables[0]
                 sp500 = (
-                    table["Symbol"]
+                    table[
+                        [c for c in table.columns if str(c).lower() in ("symbol", "ticker")][0]
+                    ]
                     .astype(str)
                     .str.replace(".", "-", regex=False)
                     .str.upper()
@@ -228,7 +238,7 @@ def load_universe_tickers(universe: str) -> list[str]:
                                 tickers.extend(series.tolist())
                         break
                 tickers = [t for t in tickers if t and t != "nan"]
-                return tickers[:1000] if tickers else sp500
+                return tickers[:1000] if tickers else RUSSELL_1000_FALLBACK
             except Exception:
                 # Fallback to S&P 500 if Russell 3000 components are unavailable
                 return sp500
@@ -313,8 +323,9 @@ def scan_top_movers(universe: str) -> dict:
                     for m in movers:
                         sym = m["symbol"]
                         try:
-                            if isinstance(vol_data.columns, pd.MultiIndex) and sym in vol_data["Volume"].columns:
-                                vol_series = vol_data["Volume"][sym].dropna()
+                            if isinstance(vol_data.columns, pd.MultiIndex) and sym in vol_data.columns.get_level_values(0):
+                                # MultiIndex: first level = ticker, second = field (e.g. Volume)
+                                vol_series = vol_data[sym]["Volume"].dropna()
                             elif not isinstance(vol_data.columns, pd.MultiIndex):
                                 vol_series = vol_data["Volume"].dropna()
                             else:
