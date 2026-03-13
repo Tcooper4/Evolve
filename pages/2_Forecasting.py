@@ -528,46 +528,46 @@ with tab1:
                                     # Extract forecast values (ARIMA uses 'forecast'; some use 'predictions'/'values'/'forecast_values')
                                     if isinstance(forecast_result, dict):
                                         forecast_vals = (
-                                        forecast_result.get('forecast')
-                                        or forecast_result.get('predictions')
-                                        or forecast_result.get('values')
-                                        or forecast_result.get('forecast_values')
-                                        or []
+                                            forecast_result.get('forecast')
+                                            or forecast_result.get('predictions')
+                                            or forecast_result.get('values')
+                                            or forecast_result.get('forecast_values')
+                                            or []
+                                        )
+                                        if hasattr(forecast_vals, 'tolist'):
+                                            forecast_vals = forecast_vals.tolist()
+                                    else:
+                                        forecast_vals = forecast_result
+
+                                    # Postprocess forecast
+                                    processed_forecast = postprocessor.process(
+                                        forecast=forecast_vals,
+                                        historical_data=data,
+                                        apply_smoothing=True,
+                                        remove_outliers=True,
+                                        ensure_realistic_bounds=True
                                     )
-                                    if hasattr(forecast_vals, 'tolist'):
-                                        forecast_vals = forecast_vals.tolist()
-                                else:
-                                    forecast_vals = forecast_result
-                                
-                                # Postprocess forecast
-                                processed_forecast = postprocessor.process(
-                                    forecast=forecast_vals,
-                                    historical_data=data,
-                                    apply_smoothing=True,
-                                    remove_outliers=True,
-                                    ensure_realistic_bounds=True
-                                )
-                                
-                                # Update forecast_result with processed version
-                                if isinstance(forecast_result, dict):
-                                    forecast_result['forecast'] = processed_forecast['values']
-                                    forecast_result['postprocessing_notes'] = processed_forecast.get('notes', [])
-                                else:
-                                    forecast_result = processed_forecast['values']
-                                
-                                # Show what was done
-                                if processed_forecast.get('modifications'):
-                                    with st.expander("⚙️ Forecast Postprocessing", expanded=False):
-                                        st.write("**Modifications applied:**")
-                                        for mod in processed_forecast['modifications']:
-                                            st.write(f"• {mod}")
-                                
-                                # Update session state with processed forecast
-                                st.session_state.current_forecast_result = forecast_result
-                            except ImportError:
-                                pass  # Silently fail if postprocessor not available
-                            except Exception as e:
-                                logger.warning(f"Forecast postprocessing failed: {e}")
+
+                                    # Update forecast_result with processed version
+                                    if isinstance(forecast_result, dict):
+                                        forecast_result['forecast'] = processed_forecast['values']
+                                        forecast_result['postprocessing_notes'] = processed_forecast.get('notes', [])
+                                    else:
+                                        forecast_result = processed_forecast['values']
+
+                                    # Show what was done
+                                    if processed_forecast.get('modifications'):
+                                        with st.expander("⚙️ Forecast Postprocessing", expanded=False):
+                                            st.write("**Modifications applied:**")
+                                            for mod in processed_forecast['modifications']:
+                                                st.write(f"• {mod}")
+
+                                    # Update session state with processed forecast
+                                    st.session_state.current_forecast_result = forecast_result
+                                except ImportError:
+                                    pass  # Silently fail if postprocessor not available
+                                except Exception as e:
+                                    logger.warning(f"Forecast postprocessing failed: {e}")
                             
                             # Log model performance
                             if 'model_log' in st.session_state and 'perf_logger' in st.session_state:

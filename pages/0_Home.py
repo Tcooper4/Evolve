@@ -6,7 +6,9 @@ a plain-English briefing and 2–4 dynamic cards. Includes a background polling 
 that scans a watchlist for volume/price spikes and shows a featured event with chart and news.
 """
 
+import json
 import logging
+import os
 import sys
 import time
 from datetime import datetime
@@ -26,6 +28,13 @@ from trading.analysis.event_news_fetcher import fetch_news_around_event
 from trading.analysis.news_ranker import rank_news_by_relevance
 from trading.analysis.chart_builder import build_event_chart
 from trading.data.earnings_calendar import get_upcoming_earnings
+
+# Emergency fallback when JSON and Wikipedia both fail (e.g. Streamlit Cloud 403)
+UNIVERSE_FALLBACK = [
+    "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO",
+    "JPM", "UNH", "V", "XOM", "LLY", "MA", "JNJ", "PG", "HD", "MRK",
+    "COST", "ABBV", "BAC", "WMT", "KO", "PEP", "CVX", "CRM", "AMD",
+]
 
 RUSSELL_1000_FALLBACK = [
     "AAPL","MSFT","NVDA","AMZN","META","GOOGL","GOOG","BRK-B","LLY","AVGO",
@@ -149,40 +158,29 @@ TOP_MOVERS_UNIVERSE_OPTIONS = [
 ]
 
 
-@st.cache_data(ttl=86400)
-def load_universe_tickers(universe: str) -> list[str]:
-    """Load ticker universe for the Home page Top Movers section."""
+def _load_universe(name: str, fallback: list) -> list:
+    """Load universe: JSON file → Wikipedia scrape → fallback list."""
+    # Tier 1: pre-built JSON (fast, works on Cloud)
+    _dir = os.path.dirname(os.path.abspath(__file__))
+    json_path = os.path.join(_dir, "..", "data", "universes", f"{name}.json")
+    try:
+        with open(json_path, encoding="utf-8") as f:
+            tickers = json.load(f)
+        if tickers:
+            return tickers
+    except Exception:
+        pass
+
+    # Tier 2: Wikipedia scrape (works locally, may fail on Cloud)
     try:
         import pandas as pd  # type: ignore
 
-        universe = universe or "S&P 100"
-        universe = universe.strip()
-
-        if universe == "S&P 100":
-            # Components as of latest published list (includes GOOG/GOOGL)
-            return [
-                "AAPL", "ABBV", "ABT", "ACN", "ADBE", "AIG", "AMD", "AMGN", "AMT",
-                "AMZN", "AVGO", "AXP", "BA", "BAC", "BK", "BKNG", "BLK", "BMY",
-                "BRK.B", "C", "CAT", "CL", "CMCSA", "COF", "COP", "COST", "CRM",
-                "CSCO", "CVS", "CVX", "DE", "DHR", "DIS", "DUK", "EMR", "FDX",
-                "GD", "GE", "GILD", "GM", "GOOG", "GOOGL", "GS", "HD", "HON",
-                "IBM", "INTC", "INTU", "ISRG", "JNJ", "JPM", "KO", "LIN", "LLY",
-                "LMT", "LOW", "MA", "MCD", "MDLZ", "MDT", "MET", "META", "MMM",
-                "MO", "MRK", "MS", "MSFT", "NEE", "NFLX", "NKE", "NOW", "NVDA",
-                "ORCL", "PEP", "PFE", "PG", "PLTR", "PM", "PYPL", "QCOM", "RTX",
-                "SBUX", "SCHW", "SO", "SPG", "T", "TGT", "TMO", "TMUS", "TSLA",
-                "TXN", "UBER", "UNH", "UNP", "UPS", "USB", "V", "VZ", "WFC",
-                "WMT", "XOM",
-            ]
-
-        # S&P 500 from Wikipedia
-        sp500: list[str] = []
-        try:
+        if name == "sp500":
             url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
             tables = pd.read_html(url)
             if tables:
                 table = tables[0]
-                sp500 = (
+                tickers = (
                     table[
                         [c for c in table.columns if str(c).lower() in ("symbol", "ticker")][0]
                     ]
@@ -191,62 +189,56 @@ def load_universe_tickers(universe: str) -> list[str]:
                     .str.upper()
                     .tolist()
                 )
-        except Exception:
-            sp500 = []
-
-        if universe == "S&P 500":
-            return sp500
-
-        # Nasdaq 100 universe (hard-coded, current constituents)
-        nasdaq100 = [
-            "ATVI", "ADBE", "AMD", "ALGN", "AMZN", "ANSS", "AAPL", "AMAT",
-            "ASML", "AZN", "TEAM", "ADSK", "BIIB", "BKR", "BKNG", "AVGO",
-            "CDNS", "CDW", "CHTR", "CTAS", "CSCO", "CMCSA", "CPRT", "CSX",
-            "CTSH", "DDOG", "DXCM", "DOCU", "DLTR", "EA", "EXC", "FAST",
-            "FISV", "FTNT", "GILD", "GOOG", "GOOGL", "HON", "IDXX", "ILMN",
-            "INTC", "INTU", "ISRG", "JD", "KDP", "KLAC", "KHC", "LRCX",
-            "LULU", "MAR", "MELI", "META", "MCHP", "MU", "MSFT", "MRNA",
-            "MDLZ", "MNST", "NTES", "NFLX", "NVDA", "NXPI", "ORLY", "PCAR",
-            "PANW", "PAYX", "PYPL", "PEP", "PDD", "QCOM", "REGN", "ROST",
-            "SIRI", "SBUX", "SNPS", "SPLK", "SWKS", "TMUS", "TSLA", "TXN",
-            "TTWO", "VRSK", "VRSN", "VRSK", "VRTX", "WBA", "WDAY", "XEL",
-            "ZM",
-        ]
-
-        if universe == "S&P 500 + Nasdaq 100":
-            return sorted(set(sp500).union(nasdaq100))
-
-        if universe == "Russell 1000":
-            # Approximate Russell 1000 using the largest 1000 names from Russell 3000 components
-            try:
-                url = "https://en.wikipedia.org/wiki/Russell_3000_Index"
-                tables = pd.read_html(url)
-                # Look for a table with a Ticker column
-                tickers: list[str] = []
-                for t in tables:
-                    cols = [c.lower() for c in t.columns.astype(str)]
-                    if any("ticker" in c or "symbol" in c for c in cols):
-                        for col in t.columns:
-                            col_lower = str(col).lower()
-                            if "ticker" in col_lower or "symbol" in col_lower:
-                                series = (
-                                    t[col]
-                                    .astype(str)
-                                    .str.replace(".", "-", regex=False)
-                                    .str.upper()
-                                )
-                                tickers.extend(series.tolist())
-                        break
-                tickers = [t for t in tickers if t and t != "nan"]
-                return tickers[:1000] if tickers else RUSSELL_1000_FALLBACK
-            except Exception:
-                # Fallback to S&P 500 if Russell 3000 components are unavailable
-                return sp500
-
-        # Fallback: return S&P 100 if nothing else matched
-        return load_universe_tickers("S&P 100")
+                if tickers:
+                    return tickers
+        elif name in ("russell1000", "russell3000"):
+            url = "https://en.wikipedia.org/wiki/Russell_3000_Index"
+            tables = pd.read_html(url)
+            tickers_list: list[str] = []
+            for t in tables:
+                cols = [c.lower() for c in t.columns.astype(str)]
+                if any("ticker" in c or "symbol" in c for c in cols):
+                    for col in t.columns:
+                        col_lower = str(col).lower()
+                        if "ticker" in col_lower or "symbol" in col_lower:
+                            series = (
+                                t[col]
+                                .astype(str)
+                                .str.replace(".", "-", regex=False)
+                                .str.upper()
+                            )
+                            tickers_list.extend(series.tolist())
+                    break
+            tickers_list = [t for t in tickers_list if t and t != "nan"]
+            if tickers_list:
+                return tickers_list[:1000] if name == "russell1000" else tickers_list
+        elif name == "sp500_nasdaq100":
+            sp500 = _load_universe("sp500", fallback)
+            nasdaq100 = _load_universe("nasdaq100", fallback)
+            if sp500 or nasdaq100:
+                return sorted(set(sp500 or []).union(nasdaq100 or []))
     except Exception:
-        return []
+        pass
+
+    # Tier 3: emergency fallback
+    return fallback
+
+
+@st.cache_data(ttl=86400)
+def load_universe_tickers(universe: str) -> list[str]:
+    """Load ticker universe for the Home page Top Movers section."""
+    universe = (universe or "S&P 100").strip()
+    # Map UI label → JSON filename
+    label_to_name = {
+        "S&P 100": "sp100",
+        "S&P 500": "sp500",
+        "Nasdaq 100": "nasdaq100",
+        "S&P 500 + Nasdaq 100": "sp500_nasdaq100",
+        "Russell 1000": "russell1000",
+        "Russell 3000": "russell3000",
+    }
+    name = label_to_name.get(universe, "sp100")
+    return _load_universe(name, UNIVERSE_FALLBACK)
 
 
 @st.cache_data(ttl=900)

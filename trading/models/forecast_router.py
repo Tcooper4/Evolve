@@ -24,6 +24,7 @@ Example:
 
 import importlib
 import logging
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -123,6 +124,138 @@ class ForecastRouter:
         self.performance_history = pd.DataFrame()
         self.model_weights = self._initialize_weights()
         self._last_price_used = 1.0
+
+    @staticmethod
+    @lru_cache(maxsize=64)
+    def _cached_model_key(
+        symbol: str,
+        start: str,
+        end: str,
+        model_name: str,
+    ) -> Tuple[str, str, str, str]:
+        """Lightweight cache key helper for trained model instances."""
+        return (symbol or "", start or "", end or "", model_name or "")
+
+    def _get_cached_trained_model(
+        self,
+        data: pd.DataFrame,
+        selected_model: str,
+        run_walk_forward: bool,
+        **kwargs: Any,
+    ):
+        """Return a trained model instance, cached by (symbol, date-range, model).
+
+        This prevents 3–5x redundant retraining across Quick Forecast,
+        EnsembleModel, HybridModel, and consensus calls for the same
+        ticker/date-range/model combination.
+        """
+        # Derive a simple key from the primary price column and index range
+        symbol = str(kwargs.get("symbol") or kwargs.get("ticker") or "")
+        if not symbol and isinstance(data, pd.DataFrame) and "symbol" in data.columns:
+            try:
+                symbol = str(data["symbol"].iloc[0])
+            except Exception:
+                symbol = ""
+        if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+            start = data.index[0].isoformat()
+            end = data.index[-1].isoformat()
+        else:
+            start = ""
+            end = ""
+
+        key = self._cached_model_key(symbol, start, end, selected_model)
+
+        # Attach a simple in-memory cache dict on the instance
+        cache: Dict[Tuple[str, str, str, str], Any] = getattr(
+            self, "_trained_model_cache", {}
+        )
+
+        if key in cache:
+            return cache[key]
+
+        # Instantiate and fit a fresh model, then cache it
+        model_class = self.model_registry[selected_model]
+        config = self._get_model_defaults(selected_model)
+        config.update(kwargs)
+
+        if selected_model == "lstm":
+            config["input_dim"] = (
+                data.shape[1] if hasattr(data, "shape") else 1
+            )
+            config["output_dim"] = 1
+
+        if selected_model == "hybrid":
+            from trading.forecasting.hybrid_model import HybridModel
+
+            arima_sub = ARIMAModel(
+                {
+                    "order": (5, 1, 0),
+                    "use_auto_arima": True,
+                    "target_column": "close",
+                }
+            )
+            ridge_sub = RidgeModel(
+                {
+                    "alpha": 1.0,
+                    "target_column": "close",
+                }
+            )
+            hybrid_models = {"arima": arima_sub, "ridge": ridge_sub}
+            try:
+                _arima = ARIMAModel(
+                    {
+                        "order": (5, 1, 0),
+                        "use_auto_arima": True,
+                        "target_column": config.get("target_column", "close"),
+                    }
+                )
+                _ridge = RidgeModel(
+                    {
+                        "alpha": 1.0,
+                        "max_iter": 1000,
+                        "target_column": config.get("target_column", "close"),
+                    }
+                )
+                hybrid_models = {"arima": _arima, "ridge": _ridge}
+            except Exception as _e:
+                logger.warning(f"Hybrid sub-model injection failed: {_e}")
+            model = HybridModel(hybrid_models)
+        else:
+            model = model_class(config)
+
+        fit_args: Dict[str, Any] = {}
+        if selected_model == "lstm":
+            fit_args = {
+                "epochs": config.get("epochs", 50),
+                "batch_size": config.get("batch_size", 32),
+                "learning_rate": config.get("learning_rate", 0.001),
+            }
+
+        try:
+            if selected_model == "lstm":
+                model.train_model(data, data.iloc[:, 0], **fit_args)
+            else:
+                model.fit(data)
+            logger.info(f"Successfully fitted {selected_model}")
+        except Exception as e:
+            logger.error(f"Failed to fit {selected_model}: {e}")
+            # Fallback to a simpler model (non-cached) if training fails
+            fallback_model = self._get_fallback_model(selected_model)
+            logger.info(f"Trying fallback model: {fallback_model}")
+            model_class = self.model_registry[fallback_model]
+            fallback_config = self._get_model_defaults(fallback_model)
+            if fallback_model == "lstm":
+                fallback_config["input_dim"] = (
+                    data.shape[1] if hasattr(data, "shape") else 1
+                )
+                fallback_config["output_dim"] = 1
+            model = model_class(fallback_config)
+            model.fit(data)
+
+        # Store in cache on success
+        cache[key] = model
+        self._trained_model_cache = cache
+        return model
 
     def _load_model_registry(self):
         """Dynamically load model registry from config or discovery."""
@@ -659,47 +792,17 @@ class ForecastRouter:
             selected_model = self._select_model_with_fallback(prepared_data, model_type)
             logger.info(f"Selected model: {selected_model}")
 
-            # Initialize model with single config dict (all constructors accept config: Dict)
-            model_class = self.model_registry[selected_model]
-            config = self._get_model_defaults(selected_model)
-            kwargs_for_model = {
-                k: v
-                for k, v in kwargs.items()
-                if k not in ("run_walk_forward", "model_name", "model")
-            }
-            config.update(kwargs_for_model)
-            if selected_model == "lstm":
-                config["input_dim"] = (
-                    prepared_data.shape[1] if hasattr(prepared_data, "shape") else 1
-                )
-                config["output_dim"] = 1
-            if selected_model == "hybrid":
-                # HybridModel expects a dict of name -> instantiated model object (not raw config).
-                from trading.forecasting.hybrid_model import HybridModel
-                arima_sub = ARIMAModel({
-                    "order": (5, 1, 0),
-                    "use_auto_arima": True,
-                    "target_column": "close",
-                })
-                ridge_sub = RidgeModel({
-                    "alpha": 1.0,
-                    "target_column": "close",
-                })
-                hybrid_models = {"arima": arima_sub, "ridge": ridge_sub}
-                # --- Hybrid sub-model injection ---
-                if selected_model == 'hybrid':
-                    try:
-                        _arima = ARIMAModel({'order': (5, 1, 0), 'use_auto_arima': True,
-                                             'target_column': config.get('target_column', 'close')})
-                        _ridge = RidgeModel({'alpha': 1.0, 'max_iter': 1000,
-                                             'target_column': config.get('target_column', 'close')})
-                        hybrid_models = {'arima': _arima, 'ridge': _ridge}
-                    except Exception as _e:
-                        logger.warning(f"Hybrid sub-model injection failed: {_e}")
-                # --- end hybrid injection ---
-                model = HybridModel(hybrid_models)
-            else:
-                model = model_class(config)
+            # Initialize / retrieve a cached trained model instance based on (symbol, date_range, model)
+            model = self._get_cached_trained_model(
+                data=prepared_data,
+                selected_model=selected_model,
+                run_walk_forward=run_walk_forward,
+                **{
+                    k: v
+                    for k, v in kwargs.items()
+                    if k not in ("run_walk_forward", "model_name", "model")
+                },
+            )
             fit_args = (
                 {
                     "epochs": config.get("epochs", 50),
@@ -719,30 +822,7 @@ class ForecastRouter:
                     prepared_data, selected_model, horizon
                 )
 
-            # Fit model with error handling
-            try:
-                if selected_model == "lstm":
-                    model.train_model(
-                        prepared_data, prepared_data.iloc[:, 0], **fit_args
-                    )
-                else:
-                    model.fit(prepared_data)
-                logger.info(f"Successfully fitted {selected_model}")
-            except Exception as e:
-                logger.error(f"Failed to fit {selected_model}: {e}")
-                # Try fallback model
-                fallback_model = self._get_fallback_model(selected_model)
-                logger.info(f"Trying fallback model: {fallback_model}")
-                model_class = self.model_registry[fallback_model]
-                fallback_config = self._get_model_defaults(fallback_model)
-                if fallback_model == "lstm":
-                    fallback_config["input_dim"] = (
-                        prepared_data.shape[1] if hasattr(prepared_data, "shape") else 1
-                    )
-                    fallback_config["output_dim"] = 1
-                model = model_class(fallback_config)
-                model.fit(prepared_data)
-                selected_model = fallback_model
+            # At this point, model is already trained (from cache or freshly fitted)
 
             # Generate forecast with error handling
             try:

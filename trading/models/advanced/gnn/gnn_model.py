@@ -474,21 +474,48 @@ class GNNForecaster:
         
         predictions = np.array(predictions)
         
-        # If target asset specified, extract it
+        # If target asset specified, extract its series; otherwise use the first asset
         if target_asset and target_asset in data.columns:
             asset_idx = data.columns.get_loc(target_asset)
             forecast_values = predictions[:, asset_idx]
+            last_price_series = data[target_asset]
         else:
-            # Return predictions for first asset
+            asset_idx = 0
             forecast_values = predictions[:, 0]
-        
+            last_price_series = data.iloc[:, 0]
+
+        # Convert model output (normalized return / ratio) into price space for the target asset.
+        # If outputs already look like prices (large magnitudes), leave them unchanged.
+        forecast_array = np.asarray(forecast_values, dtype=float).ravel()
+        if len(last_price_series) > 0:
+            try:
+                last_price = float(last_price_series.iloc[-1])
+            except Exception:
+                last_price = None
+        else:
+            last_price = None
+
+        if last_price is not None and np.isfinite(last_price):
+            max_abs = float(np.nanmax(np.abs(forecast_array))) if forecast_array.size else 0.0
+            # Heuristic: treat small-magnitude outputs as returns; convert to prices iteratively.
+            if max_abs < 1.0:
+                price_path: List[float] = []
+                current_price = last_price
+                for r in forecast_array:
+                    r_float = float(r)
+                    current_price = current_price * (1.0 + r_float)
+                    price_path.append(current_price)
+                forecast_array = np.asarray(price_path, dtype=float)
+
         # Create dates
         last_date = data.index[-1] if hasattr(data.index, 'freq') else pd.Timestamp.now()
         forecast_dates = pd.date_range(start=last_date, periods=horizon + 1, freq='D')[1:]
         
         return {
-            'forecast': forecast_values,
-            'all_assets': predictions,  # Predictions for all assets
+            # Ensure the primary forecast is a plain list of floats in price space
+            'forecast': forecast_array.tolist(),
+            # Multi-asset predictions as nested lists (no dicts) for downstream consumers
+            'all_assets': predictions.tolist(),
             'dates': forecast_dates,
             'model_type': 'GNN',
             'horizon': horizon,
