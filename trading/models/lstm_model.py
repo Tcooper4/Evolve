@@ -1000,11 +1000,12 @@ class LSTMForecaster(BaseModel):
                         self.y_scaler = StandardScaler()
                 
                 # Scale X and y
-                X_scaled = self.X_scaler.fit_transform(X[self.config.get("feature_columns", list(X.columns))])
+                feature_cols = self.config.get("feature_columns", list(X.columns))
+                X_scaled = self.X_scaler.fit_transform(X[feature_cols])
                 y_scaled = self.y_scaler.fit_transform(y.values.reshape(-1, 1)).flatten()
                 
                 # Convert to DataFrame/Series for easier indexing
-                X_scaled_df = pd.DataFrame(X_scaled, index=X.index, columns=X.columns)
+                X_scaled_df = pd.DataFrame(X_scaled, index=X.index, columns=feature_cols)
                 y_scaled_series = pd.Series(y_scaled, index=y.index)
             except Exception as e:
                 logger.error(f"Failed to scale data: {e}")

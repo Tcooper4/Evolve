@@ -276,14 +276,16 @@ class ForecastExplainability:
                     logger.warning(f"LIME calculation failed: {e}")
             elif method.lower() == "shap":
                 try:
+                    # Import shap conditionally so the model lab can degrade gracefully
                     try:
-    import shap
-    HAS_SHAP = True
-except ImportError:
-    shap = None
-    HAS_SHAP = False
-                except ImportError:
-                    shap = None
+                        import shap  # type: ignore
+                        HAS_SHAP = True
+                    except ImportError:
+                        shap = None  # type: ignore[assignment]
+                        HAS_SHAP = False
+                except Exception:
+                    shap = None  # type: ignore[assignment]
+                    HAS_SHAP = False
                 if shap is not None and hasattr(model, "predict"):
                     try:
                         # Model type detection

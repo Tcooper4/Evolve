@@ -513,50 +513,21 @@ with tab1:
                             logger.debug("Consensus forecast failed: %s", _e)
                         if not used_router:
                             st.error("Consensus forecast failed. Load data and try again, or use Tab 2 for a single-model forecast.")
-                        model = None  # Quick Forecast uses consensus only; single-model path is in Tab 2
-                        if not used_router:
-                            model = None  # Skip single-model fallback; use Tab 2 for that
-                        if model is None and not used_router:
-                            st.error("Failed to initialize model")
-                        elif model is not None:
-                            # Train model
-                            if "Prophet" in selected_model:
-                                # Prophet needs special format
-                                train_df = pd.DataFrame({
-                                    'ds': data.index,
-                                    'y': data['close']
-                                })
-                                fit_result = model.fit(train_df)
-                            elif "ARIMA" in selected_model:
-                                # ARIMA needs series
-                                fit_result = model.fit(data['close'])
-                            else:
-                                # LSTM and XGBoost use DataFrame
-                                fit_result = model.fit(data, data['close'])
-                            
-                            # Generate forecast - try with uncertainty if available
-                            forecast_result = None
-                            if hasattr(model, 'forecast_with_uncertainty'):
+                        # Quick Forecast now uses only the consensus router; single-model flows live in Tab 2.
+                        # If consensus fails, we surface the above error and do not attempt any model initialization here.
+                        if used_router:
+                            # Store full forecast result for confidence intervals if available
+                            forecast_result = st.session_state.get("current_forecast_result")
+                            if forecast_result is not None:
+                                # Postprocess forecast
                                 try:
-                                    forecast_result = model.forecast_with_uncertainty(data, horizon=horizon, num_samples=100)
-                                except Exception as e:
-                                    st.warning(f"Could not generate forecast with uncertainty: {e}. Using standard forecast.")
-                                    forecast_result = model.forecast(data, horizon=horizon)
-                            else:
-                                forecast_result = model.forecast(data, horizon=horizon)
-                            
-                            # Store full forecast result for confidence intervals
-                            st.session_state.current_forecast_result = forecast_result
-                            
-                            # Postprocess forecast
-                            try:
-                                from trading.forecasting.forecast_postprocessor import ForecastPostprocessor
-                                
-                                postprocessor = ForecastPostprocessor()
-                                
-                                # Extract forecast values (ARIMA uses 'forecast'; some use 'predictions'/'values'/'forecast_values')
-                                if isinstance(forecast_result, dict):
-                                    forecast_vals = (
+                                    from trading.forecasting.forecast_postprocessor import ForecastPostprocessor
+
+                                    postprocessor = ForecastPostprocessor()
+
+                                    # Extract forecast values (ARIMA uses 'forecast'; some use 'predictions'/'values'/'forecast_values')
+                                    if isinstance(forecast_result, dict):
+                                        forecast_vals = (
                                         forecast_result.get('forecast')
                                         or forecast_result.get('predictions')
                                         or forecast_result.get('values')
