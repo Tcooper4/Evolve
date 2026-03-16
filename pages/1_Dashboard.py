@@ -19,7 +19,7 @@ if str(project_root) not in sys.path:
 import pandas as pd
 import streamlit as st
 
-from components.theme import inject_theme, market_status_html, render_top_bar, keyboard_shortcut_js
+from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
 from trading.data.price_cache import get_quote, get_history, get_info, get_news
 
 try:
@@ -28,7 +28,6 @@ except Exception:
     pass
 inject_theme()
 render_top_bar()
-st.markdown(market_status_html(), unsafe_allow_html=True)
 
 from config.user_store import load_user_preferences, save_user_preferences
 from trading.analysis.market_monitor import scan_watchlist, DEFAULT_WATCHLIST
@@ -476,6 +475,17 @@ if render_news_candle_chart:
                     st.caption(f"Chart unavailable for {_sym}")
             else:
                 st.info("No additional volume events detected")
+
+st.markdown("---")
+try:
+    from trading.data.news_aggregator import get_walter_bloomberg_headlines
+    wb_news = get_walter_bloomberg_headlines(5)
+    if wb_news:
+        st.markdown("**Breaking — Walter Bloomberg**")
+        for item in wb_news:
+            st.markdown(f"- {item.get('title', '')[:100]}")
+except Exception:
+    pass
 
 st.markdown("---")
 st.subheader("Watchlist")

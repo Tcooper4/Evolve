@@ -294,3 +294,37 @@ def get_market_news(max_items: int = 15) -> List[Dict]:
     articles += _fetch_rss("", max_items)
     return _deduplicate(articles)[:max_items]
 
+
+def get_walter_bloomberg_headlines(max_items: int = 10) -> List[Dict]:
+    """
+    Fetch breaking financial headlines from Walter Bloomberg (@WalterBloomberg)
+    via public RSS feed. Returns list of dicts with keys: title, published, source.
+    """
+    try:
+        import feedparser
+    except ImportError:
+        return []
+
+    urls = [
+        "https://nitter.net/WalterBloomberg/rss",
+        "https://nitter.privacydev.net/WalterBloomberg/rss",
+    ]
+    for url in urls:
+        try:
+            feed = feedparser.parse(url)
+            if not feed.entries:
+                continue
+            items: List[Dict] = []
+            for entry in feed.entries[:max_items]:
+                items.append({
+                    "title": entry.get("title", ""),
+                    "published": entry.get("published", ""),
+                    "source": "Walter Bloomberg",
+                    "link": entry.get("link", ""),
+                })
+            if items:
+                return items
+        except Exception:
+            continue
+    return []
+

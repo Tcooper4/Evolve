@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
-from components.theme import inject_theme, market_status_html, render_top_bar, keyboard_shortcut_js
+from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
 from components.news_candle_chart import render_news_candle_chart
 from trading.data.price_cache import get_quote, get_history, get_info, get_news
 from ui.page_assistant import render_page_assistant
@@ -27,7 +27,6 @@ except Exception:
     pass
 inject_theme()
 render_top_bar()
-st.markdown(market_status_html(), unsafe_allow_html=True)
 
 logger = logging.getLogger(__name__)
 
@@ -666,6 +665,29 @@ with tab1:
                         component_scores[k] * display_weights[k] for k in display_weights
                     )
                     weighted_score = round(min(10.0, max(0.0, weighted_score)), 1)
+
+                    # Show mode impact clearly (diff vs base score)
+                    try:
+                        base_score = float(ai_score.get("overall_score", 0) or 0)
+                        diff = round(weighted_score - base_score, 1)
+                        diff_str = (
+                            f"+{diff}" if diff > 0
+                            else str(diff) if diff < 0
+                            else "="
+                        )
+                        diff_color = (
+                            "#26a69a" if diff > 0
+                            else "#ef5350" if diff < 0
+                            else "#4a6080"
+                        )
+                        st.markdown(
+                            f'<span style="font-size:11px;color:{diff_color}">'
+                            f"{trader_mode} view: {diff_str} vs base score"
+                            f"</span>",
+                            unsafe_allow_html=True,
+                        )
+                    except Exception:
+                        pass
 
                     # News sentiment score feeding into sentiment view
                     news_score = _news_sentiment_score(_sym)

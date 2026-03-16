@@ -792,6 +792,9 @@ class ForecastRouter:
             selected_model = self._select_model_with_fallback(prepared_data, model_type)
             logger.info(f"Selected model: {selected_model}")
 
+            # Ensure config is defined for all code paths that use it (fit_args, logger)
+            config = self._get_model_defaults(selected_model)
+
             # Initialize / retrieve a cached trained model instance based on (symbol, date_range, model)
             model = self._get_cached_trained_model(
                 data=prepared_data,

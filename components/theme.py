@@ -141,10 +141,18 @@ def market_status_html() -> str:
     try:
         try:
             import pytz
+
             et = pytz.timezone("America/New_York")
             now = datetime.now(et)
         except ImportError:
-            now = datetime.now(timezone(timedelta(hours=-4)))
+            try:
+                # Python 3.9+ stdlib fallback with full DST support
+                from zoneinfo import ZoneInfo
+
+                now = datetime.now(ZoneInfo("America/New_York"))
+            except Exception:
+                # Last-resort: naive UTC time (no offset guess)
+                now = datetime.utcnow()
         t = now.time()
         wd = now.weekday()
         if wd >= 5:
@@ -181,7 +189,7 @@ def render_top_bar() -> None:
     try:
         from trading.data.price_cache import get_quote
         tickers_to_fetch = ["SPY", "QQQ", "IWM", "^VIX"]
-        items = []
+        ticker_data = {}
         for sym in tickers_to_fetch:
             try:
                 q = get_quote(sym)
@@ -189,21 +197,38 @@ def render_top_bar() -> None:
                 prev = q.get("prev_close")
                 if price is not None and prev is not None and prev != 0:
                     chg = (float(price) - float(prev)) / float(prev) * 100
-                    cls = "ticker-up" if chg >= 0 else "ticker-dn"
-                    items.append(
-                        f'<span class="ticker-item">'
-                        f'<span class="ticker-sym">{sym}</span>'
-                        f'<span class="ticker-px">${float(price):.2f}</span>'
-                        f'<span class="{cls}">{chg:+.2f}%</span>'
-                        f"</span>"
-                    )
+                    ticker_data[sym] = {"price": float(price), "change_pct": chg}
             except Exception:
                 continue
-        status = market_status_html()
-        bar = '<div class="ticker-bar">' + "".join(items)
-        if status:
-            bar += f'<span style="margin-left:auto">{status}</span>'
-        bar += "</div>"
+
+        items_html = ""
+        for sym, info in ticker_data.items():
+            price = info.get("price", "")
+            chg = info.get("change_pct", 0)
+            sign = "+" if chg >= 0 else ""
+            color = "#26a69a" if chg >= 0 else "#ef5350"
+            items_html += (
+                f'<span style="margin-right:20px;'
+                f'font-family:monospace;font-size:12px">'
+                f'<span style="color:#00d4ff;'
+                f'font-weight:bold">{sym}</span>'
+                f'<span style="color:#e0e6f0;'
+                f'margin-left:4px">${price:.2f}</span>'
+                f'<span style="color:{color};'
+                f'margin-left:4px">{sign}{chg:.2f}%</span>'
+                f'</span>'
+            )
+
+        status_html = market_status_html()
+        bar = (
+            f'<div style="display:flex;align-items:center;'
+            f'padding:6px 0;border-bottom:1px solid #1e2d45;'
+            f'margin-bottom:8px;flex-wrap:wrap;">'
+            f'{items_html}'
+            f'<span style="margin-left:auto;font-size:11px">'
+            f'{status_html}</span>'
+            f'</div>'
+        )
         st.markdown(bar, unsafe_allow_html=True)
     except Exception:
         pass
