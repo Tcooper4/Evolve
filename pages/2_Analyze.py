@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
-from components.theme import market_status_html, render_top_bar, keyboard_shortcut_js
+from components.theme import inject_theme, market_status_html, render_top_bar, keyboard_shortcut_js
 from components.news_candle_chart import render_news_candle_chart
 from trading.data.price_cache import get_quote, get_history, get_info, get_news
 from ui.page_assistant import render_page_assistant
@@ -25,6 +25,7 @@ try:
     st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
 except Exception:
     pass
+inject_theme()
 render_top_bar()
 st.markdown(market_status_html(), unsafe_allow_html=True)
 

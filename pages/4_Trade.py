@@ -12,12 +12,13 @@ if str(project_root) not in sys.path:
 
 import streamlit as st
 
-from components.theme import market_status_html, render_top_bar, keyboard_shortcut_js
+from components.theme import inject_theme, market_status_html, render_top_bar, keyboard_shortcut_js
 
 try:
     st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
 except Exception:
     pass
+inject_theme()
 render_top_bar()
 st.markdown(market_status_html(), unsafe_allow_html=True)
 

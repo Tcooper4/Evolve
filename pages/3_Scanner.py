@@ -11,13 +11,14 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from components.theme import market_status_html, render_top_bar, keyboard_shortcut_js
+from components.theme import inject_theme, market_status_html, render_top_bar, keyboard_shortcut_js
 from trading.data.price_cache import get_history, get_news, batch_quotes
 
 try:
     st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
 except Exception:
     pass
+inject_theme()
 render_top_bar()
 st.markdown(market_status_html(), unsafe_allow_html=True)
 
