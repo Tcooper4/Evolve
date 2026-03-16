@@ -216,10 +216,12 @@ if st.button("🚀 Run Scan", type="primary", key="scanner_run_btn"):
         )
     progress_bar.empty()
     if scan_result.get("error"):
+        # Surface the error and keep previous results so the user
+        # can see what went wrong instead of an immediate rerun.
         st.error(f"Scan error: {scan_result['error']}")
     else:
         st.session_state.scanner_results = scan_result
-    st.rerun()
+        st.rerun()
 
 if "scanner_results" not in st.session_state:
     st.session_state.scanner_results = None

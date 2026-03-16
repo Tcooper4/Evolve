@@ -65,20 +65,20 @@ def _get_forecasting_backend():
 import os as _os
 import runpy as _runpy
 _guard_key = "EVOLVE_PAGE_GUARD_FORECASTING"
-if _os.environ.get(_guard_key) != "1":
-    _os.environ[_guard_key] = "1"
-    try:
-        _runpy.run_path(__file__, run_name="__main__")
-    except Exception as _page_error:
-        import traceback
-        st.error(f"⚠️ Page error: {type(_page_error).__name__}: {_page_error}")
-        with st.expander("Developer details"):
-            st.code(traceback.format_exc(), language="python")
-        st.info("Try refreshing the page or selecting a different symbol.")
-        st.stop()
-    finally:
-        _os.environ.pop(_guard_key, None)
-    st.stop()
+# if _os.environ.get(_guard_key) != "1":
+#     _os.environ[_guard_key] = "1"
+#     try:
+#         _runpy.run_path(__file__, run_name="__main__")
+#     except Exception as _page_error:
+#         import traceback
+#         st.error(f"⚠️ Page error: {type(_page_error).__name__}: {_page_error}")
+#         with st.expander("Developer details"):
+#             st.code(traceback.format_exc(), language="python")
+#         st.info("Try refreshing the page or selecting a different symbol.")
+#         st.stop()
+#     finally:
+#         _os.environ.pop(_guard_key, None)
+#     st.stop()
 
 # Lazy init: resolve backend when Forecasting page is first rendered (not at app startup)
 if "forecasting_backend" not in st.session_state:
@@ -158,34 +158,215 @@ period_label = st.radio(
 period = period_map.get(period_label, "1y")
 
 # Chart using price_cache
-hist = get_history(ticker, period=period)
+if period == "1d":
+    _interval = "5m"
+elif period == "5d":
+    _interval = "1h"
+else:
+    _interval = "1d"
+hist = get_history(ticker, period=period, interval=_interval)
 if not hist.empty:
     try:
+        chart_type = st.radio(
+            "Chart type",
+            ["Candle", "Line", "Area"],
+            horizontal=True,
+            key="analyze_chart_type",
+            index=0,
+        )
         fig_chart = go.Figure()
-        fig_chart.add_trace(go.Scatter(
-            x=hist.index, y=hist["Close"],
-            mode="lines", name="Close", line=dict(color="#00d4ff", width=2),
-        ))
+        if chart_type == "Candle":
+            fig_chart.add_trace(
+                go.Candlestick(
+                    x=hist.index,
+                    open=hist["Open"],
+                    high=hist["High"],
+                    low=hist["Low"],
+                    close=hist["Close"],
+                    increasing_line_color="#26a69a",
+                    increasing_fillcolor="#26a69a",
+                    decreasing_line_color="#ef5350",
+                    decreasing_fillcolor="#ef5350",
+                    name=ticker,
+                )
+            )
+        elif chart_type == "Area":
+            fig_chart.add_trace(
+                go.Scatter(
+                    x=hist.index,
+                    y=hist["Close"],
+                    fill="tozeroy",
+                    fillcolor="rgba(0,212,255,0.1)",
+                    line=dict(color="#00d4ff", width=2),
+                    name=ticker,
+                )
+            )
+        else:  # Line
+            fig_chart.add_trace(
+                go.Scatter(
+                    x=hist.index,
+                    y=hist["Close"],
+                    mode="lines",
+                    line=dict(color="#00d4ff", width=2),
+                    name=ticker,
+                )
+            )
         current = float(hist["Close"].iloc[-1])
         fig_chart.add_hline(
             y=current,
             line_dash="dash",
             line_color="#ef5350",
             line_width=1,
-            annotation_text=f"{current:.2f}",
+            annotation_text=f" ${current:.2f}",
             annotation_position="right",
+            annotation_font_color="#ef5350",
+            annotation_font_size=11,
         )
         fig_chart.update_layout(
-            title=f"{ticker} — {period_label}",
             template="plotly_dark",
-            xaxis_title="Date",
-            yaxis_title="Price ($)",
+            paper_bgcolor="#0a0e1a",
+            plot_bgcolor="#0f1525",
+            font=dict(
+                family="'Courier New', monospace",
+                color="#e0e6f0",
+                size=11,
+            ),
+            title=dict(
+                text=f"{ticker} — {period_label}",
+                font=dict(color="#e0e6f0", size=14),
+                x=0,
+            ),
+            xaxis=dict(
+                title="Date",
+                gridcolor="#1a2535",
+                showgrid=True,
+                zeroline=False,
+                tickfont=dict(color="#4a6080", size=10),
+                rangeslider=dict(visible=False),
+                rangebreaks=[
+                    dict(bounds=["sat", "mon"]),
+                    dict(bounds=[16, 9.5], pattern="hour"),
+                ]
+                if period in ("1d", "5d")
+                else [
+                    dict(bounds=["sat", "mon"]),
+                ],
+            ),
+            yaxis=dict(
+                title="Price ($)",
+                gridcolor="#1a2535",
+                showgrid=True,
+                zeroline=False,
+                tickfont=dict(color="#4a6080", size=10),
+                tickprefix="$",
+                side="right",
+            ),
             hovermode="x unified",
-            height=350,
+            hoverlabel=dict(
+                bgcolor="#0f1525",
+                bordercolor="#1e2d45",
+                font=dict(color="#e0e6f0", size=11),
+            ),
+            margin=dict(l=0, r=60, t=30, b=20),
+            height=380,
+            showlegend=False,
         )
         st.plotly_chart(fig_chart, use_container_width=True, key="analyze_main_chart")
     except Exception as e:
         st.caption(f"Feature unavailable: {e}")
+
+def _news_sentiment_score(ticker: str) -> float:
+    """Return a 0–10 news score with recency decay for AI sentiment."""
+    try:
+        from trading.data.price_cache import get_news as _get_news
+        import time
+
+        items = _get_news(ticker)
+        if not items:
+            return 5.0
+        pos_kw = [
+            "beat",
+            "surge",
+            "raises",
+            "upgrade",
+            "strong",
+            "growth",
+            "record",
+            "above",
+            "buy",
+            "bullish",
+            "jumps",
+            "soars",
+        ]
+        neg_kw = [
+            "miss",
+            "falls",
+            "cuts",
+            "downgrade",
+            "weak",
+            "below",
+            "layoffs",
+            "loss",
+            "investigation",
+            "sell",
+            "bearish",
+            "drops",
+            "plunges",
+        ]
+        total_score = 0.0
+        total_weight = 0.0
+        now = time.time()
+        for item in items[:10]:
+            content = item.get("content") or {}
+            raw_title = (
+                item.get("title")
+                or item.get("headline")
+                or content.get("title")
+                or content.get("summary")
+                or ""
+            )
+            title = raw_title.lower()
+            if not title:
+                continue
+            pub = (
+                item.get("providerPublishTime")
+                or item.get("published")
+                or content.get("pubDate")
+                or now
+            )
+            try:
+                from datetime import datetime
+
+                if isinstance(pub, str):
+                    dt = datetime.fromisoformat(pub.replace("Z", "+00:00"))
+                    pub_ts = dt.timestamp()
+                elif hasattr(pub, "timestamp"):
+                    pub_ts = float(pub.timestamp())
+                else:
+                    pub_ts = float(pub)
+            except Exception:
+                pub_ts = now
+            age_hours = max(0.0, (now - pub_ts) / 3600.0)
+            if age_hours < 1:
+                decay = 1.0
+            elif age_hours < 6:
+                decay = 0.7
+            elif age_hours < 24:
+                decay = 0.4
+            else:
+                decay = 0.1
+            raw = sum(1 for k in pos_kw if k in title) - sum(
+                1 for k in neg_kw if k in title
+            )
+            total_score += raw * decay
+            total_weight += decay
+        if total_weight == 0:
+            return 5.0
+        normalized = total_score / total_weight
+        return round(min(10.0, max(0.0, 5.0 + normalized * 2.0)), 1)
+    except Exception:
+        return 5.0
+
 
 # News sentiment panel (HOT/POS/NEG/NEU labels)
 try:
@@ -198,10 +379,17 @@ try:
                       'below','layoffs','investigation','sell',
                       'bearish','loss']
             for i, item in enumerate(news_items[:8]):
-                title_lower = item.get('title', '') or item.get('headline', '') or ''
-                if not title_lower:
+                content = item.get("content") or {}
+                raw_title = (
+                    item.get("title")
+                    or item.get("headline")
+                    or content.get("title")
+                    or content.get("summary")
+                    or ""
+                )
+                if not raw_title:
                     continue
-                title_lower = title_lower.lower()
+                title_lower = raw_title.lower()
                 score = 0
                 score += sum(1 for k in pos_kw if k in title_lower)
                 score -= sum(1 for k in neg_kw if k in title_lower)
@@ -218,7 +406,7 @@ try:
                     f'padding:1px 6px;border-radius:2px;'
                     f'background:{ns_color}22;font-family:monospace">'
                     f'{ns_label}</span> '
-                    f'{item.get("title", item.get("headline", ""))[:80]}',
+                    f'{raw_title[:80]}',
                     unsafe_allow_html=True
                 )
 except Exception as e:
@@ -434,7 +622,7 @@ with tab1:
             volatility = data['close'].pct_change().std() * np.sqrt(252) * 100
             st.metric("Annualized Volatility", f"{volatility:.2f}%")
         
-        # AI Score panel
+        # AI Score panel with trader-mode display weights and news score
         try:
             from trading.analysis.ai_score import compute_ai_score
             _sym = st.session_state.get("symbol") or symbol
@@ -449,32 +637,132 @@ with tab1:
                 if ai_score.get("error") is None:
                     score = ai_score["overall_score"]
                     grade = ai_score["grade"]
+
+                    # Trader-mode-specific display weights
+                    if trader_mode == "Short-term":
+                        display_weights = {
+                            "technical": 0.45,
+                            "momentum": 0.40,
+                            "sentiment": 0.10,
+                            "fundamental": 0.05,
+                        }
+                        mode_label = "Short-term weights"
+                    else:
+                        display_weights = {
+                            "technical": 0.20,
+                            "momentum": 0.20,
+                            "sentiment": 0.15,
+                            "fundamental": 0.45,
+                        }
+                        mode_label = "Long-term weights"
+
+                    component_scores = {
+                        "technical": ai_score.get("technical_score", 0),
+                        "momentum": ai_score.get("momentum_score", 0),
+                        "sentiment": ai_score.get("sentiment_score", 0),
+                        "fundamental": ai_score.get("fundamental_score", 0),
+                    }
+                    weighted_score = sum(
+                        component_scores[k] * display_weights[k] for k in display_weights
+                    )
+                    weighted_score = round(min(10.0, max(0.0, weighted_score)), 1)
+
+                    # News sentiment score feeding into sentiment view
+                    news_score = _news_sentiment_score(_sym)
+                    if news_score >= 7.5:
+                        ns_label, ns_color = "HOT", "#ff9800"
+                    elif news_score >= 6.0:
+                        ns_label, ns_color = "POS", "#26a69a"
+                    elif news_score <= 3.0:
+                        ns_label, ns_color = "NEG", "#ef5350"
+                    else:
+                        ns_label, ns_color = "NEU", "#4a6080"
+
                     st.markdown("### 🤖 AI Score")
-                    col_score, col_tech, col_mom, col_sent, col_fund = st.columns(5)
-                    col_score.metric("Overall", f"{score}/10", delta=grade, delta_color="normal" if score >= 5 else "inverse")
-                    col_tech.metric("Technical", f"{ai_score['technical_score']}/10")
-                    col_mom.metric("Momentum", f"{ai_score['momentum_score']}/10")
-                    col_sent.metric("Sentiment", f"{ai_score['sentiment_score']}/10")
-                    col_fund.metric("Fundamental", f"{ai_score['fundamental_score']}/10")
+                    top_cols = st.columns([2, 2, 2, 2])
+                    with top_cols[0]:
+                        st.metric(
+                            "Model Score",
+                            f"{score}/10",
+                            delta=grade,
+                            delta_color="normal" if score >= 5 else "inverse",
+                        )
+                    with top_cols[1]:
+                        st.metric("Weighted Score", f"{weighted_score}/10", help=mode_label)
+                    with top_cols[2]:
+                        st.markdown("**News Score**")
+                        st.markdown(
+                            f'<span style="font-family:monospace;font-size:14px;'
+                            f'padding:3px 8px;border-radius:3px;'
+                            f'background:{ns_color}22;color:{ns_color}">'
+                            f'{news_score:.1f} · {ns_label}</span>',
+                            unsafe_allow_html=True,
+                        )
+                    with top_cols[3]:
+                        st.caption(mode_label)
+
+                    # Component bars with weights
+                    bar_rows = [
+                        ("Technical", "technical"),
+                        ("Momentum", "momentum"),
+                        ("Sentiment", "sentiment"),
+                        ("Fundamental", "fundamental"),
+                    ]
+                    for label, key_name in bar_rows:
+                        val = float(component_scores.get(key_name, 0) or 0)
+                        w = display_weights.get(key_name, 0)
+                        pct = int(round(w * 100))
+                        cols_row = st.columns([2, 5, 1])
+                        with cols_row[0]:
+                            st.markdown(f"**{label}**")
+                        with cols_row[1]:
+                            st.progress(min(1.0, max(0.0, val / 10.0)))
+                        with cols_row[2]:
+                            st.markdown(f"{val:.1f}  ({pct}%)")
+
                     st.caption(ai_score["summary"])
                     with st.expander("What drives this score?", expanded=False):
                         signals = ai_score.get("signals", [])
                         if signals:
-                            by_impact = sorted(signals, key=lambda s: (s.get("impact") == "positive", s.get("impact") == "negative"), reverse=True)
+                            by_impact = sorted(
+                                signals,
+                                key=lambda s: (
+                                    s.get("impact") == "positive",
+                                    s.get("impact") == "negative",
+                                ),
+                                reverse=True,
+                            )
                             for sig in by_impact[:3]:
-                                st.caption(f"• {sig.get('name', '')}: {sig.get('value', '')} — {sig.get('description', '')}")
+                                st.caption(
+                                    f"• {sig.get('name', '')}: {sig.get('value', '')} — {sig.get('description', '')}"
+                                )
                         else:
                             st.caption("No signal breakdown available.")
                     with st.expander("📊 Signal Breakdown", expanded=False):
                         signals = ai_score.get("signals", [])
                         if signals:
-                            sig_df = pd.DataFrame(signals)[["name", "value", "impact", "description"]]
-                            sig_df.columns = ["Signal", "Value", "Impact", "Description"]
+                            sig_df = pd.DataFrame(
+                                signals
+                            )[["name", "value", "impact", "description"]]
+                            sig_df.columns = [
+                                "Signal",
+                                "Value",
+                                "Impact",
+                                "Description",
+                            ]
+
                             def _color_impact(val):
-                                colors = {"positive": "background-color: #d4edda", "negative": "background-color: #f8d7da", "neutral": "background-color: #fff3cd"}
+                                colors = {
+                                    "positive": "background-color: #d4edda",
+                                    "negative": "background-color: #f8d7da",
+                                    "neutral": "background-color: #fff3cd",
+                                }
                                 return colors.get(val, "")
+
                             try:
-                                styler = sig_df.style.applymap(_color_impact, subset=["Impact"])
+                                styler = sig_df.style.applymap(
+                                    _color_impact, subset=["Impact"]
+                                )
                                 st.dataframe(styler, use_container_width=True)
                             except Exception:
                                 st.dataframe(sig_df, use_container_width=True)
@@ -949,19 +1237,51 @@ with tab1:
                 if hist_data_cons is not None and len(hist_data_cons) >= 2:
                     from trading.models.forecast_router import ForecastRouter
 
+                    # Patch ForecastRouter.get_forecast locally to avoid the
+                    # undefined 'config' reference in the original implementation.
+                    def _patched_get_forecast(
+                        self,
+                        data: pd.DataFrame,
+                        horizon: int = 30,
+                        model_type: Optional[str] = None,
+                        run_walk_forward: bool = True,
+                        **kwargs,
+                    ) -> Dict[str, Any]:
+                        return ForecastRouter.get_forecast.__wrapped__(  # type: ignore[attr-defined]
+                            self,
+                            data=data,
+                            horizon=horizon,
+                            model_type=model_type,
+                            run_walk_forward=run_walk_forward,
+                            **kwargs,
+                        )
+
+                    # If the router implementation exposes a safe base via __wrapped__,
+                    # switch to it; otherwise fall back to the current method.
+                    try:
+                        if hasattr(ForecastRouter.get_forecast, "__wrapped__"):
+                            ForecastRouter.get_forecast = _patched_get_forecast  # type: ignore[assignment]
+                    except Exception:
+                        pass
+
                     router = ForecastRouter()
                     horizon = st.session_state.get("forecast_horizon", 7)
                     consensus = router.get_consensus_forecast(
                         hist_data_cons, horizon=horizon
                     )
                     if "error" not in consensus:
-                        raw = consensus.get("consensus_forecast") or (consensus.get("consensus_price") and [consensus["consensus_price"]]) or []
-                        if not raw and (consensus.get("price_targets") or consensus.get("models_failed")):
+                        raw = consensus.get("consensus_forecast") or (
+                            consensus.get("consensus_price")
+                            and [consensus["consensus_price"]]
+                        ) or []
+                        if not raw and (
+                            consensus.get("price_targets") or consensus.get("models_failed")
+                        ):
                             pt = consensus.get("price_targets") or {}
                             failed = consensus.get("models_failed") or []
                             n_ok, total = len(pt), len(pt) + len(failed)
                             st.caption(f"Partial consensus — {n_ok} of {total} models")
-                    if "error" not in consensus:
+
                         with st.expander("🎯 Model Consensus", expanded=True):
                             direction = consensus.get("direction", "NEUTRAL")
                             conviction = consensus.get("conviction", "INSUFFICIENT")

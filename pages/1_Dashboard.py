@@ -203,6 +203,12 @@ def load_universe_tickers(universe: str) -> list:
 
 @st.cache_data(ttl=900)
 def scan_top_movers(universe: str) -> dict:
+    """
+    Scan for top gainers/losers in the selected universe.
+
+    Also computes a simple intraday volume spike ratio so that the
+    Volume & News Events section can filter by meaningful volume.
+    """
     try:
         import yfinance as yf
         import numpy as np
@@ -210,11 +216,38 @@ def scan_top_movers(universe: str) -> dict:
         tickers = load_universe_tickers(universe)
         if not tickers:
             return {"as_of": None, "gainers": [], "losers": []}
-        data = yf.download(tickers, period="1d", interval="1d", auto_adjust=False, progress=False, threads=True)
+
+        # Use ~1 month of daily data so we can compare today's volume
+        # to the recent average and derive a volume_ratio.
+        data = yf.download(
+            tickers,
+            period="21d",
+            interval="1d",
+            auto_adjust=False,
+            progress=False,
+            threads=True,
+        )
         if data.empty:
             return {"as_of": None, "gainers": [], "losers": []}
+
         as_of_ts = None
         movers = []
+
+        def _volume_ratio_for(sym: str) -> float:
+            try:
+                vol_series = data["Volume"][sym] if isinstance(data.columns, pd.MultiIndex) else data["Volume"]
+                if vol_series.isna().all():
+                    return 1.0
+                today_vol = float(vol_series.iloc[-1])
+                # Use up to the previous 20 sessions as the baseline
+                hist_vol = vol_series.iloc[:-1].tail(20)
+                avg_vol = float(hist_vol.mean()) if not hist_vol.isna().all() else 0.0
+                if avg_vol <= 0:
+                    return 1.0
+                return today_vol / avg_vol
+            except Exception:
+                return 1.0
+
         if isinstance(data.columns, pd.MultiIndex):
             open_row = data["Open"].iloc[0]
             close_row = data["Close"].iloc[-1]
@@ -224,7 +257,14 @@ def scan_top_movers(universe: str) -> dict:
                     o, c = float(open_row.get(sym, np.nan)), float(close_row.get(sym, np.nan))
                     if not np.isfinite(o) or not np.isfinite(c) or o == 0:
                         continue
-                    movers.append({"symbol": sym, "price": c, "change": (c - o) / o * 100.0})
+                    movers.append(
+                        {
+                            "symbol": sym,
+                            "price": c,
+                            "change": (c - o) / o * 100.0,
+                            "volume_ratio": _volume_ratio_for(sym),
+                        }
+                    )
                 except Exception:
                     continue
         else:
@@ -232,13 +272,21 @@ def scan_top_movers(universe: str) -> dict:
                 o, c = float(data["Open"].iloc[0]), float(data["Close"].iloc[-1])
                 as_of_ts = data.index[-1].to_pydatetime() if hasattr(data.index[-1], "to_pydatetime") else data.index[-1]
                 if o != 0:
-                    movers.append({"symbol": tickers[0], "price": c, "change": (c - o) / o * 100.0})
+                    sym = tickers[0]
+                    movers.append(
+                        {
+                            "symbol": sym,
+                            "price": c,
+                            "change": (c - o) / o * 100.0,
+                            "volume_ratio": _volume_ratio_for(sym),
+                        }
+                    )
             except Exception:
                 pass
-        for m in movers:
-            m["volume_ratio"] = 1.0
+
         if not movers:
             return {"as_of": as_of_ts, "gainers": [], "losers": []}
+
         gainers = sorted([m for m in movers if m["change"] > 0], key=lambda x: x["change"], reverse=True)[:5]
         losers = sorted([m for m in movers if m["change"] < 0], key=lambda x: x["change"])[:5]
         return {

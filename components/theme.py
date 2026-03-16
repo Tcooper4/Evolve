@@ -12,138 +12,128 @@ from typing import Dict, Any
 def inject_theme() -> None:
     """Inject global CSS via st.markdown(unsafe_allow_html=True)."""
     css = """
-    <style>
-    :root {
-      --ev-bg: #0a0e1a;
-      --ev-surface: #0f1525;
-      --ev-surface2: #131d30;
-      --ev-border: #1e2d45;
-      --ev-accent: #00d4ff;
-      --ev-text: #e0e6f0;
-      --ev-muted: #4a6080;
-      --ev-up: #26a69a;
-      --ev-dn: #ef5350;
-      --ev-warn: #ff9800;
-    }
+/* Force dark background on everything */
+.stApp {
+    background-color: #0a0e1a !important;
+    color: #e0e6f0 !important;
+}
 
-    /* Page background */
-    .stApp { background-color: var(--ev-bg) !important; }
+/* Main content area */
+.main .block-container {
+    background-color: #0a0e1a !important;
+    padding-top: 1rem !important;
+}
 
-    /* Main content text */
-    .stApp, .stMarkdown, p, div {
-      color: var(--ev-text);
-    }
+/* All text */
+.stApp p, .stApp div, .stApp span, .stApp label {
+    color: #e0e6f0 !important;
+}
 
-    /* Sidebar */
-    [data-testid="stSidebar"] {
-      background-color: #070b14 !important;
-      border-right: 1px solid var(--ev-border);
-    }
+/* Headings */
+.stApp h1, .stApp h2, .stApp h3 {
+    color: #e0e6f0 !important;
+}
 
-    /* Hide Streamlit branding and top bar */
-    #MainMenu, footer, header { visibility: hidden; }
-    .stDeployButton { display: none; }
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: #070b14 !important;
+    border-right: 1px solid #1e2d45 !important;
+}
+[data-testid="stSidebar"] * {
+    color: #e0e6f0 !important;
+}
 
-    /* Metric deltas */
-    [data-testid="stMetricDelta"] svg { display: none; }
+/* Text inputs */
+[data-testid="stTextInput"] input {
+    background-color: #0f1525 !important;
+    color: #e0e6f0 !important;
+    border: 1px solid #1e2d45 !important;
+}
 
-    /* Dataframes */
-    .stDataFrame { background: var(--ev-surface) !important; }
+/* Selectboxes */
+[data-testid="stSelectbox"] > div > div {
+    background-color: #0f1525 !important;
+    color: #e0e6f0 !important;
+    border: 1px solid #1e2d45 !important;
+}
 
-    /* Buttons */
-    .stButton > button {
-      background: var(--ev-surface) !important;
-      border: 1px solid var(--ev-border) !important;
-      color: var(--ev-text) !important;
-      font-family: 'Courier New', monospace;
-    }
-    .stButton > button:hover {
-      border-color: var(--ev-accent) !important;
-      color: var(--ev-accent) !important;
-    }
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    background-color: #0a0e1a !important;
+    border-bottom: 1px solid #1e2d45 !important;
+}
+.stTabs [data-baseweb="tab"] {
+    background-color: #0a0e1a !important;
+    color: #4a6080 !important;
+}
+.stTabs [aria-selected="true"] {
+    color: #00d4ff !important;
+    border-bottom: 2px solid #00d4ff !important;
+}
 
-    /* Text inputs and selectboxes */
-    .stTextInput input, .stSelectbox select {
-      background: var(--ev-surface) !important;
-      border: 1px solid var(--ev-border) !important;
-      color: var(--ev-text) !important;
-      font-family: 'Courier New', monospace;
-    }
-    .stTextInput input:focus {
-      border-color: var(--ev-accent) !important;
-    }
+/* Metric cards */
+[data-testid="stMetric"] {
+    background-color: #0f1525 !important;
+    border: 1px solid #1e2d45 !important;
+    border-radius: 4px !important;
+    padding: 8px 12px !important;
+}
+[data-testid="stMetricValue"] {
+    color: #e0e6f0 !important;
+}
+[data-testid="stMetricLabel"] {
+    color: #4a6080 !important;
+}
 
-    /* Tabs */
-    .stTabs [data-baseweb="tab"] {
-      background: var(--ev-surface);
-      color: var(--ev-muted);
-      border-bottom: 2px solid transparent;
-    }
-    .stTabs [aria-selected="true"] {
-      color: var(--ev-accent) !important;
-      border-bottom: 2px solid var(--ev-accent) !important;
-    }
+/* Buttons */
+.stButton > button {
+    background-color: #0f1525 !important;
+    color: #e0e6f0 !important;
+    border: 1px solid #1e2d45 !important;
+}
+.stButton > button:hover {
+    border-color: #00d4ff !important;
+    color: #00d4ff !important;
+}
 
-    /* Metric cards */
-    [data-testid="stMetric"] {
-      background: var(--ev-surface);
-      border: 1px solid var(--ev-border);
-      border-radius: 4px;
-      padding: 8px 12px;
-    }
-    [data-testid="stMetricValue"] {
-      font-family: 'Courier New', monospace;
-      color: var(--ev-text);
-    }
+/* Dataframes */
+[data-testid="stDataFrame"] {
+    background-color: #0f1525 !important;
+}
 
-    /* Price flash animations */
-    @keyframes flashUp {
-      0%  { background-color: rgba(38,166,154,0.35); }
-      100%{ background-color: transparent; }
-    }
-    @keyframes flashDn {
-      0%  { background-color: rgba(239,83,80,0.35); }
-      100%{ background-color: transparent; }
-    }
-    .flash-up { animation: flashUp 0.8s ease-out; }
-    .flash-dn { animation: flashDn 0.8s ease-out; }
+/* Radio buttons */
+[data-testid="stRadio"] label {
+    color: #e0e6f0 !important;
+}
 
-    /* Market status badge */
-    .market-badge {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 3px;
-      font-family: 'Courier New', monospace;
-      letter-spacing: 0.5px;
-    }
-    .market-open   { color:#26a69a; border:1px solid #26a69a;
-                   background:#0d2a1a; }
-    .market-closed { color:#4a6080; border:1px solid #4a6080;
-                   background:#0f1525; }
-    .market-pre    { color:#ff9800; border:1px solid #ff9800;
-                   background:#2a1a0a; }
-    .market-post   { color:#ff9800; border:1px solid #ff9800;
-                   background:#2a1a0a; }
+/* Expanders */
+[data-testid="stExpander"] {
+    background-color: #0f1525 !important;
+    border: 1px solid #1e2d45 !important;
+}
+[data-testid="stExpander"] summary {
+    color: #e0e6f0 !important;
+}
 
-    /* Global ticker bar */
-    .ticker-bar {
-      display: flex;
-      gap: 16px;
-      padding: 4px 0;
-      font-family: 'Courier New', monospace;
-      font-size: 12px;
-      border-bottom: 1px solid var(--ev-border);
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-    .ticker-item { display: flex; gap: 6px; align-items: center; }
-    .ticker-sym  { color: var(--ev-accent); font-weight: bold; }
-    .ticker-px   { color: var(--ev-text); }
-    .ticker-up   { color: var(--ev-up); }
-    .ticker-dn   { color: var(--ev-dn); }
-    </style>
-    """
-    st.markdown(css, unsafe_allow_html=True)
+/* Plotly chart containers */
+[data-testid="stPlotlyChart"] {
+    background-color: #0a0e1a !important;
+}
+
+/* Info/warning/error boxes */
+[data-testid="stAlert"] {
+    background-color: #0f1525 !important;
+    border: 1px solid #1e2d45 !important;
+}
+
+/* Hide Streamlit branding */
+#MainMenu { visibility: hidden !important; }
+footer { visibility: hidden !important; }
+header { visibility: hidden !important; }
+.stDeployButton { display: none !important; }
+"""
+    # Force dark theme config + CSS injection
+    st.markdown("<style>" + css + "</style>", unsafe_allow_html=True)
 
 
 def market_status_html() -> str:
