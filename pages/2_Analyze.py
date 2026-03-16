@@ -156,6 +156,18 @@ period_label = st.radio(
 )
 period = period_map.get(period_label, "1y")
 
+# Auto-load data when ticker changes (so Market Analysis, Monte Carlo, etc. have forecast_data without manual Load Data)
+_cache_key = f"autoloaded_{ticker}_{period}"
+if st.session_state.get("_last_autoload_key") != _cache_key:
+    try:
+        _auto_hist = get_history(ticker, period=period)
+        if not _auto_hist.empty:
+            st.session_state["forecast_data"] = _auto_hist
+            st.session_state["_last_autoload_key"] = _cache_key
+            st.session_state["symbol"] = ticker
+    except Exception:
+        pass
+
 # Chart using price_cache
 if period == "1d":
     _interval = "5m"
@@ -271,6 +283,96 @@ if not hist.empty:
             showlegend=False,
         )
         st.plotly_chart(fig_chart, use_container_width=True, key="analyze_main_chart")
+        if trader_mode == "Short-term":
+            try:
+                st.markdown("**Short-term Signals**")
+                _hist_1d = get_history(ticker, period="1d", interval="5m")
+                if not _hist_1d.empty:
+                    _close = _hist_1d["Close"]
+                    _vwap = (_hist_1d["Close"] * _hist_1d["Volume"]).cumsum() / _hist_1d["Volume"].cumsum()
+                    _last = float(_close.iloc[-1])
+                    _vwap_last = float(_vwap.iloc[-1])
+                    _vwap_dev = ((_last - _vwap_last) / _vwap_last * 100)
+                    _vol_avg = float(_hist_1d["Volume"].mean())
+                    _vol_last = float(_hist_1d["Volume"].iloc[-1])
+                    _vol_ratio = _vol_last / _vol_avg if _vol_avg > 0 else 1.0
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        _sign = "+" if _vwap_dev >= 0 else ""
+                        st.metric(
+                            "vs VWAP",
+                            f"{_sign}{_vwap_dev:.2f}%",
+                            help="Price deviation from Volume Weighted Avg Price",
+                        )
+                    with c2:
+                        st.metric(
+                            "Volume Ratio",
+                            f"{_vol_ratio:.1f}x",
+                            help="Current bar volume vs average intraday volume",
+                        )
+                    with c3:
+                        _momentum = float(_close.pct_change(5).iloc[-1] * 100) if len(_close) > 5 else 0.0
+                        _sign2 = "+" if _momentum >= 0 else ""
+                        st.metric(
+                            "5-bar Momentum",
+                            f"{_sign2}{_momentum:.2f}%",
+                            help="Price change over last 5 intraday bars",
+                        )
+            except Exception:
+                pass
+        elif trader_mode == "Long-term":
+            try:
+                st.markdown("**Value Signals**")
+                _info = get_info(ticker)
+                if _info:
+                    _pe = _info.get("trailingPE") or _info.get("forwardPE")
+                    _pb = _info.get("priceToBook")
+                    _eps = _info.get("trailingEps") or _info.get("forwardEps")
+                    _div = _info.get("dividendYield", 0) or 0
+                    _52w_low = _info.get("fiftyTwoWeekLow")
+                    _52w_high = _info.get("fiftyTwoWeekHigh")
+                    _price = get_quote(ticker).get("price", 0)
+                    _range_pct = None
+                    if _52w_low and _52w_high and _price:
+                        _range_pct = (_price - _52w_low) / (_52w_high - _52w_low) * 100
+                    c1, c2, c3, c4 = st.columns(4)
+                    with c1:
+                        st.metric(
+                            "P/E Ratio",
+                            f"{_pe:.1f}x" if _pe else "N/A",
+                            help="Lower = cheaper relative to earnings",
+                        )
+                    with c2:
+                        st.metric(
+                            "P/B Ratio",
+                            f"{_pb:.2f}x" if _pb else "N/A",
+                            help="Below 1.0 may indicate undervaluation",
+                        )
+                    with c3:
+                        st.metric(
+                            "Div Yield",
+                            f"{_div * 100:.2f}%" if _div else "N/A",
+                        )
+                    with c4:
+                        if _range_pct is not None:
+                            st.metric(
+                                "52w Position",
+                                f"{_range_pct:.0f}%",
+                                help="Where price sits in 52-week range. Low % = near lows",
+                            )
+                        else:
+                            st.metric("52w Position", "N/A")
+                    _signals = []
+                    if _pe and _pe < 15:
+                        _signals.append("P/E below 15")
+                    if _pb and _pb < 1.5:
+                        _signals.append("P/B below 1.5")
+                    if _range_pct is not None and _range_pct < 25:
+                        _signals.append("Near 52-week low")
+                    if _signals:
+                        st.success("Value signals: " + ", ".join(_signals))
+            except Exception:
+                pass
     except Exception as e:
         st.caption(f"Feature unavailable: {e}")
 
@@ -579,7 +681,13 @@ with tab1:
     # Display loaded data
     if st.session_state.get("forecast_data") is not None:
         data = st.session_state.get("forecast_data")
-        
+        # Normalize column case (yfinance uses Close, etc.)
+        if "close" in data.columns and "Close" not in data.columns:
+            data = data.rename(columns={"close": "Close"})
+        if "Close" not in data.columns:
+            data = data.copy()
+            data["Close"] = data.iloc[:, 0]
+
         # Show data quality metrics (optional: src.utils.data_validation)
         try:
             from src.utils.data_validation import DataValidator
@@ -613,12 +721,12 @@ with tab1:
         with col1:
             st.metric("Data Points", len(data))
         with col2:
-            st.metric("Current Price", f"${data['close'].iloc[-1]:.2f}")
+            st.metric("Current Price", f"${data['Close'].iloc[-1]:.2f}")
         with col3:
-            change = ((data['close'].iloc[-1] / data['close'].iloc[0]) - 1) * 100
+            change = ((data['Close'].iloc[-1] / data['Close'].iloc[0]) - 1) * 100
             st.metric("Period Return", f"{change:.2f}%")
         with col4:
-            volatility = data['close'].pct_change().std() * np.sqrt(252) * 100
+            volatility = data['Close'].pct_change().std() * np.sqrt(252) * 100
             st.metric("Annualized Volatility", f"{volatility:.2f}%")
         
         # AI Score panel with trader-mode display weights and news score
@@ -825,7 +933,7 @@ with tab1:
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=data.index,
-                    y=data['close'],
+                    y=data['Close'],
                     mode='lines',
                     name='Close Price',
                     line=dict(color='blue', width=2)
@@ -844,7 +952,7 @@ with tab1:
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=data.index,
-                y=data['close'],
+                y=data['Close'],
                 mode='lines',
                 name='Close Price',
                 line=dict(color='blue', width=2)
@@ -890,22 +998,32 @@ with tab1:
         with col2:
             if forecast_button:
                 try:
+                    _denorm_price = None  # safe default before any conditional that might skip assignment
                     with st.spinner("Running consensus forecast (all models)..."):
                         data = st.session_state.get("forecast_data")
                         if data is None:
                             raise RuntimeError("No forecast_data in session_state; please load data first.")
                         data = data.copy()
+                        # Normalize column case (yfinance uses Close, etc.)
+                        if "close" in data.columns and "Close" not in data.columns:
+                            data = data.rename(columns={"close": "Close"})
+                        if "Close" not in data.columns:
+                            data["Close"] = data.iloc[:, 0]
                         horizon = st.session_state.get("forecast_horizon", 7)
                         if not isinstance(data.index, pd.DatetimeIndex):
                             data.index = pd.to_datetime(data.index)
-                        if "Close" in data.columns and "close" not in data.columns:
-                            data = data.rename(columns={"Close": "close", "Open": "open", "High": "high", "Low": "low", "Volume": "volume"})
                         used_router = False
                         consensus = None
                         try:
                             from trading.models.forecast_router import ForecastRouter
                             _router = ForecastRouter()
                             consensus = _router.get_consensus_forecast(data, horizon=horizon)
+                            _used = consensus.get("models_used", []) if isinstance(consensus, dict) else []
+                            _failed = consensus.get("models_failed", []) if isinstance(consensus, dict) else []
+                            if _failed:
+                                st.caption(
+                                    f"Models available: {_used} | Unavailable: {_failed}"
+                                )
                             if consensus and "error" not in consensus:
                                 raw = consensus.get("consensus_forecast") or (consensus.get("consensus_price") and [consensus["consensus_price"]]) or []
                                 forecast_values = np.asarray(raw, dtype="float64").ravel()
@@ -936,8 +1054,9 @@ with tab1:
                                 }
                                 used_router = True
                                 st.success("✅ Consensus forecast generated")
-                        except Exception as _e:
-                            logger.debug("Consensus forecast failed: %s", _e)
+                        except Exception as _ce:
+                            logger.debug("Consensus forecast failed: %s", _ce)
+                            st.caption(f"Consensus error: {_ce}")
                             consensus = None
                         if not used_router:
                             _pt = consensus.get("price_targets") if isinstance(consensus, dict) else None
@@ -1061,7 +1180,7 @@ with tab1:
                                 if isinstance(forecast_result, dict):
                                     st.write("Forecast result keys:", list(forecast_result.keys()))
                                 # Use last known price as fallback
-                                last_price = data['close'].iloc[-1] if 'close' in data.columns else data.iloc[-1, 0]
+                                last_price = data['Close'].iloc[-1] if 'Close' in data.columns else data.iloc[-1, 0]
                                 forecast_values = np.full(horizon, float(last_price))
                             
                             # Ensure forecast_values is array-like
@@ -1070,7 +1189,7 @@ with tab1:
                                 # Check for NaN/None values
                                 if np.any(np.isnan(forecast_values)) or np.any(forecast_values == None):
                                     st.warning("⚠️ Forecast contains NaN/None values. Replacing with last known price.")
-                                    last_price = float(data['close'].iloc[-1] if 'close' in data.columns else data.iloc[-1, 0])
+                                    last_price = float(data['Close'].iloc[-1] if 'Close' in data.columns else data.iloc[-1, 0])
                                     forecast_values = np.where(
                                         np.isnan(forecast_values) | (forecast_values == None),
                                         last_price,
@@ -1079,7 +1198,7 @@ with tab1:
                             else:
                                 # Single value case
                                 if forecast_values is None or (isinstance(forecast_values, float) and np.isnan(forecast_values)):
-                                    last_price = float(data['close'].iloc[-1] if 'close' in data.columns else data.iloc[-1, 0])
+                                    last_price = float(data['Close'].iloc[-1] if 'Close' in data.columns else data.iloc[-1, 0])
                                     forecast_values = np.full(horizon, last_price)
                                 else:
                                     forecast_values = np.array([float(forecast_values)] * horizon)
@@ -1288,9 +1407,20 @@ with tab1:
 
                     router = ForecastRouter()
                     horizon = st.session_state.get("forecast_horizon", 7)
-                    consensus = router.get_consensus_forecast(
-                        hist_data_cons, horizon=horizon
-                    )
+                    try:
+                        consensus = router.get_consensus_forecast(
+                            data=hist_data_cons,
+                            horizon=horizon,
+                        )
+                    except Exception as _ce:
+                        st.caption(f"Consensus error: {_ce}")
+                        consensus = {"error": str(_ce)}
+                    _used = consensus.get("models_used", []) if isinstance(consensus, dict) else []
+                    _failed = consensus.get("models_failed", []) if isinstance(consensus, dict) else []
+                    if _failed:
+                        st.caption(
+                            f"Models available: {_used} | Unavailable: {_failed}"
+                        )
                     if "error" not in consensus:
                         raw = consensus.get("consensus_forecast") or (
                             consensus.get("consensus_price")
@@ -1440,6 +1570,38 @@ with tab1:
                     # Show confidence metrics
                     if isinstance(forecast_result, dict) and ('lower_bound' in forecast_result or 'confidence' in forecast_result):
                         render_confidence_metrics(forecast_data)
+                    # News sentiment overlay below forecast results
+                    try:
+                        _ns = _news_sentiment_score(ticker)
+                        if _ns >= 7.5:
+                            _ns_label, _ns_color = "HOT", "#ff9800"
+                            _ns_text = "Breaking positive news may accelerate move"
+                        elif _ns >= 6.0:
+                            _ns_label, _ns_color = "POS", "#26a69a"
+                            _ns_text = "Positive news sentiment supports forecast"
+                        elif _ns <= 3.0:
+                            _ns_label, _ns_color = "NEG", "#ef5350"
+                            _ns_text = "Negative news may create headwinds"
+                        else:
+                            _ns_label, _ns_color = "NEU", "#4a6080"
+                            _ns_text = "News sentiment is neutral"
+                        st.markdown(
+                            f'<div style="padding:8px 12px;'
+                            f'background:#0f1525;border-left:3px solid '
+                            f'{_ns_color};border-radius:0 4px 4px 0;'
+                            f'margin-top:8px">'
+                            f'<span style="color:{_ns_color};'
+                            f'font-weight:bold;font-size:11px">'
+                            f'NEWS {_ns_label}</span>'
+                            f'<span style="color:#8899aa;font-size:11px;'
+                            f'margin-left:8px">{_ns_text}</span>'
+                            f'<span style="color:#4a6080;font-size:10px;'
+                            f'float:right">score: {_ns:.1f}/10</span>'
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
+                    except Exception:
+                        pass
                     
                 except ImportError:
                     # Fallback to original display code
@@ -1535,25 +1697,43 @@ with tab1:
                                     
                                     if isinstance(forecast_result, dict):
                                         forecast_values = forecast_result.get('forecast', [])
-                                        forecast_value = float(forecast_values[0]) if len(forecast_values) > 0 else float(data['close'].iloc[-1])
+                                        forecast_value = float(forecast_values[0]) if len(forecast_values) > 0 else float(data['Close'].iloc[-1])
                                     else:
-                                        forecast_value = float(forecast_result) if isinstance(forecast_result, (int, float)) else float(data['close'].iloc[-1])
+                                        forecast_value = float(forecast_result) if isinstance(forecast_result, (int, float)) else float(data['Close'].iloc[-1])
                                     
                                     features = data.copy()
-                                    target_history = features['close'] if 'close' in features.columns else features.iloc[:, 0]
+                                    target_history = features['Close'] if 'Close' in features.columns else (features['close'] if 'close' in features.columns else features.iloc[:, 0])
                                     
-                                    explanation = explainer.explain_forecast(
-                                        forecast_id=f"forecast_{st.session_state.symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                                        symbol=st.session_state.symbol,
-                                        forecast_value=forecast_value,
-                                        model=model,
-                                        features=features,
-                                        target_history=target_history,
-                                        horizon=st.session_state.forecast_horizon
-                                    )
-                                    st.session_state.forecast_explanation = explanation
-                                    st.success("✅ Explanation generated")
-                                    st.rerun()
+                                    try:
+                                        if hasattr(explainer, 'generate_forecast_explanation'):
+                                            explanation = explainer.generate_forecast_explanation(
+                                                model=model,
+                                                X=features,
+                                                forecast_value=forecast_value,
+                                                forecast_horizon=st.session_state.forecast_horizon,
+                                                actual_values=target_history,
+                                            )
+                                            st.session_state.forecast_explanation = {"success": True, "explanation": explanation}
+                                        elif hasattr(explainer, 'explain_forecast'):
+                                            explanation = explainer.explain_forecast(
+                                                forecast_id=f"forecast_{st.session_state.symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                                                symbol=st.session_state.symbol,
+                                                forecast_value=forecast_value,
+                                                model=model,
+                                                features=features,
+                                                target_history=target_history,
+                                                horizon=st.session_state.forecast_horizon,
+                                            )
+                                            st.session_state.forecast_explanation = explanation
+                                        else:
+                                            st.caption("Model explainability unavailable for this model type.")
+                                            st.rerun()
+                                            explanation = None
+                                        if explanation is not None:
+                                            st.success("✅ Explanation generated")
+                                            st.rerun()
+                                    except Exception:
+                                        st.caption("Model explainability unavailable for this model type.")
                                 except Exception as e:
                                     st.error(f"Error generating explanation: {e}")
                                     import traceback
@@ -1574,7 +1754,7 @@ with tab1:
                         agent = get_prompt_agent()
                         model_name = st.session_state.get("current_model", "Unknown")
                         symbol = st.session_state.get("symbol", "Unknown")
-                        last_price = float(data["close"].iloc[-1]) if "close" in data.columns else 0.0
+                        last_price = float(data["Close"].iloc[-1]) if "Close" in data.columns else (float(data["close"].iloc[-1]) if "close" in data.columns else 0.0)
                         fcast = forecast_result.get("forecast", []) if isinstance(forecast_result, dict) else []
                         forecast_mean = float(np.mean(fcast)) if len(fcast) > 0 else last_price
                         pct_change = ((forecast_mean - last_price) / last_price * 100) if last_price else 0.0
@@ -1811,11 +1991,15 @@ with tab2:
                     if data is None:
                         raise RuntimeError("No forecast_data in session_state; please load data first.")
                     data = data.copy()
-                    
+                    # Normalize column case (yfinance uses Close, etc.)
+                    if "close" in data.columns and "Close" not in data.columns:
+                        data["Close"] = data["close"]
+                    if "Close" not in data.columns:
+                        data["Close"] = data.iloc[:, 0]
                     # Ensure proper column names (capitalize for FeatureEngineering)
-                    if 'close' in data.columns:
-                        data['Close'] = data['close']
-                    if 'open' in data.columns:
+                    if "close" in data.columns:
+                        data["Close"] = data["close"]
+                    if "open" in data.columns:
                         data['Open'] = data['open']
                     if 'high' in data.columns:
                         data['High'] = data['high']
@@ -2281,21 +2465,24 @@ with tab2:
                                         forecast_value = float(fv[0]) if isinstance(fv, (list, np.ndarray)) and len(fv) > 0 else float(data[model_config["target_column"]].iloc[-1])
                                         features = data.copy()
                                         target_history = features[model_config["target_column"]] if model_config["target_column"] in features.columns else features.iloc[:, 0]
-                                        explanation = explainer.explain_forecast(
-                                            forecast_id=f"forecast_{st.session_state.symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                                            symbol=st.session_state.symbol,
-                                            forecast_value=forecast_value,
-                                            model=model,
-                                            features=features,
-                                            target_history=target_history,
-                                            horizon=st.session_state.forecast_horizon
-                                        )
-                                        # Persist explanation in session state so it survives reruns
-                                        st.session_state.forecast_explanation_tab2 = {
-                                            "success": True,
-                                            "explanation": explanation,
-                                        }
-                                        st.success("✅ Explanation generated successfully!")
+                                        try:
+                                            explanation = explainer.explain_forecast(
+                                                forecast_id=f"forecast_{st.session_state.symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                                                symbol=st.session_state.symbol,
+                                                forecast_value=forecast_value,
+                                                model=model,
+                                                features=features,
+                                                target_history=target_history,
+                                                horizon=st.session_state.forecast_horizon
+                                            )
+                                            # Persist explanation in session state so it survives reruns
+                                            st.session_state.forecast_explanation_tab2 = {
+                                                "success": True,
+                                                "explanation": explanation,
+                                            }
+                                            st.success("✅ Explanation generated successfully!")
+                                        except Exception:
+                                            st.caption("Model explainability unavailable for this model type.")
                                 except ImportError:
                                     st.warning("⚠️ Forecast explainability requires SHAP library")
                                     st.code("pip install shap")

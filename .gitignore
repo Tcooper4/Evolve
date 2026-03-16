@@ -100,6 +100,9 @@ Thumbs.db
 *.ipynb
 dev/notebooks/
 
+# CatBoost / training artifacts (auto-generated, change every run)
+catboost_info/
+
 # Cache
 .cache/
 cache/

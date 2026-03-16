@@ -449,43 +449,84 @@ if gainers or losers:
         st.caption(f"Feature unavailable: {e}")
 
 st.markdown("---")
-st.subheader("📊 Volume & News Events")
-_vol_th = vol_threshold
-_price_th = price_threshold
-_all_movers = (movers_state.get("gainers") or []) + (movers_state.get("losers") or [])
-_qualified = [m for m in _all_movers if m.get("volume_ratio", 1.0) >= _vol_th and abs(m.get("change", 0)) >= _price_th]
-_qualified.sort(key=lambda x: x.get("volume_ratio", 0), reverse=True)
-_top4 = _qualified[:4]
-try:
-    from components.news_candle_chart import render_news_candle_chart
-except Exception:
-    render_news_candle_chart = None
 
-if render_news_candle_chart:
-    _row1_cols = st.columns(2)
-    _row2_cols = st.columns(2)
-    for _idx in range(4):
-        _col = _row1_cols[_idx % 2] if _idx < 2 else _row2_cols[_idx % 2]
-        with _col:
-            if _idx < len(_top4):
-                _sym = _top4[_idx].get("symbol", "")
-                try:
-                    render_news_candle_chart(_sym, period="3mo", interval="1d", show_annotations=True)
-                except Exception as _e:
-                    st.caption(f"Chart unavailable for {_sym}")
-            else:
-                st.info("No additional volume events detected")
-
-st.markdown("---")
-try:
-    from trading.data.news_aggregator import get_walter_bloomberg_headlines
-    wb_news = get_walter_bloomberg_headlines(5)
-    if wb_news:
-        st.markdown("**Breaking — Walter Bloomberg**")
-        for item in wb_news:
-            st.markdown(f"- {item.get('title', '')[:100]}")
-except Exception:
-    pass
+# News section: auto-refresh every 5 minutes when fragment is available
+_st_ver = tuple(int(x) for x in st.__version__.split(".")[:2])
+if _st_ver >= (1, 37):
+    @st.fragment(run_every=300)
+    def _news_section():
+        st.subheader("📊 Volume & News Events")
+        _vol_th = vol_threshold
+        _price_th = price_threshold
+        _all_movers = (movers_state.get("gainers") or []) + (movers_state.get("losers") or [])
+        _qualified = [m for m in _all_movers if m.get("volume_ratio", 1.0) >= _vol_th and abs(m.get("change", 0)) >= _price_th]
+        _qualified.sort(key=lambda x: x.get("volume_ratio", 0), reverse=True)
+        _top4 = _qualified[:4]
+        try:
+            from components.news_candle_chart import render_news_candle_chart
+        except Exception:
+            render_news_candle_chart = None
+        if render_news_candle_chart:
+            _row1_cols = st.columns(2)
+            _row2_cols = st.columns(2)
+            for _idx in range(4):
+                _col = _row1_cols[_idx % 2] if _idx < 2 else _row2_cols[_idx % 2]
+                with _col:
+                    if _idx < len(_top4):
+                        _sym = _top4[_idx].get("symbol", "")
+                        try:
+                            render_news_candle_chart(_sym, period="3mo", interval="1d", show_annotations=True)
+                        except Exception as _e:
+                            st.caption(f"Chart unavailable for {_sym}")
+                    else:
+                        st.info("No additional volume events detected")
+        st.markdown("---")
+        try:
+            from trading.data.news_aggregator import get_walter_bloomberg_headlines
+            wb_news = get_walter_bloomberg_headlines(5)
+            if wb_news:
+                st.markdown("**Breaking — Walter Bloomberg**")
+                for item in wb_news:
+                    st.markdown(f"- {item.get('title', '')[:100]}")
+        except Exception:
+            pass
+    _news_section()
+else:
+    st.subheader("📊 Volume & News Events")
+    _vol_th = vol_threshold
+    _price_th = price_threshold
+    _all_movers = (movers_state.get("gainers") or []) + (movers_state.get("losers") or [])
+    _qualified = [m for m in _all_movers if m.get("volume_ratio", 1.0) >= _vol_th and abs(m.get("change", 0)) >= _price_th]
+    _qualified.sort(key=lambda x: x.get("volume_ratio", 0), reverse=True)
+    _top4 = _qualified[:4]
+    try:
+        from components.news_candle_chart import render_news_candle_chart
+    except Exception:
+        render_news_candle_chart = None
+    if render_news_candle_chart:
+        _row1_cols = st.columns(2)
+        _row2_cols = st.columns(2)
+        for _idx in range(4):
+            _col = _row1_cols[_idx % 2] if _idx < 2 else _row2_cols[_idx % 2]
+            with _col:
+                if _idx < len(_top4):
+                    _sym = _top4[_idx].get("symbol", "")
+                    try:
+                        render_news_candle_chart(_sym, period="3mo", interval="1d", show_annotations=True)
+                    except Exception as _e:
+                        st.caption(f"Chart unavailable for {_sym}")
+                else:
+                    st.info("No additional volume events detected")
+    st.markdown("---")
+    try:
+        from trading.data.news_aggregator import get_walter_bloomberg_headlines
+        wb_news = get_walter_bloomberg_headlines(5)
+        if wb_news:
+            st.markdown("**Breaking — Walter Bloomberg**")
+            for item in wb_news:
+                st.markdown(f"- {item.get('title', '')[:100]}")
+    except Exception:
+        pass
 
 st.markdown("---")
 st.subheader("Watchlist")

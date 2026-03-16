@@ -151,8 +151,9 @@ def market_status_html() -> str:
 
                 now = datetime.now(ZoneInfo("America/New_York"))
             except Exception:
-                # Last-resort: naive UTC time (no offset guess)
-                now = datetime.utcnow()
+                # Last-resort: no tz library. UTC is 4–5h ahead of ET; compare
+                # against ET boundaries by converting UTC to approximate ET.
+                now = datetime.utcnow() + timedelta(hours=-4)
         t = now.time()
         wd = now.weekday()
         if wd >= 5:
