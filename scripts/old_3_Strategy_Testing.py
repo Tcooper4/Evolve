@@ -60,20 +60,20 @@ def _normalize_trades(trades: list) -> list:
 import os as _os
 import runpy as _runpy
 _guard_key = "EVOLVE_PAGE_GUARD_STRATEGY_TESTING"
-if _os.environ.get(_guard_key) != "1":
-    _os.environ[_guard_key] = "1"
-    try:
-        _runpy.run_path(__file__, run_name="__main__")
-    except Exception as _page_error:
-        import traceback
-        st.error(f"⚠️ Page error: {type(_page_error).__name__}: {_page_error}")
-        with st.expander("Developer details"):
-            st.code(traceback.format_exc(), language="python")
-        st.info("Try refreshing the page or selecting a different symbol.")
-        st.stop()
-    finally:
-        _os.environ.pop(_guard_key, None)
-    st.stop()
+#if _os.environ.get(_guard_key) != "1":
+#    _os.environ[_guard_key] = "1"
+#    try:
+#        _runpy.run_path(__file__, run_name="__main__")
+#    except Exception as _page_error:
+#        import traceback
+#        st.error(f"⚠️ Page error: {type(_page_error).__name__}: {_page_error}")
+#        with st.expander("Developer details"):
+#            st.code(traceback.format_exc(), language="python")
+#        st.info("Try refreshing the page or selecting a different symbol.")
+#        # st.stop() disabled for tab embedding
+#    finally:
+#        _os.environ.pop(_guard_key, None)
+    # st.stop() disabled for tab embedding
 
 # Backend: lazy load when Strategy page is opened (not at app startup)
 def _get_strategy_backend():
@@ -138,7 +138,7 @@ else:
 
 if not _sbe:
     st.error("Strategy backend could not be loaded. Check logs and dependencies.")
-    st.stop()
+    # st.stop() disabled for tab embedding
 
 # get_memory_store only when page needs it (e.g. save/load)
 def _get_memory_store():

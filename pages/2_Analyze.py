@@ -1,18 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Forecasting & Market Analysis Page
-
-Merges functionality from:
-- Forecasting.py
-- Forecast_with_AI_Selection.py
-- 7_Market_Analysis.py
-
-Features:
-- Quick Forecast with 3 fast models (ARIMA, XGBoost, Ridge); no walk-forward
-- Advanced Forecasting with hyperparameter tuning
-- AI-powered model selection
-- Multi-model comparison and ensemble
-- Market analysis with technical indicators
+Analyze Page — Forecasting & Market Analysis (reorganized from 2_Forecasting).
+Ticker-driven analysis with theme, price_cache, period chart, and news sentiment.
 """
 
 import logging
@@ -25,9 +14,19 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
+from components.theme import market_status_html, render_top_bar, keyboard_shortcut_js
+from components.news_candle_chart import render_news_candle_chart
+from trading.data.price_cache import get_quote, get_history, get_info, get_news
 from ui.page_assistant import render_page_assistant
 from trading.data.earnings_calendar import get_upcoming_earnings
 from trading.data.insider_flow import get_insider_flow
+
+try:
+    st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
+except Exception:
+    pass
+render_top_bar()
+st.markdown(market_status_html(), unsafe_allow_html=True)
 
 logger = logging.getLogger(__name__)
 
@@ -121,8 +120,110 @@ if "forecast_horizon" not in st.session_state:
     st.session_state["forecast_horizon"] = 7
 
 # Main page title
-st.title("📈 Forecasting & Market Analysis")
-st.markdown("Advanced forecasting with AI model selection and comprehensive market analysis")
+st.title("📈 Analyze")
+st.markdown("Ticker analysis with forecasting, AI model selection, and market analysis")
+
+# Ticker and controls at top
+ticker = st.text_input(
+    "Ticker",
+    value=st.session_state.get("analyze_ticker", "AAPL"),
+    key="analyze_ticker",
+)
+if not ticker or not ticker.strip():
+    ticker = "AAPL"
+else:
+    ticker = ticker.strip().upper()
+
+trader_mode = st.radio(
+    "Mode",
+    ["Short-term", "Long-term"],
+    horizontal=True,
+    key="analyze_trader_mode",
+)
+
+period_map = {
+    "1D": "1d", "5D": "5d", "1M": "1mo", "3M": "3mo",
+    "6M": "6mo", "1Y": "1y", "5Y": "5y",
+}
+period_labels = list(period_map.keys())
+default_idx = 5 if "1Y" in period_labels else 0
+period_label = st.radio(
+    "Period",
+    period_labels,
+    horizontal=True,
+    key="analyze_period",
+    index=min(default_idx, len(period_labels) - 1),
+)
+period = period_map.get(period_label, "1y")
+
+# Chart using price_cache
+hist = get_history(ticker, period=period)
+if not hist.empty:
+    try:
+        fig_chart = go.Figure()
+        fig_chart.add_trace(go.Scatter(
+            x=hist.index, y=hist["Close"],
+            mode="lines", name="Close", line=dict(color="#00d4ff", width=2),
+        ))
+        current = float(hist["Close"].iloc[-1])
+        fig_chart.add_hline(
+            y=current,
+            line_dash="dash",
+            line_color="#ef5350",
+            line_width=1,
+            annotation_text=f"{current:.2f}",
+            annotation_position="right",
+        )
+        fig_chart.update_layout(
+            title=f"{ticker} — {period_label}",
+            template="plotly_dark",
+            xaxis_title="Date",
+            yaxis_title="Price ($)",
+            hovermode="x unified",
+            height=350,
+        )
+        st.plotly_chart(fig_chart, use_container_width=True, key="analyze_main_chart")
+    except Exception as e:
+        st.caption(f"Feature unavailable: {e}")
+
+# News sentiment panel (HOT/POS/NEG/NEU labels)
+try:
+    news_items = get_news(ticker)
+    if news_items:
+        with st.expander("📰 News sentiment", expanded=False):
+            pos_kw = ['beat','surge','raises','upgrade','strong',
+                      'growth','record','above','buy','bullish']
+            neg_kw = ['miss','falls','cuts','downgrade','weak',
+                      'below','layoffs','investigation','sell',
+                      'bearish','loss']
+            for i, item in enumerate(news_items[:8]):
+                title_lower = item.get('title', '') or item.get('headline', '') or ''
+                if not title_lower:
+                    continue
+                title_lower = title_lower.lower()
+                score = 0
+                score += sum(1 for k in pos_kw if k in title_lower)
+                score -= sum(1 for k in neg_kw if k in title_lower)
+                if score >= 3:
+                    ns_label, ns_color = "HOT", "#ff9800"
+                elif score >= 1:
+                    ns_label, ns_color = "POS", "#26a69a"
+                elif score <= -1:
+                    ns_label, ns_color = "NEG", "#ef5350"
+                else:
+                    ns_label, ns_color = "NEU", "#4a6080"
+                st.markdown(
+                    f'<span style="color:{ns_color};font-size:10px;'
+                    f'padding:1px 6px;border-radius:2px;'
+                    f'background:{ns_color}22;font-family:monospace">'
+                    f'{ns_label}</span> '
+                    f'{item.get("title", item.get("headline", ""))[:80]}',
+                    unsafe_allow_html=True
+                )
+except Exception as e:
+    st.caption(f"Feature unavailable: {e}")
+
+st.markdown("---")
 
 # Create tabbed interface
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_insider, tab_earnings = st.tabs(
@@ -355,6 +456,14 @@ with tab1:
                     col_sent.metric("Sentiment", f"{ai_score['sentiment_score']}/10")
                     col_fund.metric("Fundamental", f"{ai_score['fundamental_score']}/10")
                     st.caption(ai_score["summary"])
+                    with st.expander("What drives this score?", expanded=False):
+                        signals = ai_score.get("signals", [])
+                        if signals:
+                            by_impact = sorted(signals, key=lambda s: (s.get("impact") == "positive", s.get("impact") == "negative"), reverse=True)
+                            for sig in by_impact[:3]:
+                                st.caption(f"• {sig.get('name', '')}: {sig.get('value', '')} — {sig.get('description', '')}")
+                        else:
+                            st.caption("No signal breakdown available.")
                     with st.expander("📊 Signal Breakdown", expanded=False):
                         signals = ai_score.get("signals", [])
                         if signals:
@@ -379,6 +488,12 @@ with tab1:
                 render_multi_timeframe_chart(_sym, hist_daily=data)
             except Exception as _e:
                 st.caption(f"Chart unavailable: {_e}")
+            try:
+                st.markdown("**News-Annotated Chart**")
+                render_news_candle_chart(
+                    _sym, period="6mo", show_annotations=True)
+            except Exception as _e:
+                st.caption(f"News candle chart unavailable: {_e}")
 
         # Price chart - use advanced candlestick chart if OHLCV data available
         try:
@@ -475,6 +590,7 @@ with tab1:
                         if "Close" in data.columns and "close" not in data.columns:
                             data = data.rename(columns={"Close": "close", "Open": "open", "High": "high", "Low": "low", "Volume": "volume"})
                         used_router = False
+                        consensus = None
                         try:
                             from trading.models.forecast_router import ForecastRouter
                             _router = ForecastRouter()
@@ -511,8 +627,18 @@ with tab1:
                                 st.success("✅ Consensus forecast generated")
                         except Exception as _e:
                             logger.debug("Consensus forecast failed: %s", _e)
+                            consensus = None
                         if not used_router:
-                            st.error("Consensus forecast failed. Load data and try again, or use Tab 2 for a single-model forecast.")
+                            _pt = consensus.get("price_targets") if isinstance(consensus, dict) else None
+                            _failed = consensus.get("models_failed") if isinstance(consensus, dict) else None
+                            if consensus and (_pt or _failed):
+                                pt = _pt or {}
+                                failed = _failed or []
+                                n_ok = len(pt)
+                                total = n_ok + len(failed)
+                                st.caption(f"Partial consensus — {n_ok} of {total} models")
+                            else:
+                                st.error("Consensus forecast failed. Load data and try again, or use Tab 2 for a single-model forecast.")
                         # Quick Forecast now uses only the consensus router; single-model flows live in Tab 2.
                         # If consensus fails, we surface the above error and do not attempt any model initialization here.
                         if used_router:
@@ -827,6 +953,13 @@ with tab1:
                     consensus = router.get_consensus_forecast(
                         hist_data_cons, horizon=horizon
                     )
+                    if "error" not in consensus:
+                        raw = consensus.get("consensus_forecast") or (consensus.get("consensus_price") and [consensus["consensus_price"]]) or []
+                        if not raw and (consensus.get("price_targets") or consensus.get("models_failed")):
+                            pt = consensus.get("price_targets") or {}
+                            failed = consensus.get("models_failed") or []
+                            n_ok, total = len(pt), len(pt) + len(failed)
+                            st.caption(f"Partial consensus — {n_ok} of {total} models")
                     if "error" not in consensus:
                         with st.expander("🎯 Model Consensus", expanded=True):
                             direction = consensus.get("direction", "NEUTRAL")
@@ -2328,7 +2461,12 @@ with tab5:
                 with _col1:
                     st.markdown("**Rolling 60-Day Correlation vs SPY**")
                     try:
-                        _spy = yf.Ticker("SPY").history(period="1y")["Close"]
+                        _spy_df = get_history("SPY", period="1y")
+                        if not _spy_df.empty and "Close" in _spy_df.columns:
+                            _spy = _spy_df["Close"]
+                        else:
+                            import yfinance as yf
+                            _spy = yf.Ticker("SPY").history(period="1y")["Close"]
                         _sym_ret = hist["Close"].pct_change().dropna()
                         _spy_ret = _spy.pct_change().dropna()
                         _sym_aligned, _spy_aligned = _sym_ret.align(_spy_ret, join="inner")

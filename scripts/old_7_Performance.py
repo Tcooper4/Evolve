@@ -1221,7 +1221,7 @@ try:
                 strategy_row = match_df.iloc[0] if not match_df.empty else None
                 if strategy_row is None:
                     st.warning(f"No data for strategy '{selected_strategy}'.")
-                    st.stop()
+                    # st.stop() disabled for tab embedding
                 lifecycle = get_strategy_lifecycle(selected_strategy)
             
                 # Health score visualization
@@ -3030,4 +3030,4 @@ except Exception as _page_error:
     with st.expander("Developer details"):
         st.code(traceback.format_exc(), language="python")
     st.info("Try refreshing the page or selecting a different symbol.")
-    st.stop()
+    # st.stop() disabled for tab embedding

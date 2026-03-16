@@ -229,7 +229,7 @@ To generate a report, run a backtest first:
 2. Configure and run a Quick Backtest
 3. Return here to generate your report
                     """)
-                    st.stop()
+                    # st.stop() disabled for tab embedding
                 # Use results (backtest_results) for the report
                 backtest_results = results
                 has_report_data = True
@@ -468,7 +468,7 @@ To generate a report, run a backtest first:
                     backtest = st.session_state.get("backtest_results")
                     if not backtest:
                         st.error("No backtest data to export. Run a strategy backtest first.")
-                        st.stop()
+                        # st.stop() disabled for tab embedding
                     trades_export = backtest.get("trades", []) if isinstance(backtest, dict) else []
                     trade_df_export = pd.DataFrame(trades_export) if trades_export else pd.DataFrame()
                     eq_export = backtest.get("equity_curve") if isinstance(backtest, dict) else None

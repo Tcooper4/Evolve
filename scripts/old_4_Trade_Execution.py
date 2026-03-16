@@ -283,7 +283,7 @@ try:
         # Convert to enum (with None check)
         if OrderType is None or OrderSide is None:
             st.error("⚠️ Execution modules not available. Please ensure execution package is properly installed.")
-            st.stop()
+            # st.stop() disabled for tab embedding
     
         order_type = OrderType.MARKET if order_type_str == "Market" else OrderType.LIMIT
         order_side = OrderSide.BUY if side == "Buy" else OrderSide.SELL

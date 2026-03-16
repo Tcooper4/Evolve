@@ -99,11 +99,34 @@ except Exception:
 if not session_id:
     st.stop()
 
-# Sidebar branding
+# ── Global ticker search (sidebar) ──────────────────
+if "global_search_ticker" not in st.session_state:
+    st.session_state["global_search_ticker"] = ""
+
 with st.sidebar:
-    st.markdown("## 🚀 Evolve AI")
-    st.caption("Autonomous Trading Intelligence")
+    _gsearch = st.text_input(
+        "Search ticker",
+        placeholder="/ to search any ticker...",
+        key="global_search_ticker",
+        label_visibility="collapsed",
+    )
+    if _gsearch and len(_gsearch.strip()) >= 1:
+        _sym = _gsearch.strip().upper()
+        if st.sidebar.button(
+            "Analyze " + _sym,
+            key="global_search_go",
+            use_container_width=True,
+        ):
+            st.session_state["analyze_ticker"] = _sym
+            st.switch_page("pages/2_Analyze.py")
     st.markdown("---")
+
+# ── Inject theme globally ────────────────────────────
+try:
+    from components.theme import inject_theme
+    inject_theme()
+except Exception:
+    pass
 
 # Optional: initialize notification service, audit logger, and LLM processor for pages that use them
 if "notification_service" not in st.session_state:
@@ -127,5 +150,5 @@ if "llm_processor" not in st.session_state:
 
 # Main area when this script is the active page
 st.markdown("# Welcome to Evolve")
-st.markdown("Use the **sidebar** to open **Home**, **Chat**, **Forecasting**, **Strategy Testing**, and other pages.")
-st.info("👉 Select a page from the sidebar to get started.")
+st.markdown("Use the **sidebar** to open **Dashboard**, **Analyze**, **Scanner**, **Trade**, **Backtest**, **Chat**, **Settings**, or the legacy pages.")
+st.info("👉 Select a page from the sidebar to get started. New pages: 1_Dashboard, 2_Analyze, 3_Scanner, 4_Trade, 5_Backtest, 6_Chat, 7_Settings.")

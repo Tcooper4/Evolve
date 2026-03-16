@@ -408,7 +408,7 @@ if portfolio is None or not hasattr(portfolio, "state") or portfolio.state is No
     st.error(
         "Portfolio manager not properly initialized. Please try refreshing the page."
     )
-    st.stop()
+    # st.stop() disabled for tab embedding
 
 # Sidebar
 st.sidebar.title("Controls")
@@ -1801,7 +1801,7 @@ with tab4:
     # Initialize optimizers (with None check)
     if PortfolioAllocator is None:
         st.error("⚠️ Portfolio allocation modules not available. Please ensure portfolio package is properly installed.")
-        st.stop()
+        # st.stop() disabled for tab embedding
     
     optimizer = PortfolioOptimizer(risk_free_rate=0.02)
     allocator = PortfolioAllocator()

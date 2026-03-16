@@ -88,7 +88,7 @@ if not check_admin_access():
     st.error("🔒 Access Denied")
     st.markdown("**Admin privileges required to access this page.**")
     st.info("Please contact your system administrator for access.")
-    st.stop()
+    # st.stop() disabled for tab embedding
 
 
 def compute_health_score() -> int:
