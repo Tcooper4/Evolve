@@ -224,6 +224,15 @@ class GNNForecaster:
             learning_rate: Learning rate
             correlation_threshold: Threshold for creating edges (0-1)
         """
+        # Handle being called with a config dict (from model registry) vs individual kwargs.
+        if isinstance(num_assets, dict):
+            _cfg = num_assets
+            num_assets = int(_cfg.get("num_assets", 10))
+            hidden_size = int(_cfg.get("hidden_size", hidden_size))
+            num_layers = int(_cfg.get("num_layers", num_layers))
+            seq_length = int(_cfg.get("seq_length", seq_length))
+            learning_rate = float(_cfg.get("learning_rate", learning_rate))
+
         if not TORCH_AVAILABLE:
             raise ImportError("PyTorch is required for GNN models")
         

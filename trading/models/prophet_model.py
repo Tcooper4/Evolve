@@ -458,32 +458,6 @@ if PROPHET_AVAILABLE:
                     )
                     return np.array([])
 
-                # Check for required columns
-                if self.config["date_column"] not in data.columns:
-                    logger.warning(
-                        f"Prophet predict: Missing required column '{self.config['date_column']}', returning empty result"
-                    )
-                    return np.array([])
-
-                # Validate date column using time utilities
-                if not validate_date_column(data, self.config["date_column"]):
-                    logger.warning(
-                        f"Prophet predict: Invalid date column '{self.config['date_column']}', returning empty result"
-                    )
-                    return np.array([])
-
-                # Check for NaN values
-                if data[self.config["date_column"]].isnull().any():
-                    logger.warning(
-                        "Prophet predict: NaN values found in date column, attempting to clean"
-                    )
-                    data = data.dropna(subset=[self.config["date_column"]])
-                    if data.empty:
-                        logger.warning(
-                            "Prophet predict: No valid data after cleaning, returning empty result"
-                        )
-                        return np.array([])
-
                 # Validate data size
                 if len(data) < 2:
                     logger.warning(
@@ -507,13 +481,32 @@ if PROPHET_AVAILABLE:
                     )
                     logger.info(f"Using dynamic forecast horizon: {horizon} periods")
 
-                # Prepare data for prediction
-                future = data[[self.config["date_column"]]].rename(
-                    columns={self.config["date_column"]: "ds"}
-                )
+                # Prepare data for prediction – mirror fit() logic:
+                # use date column if present, else use index
+                date_col = self.config.get("date_column", "ds")
 
-                # Validate date format using time utilities using time utilities
-                future["ds"] = pd.to_datetime(future["ds"])
+                if date_col in data.columns:
+                    future = data[[date_col]].rename(columns={date_col: "ds"})
+                elif hasattr(data.index, "to_frame"):
+                    # Use DatetimeIndex as ds
+                    _idx = data.index
+                    try:
+                        # Drop timezone info for compatibility
+                        if hasattr(_idx, "tz") and _idx.tz is not None:
+                            _idx = _idx.tz_localize(None)
+                    except Exception:
+                        pass
+                    future = pd.DataFrame({"ds": _idx})
+                else:
+                    logger.warning(
+                        "Prophet predict: cannot build date column from data, returning empty result"
+                    )
+                    return np.array([])
+
+                # Normalize and validate ds column
+                future["ds"] = pd.to_datetime(future["ds"], utc=False).dt.tz_localize(
+                    None
+                )
 
                 # Make prediction
                 forecast = self.model.predict(future)

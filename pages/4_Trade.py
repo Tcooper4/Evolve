@@ -109,6 +109,62 @@ with tab_risk:
     except Exception as e:
         st.caption(f"Feature unavailable: {e}")
 
+    # Advanced Risk Analytics from archive (now wired via trading.risk)
+    st.markdown("---")
+    st.subheader("📊 Advanced Risk Analytics")
+    try:
+        from trading.risk.advanced_risk import AdvancedRiskAnalyzer
+        from trading.portfolio.portfolio_manager import PortfolioManager
+
+        _pm = st.session_state.get("portfolio_manager")
+        if _pm and isinstance(_pm, PortfolioManager):
+            _positions = _pm.get_all_positions()
+            if _positions:
+                # Expect a mapping of ticker -> position/weight
+                _analyzer = AdvancedRiskAnalyzer()
+
+                # For now, use synthetic returns built from position notional history if available.
+                # If the portfolio manager exposes historical returns, prefer that.
+                _hist_returns = getattr(_pm, "get_portfolio_returns", None)
+                if callable(_hist_returns):
+                    _rets = _hist_returns()
+                else:
+                    _rets = None
+
+                if _rets is not None and not _rets.empty:
+                    _risk_metrics = _analyzer.calculate_comprehensive_risk(_rets)
+                    if _risk_metrics:
+                        _rc1, _rc2, _rc3 = st.columns(3)
+                        with _rc1:
+                            st.metric(
+                                "Portfolio VaR (95%)",
+                                f"{_risk_metrics.var_95:.2%}",
+                            )
+                        with _rc2:
+                            st.metric(
+                                "CVaR (95%)",
+                                f"{_risk_metrics.cvar_95:.2%}",
+                            )
+                        with _rc3:
+                            st.metric(
+                                "Max Drawdown",
+                                f"{_risk_metrics.max_drawdown:.2%}",
+                            )
+                    else:
+                        st.caption(
+                            "No risk metrics available for current positions."
+                        )
+                else:
+                    st.caption(
+                        "Not enough return history to compute advanced risk metrics."
+                    )
+            else:
+                st.caption("No open positions to analyze.")
+        else:
+            st.caption("Portfolio manager not initialized.")
+    except Exception as _re:
+        st.caption(f"Advanced risk unavailable: {_re}")
+
 
 # Page Assistant
 try:

@@ -360,6 +360,28 @@ class TransformerForecaster(BaseModel):
             # Try to load the model
             self.model = self.build_model()
             logger.info("Transformer model loaded successfully")
+
+            # Attempt to restore normalization statistics from sidecar JSON
+            try:
+                import json as _json
+                from pathlib import Path as _Path
+                import numpy as _np
+
+                _stats_path = _Path(".cache") / "transformer_norm_stats.json"
+                if _stats_path.exists():
+                    _stats = _json.loads(_stats_path.read_text())
+                    if _stats.get("X_mean") is not None:
+                        self.X_mean = _np.array(_stats["X_mean"])
+                    if _stats.get("X_std") is not None:
+                        self.X_std = _np.array(_stats["X_std"])
+                    if _stats.get("y_mean") is not None:
+                        self.y_mean = float(_stats["y_mean"])
+                    if _stats.get("y_std") is not None:
+                        self.y_std = float(_stats["y_std"])
+            except Exception:
+                # If stats loading fails, we'll fall back to requiring fit() before predict()
+                pass
+
             return True
 
         except Exception as e:
@@ -429,6 +451,32 @@ class TransformerForecaster(BaseModel):
             self.X_std = X.std(axis=(0, 1))
             self.y_mean = y.mean()
             self.y_std = y.std()
+
+            # Persist normalization statistics so they survive new instances
+            try:
+                import json as _json
+                from pathlib import Path as _Path
+
+                _stats = {
+                    "X_mean": self.X_mean.tolist()
+                    if hasattr(self.X_mean, "tolist")
+                    else list(self.X_mean),
+                    "X_std": self.X_std.tolist()
+                    if hasattr(self.X_std, "tolist")
+                    else list(self.X_std),
+                    "y_mean": float(self.y_mean)
+                    if self.y_mean is not None
+                    else None,
+                    "y_std": float(self.y_std)
+                    if self.y_std is not None
+                    else None,
+                }
+                _stats_path = _Path(".cache") / "transformer_norm_stats.json"
+                _stats_path.parent.mkdir(exist_ok=True, parents=True)
+                _stats_path.write_text(_json.dumps(_stats))
+            except Exception:
+                # Never break training just because stats persistence failed
+                pass
 
         X = (X - self.X_mean) / self.X_std
         y = (y - self.y_mean) / self.y_std

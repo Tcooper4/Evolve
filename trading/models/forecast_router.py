@@ -220,6 +220,26 @@ class ForecastRouter:
             except Exception as _e:
                 logger.warning(f"Hybrid sub-model injection failed: {_e}")
             model = HybridModel(hybrid_models)
+        elif selected_model == "gnn":
+            from trading.models.advanced.gnn.gnn_model import GNNForecaster
+
+            # GNNForecaster expects explicit kwargs, not a config dict.
+            # Infer number of assets from the data columns as a safe default.
+            _n_assets = (
+                data.shape[1]
+                if isinstance(data, pd.DataFrame) and data.shape[1] > 1
+                else 1
+            )
+            # Clamp to a reasonable range
+            _n_assets = max(3, min(20, _n_assets))
+
+            model = GNNForecaster(
+                num_assets=_n_assets,
+                hidden_size=64,
+                num_layers=2,
+                seq_length=30,
+                learning_rate=0.001,
+            )
         else:
             model = model_class(config)
 
