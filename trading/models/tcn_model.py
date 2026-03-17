@@ -1,4 +1,4 @@
-﻿"""Temporal Convolutional Network for time series forecasting."""
+"""Temporal Convolutional Network for time series forecasting."""
 
 # Standard library imports
 import logging

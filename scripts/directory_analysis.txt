@@ -1,0 +1,602 @@
+======================================================================
+  EVOLVE CODEBASE DIRECTORY ANALYSIS
+  What each directory contains and whether it should be kept
+======================================================================
+
+LEGEND:
+  [ACTIVE]   Used directly by running app (pages + app.py)
+  [SUPPORT]  Not used directly but needed (tests, scripts, docs)
+  [OUTPUT]   Generated files, logs, cache — safe to clear
+  [ORPHAN?]  Not used by app — review if needed or delete
+  [EMPTY]    No files — safe to delete
+
+
+----------------------------------------------------------------------
+  [ACTIVE] 7 directories
+----------------------------------------------------------------------
+
+  agents/
+    Size:   414.9 KB
+    Files:  23 Python files
+    Purpose: Trading strategies
+    Classes: AgentConfig, AgentWorkflowResult, BuilderWorkflow, EvaluatorWorkflow
+    Key fns: get_agent_config, set_agent_config, update_agent_config, save_agent_config
+    Doc:    "Agent Configuration Module  This module provides centralized configuration for all agents including:"
+
+  components/
+    Size:   33.4 KB
+    Files:  6 Python files
+    Purpose: Trading strategies
+    Classes: none
+    Key fns: render_multi_timeframe_chart, render_news_candle_chart, check_onboarding, inject_theme
+    Doc:    "Multi-timeframe candlestick chart component. Shows 1D, 1W, and 1M views side by side with key indica"
+
+  config/
+    Size:   204.4 KB
+    Files:  10 Python files
+    Purpose: Trading strategies
+    Classes: ServerConfig, LoggingConfig, DatabaseConfig, MarketDataConfig
+    Key fns: get_config, set_config, from_yaml, to_dict
+    Doc:    "Application configuration management.  This module handles loading and managing application configur"
+
+  nlp/
+    Size:   24.7 KB
+    Files:  1 Python files
+    Purpose: NLP and sentiment
+    Classes: NaturalLanguageInsights
+    Key fns: get_nlp_insights, extract_tickers, summarize_earnings_call, analyze_analyst_commentary
+    Doc:    "Natural Language Insights Module  Advanced NLP capabilities for financial text analysis including: -"
+
+  trading/
+    Size:   8084.5 KB
+    Files:  452 Python files
+    Purpose: Trading strategies
+    Classes: AutomationCore, AutomationConfig, Task, AgentResult
+    Key fns: run, validate_input, handle_error, log_execution
+    Doc:    "Automation Core Bridge Module  This module provides a bridge to the system.infra.agents.services.aut"
+
+  ui/
+    Size:   78.4 KB
+    Files:  4 Python files
+    Purpose: Trading agents
+    Classes: ChatMessage, TradingCommand, VoiceInput, SpeechRecognizer
+    Key fns: create_chatbox_agent, listen_for_speech, transcribe_audio, speak
+    Doc:    "Voice & Chat-Driven Interface for Evolve Trading Platform.  This module provides voice input support"
+
+  utils/
+    Size:   302.7 KB
+    Files:  34 Python files
+    Purpose: Trading strategies
+    Classes: CacheConfig, ModelCache, ConfigLoader, ConfigReloader
+    Key fns: get_model_cache, cache_model_operation, cache_forecast_operation, cache_training_operation
+    Doc:    "Cache Utilities for Model Operations  This module provides centralized caching functionality for mod"
+
+----------------------------------------------------------------------
+  [SUPPORT] 4 directories
+----------------------------------------------------------------------
+
+  data/
+    Size:   1427.3 KB
+    Files:  5 Python files
+    Purpose: Data pipelines
+    Classes: DataProvider, AlpacaProvider, YFinanceProvider, DataProvider
+    Key fns: check_availability, get_historical_data, get_live_data, get_ohlcv
+    Doc:    "Enhanced Live Data Feed with Multiple API Support and UI Integration.  This module provides a robust"
+
+  docs/
+    Size:   169.9 KB
+    Files:  8 Python files
+    Purpose: Trading strategies
+    Classes: ActionType, NegationType, NegationPattern, ParsedAction
+    Key fns: create_fallback_llm, detect_negations, is_action_negated, parse_prompt
+    Doc:    "Documentation module for project documentation."
+
+  scripts/
+    Size:   6347.8 KB
+    Files:  126 Python files
+    Purpose: Trading strategies
+    Classes: AttributeInfo, ClassInfo, StateAnalyzer, ProductionCleanup
+    Key fns: w, read_file, get_docstring, get_classes_and_fns
+    Doc:    "Deep directory analysis for Evolve codebase. Reads every file and produces a plain-English summary o"
+
+  tests/
+    Size:   2269.5 KB
+    Files:  171 Python files
+    Purpose: Trading agents
+    Classes: PostUpgradeAuditor, ReturnStatementAuditor, MockAgent, TestEnhancedAgentManager
+    Key fns: check_imports, check_core_modules, check_advanced_modules, check_ui_modules
+    Doc:    "Quick System Check for Evolve Trading Platform"
+
+----------------------------------------------------------------------
+  [OUTPUT] 11 directories
+----------------------------------------------------------------------
+
+  backups/
+    Status: OUTPUT/CACHE — safe to clear
+    Size:   0.0 KB
+
+  cache/
+    Status: OUTPUT/CACHE — safe to clear
+    Size:   406.6 KB
+
+  catboost_info/
+    Status: OUTPUT/CACHE — safe to clear
+    Size:   8.7 KB
+
+  checkpoints/
+    Status: OUTPUT/CACHE — safe to clear
+    Size:   1453.9 KB
+
+  deploy/
+    Status: OUTPUT/CACHE — safe to clear
+    Size:   22.5 KB
+
+  docker/
+    Status: OUTPUT/CACHE — safe to clear
+    Size:   8.5 KB
+
+  kubernetes/
+    Status: OUTPUT/CACHE — safe to clear
+    Size:   4.2 KB
+
+  logs/
+    Status: OUTPUT/CACHE — safe to clear
+    Size:   14463.0 KB
+
+  reports/
+    Status: OUTPUT/CACHE — safe to clear
+    Size:   9061.1 KB
+
+  results/
+    Status: OUTPUT/CACHE — safe to clear
+    Size:   1.4 KB
+
+  test_model_save/
+    Status: OUTPUT/CACHE — safe to clear
+    Size:   1.2 KB
+
+----------------------------------------------------------------------
+  [ORPHAN] 26 directories
+----------------------------------------------------------------------
+
+  automate/
+    Size:   8.6 KB
+    Files:  1 Python files
+    Purpose: ML models and forecasting
+    Classes: TickerResult
+    Key fns: safe_get, load_tickers, run_ticker_analysis, run_daily_schedule
+    Doc:    "Daily scheduler for running forecasts and strategies."
+
+  causal/
+    Size:   32.5 KB
+    Files:  3 Python files
+    Purpose: Trading strategies
+    Classes: CausalModel, CausalAnalysisResult, CausalModelAnalyzer, DummyCausalModel
+    Key fns: create_causal_model, build_causal_graph, estimate_causal_effect, perform_intervention
+    Doc:    "Causal Inference Module for Trading Strategy Analysis.  This module provides causal inference capabi"
+
+  core/
+    Size:   69.7 KB
+    Files:  9 Python files
+    Purpose: Trading agents
+    Classes: TaskConditions, TaskExecutor, TaskStatus, TaskPriority
+    Key fns: check_condition, get_available_conditions, validate_condition, register_task_provider
+    Doc:    "Core module for Evolve Trading Platform.  This module contains core orchestration and task managemen"
+
+  dashboard/
+    Size:   47.8 KB
+    Files:  1 Python files
+    Purpose: Unknown — needs manual review
+    Classes: none
+    Key fns: none
+
+  evaluation/
+    Size:   2.4 KB
+    Files:  1 Python files
+    Purpose: Unknown — needs manual review
+    Classes: none
+    Key fns: none
+    Doc:    "Evaluation module for performance evaluation and analysis."
+
+  execution/
+    Size:   172.7 KB
+    Files:  8 Python files
+    Purpose: Trading strategies
+    Classes: OrderSlice, AdvancedOrderExecutor, BrokerType, MarketData
+    Key fns: start, stop, submit_advanced_order, cancel_advanced_order
+    Doc:    "Advanced Order Executor  Implements advanced order types: TWAP, VWAP, and Iceberg orders. These orde"
+
+  features/
+    Size:   21.3 KB
+    Files:  2 Python files
+    Purpose: Data pipelines
+    Classes: SentimentFeatures, SentimentAnalyzer
+    Key fns: create_sentiment_analyzer, analyze_ticker_sentiment, get_sentiment_signal, analyze_text_sentiment
+    Doc:    "Sentiment Features Module  This module processes sentiment data from multiple sources and generates "
+
+  interface/
+    Size:   2.0 KB
+    Files:  1 Python files
+    Purpose: Unknown — needs manual review
+    Classes: none
+    Key fns: create_interface, get_available_interfaces
+    Doc:    "Interface Module for Evolve Trading Platform  This module provides the main user interface component"
+
+  llm/
+    Size:   2.2 KB
+    Files:  2 Python files
+    Purpose: Trading strategies
+    Classes: none
+    Key fns: generate_strategy_commentary
+    Doc:    "LLM utilities for generating strategy summaries and commentary."
+
+  market_analysis/
+    Size:   0.1 KB
+    Files:  1 Python files
+    Purpose: Data pipelines
+    Classes: none
+    Key fns: none
+    Doc:    "Market analysis module for market data processing and analysis."
+
+  memory/
+    Size:   210.8 KB
+    Files:  7 Python files
+    Purpose: Trading strategies
+    Classes: PerformanceMetrics, StrategyDecision, UnifiedLogger, PromptEntry
+    Key fns: log_performance, log_strategy_decision, get_performance_history, get_strategy_history
+    Doc:    "Unified logging utilities for strategy and performance tracking."
+
+  meta/
+    Size:   45.3 KB
+    Files:  1 Python files
+    Purpose: Trading agents
+    Classes: ActionType, TriggerCondition, SystemMetrics, ActionDecision
+    Key fns: create_meta_controller, run_meta_controller, collect_system_metrics, evaluate_triggers
+    Doc:    "MetaControllerAgent - System Orchestrator  This agent oversees the entire Evolve trading system and "
+
+  meta_learning/
+    Size:   18.4 KB
+    Files:  2 Python files
+    Purpose: Trading strategies
+    Classes: StrategyPerformance, ScoringFunction, SharpeScoring, MSEScoring
+    Key fns: calculate_score, calculate_score, calculate_score, calculate_score
+    Doc:    "Strategy Refiner  This module provides meta-learning capabilities for strategy refinement with recen"
+
+  models/
+    Size:   31909.9 KB
+    Files:  4 Python files
+    Purpose: ML models and forecasting
+    Classes: ModelType, ForecastResult, EnsembleForecastResult, ForecastEngine
+    Key fns: get_forecast_engine, generate_forecast, generate_ensemble_forecast, get_available_models
+    Doc:    "Forecast Engine Module  This module handles forecasting operations for the Evolve Trading Platform: "
+
+  monitoring/
+    Size:   10.6 KB
+    Files:  2 Python files
+    Purpose: Monitoring
+    Classes: HealthStatus, HealthChecker
+    Key fns: get_health_checker, check_system_health, get_health_summary, get_health_history
+    Doc:    "Health check system for EVOLVE trading system  Provides comprehensive health monitoring for all syst"
+
+  pages/
+    Size:   260.1 KB
+    Files:  8 Python files
+    Purpose: Trading strategies
+    Classes: none
+    Key fns: get_market_pulse, get_prepost_price, load_universe_tickers, scan_top_movers
+    Doc:    "Evolve Dashboard — Personalized morning briefing + live market events monitor. Reorganized from 0_Ho"
+
+  portfolio/
+    Size:   66.2 KB
+    Files:  3 Python files
+    Purpose: Trading strategies
+    Classes: AllocationStrategy, AssetMetrics, AllocationResult, PortfolioAllocator
+    Key fns: create_allocator, allocate_portfolio, allocate_portfolio, compare_strategies
+    Doc:    "Portfolio Allocator  This module implements various portfolio allocation strategies: - Modern Portfo"
+
+  reporting/
+    Size:   87.7 KB
+    Files:  3 Python files
+    Purpose: Trading strategies
+    Classes: AuditEventType, DecisionLevel, AuditEvent, SignalEvent
+    Key fns: create_audit_logger, log_trading_decision, log_session_start, log_signal_generated
+    Doc:    "Audit Logger  This module provides comprehensive audit trail functionality for the Evolve trading pl"
+
+  risk/
+    Size:   39.5 KB
+    Files:  3 Python files
+    Purpose: Risk management
+    Classes: RiskMetrics, AdvancedRiskAnalyzer, RiskMetrics, RegimeAnalysis
+    Key fns: get_risk_analyzer, calculate_comprehensive_risk, calculate_max_drawdown, calculate_drawdown_metrics
+    Doc:    "Advanced Risk Analytics for Evolve Trading Platform.  This module provides comprehensive risk metric"
+
+  rl/
+    Size:   35.4 KB
+    Files:  3 Python files
+    Purpose: Trading strategies
+    Classes: TradingEnvironment, TrainingCallback, RLTrader, TradingEnvironment
+    Key fns: get_rl_trader, reset, step, calculate_metrics
+    Doc:    "Reinforcement Learning Trader for Evolve Trading Platform.  This module implements a PPO-based RL tr"
+
+  routing/
+    Size:   42.5 KB
+    Files:  2 Python files
+    Purpose: Trading agents
+    Classes: PromptRouter
+    Key fns: get_prompt_router, route_prompt, route_prompt
+    Doc:    "Prompt Router Module  This module handles all prompt processing and routing logic for the Evolve Tra"
+
+  strategies/
+    Size:   19.9 KB
+    Files:  2 Python files
+    Purpose: Trading strategies
+    Classes: StrategyConfig, CombinationConfig, StrategyPipeline
+    Key fns: combine_signals, rsi_strategy, macd_strategy, bollinger_strategy
+    Doc:    "Enhanced Strategy Pipeline for Signal Combination  This module provides comprehensive signal combina"
+
+  system/
+    Size:   733.0 KB
+    Files:  43 Python files
+    Purpose: Trading agents
+    Classes: ForecastController, HybridEngine, LoggerDebugger, EvolveSystemIntegration
+    Key fns: route_forecast, route_forecast_request, get_performance_summary, get_routing_recommendations
+    Doc:    "Forecast Controller  This module provides intelligent routing for forecast requests based on context"
+
+  testing/
+    Size:   15.4 KB
+    Files:  1 Python files
+    Purpose: Backtesting and validation
+    Classes: ParityChecker
+    Key fns: get_parity_checker, log_backtest_decision, log_live_decision, check_parity
+    Doc:    "Parity Checker for Backtest vs Live Execution  Ensures same inputs produce same outputs between back"
+
+  tools/
+    Size:   12.8 KB
+    Files:  2 Python files
+    Purpose: Utilities
+    Classes: none
+    Key fns: check_encoding, is_utf8, detect_encoding, convert_to_utf8
+    Doc:    "Utility functions for detecting and converting file encodings to UTF-8."
+
+  visualization/
+    Size:   2.4 KB
+    Files:  1 Python files
+    Purpose: Data pipelines
+    Classes: none
+    Key fns: none
+    Doc:    "Visualization module for interactive dashboards and data visualization."
+
+----------------------------------------------------------------------
+  [EMPTY] 7 directories
+----------------------------------------------------------------------
+
+  backtest_results/
+    Status: EMPTY — safe to delete
+
+  backup/
+    Status: EMPTY — safe to delete
+
+  charts/
+    Status: EMPTY — safe to delete
+
+  dev/
+    Status: EMPTY — safe to delete
+
+  model_results/
+    Status: EMPTY — safe to delete
+
+  replays/
+    Status: EMPTY — safe to delete
+
+  templates/
+    Status: EMPTY — safe to delete
+
+======================================================================
+  SCRIPTS DIRECTORY - DETAILED BREAKDOWN
+======================================================================
+Total scripts: 126
+
+  [OLD PAGE BACKUPS (needed by runpy)] (11 files)
+    old_10_Alerts.py                                83.2 KB  -- Alerts & Notifications Page  Merges functionality from: - 18
+    old_11_Admin.py                                181.8 KB  -- System Administration Page  Merges functionality from: - 19_
+    old_3_Strategy_Testing.py                      179.2 KB  -- Strategy Development & Testing Page  Merges functionality fr
+    old_4_Trade_Execution.py                       137.4 KB  -- Trade Execution & Order Management Page  Merges functionalit
+    old_5_Portfolio.py                             121.5 KB  -- Portfolio & Positions Page  Merges functionality from: - por
+    old_6_Risk_Management.py                       121.3 KB  -- Risk Management & Analysis Page  Merges functionality from: 
+    old_7_Performance.py                           150.8 KB  -- Performance & History Page  Merges functionality from: - 7_S
+    old_9_Reports.py                                84.3 KB  -- Reports & Exports Page  Merges functionality from: - Reports
+    old_strategy_backtest.py                        37.0 KB
+    old_strategy_rl.py                               8.8 KB
+    old_strategy_walkforward.py                     34.8 KB
+
+  [VERIFY SCRIPTS (session history)] (33 files)
+    verify_forecasts.py                              1.9 KB  -- Quick forecast verification — run this to confirm model outp
+    verify_s16.py                                    3.2 KB  -- Session 16 verification.
+    verify_s17.py                                    3.6 KB  -- Session 17 verification.
+    verify_s18.py                                    3.0 KB  -- Session 18 verification.
+    verify_s19.py                                    3.7 KB  -- Session 19 verification.
+    verify_s20.py                                    5.3 KB  -- Session 20 — final polish verification.
+    verify_s21.py                                    5.6 KB  -- Session 21 Verification Script Run: .\evolve_venv\Scripts\py
+    verify_s21a.py                                   2.5 KB
+    verify_s21b.py                                   3.1 KB
+    verify_s21b_posfix.py                            0.9 KB
+    verify_s22.py                                    7.4 KB  -- Session 22 Verification Script — corrected paths from audit_
+    verify_s22a.py                                   1.7 KB
+    verify_s22b.py                                   1.8 KB
+    verify_s23.py                                    3.3 KB  -- Session 23 verification.
+    verify_s24.py                                    3.6 KB  -- Session 24 verification.
+    verify_s24a.py                                   4.1 KB  -- Session 24A verification script - paste output to Claude aft
+    verify_s24b.py                                   3.5 KB  -- Session 24B verification — paste output to Claude after Curs
+    verify_s24c.py                                   2.8 KB  -- Session 24D verification
+    verify_s25.py                                    2.9 KB  -- Session 25 verification.
+    verify_s26.py                                   10.6 KB  -- verify_s26.py — Session 26 Verification Script Run with: .\e
+    verify_s27.py                                    4.5 KB  -- Session 27 verification.
+    verify_s28.py                                    3.6 KB  -- Session 28 verification.
+    verify_s28b.py                                   3.6 KB
+    verify_s29.py                                    3.6 KB  -- Session 29 verification.
+    verify_s29a.py                                   6.7 KB
+    verify_s29b.py                                   4.1 KB
+    verify_s30.py                                    3.6 KB  -- Session 30 verification — orchestrator cleanup + noise final
+    verify_s31.py                                    2.8 KB  -- Session 31 — final two fixes.
+    verify_s32.py                                    4.4 KB  -- Session 32 verification.
+    verify_s33.py                                    3.0 KB  -- Session 33 verification.
+    verify_s34.py                                    5.4 KB  -- Session 34 — HIGH severity bug fixes verification.
+    verify_s35.py                                    4.2 KB  -- Session 35 — MEDIUM severity sweep verification.
+    verify_s36.py                                    3.9 KB  -- Session 36 — iloc precision fix + v1.4.0 release.
+
+  [AUDIT SCRIPTS (keep for future)] (13 files)
+    audit_clean.py                                  13.0 KB  -- Clean codebase audit - excludes venv, focuses on actual code
+    audit_codebase.py                               11.3 KB  -- Full codebase audit for Evolve platform - Session 34 Run: .\
+    audit_ensemble_xgb.py                            2.6 KB  -- Audit XGBoost feature preparation failure inside EnsembleMod
+    audit_pages.py                                   0.6 KB
+    audit_s22.py                                     1.3 KB
+    audit_s22b.py                                    3.7 KB  -- Session 22 Audit — find actual file locations Run: .\evolve_
+    audit_s27.py                                     3.4 KB  -- audit_s27.py — Check S27 fix status Run: .\evolve_venv\Scrip
+    audit_s27b.py                                    2.6 KB  -- audit_s27b.py — Deeper audit of S27 remaining issues Run: .\
+    audit_s27c.py                                    1.4 KB  -- audit_s27c.py — Show exact broken sections of the three fail
+    audit_s27d.py                                    1.7 KB  -- audit_s27d.py Run: .\evolve_venv\Scripts\python.exe scripts
+    audit_s29.py                                     6.0 KB
+    audit_shap.py                                    1.0 KB  -- audit_shap.py — Check SHAP implementation status Run: .\evol
+    audit_table_col.py                               0.6 KB  -- audit_table_col.py — Show the Wikipedia scrape blocks in bot
+
+  [MANAGE SCRIPTS (unclear purpose)] (21 files)
+    manage_api.py                                   13.2 KB  -- API management script. Provides commands for managing the ap
+    manage_backup.py                                23.3 KB  -- Backup management script. Provides commands for creating, re
+    manage_config.py                                15.3 KB  -- Configuration management script. Provides commands for manag
+    manage_dashboard.py                              6.5 KB  -- Dashboard management script. Provides commands for managing 
+    manage_data.py                                  10.2 KB  -- Data management script. Provides commands for managing datas
+    manage_data_quality.py                          20.5 KB  -- Data quality management script. Provides commands for assess
+    manage_db.py                                     9.0 KB  -- Database management script. Provides commands for managing t
+    manage_debug.py                                 20.3 KB  -- Debug management script. Provides commands for debugging the
+    manage_deps.py                                   8.4 KB  -- Dependency management script. Provides commands for managing
+    manage_docs.py                                   9.9 KB  -- Documentation management script. Provides commands for gener
+    manage_env.py                                    3.0 KB  -- Environment management script. Provides commands for managin
+    manage_health.py                                15.5 KB  -- Health management script. Provides commands for checking and
+    manage_incident.py                              18.6 KB  -- Incident management script. Provides commands for managing i
+    manage_logs.py                                  11.7 KB  -- Log management script. Provides commands for managing applic
+    manage_ml.py                                    32.1 KB  -- ML pipeline management script. Provides commands for managin
+    manage_model.py                                 18.7 KB  -- Model management script. Provides commands for managing mach
+    manage_monitor.py                               10.0 KB  -- Monitoring management script. Provides commands for monitori
+    manage_performance.py                           20.1 KB  -- Performance management script. Provides commands for profili
+    manage_pipeline.py                              17.6 KB  -- Pipeline management script. Provides commands for managing t
+    manage_recovery.py                              19.4 KB  -- Recovery management script. Provides commands for managing a
+    manage_security.py                              11.7 KB  -- Security management script. Provides commands for managing a
+
+  [RUN/LAUNCH SCRIPTS (unclear purpose)] (10 files)
+    launch_agent_api.py                              1.8 KB  -- Launch Agent API Service  Provides REST API endpoints for: -
+    launch_institutional_system.py                  20.9 KB  -- Institutional-Grade Trading System Launcher  This script lau
+    launch_unified_interface.py                      6.0 KB  -- Unified Interface Launcher  Provides easy access to all Evol
+    launch_websocket.py                              2.3 KB  -- Launch WebSocket Service for Real-time Updates  Provides rea
+    run_app.py                                       1.5 KB  -- Main application runner for the trading system. Handles star
+    run_comprehensive_tests.py                      12.3 KB  -- Comprehensive test runner for the trading system.  This scri
+    run_forecasting_pipeline.py                     12.9 KB  -- Evolve Forecasting Pipeline Launcher  This script launches t
+    run_live_dashboard.py                           11.0 KB  -- Live Dashboard Runner  Enhanced dashboard launcher with: - P
+    run_tests.py                                     3.9 KB  -- Script to run tests with proper configuration and security.
+    run_unified.py                                   1.6 KB  -- Simple Unified Interface Launcher  Quick access to all Evolv
+
+  [TEST SCRIPTS IN SCRIPTS DIR] (5 files)
+    test_backtest.py                                 3.8 KB
+    test_chat_forecast.py                            1.1 KB
+    test_monitoring.py                               4.2 KB  -- Test monitoring pipeline: create MemoryStore, call all three
+    test_order.py                                    0.6 KB  -- Minimal order-flow test: verifies ExecutionEngine.execute_or
+    test_paper_trade.py                              0.9 KB
+
+  [OTHER - REVIEW] (33 files)
+    __init__.py                                      2.2 KB  -- Scripts module for application management and utilities. Ref
+    _grep_py.py                                      1.5 KB  -- Tiny grep-equivalent for Windows environments without grep/r
+    analyze_directories.py                          11.6 KB  -- Deep directory analysis for Evolve codebase. Reads every fil
+    analyze_directories_v2.py                        9.5 KB  -- Directory analysis for Evolve - robust version. Run: .\evolv
+    analyze_file_usage.py                            8.7 KB  -- Analyze which files are actually used by the Streamlit appli
+    analyze_state_inventory.py                      26.7 KB  -- Automated State Inventory Analysis Script  This script analy
+    cleanup_production.py                           16.1 KB  -- Production Cleanup Script  This script performs comprehensiv
+    cleanup_requirements.py                          9.3 KB  -- Requirements cleanup script.  This script cleans up requirem
+    comprehensive_file_analysis.py                  11.5 KB  -- Comprehensive file usage analysis using multiple methods: 1.
+    deploy_to_kube_batch.py                         18.4 KB  -- Enhanced Kubernetes Deployment Script  Features: - Argument 
+    examine_excel.py                                 1.0 KB
+    find_division_bugs.py                            6.5 KB  -- Helper script to find remaining division bugs in the codebas
+    forecast_registry.py                             3.5 KB  -- Forecast Registry Module  This module handles forecast-relat
+    generate_docs.py                                 6.6 KB  -- Documentation generation script. Provides commands for gener
+    init_database.py                                 0.9 KB  -- Database Initialization Script  Initializes the database sch
+    inspect_model_lab.py                             0.9 KB  -- Show exact context around SyntaxError in 8_Model_Lab.py Run:
+    inspect_model_lab2.py                            0.4 KB  -- Find the missing try: block above line 4718 in 8_Model_Lab.p
+    install_requirements.py                          3.0 KB  -- Requirements Installation Script  This script installs all r
+    integrate_orchestrator.py                       13.3 KB  -- Task Orchestrator Integration Script  This script integrates
+    manage.py                                       12.7 KB  -- Application Management Script  Provides utilities for managi
+    management_registry.py                           4.1 KB  -- Management Registry Module  This module handles management-r
+    memory_audit.py                                  3.2 KB  -- Audits Evolve's data storage and memory usage. Run: .\evolve
+    monitor_app.py                                  16.9 KB  -- Application monitoring script. Provides commands for monitor
+    quick_system_check.py                            4.3 KB  -- Quick system check for Evolve trading platform.
+    repair.py                                       10.2 KB  -- Auto-repair script for the trading platform. Scans and fixes
+    resolve_dependencies.py                          5.8 KB  -- Dependency Resolution Script  This script helps resolve pip-
+    setup_test_env.py                                1.1 KB  -- Script to set up the test environment.
+    smoke_test_pages.py                              2.2 KB  -- Smoke test: run each Streamlit page script and capture load 
+    strategy_registry.py                             4.1 KB  -- Strategy Registry Module  This module handles strategy-relat
+    system_check.py                                 10.9 KB  -- Comprehensive System Check for Evolve Trading Platform Evalu
+    trim_agent_registry.py                           1.3 KB  -- Trim agent_registry.json to remove agents moved to _dead_cod
+    update_imports.py                                9.8 KB  -- Script to update import statements with try/except blocks fo
+    voice_prompt_agent.py                           19.8 KB  -- Voice Prompt Interface for Evolve Trading Platform.  This mo
+
+======================================================================
+  RECOMMENDATIONS
+======================================================================
+
+SAFE TO DELETE (empty or output):
+  del /s /q backtest_results\  (0 KB)
+  del /s /q backup\  (0 KB)
+  del /s /q charts\  (0 KB)
+  del /s /q dev\  (0 KB)
+  del /s /q model_results\  (0 KB)
+  del /s /q replays\  (0 KB)
+  del /s /q templates\  (0 KB)
+  del /s /q backups\  (0.0 KB)
+  del /s /q cache\  (406.6 KB)
+  del /s /q catboost_info\  (8.7 KB)
+  del /s /q checkpoints\  (1453.9 KB)
+  del /s /q deploy\  (22.5 KB)
+  del /s /q docker\  (8.5 KB)
+  del /s /q kubernetes\  (4.2 KB)
+  del /s /q logs\  (14463.0 KB)
+  del /s /q reports\  (9061.1 KB)
+  del /s /q results\  (1.4 KB)
+  del /s /q test_model_save\  (1.2 KB)
+
+REVIEW BEFORE DECIDING (orphan directories):
+  automate/ -- ML models and forecasting (1 py files, 8.6 KB)
+  causal/ -- Trading strategies (3 py files, 32.5 KB)
+  core/ -- Trading agents (9 py files, 69.7 KB)
+  dashboard/ -- Unknown — needs manual review (1 py files, 47.8 KB)
+  evaluation/ -- Unknown — needs manual review (1 py files, 2.4 KB)
+  execution/ -- Trading strategies (8 py files, 172.7 KB)
+  features/ -- Data pipelines (2 py files, 21.3 KB)
+  interface/ -- Unknown — needs manual review (1 py files, 2.0 KB)
+  llm/ -- Trading strategies (2 py files, 2.2 KB)
+  market_analysis/ -- Data pipelines (1 py files, 0.1 KB)
+  memory/ -- Trading strategies (7 py files, 210.8 KB)
+  meta/ -- Trading agents (1 py files, 45.3 KB)
+  meta_learning/ -- Trading strategies (2 py files, 18.4 KB)
+  models/ -- ML models and forecasting (4 py files, 31909.9 KB)
+  monitoring/ -- Monitoring (2 py files, 10.6 KB)
+  pages/ -- Trading strategies (8 py files, 260.1 KB)
+  portfolio/ -- Trading strategies (3 py files, 66.2 KB)
+  reporting/ -- Trading strategies (3 py files, 87.7 KB)
+  risk/ -- Risk management (3 py files, 39.5 KB)
+  rl/ -- Trading strategies (3 py files, 35.4 KB)
+  routing/ -- Trading agents (2 py files, 42.5 KB)
+  strategies/ -- Trading strategies (2 py files, 19.9 KB)
+  system/ -- Trading agents (43 py files, 733.0 KB)
+  testing/ -- Backtesting and validation (1 py files, 15.4 KB)
+  tools/ -- Utilities (2 py files, 12.8 KB)
+  visualization/ -- Data pipelines (1 py files, 2.4 KB)
+
+KEEP (active or support):
+  agents/
+  components/
+  config/
+  nlp/
+  trading/
+  ui/
+  utils/
+  data/
+  docs/
+  scripts/
+  tests/

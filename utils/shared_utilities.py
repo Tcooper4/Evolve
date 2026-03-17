@@ -87,8 +87,6 @@ def create_sample_forecast_data(
     """
     ⚠️ WARNING: This function generates fake data for TESTING ONLY.
     DO NOT use in production code. Use real data providers instead.
-    
-    """
     Create sample forecasting data with features and target.
     """
     np.random.seed(42)  # For reproducible results

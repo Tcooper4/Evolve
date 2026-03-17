@@ -1,0 +1,3236 @@
+Collecting files...
+Total files in codebase: 971
+
+======================================================================
+  1. FILES BY DIRECTORY
+======================================================================
+Total codebase size: 14582.1 KB
+
+  trading                    452 files    7144.6 KB
+  tests                      171 files    2189.9 KB
+  scripts                    144 files    2497.7 KB
+  system                      43 files     545.6 KB
+  utils                       34 files     302.7 KB
+  agents                      23 files     403.8 KB
+  config                      10 files     136.1 KB
+  core                         9 files      69.7 KB
+  execution                    8 files     171.2 KB
+  pages                        8 files     260.1 KB
+  memory                       7 files      55.9 KB
+  components                   6 files      33.4 KB
+  root                         5 files      59.1 KB
+  data                         5 files      97.0 KB
+  models                       4 files      54.3 KB
+  ui                           4 files      78.4 KB
+  causal                       3 files      32.5 KB
+  portfolio                    3 files      66.2 KB
+  reporting                    3 files      87.7 KB
+  risk                         3 files      39.5 KB
+  rl                           3 files      35.4 KB
+  features                     2 files      21.3 KB
+  llm                          2 files       2.2 KB
+  meta_learning                2 files      18.4 KB
+  monitoring                   2 files      10.6 KB
+  routing                      2 files      39.4 KB
+  strategies                   2 files      19.9 KB
+  tools                        2 files      12.8 KB
+  automate                     1 files       8.6 KB
+  dashboard                    1 files       0.0 KB
+  evaluation                   1 files       0.3 KB
+  interface                    1 files       2.0 KB
+  market_analysis              1 files       0.1 KB
+  meta                         1 files      45.3 KB
+  nlp                          1 files      24.7 KB
+  testing                      1 files      15.4 KB
+  visualization                1 files       0.3 KB
+
+======================================================================
+  2. SYNTAX ERRORS IN OUR CODE
+======================================================================
+  FAIL  scripts\audit_pages.py
+        line 1: invalid non-printable character U+FEFF
+  FAIL  scripts\audit_s22.py
+        line 1: invalid non-printable character U+FEFF
+  FAIL  scripts\check_pos_sizer.py
+        line 1: invalid non-printable character U+FEFF
+  FAIL  scripts\check_price_fetch.py
+        line 1: invalid non-printable character U+FEFF
+  FAIL  scripts\old_8_Model_Lab.py
+        source code string cannot contain null bytes
+  FAIL  scripts\verify_s21.py
+        line 1: invalid non-printable character U+FEFF
+  FAIL  scripts\verify_s21a.py
+        line 1: invalid non-printable character U+FEFF
+  FAIL  scripts\verify_s21b.py
+        line 1: invalid non-printable character U+FEFF
+  FAIL  scripts\verify_s21b_posfix.py
+        line 1: invalid non-printable character U+FEFF
+  FAIL  scripts\verify_s22a.py
+        line 1: invalid non-printable character U+FEFF
+  FAIL  scripts\verify_s22b.py
+        line 1: invalid non-printable character U+FEFF
+  FAIL  tests\analysis\benchmark_market_analyzer.py
+        line 450: unterminated string literal (detected at line 450)
+  FAIL  tests\audit_return_statements.py
+        line 564: unterminated string literal (detected at line 564)
+  FAIL  tests\comprehensive_audit.py
+        line 339: unterminated string literal (detected at line 339)
+  FAIL  tests\comprehensive_return_fix.py
+        line 255: unterminated string literal (detected at line 255)
+  FAIL  tests\focused_return_fix.py
+        line 78: unterminated string literal (detected at line 78)
+  FAIL  tests\optimization\test_optimization.py
+        line 441: unterminated string literal (detected at line 441)
+  FAIL  tests\optimization\test_optimizers.py
+        line 401: unterminated string literal (detected at line 401)
+  FAIL  tests\post_upgrade_return_audit.py
+        line 143: unterminated string literal (detected at line 143)
+  FAIL  tests\report\test_report_generator.py
+        line 451: unterminated string literal (detected at line 451)
+  FAIL  tests\strategies\test_rsi_strategy.py
+        line 65: unterminated string literal (detected at line 65)
+  FAIL  tests\test_agents\test_self_improving_agent.py
+        line 516: unterminated string literal (detected at line 516)
+  FAIL  tests\test_model_selection_strategy_signals.py
+        line 395: unexpected indent
+  FAIL  tests\test_system_status.py
+        line 283: unterminated string literal (detected at line 283)
+  FAIL  trading\models\tcn_model.py
+        line 1: invalid non-printable character U+FEFF
+  FAIL  utils\shared_utilities.py
+        line 270: unterminated triple-quoted string literal (detected at line 277)
+
+Total: 26 syntax errors
+
+======================================================================
+  3. EMPTY FILES IN OUR CODE
+======================================================================
+  features\__init__.py
+  meta_learning\__init__.py
+  monitoring\__init__.py
+  pages\__init__.py
+  scripts\diag_s29a.py
+  scripts\rebuild_final2.py
+  scripts\rebuild_strategy_splits.py
+  strategies\__init__.py
+  tests\fix_optimization_imports.py
+  trading\forecasting\__init__.py
+  trading\sentiment\__init__.py
+  trading\signals\__init__.py
+  trading\ui\config\__init__.py
+  trading\utils\logger.py
+Total: 14
+
+======================================================================
+  4. SCRIPTS DIRECTORY - WHAT TO KEEP VS DELETE
+======================================================================
+  __init__.py                                         2.2 KB  [REVIEW - other]
+  _grep_py.py                                         1.5 KB  [REVIEW - other]
+  analyze_file_usage.py                               8.7 KB  [REVIEW - other]
+  analyze_state_inventory.py                         26.7 KB  [REVIEW - other]
+  audit_clean.py                                     13.0 KB  [KEEP - audit script]
+  audit_codebase.py                                  11.3 KB  [KEEP - audit script]
+  audit_ensemble_xgb.py                               2.6 KB  [KEEP - audit script]
+  audit_pages.py                                      0.6 KB  [KEEP - audit script]
+  audit_s22.py                                        1.3 KB  [KEEP - audit script]
+  audit_s22b.py                                       3.7 KB  [KEEP - audit script]
+  audit_s27.py                                        3.4 KB  [KEEP - audit script]
+  audit_s27b.py                                       2.6 KB  [KEEP - audit script]
+  audit_s27c.py                                       1.4 KB  [KEEP - audit script]
+  audit_s27d.py                                       1.7 KB  [KEEP - audit script]
+  audit_s29.py                                        6.0 KB  [KEEP - audit script]
+  audit_shap.py                                       1.0 KB  [KEEP - audit script]
+  audit_table_col.py                                  0.6 KB  [KEEP - audit script]
+  check_duplicate_keys.py                             3.8 KB  [DELETE - one-time fix script]
+  check_pos_sizer.py                                  1.2 KB  [DELETE - one-time fix script]
+  check_price_fetch.py                                0.4 KB  [DELETE - one-time fix script]
+  check_tests.py                                      4.2 KB  [DELETE - one-time fix script]
+  cleanup_production.py                              16.1 KB  [REVIEW - other]
+  cleanup_requirements.py                             9.3 KB  [REVIEW - other]
+  comprehensive_file_analysis.py                     11.5 KB  [REVIEW - other]
+  deploy_to_kube_batch.py                            18.4 KB  [REVIEW - other]
+  diag_s29a.py                                        0.0 KB  [DELETE - empty]
+  examine_excel.py                                    1.0 KB  [REVIEW - other]
+  fetch_universes.py                                  7.4 KB  [DELETE - one-time fix script]
+  find_division_bugs.py                               6.5 KB  [REVIEW - other]
+  fix_model_lab.py                                    2.3 KB  [DELETE - one-time fix script]
+  fix_model_lab2.py                                   5.9 KB  [DELETE - one-time fix script]
+  fix_s22_final.py                                    7.1 KB  [DELETE - one-time fix script]
+  fix_s26_column.py                                   1.6 KB  [DELETE - one-time fix script]
+  fix_s26_syntax.py                                   4.8 KB  [DELETE - one-time fix script]
+  fix_strategy_guard.py                               2.8 KB  [DELETE - one-time fix script]
+  forecast_registry.py                                3.5 KB  [REVIEW - other]
+  generate_docs.py                                    6.6 KB  [REVIEW - other]
+  init_database.py                                    0.9 KB  [REVIEW - other]
+  inspect_model_lab.py                                0.9 KB  [REVIEW - other]
+  inspect_model_lab2.py                               0.4 KB  [REVIEW - other]
+  install_requirements.py                             3.0 KB  [REVIEW - other]
+  integrate_orchestrator.py                          13.3 KB  [REVIEW - other]
+  launch_agent_api.py                                 1.8 KB  [REVIEW - other]
+  launch_institutional_system.py                     20.9 KB  [REVIEW - other]
+  launch_unified_interface.py                         6.0 KB  [REVIEW - other]
+  launch_websocket.py                                 2.3 KB  [REVIEW - other]
+  manage.py                                          12.7 KB  [REVIEW - other]
+  manage_api.py                                      13.2 KB  [REVIEW - other]
+  manage_backup.py                                   23.3 KB  [REVIEW - other]
+  manage_config.py                                   15.3 KB  [REVIEW - other]
+  manage_dashboard.py                                 6.5 KB  [REVIEW - other]
+  manage_data.py                                     10.2 KB  [REVIEW - other]
+  manage_data_quality.py                             20.5 KB  [REVIEW - other]
+  manage_db.py                                        9.0 KB  [REVIEW - other]
+  manage_debug.py                                    20.3 KB  [REVIEW - other]
+  manage_deps.py                                      8.4 KB  [REVIEW - other]
+  manage_docs.py                                      9.9 KB  [REVIEW - other]
+  manage_env.py                                       3.0 KB  [REVIEW - other]
+  manage_health.py                                   15.5 KB  [REVIEW - other]
+  manage_incident.py                                 18.6 KB  [REVIEW - other]
+  manage_logs.py                                     11.7 KB  [REVIEW - other]
+  manage_ml.py                                       32.1 KB  [REVIEW - other]
+  manage_model.py                                    18.7 KB  [REVIEW - other]
+  manage_monitor.py                                  10.0 KB  [REVIEW - other]
+  manage_performance.py                              20.1 KB  [REVIEW - other]
+  manage_pipeline.py                                 17.6 KB  [REVIEW - other]
+  manage_recovery.py                                 19.4 KB  [REVIEW - other]
+  manage_security.py                                 11.7 KB  [REVIEW - other]
+  management_registry.py                              4.1 KB  [REVIEW - other]
+  memory_audit.py                                     3.2 KB  [REVIEW - other]
+  monitor_app.py                                     16.9 KB  [REVIEW - other]
+  old_10_Alerts.py                                   83.2 KB  [KEEP - runpy source for pages]
+  old_11_Admin.py                                   181.8 KB  [KEEP - runpy source for pages]
+  old_3_Strategy_Testing.py                         179.2 KB  [KEEP - runpy source for pages]
+  old_4_Trade_Execution.py                          137.4 KB  [KEEP - runpy source for pages]
+  old_5_Portfolio.py                                121.5 KB  [KEEP - runpy source for pages]
+  old_6_Risk_Management.py                          121.3 KB  [KEEP - runpy source for pages]
+  old_7_Performance.py                              150.8 KB  [KEEP - runpy source for pages]
+  old_8_Model_Lab.py                                466.8 KB  [DELETE - corrupt]
+  old_9_Reports.py                                   84.3 KB  [KEEP - runpy source for pages]
+  old_strategy_backtest.py                           37.0 KB  [KEEP - runpy source (split)]
+  old_strategy_rl.py                                  8.8 KB  [KEEP - runpy source (split)]
+  old_strategy_walkforward.py                        34.8 KB  [KEEP - runpy source (split)]
+  patch_s26_universe.py                               9.0 KB  [DELETE - one-time fix script]
+  patch_s27.py                                        9.2 KB  [DELETE - one-time fix script]
+  patch_universe_loader.py                            8.3 KB  [DELETE - one-time fix script]
+  quick_system_check.py                               4.3 KB  [REVIEW - other]
+  rebuild_final2.py                                   0.0 KB  [DELETE - empty]
+  rebuild_splits_final.py                             2.8 KB  [DELETE - one-time fix script]
+  rebuild_strategy_splits.py                          0.0 KB  [DELETE - empty]
+  repair.py                                          10.2 KB  [REVIEW - other]
+  resolve_dependencies.py                             5.8 KB  [REVIEW - other]
+  run_app.py                                          1.5 KB  [REVIEW - other]
+  run_comprehensive_tests.py                         12.3 KB  [REVIEW - other]
+  run_forecasting_pipeline.py                        12.9 KB  [REVIEW - other]
+  run_live_dashboard.py                              11.0 KB  [REVIEW - other]
+  run_tests.py                                        3.9 KB  [REVIEW - other]
+  run_unified.py                                      1.6 KB  [REVIEW - other]
+  setup_test_env.py                                   1.1 KB  [REVIEW - other]
+  smoke_test_pages.py                                 2.2 KB  [REVIEW - other]
+  split_strategy.py                                   6.8 KB  [DELETE - one-time fix script]
+  strategy_registry.py                                4.1 KB  [REVIEW - other]
+  system_check.py                                    10.9 KB  [REVIEW - other]
+  test_backtest.py                                    3.8 KB  [REVIEW - other]
+  test_chat_forecast.py                               1.1 KB  [REVIEW - other]
+  test_monitoring.py                                  4.2 KB  [REVIEW - other]
+  test_order.py                                       0.6 KB  [REVIEW - other]
+  test_paper_trade.py                                 0.9 KB  [REVIEW - other]
+  trim_agent_registry.py                              1.3 KB  [REVIEW - other]
+  update_imports.py                                   9.8 KB  [REVIEW - other]
+  verify_forecasts.py                                 1.9 KB  [REVIEW - other]
+  verify_s16.py                                       3.2 KB  [KEEP - verification script]
+  verify_s17.py                                       3.6 KB  [KEEP - verification script]
+  verify_s18.py                                       3.0 KB  [KEEP - verification script]
+  verify_s19.py                                       3.7 KB  [KEEP - verification script]
+  verify_s20.py                                       5.3 KB  [KEEP - verification script]
+  verify_s21.py                                       5.6 KB  [KEEP - verification script]
+  verify_s21a.py                                      2.4 KB  [KEEP - verification script]
+  verify_s21b.py                                      3.0 KB  [KEEP - verification script]
+  verify_s21b_posfix.py                               0.9 KB  [KEEP - verification script]
+  verify_s22.py                                       7.4 KB  [KEEP - verification script]
+  verify_s22a.py                                      1.7 KB  [KEEP - verification script]
+  verify_s22b.py                                      1.7 KB  [KEEP - verification script]
+  verify_s23.py                                       3.3 KB  [KEEP - verification script]
+  verify_s24.py                                       3.6 KB  [KEEP - verification script]
+  verify_s24a.py                                      4.1 KB  [KEEP - verification script]
+  verify_s24b.py                                      3.5 KB  [KEEP - verification script]
+  verify_s24c.py                                      2.8 KB  [KEEP - verification script]
+  verify_s25.py                                       2.9 KB  [KEEP - verification script]
+  verify_s26.py                                      10.6 KB  [KEEP - verification script]
+  verify_s27.py                                       4.5 KB  [KEEP - verification script]
+  verify_s28.py                                       3.6 KB  [KEEP - verification script]
+  verify_s28b.py                                      3.6 KB  [KEEP - verification script]
+  verify_s29.py                                       3.6 KB  [KEEP - verification script]
+  verify_s29a.py                                      6.7 KB  [KEEP - verification script]
+  verify_s29b.py                                      4.1 KB  [KEEP - verification script]
+  verify_s30.py                                       3.6 KB  [KEEP - verification script]
+  verify_s31.py                                       2.8 KB  [KEEP - verification script]
+  verify_s32.py                                       4.4 KB  [KEEP - verification script]
+  verify_s33.py                                       3.0 KB  [KEEP - verification script]
+  verify_s34.py                                       5.4 KB  [KEEP - verification script]
+  verify_s35.py                                       4.2 KB  [KEEP - verification script]
+  verify_s36.py                                       3.9 KB  [KEEP - verification script]
+  voice_prompt_agent.py                              19.8 KB  [REVIEW - other]
+
+Scripts to DELETE (20):
+    del scripts\check_duplicate_keys.py
+    del scripts\check_pos_sizer.py
+    del scripts\check_price_fetch.py
+    del scripts\check_tests.py
+    del scripts\diag_s29a.py
+    del scripts\fetch_universes.py
+    del scripts\fix_model_lab.py
+    del scripts\fix_model_lab2.py
+    del scripts\fix_s22_final.py
+    del scripts\fix_s26_column.py
+    del scripts\fix_s26_syntax.py
+    del scripts\fix_strategy_guard.py
+    del scripts\old_8_Model_Lab.py
+    del scripts\patch_s26_universe.py
+    del scripts\patch_s27.py
+    del scripts\patch_universe_loader.py
+    del scripts\rebuild_final2.py
+    del scripts\rebuild_splits_final.py
+    del scripts\rebuild_strategy_splits.py
+    del scripts\split_strategy.py
+
+Scripts to KEEP (56):
+    audit_clean.py
+    audit_codebase.py
+    audit_ensemble_xgb.py
+    audit_pages.py
+    audit_s22.py
+    audit_s22b.py
+    audit_s27.py
+    audit_s27b.py
+    audit_s27c.py
+    audit_s27d.py
+    audit_s29.py
+    audit_shap.py
+    audit_table_col.py
+    old_10_Alerts.py
+    old_11_Admin.py
+    old_3_Strategy_Testing.py
+    old_4_Trade_Execution.py
+    old_5_Portfolio.py
+    old_6_Risk_Management.py
+    old_7_Performance.py
+    old_9_Reports.py
+    old_strategy_backtest.py
+    old_strategy_rl.py
+    old_strategy_walkforward.py
+    verify_s16.py
+    verify_s17.py
+    verify_s18.py
+    verify_s19.py
+    verify_s20.py
+    verify_s21.py
+    verify_s21a.py
+    verify_s21b.py
+    verify_s21b_posfix.py
+    verify_s22.py
+    verify_s22a.py
+    verify_s22b.py
+    verify_s23.py
+    verify_s24.py
+    verify_s24a.py
+    verify_s24b.py
+    verify_s24c.py
+    verify_s25.py
+    verify_s26.py
+    verify_s27.py
+    verify_s28.py
+    verify_s28b.py
+    verify_s29.py
+    verify_s29a.py
+    verify_s29b.py
+    verify_s30.py
+    verify_s31.py
+    verify_s32.py
+    verify_s33.py
+    verify_s34.py
+    verify_s35.py
+    verify_s36.py
+
+======================================================================
+  5. TRADING MODULE FULL MAP
+======================================================================
+Total trading modules: 452
+
+  trading\__init__.py
+    476 lines, 12.7 KB
+    Classes: RegressionMetrics, ClassificationMetrics, TimeSeriesMetrics, ModelEvaluator
+    Fns: get_version, get_version_info, discover_available_modules, auto_import_subcomponents, get_available_subcomponents, import_subcomponent +7 more
+  trading\agents\__init__.py
+    452 lines, 13.3 KB
+    Fns: get_model_builder_agent, get_model_selector_agent, get_model_optimizer_agent, get_model_evaluator_agent, get_model_improver_agent, get_model_synthesizer_agent +37 more
+  trading\agents\agent_leaderboard.py
+    1084 lines, 39.7 KB
+    Classes: AgentStatus, SortMetric, LeaderboardRequest, LeaderboardResult, AgentPerformance, AgentLeaderboard
+    Fns: get_leaderboard, update_agent_performance, get_top_agents, get_leaderboard_stats, to_dict, from_dict +13 more
+  trading\agents\agent_loop_manager.py
+    733 lines, 25.2 KB
+    Classes: AgentLoopState, AgentCommunication, AgentLoopManager
+    Fns: main, get_agent_loop_manager, start_loop, pause_loop, resume_loop, get_loop_status +1 more
+  trading\agents\agent_manager.py
+    1458 lines, 50.8 KB
+    Classes: RetryConfig, AgentTask, AgentManagementRequest, AgentManagementResult, AgentRegistryEntry, AgentManagerConfig, EnhancedAgentManager, MinimalFallbackAgent
+    Fns: get_agent_manager, register_agent, execute_agent, execute_agent_with_retry, start_restart_monitor, stop_restart_monitor +33 more
+  trading\agents\agent_registry.py
+    1095 lines, 37.4 KB
+    Classes: AgentStatus, AgentCategory, AgentRegistrationRequest, AgentRegistrationResult, AgentCapability, AgentInfo, AgentRegistry
+    Fns: get_registry, register_agent, get_agent, list_agents, get_agent_class, create_agent_instance +19 more
+  trading\agents\base_agent_interface.py
+    428 lines, 13.5 KB
+    Classes: AgentPriority, AgentState, AgentConfig, AgentStatus, AgentResult, BaseAgent
+    Fns: to_dict, from_dict, to_dict, from_dict, to_dict, from_dict +13 more
+  trading\agents\commentary_agent.py
+    665 lines, 23.5 KB
+    Classes: CommentaryAgentRequest, CommentaryAgent
+    Fns: create_commentary_agent, execute, validate_input, validate_config, handle_error, get_capabilities +6 more
+  trading\agents\data_quality_agent.py
+    1039 lines, 37.7 KB
+    Classes: AnomalyType, DataQualityLevel, DataAnomaly, DataQualityReport, DataQualityRequest, DataQualityResult, DataQualityAgent
+    Fns: execute, assess_data_quality, route_to_backup_provider, get_quality_summary, save_quality_history
+  trading\agents\enhanced_prompt_router.py
+    692 lines, 25.7 KB
+    Classes: ParsedIntent, EnhancedPromptRouterAgent
+    Fns: parse_intent_openai, parse_intent_claude, parse_intent_huggingface, parse_intent_regex, parse_intent, route +1 more
+  trading\agents\execution\__init__.py
+    41 lines, 1.0 KB
+  trading\agents\execution\execution_agent.py
+    619 lines, 23.1 KB
+    Classes: ExecutionAgent
+    Fns: create_execution_agent, execute, get_portfolio_status, get_execution_history, get_trade_log, clear_trade_log
+  trading\agents\execution\execution_models.py
+    93 lines, 3.2 KB
+    Classes: ExecutionRequest, ExecutionResult
+    Fns: to_dict, from_dict, to_dict, from_dict, is_successful, get_total_cost
+  trading\agents\execution\execution_providers.py
+    423 lines, 14.4 KB
+    Classes: ExecutionMode, ExecutionProvider, SimulationProvider, AlpacaProvider, IBProvider, RobinhoodProvider
+    Fns: create_execution_provider, connect, disconnect, execute_trade, get_account_info, get_positions +20 more
+  trading\agents\execution\position_manager.py
+    367 lines, 13.1 KB
+    Classes: PositionManager
+    Fns: add_position, remove_position, get_position, get_positions_by_symbol, get_all_positions, update_position +7 more
+  trading\agents\execution\risk_calculator.py
+    281 lines, 10.4 KB
+    Classes: RiskCalculator
+    Fns: calculate_atr, calculate_portfolio_correlation, calculate_portfolio_risk_exposure, calculate_position_risk_metrics, calculate_portfolio_risk_metrics, calculate_stop_loss_price +1 more
+  trading\agents\execution\risk_controls.py
+    145 lines, 4.6 KB
+    Classes: RiskThresholdType, ExitReason, RiskThreshold, RiskControls, ExitEvent
+    Fns: create_default_risk_controls, to_dict, from_dict, to_dict, from_dict, to_dict +1 more
+  trading\agents\execution\trade_signals.py
+    100 lines, 3.3 KB
+    Classes: TradeSignal, ExecutionRequest, ExecutionResult
+    Fns: to_dict, from_dict, to_dict
+  trading\agents\execution_risk_agent.py
+    971 lines, 32.3 KB
+    Classes: RiskLevel, TradeStatus, RiskCheck, TradeApproval, RiskAssessmentRequest, RiskAssessmentResult, ExecutionRiskAgent
+    Fns: get_execution_risk_agent, execute, approve_trade, trigger_cooling_period, get_risk_summary, export_risk_report
+  trading\agents\execution_risk_control_agent.py
+    970 lines, 36.2 KB
+    Classes: RiskLevel, TradeStatus, TradeRequest, RiskCheck, ExecutionResult, RiskControlRequest, RiskControlResult, ExecutionRiskControlAgent
+    Fns: execute, check_trade_risk, execute_trade, get_risk_summary, export_risk_data
+  trading\agents\intent_detector.py
+    50 lines, 1.3 KB
+    Classes: IntentDetectionRequest, IntentDetectionResult, IntentDetector
+    Fns: detect_intent, extract_entities, classify_intent
+  trading\agents\leaderboard_dashboard.py
+    506 lines, 16.5 KB
+    Classes: LeaderboardDashboard
+    Fns: main, run, color_status
+  trading\agents\market_regime_agent.py
+    783 lines, 29.0 KB
+    Classes: MarketRegime, RegimeMetrics, RegimeAnalysis, MarketRegimeRequest, MarketRegimeResult, MarketRegimeAgent
+    Fns: get_market_regime_agent, execute, get_market_data, calculate_regime_features, classify_regime, get_recommended_strategies +5 more
+  trading\agents\meta_strategy_agent.py
+    107 lines, 3.8 KB
+    Classes: MetaStrategyRequest, MetaStrategyResult, MetaStrategyAgent
+    Fns: execute
+  trading\agents\model_builder_agent.py
+    656 lines, 21.9 KB
+    Classes: ModelBuildRequest, ModelBuildResult, ModelBuilderAgent
+    Fns: execute, validate_input, validate_config, handle_error, get_capabilities, get_requirements +5 more
+  trading\agents\model_evaluator_agent.py
+    722 lines, 26.3 KB
+    Classes: EvaluationMetric, ModelStatus, EvaluationResult, ModelPerformance, ModelEvaluationRequest, ModelEvaluationResult, ModelEvaluatorAgent
+    Fns: execute, evaluate_model, get_evaluation_history, get_model_status, compare_models, generate_evaluation_report +1 more
+  trading\agents\model_improver_agent.py
+    609 lines, 21.7 KB
+    Classes: BayesianOptimizer, GeneticOptimizer, ModelImprovementRequest, ModelImprovementResult, ModelImproverAgent
+    Fns: optimize, optimize, execute, get_improvement_summary, update_performance_thresholds, get_status +1 more
+  trading\agents\model_optimizer_agent.py
+    778 lines, 28.6 KB
+    Classes: GeneticOptimizer, OptimizationType, OptimizationStatus, OptimizationResult, OptimizationConfig, ModelOptimizerAgent
+    Fns: optimize, execute, optimize_model, get_optimization_history, get_optimization_status, cancel_optimization +6 more
+  trading\agents\model_selector_agent.py
+    949 lines, 35.4 KB
+    Classes: ForecastingHorizon, MarketRegime, ModelType, ModelPerformance, ModelCapability, ModelSelectorAgent
+    Fns: execute, register_model, update_model_performance, detect_market_regime, select_model, get_model_recommendations +2 more
+  trading\agents\model_synthesizer_agent.py
+    1301 lines, 46.9 KB
+    Classes: ModelType, SynthesisStatus, ModelArchitecture, SynthesisRequest, SynthesisResult, ModelSynthesizerAgent
+    Fns: create_model_synthesizer, synthesize_model, get_synthesis_history, get_model_registry, save_synthesis_state, load_synthesis_state +2 more
+  trading\agents\optimization\__init__.py
+    35 lines, 0.9 KB
+  trading\agents\optimization\backtest_integration.py
+    190 lines, 6.6 KB
+    Classes: BacktestIntegration
+    Fns: run_backtest, get_backtest_config, update_backtest_config
+  trading\agents\optimization\parameter_validator.py
+    254 lines, 9.1 KB
+    Classes: OptimizationParameter, ParameterValidator
+    Fns: to_dict, from_dict, validate_optimization_parameters, generate_parameter_range, validate_parameter_combination, get_parameter_rules +1 more
+  trading\agents\optimization\performance_analyzer.py
+    276 lines, 10.0 KB
+    Classes: OptimizationResult, PerformanceAnalyzer
+    Fns: to_dict, from_dict, add_optimization_result, get_optimization_history, get_best_results, get_optimization_stats +5 more
+  trading\agents\optimization\strategy_optimizer.py
+    512 lines, 18.4 KB
+    Classes: OptimizationType, OptimizationMetric, StrategyConfig, OptimizationRequest, OptimizationConfig, StrategyOptimizer
+    Fns: to_dict, from_dict, to_dict, from_dict, to_dict, from_dict +4 more
+  trading\agents\performance_critic_agent.py
+    1200 lines, 42.0 KB
+    Classes: ModelEvaluationRequest, ModelEvaluationResult, PerformanceCriticAgent
+    Fns: execute, validate_input, evaluate_model, get_evaluation_history, get_model_performance_summary
+  trading\agents\prompt_response_validator.py
+    546 lines, 18.6 KB
+    Classes: ValidationLevel, ValidationResult, StrategySchema, PromptResponseValidator
+    Fns: create_prompt_response_validator, validate_strategy_result, validate_prompt_response, get_validation_summary, set_validation_level, enable_auto_correction
+  trading\agents\prompt_templates.py
+    878 lines, 23.1 KB
+    Fns: get_template, get_templates_by_category, list_templates, list_categories, format_template, get_legacy_template
+  trading\agents\regime_detection_agent.py
+    607 lines, 22.0 KB
+    Classes: MarketRegime, RegimeMetrics, RegimeResult, RegimeDetectionAgent
+    Fns: create_regime_detection_agent, execute, detect_regime, get_regime_statistics, update_performance_by_regime
+  trading\agents\research_agent.py
+    379 lines, 15.1 KB
+    Classes: ResearchRequest, ResearchResult, ResearchAgent
+    Fns: execute, search_github, search_arxiv, summarize_with_openai, code_suggestion_with_openai, log_finding +1 more
+  trading\agents\rl_trainer.py
+    701 lines, 24.9 KB
+    Classes: TradingEnvironment, TrainingCallback, RLTrainer
+    Fns: get_rl_trainer, reset, step, create_trading_environment, train_ppo_agent, train_a2c_agent +3 more
+  trading\agents\routing_engine.py
+    175 lines, 5.7 KB
+    Classes: RouteType, RouteResult, RoutingEngine
+    Fns: register_handler, route, get_route_info
+  trading\agents\run_agent_loop.py
+    88 lines, 2.3 KB
+    Fns: signal_handler, run_agent_loop
+  trading\agents\strategy_dispatcher.py
+    677 lines, 23.8 KB
+    Classes: StrategyStatus, ValidationLevel, StrategyConfig, ValidationResult, StrategyExecution, StrategyValidator, StrategyDispatcher
+    Fns: create_strategy_dispatcher, validate_strategy, register_strategy, is_valid_strategy, execute_strategy, get_execution_status +3 more
+  trading\agents\strategy_improver_agent.py
+    678 lines, 25.0 KB
+    Classes: StrategyImprovementRequest, StrategyImprovementResult, StrategyImproverAgent
+    Fns: execute, get_improvement_summary, update_performance_thresholds, get_status, objective
+  trading\agents\strategy_selector_agent.py
+    1010 lines, 38.5 KB
+    Classes: StrategyType, StrategyPerformance, StrategyRecommendation, StrategySelectorAgent
+    Fns: execute, select_strategy, update_strategy_performance, get_strategy_recommendations, save_strategy_performance, plot_strategy_comparison +1 more
+  trading\agents\strategy_switcher.py
+    489 lines, 16.8 KB
+    Classes: StrategySwitchBackend, StrategySwitch, StrategySwitcher
+    Fns: switch_strategy_if_needed
+  trading\agents\task_dashboard.py
+    332 lines, 10.5 KB
+    Classes: TaskDashboard
+    Fns: get_active_tasks, get_task_log, run_dashboard, render
+  trading\agents\task_memory.py
+    495 lines, 16.7 KB
+    Classes: TaskStatus, Task, TaskMemory
+    Fns: to_dict, from_dict, add_task, update_task, get_task, get_tasks_by_status +4 more
+  trading\agents\test_execution_agent.py
+    133 lines, 4.5 KB
+    Fns: test_execution_agent
+  trading\agents\test_integration.py
+    135 lines, 4.5 KB
+    Fns: test_agent_integration
+  trading\agents\updater_agent.py
+    894 lines, 31.4 KB
+    Classes: UpdateRequest, UpdateResult, UpdaterAgent
+    Fns: execute, validate_input, process_evaluation, execute_update, get_update_history, get_active_models +1 more
+  trading\agents\upgrader\__init__.py
+    10 lines, 0.3 KB
+  trading\agents\upgrader\agent.py
+    440 lines, 14.6 KB
+    Classes: UpgraderAgent
+    Fns: start, stop, run_once, check_for_upgrades, process_upgrade_task, cleanup +2 more
+  trading\agents\upgrader\scheduler.py
+    135 lines, 4.4 KB
+    Classes: UpgradeScheduler
+    Fns: start, stop, run_check, get_status, run_scheduler
+  trading\agents\upgrader\utils.py
+    296 lines, 8.6 KB
+    Fns: check_model_status, check_component_status, detect_drift, check_deprecated_logic, check_missing_parameters, get_pipeline_components +1 more
+  trading\analysis\__init__.py
+    20 lines, 0.6 KB
+  trading\analysis\ai_score.py
+    304 lines, 11.6 KB
+    Fns: compute_ai_score
+  trading\analysis\chart_builder.py
+    108 lines, 3.3 KB
+    Fns: build_event_chart
+  trading\analysis\event_news_fetcher.py
+    68 lines, 2.1 KB
+    Fns: fetch_news_around_event
+  trading\analysis\factor_model.py
+    128 lines, 4.7 KB
+    Fns: compute_factor_exposures, factor_attribution_pct
+  trading\analysis\market_monitor.py
+    83 lines, 3.2 KB
+    Fns: scan_watchlist
+  trading\analysis\market_scanner.py
+    249 lines, 9.1 KB
+    Fns: scan_market, get_available_filters
+  trading\analysis\monte_carlo.py
+    81 lines, 2.3 KB
+    Fns: simulate_price_paths, fan_chart_percentiles, probability_above_below
+  trading\analysis\news_ranker.py
+    64 lines, 2.4 KB
+    Fns: rank_news_by_relevance
+  trading\analysis\volume_news_linker.py
+    182 lines, 5.9 KB
+    Fns: detect_significant_candles, get_news_for_date, build_chart_annotations
+  trading\analytics\__init__.py
+    3 lines, 0.0 KB
+  trading\analytics\alpha_attribution_engine.py
+    1066 lines, 40.0 KB
+    Classes: AttributionMethod, AttributionResult, AlphaDecayAlert, StrategyContribution, AlphaDecayAnalysis, AttributionFactor, AlphaAttribution, AlphaAttributionEngine
+    Fns: get_alpha_attribution_engine, perform_attribution_analysis, get_attribution_summary, get_alpha_decay_alerts, disable_underperforming_strategies
+  trading\analytics\forecast_explainability.py
+    829 lines, 30.4 KB
+    Classes: ConfidenceInterval, FeatureImportance, ForecastExplanation, IntelligentForecastExplainability
+    Fns: calculate_confidence_intervals, calculate_feature_importance, generate_forecast_explanation, create_forecast_vs_actual_plot, get_explanation_summary, export_explanations
+  trading\async_utils\forecast_task_dispatcher.py
+    647 lines, 24.7 KB
+    Classes: ForecastTask, ForecastResult, AsyncResultReporter, ForecastTaskDispatcher, ModelForecastDispatcher
+    Fns: async_safe_logging, add_result, get_result, get_all_results, clear_old_results, wrapper +6 more
+  trading\automation_core.py
+    44 lines, 1.6 KB
+    Classes: AutomationCore, AutomationConfig
+  trading\backtesting\__init__.py
+    48 lines, 1.6 KB
+  trading\backtesting\backtest_compiler.py
+    474 lines, 17.3 KB
+    Classes: BacktestCompiler
+    Fns: compile_signals, compile_with_overlap_detection, get_compilation_summary, export_compilation_report
+  trading\backtesting\backtest_utils.py
+    371 lines, 12.3 KB
+    Classes: BacktestReport, BacktestUtils
+    Fns: validate_backtest_data, generate_backtest_report, validate_strategy_signals
+  trading\backtesting\backtester.py
+    867 lines, 33.6 KB
+    Classes: Backtester
+    Fns: run_backtest, normalize_results, execute_trade, get_account_summary, get_performance_metrics, run +6 more
+  trading\backtesting\cost_model.py
+    323 lines, 12.4 KB
+    Classes: FeeModel, SpreadModel, SlippageModel, CostConfig, CostModel
+    Fns: get_retail_cost_config, get_institutional_cost_config, get_high_frequency_cost_config, get_crypto_cost_config, calculate_fees, calculate_spread +3 more
+  trading\backtesting\edge_case_handler.py
+    284 lines, 10.0 KB
+    Classes: EdgeCaseHandler
+    Fns: validate_signals, validate_trade_data, create_fallback_chart, generate_edge_case_report, clear_history, add_warning +1 more
+  trading\backtesting\enhanced_backtester.py
+    852 lines, 31.8 KB
+    Classes: EnhancedBacktester
+    Fns: run_forecast_backtest, run_multi_model_backtest, run_strategy_comparison, run_forecast_backtest, run_multi_model_backtest, run_strategy_comparison +2 more
+  trading\backtesting\evaluator.py
+    814 lines, 29.1 KB
+    Classes: BacktestEvaluator
+    Fns: walk_forward_backtest, walk_forward_backtest, get_evaluation_summary
+  trading\backtesting\monte_carlo.py
+    627 lines, 21.3 KB
+    Classes: MonteCarloConfig, MonteCarloSimulator
+    Fns: run_monte_carlo_analysis, simulate_portfolio_paths, calculate_percentiles, get_summary_statistics, plot_simulation_results, create_detailed_report
+  trading\backtesting\performance_analysis.py
+    617 lines, 22.9 KB
+    Classes: CostParameters, PerformanceAnalyzer
+    Fns: compute_metrics, combine_metrics, add_metrics, get_history, clear_history, get_fallback_metrics +1 more
+  trading\backtesting\position_sizing.py
+    1289 lines, 46.0 KB
+    Classes: PositionSizing, PositionSizingEngine
+    Fns: calculate_position_size, add_trade, get_trade_history, clear_trade_history, portfolio_stats, portfolio_variance +2 more
+  trading\backtesting\risk_metrics.py
+    134 lines, 4.7 KB
+    Classes: RiskMetric, RiskMetricsEngine
+    Fns: calculate, get_metric
+  trading\backtesting\trade_models.py
+    172 lines, 6.2 KB
+    Classes: TradeType, Trade
+    Fns: calculate_total_cost, calculate_net_pnl, to_dict, from_dict
+  trading\backtesting\visualization.py
+    169 lines, 5.5 KB
+    Classes: BacktestVisualizer
+    Fns: plot_equity_curve, plot_trades, plot_risk_metrics
+  trading\base_agent.py
+    139 lines, 3.8 KB
+    Classes: Task, AgentResult, BaseAgent
+    Fns: run, validate_input, handle_error, log_execution
+  trading\commentary\__init__.py
+    22 lines, 0.5 KB
+  trading\commentary\commentary_engine.py
+    574 lines, 22.3 KB
+    Classes: CommentaryType, CommentaryRequest, CommentaryResponse, CommentaryEngine
+    Fns: create_commentary_engine, generate_commentary, get_commentary_statistics
+  trading\config\__init__.py
+    237 lines, 5.5 KB
+    Classes: Config
+    Fns: get, set, get_all, validate
+  trading\config\configuration.py
+    845 lines, 28.6 KB
+    Classes: ConfigManager, ModelConfig, DataConfig, TrainingConfig, WebConfig, MonitoringConfig
+    Fns: load_config, save_config, delete_config, create_config_from_env, get, set +23 more
+  trading\config\enhanced_settings.py
+    1071 lines, 35.0 KB
+    Classes: ValidationSchema, ConfigurationValidator, EnhancedSettings, TradingConfig, AgentConfig, RiskConfig, PerformanceConfig
+    Fns: create_enhanced_settings, create_trading_config, create_agent_config, create_risk_config, create_performance_config, validate_env_var +23 more
+  trading\config\settings.py
+    585 lines, 19.2 KB
+    Classes: Settings, _SettingsNamespace
+    Fns: get_config_value, get_config_dict, validate_config, create_env_template, get
+  trading\context_manager\trading_context.py
+    747 lines, 28.3 KB
+    Classes: SessionStatus, StrategyType, TradingSession, StrategyContext, TradingContextManager
+    Fns: create_trading_context_manager, create_session, get_session, update_session_context, register_strategy, unregister_strategy +11 more
+  trading\core\__init__.py
+    193 lines, 5.5 KB
+    Fns: setup_core_logging, load_agent_registry, save_agent_registry, initialize_core_system, get_agent_registry, update_agent_status +1 more
+  trading\core\agents.py
+    909 lines, 31.7 KB
+    Classes: AgentStatus, AgentType, EventType, AgentConfig, AgentMetrics, AgentTask, EventData, UIAgentInfo, AgentManager, EventHandlers
+    Fns: get_agent_manager, register_agent, trigger_event, handle_underperformance, register_agent, unregister_agent +13 more
+  trading\core\backtest_common.py
+    587 lines, 18.5 KB
+    Classes: Frequency, BacktestCommon
+    Fns: validate_backtest_data, calculate_backtest_metrics, scale_metrics_for_frequency, validate_data, preprocess_data, calculate_returns +9 more
+  trading\core\history_logger.py
+    680 lines, 23.6 KB
+    Classes: RetentionPolicy, RetentionConfig, HistoryLogger
+    Fns: get_history_logger, log_event, get_recent_events, log_event, get_recent_events, get_events_by_date_range +6 more
+  trading\core\performance.py
+    1305 lines, 44.5 KB
+    Classes: PerformanceMetrics, PerformanceEntry, PerformanceStatus, ModelLeaderboardEntry, LeaderboardConfig, PerformancePaths, TargetManager, PerformanceLogger, MetricsCalculator, PerformanceEvaluator, PerformanceVisualizer, LeaderboardManager, PerformanceTracker
+    Fns: load_targets, update_targets, log_performance, calculate_rolling_metrics, evaluate_performance, plot_performance_trends +27 more
+  trading\dashboards\__init__.py
+    583 lines, 19.6 KB
+    Classes: DashboardPlugin, PluginManager, StreamlitLayoutManager, TradingDashboard, StrategyDashboard
+    Fns: get_plugin_manager, get_layout_manager, get_trading_dashboard, get_strategy_dashboard, get_available_plugins, get_available_layouts +24 more
+  trading\data\__init__.py
+    357 lines, 11.5 KB
+    Classes: DataProviderManager
+    Fns: get_provider_manager, get_data_provider, get_available_providers, set_default_provider, get_provider_status, get_default_provider +8 more
+  trading\data\data_listener.py
+    1084 lines, 39.7 KB
+    Classes: DataFeedWatchdog, DataListener, RealTimeDataFeed, MarketDataStream
+    Fns: register_feed, update_feed, check_feeds, get_statistics, reset_statistics, start +19 more
+  trading\data\data_loader.py
+    978 lines, 33.5 KB
+    Classes: DataLoadRequest, DataLoadResponse, PriceResponse, ParallelLoadConfig, DataLoaderConfig, DataValidator, ParallelProcessor, DataLoader
+    Fns: get_data_loader, load_market_data, load_multiple_tickers, get_latest_price, get_yfinance_config, get_validation_config +9 more
+  trading\data\data_provider.py
+    737 lines, 24.6 KB
+    Classes: DataRequest, DataResponse, CacheEntry, ProviderStatus, DataProviderConfig, DataCache, DataValidator, DataProviderManager
+    Fns: get_data_provider, fetch_data, fetch_multiple_data, get_provider_config, get_cache_config, get_validation_config +12 more
+  trading\data\earnings_calendar.py
+    86 lines, 3.2 KB
+    Fns: get_upcoming_earnings
+  trading\data\earnings_reaction.py
+    206 lines, 7.8 KB
+    Fns: get_earnings_reactions
+  trading\data\external_signals.py
+    1286 lines, 46.5 KB
+    Classes: SignalData, SignalValidator, SentimentData, NewsSentimentCollector, TwitterSentimentCollector, RedditSentimentCollector, MacroIndicatorCollector, OptionsFlowCollector, ExternalSignalsManager
+    Fns: async_strategy_wrapper, get_external_signals_manager, decorator, validate_signal_data, validate_sentiment_data, validate_options_flow_data +10 more
+  trading\data\insider_flow.py
+    135 lines, 4.5 KB
+    Fns: get_insider_flow
+  trading\data\macro_data_integration.py
+    800 lines, 27.8 KB
+    Classes: DataSource, MacroIndicator, YieldCurveData, EarningsData, MacroDataIntegration, EconomicIndicatorLoader
+    Fns: get_macro_data_integration, get_fred_data, get_yield_curve_data, get_earnings_data, get_macro_indicators, analyze_macro_environment +3 more
+  trading\data\news_aggregator.py
+    330 lines, 12.3 KB
+    Fns: get_news, get_market_news, get_walter_bloomberg_headlines
+  trading\data\news_fetcher.py
+    83 lines, 2.4 KB
+    Fns: fetch_recent_news, format_news_for_context
+  trading\data\preprocessing.py
+    1375 lines, 51.3 KB
+    Classes: DataPreprocessor, FeatureEngineering, DataValidator, DataScaler
+    Fns: remove_outliers, apply_agent_transformations, preprocess_data, clean_data, normalize_data, fit +31 more
+  trading\data\price_cache.py
+    70 lines, 2.0 KB
+    Fns: get_quote, get_history, get_info, get_news, batch_quotes
+  trading\data\providers\__init__.py
+    490 lines, 15.5 KB
+    Classes: ProviderManager, DataLoader
+    Fns: load_data, load_multiple_data, get_available_providers, get_provider_status, get_provider_manager, get_data_loader +9 more
+  trading\data\providers\alpha_vantage_provider.py
+    557 lines, 18.3 KB
+    Classes: AlphaVantageError, RateLimiter, AlphaVantageProvider
+    Fns: get_cached_data, cache_data, log_data_request, wait_if_needed, fetch, fetch_multiple +5 more
+  trading\data\providers\base_provider.py
+    213 lines, 6.4 KB
+    Classes: ProviderConfig, ProviderStatus, BaseDataProvider
+    Fns: fetch, fetch_multiple, enable, disable, is_enabled, is_available +7 more
+  trading\data\providers\fallback_provider.py
+    554 lines, 18.9 KB
+    Classes: FallbackDataProvider, MockDataProvider
+    Fns: get_fallback_provider, fetch, fetch_multiple, get_historical_data, get_live_price, get_market_data +6 more
+  trading\data\providers\yfinance_provider.py
+    428 lines, 14.4 KB
+    Classes: YFinanceProvider
+    Fns: log_data_request, get_cached_data, cache_data, fetch, fetch_multiple, get_data +2 more
+  trading\data\short_interest.py
+    50 lines, 1.6 KB
+    Fns: get_short_interest
+  trading\data\watchlist.py
+    317 lines, 10.6 KB
+    Classes: WatchlistEntry, WatchlistManager
+    Fns: add_ticker, remove_ticker, update_alert, get_all, check_alerts, get_alert_history
+  trading\database\__init__.py
+    28 lines, 0.6 KB
+  trading\database\connection.py
+    199 lines, 5.4 KB
+    Fns: get_database_url, create_database_engine, get_session_factory, get_db_session, init_database, get_engine +2 more
+  trading\database\models.py
+    267 lines, 9.4 KB
+    Classes: JSONEncodedDict, PositionStatus, TradeDirection, PositionModel, PortfolioStateModel, TradingSessionModel, StateManagerModel, AgentMemoryModel, TaskModel
+    Fns: process_bind_param, process_result_value, to_dict, to_dict
+  trading\demo_live_market_runner.py
+    420 lines, 14.1 KB
+    Fns: setup_signal_handlers, demo_live_market_runner, demo_forecast_tracking, demo_agent_triggering, demo_simulated_trading, main +1 more
+  trading\ensemble\diagnostic_tools.py
+    466 lines, 16.2 KB
+    Classes: DiagnosticLevel, ModelDiagnostic, EnsembleDiagnostic, EnsembleDiagnosticTools
+    Fns: create_ensemble_diagnostic_tools, analyze_ensemble, generate_diagnostic_report, log_diagnostic_summary, get_model_performance_trends, set_confidence_threshold +2 more
+  trading\ensemble\integrity_checker.py
+    575 lines, 20.3 KB
+    Classes: DriftType, DistanceMetric, DriftResult, EnsembleHealth, EnsembleIntegrityChecker
+    Fns: create_ensemble_integrity_checker, add_model_predictions, distribution_drift_check, check_ensemble_health, get_drift_statistics, set_drift_thresholds
+  trading\evaluation\__init__.py
+    17 lines, 0.3 KB
+  trading\evaluation\metrics.py
+    308 lines, 10.7 KB
+    Classes: RegressionMetrics, ClassificationMetrics, TimeSeriesMetrics, RiskMetrics
+    Fns: calculate_sharpe_ratio, calculate_max_drawdown, calculate_win_rate, mean_squared_error, root_mean_squared_error, mean_absolute_error +18 more
+  trading\evaluation\model_evaluator.py
+    773 lines, 28.1 KB
+    Classes: ValidationStatus, ValidationResult, StrategyEvaluationSchema, ModelEvaluator
+    Fns: evaluate_model, validate_evaluation_result, create_evaluation_result, export_evaluation_results, plot_predictions, plot_residuals +4 more
+  trading\exceptions.py
+    342 lines, 9.4 KB
+    Classes: TradingSystemError, AgentError, AgentInitializationError, AgentExecutionError, AgentCommunicationError, AgentTimeoutError, AgentValidationError, AgentRegistryError, ModelError, ModelInitializationError, ModelTrainingError, ModelPredictionError, ModelValidationError, ModelDeploymentError, DataError, DataConnectionError, DataValidationError, DataProcessingError, DataNotFoundError, DataIntegrityError, StrategyError, StrategyInitializationError, StrategyExecutionError, StrategyValidationError, ExecutionError, OrderExecutionError, PositionError, RiskError, RiskLimitExceededError, RiskValidationError, ConfigurationError, AuthenticationError, AuthorizationError, NetworkError, TimeoutError, ResourceError, MemoryError, FileError, DatabaseError, APIError, ValidationError, StateError, CircularDependencyError, VersionError
+    Fns: get_error_code, create_error_context, add_integrity_issue, get_integrity_summary
+  trading\execution\__init__.py
+    5 lines, 0.1 KB
+  trading\execution\execution_engine.py
+    453 lines, 16.7 KB
+    Classes: AgentMemory, ExecutionEngine, TradingConfig
+    Fns: calculate_metrics, get_execution_engine, execute_order, get_failure_summary, get_skip_summary, cancel_order +5 more
+  trading\execution\execution_replay.py
+    675 lines, 24.7 KB
+    Classes: ExecutionReplay
+    Fns: start_replay_session, record_trade, record_market_data, end_replay_session, load_replay, generate_replay_visualization +1 more
+  trading\execution\trade_execution_simulator.py
+    930 lines, 34.3 KB
+    Classes: FillType, OrderBookLevel, OrderBook, Order, ExecutionResult, TradeExecutionSimulator
+    Fns: place_order, execute_order, cancel_order, get_order_status, get_execution_summary, simulate_bulk_execution +2 more
+  trading\execution\trade_journal.py
+    640 lines, 21.4 KB
+    Classes: Trade, TradeSummary, TradeJournal
+    Fns: create_trade_journal, to_dict, add_trade, close_trade, get_trade, get_open_trades +7 more
+  trading\explainability\signal_trace.py
+    429 lines, 13.4 KB
+    Classes: TraceLevel, SignalTrace, SignalTracer
+    Fns: create_signal_tracer, safe_eval, trace_signal, trace_evaluation, trace_signal_processing, get_signal_traces +4 more
+  trading\feature_engineering\__init__.py
+    3 lines, 0.1 KB
+  trading\feature_engineering\feature_engineer.py
+    811 lines, 29.7 KB
+    Classes: FeatureEngineer
+    Fns: register_custom_indicator, apply_registered_indicator, feature_descriptions, select_features, get_feature_importance, engineer_features +8 more
+  trading\feature_engineering\indicators.py
+    268 lines, 8.4 KB
+    Fns: register_indicator, rolling_zscore, price_ratios, rsi, macd, atr +6 more
+  trading\feature_engineering\macro_feature_engineering.py
+    440 lines, 16.0 KB
+    Classes: MacroFeatureEngineer
+    Fns: get_macro_engineer, get_fred_data, get_worldbank_data, enrich_trading_data, get_feature_importance
+  trading\feature_engineering\utils.py
+    159 lines, 5.1 KB
+    Fns: normalize_features, create_lag_features, remove_outliers, calculate_rolling_features
+  trading\forecasting\__init__.py
+    0 lines, 0.0 KB
+  trading\forecasting\forecast_postprocessor.py
+    184 lines, 6.8 KB
+    Classes: ForecastPostprocessor
+    Fns: sanitize_forecast, dynamic_ewma_smoothing, prepare_for_plotting, process, prepare_for_saving
+  trading\forecasting\hybrid_model.py
+    895 lines, 37.2 KB
+    Classes: HybridModel
+    Fns: fit, update_weights, set_scoring_config, set_weighting_metric, get_weighting_metric_info, get_model_performance_summary +4 more
+  trading\forecasting\hybrid_model_selector.py
+    210 lines, 8.2 KB
+    Classes: HybridModelSelector
+    Fns: select_best_model, get_model_ranking, validate_scores
+  trading\forecasting\postprocess.py
+    423 lines, 13.3 KB
+    Classes: AlphaMethod, PostprocessConfig, ForecastPostprocessor
+    Fns: create_forecast_postprocessor, calculate_dynamic_alpha, apply_ewma_smoothing, postprocess_forecast, batch_postprocess, get_alpha_statistics +3 more
+  trading\integration\__init__.py
+    3 lines, 0.1 KB
+  trading\integration\institutional_grade_system.py
+    951 lines, 35.4 KB
+    Classes: SystemStatus, SystemMetrics, InstitutionalGradeSystem, FallbackModule
+    Fns: start, stop, generate_system_report, get_system_status, process_natural_language_query, export_system_data +2 more
+  trading\integration\meta_agent_manager.py
+    410 lines, 15.2 KB
+    Classes: MetaAgentStatus, MetaAgentResult, MetaAgentManager
+    Fns: run_system_integration_tests, analyze_system_logs, generate_system_documentation, run_security_audit, to_dict, execute_agent +12 more
+  trading\integration\model_registry.py
+    632 lines, 21.8 KB
+    Classes: ModelStatus, TaskType, ModelMetadata, PerformanceMetrics, ModelRegistry, ExampleLSTM, ExampleXGBoost
+    Fns: get_best_forecasting_model, get_best_classification_model, track_model_performance, to_dict, to_dict, register_model +11 more
+  trading\integration\service_mesh.py
+    695 lines, 23.7 KB
+    Classes: ServiceStatus, RequestType, ServiceInfo, ServiceRequest, ServiceResponse, ServiceHealthMonitor, LoadBalancer, ServiceMesh
+    Fns: create_service_mesh, register_forecasting_service, to_dict, to_dict, to_dict, register_service +16 more
+  trading\knowledge_base\__init__.py
+    3 lines, 0.1 KB
+  trading\knowledge_base\trading_rules.py
+    446 lines, 15.7 KB
+    Classes: RuleStatus, LogicalOperator, RuleMetadata, TradingRules
+    Fns: add_rule, update_rule, filter_rules_by_tag, snooze_rule, archive_rule, is_rule_active +11 more
+  trading\launch_live_market_runner.py
+    168 lines, 5.7 KB
+    Fns: setup_logging, load_config, main, signal_handler
+  trading\live_market_runner.py
+    1115 lines, 41.6 KB
+    Classes: TriggerType, TriggerConfig, ForecastResult, LiveMarketState, LiveMarketRunner
+    Fns: create_live_market_runner, to_dict, from_dict, to_dict, start, stop +4 more
+  trading\llm\__init__.py
+    14 lines, 0.3 KB
+    Fns: get_llm_interface
+  trading\llm\llm_interface.py
+    33 lines, 1.1 KB
+    Classes: LLMInterface
+  trading\llm\parser_engine.py
+    901 lines, 33.1 KB
+    Classes: ParsedIntent, StrategyRoute, ParserEngine
+    Fns: create_parser_engine, parse_intent, parse_intent_regex, parse_intent_huggingface, parse_intent_openai, route_strategy +3 more
+  trading\llm\prompt_parser.py
+    620 lines, 19.4 KB
+    Classes: ActionPlan, PromptParser
+    Fns: parse_prompt, parse_prompts, to_dict, parse_prompt, parse_batch, get_parsing_statistics
+  trading\logger_utils.py
+    23 lines, 0.5 KB
+  trading\logs\__init__.py
+    2 lines, 0.1 KB
+  trading\logs\audit_logger.py
+    283 lines, 8.2 KB
+    Classes: AuditLogger
+    Fns: log_prompt, log_strategy, log_rule, log_llm, log_error
+  trading\logs\init_logs.py
+    123 lines, 3.8 KB
+    Fns: init_log_files, main
+  trading\logs\logger.py
+    235 lines, 6.2 KB
+    Fns: get_logger, log_metrics, log_llm_metrics, log_backtest_metrics, log_agent_metrics
+  trading\market\__init__.py
+    7 lines, 0.2 KB
+  trading\market\market_analyzer.py
+    257 lines, 10.4 KB
+    Classes: MarketAnalysisError, MarketAnalyzer
+    Fns: detect_market_regime, analyze_trend, analyze_volatility, analyze_correlation, analyze_market_conditions
+  trading\market\market_data.py
+    476 lines, 16.1 KB
+    Classes: MarketDataError, NetworkError, ValidationError, FormatError, MarketData
+    Fns: fetch_data, auto_update_all, get_cached_symbols, remove_symbol, get_error_stats, add_data +7 more
+  trading\market\market_indicators.py
+    642 lines, 22.1 KB
+    Classes: MarketIndicators
+    Fns: calculate_rsi, calculate_macd, calculate_sma, calculate_ema, calculate_bollinger_bands, calculate_all_indicators +6 more
+  trading\memory\__init__.py
+    34 lines, 0.8 KB
+  trading\memory\agent_logger.py
+    875 lines, 31.8 KB
+    Classes: LogLevel, AgentAction, AgentType, AgentContext, AgentLogEntry, LogFilter, AgentLogger
+    Fns: enum_to_value, get_agent_logger, log_agent_action, to_dict, register_agent_context, update_agent_context +10 more
+  trading\memory\agent_memory.py
+    937 lines, 34.2 KB
+    Classes: MemoryChunk, MemoryManager, AgentMemory
+    Fns: is_expired, update_access, get_size_bytes, to_dict, from_dict, add +13 more
+  trading\memory\agent_memory_manager.py
+    1658 lines, 62.3 KB
+    Classes: AgentInteraction, StrategyMemory, ModelMemory, ThreadSafeConnectionPool, AtomicCounter, ThreadSafeCache, AgentMemoryManager
+    Fns: get_agent_memory_manager, configure, get_connection, increment, decrement, get +20 more
+  trading\memory\agent_thoughts_logger.py
+    1139 lines, 37.5 KB
+    Classes: AgentThought, TaskContext, AgentThoughtsLogger
+    Fns: get_thoughts_logger, log_agent_thought, create_task, start_task, complete_task, log_thought +17 more
+  trading\memory\goals\__init__.py
+    23 lines, 0.4 KB
+  trading\memory\goals\status.py
+    686 lines, 23.2 KB
+    Classes: GoalStatus, GoalStatusTracker
+    Fns: ensure_goals_directory, load_goals, save_goals, clear_goals, get_status_summary, update_goal_progress +10 more
+  trading\memory\logger_utils.py
+    258 lines, 7.1 KB
+    Fns: setup_logging, get_logger, log_function_call, log_execution_time, setup_trading_logger, log_trade_execution +4 more
+  trading\memory\long_term_performance_tracker.py
+    964 lines, 35.2 KB
+    Classes: PerformanceMetric, PerformanceTrend, DrawdownInfo, SharpeMetrics, LongTermPerformanceTracker
+    Fns: get_performance_tracker, record_metric, analyze_trends, get_rolling_sharpe, get_drawdown_history, get_improvement_tracking +6 more
+  trading\memory\memory_store.py
+    412 lines, 15.2 KB
+    Classes: MemoryType, MemoryEntry, MemoryRecord, MemoryStore
+    Fns: get_memory_store, close_memory_store, set_sqlite_pragma, close, upsert, add +8 more
+  trading\memory\model_log.py
+    94 lines, 3.8 KB
+    Classes: ModelLog, ModelLog
+    Fns: log, get_logs, log, get_logs
+  trading\memory\model_monitor.py
+    1276 lines, 47.5 KB
+    Classes: ModelParameters, DriftAlert, AnomalyDetection, ModelMonitor
+    Fns: get_model_monitor, detect_drift, generate_strategy_priority, get_default_model_trust_levels, get_model_trust_levels, update_trust_level +10 more
+  trading\memory\performance_logger.py
+    703 lines, 23.1 KB
+    Classes: ModelScoreTracker
+    Fns: log_strategy_performance, log_performance, get_performance_data, create_performance_trend_chart, create_streamlit_performance_dashboard, export_performance_data +12 more
+  trading\memory\performance_memory.py
+    831 lines, 29.9 KB
+    Classes: PerformanceMemory
+    Fns: load, save, update, get_metrics, get_best_model, clear +5 more
+  trading\memory\performance_weights.py
+    410 lines, 13.6 KB
+    Classes: PerformanceWeightsManager
+    Fns: export_weights_to_file, get_latest_weights, update_weights_with_sharpe, get_current_weights, get_weight_history, reset_weights
+  trading\memory\persistent_memory.py
+    961 lines, 32.5 KB
+    Classes: MemoryType, InteractionType, OutcomeType, MemoryInteraction, LearningInsight, MemoryStats, RedisMemoryStore, VectorMemoryStore, SQLiteMemoryStore, PersistentMemory
+    Fns: get_persistent_memory, store_interaction, to_dict, from_dict, store_interaction, get_interaction +13 more
+  trading\memory\prompt_feedback_memory.py
+    375 lines, 12.9 KB
+    Classes: PromptInteraction, PromptPattern, PromptFeedbackMemory
+    Fns: store_interaction, learn_patterns, get_prompt_suggestions, get_memory_summary, run_memory_loop
+  trading\memory\state_manager.py
+    608 lines, 22.0 KB
+    Classes: StateVersion, StateManager
+    Fns: get_state_manager, get_state, set_state, save_state, to_dict, from_dict +17 more
+  trading\memory\strategy_logger.py
+    836 lines, 31.0 KB
+    Classes: StrategyLogger
+    Fns: log_strategy_decision, get_strategy_analysis, log_decision, save_strategy_regime_mapping, load_strategy_regime_mappings, get_best_strategy_for_regime +5 more
+  trading\memory\visualize_memory.py
+    373 lines, 11.6 KB
+    Classes: TaskProgressTracker
+    Fns: display_task_progress, simulate_task_progress, main, add_task, update_task_progress, complete_task +5 more
+  trading\meta_learning\model_swapper.py
+    604 lines, 20.4 KB
+    Classes: ModelStatus, ValidationResult, ModelMetrics, SwapCandidate, SwapResult, ModelSwapper
+    Fns: create_model_swapper, add_candidate_model, find_best_candidate, swap_model, get_swap_statistics, rollback_last_swap +2 more
+  trading\models\__init__.py
+    36 lines, 1.0 KB
+  trading\models\advanced\__init__.py
+    9 lines, 0.4 KB
+  trading\models\advanced\ensemble\__init__.py
+    6 lines, 0.3 KB
+  trading\models\advanced\gnn\__init__.py
+    8 lines, 0.3 KB
+  trading\models\advanced\gnn\gnn_model.py
+    540 lines, 19.0 KB
+    Classes: GraphConvLayer, GNNModel, GNNForecaster
+    Fns: forward, forward, fit, predict, forecast, get_relationship_matrix
+  trading\models\advanced\lstm\__init__.py
+    3 lines, 0.0 KB
+  trading\models\advanced\rl\__init__.py
+    3 lines, 0.1 KB
+  trading\models\advanced\rl\strategy_optimizer.py
+    333 lines, 11.1 KB
+    Classes: StrategyOptimizer, DQNStrategyOptimizer
+    Fns: fit, predict, save, load, plot_results
+  trading\models\advanced\tcn\__init__.py
+    3 lines, 0.1 KB
+  trading\models\advanced\transformer\__init__.py
+    3 lines, 0.1 KB
+  trading\models\advanced\transformer\time_series_transformer.py
+    833 lines, 31.0 KB
+    Classes: PositionalEncoding, TransformerForecaster, EncoderWithDropout
+    Fns: forward, build_model, forward, predict, forecast, summary +6 more
+  trading\models\arima_model.py
+    893 lines, 34.8 KB
+    Classes: OptimizationCriterion, ARIMAModel
+    Fns: fit, predict, get_model_summary, get_aic, get_bic, check_stationarity +7 more
+  trading\models\base_model.py
+    927 lines, 29.6 KB
+    Classes: Recommendation, StrategyPayload, ModelRegistry, TimeSeriesDataset, BaseModel
+    Fns: register, get_model, build_model, prepare_data, train, evaluate +7 more
+  trading\models\catboost_model.py
+    216 lines, 9.8 KB
+    Classes: CatBoostModel
+    Fns: build_model, fit, predict, forecast, summary, infer +3 more
+  trading\models\confidence_generator.py
+    408 lines, 14.1 KB
+    Classes: ConfidenceBand, ConfidenceBands, ConfidenceGenerator
+    Fns: create_confidence_generator, generate_confidence_bands, get_visualization_data, get_statistics, clear_history
+  trading\models\dataset.py
+    162 lines, 4.5 KB
+    Classes: ValidationError, TimeSeriesDataset
+    Fns: get_scaler, inverse_transform_features
+  trading\models\ensemble_model.py
+    1113 lines, 42.6 KB
+    Classes: EnsembleModel
+    Fns: build_model, fit, predict, save_model, load_model, summary +3 more
+  trading\models\forecast_explainability.py
+    808 lines, 29.7 KB
+    Classes: ForecastExplanation, ForecastAccuracy, ForecastExplainability
+    Fns: get_forecast_explainability, explain_forecast, track_forecast_accuracy, get_forecast_vs_actual_plot_data, get_feature_importance_summary, get_explanation_summary +1 more
+  trading\models\forecast_features.py
+    131 lines, 4.5 KB
+    Fns: add_forecast_features, prepare_forecast_data
+  trading\models\forecast_normalizer.py
+    333 lines, 11.7 KB
+    Classes: NormalizedForecast, ForecastNormalizer
+    Fns: create_forecast_normalizer, align, normalize_multiple_forecasts, get_alignment_statistics, clear_history
+  trading\models\forecast_router.py
+    1276 lines, 54.5 KB
+    Classes: ForecastRouter
+    Fns: get_available_models, register_model, unregister_model, get_forecast, select_best_model, get_consensus_forecast
+  trading\models\garch_model.py
+    621 lines, 22.2 KB
+    Classes: GARCHModel
+    Fns: create_garch_model, fit, build_model, train, predict, forecast +5 more
+  trading\models\lstm_model.py
+    1975 lines, 83.8 KB
+    Classes: FallbackModel, LSTMModel, LSTMForecaster, SimpleLSTMModel, LSTMForecasterModel, DummyModel
+    Fns: fit, predict, forward, train_model, predict, set_sequence_length +16 more
+  trading\models\model_registry.py
+    400 lines, 15.8 KB
+    Classes: ModelRegistry
+    Fns: get_registry, register, get, list_models, get_quick_forecast_models, get_advanced_models +4 more
+  trading\models\model_utils.py
+    314 lines, 8.9 KB
+    Classes: ValidationError, ModelError
+    Fns: validate_data, to_device, from_device, safe_forward, compute_loss, compute_metrics +3 more
+  trading\models\multi_model_aggregator.py
+    537 lines, 19.3 KB
+    Classes: ModelPerformance, AggregatedForecast, MultiModelAggregator
+    Fns: create_multi_model_aggregator, add_model, update_model_performance, calculate_weights, aggregate_forecasts, get_model_performance +2 more
+  trading\models\neuralforecast_models.py
+    303 lines, 8.7 KB
+    Classes: NeuralForecastWrapper, AutoformerModel, InformerModel, TFTModel, NBEATSModel, PatchTSTModel, NHITSModel
+    Fns: get_neuralforecast_model, fit, predict
+  trading\models\prophet_model.py
+    676 lines, 29.4 KB
+    Classes: ProphetModel, ProphetModel
+    Fns: build_model, fit, add_custom_holidays, predict, forecast, summary +4 more
+  trading\models\ridge_model.py
+    828 lines, 32.1 KB
+    Classes: RidgeModel
+    Fns: create_ridge_model, build_model, train, fit, predict, forecast +5 more
+  [ERROR] trading\models\tcn_model.py -- line 1: invalid non-printable character U+FEFF
+  trading\models\timeseries\__init__.py
+    1 lines, 0.1 KB
+  trading\models\transformer_model.py
+    230 lines, 9.0 KB
+    Classes: TransformerForecaster, _TransformerModel
+    Fns: fit, predict, forecast, forward
+  trading\models\transformer_wrapper.py
+    439 lines, 13.9 KB
+    Classes: TransformerConfig, MultiHeadAttention, FeedForward, TransformerBlock, TransformerWrapper
+    Fns: create_transformer_wrapper, forward, forward, forward, forward, get_dropout_stats +3 more
+  trading\models\walk_forward_validator.py
+    8 lines, 0.3 KB
+  trading\models\xgboost_model.py
+    901 lines, 37.9 KB
+    Classes: FallbackXGBoostModel, XGBoostModel
+    Fns: fit, predict, build_model, prepare_features, train, fit +6 more
+  trading\monitoring\__init__.py
+    5 lines, 0.2 KB
+  trading\monitoring\health_check.py
+    11 lines, 0.4 KB
+  trading\nlp\__init__.py
+    6 lines, 0.3 KB
+  trading\nlp\llm_processor.py
+    199 lines, 6.7 KB
+    Classes: LLMProcessor
+    Fns: process, process_stream, is_unsafe_content, validate_json_response
+  trading\nlp\nl_interface.py
+    742 lines, 27.2 KB
+    Classes: NLResponse, NLInterface
+    Fns: process_query
+  trading\nlp\prompt_bridge.py
+    568 lines, 19.4 KB
+    Classes: IntentType, ParsedIntent, PromptParseResult, PromptBridge
+    Fns: create_prompt_bridge, parse_prompt, split_intents, resolve_dependencies, get_parse_statistics
+  trading\nlp\prompt_processor.py
+    581 lines, 20.0 KB
+    Classes: EntityMatch, ProcessedPrompt, Intent, PromptProcessor
+    Fns: process_prompt, get_entity_values, get_entity_by_type, has_entity, get_required_entities, validate_prompt +11 more
+  trading\nlp\response_formatter.py
+    453 lines, 16.2 KB
+    Classes: ResponseData, ResponseFormatter
+    Fns: format_response, create_visualization
+  trading\nlp\sentiment_bridge.py
+    388 lines, 12.6 KB
+    Classes: SoftMatchResult, LexiconScore, SentimentBridge
+    Fns: create_sentiment_bridge, score_text, score_batch, get_lexicon_stats, add_custom_lexicon, clear_embeddings_cache
+  trading\nlp\sentiment_classifier.py
+    858 lines, 26.2 KB
+    Classes: SentimentLabel, ReadabilityLevel, ClassificationResult, TrainingExample, ClassifierConfig, FinancialNewsDataset, ReadabilityAnalyzer, TfidfLogisticClassifier, TransformerClassifier, SentimentClassifier
+    Fns: create_sentiment_classifier, calculate_readability_score, get_readability_level, is_acceptable_readability, train, predict +8 more
+  trading\nlp\sentiment_processor.py
+    891 lines, 29.7 KB
+    Classes: SentimentSource, SentimentType, NewsSource, TweetMetrics, SentimentResult, SentimentContext, SentimentProcessor
+    Fns: create_sentiment_processor, load_config, add_news_source, remove_news_source, calculate_readability_score, calculate_tweet_impact_score +5 more
+  trading\optimization\__init__.py
+    27 lines, 0.9 KB
+  trading\optimization\backtest_optimizer.py
+    1113 lines, 39.8 KB
+    Classes: WalkForwardResult, RegimeInfo, OptimizationResult, StrategyValidator, RegimeDetector, WalkForwardOptimizer, BacktestOptimizer
+    Fns: get_backtest_optimizer, validate_returns, calculate_regime_features, detect_regimes, get_current_regime, run_walk_forward_analysis +5 more
+  trading\optimization\base_optimizer.py
+    819 lines, 29.0 KB
+    Classes: ParameterSchema, OptimizerConfig, OptimizationResult, BaseOptimizer
+    Fns: validate_type, validate_range, validate_scheduler_type, validate_objectives, validate_log_level, optimize +15 more
+  trading\optimization\bayesian_optimizer.py
+    146 lines, 5.1 KB
+    Classes: BayesianOptimization
+    Fns: optimize, objective_wrapper
+  trading\optimization\core\__init__.py
+    10 lines, 0.3 KB
+  trading\optimization\core_optimizer.py
+    813 lines, 30.7 KB
+    Classes: OptimizationResult, OptimizerConfig, ParallelProcessor, BaseOptimizer, BayesianOptimizer, GeneticOptimizer, GridOptimizer, RandomSearchOptimizer, OptimizerFactory, StrategyOptimizer
+    Fns: create_genetic_optimizer, create_grid_optimizer, create_bayesian_optimizer, create_random_search_optimizer, validate_parallel_backend, parallel_map +20 more
+  trading\optimization\forecasting_integration.py
+    488 lines, 16.8 KB
+    Classes: ForecastingOptimizer
+    Fns: get_forecasting_optimizer, integrate_with_forecasting_pipeline, optimize_for_forecasting, get_optimized_model, evaluate_model_performance, get_optimization_summary
+  trading\optimization\genetic_optimizer.py
+    240 lines, 8.3 KB
+    Classes: GeneticAlgorithm
+    Fns: optimize
+  trading\optimization\grid_search_optimizer.py
+    331 lines, 10.9 KB
+    Classes: OptimizationResult, OptimizationMethod, GridSearch
+    Fns: optimize, optimize, wrapper
+  trading\optimization\optimization_visualizer.py
+    341 lines, 9.4 KB
+    Classes: OptimizationVisualizer
+    Fns: plot_convergence, plot_metric_tradeoffs, plot_parameter_importance, plot_parameter_distributions, plot_equity_curves, plot_drawdowns +2 more
+  trading\optimization\optimizer_factory.py
+    159 lines, 5.3 KB
+    Classes: OptimizerFactory
+    Fns: get_available_optimizers, create_optimizer, get_optimizer_info, get_optimizer_help
+  trading\optimization\optuna_optimizer.py
+    920 lines, 33.6 KB
+    Classes: HyperparameterOptimizer
+    Fns: get_optimizer, optimize_xgboost, optimize_lstm, get_best_params, plot_optimization_history, objective +3 more
+  trading\optimization\optuna_tuner.py
+    667 lines, 24.1 KB
+    Classes: SharpeOptunaTuner
+    Fns: get_sharpe_optuna_tuner, optimize_lstm, optimize_xgboost, optimize_transformer, optimize_all_models, save_results +7 more
+  trading\optimization\performance_logger.py
+    277 lines, 8.9 KB
+    Classes: PerformanceMetrics, PerformanceLogger
+    Fns: to_dict, from_dict, log_metrics, load_metrics, get_strategy_performance, get_best_config +1 more
+  trading\optimization\portfolio_optimizer.py
+    883 lines, 34.2 KB
+    Classes: PortfolioOptimizer
+    Fns: get_portfolio_optimizer, mean_variance_optimization, black_litterman_optimization, risk_parity_optimization, enhanced_black_litterman_optimization, min_cvar_optimization +1 more
+  trading\optimization\pso_optimizer.py
+    174 lines, 6.1 KB
+    Classes: ParticleSwarmOptimization
+    Fns: optimize
+  trading\optimization\ray_optimizer.py
+    168 lines, 5.3 KB
+    Classes: RayTuneOptimization
+    Fns: optimize, tune_objective
+  trading\optimization\rsi_optimizer.py
+    420 lines, 13.7 KB
+    Classes: RSIParameters, OptimizationResult, RSIOptimizationResult, RSIOptimizer
+    Fns: optimize, optimize_rsi_parameters, plot_equity_curve, plot_drawdown, plot_signals, objective_function
+  trading\optimization\self_tuning_optimizer.py
+    601 lines, 20.1 KB
+    Classes: OptimizationMetric, ParameterChange, OptimizationResult, SelfTuningOptimizer
+    Fns: get_self_tuning_optimizer, record_performance, should_optimize, optimize_strategy, get_optimization_summary
+  trading\optimization\strategies\__init__.py
+    10 lines, 0.3 KB
+  trading\optimization\strategy_optimizer.py
+    395 lines, 13.9 KB
+    Classes: StrategyOptimizer, EarlyStoppingObjective
+    Fns: optimize, optimize_with_early_stopping, optimize_multiple_methods, get_best_result, compare_methods, get_available_methods +3 more
+  trading\optimization\strategy_selection_agent.py
+    368 lines, 13.1 KB
+    Classes: MarketRegime, StrategyPerformance, StrategySelectionAgent
+    Fns: from_data, to_dict, from_dict, select_strategy, update_performance
+  trading\optimization\utils\__init__.py
+    13 lines, 0.3 KB
+  trading\optimization\utils\consolidator.py
+    483 lines, 18.3 KB
+    Classes: OptimizerConsolidator, PositionConsolidator
+    Fns: run_optimizer_consolidation, get_optimizer_status, consolidate_positions, run_optimizer_consolidation, get_optimizer_status, validate_consolidation
+  trading\optimization\visualization\__init__.py
+    9 lines, 0.2 KB
+  trading\options\__init__.py
+    3 lines, 0.1 KB
+  trading\options\options_forecaster.py
+    732 lines, 24.8 KB
+    Classes: OptionContract, VolatilitySurface, OptionsForecaster
+    Fns: get_options_chain, calculate_implied_volatility, calculate_greeks, build_volatility_surface, forecast_implied_volatility, analyze_options_flow +1 more
+  trading\pipeline\task_dispatcher.py
+    593 lines, 19.9 KB
+    Classes: TaskPriority, TaskStatus, Task, TaskRegistry, LocalTaskQueue, RedisTaskQueue, TaskDispatcher
+    Fns: get_dispatcher, submit_task, get_task_result, register_task, unregister_task, get_task +16 more
+  trading\portfolio\__init__.py
+    3 lines, 0.1 KB
+  trading\portfolio\llm_utils.py
+    582 lines, 19.0 KB
+    Classes: TradeRationale, DailyCommentary, LLMInterface
+    Fns: to_dict, from_dict, to_dict, from_dict, generate_trade_rationale, generate_daily_commentary
+  trading\portfolio\portfolio_manager.py
+    1300 lines, 50.9 KB
+    Classes: PositionStatus, TradeDirection, Position, PortfolioState, PortfolioManager
+    Fns: to_dict, from_dict, to_dict, from_dict, open_position, close_position +10 more
+  trading\portfolio\portfolio_simulator.py
+    791 lines, 29.2 KB
+    Classes: OptimizationMethod, PortfolioConstraints, PortfolioResult, PortfolioSimulator
+    Fns: optimize_portfolio, compare_optimization_methods, get_optimization_summary, risk_parity_objective, constraint_sum_to_one, negative_sharpe +3 more
+  trading\portfolio\position_sizer.py
+    897 lines, 29.7 KB
+    Classes: SizingStrategy, SizingParameters, MarketContext, SignalContext, PortfolioContext, PositionSizer
+    Fns: create_position_sizer, to_dict, from_dict, to_dict, to_dict, to_dict +3 more
+  trading\recovery\__init__.py
+    20 lines, 0.4 KB
+  trading\recovery\disaster_recovery_manager.py
+    828 lines, 31.2 KB
+    Classes: RecoveryType, BackupStatus, BackupMetadata, DisasterRecoveryManager
+    Fns: create_backup, restore_backup, delete_backup, list_backups, get_backup_info, get_recovery_statistics
+  trading\report\__init__.py
+    52 lines, 1.4 KB
+  trading\report\export_report.py
+    689 lines, 23.8 KB
+    Classes: ExportReport
+    Fns: export_to_csv, export_to_json, export_to_html, create_zipped_export, get_export_summary, cleanup_old_exports
+  trading\report\launch_report_service.py
+    86 lines, 2.6 KB
+    Fns: setup_logging, main
+  trading\report\performance_summarizer.py
+    505 lines, 17.8 KB
+    Classes: PerformanceSummarizer
+    Fns: calculate_performance_metrics, calculate_rolling_metrics, compare_strategies, generate_performance_report, get_summary_history, export_summary_history
+  trading\report\report_client.py
+    485 lines, 14.3 KB
+    Classes: ReportClient
+    Fns: generate_quick_report, generate_report, trigger_forecast_report, trigger_strategy_report, trigger_backtest_report, wait_for_report +5 more
+  trading\report\report_export_engine.py
+    1259 lines, 44.2 KB
+    Classes: ReportFormat, ReportSection, ReportConfig, ReportExportEngine
+    Fns: generate_comprehensive_report, get_report_summary, export_report_history
+  trading\report\report_generator.py
+    1570 lines, 60.0 KB
+    Classes: TradeMetrics, ModelMetrics, StrategyReasoning, HyperparameterExport, ReportGenerator
+    Fns: generate_trade_report, generate_comprehensive_report, export_signals, export_hyperparameters_batch, get_hyperparameter_summary
+  trading\report\report_service.py
+    446 lines, 16.3 KB
+    Classes: ReportService
+    Fns: main, start, stop, get_status, heartbeat
+  trading\report\test_report_system.py
+    450 lines, 14.7 KB
+    Classes: TestReportGenerator, TestReportClient, TestConvenienceFunctions, TestDataStructures
+    Fns: run_tests, setUp, tearDown, test_calculate_trade_metrics, test_calculate_model_metrics, test_generate_fallback_reasoning +15 more
+  trading\report\test_simple.py
+    133 lines, 3.5 KB
+    Fns: test_imports, test_basic_report, test_client, main
+  trading\report\unified_trade_reporter.py
+    1148 lines, 42.6 KB
+    Classes: EnhancedTradeMetrics, EquityCurveData, TradeAnalysis, UnifiedTradeReporter
+    Fns: generate_unified_report, export_trade_report, generate_comprehensive_report
+  trading\risk\__init__.py
+    3 lines, 0.1 KB
+  trading\risk\position_sizing_engine.py
+    810 lines, 27.3 KB
+    Classes: SizingMethod, PositionSize, PortfolioAllocation, PositionSizingEngine
+    Fns: get_position_sizing_engine, calculate_position_size, optimize_portfolio_allocation, get_sizing_history, export_sizing_report
+  trading\risk\risk_adjusted_strategy.py
+    206 lines, 6.3 KB
+    Classes: StrategyConfig, PositionAdjustment, RiskAdjustedStrategy
+    Fns: adjust_position, get_fallback_rules, should_enter_trade, get_last_adjustment
+  trading\risk\risk_analyzer.py
+    367 lines, 11.9 KB
+    Classes: RiskAssessment, RiskAnalyzer
+    Fns: analyze_risk, get_last_assessment
+  trading\risk\risk_control.py
+    196 lines, 5.8 KB
+    Classes: RiskControl
+    Fns: calculate_rolling_volatility, check_volatility_risk, check_drawdown_risk, check_position_size_risk, get_risk_status, should_reduce_position +1 more
+  trading\risk\risk_logger.py
+    231 lines, 7.6 KB
+    Classes: RiskLogger
+    Fns: log_metrics, get_recent_metrics, should_update, cleanup_old_logs, export_metrics
+  trading\risk\risk_manager.py
+    1188 lines, 42.6 KB
+    Classes: VolatilityModel, VolatilityForecast, PositionSizeRecommendation, RiskMetrics, StressTestResult, DynamicVolatilityModel, RiskManager
+    Fns: calculate_rolling_volatility, calculate_ewma_volatility, calculate_garch_volatility, calculate_hybrid_volatility, forecast_volatility, update_returns +15 more
+  trading\risk\risk_metrics.py
+    344 lines, 9.9 KB
+    Classes: RiskMetrics
+    Fns: calculate_rolling_metrics, calculate_advanced_metrics, compute_correlation_matrix, plot_risk_metrics, plot_drawdown_heatmap, calculate_regime_metrics
+  trading\risk_model\compliance_flags.py
+    642 lines, 21.9 KB
+    Classes: RiskLevel, ComplianceFlagType, ComplianceFlag, RiskThresholds, RiskModelComplianceFlags
+    Fns: create_risk_model_compliance_flags, add_risk_data, check_compliance, get_active_flags, clear_resolved_flags, get_compliance_summary +3 more
+  trading\scheduler.py
+    704 lines, 23.4 KB
+    Classes: TaskPriority, TaskStatus, ScheduleType, ScheduledTask, TaskScheduler, UpdateScheduler
+    Fns: get_scheduler, schedule_task, schedule_task_async, start_scheduler, stop_scheduler, get_scheduler_stats +20 more
+  trading\sentiment\__init__.py
+    0 lines, 0.0 KB
+  trading\sentiment\parser.py
+    467 lines, 16.1 KB
+    Classes: FinancialSymbol, ParsedText, FinancialContext, SentimentParser
+    Fns: create_sentiment_parser, clean_text, analyze_financial_context, get_parse_statistics, enable_financial_symbol_preservation
+  trading\services\__init__.py
+    26 lines, 0.8 KB
+  trading\services\action_executor.py
+    281 lines, 10.1 KB
+    Classes: ActionExecutor
+    Fns: execute_action
+  trading\services\agent_api_service.py
+    522 lines, 19.7 KB
+    Classes: AgentRequest, AgentResponse, AgentStatusResponse, AgentAPIService
+    Fns: main, setup_logging, load_config, setup_app, setup_middleware, setup_routes +13 more
+  trading\services\agent_tools.py
+    166 lines, 6.4 KB
+    Fns: market_research, detect_market_regime, recommend_strategy, recommend_model, critique_backtest
+  trading\services\base_service.py
+    464 lines, 14.5 KB
+    Classes: BaseService
+    Fns: start, stop, process_message, send_message, get_service_info
+  trading\services\cache_manager.py
+    256 lines, 7.2 KB
+    Classes: CacheManager
+    Fns: cache_result, get, set, delete, clear, get_stats +5 more
+  trading\services\chat_nl_service.py
+    347 lines, 15.1 KB
+    Classes: ChatTurnResult
+    Fns: get_trading_context_summary, get_memory_context, parse_intent, run_agent_action, build_context_block, call_claude +1 more
+  trading\services\commentary_generator.py
+    215 lines, 8.1 KB
+    Classes: CommentaryGenerator
+    Fns: truncate_response, generate_commentary
+  trading\services\commentary_service.py
+    304 lines, 9.8 KB
+    Classes: CommentaryService
+    Fns: create_commentary_service, explain_trade, analyze_performance, assess_risk, generate_daily_summary, get_service_statistics +1 more
+  trading\services\config.py
+    213 lines, 7.2 KB
+    Classes: QuantGPTConfig
+    Fns: from_env, from_file, validate, to_dict
+  trading\services\demo_quant_gpt.py
+    431 lines, 16.4 KB
+    Classes: SafeLLMResponseParser
+    Fns: demo_quant_gpt, main, parse_llm_response, validate_parsed_data
+  trading\services\demo_safe_executor.py
+    571 lines, 19.5 KB
+    Classes: AgentOrchestrationResult, DemoSafeExecutor
+    Fns: main, setup_logging, initialize_client, validate_agent_orchestration_output, demo_safe_model_execution, demo_safe_strategy_execution +4 more
+  trading\services\exceptions.py
+    432 lines, 13.2 KB
+    Classes: QuantGPTException, AgentExecutionError, AgentInitializationError, AgentCommunicationError, AgentOrchestrationError, AgentTimeoutError, AgentResourceError, AgentValidationError, QueryParsingError, ActionExecutionError, CommentaryGenerationError, ServiceConnectionError, RateLimitExceededError, ValidationError, ConfigurationError, ModelBuildError, ModelEvaluationError, DataProviderError
+    Fns: capture_agent_context, handle_agent_exception, add_execution_step, set_fallback_attempted, add_recovery_suggestion, get_context_summary +2 more
+  trading\services\home_briefing_service.py
+    468 lines, 21.2 KB
+    Fns: generate_briefing
+  trading\services\launch_agent_api.py
+    329 lines, 11.3 KB
+    Classes: APILoggingMiddleware
+    Fns: setup_logging, main, log_endpoint_call, get_stats_summary, log_stats_summary, decorator +2 more
+  trading\services\launch_meta_tuner.py
+    84 lines, 2.2 KB
+    Fns: signal_handler, main
+  trading\services\launch_model_builder.py
+    152 lines, 4.5 KB
+    Classes: LLMIdentityFilter
+    Fns: system_health_check, signal_handler, main, filter
+  trading\services\launch_multimodal.py
+    84 lines, 2.2 KB
+    Fns: signal_handler, main
+  trading\services\launch_performance_critic.py
+    86 lines, 2.3 KB
+    Fns: signal_handler, main
+  trading\services\launch_prompt_router.py
+    395 lines, 14.7 KB
+    Classes: PromptValidationHandler
+    Fns: signal_handler, main, validate_prompt, handle_routing_failure, handle_gpt_fallback_failure, get_examples_for_intent +1 more
+  trading\services\launch_quant_gpt.py
+    166 lines, 5.6 KB
+    Fns: signal_handler, main
+  trading\services\launch_research.py
+    84 lines, 2.2 KB
+    Fns: signal_handler, main
+  trading\services\launch_safe_executor.py
+    88 lines, 2.5 KB
+    Fns: signal_handler, main
+  trading\services\launch_updater.py
+    281 lines, 9.3 KB
+    Classes: ModelRetrainingLogger
+    Fns: signal_handler, main, log_retraining_attempt, log_retraining_success, log_retraining_failure, log_retraining_timeout +3 more
+  trading\services\meta_tuner_service.py
+    280 lines, 10.5 KB
+    Classes: MetaTunerService
+    Fns: process_message, get_service_stats
+  trading\services\model_builder_service.py
+    201 lines, 7.1 KB
+    Classes: ModelBuilderService
+    Fns: process_message, get_service_stats
+  trading\services\monitoring_tools.py
+    254 lines, 10.0 KB
+    Fns: check_model_degradation, check_strategy_degradation, check_data_quality
+  trading\services\multimodal_service.py
+    263 lines, 9.4 KB
+    Classes: MultimodalService
+    Fns: process_message, get_service_stats
+  trading\services\page_assistant_service.py
+    226 lines, 9.3 KB
+    Fns: get_full_context_summary, get_page_context
+  trading\services\performance_critic_service.py
+    251 lines, 8.9 KB
+    Classes: PerformanceCriticService
+    Fns: process_message, get_service_stats
+  trading\services\prompt_handler.py
+    525 lines, 16.1 KB
+    Classes: PromptStatus, PromptError, PromptRecord, PromptHandler
+    Fns: create_prompt_handler, handle_prompt, log_routing_failure, log_processing_failure, log_gpt_fallback_failure, log_successful_routing +7 more
+  trading\services\prompt_router_service.py
+    285 lines, 10.6 KB
+    Classes: PromptRouterService
+    Fns: process_message, get_service_stats
+  trading\services\quant_gpt.py
+    366 lines, 12.5 KB
+    Classes: QuantGPT
+    Fns: main, process_query, get_stats, clear_cache, reset_rate_limits, close
+  trading\services\quant_gpt_example.py
+    231 lines, 8.0 KB
+    Fns: example_queries, example_service_client, main
+  trading\services\quant_gpt_service.py
+    212 lines, 7.3 KB
+    Classes: QuantGPTService
+    Fns: process_message, get_service_stats, stop
+  trading\services\query_parser.py
+    223 lines, 7.8 KB
+    Classes: QueryParser
+    Fns: parse_query
+  trading\services\rate_limiter.py
+    174 lines, 4.9 KB
+    Classes: RateLimiter, RateLimitDecorator
+    Fns: rate_limit, is_allowed, record_call, get_status, reset, reset_all +1 more
+  trading\services\real_time_signal_center.py
+    815 lines, 28.9 KB
+    Classes: SignalType, SignalPriority, TradingSignal, ActiveTrade, AlertConfig, RealTimeSignalCenter
+    Fns: start, stop, add_signal, update_active_trade, close_trade, subscribe_to_signals +7 more
+  trading\services\research_service.py
+    304 lines, 10.7 KB
+    Classes: ResearchService
+    Fns: process_message, get_service_stats
+  trading\services\safe_executor_service.py
+    331 lines, 12.1 KB
+    Classes: SafeExecutorService
+    Fns: process_message, get_service_stats, stop
+  trading\services\service_client.py
+    736 lines, 25.3 KB
+    Classes: ServiceClient
+    Fns: main, send_request, build_model, evaluate_model, retrain_model, search_github +21 more
+  trading\services\service_manager.py
+    424 lines, 13.3 KB
+    Classes: ServiceManager
+    Fns: main, start_service, stop_service, start_all_services, stop_all_services, get_service_status +3 more
+  trading\services\signal_center.py
+    711 lines, 22.8 KB
+    Classes: SignalType, SignalStatus, Signal, ActiveTrade, SignalCenter
+    Fns: get_signal_center, add_signal, update_signal_status, add_trade, update_trade_price, close_trade +5 more
+  trading\services\test_quant_gpt.py
+    292 lines, 9.7 KB
+    Fns: test_direct_quant_gpt, test_service_client, test_query_parsing, main
+  trading\services\test_safe_executor.py
+    476 lines, 15.7 KB
+    Fns: test_direct_safe_executor, test_service_client, test_security_features, main
+  trading\services\test_service_integration.py
+    307 lines, 11.0 KB
+    Classes: ServiceIntegrationTest
+    Fns: main, setup_logging, log_test_result, test_agent_registry, test_agent_manager, test_agent_execution +4 more
+  trading\services\updater_service.py
+    320 lines, 11.4 KB
+    Classes: UpdaterService
+    Fns: process_message, get_service_stats
+  trading\services\websocket_service.py
+    423 lines, 15.7 KB
+    Classes: WebSocketMessage, WebSocketService
+    Fns: connect, disconnect, send_personal_message, broadcast, broadcast_to_subscribers, handle_message +3 more
+  trading\signal_score\evaluator.py
+    555 lines, 19.1 KB
+    Classes: SignalType, StrategyType, SignalScore, EvaluationResult, SignalScoreEvaluator
+    Fns: create_signal_score_evaluator, evaluate_signal, evaluate_multiple_signals, register_custom_strategy, get_evaluation_statistics, enable_nan_protection
+  trading\signals\__init__.py
+    0 lines, 0.0 KB
+  trading\signals\sentiment_signals.py
+    628 lines, 23.7 KB
+    Classes: SentimentSignals
+    Fns: get_sentiment_signals, get_reddit_sentiment, get_news_sentiment, generate_sentiment_signals
+  trading\signals\strategy_executor.py
+    558 lines, 18.2 KB
+    Classes: TaskStatus, TaskResult, StrategyTask, StrategyExecutor
+    Fns: process_strategy_signals, get_strategy_executor, submit_strategy_task, to_dict, start, stop +10 more
+  trading\strategies\__init__.py
+    201 lines, 6.7 KB
+    Fns: get_signals, get_available_strategies, create_strategy
+  trading\strategies\adaptive_selector.py
+    1065 lines, 36.5 KB
+    Classes: VolatilityRegime, MarketTrend, ModelPerformance, StrategyPerformance, MarketConditions, VolatilityAnalyzer, TrendAnalyzer, ModelSelector, StrategySelector, HybridEnsembleOptimizer, AdaptiveSelector
+    Fns: get_adaptive_selector, analyze_volatility, calculate_volatility_score, analyze_trend, calculate_trend_score, select_optimal_model +5 more
+  trading\strategies\atr_strategy.py
+    403 lines, 13.2 KB
+    Classes: ATRConfig, ATRStrategy
+    Fns: create_atr_strategy, generate_atr_signals, calculate_atr, calculate_bollinger_bands_atr, generate_signals, calculate_positions +4 more
+  trading\strategies\base_strategy.py
+    97 lines, 2.7 KB
+    Classes: BaseStrategy
+    Fns: generate_signals, get_parameter_space, set_parameters, get_parameters, validate_data, get_name +1 more
+  trading\strategies\bollinger_strategy.py
+    266 lines, 9.8 KB
+    Classes: BollingerConfig, BollingerStrategy
+    Fns: calculate_bands, generate_signals, calculate_positions, get_parameters, set_parameters, get_parameter_space
+  trading\strategies\breakout_strategy_engine.py
+    791 lines, 28.7 KB
+    Classes: BreakoutType, ConsolidationRange, BreakoutSignal, BreakoutStrategyEngine
+    Fns: detect_consolidation_ranges, detect_breakouts, filter_false_breakouts, get_consolidation_summary, get_breakout_summary
+  trading\strategies\cci_strategy.py
+    325 lines, 10.5 KB
+    Classes: CCIConfig, CCIStrategy
+    Fns: create_cci_strategy, generate_cci_signals, calculate_cci, generate_signals, calculate_positions, get_strategy_info +1 more
+  trading\strategies\composite_strategy.py
+    399 lines, 14.6 KB
+    Classes: SignalType, StrategySignal, ConflictResolution, CompositeStrategy
+    Fns: add_strategy_signal, resolve_conflicts, get_signal_summary, clear_signals, update_strategy_priority, get_conflict_history +2 more
+  trading\strategies\custom_strategy_handler.py
+    511 lines, 18.4 KB
+    Classes: CustomStrategy, CustomStrategyHandler
+    Fns: get_custom_strategy_handler, load_strategies, create_strategy_from_yaml, create_strategy_from_code, execute_strategy, list_strategies +1 more
+  trading\strategies\enhanced_strategy_engine.py
+    965 lines, 37.0 KB
+    Classes: StrategyType, MarketRegime, StrategyConfig, StrategyResult, PerformanceChecker, EnhancedStrategyEngine, FallbackRegimeClassifier, FallbackMetaAgent
+    Fns: get_enhanced_strategy_engine, check_strategy_performance, check_model_performance, suggest_improvements, get_strategy_chain, execute_strategy_chain +6 more
+  trading\strategies\ensemble.py
+    397 lines, 15.4 KB
+    Classes: EnsembleConfig, WeightedEnsembleStrategy
+    Fns: create_ensemble_strategy, create_rsi_macd_bollinger_ensemble, create_balanced_ensemble, create_conservative_ensemble, validate_weights, normalize_weights +6 more
+  trading\strategies\ensemble_methods.py
+    725 lines, 25.8 KB
+    Classes: SignalType, StrategySignal, HybridSignal, ModelPerformance, DynamicEnsembleVoter
+    Fns: combine_weighted_average, combine_voting, combine_ensemble_model, calculate_ensemble_position_size, create_fallback_hybrid_signal, update_model_performance +5 more
+  trading\strategies\gatekeeper.py
+    788 lines, 27.8 KB
+    Classes: MarketRegime, StrategyStatus, GatekeeperDecision, RegimeMetrics, StrategyPerformance, GatekeeperDecisionResult, RegimeClassifier, StrategyGatekeeper
+    Fns: create_strategy_gatekeeper, classify_regime, evaluate_strategy, get_active_strategies, get_strategy_recommendations, save_gatekeeper_state +1 more
+  trading\strategies\hybrid_engine.py
+    665 lines, 20.9 KB
+    Classes: SignalType, StrategySignal, HybridSignal, HybridEngine
+    Fns: get_hybrid_engine, add_strategy, generate_signals, get_signal_history, get_performance_metrics, update_strategy_weights +1 more
+  trading\strategies\macd_strategy.py
+    225 lines, 8.1 KB
+    Classes: MACDConfig, MACDStrategy
+    Fns: calculate_macd, generate_signals, calculate_positions, get_parameters, set_parameters
+  trading\strategies\multi_strategy_hybrid_engine.py
+    822 lines, 32.1 KB
+    Classes: SignalType, StrategySignal, HybridSignal, MultiStrategyHybridEngine
+    Fns: generate_hybrid_signal, update_strategy_weights, update_weights_based_on_error, auto_update_weights, get_performance_summary, export_signals
+  trading\strategies\pairs_trading_engine.py
+    653 lines, 23.7 KB
+    Classes: CointegrationResult, PairsSignal, PairsTradingEngine
+    Fns: find_cointegrated_pairs, update_hedge_ratios, generate_signals, validate_pair_stability, get_pair_statistics, cleanup_inactive_pairs +1 more
+  trading\strategies\parameter_validator.py
+    627 lines, 22.6 KB
+    Classes: ValidationLevel, ValidationResult, ParameterConstraint, StrategyParameterValidator
+    Fns: get_parameter_validator, validate_strategy_parameters, fix_strategy_parameters, validate_parameters, fix_parameters, get_safe_defaults +2 more
+  trading\strategies\registry.py
+    290 lines, 10.8 KB
+    Classes: StrategyResult, StrategyDiscovery, StrategyRegistry
+    Fns: get_strategy_registry, register_strategy, get_strategy, execute_strategy, discover_strategies, discover_strategies_by_pattern +11 more
+  trading\strategies\rsi_signals.py
+    386 lines, 13.6 KB
+    Fns: validate_dataframe_index, align_signals_with_index, validate_empty_slices, load_optimized_settings, generate_rsi_signals, generate_signals +1 more
+  trading\strategies\rsi_strategy.py
+    517 lines, 20.4 KB
+    Classes: FallbackRSIStrategy, RSIStrategy
+    Fns: generate_signals, calculate_rsi, log_rsi_crossover, is_rsi_in_valid_range, generate_signals, get_parameters +5 more
+  trading\strategies\rsi_utils.py
+    348 lines, 10.4 KB
+    Fns: normalize_rsi_value, handle_constant_price, create_cache_key, clear_rsi_cache, get_cache_stats, calculate_rsi +6 more
+  trading\strategies\sma_strategy.py
+    426 lines, 16.3 KB
+    Classes: SMAConfig, SMAStrategy
+    Fns: calculate_sma, generate_signals, calculate_positions, get_parameters, set_parameters, get_signal_quality_metrics
+  trading\strategies\strategy_chain_router.py
+    558 lines, 17.6 KB
+    Classes: StrategyType, StrategyStatus, StrategyConfig, StrategyResult, PromptStrategyMapping, StrategyChainRouter
+    Fns: create_strategy_chain_router, register_strategy, link_prompt_to_strategy, route_strategy, get_strategy_status, get_fallback_statistics +3 more
+  trading\strategies\strategy_comparison.py
+    1106 lines, 39.7 KB
+    Classes: StrategyPerformance, StrategyComparison, MetricNormalizer, StrategyComparisonMatrix, StrategyStacker
+    Fns: get_strategy_comparison, get_strategy_stacker, normalize_metric, calculate_confidence_intervals, generate_comparison_matrix, get_best_strategy +3 more
+  trading\strategies\strategy_composer.py
+    460 lines, 16.0 KB
+    Classes: StrategyToggle, SubStrategyConfig, StrategyComposer
+    Fns: add_sub_strategy, toggle_sub_strategy, set_conditional_toggle, evaluate_conditions, get_active_strategies, get_strategy_weights +5 more
+  trading\strategies\strategy_fallback.py
+    669 lines, 23.9 KB
+    Classes: FallbackStrategy, StrategyPerformance, FallbackResult, StrategyFallback
+    Fns: create_strategy_fallback, get_ranked_fallbacks, execute_fallback, update_strategy_performance, get_performance_summary
+  trading\strategies\strategy_implementations.py
+    427 lines, 13.3 KB
+    Classes: SignalType, StrategySignal
+    Fns: momentum_strategy, mean_reversion_strategy, volatility_breakout_strategy, trend_following_strategy, volume_price_strategy, calculate_position_size +1 more
+  trading\strategies\strategy_manager.py
+    976 lines, 32.0 KB
+    Classes: StrategyMetrics, Strategy, StrategyManager
+    Fns: to_dict, from_dict, to_json, from_json, summary, generate_signals +19 more
+  trading\strategies\strategy_ranking.py
+    400 lines, 14.1 KB
+    Classes: StrategyRanking, StrategyRanker
+    Fns: record_strategy_usage, rank_strategies, get_top_strategies, get_strategy_recommendations, get_ranking_statistics, reset_history
+  trading\strategies\strategy_router.py
+    539 lines, 17.7 KB
+    Classes: StrategyType, SignalPriority, StrategyMatch, TradeSignal, StrategyRouter
+    Fns: find_strategy_matches, select_best_strategy, get_strategy_suggestions, validate_strategy_request, align_data_indices, create_trade_signal +2 more
+  trading\strategies\strategy_runner.py
+    600 lines, 23.3 KB
+    Classes: AsyncStrategyRunner
+    Fns: run_rsi, run_macd, run_bollinger_bands, run_strategies_parallel_example, run_strategies_parallel, run_rsi_strategy +7 more
+  trading\strategies\strategy_synthesizer.py
+    414 lines, 15.0 KB
+    Classes: StrategySynthesizer
+    Fns: generate_signals, combine_signals, resolve_conflicts, get_synthesized_signal, update_weights, get_strategy_summary
+  trading\strategies\validation.py
+    334 lines, 12.0 KB
+    Classes: StrategyExecutionValidator
+    Fns: execute_strategy_with_validation, validate_signal, validate_strategy_state, validate_signals_dataframe, validate_execution_context, validate_strategy_result
+  trading\system_resilience.py
+    951 lines, 33.2 KB
+    Classes: ResilienceLevel, FallbackConfig, SignalWarning, SystemResilience
+    Fns: handle_model_failure, check_signal_activity, get_resilience_report, check_system_health, handle_model_failure, check_signal_activity +14 more
+  trading\test_live_market_runner.py
+    400 lines, 13.8 KB
+    Fns: test_live_market_runner, test_forecast_tracking, test_agent_triggering, test_live_trade_execution, test_market_data_integrity, main
+  trading\tools\__init__.py
+    3 lines, 0.0 KB
+  trading\tools\init_logs.py
+    129 lines, 3.9 KB
+    Fns: load_log_config, init_log_files, main
+  trading\training\loop.py
+    473 lines, 16.4 KB
+    Classes: TrainingConfig, TrainingMetrics, TrainingLoop
+    Fns: create_training_loop, train_epoch, validate, train, save_checkpoint, load_checkpoint +2 more
+  trading\ui\__init__.py
+    41 lines, 1.1 KB
+  trading\ui\components.py
+    1247 lines, 36.8 KB
+    Fns: create_date_range_selector, create_model_selector, create_strategy_selector, create_parameter_inputs, create_asset_selector, create_timeframe_selector +15 more
+  trading\ui\config\__init__.py
+    0 lines, 0.0 KB
+  trading\ui\config\registry.py
+    142 lines, 5.3 KB
+    Classes: ModelConfig, StrategyConfig, Registry
+    Fns: get_available_models, get_available_strategies, get_model_config, get_strategy_config, get_model_parameters, get_strategy_parameters
+  trading\ui\cost_config.py
+    456 lines, 13.8 KB
+    Classes: CostConfigUI
+    Fns: render_cost_config_sidebar, render_cost_summary, get_cost_config_from_session, save_cost_config_to_session
+  trading\ui\enhanced_ui_components.py
+    652 lines, 23.2 KB
+    Classes: ParameterConfig, EnhancedUIComponents
+    Fns: initialize_session_state, render_dynamic_sliders, render_confidence_score_display, render_session_summary_bar, render_log_viewer, render_error_viewer +4 more
+  trading\ui\forecast_components.py
+    583 lines, 20.1 KB
+    Fns: create_forecast_form, create_forecast_chart, create_forecast_metrics, create_forecast_export, create_forecast_explanation, create_forecast_table +4 more
+  trading\ui\hybrid_model_config.py
+    511 lines, 17.3 KB
+    Classes: HybridModelConfigUI
+    Fns: render_hybrid_model_config_sidebar, render_weighting_metric_comparison, render_model_performance_dashboard, get_hybrid_model_recommendations, render_recommendations, get_hybrid_config_from_session +1 more
+  trading\ui\institutional_dashboard.py
+    651 lines, 22.1 KB
+    Classes: InstitutionalDashboard
+    Fns: main, initialize_system, setup_custom_css, run, render_sidebar, render_system_unavailable +14 more
+  trading\ui\logging_controls.py
+    146 lines, 4.4 KB
+    Fns: render_logging_controls, render_metrics_viewer, render_log_viewer, main
+  trading\ui\model_parameter_tuner.py
+    576 lines, 20.8 KB
+    Classes: ParameterConfig, ModelParameterTuner
+    Fns: get_parameter_tuner, render_parameter_tuner, get_default_parameters, save_parameter_preset, load_parameter_preset, add_optimization_result +1 more
+  trading\ui\strategy_components.py
+    506 lines, 17.1 KB
+    Fns: create_strategy_form, create_performance_chart, create_performance_metrics, create_trade_list, create_strategy_export, render_strategy_selector +3 more
+  trading\utils\__init__.py
+    518 lines, 15.0 KB
+    Fns: check_model_performance, detect_model_drift, validate_update_result, calculate_reweighting_factors, get_model_metrics, check_update_frequency +33 more
+  trading\utils\auto_repair.py
+    408 lines, 13.6 KB
+    Classes: AutoRepair
+    Fns: run_auto_repair, check_system_health, check_packages, check_dlls, check_transformers, repair_packages +5 more
+  trading\utils\cache_manager.py
+    221 lines, 6.8 KB
+    Classes: CacheManager
+    Fns: cache_result, clear_cache, get_cache_stats, get, set, delete +4 more
+  trading\utils\config_manager.py
+    220 lines, 7.3 KB
+    Classes: ConfigManager, ConfigValidator, ConfigLoader
+    Fns: load_config, save_config, get, set, update, get_all +6 more
+  trading\utils\config_utils.py
+    640 lines, 18.9 KB
+    Classes: TradingConfig, ConfigFileHandler, ConfigManager
+    Fns: hot_reload_config, load_config, save_config, update_config, get_env_config, create_default_config +10 more
+  trading\utils\data_manager.py
+    191 lines, 6.9 KB
+    Fns: cache_get, cache_set, cache_clear, cache_stats, disk_cache_get, disk_cache_set +4 more
+  trading\utils\data_transformer.py
+    253 lines, 8.4 KB
+    Classes: DataTransformer
+    Fns: resample_data, calculate_technical_indicators, split_data, prepare_forecast_data, fit_transform, transform +3 more
+  trading\utils\data_utils.py
+    386 lines, 11.9 KB
+    Classes: DataValidator, DataPreprocessor
+    Fns: resample_data, calculate_technical_indicators, split_data, prepare_forecast_data, validate_dataframe, preprocess_data
+  trading\utils\data_validation.py
+    176 lines, 6.0 KB
+    Classes: DataValidator
+    Fns: validate_symbol, validate_timeframe, validate_date_range, validate_market_data, validate_forecast_data, validate_model_parameters +3 more
+  trading\utils\demo_reasoning.py
+    376 lines, 13.8 KB
+    Fns: create_sample_forecast_decision, create_sample_strategy_decision, create_sample_model_selection_decision, demo_basic_logging, demo_display_components, demo_real_time_updates +3 more
+  trading\utils\diagnostics.py
+    257 lines, 8.0 KB
+    Classes: SystemDiagnostics
+    Fns: check_data_loading, check_forecasting_models, check_agent_communication, check_system_resources, run_health_check, get_health_status +1 more
+  trading\utils\env_manager.py
+    190 lines, 5.6 KB
+    Classes: EnvironmentSettings, EnvironmentManager, Config
+    Fns: get, get_all, validate, create_template, rotate_secret
+  trading\utils\error_handling.py
+    290 lines, 9.0 KB
+    Classes: TradingSystemError, TradingError, RoutingError, ErrorContext, ErrorRecoveryStrategy, ErrorHandler
+    Fns: log_errors, retry_on_error, handle_routing_errors, with_error_context, safe_execute, validate_error_context +17 more
+  trading\utils\error_logger.py
+    109 lines, 3.1 KB
+    Classes: ErrorLogger
+    Fns: log_error, get_last_error, get_error_count, clear_errors
+  trading\utils\feature_engineering.py
+    392 lines, 14.4 KB
+    Classes: FeatureEngineer
+    Fns: create_all_features, create_price_features, create_volume_features, create_technical_features, create_time_features, create_lag_features +4 more
+  trading\utils\forecast_formatter.py
+    234 lines, 7.7 KB
+    Classes: ForecastFormatter
+    Fns: normalize_datetime_index, format_forecast_data, format_confidence_intervals, validate_forecast_format
+  trading\utils\gpu_utils.py
+    277 lines, 8.8 KB
+    Fns: get_device, get_torch_device, is_gpu_available, get_gpu_info, clear_gpu_cache, get_xgboost_device +4 more
+  trading\utils\launch_reasoning_service.py
+    63 lines, 1.7 KB
+    Fns: main
+  trading\utils\logger.py
+    0 lines, 0.0 KB
+  trading\utils\logging.py
+    268 lines, 8.4 KB
+    Classes: LoggingManager
+    Fns: setup_logging, log_event, get_logging_stats, cleanup_logs, setup_logger, log_event +2 more
+  trading\utils\logging_utils.py
+    744 lines, 21.7 KB
+    Classes: StructuredFormatter, LogManager
+    Fns: setup_logger, get_logger, log_config, save_log_config, load_log_config, setup_structured_logging +14 more
+  trading\utils\memory_logger.py
+    157 lines, 5.1 KB
+    Classes: MemoryLogger
+    Fns: log_memory_operation, log_performance_metrics, log_error, get_recent_logs, clear_logs, get_log_stats
+  trading\utils\metrics\__init__.py
+    9 lines, 0.1 KB
+  trading\utils\metrics\scorer.py
+    412 lines, 14.4 KB
+    Classes: ModelScorer
+    Fns: model_score, get_score_trend, clear_history, compare_models, get_best_model, calculate_ensemble_score +1 more
+  trading\utils\metrics.py
+    169 lines, 5.0 KB
+    Fns: calculate_metrics, calculate_trading_metrics, calculate_regime_metrics, calculate_model_confidence
+  trading\utils\model_evaluation.py
+    319 lines, 11.0 KB
+    Classes: ModelEvaluationUtils, ModelValidator, ModelMonitor
+    Fns: evaluate_regression, evaluate_classification, evaluate_forecast, cross_validate, validate_model_inputs, validate_model_outputs +4 more
+  trading\utils\model_monitoring.py
+    419 lines, 14.4 KB
+    Classes: ModelMetrics, DriftAlert, ModelMonitor
+    Fns: get_model_monitor, record_metrics, get_model_metrics, check_model_health, get_drift_alerts
+  trading\utils\monitor.py
+    375 lines, 11.4 KB
+    Classes: Metric, Alert, SystemMonitor
+    Fns: start, stop, run_once, get_status
+  trading\utils\notification_system.py
+    393 lines, 12.3 KB
+    Classes: NotificationSystem
+    Fns: send_alert, send_model_alert, send_system_alert, send_slack_notification, send_email_notification, send_trading_alert +6 more
+  trading\utils\notifications.py
+    244 lines, 7.9 KB
+    Classes: BaseNotifier, SlackNotifier, TradeLogger
+    Fns: get_trade_logger, is_enabled, send_notification, add_notifier, log_trade, get_recent_trades +1 more
+  trading\utils\performance.py
+    425 lines, 14.1 KB
+    Classes: Metric, Alert, PerformanceMonitor
+    Fns: start_monitoring, stop_monitoring, restart_monitoring, collect_metrics, evaluate_alerts, resolve_alert +3 more
+  trading\utils\performance_metrics.py
+    340 lines, 12.0 KB
+    Classes: PerformanceMetrics, RiskMetrics, TradingMetrics
+    Fns: calculate_sharpe_ratio, calculate_max_drawdown, calculate_win_rate, calculate_profit_factor, calculate_returns, calculate_cumulative_returns +16 more
+  trading\utils\prompt_formatter.py
+    302 lines, 10.3 KB
+    Classes: FormattedPrompt, PromptFormatter
+    Fns: format_prompt, format_prompt_with_template, validate_json_input, extract_prompt_from_json, get_formatting_statistics
+  trading\utils\reasoning_display.py
+    490 lines, 17.1 KB
+    Classes: ReasoningDisplay
+    Fns: create_reasoning_page_streamlit, display_decision_terminal, display_recent_decisions_terminal, display_statistics_terminal, display_decision_streamlit, display_recent_decisions_streamlit +3 more
+  trading\utils\reasoning_logger.py
+    722 lines, 25.4 KB
+    Classes: DecisionType, ConfidenceLevel, DecisionContext, DecisionReasoning, AgentDecision, ReasoningLogger
+    Fns: log_forecast_decision, log_strategy_decision, log_decision, get_decision, get_agent_decisions, get_decisions_by_type +4 more
+  trading\utils\reasoning_service.py
+    461 lines, 17.5 KB
+    Classes: ReasoningService
+    Fns: main, start, stop, get_recent_decisions, get_statistics, get_status +1 more
+  trading\utils\redis_cache.py
+    601 lines, 18.2 KB
+    Classes: RedisCache
+    Fns: get_redis_cache, set, get, delete, exists, expire +14 more
+  trading\utils\redis_utils.py
+    354 lines, 10.4 KB
+    Classes: RedisManager
+    Fns: with_redis_retry, get, set, delete, exists, keys +8 more
+  trading\utils\reward_function.py
+    256 lines, 9.7 KB
+    Classes: RewardFunction
+    Fns: compute, compute_objectives, aggregate, multi_objective_vector, set_weights, get_adaptive_weights +2 more
+  trading\utils\safe_executor.py
+    974 lines, 31.9 KB
+    Classes: ExecutionStatus, ExecutionResult, SafeExecutor
+    Fns: get_safe_executor, execute_model_safely, execute_strategy_safely, execute_indicator_safely, execute_model, execute_strategy +3 more
+  trading\utils\safe_indicators.py
+    136 lines, 3.9 KB
+    Fns: safe_rsi, safe_bollinger_bandwidth, safe_stochastic
+  trading\utils\safe_math.py
+    781 lines, 25.5 KB
+    Fns: safe_divide, safe_rsi, safe_returns, safe_drawdown, safe_sharpe_ratio, safe_sortino_ratio +6 more
+  trading\utils\signal_generation.py
+    547 lines, 18.7 KB
+    Classes: SignalConfig, SignalResult
+    Fns: validate_market_data, validate_signals, calculate_signal_confidence, calculate_technical_indicators, apply_signal_filters, generate_signals +2 more
+  trading\utils\signal_merger.py
+    176 lines, 6.4 KB
+    Classes: SignalMerger
+    Fns: merge_signals, merge_multiple_signals, validate_merge_compatibility, get_merge_summary
+  trading\utils\signal_scorer.py
+    445 lines, 13.5 KB
+    Classes: DecayMethod, ScoreRecord, DecayConfig, SignalScorer
+    Fns: create_signal_scorer, add_score, get_decayed_score, get_score_trend, get_signal_summary, clear_history +2 more
+  trading\utils\system_startup.py
+    363 lines, 12.5 KB
+    Classes: StartupMonitor
+    Fns: run_system_checks, initialize_components, get_system_status, clear_session_state, get_startup_performance, log_init_step +2 more
+  trading\utils\system_status.py
+    439 lines, 14.9 KB
+    Classes: HealthProbe, SystemStatus
+    Fns: check_disk_space, check_memory_usage, check_model_health, check_data_health, get_system_status, build_health_probe_endpoint +13 more
+  trading\utils\test_reasoning.py
+    592 lines, 21.9 KB
+    Classes: TestReasoningLogger, TestReasoningDisplay, TestConvenienceFunctions, TestDataStructures
+    Fns: run_tests, setUp, tearDown, test_log_decision, test_get_decision, test_get_agent_decisions +28 more
+  trading\utils\time_utils.py
+    528 lines, 16.9 KB
+    Classes: MarketHours, TimeUtils
+    Fns: get_current_time, format_timestamp, round_timestamp, is_market_open, get_next_market_open, get_next_market_close +11 more
+  trading\utils\validation_utils.py
+    573 lines, 18.1 KB
+    Classes: ValidationError, DataValidator, ParameterValidator, ConfigValidator
+    Fns: ensure_array_compatible, validate_array_shape, validate_dataframe_integrity, validate_numeric_range, validate_string_length, validate_datetime_range +10 more
+  trading\utils\visualization.py
+    618 lines, 16.9 KB
+    Fns: plot_forecast, plot_attention_heatmap, plot_shap_values, plot_backtest_results, plot_model_components, plot_performance_over_time +3 more
+  trading\validation\walk_forward_utils.py
+    234 lines, 8.7 KB
+    Classes: WalkForwardValidator, WalkForwardResult
+    Fns: walk_forward_validate, get_walk_forward_agent, validate, walk_forward_test
+  trading\visualization\__init__.py
+    47 lines, 1.2 KB
+  trading\visualization\plotting.py
+    1518 lines, 50.7 KB
+    Classes: TimeSeriesPlotter, PerformancePlotter, FeatureImportancePlotter, PredictionPlotter
+    Fns: plot_time_series, plot_performance, plot_multiple_series, plot_with_confidence, plot_seasonal_decomposition, plot_data +7 more
+  trading\visualization\visualizer.py
+    726 lines, 24.5 KB
+    Classes: VisualizationError, DataValidationError, EnhancedVisualizer
+    Fns: create_visualizer, validate_and_plot, validate_dataframe, validate_price_data, validate_volume_data, validate_indicator_data +6 more
+  trading\web\__init__.py
+    3 lines, 0.1 KB
+  trading\web\app.py
+    534 lines, 16.9 KB
+    Classes: AssetRequest, BacktestRequest, RiskAnalysisRequest, APIError
+    Fns: add_security_headers, validate_request, validate_openai_key, token_required, rate_limit, handle_api_error +25 more
+
+======================================================================
+  6. BROKEN INTERNAL IMPORTS
+======================================================================
+  agents\agent_controller.py
+    -> missing: agents.task_agent
+  automate\daily_scheduler.py
+    -> missing: core.agents.goal_planner
+  automate\daily_scheduler.py
+    -> missing: core.agents.self_improving_agent
+  core\orchestrator\task_providers.py
+    -> missing: agents.strategy_research_agent
+  core\orchestrator\task_providers.py
+    -> missing: agents.explainer_agent
+  core\orchestrator\task_providers.py
+    -> missing: trading.agents.model_innovation_agent
+  core\orchestrator\task_providers.py
+    -> missing: trading.agents.strategy_research_agent
+  core\orchestrator\task_providers.py
+    -> missing: trading.agents.sentiment_fetcher
+  core\orchestrator\task_providers.py
+    -> missing: trading.agents.meta_controller
+  core\orchestrator\task_providers.py
+    -> missing: trading.agents.explainer_agent
+  core\orchestrator\task_providers.py
+    -> missing: trading.agents.risk_manager
+  evaluation\__init__.py
+    -> missing: trading.metrics
+  evaluation\__init__.py
+    -> missing: trading.reporting
+  main.py
+    -> missing: core.task_orchestrator
+  meta\meta_controller.py
+    -> missing: trading.backtesting.backtest_engine
+  meta\meta_controller.py
+    -> missing: agents.base_agent
+  scripts\integrate_orchestrator.py
+    -> missing: trading.nlp.sentiment_analyzer
+  scripts\integrate_orchestrator.py
+    -> missing: trading.data.data_manager
+  scripts\integrate_orchestrator.py
+    -> missing: trading.evaluation.performance_analyzer
+  scripts\old_11_Admin.py
+    -> missing: trading.automation
+  scripts\run_app.py
+    -> missing: trading.config.config_loader
+  scripts\run_app.py
+    -> missing: trading.core.trading_agent
+  scripts\run_app.py
+    -> missing: trading.utils.logger_utils
+  scripts\run_forecasting_pipeline.py
+    -> missing: trading.utils.trade_logger
+  start_orchestrator.py
+    -> missing: agents.agent_registry
+  system\forecast_controller.py
+    -> missing: trading.utils.model_selector
+  system\infra\agents\services\automation_api.py
+    -> missing: trading.automation_monitoring
+  system\infra\agents\services\automation_api.py
+    -> missing: trading.automation_notification
+  system\infra\agents\services\automation_api.py
+    -> missing: trading.automation_scheduler
+  system\infra\agents\services\automation_api.py
+    -> missing: trading.automation_tasks
+  system\infra\agents\services\automation_api.py
+    -> missing: trading.automation_workflows
+  system\infra\agents\services\automation_cli.py
+    -> missing: trading.automation_api
+  system\infra\agents\web\app.py
+    -> missing: trading.middleware
+  tests\test_agents\test_goal_planner.py
+    -> missing: trading.agents.goal_planner
+  tests\test_agents\test_llm_router.py
+    -> missing: core.agents.router
+  tests\test_async_strategy_runner.py
+    -> missing: trading.strategies.async_strategy_runner
+  tests\test_batch_18.py
+    -> missing: agents.model_discovery_agent
+  tests\test_critical_modules_fixes.py
+    -> missing: agents.prompt_agent
+  tests\test_edge_cases.py
+    -> missing: trading.agents.self_improving_agent
+  tests\test_fixes.py
+    -> missing: core.capability_router
+  tests\test_fixes.py
+    -> missing: core.agent_hub
+  tests\test_institutional_upgrade.py
+    -> missing: trading.meta_agents.agents.performance_checker
+  tests\test_institutional_upgrade.py
+    -> missing: trading.report.export_engine
+  tests\test_production_readiness.py
+    -> missing: trading.llm.agent
+  tests\test_production_readiness.py
+    -> missing: trading.models.forecast_engine
+  tests\test_unified_interface.py
+    -> missing: trading.llm.llm_processor
+  tests\test_unified_interface.py
+    -> missing: trading.strategies.strategy_factory
+  tests\unit\test_alpha_system.py
+    -> missing: trading.agents.alpha
+  tests\unit\test_backtester.py
+    -> missing: trading.backtesting.performance_analyzer
+  tests\unit\test_bollinger_signals.py
+    -> missing: trading.strategies.bollinger_signals
+  tests\unit\test_hybrid_forecaster.py
+    -> missing: trading.models.hybrid_model
+  tests\unit\test_macd_signals.py
+    -> missing: trading.strategies.macd_signals
+  trading\agents\run_agent_loop.py
+    -> missing: trading.agents.execution_agent
+  trading\core\agents.py
+    -> missing: trading.meta_agents.notification_handlers
+  trading\execution\execution_engine.py
+    -> missing: trading.utils.common
+  trading\integration\institutional_grade_system.py
+    -> missing: trading.agents.rolling_retraining_agent
+  trading\integration\meta_agent_manager.py
+    -> missing: trading.meta_agents.integration_test_handler
+  trading\integration\meta_agent_manager.py
+    -> missing: trading.meta_agents.log_visualization_handler
+  trading\integration\meta_agent_manager.py
+    -> missing: trading.meta_agents.documentation_analytics
+  trading\integration\meta_agent_manager.py
+    -> missing: trading.meta_agents.automation_security
+  trading\models\advanced\tcn\__init__.py
+    -> missing: trading.tcn_model
+  trading\optimization\core\__init__.py
+    -> missing: trading.optimization.multi_objective_optimizer
+  trading\services\meta_tuner_service.py
+    -> missing: trading.agents.meta_tuner_agent
+  trading\services\multimodal_service.py
+    -> missing: trading.agents.multimodal_agent
+  trading\ui\components.py
+    -> missing: config.registry
+  trading\validation\walk_forward_utils.py
+    -> missing: trading.agents.walk_forward_agent
+  ui\__init__.py
+    -> missing: trading.ui.chatbox_agent
+  utils\runner.py
+    -> missing: core.session_utils
+  utils\runner.py
+    -> missing: trading.strategies.strategy_engine
+  visualization\__init__.py
+    -> missing: trading.charts
+  visualization\__init__.py
+    -> missing: trading.widgets
+Total: 71 broken imports
+
+======================================================================
+  7. PAGES - FULL IMPORT MAP
+======================================================================
+
+  1_Dashboard.py (761 lines, 32.8 KB)
+    [OK] agents.llm.agent
+    [OK] components.news_candle_chart
+    [OK] components.theme
+    [OK] components.watchlist_widget
+    [OK] config.user_store
+    [OK] trading.analysis.ai_score
+    [OK] trading.analysis.event_news_fetcher
+    [OK] trading.analysis.market_monitor
+    [OK] trading.analysis.market_scanner
+    [OK] trading.analysis.news_ranker
+    [OK] trading.data.earnings_calendar
+    [OK] trading.data.news_aggregator
+    [OK] trading.data.price_cache
+    [OK] trading.data.watchlist
+    [OK] trading.memory
+    [OK] trading.services.home_briefing_service
+    [OK] trading.services.monitoring_tools
+    [OK] ui.page_assistant
+
+  2_Analyze.py (3796 lines, 196.9 KB)
+    [OK] agents.llm.agent
+    [OK] components.multi_timeframe_chart
+    [OK] components.news_candle_chart
+    [OK] components.theme
+    [OK] trading.agents.model_selector_agent
+    [OK] trading.analysis.ai_score
+    [OK] trading.data.data_loader
+    [OK] trading.data.earnings_calendar
+    [OK] trading.data.earnings_reaction
+    [OK] trading.data.insider_flow
+    [OK] trading.data.preprocessing
+    [OK] trading.data.price_cache
+    [OK] trading.data.providers.yfinance_provider
+    [OK] trading.feature_engineering.macro_feature_engineering
+    [OK] trading.forecasting.forecast_postprocessor
+    [OK] trading.forecasting.hybrid_model_selector
+    [OK] trading.market.market_analyzer
+    [OK] trading.memory
+    [OK] trading.memory.memory_store
+    [OK] trading.models.advanced.gnn.gnn_model
+    [OK] trading.models.arima_model
+    [OK] trading.models.forecast_explainability
+    [OK] trading.models.forecast_router
+    [OK] trading.models.lstm_model
+    [OK] trading.models.model_registry
+    [OK] trading.models.prophet_model
+    [OK] trading.models.xgboost_model
+    [OK] trading.ui.forecast_components
+    [OK] ui.page_assistant
+
+  3_Scanner.py (361 lines, 14.2 KB)
+    [OK] components.theme
+    [OK] trading.analysis.ai_score
+    [OK] trading.analysis.market_scanner
+    [OK] trading.data.price_cache
+
+  4_Trade.py (110 lines, 3.9 KB)
+    [OK] components.theme
+    [OK] trading.portfolio.portfolio_manager
+
+  5_Backtest.py (31 lines, 0.8 KB)
+    [OK] components.theme
+
+  6_Chat.py (206 lines, 9.4 KB)
+    [OK] agents.llm.active_llm_calls
+    [OK] components.theme
+    [OK] trading.agents.enhanced_prompt_router
+    [OK] trading.data.news_aggregator
+    [OK] trading.memory
+    [OK] trading.memory.memory_store
+    [OK] trading.services
+    [OK] ui.page_assistant
+
+  7_Settings.py (73 lines, 2.2 KB)
+    [OK] components.theme
+    [OK] components.watchlist_widget
+    [OK] config.user_store
+    [OK] trading.utils.notification_system
+
+  __init__.py (0 lines, 0.0 KB)
+
+======================================================================
+  8. TESTS DIRECTORY
+======================================================================
+Total test files: 171
+  FAIL  tests\analysis\benchmark_market_analyzer.py  -- line 450: unterminated string literal (detected at line 450)
+  FAIL  tests\audit_return_statements.py  -- line 564: unterminated string literal (detected at line 564)
+  FAIL  tests\comprehensive_audit.py  -- line 339: unterminated string literal (detected at line 339)
+  FAIL  tests\comprehensive_return_fix.py  -- line 255: unterminated string literal (detected at line 255)
+  FAIL  tests\focused_return_fix.py  -- line 78: unterminated string literal (detected at line 78)
+  FAIL  tests\optimization\test_optimization.py  -- line 441: unterminated string literal (detected at line 441)
+  FAIL  tests\optimization\test_optimizers.py  -- line 401: unterminated string literal (detected at line 401)
+  FAIL  tests\post_upgrade_return_audit.py  -- line 143: unterminated string literal (detected at line 143)
+  FAIL  tests\report\test_report_generator.py  -- line 451: unterminated string literal (detected at line 451)
+  FAIL  tests\strategies\test_rsi_strategy.py  -- line 65: unterminated string literal (detected at line 65)
+  FAIL  tests\test_agents\test_self_improving_agent.py  -- line 516: unterminated string literal (detected at line 516)
+  FAIL  tests\test_model_selection_strategy_signals.py  -- line 395: unexpected indent
+  FAIL  tests\test_system_status.py  -- line 283: unterminated string literal (detected at line 283)
+
+Tests parsing OK:   158
+Tests with errors:  13
+
+======================================================================
+  9. ALL OUR FILES BY SIZE
+======================================================================
+      466.8 KB  scripts\old_8_Model_Lab.py
+      196.9 KB  pages\2_Analyze.py
+      181.8 KB  scripts\old_11_Admin.py
+      179.2 KB  scripts\old_3_Strategy_Testing.py
+      150.8 KB  scripts\old_7_Performance.py
+      137.4 KB  scripts\old_4_Trade_Execution.py
+      121.5 KB  scripts\old_5_Portfolio.py
+      121.3 KB  scripts\old_6_Risk_Management.py
+      110.2 KB  agents\llm\agent.py
+       93.9 KB  system\infra\agents\services\notification_service.py
+       84.3 KB  scripts\old_9_Reports.py
+       83.8 KB  trading\models\lstm_model.py
+       83.2 KB  scripts\old_10_Alerts.py
+       64.2 KB  config\app_config.py
+       62.3 KB  trading\memory\agent_memory_manager.py
+       60.0 KB  trading\report\report_generator.py
+       54.5 KB  trading\models\forecast_router.py
+       51.5 KB  system\infra\agents\services\notification_cleanup.py
+       51.3 KB  trading\data\preprocessing.py
+       50.9 KB  trading\portfolio\portfolio_manager.py
+       50.8 KB  trading\agents\agent_manager.py
+       50.7 KB  trading\visualization\plotting.py
+       49.0 KB  agents\agent_controller.py
+       47.5 KB  trading\memory\model_monitor.py
+       46.9 KB  trading\agents\model_synthesizer_agent.py
+       46.5 KB  trading\data\external_signals.py
+       46.0 KB  trading\backtesting\position_sizing.py
+       45.3 KB  meta\meta_controller.py
+       44.5 KB  trading\core\performance.py
+       44.2 KB  trading\report\report_export_engine.py
+       43.7 KB  execution\broker_adapter.py
+       42.6 KB  trading\risk\risk_manager.py
+       42.6 KB  trading\report\unified_trade_reporter.py
+       42.6 KB  trading\models\ensemble_model.py
+       42.0 KB  trading\agents\performance_critic_agent.py
+       41.7 KB  data\streaming_pipeline.py
+       41.6 KB  trading\live_market_runner.py
+       40.5 KB  reporting\explainer_agent.py
+       40.1 KB  tests\test_fixes.py
+       40.0 KB  trading\analytics\alpha_attribution_engine.py
+       39.9 KB  tests\test_strategy_combinations.py
+       39.8 KB  trading\optimization\backtest_optimizer.py
+       39.7 KB  trading\data\data_listener.py
+       39.7 KB  trading\agents\agent_leaderboard.py
+       39.7 KB  trading\strategies\strategy_comparison.py
+       39.1 KB  routing\prompt_router.py
+       38.9 KB  ui\page_renderer.py
+       38.5 KB  trading\agents\strategy_selector_agent.py
+       38.0 KB  tests\test_agents\test_updater_agent.py
+       37.9 KB  trading\models\xgboost_model.py
+       37.7 KB  trading\agents\data_quality_agent.py
+       37.5 KB  trading\memory\agent_thoughts_logger.py
+       37.4 KB  trading\agents\agent_registry.py
+       37.2 KB  trading\forecasting\hybrid_model.py
+       37.0 KB  scripts\old_strategy_backtest.py
+       37.0 KB  trading\strategies\enhanced_strategy_engine.py
+       36.8 KB  trading\ui\components.py
+       36.5 KB  trading\strategies\adaptive_selector.py
+       36.2 KB  trading\agents\execution_risk_control_agent.py
+       36.0 KB  tests\test_agents\test_performance_critic_agent.py
+       35.9 KB  reporting\audit_logger.py
+       35.4 KB  trading\agents\model_selector_agent.py
+       35.4 KB  trading\integration\institutional_grade_system.py
+       35.2 KB  execution\live_trading_interface.py
+       35.2 KB  trading\memory\long_term_performance_tracker.py
+       35.0 KB  trading\config\enhanced_settings.py
+       34.8 KB  scripts\old_strategy_walkforward.py
+       34.8 KB  system\infra\agents\web\app.py
+       34.8 KB  trading\models\arima_model.py
+       34.6 KB  execution\execution_agent.py
+       34.3 KB  trading\execution\trade_execution_simulator.py
+       34.2 KB  trading\memory\agent_memory.py
+       34.2 KB  trading\optimization\portfolio_optimizer.py
+       34.0 KB  agents\task_router.py
+       33.6 KB  trading\backtesting\backtester.py
+       33.6 KB  trading\optimization\optuna_optimizer.py
+       33.5 KB  trading\data\data_loader.py
+       33.2 KB  trading\system_resilience.py
+       33.1 KB  trading\llm\parser_engine.py
+       32.8 KB  pages\1_Dashboard.py
+       32.6 KB  tests\test_institutional_upgrade.py
+       32.5 KB  trading\memory\persistent_memory.py
+       32.3 KB  trading\agents\execution_risk_agent.py
+       32.1 KB  scripts\manage_ml.py
+       32.1 KB  trading\models\ridge_model.py
+       32.1 KB  trading\strategies\multi_strategy_hybrid_engine.py
+       32.0 KB  trading\strategies\strategy_manager.py
+       31.9 KB  trading\utils\safe_executor.py
+       31.8 KB  trading\backtesting\enhanced_backtester.py
+       31.8 KB  trading\memory\agent_logger.py
+       31.7 KB  trading\core\agents.py
+       31.4 KB  trading\agents\updater_agent.py
+       31.2 KB  trading\recovery\disaster_recovery_manager.py
+       31.0 KB  trading\models\advanced\transformer\time_series_transformer.py
+       31.0 KB  trading\memory\strategy_logger.py
+       30.7 KB  trading\optimization\core_optimizer.py
+       30.5 KB  portfolio\risk_manager.py
+       30.4 KB  trading\analytics\forecast_explainability.py
+       30.3 KB  tests\unit\test_alpha_system.py
+       30.1 KB  tests\test_agents\test_model_builder_agent.py
+       29.9 KB  trading\memory\performance_memory.py
+       29.7 KB  trading\feature_engineering\feature_engineer.py
+       29.7 KB  trading\models\forecast_explainability.py
+       29.7 KB  trading\portfolio\position_sizer.py
+       29.7 KB  trading\nlp\sentiment_processor.py
+       29.6 KB  trading\models\base_model.py
+       29.5 KB  portfolio\allocator.py
+       29.4 KB  trading\models\prophet_model.py
+       29.2 KB  trading\portfolio\portfolio_simulator.py
+       29.1 KB  trading\backtesting\evaluator.py
+       29.0 KB  tests\test_batch_11.py
+       29.0 KB  trading\optimization\base_optimizer.py
+       29.0 KB  trading\agents\market_regime_agent.py
+       28.9 KB  trading\services\real_time_signal_center.py
+       28.7 KB  trading\strategies\breakout_strategy_engine.py
+       28.6 KB  trading\config\configuration.py
+       28.6 KB  trading\agents\model_optimizer_agent.py
+       28.3 KB  trading\context_manager\trading_context.py
+       28.1 KB  trading\evaluation\model_evaluator.py
+       28.1 KB  agents\llm\model_loader.py
+       27.9 KB  tests\test_agents\test_self_improving_agent.py
+       27.8 KB  trading\data\macro_data_integration.py
+       27.8 KB  trading\strategies\gatekeeper.py
+       27.6 KB  system\infra\agents\web\dashboard.py
+       27.3 KB  trading\risk\position_sizing_engine.py
+       27.2 KB  trading\nlp\nl_interface.py
+       26.9 KB  ui\chatbox_agent.py
+       26.7 KB  scripts\analyze_state_inventory.py
+       26.3 KB  trading\agents\model_evaluator_agent.py
+       26.2 KB  trading\nlp\sentiment_classifier.py
+       26.2 KB  models\tft_model.py
+       26.1 KB  tests\unit\test_xgboost_forecaster.py
+       25.9 KB  tests\test_agents\test_agent_leaderboard.py
+       25.8 KB  trading\strategies\ensemble_methods.py
+       25.7 KB  trading\agents\enhanced_prompt_router.py
+       25.7 KB  system_resilience.py
+       25.7 KB  tests\test_signal_collector_and_kube_deploy.py
+       25.5 KB  trading\utils\safe_math.py
+       25.4 KB  trading\utils\reasoning_logger.py
+       25.3 KB  tests\test_optimization\test_backtest_optimizer.py
+       25.3 KB  trading\services\service_client.py
+       25.3 KB  tests\unit\test_lstm_forecaster.py
+       25.2 KB  trading\agents\agent_loop_manager.py
+       25.0 KB  trading\agents\strategy_improver_agent.py
+       24.9 KB  trading\agents\rl_trainer.py
+       24.8 KB  trading\options\options_forecaster.py
+       24.8 KB  tests\analysis\benchmark_market_analyzer.py
+       24.7 KB  nlp\natural_language_insights.py
+       24.7 KB  trading\async_utils\forecast_task_dispatcher.py
+       24.7 KB  trading\execution\execution_replay.py
+       24.6 KB  tests\unit\test_prompt_agent.py
+       24.6 KB  trading\data\data_provider.py
+       24.5 KB  trading\visualization\visualizer.py
+       24.1 KB  agents\llm\active_llm_calls.py
+       24.1 KB  trading\optimization\optuna_tuner.py
+       23.9 KB  trading\strategies\strategy_fallback.py
+       23.8 KB  trading\report\export_report.py
+       23.8 KB  trading\agents\strategy_dispatcher.py
+       23.7 KB  trading\strategies\pairs_trading_engine.py
+       23.7 KB  trading\integration\service_mesh.py
+       23.7 KB  trading\signals\sentiment_signals.py
+       23.6 KB  trading\core\history_logger.py
+       23.5 KB  trading\agents\commentary_agent.py
+       23.4 KB  trading\scheduler.py
+       23.3 KB  trading\strategies\strategy_runner.py
+       23.3 KB  utils\weight_registry.py
+       23.3 KB  scripts\manage_backup.py
+       23.2 KB  trading\ui\enhanced_ui_components.py
+       23.2 KB  trading\memory\goals\status.py
+       23.1 KB  trading\agents\execution\execution_agent.py
+       23.1 KB  trading\agents\prompt_templates.py
+       23.1 KB  tests\audit_return_statements.py
+       23.1 KB  system\hybrid_engine.py
+       23.1 KB  trading\memory\performance_logger.py
+       22.9 KB  trading\backtesting\performance_analysis.py
+       22.8 KB  tests\unit\test_alpaca_migration.py
+       22.8 KB  trading\services\signal_center.py
+       22.8 KB  models\forecast_engine.py
+       22.6 KB  trading\strategies\parameter_validator.py
+       22.5 KB  tests\test_enhancements_event_loop_task_dispatcher.py
+       22.4 KB  tests\strategies\test_rsi_strategy.py
+       22.4 KB  risk\tail_risk.py
+       22.4 KB  tests\test_optimization\test_strategy_optimizer.py
+       22.3 KB  trading\commentary\commentary_engine.py
+       22.2 KB  trading\models\garch_model.py
+       22.2 KB  rl\rl_trader.py
+       22.1 KB  tests\complete_optimization_consolidation.py
+       22.1 KB  trading\market\market_indicators.py
+       22.1 KB  trading\ui\institutional_dashboard.py
+       22.0 KB  execution\redundant_broker_manager.py
+       22.0 KB  trading\agents\regime_detection_agent.py
+       22.0 KB  tests\test_agents\test_llm_router.py
+       22.0 KB  trading\memory\state_manager.py
+       21.9 KB  trading\utils\test_reasoning.py
+       21.9 KB  trading\risk_model\compliance_flags.py
+       21.9 KB  trading\agents\model_builder_agent.py
+       21.8 KB  data\live_feed.py
+       21.8 KB  trading\integration\model_registry.py
+       21.7 KB  trading\utils\logging_utils.py
+       21.7 KB  trading\agents\model_improver_agent.py
+       21.7 KB  tests\unit\test_options_forecaster.py
+       21.5 KB  agents\implementations\model_benchmarker.py
+       21.4 KB  tests\test_prompt_hybrid_backtest_improvements.py
+       21.4 KB  trading\execution\trade_journal.py
+       21.3 KB  trading\backtesting\monte_carlo.py
+       21.3 KB  tests\unit\test_bollinger_signals.py
+       21.3 KB  features\sentiment_features.py
+       21.2 KB  trading\services\home_briefing_service.py
+       21.0 KB  tests\test_strategy_research_agent.py
+       20.9 KB  trading\strategies\hybrid_engine.py
+       20.9 KB  tests\test_forecasting\test_models.py
+       20.9 KB  scripts\launch_institutional_system.py
+       20.8 KB  trading\ui\model_parameter_tuner.py
+       20.8 KB  trading\models\tcn_model.py
+       20.7 KB  tests\unit\test_macd_signals.py
+       20.7 KB  tests\system_check.py
+       20.5 KB  scripts\manage_data_quality.py
+       20.4 KB  trading\strategies\rsi_strategy.py
+       20.4 KB  trading\meta_learning\model_swapper.py
+       20.3 KB  trading\ensemble\integrity_checker.py
+       20.3 KB  tests\test_agent_manager.py
+       20.3 KB  scripts\manage_debug.py
+       20.1 KB  scripts\manage_performance.py
+       20.1 KB  trading\ui\forecast_components.py
+       20.1 KB  trading\optimization\self_tuning_optimizer.py
+       20.0 KB  trading\nlp\prompt_processor.py
+       20.0 KB  data\sentiment\sentiment_fetcher.py
+       20.0 KB  tests\test_ensemble_voting.py
+       19.9 KB  strategies\strategy_pipeline.py
+       19.9 KB  trading\pipeline\task_dispatcher.py
+       19.9 KB  system\forecast_controller.py
+       19.8 KB  tests\optimization\test_optimizers.py
+       19.8 KB  scripts\voice_prompt_agent.py
+       19.7 KB  trading\services\agent_api_service.py
+       19.6 KB  tests\test_agents\test_base_agent_interface.py
+       19.6 KB  trading\dashboards\__init__.py
+       19.5 KB  tests\optimization\test_optimization.py
+       19.5 KB  trading\services\demo_safe_executor.py
+       19.4 KB  scripts\manage_recovery.py
+       19.4 KB  trading\llm\prompt_parser.py
+       19.4 KB  trading\nlp\prompt_bridge.py
+       19.4 KB  tests\full_pipeline\test_strategy_output_merge.py
+       19.3 KB  trading\models\multi_model_aggregator.py
+       19.3 KB  tests\strategies\test_macd_strategy.py
+       19.3 KB  causal\causal_model.py
+       19.2 KB  tests\full_pipeline\test_live_dashboard.py
+       19.2 KB  trading\config\settings.py
+       19.1 KB  tests\unit\test_shap_explainer.py
+       19.1 KB  trading\signal_score\evaluator.py
+       19.1 KB  core\orchestrator\task_orchestrator.py
+       19.0 KB  trading\portfolio\llm_utils.py
+       19.0 KB  trading\models\advanced\gnn\gnn_model.py
+       18.9 KB  trading\utils\config_utils.py
+       18.9 KB  tests\unit\test_lime_explainer.py
+       18.9 KB  trading\data\providers\fallback_provider.py
+       18.9 KB  tests\test_risk\test_risk_manager.py
+       18.8 KB  tests\test_forecast_dispatcher_and_strategy_merge.py
+       18.7 KB  scripts\manage_model.py
+       18.7 KB  trading\utils\signal_generation.py
+       18.6 KB  trading\agents\prompt_response_validator.py
+       18.6 KB  scripts\manage_incident.py
+       18.5 KB  trading\core\backtest_common.py
+       18.5 KB  tests\test_production_modules.py
+       18.4 KB  meta_learning\strategy_refiner.py
+       18.4 KB  config\logging_config.py
+       18.4 KB  trading\agents\optimization\strategy_optimizer.py
+       18.4 KB  scripts\deploy_to_kube_batch.py
+       18.4 KB  trading\strategies\custom_strategy_handler.py
+       18.4 KB  tests\test_agents\test_ensemble_voter.py
+       18.3 KB  trading\optimization\utils\consolidator.py
+       18.3 KB  trading\data\providers\alpha_vantage_provider.py
+       18.3 KB  utils\cache_utils.py
+       18.3 KB  tests\strategies\test_bollinger_strategy.py
+       18.2 KB  trading\utils\redis_cache.py
+       18.2 KB  tests\test_model_innovation_agent.py
+       18.2 KB  trading\signals\strategy_executor.py
+       18.2 KB  tests\unit\test_backtester.py
+       18.1 KB  trading\utils\validation_utils.py
+       18.1 KB  utils\logging.py
+       17.9 KB  memory\model_log.py
+       17.8 KB  tests\test_task_orchestrator.py
+       17.8 KB  tests\report\test_report_generator.py
+       17.8 KB  execution\advanced_order_executor.py
+       17.8 KB  trading\report\performance_summarizer.py
+       17.7 KB  trading\strategies\strategy_router.py
+       17.6 KB  trading\strategies\strategy_chain_router.py
+       17.6 KB  tests\unit\test_rsi_signals.py
+       17.6 KB  scripts\manage_pipeline.py
+       17.5 KB  trading\utils\reasoning_service.py
+       17.5 KB  tests\analysis\test_market_analyzer.py
+       17.4 KB  tests\test_critical_modules_fixes.py
+       17.4 KB  tests\test_enhanced_cost_modeling.py
+       17.4 KB  system\orchestrator_integration.py
+       17.3 KB  tests\unit\test_prophet_forecaster.py
+       17.3 KB  trading\backtesting\backtest_compiler.py
+       17.3 KB  trading\ui\hybrid_model_config.py
+       17.2 KB  tests\unit\test_hybrid_forecaster.py
+       17.2 KB  tests\test_optimization\test_portfolio_optimizer.py
+       17.1 KB  trading\utils\reasoning_display.py
+       17.1 KB  tests\risk\test_risk_manager.py
+       17.1 KB  trading\ui\strategy_components.py
+       17.1 KB  tests\test_batch_14.py
+       17.0 KB  system\logger_debugger.py
+       17.0 KB  tests\test_batch_20.py
+       16.9 KB  trading\utils\time_utils.py
+       16.9 KB  trading\utils\visualization.py
+       16.9 KB  tests\risk\test_risk_metrics.py
+       16.9 KB  trading\web\app.py
+       16.9 KB  scripts\monitor_app.py
+       16.8 KB  config\config.py
+       16.8 KB  tests\test_model_selection_strategy_signals.py
+       16.8 KB  trading\agents\strategy_switcher.py
+       16.8 KB  trading\optimization\forecasting_integration.py
+       16.7 KB  risk\advanced_risk.py
+       16.7 KB  trading\execution\execution_engine.py
+       16.7 KB  system\infra\agents\web\websocket.py
+       16.7 KB  trading\agents\task_memory.py
+       16.5 KB  tests\test_batch_19.py
+       16.5 KB  trading\agents\leaderboard_dashboard.py
+       16.4 KB  trading\training\loop.py
+       16.4 KB  trading\services\demo_quant_gpt.py
+       16.4 KB  tests\unit\test_forecast_router.py
+       16.3 KB  trading\strategies\sma_strategy.py
+       16.3 KB  trading\report\report_service.py
+       16.3 KB  tests\test_agents\test_goal_planner.py
+       16.2 KB  tests\test_export_report.py
+       16.2 KB  trading\nlp\response_formatter.py
+       16.2 KB  trading\ensemble\diagnostic_tools.py
+       16.1 KB  trading\services\prompt_handler.py
+       16.1 KB  tests\comprehensive_return_fix.py
+       16.1 KB  utils\plotting_helper.py
+       16.1 KB  agents\orchestrator.py
+       16.1 KB  trading\market\market_data.py
+       16.1 KB  config\config_loader.py
+       16.1 KB  scripts\cleanup_production.py
+       16.1 KB  trading\sentiment\parser.py
+       16.0 KB  utils\math_helpers.py
+       16.0 KB  trading\strategies\strategy_composer.py
+       16.0 KB  trading\feature_engineering\macro_feature_engineering.py
+       15.9 KB  tests\test_batch_21.py
+       15.8 KB  trading\models\model_registry.py
+       15.7 KB  system\infra\agents\services\automation_health.py
+       15.7 KB  trading\knowledge_base\trading_rules.py
+       15.7 KB  agents\implementations\implementation_generator.py
+       15.7 KB  trading\services\test_safe_executor.py
+       15.7 KB  tests\test_enhancements.py
+       15.7 KB  trading\services\websocket_service.py
+       15.5 KB  trading\data\providers\__init__.py
+       15.5 KB  scripts\manage_health.py
+       15.4 KB  tests\test_prompt_template_formatter.py
+       15.4 KB  testing\parity_checker.py
+       15.4 KB  trading\strategies\ensemble.py
+       15.3 KB  tests\comprehensive_audit.py
+       15.3 KB  scripts\manage_config.py
+       15.3 KB  tests\test_batch_16.py
+       15.3 KB  tests\integration\test_integration_enhancements.py
+       15.2 KB  trading\integration\meta_agent_manager.py
+       15.2 KB  trading\memory\memory_store.py
+       15.1 KB  trading\agents\research_agent.py
+       15.1 KB  trading\services\chat_nl_service.py
+       15.1 KB  tests\test_production_readiness.py
+       15.0 KB  trading\strategies\strategy_synthesizer.py
+       15.0 KB  trading\utils\__init__.py
+       14.9 KB  trading\utils\system_status.py
+       14.7 KB  trading\services\launch_prompt_router.py
+       14.7 KB  memory\prompt_log.py
+       14.7 KB  tests\check_system.py
+       14.7 KB  trading\report\test_report_system.py
+       14.6 KB  trading\strategies\composite_strategy.py
+       14.6 KB  tests\unit\test_performance_metrics.py
+       14.6 KB  tests\test_agent_registry.py
+       14.6 KB  trading\agents\upgrader\agent.py
+       14.5 KB  tests\post_upgrade_return_audit.py
+       14.5 KB  tests\test_optimization\test_hyperparameter_tuner.py
+       14.5 KB  trading\services\base_service.py
+       14.4 KB  trading\data\providers\yfinance_provider.py
+       14.4 KB  trading\utils\feature_engineering.py
+       14.4 KB  trading\utils\metrics\scorer.py
+       14.4 KB  utils\math_utils.py
+       14.4 KB  trading\utils\model_monitoring.py
+       14.4 KB  trading\agents\execution\execution_providers.py
+       14.3 KB  trading\report\report_client.py
+       14.3 KB  system\infra\agents\alert_manager.py
+       14.2 KB  pages\3_Scanner.py
+       14.1 KB  tests\post_upgrade_audit.py
+       14.1 KB  trading\utils\performance.py
+       14.1 KB  trading\models\confidence_generator.py
+       14.1 KB  trading\demo_live_market_runner.py
+       14.1 KB  main.py
+       14.1 KB  trading\strategies\strategy_ranking.py
+       13.9 KB  tests\test_batch_18.py
+       13.9 KB  trading\models\transformer_wrapper.py
+       13.9 KB  trading\optimization\strategy_optimizer.py
+       13.8 KB  trading\test_live_market_runner.py
+       13.8 KB  trading\utils\demo_reasoning.py
+       13.8 KB  trading\ui\cost_config.py
+       13.8 KB  agents\registry.py
+       13.7 KB  trading\optimization\rsi_optimizer.py
+       13.6 KB  trading\utils\auto_repair.py
+       13.6 KB  agents\agent_config.py
+       13.6 KB  trading\memory\performance_weights.py
+       13.6 KB  trading\strategies\rsi_signals.py
+       13.5 KB  tests\test_agents\test_router.py
+       13.5 KB  trading\agents\base_agent_interface.py
+       13.5 KB  trading\utils\signal_scorer.py
+       13.5 KB  tests\test_system_upgrade.py
+       13.5 KB  tests\unit\test_arima_forecaster.py
+       13.4 KB  trading\explainability\signal_trace.py
+       13.4 KB  tests\test_async_strategy_runner.py
+       13.3 KB  trading\services\service_manager.py
+       13.3 KB  trading\forecasting\postprocess.py
+       13.3 KB  scripts\integrate_orchestrator.py
+       13.3 KB  trading\strategies\strategy_implementations.py
+       13.3 KB  trading\agents\__init__.py
+       13.3 KB  tests\unit\test_tuner.py
+       13.2 KB  tests\test_forecasting\test_hybrid.py
+       13.2 KB  trading\services\exceptions.py
+       13.2 KB  utils\report_exporter.py
+       13.2 KB  trading\strategies\atr_strategy.py
+       13.2 KB  system\infra\agents\services\automation_api.py
+       13.2 KB  core\orchestrator\task_providers.py
+       13.2 KB  scripts\manage_api.py
+       13.1 KB  trading\agents\execution\position_manager.py
+       13.1 KB  trading\optimization\strategy_selection_agent.py
+       13.0 KB  execution\trade_executor.py
+       13.0 KB  system\infra\agents\web\routes\notifications.py
+       13.0 KB  rl\strategy_trainer_backup.py
+       13.0 KB  tests\unit\test_tcn_model.py
+       13.0 KB  scripts\audit_clean.py
+       12.9 KB  trading\memory\prompt_feedback_memory.py
+       12.9 KB  tests\test_real_world_scenario.py
+       12.9 KB  data\live_data_feed.py
+       12.9 KB  scripts\run_forecasting_pipeline.py
+       12.9 KB  causal\driver_analysis.py
+       12.7 KB  scripts\manage.py
+       12.7 KB  trading\__init__.py
+       12.6 KB  trading\nlp\sentiment_bridge.py
+       12.6 KB  tools\encoding_utils.py
+       12.6 KB  utils\system_status.py
+       12.5 KB  trading\utils\system_startup.py
+       12.5 KB  trading\services\quant_gpt.py
+       12.4 KB  utils\technical_indicators.py
+       12.4 KB  trading\backtesting\cost_model.py
+       12.3 KB  scripts\run_comprehensive_tests.py
+       12.3 KB  tests\test_forecasting\test_lstm.py
+       12.3 KB  trading\data\news_aggregator.py
+       12.3 KB  trading\backtesting\backtest_utils.py
+       12.3 KB  trading\utils\notification_system.py
+       12.3 KB  tests\test_monte_carlo_simulation.py
+       12.2 KB  tests\test_strategies\test_bollinger.py
+       12.1 KB  system\infra\agents\web\middleware.py
+       12.1 KB  trading\services\safe_executor_service.py
+       12.1 KB  tests\test_strategies\test_sma.py
+       12.0 KB  trading\utils\performance_metrics.py
+       12.0 KB  trading\strategies\validation.py
+       11.9 KB  utils\performance_metrics.py
+       11.9 KB  trading\risk\risk_analyzer.py
+       11.9 KB  trading\utils\data_utils.py
+       11.8 KB  agents\implementations\research_fetcher.py
+       11.7 KB  trading\models\forecast_normalizer.py
+       11.7 KB  core\orchestrator\task_monitor.py
+       11.7 KB  scripts\manage_logs.py
+       11.7 KB  scripts\manage_security.py
+       11.6 KB  trading\analysis\ai_score.py
+       11.6 KB  trading\memory\visualize_memory.py
+       11.5 KB  scripts\comprehensive_file_analysis.py
+       11.5 KB  tests\test_prompt_examples.py
+       11.5 KB  trading\data\__init__.py
+       11.5 KB  start_orchestrator.py
+       11.4 KB  trading\utils\monitor.py
+       11.4 KB  tests\unit\test_error_handling.py
+       11.4 KB  trading\services\updater_service.py
+       11.4 KB  tests\unit\test_exporter.py
+       11.3 KB  scripts\audit_codebase.py
+       11.3 KB  trading\services\launch_agent_api.py
+       11.3 KB  reporting\pnl_attribution.py
+       11.3 KB  system\infra\agents\services\automation_security.py
+       11.1 KB  tests\test_forecasting\test_prophet.py
+       11.1 KB  trading\models\advanced\rl\strategy_optimizer.py
+       11.0 KB  trading\services\test_service_integration.py
+       11.0 KB  scripts\run_live_dashboard.py
+       11.0 KB  trading\utils\model_evaluation.py
+       10.9 KB  tests\test_model_performance_logging.py
+       10.9 KB  tests\test_optimization_modular.py
+       10.9 KB  tests\test_strategy_combo.py
+       10.9 KB  scripts\system_check.py
+       10.9 KB  trading\optimization\grid_search_optimizer.py
+       10.8 KB  trading\strategies\registry.py
+       10.8 KB  tests\focused_return_fix.py
+       10.7 KB  trading\evaluation\metrics.py
+       10.7 KB  trading\services\research_service.py
+       10.6 KB  system\infra\agents\services\automation_metrics.py
+       10.6 KB  trading\services\prompt_router_service.py
+       10.6 KB  scripts\verify_s26.py
+       10.6 KB  tests\test_strategies\test_ensemble_strategy.py
+       10.6 KB  monitoring\health_check.py
+       10.6 KB  trading\data\watchlist.py
+       10.5 KB  trading\strategies\cci_strategy.py
+       10.5 KB  tests\model_smoke_test.py
+       10.5 KB  tests\unit\run_tests.py
+       10.5 KB  trading\services\meta_tuner_service.py
+       10.5 KB  trading\agents\task_dashboard.py
+       10.4 KB  tests\comprehensive_codebase_review.py
+       10.4 KB  trading\market\market_analyzer.py
+       10.4 KB  trading\agents\execution\risk_calculator.py
+       10.4 KB  trading\strategies\rsi_utils.py
+       10.4 KB  trading\utils\redis_utils.py
+       10.4 KB  agents\llm\llm_interface.py
+       10.4 KB  system\infra\agents\services\automation_notification.py
+       10.3 KB  utils\runner.py
+       10.3 KB  trading\utils\prompt_formatter.py
+       10.3 KB  memory\logger_utils.py
+       10.2 KB  scripts\manage_data.py
+       10.2 KB  tests\test_edge_cases.py
+       10.2 KB  scripts\repair.py
+       10.2 KB  system\infra\agents\services\automation_config.py
+       10.1 KB  trading\services\action_executor.py
+       10.1 KB  utils\time_utils.py
+       10.1 KB  tests\test_strategies\test_macd.py
+       10.0 KB  tests\conftest.py
+       10.0 KB  trading\agents\optimization\performance_analyzer.py
+       10.0 KB  scripts\manage_monitor.py
+       10.0 KB  tests\test_system_status.py
+       10.0 KB  trading\backtesting\edge_case_handler.py
+       10.0 KB  trading\services\monitoring_tools.py
+        9.9 KB  utils\strategy_utils.py
+        9.9 KB  scripts\manage_docs.py
+        9.9 KB  trading\risk\risk_metrics.py
+        9.8 KB  trading\strategies\bollinger_strategy.py
+        9.8 KB  utils\common_helpers.py
+        9.8 KB  trading\models\catboost_model.py
+        9.8 KB  scripts\update_imports.py
+        9.8 KB  agents\llm\llm_summary.py
+        9.8 KB  trading\services\commentary_service.py
+        9.7 KB  trading\utils\reward_function.py
+        9.7 KB  trading\services\test_quant_gpt.py
+        9.7 KB  agents\mock_agent.py
+        9.7 KB  tests\test_strategies\test_rsi.py
+        9.7 KB  tests\test_return_statements.py
+        9.6 KB  utils\error_handling.py
+        9.6 KB  system\core\event_loop.py
+        9.6 KB  utils\model_cache.py
+        9.5 KB  utils\data_loader.py
+        9.4 KB  trading\optimization\optimization_visualizer.py
+        9.4 KB  trading\exceptions.py
+        9.4 KB  pages\6_Chat.py
+        9.4 KB  trading\services\multimodal_service.py
+        9.4 KB  trading\database\models.py
+        9.3 KB  trading\services\page_assistant_service.py
+        9.3 KB  tests\targeted_audit.py
+        9.3 KB  scripts\cleanup_requirements.py
+        9.3 KB  agents\llm\tools.py
+        9.3 KB  trading\services\launch_updater.py
+        9.2 KB  scripts\patch_s27.py
+        9.2 KB  system\infra\agents\auth\user_manager.py
+        9.1 KB  trading\agents\optimization\parameter_validator.py
+        9.1 KB  system\infra\agents\api\task_api.py
+        9.1 KB  trading\analysis\market_scanner.py
+        9.0 KB  trading\models\transformer_model.py
+        9.0 KB  scripts\manage_db.py
+        9.0 KB  system\infra\agents\config\notification_config.py
+        9.0 KB  trading\utils\error_handling.py
+        9.0 KB  core\orchestrator\task_executor.py
+        9.0 KB  scripts\patch_s26_universe.py
+        8.9 KB  system\infra\agents\telegram_alerts.py
+        8.9 KB  trading\optimization\performance_logger.py
+        8.9 KB  trading\services\performance_critic_service.py
+        8.9 KB  system\infra\agents\services\automation_monitoring.py
+        8.9 KB  utils\validation.py
+        8.9 KB  trading\models\model_utils.py
+        8.8 KB  tests\unit\test_goals_status.py
+        8.8 KB  trading\utils\gpu_utils.py
+        8.8 KB  scripts\old_strategy_rl.py
+        8.7 KB  trading\models\neuralforecast_models.py
+        8.7 KB  scripts\analyze_file_usage.py
+        8.7 KB  trading\validation\walk_forward_utils.py
+        8.6 KB  tests\test_task_integration.py
+        8.6 KB  agents\llm\memory.py
+        8.6 KB  trading\agents\upgrader\utils.py
+        8.6 KB  tests\nlp\test_llm_processor.py
+        8.6 KB  automate\daily_scheduler.py
+        8.4 KB  trading\feature_engineering\indicators.py
+        8.4 KB  utils\forecast_helpers.py
+        8.4 KB  scripts\manage_deps.py
+        8.4 KB  trading\utils\data_transformer.py
+        8.4 KB  trading\utils\logging.py
+        8.3 KB  trading\optimization\genetic_optimizer.py
+        8.3 KB  scripts\patch_universe_loader.py
+        8.2 KB  trading\logs\audit_logger.py
+        8.2 KB  trading\forecasting\hybrid_model_selector.py
+        8.1 KB  trading\services\commentary_generator.py
+        8.1 KB  trading\strategies\macd_strategy.py
+        8.0 KB  trading\utils\diagnostics.py
+        8.0 KB  utils\shared_utilities.py
+        8.0 KB  trading\services\quant_gpt_example.py
+        7.9 KB  system\infra\agents\services\automation_workflows.py
+        7.9 KB  tests\unit\test_hybrid_model_selector.py
+        7.9 KB  tests\test_forecasting\test_arima.py
+        7.9 KB  tests\test_hybrid_scoring.py
+        7.9 KB  trading\utils\notifications.py
+        7.8 KB  trading\data\earnings_reaction.py
+        7.8 KB  trading\services\query_parser.py
+        7.8 KB  config\llm_config.py
+        7.7 KB  trading\utils\forecast_formatter.py
+        7.7 KB  tests\test_backtesting\test_backtester.py
+        7.7 KB  components\theme.py
+        7.6 KB  trading\risk\risk_logger.py
+        7.6 KB  tests\test_basic_imports.py
+        7.6 KB  tests\unit\test_pandera_migration.py
+        7.5 KB  tests\test_agents\test_execution_agent_risk_controls.py
+        7.5 KB  tests\forecasting\test_xgboost.py
+        7.4 KB  scripts\verify_s22.py
+        7.4 KB  scripts\fetch_universes.py
+        7.3 KB  trading\utils\config_manager.py
+        7.3 KB  trading\services\quant_gpt_service.py
+        7.2 KB  components\news_candle_chart.py
+        7.2 KB  trading\services\config.py
+        7.2 KB  trading\services\cache_manager.py
+        7.1 KB  trading\memory\logger_utils.py
+        7.1 KB  trading\services\model_builder_service.py
+        7.1 KB  scripts\fix_s22_final.py
+        7.0 KB  system\infra\agents\notifications\notification_service.py
+        7.0 KB  ui\__init__.py
+        7.0 KB  tests\unit\test_signal_generators.py
+        6.9 KB  trading\utils\data_manager.py
+        6.8 KB  scripts\split_strategy.py
+        6.8 KB  trading\utils\cache_manager.py
+        6.8 KB  tests\test_unified_interface.py
+        6.8 KB  trading\forecasting\forecast_postprocessor.py
+        6.7 KB  system\infra\agents\services\automation_core.py
+        6.7 KB  trading\nlp\llm_processor.py
+        6.7 KB  trading\strategies\__init__.py
+        6.7 KB  scripts\verify_s29a.py
+        6.6 KB  core\orchestrator\task_conditions.py
+        6.6 KB  trading\agents\optimization\backtest_integration.py
+        6.6 KB  components\watchlist_widget.py
+        6.6 KB  scripts\generate_docs.py
+        6.6 KB  tests\simple_audit.py
+        6.5 KB  scripts\find_division_bugs.py
+        6.5 KB  scripts\manage_dashboard.py
+        6.5 KB  tests\forecasting\test_lstm.py
+        6.4 KB  trading\utils\signal_merger.py
+        6.4 KB  trading\services\agent_tools.py
+        6.4 KB  trading\data\providers\base_provider.py
+        6.3 KB  tests\quick_comprehensive_audit.py
+        6.3 KB  trading\risk\risk_adjusted_strategy.py
+        6.2 KB  utils\safe_json_saver.py
+        6.2 KB  tests\demo_unified_interface.py
+        6.2 KB  agents\llm_providers\local_provider.py
+        6.2 KB  system\infra\agents\auth\session_manager.py
+        6.2 KB  trading\backtesting\trade_models.py
+        6.2 KB  trading\logs\logger.py
+        6.1 KB  portfolio\__init__.py
+        6.1 KB  trading\optimization\pso_optimizer.py
+        6.0 KB  scripts\audit_s29.py
+        6.0 KB  system\infra\agents\api\metrics_api.py
+        6.0 KB  trading\utils\data_validation.py
+        6.0 KB  tests\test_basic_functionality.py
+        6.0 KB  scripts\launch_unified_interface.py
+        5.9 KB  components\multi_timeframe_chart.py
+        5.9 KB  trading\analysis\volume_news_linker.py
+        5.9 KB  tests\__init__.py
+        5.9 KB  scripts\fix_model_lab2.py
+        5.9 KB  components\onboarding.py
+        5.8 KB  trading\risk\risk_control.py
+        5.8 KB  system\infra\agents\scripts\manage_secrets.py
+        5.8 KB  scripts\resolve_dependencies.py
+        5.8 KB  system\infra\agents\scripts\setup_environment.py
+        5.7 KB  trading\agents\routing_engine.py
+        5.7 KB  trading\launch_live_market_runner.py
+        5.6 KB  trading\services\launch_quant_gpt.py
+        5.6 KB  trading\utils\env_manager.py
+        5.6 KB  utils\config_loader.py
+        5.6 KB  config\settings.py
+        5.6 KB  utils\websocket_client.py
+        5.6 KB  ui\page_assistant.py
+        5.6 KB  scripts\verify_s21.py
+        5.5 KB  memory\performance_weights.py
+        5.5 KB  tests\agents\test_prompt_router.py
+        5.5 KB  trading\config\__init__.py
+        5.5 KB  trading\core\__init__.py
+        5.5 KB  tests\test_task_dashboard.py
+        5.5 KB  trading\backtesting\visualization.py
+        5.4 KB  scripts\verify_s34.py
+        5.4 KB  trading\database\connection.py
+        5.3 KB  trading\optimization\ray_optimizer.py
+        5.3 KB  trading\ui\config\registry.py
+        5.3 KB  scripts\verify_s20.py
+        5.3 KB  app.py
+        5.3 KB  trading\optimization\optimizer_factory.py
+        5.2 KB  system\infra\agents\logs\automation_logging.py
+        5.2 KB  core\orchestrator\task_scheduler.py
+        5.1 KB  trading\utils\memory_logger.py
+        5.1 KB  trading\optimization\bayesian_optimizer.py
+        5.1 KB  trading\feature_engineering\utils.py
+        5.0 KB  utils\rate_limiter.py
+        5.0 KB  trading\utils\metrics.py
+        4.9 KB  system\infra\agents\config\config_manager.py
+        4.9 KB  system\infra\agents\test_alert_manager.py
+        4.9 KB  trading\services\rate_limiter.py
+        4.8 KB  models\retrain.py
+        4.8 KB  scripts\fix_s26_syntax.py
+        4.8 KB  tests\test_performance.py
+        4.7 KB  trading\backtesting\risk_metrics.py
+        4.7 KB  tests\nlp\test_prompt_processor.py
+        4.7 KB  trading\analysis\factor_model.py
+        4.6 KB  trading\agents\execution\risk_controls.py
+        4.6 KB  memory\strategy_logger.py
+        4.6 KB  utils\config_watcher.py
+        4.5 KB  trading\data\insider_flow.py
+        4.5 KB  trading\models\dataset.py
+        4.5 KB  scripts\verify_s27.py
+        4.5 KB  trading\agents\test_execution_agent.py
+        4.5 KB  trading\models\forecast_features.py
+        4.5 KB  trading\services\launch_model_builder.py
+        4.5 KB  trading\agents\test_integration.py
+        4.4 KB  trading\ui\logging_controls.py
+        4.4 KB  tests\unit\test_ensemble_voter.py
+        4.4 KB  scripts\verify_s32.py
+        4.4 KB  trading\agents\upgrader\scheduler.py
+        4.3 KB  scripts\quick_system_check.py
+        4.2 KB  tests\test_router.py
+        4.2 KB  scripts\test_monitoring.py
+        4.2 KB  scripts\check_tests.py
+        4.2 KB  tests\unit\test_strategy_validation.py
+        4.2 KB  scripts\verify_s35.py
+        4.1 KB  scripts\verify_s29b.py
+        4.1 KB  scripts\management_registry.py
+        4.1 KB  scripts\verify_s24a.py
+        4.1 KB  scripts\strategy_registry.py
+        4.0 KB  agents\model_innovation_agent.py
+        3.9 KB  trading\tools\init_logs.py
+        3.9 KB  scripts\run_tests.py
+        3.9 KB  tests\test_full_pipeline.py
+        3.9 KB  trading\utils\safe_indicators.py
+        3.9 KB  pages\4_Trade.py
+        3.9 KB  scripts\verify_s36.py
+        3.8 KB  trading\agents\meta_strategy_agent.py
+        3.8 KB  scripts\test_backtest.py
+        3.8 KB  utils\secrets.py
+        3.8 KB  trading\base_agent.py
+        3.8 KB  scripts\check_duplicate_keys.py
+        3.8 KB  trading\memory\model_log.py
+        3.8 KB  trading\logs\init_logs.py
+        3.7 KB  system\infra\agents\core\models\task.py
+        3.7 KB  utils\__init__.py
+        3.7 KB  utils\session_utils.py
+        3.7 KB  scripts\verify_s19.py
+        3.7 KB  agents\llm_providers\anthropic_provider.py
+        3.7 KB  scripts\audit_s22b.py
+        3.6 KB  scripts\verify_s28.py
+        3.6 KB  scripts\verify_s29.py
+        3.6 KB  scripts\verify_s24.py
+        3.6 KB  scripts\verify_s28b.py
+        3.6 KB  scripts\verify_s17.py
+        3.6 KB  scripts\verify_s30.py
+        3.5 KB  trading\report\test_simple.py
+        3.5 KB  scripts\verify_s24b.py
+        3.5 KB  scripts\forecast_registry.py
+        3.5 KB  tests\test_core_functionality.py
+        3.5 KB  config\user_store.py
+        3.4 KB  scripts\audit_s27.py
+        3.3 KB  agents\__init__.py
+        3.3 KB  trading\analysis\chart_builder.py
+        3.3 KB  scripts\verify_s23.py
+        3.3 KB  trading\agents\execution\trade_signals.py
+        3.2 KB  scripts\verify_s16.py
+        3.2 KB  trading\analysis\market_monitor.py
+        3.2 KB  scripts\memory_audit.py
+        3.2 KB  trading\data\earnings_calendar.py
+        3.2 KB  execution\models.py
+        3.2 KB  trading\agents\execution\execution_models.py
+        3.2 KB  utils\shutdown.py
+        3.1 KB  trading\utils\error_logger.py
+        3.1 KB  core\orchestrator\task_models.py
+        3.1 KB  system\infra\agents\notifications\handlers\email_handler.py
+        3.0 KB  scripts\manage_env.py
+        3.0 KB  scripts\install_requirements.py
+        3.0 KB  scripts\verify_s33.py
+        3.0 KB  scripts\verify_s18.py
+        3.0 KB  utils\feature_flags.py
+        3.0 KB  scripts\verify_s21b.py
+        3.0 KB  tests\ui\test_app.py
+        2.9 KB  scripts\verify_s25.py
+        2.8 KB  scripts\rebuild_splits_final.py
+        2.8 KB  scripts\fix_strategy_guard.py
+        2.8 KB  scripts\verify_s31.py
+        2.8 KB  scripts\verify_s24c.py
+        2.7 KB  trading\strategies\base_strategy.py
+        2.6 KB  scripts\audit_s27b.py
+        2.6 KB  scripts\audit_ensemble_xgb.py
+        2.6 KB  trading\report\launch_report_service.py
+        2.5 KB  trading\services\launch_safe_executor.py
+        2.5 KB  setup.py
+        2.5 KB  system\infra\agents\services\automation_cli.py
+        2.4 KB  trading\data\news_fetcher.py
+        2.4 KB  scripts\verify_s21a.py
+        2.4 KB  trading\analysis\news_ranker.py
+        2.3 KB  scripts\fix_model_lab.py
+        2.3 KB  memory\performance_log.py
+        2.3 KB  utils\service_utils.py
+        2.3 KB  scripts\launch_websocket.py
+        2.3 KB  trading\analysis\monte_carlo.py
+        2.3 KB  trading\agents\run_agent_loop.py
+        2.3 KB  utils\model_utils.py
+        2.3 KB  trading\services\launch_performance_critic.py
+        2.2 KB  system\infra\agents\scripts\deploy_services.py
+        2.2 KB  pages\7_Settings.py
+        2.2 KB  system\infra\agents\services\automation_logging.py
+        2.2 KB  trading\services\launch_multimodal.py
+        2.2 KB  trading\services\launch_meta_tuner.py
+        2.2 KB  scripts\__init__.py
+        2.2 KB  trading\services\launch_research.py
+        2.2 KB  scripts\smoke_test_pages.py
+        2.1 KB  system\infra\agents\scripts\monitoring_setup.py
+        2.1 KB  trading\analysis\event_news_fetcher.py
+        2.0 KB  utils\launch_utils.py
+        2.0 KB  trading\data\price_cache.py
+        2.0 KB  llm\llm_summary.py
+        2.0 KB  interface\__init__.py
+        1.9 KB  scripts\verify_forecasts.py
+        1.8 KB  scripts\launch_agent_api.py
+        1.8 KB  tests\test_imports.py
+        1.8 KB  config\market_analysis_config.py
+        1.7 KB  scripts\verify_s22b.py
+        1.7 KB  scripts\audit_s27d.py
+        1.7 KB  scripts\verify_s22a.py
+        1.7 KB  trading\utils\launch_reasoning_service.py
+        1.6 KB  tests\test_data_validator.py
+        1.6 KB  tests\quick_fix.py
+        1.6 KB  scripts\fix_s26_column.py
+        1.6 KB  execution\__init__.py
+        1.6 KB  trading\data\short_interest.py
+        1.6 KB  scripts\run_unified.py
+        1.6 KB  trading\backtesting\__init__.py
+        1.6 KB  trading\automation_core.py
+        1.5 KB  scripts\run_app.py
+        1.5 KB  scripts\_grep_py.py
+        1.4 KB  scripts\audit_s27c.py
+        1.4 KB  trading\report\__init__.py
+        1.3 KB  scripts\trim_agent_registry.py
+        1.3 KB  trading\agents\intent_detector.py
+        1.3 KB  scripts\audit_s22.py
+        1.2 KB  trading\visualization\__init__.py
+        1.2 KB  tests\test_rl.py
+        1.2 KB  scripts\check_pos_sizer.py
+        1.2 KB  system\bootstrap\runtime_initializer.py
+        1.1 KB  scripts\setup_test_env.py
+        1.1 KB  core\orchestrator\__init__.py
+        1.1 KB  config\primary_config.py
+        1.1 KB  trading\ui\__init__.py
+        1.1 KB  scripts\test_chat_forecast.py
+        1.1 KB  trading\llm\llm_interface.py
+        1.0 KB  trading\agents\execution\__init__.py
+        1.0 KB  scripts\examine_excel.py
+        1.0 KB  trading\models\__init__.py
+        1.0 KB  scripts\audit_shap.py
+        1.0 KB  utils\validators.py
+        0.9 KB  trading\agents\optimization\__init__.py
+        0.9 KB  scripts\verify_s21b_posfix.py
+        0.9 KB  scripts\test_paper_trade.py
+        0.9 KB  scripts\inspect_model_lab.py
+        0.9 KB  scripts\init_database.py
+        0.9 KB  trading\optimization\__init__.py
+        0.8 KB  pages\5_Backtest.py
+        0.8 KB  trading\services\__init__.py
+        0.8 KB  trading\memory\__init__.py
+        0.8 KB  config\__init__.py
+        0.7 KB  core\__init__.py
+        0.6 KB  tests\remove_duplicates.py
+        0.6 KB  trading\database\__init__.py
+        0.6 KB  scripts\audit_pages.py
+        0.6 KB  trading\analysis\__init__.py
+        0.6 KB  data\__init__.py
+        0.6 KB  scripts\audit_table_col.py
+        0.6 KB  memory\__init__.py
+        0.6 KB  scripts\test_order.py
+        0.5 KB  models\__init__.py
+        0.5 KB  trading\logger_utils.py
+        0.5 KB  agents\llm_providers\__init__.py
+        0.5 KB  trading\commentary\__init__.py
+        0.4 KB  trading\monitoring\health_check.py
+        0.4 KB  risk\__init__.py
+        0.4 KB  causal\__init__.py
+        0.4 KB  agents\implementations\__init__.py
+        0.4 KB  scripts\inspect_model_lab2.py
+        0.4 KB  trading\memory\goals\__init__.py
+        0.4 KB  trading\models\advanced\__init__.py
+        0.4 KB  trading\recovery\__init__.py
+        0.4 KB  scripts\check_price_fetch.py
+        0.3 KB  trading\optimization\utils\__init__.py
+        0.3 KB  trading\evaluation\__init__.py
+        0.3 KB  trading\optimization\core\__init__.py
+        0.3 KB  routing\__init__.py
+        0.3 KB  tests\integration\test_full_alpha_cycle.py
+        0.3 KB  system\infra\__init__.py
+        0.3 KB  trading\models\walk_forward_validator.py
+        0.3 KB  trading\optimization\strategies\__init__.py
+        0.3 KB  trading\agents\upgrader\__init__.py
+        0.3 KB  trading\nlp\__init__.py
+        0.3 KB  trading\models\advanced\ensemble\__init__.py
+        0.3 KB  evaluation\__init__.py
+        0.3 KB  visualization\__init__.py
+        0.3 KB  trading\models\advanced\gnn\__init__.py
+        0.3 KB  trading\llm\__init__.py
+        0.2 KB  trading\market\__init__.py
+        0.2 KB  trading\monitoring\__init__.py
+        0.2 KB  trading\optimization\visualization\__init__.py
+        0.2 KB  tests\unit\test_optuna_tuner.py
+        0.2 KB  system\__init__.py
+        0.2 KB  rl\__init__.py
+        0.2 KB  tools\__init__.py
+        0.2 KB  tests\unit\test_walk_forward_utils.py
+        0.2 KB  llm\__init__.py
+        0.2 KB  tests\unit\test_swarm_orchestrator.py
+        0.1 KB  trading\utils\metrics\__init__.py
+        0.1 KB  trading\execution\__init__.py
+        0.1 KB  tests\benchmark\__init__.py
+        0.1 KB  trading\models\advanced\transformer\__init__.py
+        0.1 KB  trading\models\advanced\rl\__init__.py
+        0.1 KB  market_analysis\__init__.py
+        0.1 KB  trading\models\timeseries\__init__.py
+        0.1 KB  tests\test_nlp\__init__.py
+        0.1 KB  tests\integration\__init__.py
+        0.1 KB  trading\portfolio\__init__.py
+        0.1 KB  trading\feature_engineering\__init__.py
+        0.1 KB  trading\knowledge_base\__init__.py
+        0.1 KB  agents\llm\__init__.py
+        0.1 KB  trading\logs\__init__.py
+        0.1 KB  trading\risk\__init__.py
+        0.1 KB  trading\models\advanced\tcn\__init__.py
+        0.1 KB  tests\nlp\__init__.py
+        0.1 KB  trading\options\__init__.py
+        0.1 KB  trading\web\__init__.py
+        0.1 KB  tests\implementation\__init__.py
+        0.1 KB  trading\integration\__init__.py
+        0.0 KB  tests\optimization\__init__.py
+        0.0 KB  trading\analytics\__init__.py
+        0.0 KB  tests\report\__init__.py
+        0.0 KB  trading\tools\__init__.py
+        0.0 KB  components\__init__.py
+        0.0 KB  tests\unit\__init__.py
+        0.0 KB  tests\risk\__init__.py
+        0.0 KB  tests\analysis\__init__.py
+        0.0 KB  tests\test_optimization\__init__.py
+        0.0 KB  tests\test_forecasting\__init__.py
+        0.0 KB  tests\test_backtesting\__init__.py
+        0.0 KB  tests\strategies\__init__.py
+        0.0 KB  tests\forecasting\__init__.py
+        0.0 KB  tests\test_strategies\__init__.py
+        0.0 KB  trading\models\advanced\lstm\__init__.py
+        0.0 KB  tests\test_agents\__init__.py
+        0.0 KB  tests\fixtures\__init__.py
+        0.0 KB  tests\agents\__init__.py
+        0.0 KB  tests\test_risk\__init__.py
+        0.0 KB  dashboard\utils\__init__.py
+        0.0 KB  tests\ui\__init__.py
+        0.0 KB  trading\utils\logger.py
+        0.0 KB  trading\ui\config\__init__.py
+        0.0 KB  trading\signals\__init__.py
+        0.0 KB  trading\sentiment\__init__.py
+        0.0 KB  trading\forecasting\__init__.py
+        0.0 KB  tests\fix_optimization_imports.py
+        0.0 KB  strategies\__init__.py
+        0.0 KB  scripts\rebuild_strategy_splits.py
+        0.0 KB  scripts\rebuild_final2.py
+        0.0 KB  scripts\diag_s29a.py
+        0.0 KB  pages\__init__.py
+        0.0 KB  monitoring\__init__.py
+        0.0 KB  meta_learning\__init__.py
+        0.0 KB  features\__init__.py
+
+======================================================================
+  AUDIT SUMMARY
+======================================================================
+Total files in our codebase: 971
+Total size:                  14582.1 KB
+Syntax errors:               26
+Empty files:                 14
+Broken imports:              71
+Scripts to delete:           20
+
+KEY ACTIONS:
+  1. Fix 26 syntax errors (esp. tcn_model.py, shared_utilities.py)
+  2. Delete 14 empty files
+  3. Delete 20 one-time fix scripts
+  4. Investigate 71 broken imports
+
+Report: C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\scripts\audit_clean_report.txt
