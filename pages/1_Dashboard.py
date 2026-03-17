@@ -247,8 +247,9 @@ def scan_top_movers(universe: str) -> dict:
             except Exception:
                 return 1.0
 
+        # Use last row (most recent session) for both open and close so "change" is same-day move, not multi-week
         if isinstance(data.columns, pd.MultiIndex):
-            open_row = data["Open"].iloc[0]
+            open_row = data["Open"].iloc[-1]
             close_row = data["Close"].iloc[-1]
             as_of_ts = data.index[-1].to_pydatetime() if hasattr(data.index[-1], "to_pydatetime") else data.index[-1]
             for sym in close_row.index:
@@ -268,7 +269,7 @@ def scan_top_movers(universe: str) -> dict:
                     continue
         else:
             try:
-                o, c = float(data["Open"].iloc[0]), float(data["Close"].iloc[-1])
+                o, c = float(data["Open"].iloc[-1]), float(data["Close"].iloc[-1])
                 as_of_ts = data.index[-1].to_pydatetime() if hasattr(data.index[-1], "to_pydatetime") else data.index[-1]
                 if o != 0:
                     sym = tickers[0]

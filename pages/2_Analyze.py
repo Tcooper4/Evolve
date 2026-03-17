@@ -119,6 +119,24 @@ if "symbol" not in st.session_state:
 if "forecast_horizon" not in st.session_state:
     st.session_state["forecast_horizon"] = 7
 
+
+def _extract_forecast_values(result):
+    """Extract forecast array from result (dict/list/array). Handles all result formats."""
+    if result is None:
+        return None
+    if isinstance(result, (list, np.ndarray)):
+        arr = np.asarray(result)
+        return arr if arr.size > 0 else None
+    if isinstance(result, dict):
+        for key in ["forecast", "predictions", "values", "forecast_values", "consensus_forecast"]:
+            val = result.get(key)
+            if val is not None:
+                arr = np.asarray(val)
+                if arr.size > 0:
+                    return arr
+    return None
+
+
 # Main page title
 st.title("📈 Analyze")
 st.markdown("Ticker analysis with forecasting, AI model selection, and market analysis")
@@ -180,109 +198,131 @@ if not hist.empty:
     try:
         chart_type = st.radio(
             "Chart type",
-            ["Candle", "Line", "Area"],
+            ["Candle", "Line", "Area", "News + Volume"],
             horizontal=True,
             key="analyze_chart_type",
             index=0,
         )
-        fig_chart = go.Figure()
-        if chart_type == "Candle":
-            fig_chart.add_trace(
-                go.Candlestick(
-                    x=hist.index,
-                    open=hist["Open"],
-                    high=hist["High"],
-                    low=hist["Low"],
-                    close=hist["Close"],
-                    increasing_line_color="#26a69a",
-                    increasing_fillcolor="#26a69a",
-                    decreasing_line_color="#ef5350",
-                    decreasing_fillcolor="#ef5350",
-                    name=ticker,
+        if chart_type == "News + Volume":
+            try:
+                _nc_interval = (
+                    "5m" if period == "1d"
+                    else "1h" if period == "5d"
+                    else "1d"
                 )
-            )
-        elif chart_type == "Area":
-            fig_chart.add_trace(
-                go.Scatter(
-                    x=hist.index,
-                    y=hist["Close"],
-                    fill="tozeroy",
-                    fillcolor="rgba(0,212,255,0.1)",
-                    line=dict(color="#00d4ff", width=2),
-                    name=ticker,
+                render_news_candle_chart(
+                    symbol=ticker,
+                    period=period,
+                    interval=_nc_interval,
+                    volume_threshold=1.5,
+                    price_threshold=0.02,
+                    show_annotations=True,
                 )
-            )
-        else:  # Line
-            fig_chart.add_trace(
-                go.Scatter(
-                    x=hist.index,
-                    y=hist["Close"],
-                    mode="lines",
-                    line=dict(color="#00d4ff", width=2),
-                    name=ticker,
+            except Exception as e:
+                st.caption(f"News chart unavailable: {e}")
+        else:
+            fig_chart = go.Figure()
+            if chart_type == "Candle":
+                fig_chart.add_trace(
+                    go.Candlestick(
+                        x=hist.index,
+                        open=hist["Open"],
+                        high=hist["High"],
+                        low=hist["Low"],
+                        close=hist["Close"],
+                        increasing_line_color="#26a69a",
+                        increasing_fillcolor="#26a69a",
+                        decreasing_line_color="#ef5350",
+                        decreasing_fillcolor="#ef5350",
+                        name=ticker,
+                    )
                 )
+            elif chart_type == "Area":
+                fig_chart.add_trace(
+                    go.Scatter(
+                        x=hist.index,
+                        y=hist["Close"],
+                        fill="tozeroy",
+                        fillcolor="rgba(0,212,255,0.1)",
+                        line=dict(color="#00d4ff", width=2),
+                        name=ticker,
+                    )
+                )
+            else:  # Line
+                fig_chart.add_trace(
+                    go.Scatter(
+                        x=hist.index,
+                        y=hist["Close"],
+                        mode="lines",
+                        line=dict(color="#00d4ff", width=2),
+                        name=ticker,
+                    )
+                )
+            current = float(hist["Close"].iloc[-1])
+            fig_chart.add_hline(
+                y=current,
+                line_dash="dash",
+                line_color="#ef5350",
+                line_width=1,
+                annotation_text=f" ${current:.2f}",
+                annotation_position="right",
+                annotation_font_color="#ef5350",
+                annotation_font_size=11,
             )
-        current = float(hist["Close"].iloc[-1])
-        fig_chart.add_hline(
-            y=current,
-            line_dash="dash",
-            line_color="#ef5350",
-            line_width=1,
-            annotation_text=f" ${current:.2f}",
-            annotation_position="right",
-            annotation_font_color="#ef5350",
-            annotation_font_size=11,
-        )
-        fig_chart.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="#0a0e1a",
-            plot_bgcolor="#0f1525",
-            font=dict(
-                family="'Courier New', monospace",
-                color="#e0e6f0",
-                size=11,
-            ),
-            title=dict(
-                text=f"{ticker} — {period_label}",
-                font=dict(color="#e0e6f0", size=14),
-                x=0,
-            ),
-            xaxis=dict(
-                title="Date",
-                gridcolor="#1a2535",
-                showgrid=True,
-                zeroline=False,
-                tickfont=dict(color="#4a6080", size=10),
-                rangeslider=dict(visible=False),
-                rangebreaks=[
-                    dict(bounds=["sat", "mon"]),
-                    dict(bounds=[16, 9.5], pattern="hour"),
-                ]
-                if period in ("1d", "5d")
-                else [
-                    dict(bounds=["sat", "mon"]),
-                ],
-            ),
-            yaxis=dict(
-                title="Price ($)",
-                gridcolor="#1a2535",
-                showgrid=True,
-                zeroline=False,
-                tickfont=dict(color="#4a6080", size=10),
-                tickprefix="$",
-                side="right",
-            ),
-            hovermode="x unified",
-            hoverlabel=dict(
-                bgcolor="#0f1525",
-                bordercolor="#1e2d45",
-                font=dict(color="#e0e6f0", size=11),
-            ),
-            margin=dict(l=0, r=60, t=30, b=20),
-            height=380,
-            showlegend=False,
-        )
-        st.plotly_chart(fig_chart, use_container_width=True, key="analyze_main_chart")
+            fig_chart.update_layout(
+                template="plotly_dark",
+                paper_bgcolor="#0a0e1a",
+                plot_bgcolor="#0f1525",
+                font=dict(
+                    family="'Courier New', monospace",
+                    color="#e0e6f0",
+                    size=11,
+                ),
+                title=dict(
+                    text=f"{ticker} — {period_label}",
+                    font=dict(color="#e0e6f0", size=14),
+                    x=0,
+                ),
+                xaxis=dict(
+                    title="Date",
+                    gridcolor="#1a2535",
+                    showgrid=True,
+                    zeroline=False,
+                    tickfont=dict(color="#4a6080", size=10),
+                    rangeslider=dict(visible=False),
+                    rangebreaks=[
+                        dict(bounds=["sat", "mon"]),
+                        dict(bounds=[16, 9.5], pattern="hour"),
+                    ]
+                    if period in ("1d", "5d")
+                    else [
+                        dict(bounds=["sat", "mon"]),
+                    ],
+                ),
+                yaxis=dict(
+                    title="Price ($)",
+                    gridcolor="#1a2535",
+                    showgrid=True,
+                    zeroline=False,
+                    tickfont=dict(color="#4a6080", size=10),
+                    tickprefix="$",
+                    side="right",
+                ),
+                hovermode="x unified",
+                hoverlabel=dict(
+                    bgcolor="#0f1525",
+                    bordercolor="#1e2d45",
+                    font=dict(color="#e0e6f0", size=11),
+                ),
+                margin=dict(l=0, r=60, t=30, b=20),
+                height=380,
+                showlegend=False,
+            )
+            st.plotly_chart(
+                fig_chart,
+                use_container_width=True,
+                key="analyze_main_chart",
+            )
         if trader_mode == "Short-term":
             try:
                 st.markdown("**Short-term Signals**")
@@ -516,7 +556,7 @@ except Exception as e:
 st.markdown("---")
 
 # Create tabbed interface
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_insider, tab_earnings = st.tabs(
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_insider, tab_earnings, tab_diag = st.tabs(
     [
         "🚀 Quick Forecast",
         "⚙️ Advanced Forecasting",
@@ -527,6 +567,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_insider, tab_earnings = st.tabs(
         "🎲 Monte Carlo",
         "🕵️ Insider Flow",
         "📅 Earnings",
+        "📐 Diagnostics",
     ]
 )
 
@@ -883,9 +924,9 @@ with tab1:
 
                             def _color_impact(val):
                                 colors = {
-                                    "positive": "background-color: #d4edda",
-                                    "negative": "background-color: #f8d7da",
-                                    "neutral": "background-color: #fff3cd",
+                                    "positive": "background-color: #1a4a2a; color: #26a69a",
+                                    "negative": "background-color: #3a1a1a; color: #ef5350",
+                                    "neutral": "background-color: #3a2a0a; color: #ff9800",
                                 }
                                 return colors.get(val, "")
 
@@ -907,12 +948,6 @@ with tab1:
                 render_multi_timeframe_chart(_sym, hist_daily=data)
             except Exception as _e:
                 st.caption(f"Chart unavailable: {_e}")
-            try:
-                st.markdown("**News-Annotated Chart**")
-                render_news_candle_chart(
-                    _sym, period="6mo", show_annotations=True)
-            except Exception as _e:
-                st.caption(f"News candle chart unavailable: {_e}")
 
         # Price chart - use advanced candlestick chart if OHLCV data available
         try:
@@ -1046,14 +1081,19 @@ with tab1:
                                 st.session_state.current_forecast = pd.DataFrame({"forecast": forecast_values[:len(forecast_dates)]}, index=forecast_dates)
                                 st.session_state.current_model = "Consensus"
                                 st.session_state.current_forecast_result = {
+                                    "forecast": np.asarray(consensus.get("consensus_forecast", [])).ravel().tolist(),
                                     "validation_mape": None,
                                     "in_sample_mape": None,
                                     "last_actual_price": consensus.get("last_price"),
                                     "confidence_label": consensus.get("conviction", "INSUFFICIENT"),
                                     "warnings": [],
                                 }
+                                st.session_state["forecast_debug"] = consensus.get("forecast_debug", {})
                                 used_router = True
                                 st.success("✅ Consensus forecast generated")
+                                if st.session_state.get("forecast_debug"):
+                                    with st.expander("🔍 Forecast debug (per-model std/mean/size)", expanded=False):
+                                        st.json(st.session_state["forecast_debug"])
                         except Exception as _ce:
                             logger.debug("Consensus forecast failed: %s", _ce)
                             st.caption(f"Consensus error: {_ce}")
@@ -1081,19 +1121,12 @@ with tab1:
 
                                     postprocessor = ForecastPostprocessor()
 
-                                    # Extract forecast values (ARIMA uses 'forecast'; some use 'predictions'/'values'/'forecast_values')
-                                    if isinstance(forecast_result, dict):
-                                        forecast_vals = (
-                                            forecast_result.get('forecast')
-                                            or forecast_result.get('predictions')
-                                            or forecast_result.get('values')
-                                            or forecast_result.get('forecast_values')
-                                            or []
-                                        )
-                                        if hasattr(forecast_vals, 'tolist'):
-                                            forecast_vals = forecast_vals.tolist()
+                                    # Extract forecast values (handles forecast, predictions, values, forecast_values, consensus_forecast)
+                                    forecast_vals = _extract_forecast_values(forecast_result)
+                                    if forecast_vals is not None:
+                                        forecast_vals = forecast_vals.tolist() if hasattr(forecast_vals, 'tolist') else list(forecast_vals)
                                     else:
-                                        forecast_vals = forecast_result
+                                        forecast_vals = []
 
                                     # Postprocess forecast
                                     processed_forecast = postprocessor.process(
@@ -1158,24 +1191,25 @@ with tab1:
                                 except Exception as e:
                                     pass  # Silently fail if logging not available
                             
-                            # Extract forecast values
+                            # Extract forecast values (robust for all result formats)
+                            forecast_values = _extract_forecast_values(forecast_result)
                             if isinstance(forecast_result, dict):
-                                forecast_values = forecast_result.get('forecast', [])
                                 forecast_dates = forecast_result.get('dates', pd.date_range(
                                     start=data.index[-1] + timedelta(days=1),
                                     periods=horizon,
                                     freq='D'
                                 ))
                             else:
-                                forecast_values = forecast_result
                                 forecast_dates = pd.date_range(
                                     start=data.index[-1] + timedelta(days=1),
                                     periods=horizon,
                                     freq='D'
                                 )
+                            if forecast_values is not None:
+                                forecast_values = np.asarray(forecast_values).ravel()
                             
                             # Debug: Check what we got
-                            if forecast_values is None or len(forecast_values) == 0:
+                            if forecast_values is None or (hasattr(forecast_values, '__len__') and len(forecast_values) == 0):
                                 st.warning(f"⚠️ Forecast returned empty values. Result type: {type(forecast_result)}")
                                 if isinstance(forecast_result, dict):
                                     st.write("Forecast result keys:", list(forecast_result.keys()))
@@ -1213,7 +1247,9 @@ with tab1:
                             
                             # Store in session state
                             st.session_state.current_forecast = forecast_df
+                            selected_model = st.session_state.get("selected_model", "consensus")
                             st.session_state.current_model = selected_model
+                            model = st.session_state.get("current_model_instance", None)
                             st.session_state.current_model_instance = model  # Store model instance for explainability
                             
                             # Situational awareness: write to MemoryStore for Chat context (quality gate)
@@ -1503,8 +1539,14 @@ with tab1:
                                 ):
                                     for f in models_failed:
                                         st.caption(f"• {f}")
+                    else:
+                        st.warning("Consensus forecast temporarily unavailable.")
             except Exception:
-                st.warning("Consensus forecast temporarily unavailable.")
+                try:
+                    if isinstance(consensus, dict) and consensus.get("error"):
+                        st.warning("Consensus forecast temporarily unavailable.")
+                except NameError:
+                    st.warning("Consensus forecast temporarily unavailable.")
 
             # Display forecast using UI components
             if st.session_state.get('current_forecast') is not None:
@@ -1657,7 +1699,7 @@ with tab1:
                 
                 with st.expander("View Feature Importance & Explanations", expanded=False):
                     try:
-                        from trading.analytics.forecast_explainability import (
+                        from trading.models.forecast_explainability import (
                             IntelligentForecastExplainability,
                         )
                         ForecastExplainability = IntelligentForecastExplainability
@@ -1695,11 +1737,13 @@ with tab1:
                                     model = st.session_state.get('current_model_instance')
                                     forecast_result = st.session_state.get('current_forecast_result', {})
                                     
-                                    if isinstance(forecast_result, dict):
-                                        forecast_values = forecast_result.get('forecast', [])
-                                        forecast_value = float(forecast_values[0]) if len(forecast_values) > 0 else float(data['Close'].iloc[-1])
+                                    _fv = _extract_forecast_values(forecast_result)
+                                    if _fv is not None and _fv.size > 0:
+                                        forecast_value = float(np.asarray(_fv).flat[0])
+                                    elif isinstance(forecast_result, (int, float)):
+                                        forecast_value = float(forecast_result)
                                     else:
-                                        forecast_value = float(forecast_result) if isinstance(forecast_result, (int, float)) else float(data['Close'].iloc[-1])
+                                        forecast_value = float(data['Close'].iloc[-1])
                                     
                                     features = data.copy()
                                     target_history = features['Close'] if 'Close' in features.columns else (features['close'] if 'close' in features.columns else features.iloc[:, 0])
@@ -1755,8 +1799,9 @@ with tab1:
                         model_name = st.session_state.get("current_model", "Unknown")
                         symbol = st.session_state.get("symbol", "Unknown")
                         last_price = float(data["Close"].iloc[-1]) if "Close" in data.columns else (float(data["close"].iloc[-1]) if "close" in data.columns else 0.0)
-                        fcast = forecast_result.get("forecast", []) if isinstance(forecast_result, dict) else []
-                        forecast_mean = float(np.mean(fcast)) if len(fcast) > 0 else last_price
+                        fcast = _extract_forecast_values(forecast_result)
+                        fcast = fcast if fcast is not None and fcast.size > 0 else np.array([])
+                        forecast_mean = float(np.mean(fcast)) if fcast.size > 0 else last_price
                         pct_change = ((forecast_mean - last_price) / last_price * 100) if last_price else 0.0
                         if agent:
                             with st.spinner("AI is analyzing the forecast..."):
@@ -2282,6 +2327,7 @@ with tab2:
                         
                         # Store full forecast result for confidence intervals
                         st.session_state.current_forecast_result = forecast_result
+                        model = st.session_state.get("current_model_instance", None)
                         st.session_state.current_model_instance = model  # Store model instance for explainability
                         
                         # Postprocess forecast
@@ -2290,18 +2336,12 @@ with tab2:
                             
                             postprocessor = ForecastPostprocessor()
                             
-                            # Extract forecast values (support forecast, predictions, values, forecast_values)
-                            if isinstance(forecast_result, dict):
-                                fv = (
-                                    forecast_result.get('forecast')
-                                    or forecast_result.get('predictions')
-                                    or forecast_result.get('values')
-                                    or forecast_result.get('forecast_values')
-                                    or []
-                                )
-                                forecast_vals = fv.tolist() if hasattr(fv, 'tolist') else fv
+                            # Extract forecast values (handles all result formats)
+                            forecast_vals = _extract_forecast_values(forecast_result)
+                            if forecast_vals is not None:
+                                forecast_vals = forecast_vals.tolist() if hasattr(forecast_vals, 'tolist') else list(forecast_vals)
                             else:
-                                forecast_vals = forecast_result
+                                forecast_vals = []
                             
                             # Postprocess forecast
                             processed_forecast = postprocessor.process(
@@ -2331,16 +2371,17 @@ with tab2:
                         
                         st.success("✅ Model trained successfully!")
                         
-                        # Extract and validate forecast values
+                        # Extract and validate forecast values (robust for all result formats)
+                        forecast_values = _extract_forecast_values(forecast_result)
+                        if forecast_values is not None:
+                            forecast_values = np.asarray(forecast_values).ravel()
                         if isinstance(forecast_result, dict):
-                            forecast_values = forecast_result.get('forecast', [])
                             forecast_dates = forecast_result.get('dates', pd.date_range(
                                 start=data.index[-1] + timedelta(days=1),
                                 periods=st.session_state.forecast_horizon,
                                 freq='D'
                             ))
                         else:
-                            forecast_values = forecast_result
                             forecast_dates = pd.date_range(
                                 start=data.index[-1] + timedelta(days=1),
                                 periods=st.session_state.forecast_horizon,
@@ -2461,8 +2502,8 @@ with tab2:
                                     with st.spinner("Analyzing model predictions..."):
                                         from trading.models.forecast_explainability import ForecastExplainability
                                         explainer = ForecastExplainability()
-                                        fv = forecast_result.get('forecast') or forecast_result.get('predictions') or []
-                                        forecast_value = float(fv[0]) if isinstance(fv, (list, np.ndarray)) and len(fv) > 0 else float(data[model_config["target_column"]].iloc[-1])
+                                        fv = _extract_forecast_values(forecast_result)
+                                        forecast_value = float(np.asarray(fv).flat[0]) if fv is not None and np.asarray(fv).size > 0 else float(data[model_config["target_column"]].iloc[-1])
                                         features = data.copy()
                                         target_history = features[model_config["target_column"]] if model_config["target_column"] in features.columns else features.iloc[:, 0]
                                         try:
@@ -2800,12 +2841,8 @@ with tab3:
                                 horizon=_horizon,
                                 run_walk_forward=False,
                             )
-                            _fc = _result.get("forecast", [])
-                            _fc_valid = (
-                                _fc is not None
-                                and hasattr(_fc, "__len__")
-                                and len(_fc) > 0
-                            )
+                            _fc = _extract_forecast_values(_result)
+                            _fc_valid = _fc is not None and _fc.size > 0
                             _mape = (
                                 _result.get("validation_mape")
                                 or _result.get("in_sample_mape")
@@ -2814,7 +2851,7 @@ with tab3:
                                 or _result.get("error_pct")
                             )
                             _last_fc = (
-                                round(float(_fc[-1]), 2) if _fc_valid else None
+                                round(float(_fc.flat[-1]), 2) if _fc_valid else None
                             )
 
                             _comparison_rows.append({
@@ -2918,12 +2955,8 @@ with tab4:
                         _r = _router.get_forecast(
                             _hist, model_type=_mn, horizon=_horizon, run_walk_forward=False
                         )
-                        _fc = _r.get("forecast", [])
-                        if (
-                            _fc is None
-                            or not hasattr(_fc, "__len__")
-                            or len(_fc) == 0
-                        ):
+                        _fc = _extract_forecast_values(_r)
+                        if _fc is None or _fc.size == 0:
                             st.caption(f"{_mn}: no forecast output")
                             continue
                         _fc = [float(v) for v in _fc]
@@ -3671,6 +3704,93 @@ with tab_earnings:
         st.error(f"Earnings tab error: {type(e).__name__}: {e}")
         import traceback
         st.code(traceback.format_exc())
+
+with tab_diag:
+    st.subheader("Model Diagnostics")
+    st.caption("Econometric tests on price data")
+
+    try:
+        _dh = st.session_state.get("forecast_data") or get_history(ticker, period="1y")
+
+        if _dh is not None and not _dh.empty:
+            _close = _dh["Close"].dropna()
+            _returns = _close.pct_change().dropna()
+
+            st.markdown("**Stationarity Test (ADF)**")
+            try:
+                from statsmodels.tsa.stattools import adfuller
+                _adf = adfuller(_close.values)
+                _adf_p = _adf[1]
+                _adf_stat = _adf[0]
+                _stat_color = "#26a69a" if _adf_p < 0.05 else "#ef5350"
+                st.markdown(
+                    f'<span style="color:{_stat_color}">'
+                    f'ADF Statistic: {_adf_stat:.4f} | '
+                    f'p-value: {_adf_p:.4f} | '
+                    f'{"Stationary" if _adf_p < 0.05 else "Non-stationary"}'
+                    f'</span>',
+                    unsafe_allow_html=True,
+                )
+            except ImportError:
+                st.caption("statsmodels not installed for ADF")
+
+            st.markdown("**White Noise Test (Ljung-Box)**")
+            try:
+                from statsmodels.stats.diagnostic import acorr_ljungbox
+                _lb = acorr_ljungbox(_returns, lags=[10], return_df=True)
+                _lb_p = float(_lb["lb_pvalue"].iloc[0])
+                _wn_color = "#26a69a" if _lb_p > 0.05 else "#ef5350"
+                st.markdown(
+                    f'<span style="color:{_wn_color}">'
+                    f'Ljung-Box p-value: {_lb_p:.4f} | '
+                    f'{"White noise ✓" if _lb_p > 0.05 else "Autocorrelation detected"}'
+                    f'</span>',
+                    unsafe_allow_html=True,
+                )
+            except ImportError:
+                st.caption("statsmodels not installed for LB")
+
+            st.markdown("**Volatility (ARCH Effect)**")
+            try:
+                from statsmodels.stats.diagnostic import het_arch
+                _arch = het_arch(_returns.values)
+                _arch_p = _arch[1]
+                _arch_color = "#ff9800" if _arch_p < 0.05 else "#26a69a"
+                st.markdown(
+                    f'<span style="color:{_arch_color}">'
+                    f'ARCH p-value: {_arch_p:.4f} | '
+                    f'{"Volatility clustering ⚠" if _arch_p < 0.05 else "No ARCH effect ✓"}'
+                    f'</span>',
+                    unsafe_allow_html=True,
+                )
+            except ImportError:
+                st.caption("statsmodels not installed for ARCH")
+
+            st.markdown("**Return Distribution**")
+            from scipy import stats as _scipy_stats
+            _skew = float(_scipy_stats.skew(_returns))
+            _kurt = float(_scipy_stats.kurtosis(_returns))
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.metric("Skewness", f"{_skew:.3f}")
+            with c2:
+                st.metric("Excess Kurtosis", f"{_kurt:.3f}")
+            with c3:
+                _ann_vol = float(_returns.std() * np.sqrt(252) * 100)
+                st.metric("Ann. Volatility", f"{_ann_vol:.1f}%")
+            with c4:
+                _sharpe = float(_returns.mean() / _returns.std() * np.sqrt(252)) if _returns.std() > 0 else 0.0
+                st.metric("Sharpe (approx)", f"{_sharpe:.2f}")
+
+            st.caption(
+                "ADF: p<0.05 = stationary (good for ARIMA). "
+                "Ljung-Box: p>0.05 = white noise residuals (good model fit). "
+                "ARCH: p<0.05 = use GARCH for volatility modeling."
+            )
+        else:
+            st.caption("Load price data (e.g. run Quick Forecast) to see diagnostics.")
+    except Exception as _de:
+        st.caption(f"Diagnostics unavailable: {_de}")
 
 render_page_assistant("Forecasting")
 

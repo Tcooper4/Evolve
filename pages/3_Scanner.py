@@ -289,19 +289,23 @@ def _scanner_table():
         try:
             v = float(val)
             if v >= 8:
-                return "background-color: #d4edda"
+                return "background-color: #1a4a2a; color: #26a69a"
             if v >= 6.5:
-                return "background-color: #cce5ff"
+                return "background-color: #1a2a3a; color: #64b5f6"
             if v >= 5:
-                return "background-color: #fff3cd"
-            return "background-color: #f8d7da"
+                return "background-color: #3a2a0a; color: #ff9800"
+            return "background-color: #3a1a1a; color: #ef5350"
         except Exception:
             return ""
 
     def _color_news_cell(val):
-        colors = {"HOT": "#ff9800", "POS": "#26a69a", "NEG": "#ef5350", "NEU": "#4a6080"}
-        c = colors.get(str(val).strip(), "#4a6080")
-        return f"background-color: {c}; color: #fff"
+        styles = {
+            "HOT": "background-color: #2a1a0a; color: #ff9800",
+            "POS": "background-color: #1a4a2a; color: #26a69a",
+            "NEG": "background-color: #3a1a1a; color: #ef5350",
+            "NEU": "background-color: #1a1a2a; color: #4a6080",
+        }
+        return styles.get(str(val).strip(), styles["NEU"])
 
     styler = df_display.style
     if "AI Score" in df_display.columns:

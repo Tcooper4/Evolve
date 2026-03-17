@@ -1169,10 +1169,33 @@ class ForecastRouter:
             except Exception as e:  # pragma: no cover - defensive guard
                 failed.append(f"{name}({e})")
 
-        if not all_forecasts:
-            return {"error": "All models failed", "models_failed": failed}
+        # Debug: per-model std/mean/size (page can store in session_state)
+        forecast_debug: Dict[str, Dict[str, float]] = {}
+        for name, fc in zip(used, all_forecasts):
+            arr = np.asarray(fc)
+            forecast_debug[name] = {
+                "std": float(arr.std()) if arr.size > 0 else 0.0,
+                "mean": float(arr.mean()) if arr.size > 0 else 0.0,
+                "size": int(arr.size),
+            }
 
-        stacked = np.stack(all_forecasts)
+        # Only include non-flat forecasts in consensus (std > 0.001)
+        valid_forecasts: List[np.ndarray] = []
+        valid_used: List[str] = []
+        for fc, name in zip(all_forecasts, used):
+            arr = np.asarray(fc)
+            if arr.size > 0 and float(arr.std()) > 0.001:
+                valid_forecasts.append(arr)
+                valid_used.append(name)
+
+        if not valid_forecasts:
+            return {
+                "error": "All model forecasts were flat (no variation). Check data or model config.",
+                "models_failed": failed,
+                "forecast_debug": forecast_debug,
+            }
+
+        stacked = np.stack(valid_forecasts)
         consensus = stacked.mean(axis=0)
         std = stacked.std(axis=0)
 
@@ -1242,11 +1265,12 @@ class ForecastRouter:
             "model_agreement": model_agreement,
             "conviction": conviction,
             "direction": direction,
-            "models_used": used,
+            "models_used": valid_used,
             "models_failed": failed,
             "last_price": last_price,
             "consensus_7d_change_pct": round(change_pct, 2),
             "consensus_price": consensus_price,
             "price_targets": price_targets,
+            "forecast_debug": forecast_debug,
         }
 
