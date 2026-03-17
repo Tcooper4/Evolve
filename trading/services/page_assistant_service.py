@@ -24,33 +24,89 @@ def get_full_context_summary() -> str:
         return ""
 
 
-def get_page_context(page_name: str, session_state: Any) -> str:
+def get_page_context(page_name: str, session_state: Any = None) -> str:
     """
     Return a short context string describing the user's current state on the given page.
     Used to build the system prompt for the page assistant. Keeps output concise (~1500 chars).
     """
     try:
-        if page_name == "Strategy Testing":
-            return _strategy_testing_context(session_state)
-        if page_name == "Risk Management":
-            return _risk_management_context(session_state)
-        if page_name == "Portfolio":
-            return _portfolio_context(session_state)
-        if page_name == "Forecasting":
-            return _forecasting_context(session_state)
-        if page_name == "Chat":
+        name = page_name.lower().strip()
+        if "dashboard" in name:
+            return _dashboard_context(session_state)
+        if "analyze" in name:
+            return _analyze_context(session_state)
+        if "scanner" in name:
+            return _scanner_context(session_state)
+        if "trade" in name:
+            return _trade_context(session_state)
+        if "backtest" in name:
+            return _backtest_context(session_state)
+        if "chat" in name:
             return _chat_context(session_state)
-        if page_name == "Trade Execution":
-            return _trade_execution_context(session_state)
-        if page_name == "Performance":
-            return _performance_context(session_state)
-        if page_name == "Model Lab":
-            return _model_lab_context(session_state)
-        if page_name == "Home":
-            return _home_context(session_state)
+        if "settings" in name:
+            return _settings_context(session_state)
+        return "Evolve algorithmic trading platform."
     except Exception:
-        pass
-    return f"User is on the {page_name} page. No additional context available."
+        return "Evolve algorithmic trading platform."
+
+
+def _dashboard_context(ss: Any = None) -> str:
+    return (
+        "Dashboard: Live market pulse showing SPY/QQQ/IWM/VIX prices, "
+        "AI-scored top opportunities, watchlist, and breaking news. "
+        "Ask about market conditions, top movers, or your watchlist."
+    )
+
+
+def _analyze_context(ss: Any = None) -> str:
+    ticker = ""
+    if ss:
+        try:
+            ticker = ss.get("analyze_ticker", "") or ss.get("symbol", "")
+        except Exception:
+            ticker = ""
+    t = (" for " + str(ticker).upper()) if ticker else ""
+    return (
+        "Analyze page"
+        + t
+        + ": Interactive chart with period switcher, AI Score "
+        "(technical/momentum/sentiment/fundamental), forecasting models "
+        "(ARIMA/XGBoost/Ridge/CatBoost/Prophet), econometric diagnostics, "
+        "and news sentiment overlay. Ask about the AI score, what the "
+        "forecast means, or buy/sell signals."
+    )
+
+
+def _scanner_context(ss: Any = None) -> str:
+    return (
+        "Scanner: Screens stocks from S&P 100, S&P 500, NASDAQ 100, or custom lists "
+        "for AI Score, momentum, volume spikes, and news sentiment. Ask about top "
+        "opportunities or how to interpret scanner results."
+    )
+
+
+def _trade_context(ss: Any = None) -> str:
+    return (
+        "Trade page: Paper trading execution with slippage model, portfolio positions, "
+        "performance history, and risk management. Ask about order types, position "
+        "sizing, or how to read performance metrics."
+    )
+
+
+def _backtest_context(ss: Any = None) -> str:
+    return (
+        "Backtest page: Strategy development and testing with 8 tabs including Quick "
+        "Backtest, Strategy Builder, Walk-Forward validation, and RL Training. Ask "
+        "about backtest results, strategy parameters, or how to interpret metrics "
+        "like Sharpe ratio and max drawdown."
+    )
+
+
+def _settings_context(ss: Any = None) -> str:
+    return (
+        "Settings page: Watchlist management, alerts configuration, and system admin. "
+        "Ask about setting up alerts, managing your watchlist, or system health."
+    )
 
 
 def _strategy_testing_context(session_state: Any) -> str:

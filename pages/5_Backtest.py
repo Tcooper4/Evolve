@@ -29,3 +29,11 @@ except Exception as e:
     import traceback
     with st.expander("Details"):
         st.code(traceback.format_exc())
+
+
+# Page Assistant
+try:
+    from ui.page_assistant import render_page_assistant
+    render_page_assistant("Backtest")
+except Exception:
+    pass

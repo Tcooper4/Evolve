@@ -756,6 +756,6 @@ if follow_up and follow_up.strip():
 
 try:
     from ui.page_assistant import render_page_assistant
-    render_page_assistant("Home")
+    render_page_assistant("Dashboard")
 except Exception:
     pass

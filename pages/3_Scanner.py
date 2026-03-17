@@ -359,3 +359,11 @@ if _FRAGMENT_OK:
     _scanner_results()
 else:
     _scanner_table()
+
+
+# Page Assistant
+try:
+    from ui.page_assistant import render_page_assistant
+    render_page_assistant("Scanner")
+except Exception:
+    pass

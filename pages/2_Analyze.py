@@ -3792,5 +3792,5 @@ with tab_diag:
     except Exception as _de:
         st.caption(f"Diagnostics unavailable: {_de}")
 
-render_page_assistant("Forecasting")
+render_page_assistant("Analyze")
 

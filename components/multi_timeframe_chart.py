@@ -170,25 +170,71 @@ def _render_ohlc_panel(
 
     if len(close) >= 2:
         _c1, _c2, _c3, _c4 = st.columns(4)
-        _c1.metric("Last Close", f"${last_close:,.2f}", chg_str)
-        if len(close) >= 20:
-            sma20_val = float(np.mean(close[-20:]))
-            _c2.metric(
-                "SMA20",
-                f"${sma20_val:,.2f}",
-                f"{(last_close / sma20_val - 1) * 100:+.1f}%",
-            )
-        if len(close) >= 52:
-            high_52 = float(np.max(close[-52:]))
-            _c3.metric(
-                "52w High",
-                f"${high_52:,.2f}",
-                f"{(last_close / high_52 - 1) * 100:+.1f}%",
-            )
-        vol_20 = (
-            float(np.mean(data["Volume"].values[-20:]))
-            if "Volume" in data.columns and len(data) >= 20
-            else None
-        )
-        if vol_20:
-            _c4.metric("Avg Vol (20d)", f"{vol_20 / 1e6:.1f}M")
+
+        # Safe last close
+        try:
+            hist = data
+            _last_series = hist["Close"].dropna()
+            _last = float(_last_series.iloc[-1])
+            if not _last or _last != _last:  # nan check
+                raise ValueError
+            _c1.metric("Last Close", f"${_last:,.2f}", chg_str)
+        except Exception:
+            _c1.metric("Last Close", "N/A")
+
+        # Safe SMA20
+        try:
+            hist = data
+            _sma_vals = hist["Close"].dropna()
+            if len(_sma_vals) >= 20:
+                sma20_val = float(_sma_vals.tail(20).mean())
+                if sma20_val != sma20_val:  # nan check
+                    raise ValueError
+                _c2.metric(
+                    "SMA20",
+                    f"${sma20_val:,.2f}",
+                    f"{((_last / sma20_val) - 1) * 100:+.1f}%"
+                    if sma20_val > 0 else None,
+                )
+            else:
+                _c2.metric("SMA20", "N/A")
+        except Exception:
+            _c2.metric("SMA20", "N/A")
+
+        # Safe 52w High
+        try:
+            _ticker_obj = yf.Ticker(symbol)
+            _fi = _ticker_obj.fast_info
+            _52h = getattr(_fi, "year_high", None)
+            if _52h and _52h == _52h:  # not nan
+                _c3.metric("52w High", f"${_52h:,.2f}")
+            else:
+                # Fallback: compute from 1y history
+                _hist1y = _ticker_obj.history(period="1y", auto_adjust=True)
+                if not _hist1y.empty:
+                    _52h = float(_hist1y["High"].dropna().max())
+                    _c3.metric("52w High", f"${_52h:,.2f}")
+                else:
+                    _c3.metric("52w High", "N/A")
+        except Exception:
+            _c3.metric("52w High", "N/A")
+
+        # Safe Avg Vol (20d)
+        try:
+            hist = data
+            _vols = hist["Volume"].dropna()
+            if len(_vols) >= 20:
+                _avg_vol = float(_vols.tail(20).mean())
+                if _avg_vol != _avg_vol:  # nan check
+                    raise ValueError
+                if _avg_vol >= 1_000_000:
+                    _vol_str = f"{_avg_vol / 1_000_000:.1f}M"
+                elif _avg_vol >= 1_000:
+                    _vol_str = f"{_avg_vol / 1_000:.0f}K"
+                else:
+                    _vol_str = str(int(_avg_vol))
+                _c4.metric("Avg Vol (20d)", _vol_str)
+            else:
+                _c4.metric("Avg Vol (20d)", "N/A")
+        except Exception:
+            _c4.metric("Avg Vol (20d)", "N/A")

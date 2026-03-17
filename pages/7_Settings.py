@@ -71,3 +71,11 @@ with tab_admin:
         runpy.run_path(str(old_path), run_name="__main__")
     except Exception as e:
         st.caption(f"Feature unavailable: {e}")
+
+
+# Page Assistant
+try:
+    from ui.page_assistant import render_page_assistant
+    render_page_assistant("Settings")
+except Exception:
+    pass
