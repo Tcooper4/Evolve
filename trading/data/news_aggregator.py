@@ -8,8 +8,9 @@ All sources are optional — the aggregator uses whatever is available.
 import hashlib
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
+import email.utils
 
 from trading.utils.data_manager import disk_cache_get, disk_cache_set
 
@@ -295,6 +296,13 @@ def get_market_news(max_items: int = 15) -> List[Dict]:
     return _deduplicate(articles)[:max_items]
 
 
+def _parse_pub_date(pub_str: str):
+    try:
+        return email.utils.parsedate_to_datetime(pub_str)
+    except Exception:
+        return None
+
+
 def get_walter_bloomberg_headlines(max_items: int = 10) -> List[Dict]:
     """
     Fetch breaking financial headlines from Walter Bloomberg (@WalterBloomberg)
@@ -316,15 +324,60 @@ def get_walter_bloomberg_headlines(max_items: int = 10) -> List[Dict]:
                 continue
             items: List[Dict] = []
             for entry in feed.entries[:max_items]:
-                items.append({
-                    "title": entry.get("title", ""),
-                    "published": entry.get("published", ""),
-                    "source": "Walter Bloomberg",
-                    "link": entry.get("link", ""),
-                })
+                pub_date = _parse_pub_date(entry.get("published", ""))
+                if pub_date:
+                    now = datetime.now(timezone.utc)
+                    if (now - pub_date).days > 7:
+                        continue
+                items.append(
+                    {
+                        "title": entry.get("title", ""),
+                        "published": entry.get("published", ""),
+                        "source": "Walter Bloomberg",
+                        "link": entry.get("link", ""),
+                    }
+                )
             if items:
                 return items
         except Exception:
             continue
     return []
+
+
+FINANCIAL_RSS_FEEDS = [
+    "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+    "https://feeds.reuters.com/reuters/businessNews",
+    "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+]
+
+
+def get_financial_headlines(max_items: int = 10) -> List[Dict]:
+    try:
+        import feedparser
+
+        items: List[Dict] = []
+        for url in FINANCIAL_RSS_FEEDS:
+            try:
+                feed = feedparser.parse(url)
+                for entry in feed.entries[:max_items]:
+                    pub_date = _parse_pub_date(entry.get("published", ""))
+                    if pub_date:
+                        age = (datetime.now(timezone.utc) - pub_date).days
+                        if age > 7:
+                            continue
+                    items.append(
+                        {
+                            "title": entry.get("title", ""),
+                            "published": entry.get("published", ""),
+                            "source": "Financial News",
+                            "link": entry.get("link", ""),
+                        }
+                    )
+                if items:
+                    return items[:max_items]
+            except Exception:
+                continue
+        return items[:max_items] if items else []
+    except Exception:
+        return []
 

@@ -12,6 +12,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as _components
 from plotly.subplots import make_subplots
 
 from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
@@ -186,13 +187,23 @@ if st.session_state.get("_last_autoload_key") != _cache_key:
     except Exception:
         pass
 
+_st_ver = tuple(int(x) for x in st.__version__.split(".")[:2])
+
 # Chart using price_cache
-if period == "1d":
-    _interval = "5m"
-elif period == "5d":
-    _interval = "1h"
+if period in ("1d", "5d"):
+    _tf_options = ["1m", "5m", "15m", "30m", "1h"]
+    _tf_default = "5m" if period == "1d" else "30m"
+    _tf_label = st.radio(
+        "Intraday interval",
+        _tf_options,
+        index=_tf_options.index(_tf_default),
+        horizontal=True,
+        key="analyze_intraday_tf",
+    )
+    _interval = _tf_label
 else:
     _interval = "1d"
+
 hist = get_history(ticker, period=period, interval=_interval)
 if not hist.empty:
     try:
@@ -221,108 +232,331 @@ if not hist.empty:
             except Exception as e:
                 st.caption(f"News chart unavailable: {e}")
         else:
-            fig_chart = go.Figure()
-            if chart_type == "Candle":
-                fig_chart.add_trace(
-                    go.Candlestick(
-                        x=hist.index,
-                        open=hist["Open"],
-                        high=hist["High"],
-                        low=hist["Low"],
-                        close=hist["Close"],
-                        increasing_line_color="#26a69a",
-                        increasing_fillcolor="#26a69a",
-                        decreasing_line_color="#ef5350",
-                        decreasing_fillcolor="#ef5350",
-                        name=ticker,
-                    )
+            if period in ("1d", "5d"):
+                from plotly.subplots import make_subplots as _make_subplots
+
+                fig_chart = _make_subplots(
+                    rows=2,
+                    cols=1,
+                    shared_xaxes=True,
+                    vertical_spacing=0.03,
+                    row_heights=[0.75, 0.25],
                 )
-            elif chart_type == "Area":
-                fig_chart.add_trace(
-                    go.Scatter(
-                        x=hist.index,
-                        y=hist["Close"],
-                        fill="tozeroy",
-                        fillcolor="rgba(0,212,255,0.1)",
-                        line=dict(color="#00d4ff", width=2),
-                        name=ticker,
+                _intraday_mode = True
+            else:
+                fig_chart = go.Figure()
+                _intraday_mode = False
+
+            if _intraday_mode:
+                if chart_type == "Candle":
+                    fig_chart.add_trace(
+                        go.Candlestick(
+                            x=hist.index,
+                            open=hist["Open"],
+                            high=hist["High"],
+                            low=hist["Low"],
+                            close=hist["Close"],
+                            increasing_line_color="#26a69a",
+                            increasing_fillcolor="#26a69a",
+                            decreasing_line_color="#ef5350",
+                            decreasing_fillcolor="#ef5350",
+                            name=ticker,
+                            showlegend=False,
+                        ),
+                        row=1,
+                        col=1,
                     )
-                )
-            else:  # Line
-                fig_chart.add_trace(
-                    go.Scatter(
-                        x=hist.index,
-                        y=hist["Close"],
-                        mode="lines",
-                        line=dict(color="#00d4ff", width=2),
-                        name=ticker,
+                else:
+                    fig_chart.add_trace(
+                        go.Scatter(
+                            x=hist.index,
+                            y=hist["Close"],
+                            mode="lines",
+                            line=dict(color="#00d4ff", width=1.5),
+                            name=ticker,
+                            showlegend=False,
+                        ),
+                        row=1,
+                        col=1,
                     )
-                )
-            current = float(hist["Close"].iloc[-1])
-            fig_chart.add_hline(
-                y=current,
-                line_dash="dash",
-                line_color="#ef5350",
-                line_width=1,
-                annotation_text=f" ${current:.2f}",
-                annotation_position="right",
-                annotation_font_color="#ef5350",
-                annotation_font_size=11,
-            )
-            fig_chart.update_layout(
-                template="plotly_dark",
-                paper_bgcolor="#0a0e1a",
-                plot_bgcolor="#0f1525",
-                font=dict(
-                    family="'Courier New', monospace",
-                    color="#e0e6f0",
-                    size=11,
-                ),
-                title=dict(
-                    text=f"{ticker} — {period_label}",
-                    font=dict(color="#e0e6f0", size=14),
-                    x=0,
-                ),
-                xaxis=dict(
-                    title="Date",
-                    gridcolor="#1a2535",
-                    showgrid=True,
-                    zeroline=False,
-                    tickfont=dict(color="#4a6080", size=10),
-                    rangeslider=dict(visible=False),
-                    rangebreaks=[
-                        dict(bounds=["sat", "mon"]),
-                        dict(bounds=[16, 9.5], pattern="hour"),
+
+                # VWAP
+                try:
+                    _vwap = (
+                        (hist["Close"] * hist["Volume"]).cumsum()
+                        / hist["Volume"].cumsum()
+                    )
+                    fig_chart.add_trace(
+                        go.Scatter(
+                            x=hist.index,
+                            y=_vwap,
+                            mode="lines",
+                            line=dict(
+                                color="#ff9800",
+                                width=1,
+                                dash="dot",
+                            ),
+                            name="VWAP",
+                        ),
+                        row=1,
+                        col=1,
+                    )
+                except Exception:
+                    pass
+
+                # Volume bars
+                try:
+                    _vcols = [
+                        "#26a69a"
+                        if hist["Close"].iloc[i] >= hist["Open"].iloc[i]
+                        else "#ef5350"
+                        for i in range(len(hist))
                     ]
-                    if period in ("1d", "5d")
-                    else [
-                        dict(bounds=["sat", "mon"]),
-                    ],
-                ),
-                yaxis=dict(
-                    title="Price ($)",
-                    gridcolor="#1a2535",
-                    showgrid=True,
-                    zeroline=False,
-                    tickfont=dict(color="#4a6080", size=10),
-                    tickprefix="$",
-                    side="right",
-                ),
-                hovermode="x unified",
-                hoverlabel=dict(
-                    bgcolor="#0f1525",
-                    bordercolor="#1e2d45",
-                    font=dict(color="#e0e6f0", size=11),
-                ),
-                margin=dict(l=0, r=60, t=30, b=20),
-                height=380,
-                showlegend=False,
-            )
-            st.plotly_chart(
-                fig_chart,
-                use_container_width=True,
-                key="analyze_main_chart",
-            )
+                    fig_chart.add_trace(
+                        go.Bar(
+                            x=hist.index,
+                            y=hist["Volume"],
+                            marker_color=_vcols,
+                            name="Volume",
+                            showlegend=False,
+                        ),
+                        row=2,
+                        col=1,
+                    )
+                except Exception:
+                    pass
+
+                # Previous close
+                try:
+                    import yfinance as _yf2
+
+                    _prev = _yf2.Ticker(ticker).history(
+                        period="2d", interval="1d"
+                    )
+                    if len(_prev) >= 2:
+                        _pc = float(_prev["Close"].iloc[-2])
+                        fig_chart.add_hline(
+                            y=_pc,
+                            line_dash="dot",
+                            line_color="#4a6080",
+                            line_width=1,
+                            annotation_text="prev close",
+                            annotation_font_color="#4a6080",
+                            annotation_font_size=10,
+                            row=1,
+                            col=1,
+                        )
+                except Exception:
+                    pass
+
+                # Current price hline (intraday)
+                try:
+                    _current = float(hist["Close"].dropna().iloc[-1])
+                    if _current and _current == _current:
+                        fig_chart.add_hline(
+                            y=_current,
+                            line_dash="dash",
+                            line_color="#ef5350",
+                            line_width=1,
+                            annotation_text=f" ${_current:.2f}",
+                            annotation_position="right",
+                            annotation_font_color="#ef5350",
+                            annotation_font_size=11,
+                            row=1,
+                            col=1,
+                        )
+                except Exception:
+                    pass
+
+                fig_chart.update_layout(
+                    template="plotly_dark",
+                    paper_bgcolor="#0a0e1a",
+                    plot_bgcolor="#0f1525",
+                    font=dict(
+                        family="'Courier New',monospace",
+                        color="#e0e6f0",
+                        size=11,
+                    ),
+                    title=dict(
+                        text=f"{ticker} — {period_label} ({_tf_label})",
+                        font=dict(color="#e0e6f0", size=14),
+                        x=0,
+                    ),
+                    xaxis=dict(
+                        gridcolor="#1a2535",
+                        showgrid=True,
+                        zeroline=False,
+                        tickfont=dict(color="#4a6080", size=10),
+                        rangeslider=dict(visible=False),
+                        rangebreaks=[
+                            dict(bounds=["sat", "mon"]),
+                            dict(bounds=[16, 9.5], pattern="hour"),
+                        ],
+                    ),
+                    xaxis2=dict(
+                        gridcolor="#1a2535",
+                        showgrid=True,
+                        zeroline=False,
+                        tickfont=dict(color="#4a6080", size=10),
+                        rangebreaks=[
+                            dict(bounds=["sat", "mon"]),
+                            dict(bounds=[16, 9.5], pattern="hour"),
+                        ],
+                    ),
+                    yaxis=dict(
+                        gridcolor="#1a2535",
+                        showgrid=True,
+                        zeroline=False,
+                        tickfont=dict(color="#4a6080", size=10),
+                        tickprefix="$",
+                        side="right",
+                    ),
+                    yaxis2=dict(
+                        gridcolor="#1a2535",
+                        showgrid=False,
+                        zeroline=False,
+                        tickfont=dict(color="#4a6080", size=9),
+                        side="right",
+                    ),
+                    hovermode="x unified",
+                    hoverlabel=dict(
+                        bgcolor="#0f1525",
+                        bordercolor="#1e2d45",
+                        font=dict(color="#e0e6f0", size=11),
+                    ),
+                    margin=dict(l=0, r=60, t=30, b=20),
+                    height=450,
+                    showlegend=True,
+                    legend=dict(
+                        bgcolor="rgba(0,0,0,0)",
+                        font=dict(color="#4a6080", size=10),
+                        x=0,
+                        y=1.0,
+                    ),
+                )
+            else:
+                if chart_type == "Candle":
+                    fig_chart = go.Figure(
+                        data=[
+                            go.Candlestick(
+                                x=hist.index,
+                                open=hist["Open"],
+                                high=hist["High"],
+                                low=hist["Low"],
+                                close=hist["Close"],
+                                increasing_line_color="#26a69a",
+                                increasing_fillcolor="#26a69a",
+                                decreasing_line_color="#ef5350",
+                                decreasing_fillcolor="#ef5350",
+                                name=ticker,
+                            )
+                        ]
+                    )
+                elif chart_type == "Area":
+                    fig_chart = go.Figure(
+                        data=[
+                            go.Scatter(
+                                x=hist.index,
+                                y=hist["Close"],
+                                fill="tozeroy",
+                                fillcolor="rgba(0,212,255,0.1)",
+                                line=dict(color="#00d4ff", width=2),
+                                name=ticker,
+                            )
+                        ]
+                    )
+                else:  # Line
+                    fig_chart = go.Figure(
+                        data=[
+                            go.Scatter(
+                                x=hist.index,
+                                y=hist["Close"],
+                                mode="lines",
+                                line=dict(color="#00d4ff", width=2),
+                                name=ticker,
+                            )
+                        ]
+                    )
+                try:
+                    _current = float(hist["Close"].dropna().iloc[-1])
+                    if _current and _current == _current:
+                        fig_chart.add_hline(
+                            y=_current,
+                            line_dash="dash",
+                            line_color="#ef5350",
+                            line_width=1,
+                            annotation_text=f" ${_current:.2f}",
+                            annotation_position="right",
+                            annotation_font_color="#ef5350",
+                            annotation_font_size=11,
+                        )
+                except Exception:
+                    pass
+                fig_chart.update_layout(
+                    template="plotly_dark",
+                    paper_bgcolor="#0a0e1a",
+                    plot_bgcolor="#0f1525",
+                    font=dict(
+                        family="'Courier New', monospace",
+                        color="#e0e6f0",
+                        size=11,
+                    ),
+                    title=dict(
+                        text=f"{ticker} — {period_label}",
+                        font=dict(color="#e0e6f0", size=14),
+                        x=0,
+                    ),
+                    xaxis=dict(
+                        title="Date",
+                        gridcolor="#1a2535",
+                        showgrid=True,
+                        zeroline=False,
+                        tickfont=dict(color="#4a6080", size=10),
+                        rangeslider=dict(visible=False),
+                        rangebreaks=[
+                            dict(bounds=["sat", "mon"]),
+                            dict(bounds=[16, 9.5], pattern="hour"),
+                        ]
+                        if period in ("1d", "5d")
+                        else [dict(bounds=["sat", "mon"])],
+                    ),
+                    yaxis=dict(
+                        title="Price ($)",
+                        gridcolor="#1a2535",
+                        showgrid=True,
+                        zeroline=False,
+                        tickfont=dict(color="#4a6080", size=10),
+                        tickprefix="$",
+                        side="right",
+                    ),
+                    hovermode="x unified",
+                    hoverlabel=dict(
+                        bgcolor="#0f1525",
+                        bordercolor="#1e2d45",
+                        font=dict(color="#e0e6f0", size=11),
+                    ),
+                    margin=dict(l=0, r=60, t=30, b=20),
+                    height=380,
+                    showlegend=False,
+                )
+
+            if _st_ver >= (1, 37) and period in ("1d", "5d"):
+
+                @st.fragment(run_every=60)
+                def _live_chart():
+                    st.plotly_chart(
+                        fig_chart,
+                        use_container_width=True,
+                        key="analyze_main_chart",
+                    )
+
+                _live_chart()
+            else:
+                st.plotly_chart(
+                    fig_chart,
+                    use_container_width=True,
+                    key="analyze_main_chart",
+                )
         if trader_mode == "Short-term":
             try:
                 st.markdown("**Short-term Signals**")
@@ -509,6 +743,99 @@ def _news_sentiment_score(ticker: str) -> float:
         return 5.0
 
 
+def _generate_recommendation(
+    ticker,
+    ai_score_result,
+    forecast_result=None,
+    trader_mode="Short-term",
+):
+    try:
+        overall = ai_score_result.get("overall_score", 5.0)
+        tech = ai_score_result.get("technical_score", 5.0)
+        mom = ai_score_result.get("momentum_score", 5.0)
+        sent = ai_score_result.get("sentiment_score", 5.0)
+        fund = ai_score_result.get("fundamental_score", 5.0)
+
+        # Forecast direction
+        fc_direction = None
+        fc_target = None
+        if forecast_result:
+            fc = forecast_result.get("forecast", [])
+            if hasattr(fc, "__len__") and len(fc) > 0:
+                import numpy as np
+
+                fc_arr = np.asarray(fc)
+                if fc_arr.size > 0:
+                    last_val = float(fc_arr[-1])
+                    first_val = float(fc_arr[0])
+                    if last_val > first_val * 1.005:
+                        fc_direction = "up"
+                        fc_target = last_val
+                    elif last_val < first_val * 0.995:
+                        fc_direction = "down"
+                        fc_target = last_val
+                    else:
+                        fc_direction = "flat"
+
+        # Determine action
+        if trader_mode == "Short-term":
+            signal_score = tech * 0.45 + mom * 0.40 + sent * 0.15
+        else:
+            signal_score = fund * 0.45 + tech * 0.20 + mom * 0.20 + sent * 0.15
+
+        if signal_score >= 6.5:
+            if fc_direction == "up":
+                action = "BUY"
+                conviction = "HIGH"
+            else:
+                action = "BUY"
+                conviction = "MEDIUM"
+        elif signal_score <= 4.0:
+            if fc_direction == "down":
+                action = "SELL / AVOID"
+                conviction = "HIGH"
+            else:
+                action = "SELL / AVOID"
+                conviction = "MEDIUM"
+        else:
+            action = "HOLD / WATCH"
+            conviction = "LOW"
+
+        # Build reasons
+        reasons = []
+        if tech >= 7.0:
+            reasons.append(("pos", "Technical trend is strong"))
+        elif tech <= 4.0:
+            reasons.append(("neg", "Technical trend is weak"))
+        if mom >= 7.0:
+            reasons.append(("pos", "Momentum is accelerating"))
+        elif mom <= 4.0:
+            reasons.append(("neg", "Momentum is fading"))
+        if fc_direction == "up":
+            reasons.append(("pos", "Forecast models project upward move"))
+        elif fc_direction == "down":
+            reasons.append(("neg", "Forecast models project decline"))
+        if sent >= 6.5:
+            reasons.append(("pos", "News sentiment positive"))
+        elif sent <= 3.5:
+            reasons.append(("neg", "News sentiment negative"))
+        if fund <= 4.0 and trader_mode == "Long-term":
+            reasons.append(("neg", "Fundamentals weak for long-term entry"))
+        if not reasons:
+            reasons.append(("neu", "Signals are mixed — monitor closely"))
+
+        return {
+            "action": action,
+            "conviction": conviction,
+            "signal_score": round(signal_score, 1),
+            "fc_target": fc_target,
+            "fc_direction": fc_direction,
+            "reasons": reasons,
+        }
+    except Exception:
+        return None
+
+
 # News sentiment panel (HOT/POS/NEG/NEU labels)
 try:
     news_items = get_news(ticker)
@@ -556,7 +883,7 @@ except Exception as e:
 st.markdown("---")
 
 # Create tabbed interface
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_insider, tab_earnings, tab_diag = st.tabs(
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_options, tab_insider, tab_earnings, tab_diag = st.tabs(
     [
         "🚀 Quick Forecast",
         "⚙️ Advanced Forecasting",
@@ -565,6 +892,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_insider, tab_earnings, tab_diag = 
         "📈 Market Analysis",
         "🔗 Multi-Asset (GNN)",
         "🎲 Monte Carlo",
+        "📊 Options & Short",
         "🕵️ Insider Flow",
         "📅 Earnings",
         "📐 Diagnostics",
@@ -781,10 +1109,10 @@ with tab1:
                 if "volume" in _hist.columns and "Volume" not in _hist.columns:
                     _hist = _hist.rename(columns={"volume": "Volume"})
                 with st.spinner("Computing AI Score..."):
-                    ai_score = compute_ai_score(_sym, _hist)
-                if ai_score.get("error") is None:
-                    score = ai_score["overall_score"]
-                    grade = ai_score["grade"]
+                    score_result = compute_ai_score(_sym, _hist)
+                if score_result.get("error") is None:
+                    score = score_result["overall_score"]
+                    grade = score_result["grade"]
 
                     # Trader-mode-specific display weights
                     if trader_mode == "Short-term":
@@ -805,10 +1133,10 @@ with tab1:
                         mode_label = "Long-term weights"
 
                     component_scores = {
-                        "technical": ai_score.get("technical_score", 0),
-                        "momentum": ai_score.get("momentum_score", 0),
-                        "sentiment": ai_score.get("sentiment_score", 0),
-                        "fundamental": ai_score.get("fundamental_score", 0),
+                        "technical": score_result.get("technical_score", 0),
+                        "momentum": score_result.get("momentum_score", 0),
+                        "sentiment": score_result.get("sentiment_score", 0),
+                        "fundamental": score_result.get("fundamental_score", 0),
                     }
                     weighted_score = sum(
                         component_scores[k] * display_weights[k] for k in display_weights
@@ -817,7 +1145,7 @@ with tab1:
 
                     # Show mode impact clearly (diff vs base score)
                     try:
-                        base_score = float(ai_score.get("overall_score", 0) or 0)
+                        base_score = float(score_result.get("overall_score", 0) or 0)
                         diff = round(weighted_score - base_score, 1)
                         diff_str = (
                             f"+{diff}" if diff > 0
@@ -891,9 +1219,9 @@ with tab1:
                         with cols_row[2]:
                             st.markdown(f"{val:.1f}  ({pct}%)")
 
-                    st.caption(ai_score["summary"])
+                    st.caption(score_result["summary"])
                     with st.expander("What drives this score?", expanded=False):
-                        signals = ai_score.get("signals", [])
+                        signals = score_result.get("signals", [])
                         if signals:
                             by_impact = sorted(
                                 signals,
@@ -910,7 +1238,7 @@ with tab1:
                         else:
                             st.caption("No signal breakdown available.")
                     with st.expander("📊 Signal Breakdown", expanded=False):
-                        signals = ai_score.get("signals", [])
+                        signals = score_result.get("signals", [])
                         if signals:
                             sig_df = pd.DataFrame(
                                 signals
@@ -937,6 +1265,134 @@ with tab1:
                                 st.dataframe(styler, use_container_width=True)
                             except Exception:
                                 st.dataframe(sig_df, use_container_width=True)
+                    # Recommendation panel
+                    try:
+                        _rec = _generate_recommendation(
+                            ticker,
+                            score_result,
+                            st.session_state.get("current_forecast_result"),
+                            trader_mode,
+                        )
+                        if _rec:
+                            _action = _rec["action"]
+                            _conv = _rec["conviction"]
+                            _score = _rec["signal_score"]
+                            _color = (
+                                "#26a69a"
+                                if "BUY" in _action
+                                else "#ef5350"
+                                if "SELL" in _action
+                                else "#ff9800"
+                            )
+                            _reasons_html = ""
+                            for _s, _t2 in _rec["reasons"]:
+                                _icon = (
+                                    "+"
+                                    if _s == "pos"
+                                    else "-"
+                                    if _s == "neg"
+                                    else "~"
+                                )
+                                _rc = (
+                                    "#26a60a"
+                                    if _s == "pos"
+                                    else "#ef5350"
+                                    if _s == "neg"
+                                    else "#8899aa"
+                                )
+                                _reasons_html += (
+                                    f'<div style="display:flex;gap:10px;'
+                                    f'margin-bottom:6px">'
+                                    f'<span style="color:{_rc};'
+                                    f'font-family:monospace;font-weight:bold;'
+                                    f'min-width:14px">{_icon}</span>'
+                                    f'<span style="color:#c8d4e0;'
+                                    f'font-size:13px">{_t2}</span></div>'
+                                )
+                            _mh = ""
+                            if _rec.get("fc_target"):
+                                _cur2 = get_quote(ticker).get("price", 0)
+                                if _cur2 and _cur2 > 0:
+                                    _pct2 = (
+                                        (_rec["fc_target"] / _cur2) - 1
+                                    ) * 100
+                                    _stop2 = _cur2 * 0.98
+                                    _rr2 = abs(_pct2) / 2.0
+                                    _tc2 = (
+                                        "#26a69a"
+                                        if _pct2 > 0
+                                        else "#ef5350"
+                                    )
+                                    _mh = (
+                                        f'<div style="display:grid;'
+                                        f'grid-template-columns:repeat(3,1fr);'
+                                        f'gap:1px;background:#1e2d45;'
+                                        f'border-radius:4px;overflow:hidden;'
+                                        f'margin-top:10px">'
+                                        f'<div style="background:#0f1525;'
+                                        f'padding:10px 14px">'
+                                        f'<div style="font-size:10px;'
+                                        f'color:#4a6080;'
+                                        f'letter-spacing:1px;'
+                                        f'margin-bottom:3px">'
+                                        f'ENTRY</div>'
+                                        f'<div style="font-size:15px;'
+                                        f'font-weight:bold;'
+                                        f'color:#e0e6f0">'
+                                        f'${_cur2:.2f}</div></div>'
+                                        f'<div style="background:#0f1525;'
+                                        f'padding:10px 14px">'
+                                        f'<div style="font-size:10px;'
+                                        f'color:#4a6080;'
+                                        f'letter-spacing:1px;'
+                                        f'margin-bottom:3px">'
+                                        f'TARGET</div>'
+                                        f'<div style="font-size:15px;'
+                                        f'font-weight:bold;'
+                                        f'color:{_tc2}">'
+                                        f'${_rec["fc_target"]:.2f}</div>'
+                                        f'<div style="font-size:11px;'
+                                        f'color:{_tc2}">'
+                                        f'{_pct2:+.1f}%</div></div>'
+                                        f'<div style="background:#0f1525;'
+                                        f'padding:10px 14px">'
+                                        f'<div style="font-size:10px;'
+                                        f'color:#4a6080;'
+                                        f'letter-spacing:1px;'
+                                        f'margin-bottom:3px">'
+                                        f'STOP</div>'
+                                        f'<div style="font-size:15px;'
+                                        f'font-weight:bold;'
+                                        f'color:#ef5350">'
+                                        f'${_stop2:.2f}</div>'
+                                        f'<div style="font-size:11px;'
+                                        f'color:#ef5350">'
+                                        f'-2.0% · R/R {_rr2:.1f}:1</div>'
+                                        f'</div></div>'
+                                    )
+                            _components.html(
+                                f'<div style="background:#0a0e1a;border:1px solid '
+                                f'#1e2d45;border-radius:6px;overflow:hidden;'
+                                f'font-family:Courier New,monospace;'
+                                f'margin:4px 0">'
+                                f'<div style="padding:10px 16px;border-bottom:'
+                                f'1px solid #1e2d45;display:flex;align-items:'
+                                f'center;gap:14px">'
+                                f'<span style="font-size:18px;font-weight:bold;'
+                                f'color:{_color}">{_action}</span>'
+                                f'<span style="font-size:11px;color:#4a6080;'
+                                f'background:#0f1525;padding:2px 8px;border:1px '
+                                f'solid #1e2d45;border-radius:3px">'
+                                f'{_conv} conviction</span>'
+                                f'<span style="font-size:11px;color:#4a6080;'
+                                f'margin-left:auto">score {_score}/10</span>'
+                                f'</div>'
+                                f'<div style="padding:10px 16px">{_reasons_html}'
+                                f'</div>{_mh}</div>',
+                                height=260 if _mh else 160,
+                            )
+                    except Exception as _re:
+                        st.caption(f"Recommendation unavailable: {_re}")
         except Exception as _e:
             st.caption(f"AI Score unavailable: {_e}")
 
@@ -1413,33 +1869,6 @@ with tab1:
                 hist_data_cons = st.session_state.get("forecast_data")
                 if hist_data_cons is not None and len(hist_data_cons) >= 2:
                     from trading.models.forecast_router import ForecastRouter
-
-                    # Patch ForecastRouter.get_forecast locally to avoid the
-                    # undefined 'config' reference in the original implementation.
-                    def _patched_get_forecast(
-                        self,
-                        data: pd.DataFrame,
-                        horizon: int = 30,
-                        model_type: Optional[str] = None,
-                        run_walk_forward: bool = True,
-                        **kwargs,
-                    ) -> Dict[str, Any]:
-                        return ForecastRouter.get_forecast.__wrapped__(  # type: ignore[attr-defined]
-                            self,
-                            data=data,
-                            horizon=horizon,
-                            model_type=model_type,
-                            run_walk_forward=run_walk_forward,
-                            **kwargs,
-                        )
-
-                    # If the router implementation exposes a safe base via __wrapped__,
-                    # switch to it; otherwise fall back to the current method.
-                    try:
-                        if hasattr(ForecastRouter.get_forecast, "__wrapped__"):
-                            ForecastRouter.get_forecast = _patched_get_forecast  # type: ignore[assignment]
-                    except Exception:
-                        pass
 
                     router = ForecastRouter()
                     horizon = st.session_state.get("forecast_horizon", 7)
@@ -3577,6 +4006,195 @@ with tab7:
         st.error(f"Tab error: {type(e).__name__}: {e}")
         import traceback
         st.code(traceback.format_exc(), language="python")
+
+with tab_options:
+    st.subheader("Options & Short Data")
+
+    try:
+        import yfinance as yf
+
+        _t = yf.Ticker(ticker)
+        _info = _t.info
+
+        # Short data
+        _short_pct = _info.get("shortPercentOfFloat", 0) or 0
+        _short_ratio = _info.get("shortRatio", 0) or 0
+
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.metric(
+                "Short float %",
+                f"{_short_pct * 100:.1f}%",
+                help="% of float sold short. >20% = high short interest",
+            )
+        with c2:
+            st.metric(
+                "Days to cover",
+                f"{_short_ratio:.1f}",
+                help=(
+                    "Days to cover short positions at avg volume. "
+                    ">5 = squeeze potential"
+                ),
+            )
+        with c3:
+            _pc_key = f"put_call_{ticker}"
+            _pc_val = st.session_state.get(_pc_key)
+            if _pc_val is not None:
+                st.metric(
+                    "Put/call ratio",
+                    f"{_pc_val:.2f}",
+                    help=">1 bearish, <1 bullish",
+                )
+            else:
+                st.metric(
+                    "Put/call ratio",
+                    "Load chain →",
+                    help=(
+                        "Load options chain below "
+                        "to calculate"
+                    ),
+                )
+
+        st.markdown("---")
+
+        # Options chain
+        if "options_loaded_" + ticker not in st.session_state:
+            if st.button("Load options chain", key="load_options_btn"):
+                st.session_state["options_loaded_" + ticker] = True
+            else:
+                st.caption("Click to load live options data.")
+                st.stop()
+
+        _expiries = _t.options
+        if _expiries:
+            _sel_exp = st.selectbox(
+                "Expiry date",
+                _expiries[:8],
+                key="options_expiry",
+            )
+            _cache_key = f"options_chain_{ticker}_{_sel_exp}"
+            if _cache_key not in st.session_state:
+                try:
+                    import threading as _threading
+
+                    _result = [None]
+
+                    def _fetch_chain() -> None:
+                        try:
+                            _result[0] = _t.option_chain(_sel_exp)
+                        except Exception:
+                            pass
+
+                    _th = _threading.Thread(target=_fetch_chain)
+                    _th.start()
+                    _th.join(timeout=8)
+                    if _result[0] is not None:
+                        st.session_state[_cache_key] = _result[0]
+                except Exception:
+                    pass
+
+            _chain = st.session_state.get(_cache_key)
+            if _chain is None:
+                st.warning("Options chain timed out. Try again.")
+                st.stop()
+            _calls = _chain.calls
+            _puts = _chain.puts
+
+            # Put/call ratio from volumes (persist in session_state)
+            try:
+                _cv = float(_chain.calls["volume"].fillna(0).sum())
+                _pv = float(_chain.puts["volume"].fillna(0).sum())
+                _pc = round(_pv / _cv, 2) if _cv > 0 else None
+                if _pc is not None:
+                    st.session_state[f"put_call_{ticker}"] = _pc
+            except Exception:
+                pass
+
+            # IV rank approximation
+            # Use ATM options (closest to current price) for IV calculation
+            _cur_price = get_quote(ticker).get("price", 0)
+            if _cur_price and not _calls.empty:
+                _calls = _calls.copy()
+                _puts = _puts.copy()
+                _calls["dist"] = abs(_calls["strike"] - _cur_price)
+                _atm_iv = float(
+                    _calls.nsmallest(5, "dist")["impliedVolatility"].mean()
+                )
+                # Simple IV rank: compare to typical range (annualized)
+                _iv_pct = min(100, _atm_iv * 100)
+                _iv_color = (
+                    "#ef5350"
+                    if _iv_pct > 50
+                    else "#ff9800"
+                    if _iv_pct > 30
+                    else "#26a69a"
+                )
+                st.markdown(
+                    "**ATM IV (approx):** "
+                    f'<span style="color:{_iv_color};font-weight:bold">'
+                    f"{_iv_pct:.1f}%</span> annualized",
+                    unsafe_allow_html=True,
+                )
+
+            col_opt1, col_opt2 = st.columns(2)
+            with col_opt1:
+                st.markdown("**Calls**")
+                _c_display = _calls[
+                    [
+                        "strike",
+                        "lastPrice",
+                        "impliedVolatility",
+                        "volume",
+                        "openInterest",
+                        "inTheMoney",
+                    ]
+                ].copy()
+                _c_display.columns = [
+                    "Strike",
+                    "Last",
+                    "IV",
+                    "Vol",
+                    "OI",
+                    "ITM",
+                ]
+                _c_display["IV"] = (_c_display["IV"] * 100).round(1).astype(str) + "%"
+                st.dataframe(
+                    _c_display,
+                    use_container_width=True,
+                    height=300,
+                    key="options_calls_table",
+                )
+            with col_opt2:
+                st.markdown("**Puts**")
+                _p_display = _puts[
+                    [
+                        "strike",
+                        "lastPrice",
+                        "impliedVolatility",
+                        "volume",
+                        "openInterest",
+                        "inTheMoney",
+                    ]
+                ].copy()
+                _p_display.columns = [
+                    "Strike",
+                    "Last",
+                    "IV",
+                    "Vol",
+                    "OI",
+                    "ITM",
+                ]
+                _p_display["IV"] = (_p_display["IV"] * 100).round(1).astype(str) + "%"
+                st.dataframe(
+                    _p_display,
+                    use_container_width=True,
+                    height=300,
+                    key="options_puts_table",
+                )
+        else:
+            st.info("No options data available for " + ticker)
+    except Exception as _oe:
+        st.caption(f"Options data unavailable: {_oe}")
 
 with tab_insider:
     try:

@@ -126,6 +126,80 @@ def inject_theme() -> None:
     border: 1px solid #1e2d45 !important;
 }
 
+/* Force dark on all form elements */
+.stSelectbox > div > div,
+.stMultiSelect > div > div,
+.stNumberInput > div > div > input,
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea {
+    background-color: #0f1525 !important;
+    color: #e0e6f0 !important;
+    border-color: #1e2d45 !important;
+}
+
+/* Force dark on all containers and columns */
+[data-testid="stVerticalBlock"],
+[data-testid="stHorizontalBlock"],
+[data-testid="column"] {
+    background-color: transparent !important;
+}
+
+/* Force dark on form submit buttons */
+.stFormSubmitButton > button,
+[data-testid="baseButton-secondary"],
+[data-testid="baseButton-primary"] {
+    background-color: #0f1525 !important;
+    color: #e0e6f0 !important;
+    border: 1px solid #1e2d45 !important;
+}
+
+/* Force dark on all markdown text */
+.stMarkdown, .stMarkdown p,
+.stMarkdown h1, .stMarkdown h2,
+.stMarkdown h3, .stMarkdown li {
+    color: #e0e6f0 !important;
+}
+
+/* Force dark on all tables */
+.stDataFrame, .dataframe,
+[data-testid="stTable"] {
+    background-color: #0f1525 !important;
+    color: #e0e6f0 !important;
+}
+
+/* Force dark on tab panels */
+[data-testid="stTabContent"] {
+    background-color: #0a0e1a !important;
+}
+
+/* Force dark on all form containers */
+[data-testid="stForm"] {
+    background-color: #0f1525 !important;
+    border: 1px solid #1e2d45 !important;
+    border-radius: 4px !important;
+    padding: 1rem !important;
+}
+
+/* Force dark on number and text inputs */
+input[type="number"], input[type="text"] {
+    background-color: #0f1525 !important;
+    color: #e0e6f0 !important;
+}
+
+/* Radio and checkbox labels */
+.stRadio label, .stCheckbox label {
+    color: #e0e6f0 !important;
+}
+
+/* Selectbox dropdown options */
+[data-baseweb="popover"] {
+    background-color: #0f1525 !important;
+}
+[data-baseweb="option"] {
+    background-color: #0f1525 !important;
+    color: #e0e6f0 !important;
+}
+
 /* Hide Streamlit branding */
 #MainMenu { visibility: hidden !important; }
 footer { visibility: hidden !important; }

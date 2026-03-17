@@ -99,6 +99,19 @@ def _load_universe(name: str, fallback: list) -> list:
     return fallback
 
 
+def _get_short_float(ticker: str) -> str:
+    try:
+        import yfinance as yf
+
+        info = yf.Ticker(ticker).info
+        pct = info.get("shortPercentOfFloat", None)
+        if pct is None:
+            return "N/A"
+        return f"{pct * 100:.1f}%"
+    except Exception:
+        return "N/A"
+
+
 @st.cache_data(ttl=86400)
 def _load_scanner_universe(universe_label: str) -> list:
     universe_label = (universe_label or "").strip()
@@ -247,11 +260,14 @@ def _scanner_table():
         st.info("No stocks passed the selected filters. Try relaxing criteria.")
         return
 
-    # News Score column
+    # News Score and Short Float columns
     for r in results:
         label, color = _news_score(r.get("symbol", ""))
         r["news_score"] = label
         r["_news_color"] = color
+        sym = r.get("symbol")
+        if sym and "short_float" not in r:
+            r["short_float"] = _get_short_float(sym)
 
     df = pd.DataFrame(results)
 
@@ -276,12 +292,21 @@ def _scanner_table():
     elif current_filter == "News Surge":
         df = df[df.get("news_score", "") == "HOT"] if "news_score" in df.columns else df
 
-    df_display = df.rename(columns={
-        "symbol": "Symbol", "price": "Price", "change_20d": "20d Chg%",
-        "rsi": "RSI", "vs_sma20": "vs SMA20%", "pct_from_52w_high": "vs 52w High%",
-        "volume_ratio": "Vol Ratio", "ai_score": "AI Score", "ai_grade": "Grade",
-        "news_score": "News",
-    })
+    df_display = df.rename(
+        columns={
+            "symbol": "Symbol",
+            "price": "Price",
+            "change_20d": "20d Chg%",
+            "rsi": "RSI",
+            "vs_sma20": "vs SMA20%",
+            "pct_from_52w_high": "vs 52w High%",
+            "volume_ratio": "Vol Ratio",
+            "ai_score": "AI Score",
+            "ai_grade": "Grade",
+            "news_score": "News",
+            "short_float": "Short Float",
+        }
+    )
     if "News" not in df_display.columns and "news_score" in df.columns:
         df_display["News"] = df["news_score"]
 

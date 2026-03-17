@@ -1,7 +1,15 @@
 {
     "model_strategy_patterns": {
         "neutral": {
-            "timestamp": "2026-03-17T01:59:01.800704",
+            "timestamp": "2026-03-17T14:08:53.506845",
+            "model_confidences": {
+                "Ridge": 1.0,
+                "XGBoost": 1.0
+            },
+            "best_model": "Ridge"
+        },
+        "bear": {
+            "timestamp": "2026-03-17T10:29:29.108583",
             "model_confidences": {
                 "Ridge": 1.0,
                 "XGBoost": 1.0

@@ -21,7 +21,7 @@ from trading.market.market_analyzer import MarketAnalyzer
 from trading.utils.safe_math import safe_divide
 
 # P2 fix: Canonical order enums
-from execution.models import OrderStatus, OrderType
+from trading.execution.models import OrderStatus, OrderType
 
 
 class FillType(str, Enum):

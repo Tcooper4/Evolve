@@ -483,10 +483,21 @@ if _st_ver >= (1, 37):
                         st.info("No additional volume events detected")
         st.markdown("---")
         try:
-            from trading.data.news_aggregator import get_walter_bloomberg_headlines
+            from trading.data.news_aggregator import (
+                get_walter_bloomberg_headlines,
+                get_financial_headlines,
+            )
             wb_news = get_walter_bloomberg_headlines(5)
+            if not wb_news:
+                try:
+                    wb_news = get_financial_headlines(5)
+                    _wb_title = "Breaking — Financial News"
+                except Exception:
+                    _wb_title = "Breaking — Walter Bloomberg"
+            else:
+                _wb_title = "Breaking — Walter Bloomberg"
             if wb_news:
-                st.markdown("**Breaking — Walter Bloomberg**")
+                st.markdown(f"**{_wb_title}**")
                 for item in wb_news:
                     st.markdown(f"- {item.get('title', '')[:100]}")
         except Exception:
@@ -520,10 +531,21 @@ else:
                     st.info("No additional volume events detected")
     st.markdown("---")
     try:
-        from trading.data.news_aggregator import get_walter_bloomberg_headlines
+        from trading.data.news_aggregator import (
+            get_walter_bloomberg_headlines,
+            get_financial_headlines,
+        )
         wb_news = get_walter_bloomberg_headlines(5)
+        if not wb_news:
+            try:
+                wb_news = get_financial_headlines(5)
+                _wb_title = "Breaking — Financial News"
+            except Exception:
+                _wb_title = "Breaking — Walter Bloomberg"
+        else:
+            _wb_title = "Breaking — Walter Bloomberg"
         if wb_news:
-            st.markdown("**Breaking — Walter Bloomberg**")
+            st.markdown(f"**{_wb_title}**")
             for item in wb_news:
                 st.markdown(f"- {item.get('title', '')[:100]}")
     except Exception:

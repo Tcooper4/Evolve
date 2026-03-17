@@ -171,14 +171,17 @@ def _render_ohlc_panel(
     if len(close) >= 2:
         _c1, _c2, _c3, _c4 = st.columns(4)
 
+        _last_val = None
+
         # Safe last close
         try:
             hist = data
             _last_series = hist["Close"].dropna()
-            _last = float(_last_series.iloc[-1])
-            if not _last or _last != _last:  # nan check
+            _last_val = float(_last_series.iloc[-1])
+            # NaN check only; allow legitimate zero prices if they ever occur
+            if _last_val != _last_val:
                 raise ValueError
-            _c1.metric("Last Close", f"${_last:,.2f}", chg_str)
+            _c1.metric("Last Close", f"${_last_val:,.2f}", chg_str)
         except Exception:
             _c1.metric("Last Close", "N/A")
 
@@ -190,11 +193,13 @@ def _render_ohlc_panel(
                 sma20_val = float(_sma_vals.tail(20).mean())
                 if sma20_val != sma20_val:  # nan check
                     raise ValueError
+                delta_str = None
+                if _last_val is not None and sma20_val > 0:
+                    delta_str = f"{((_last_val / sma20_val) - 1) * 100:+.1f}%"
                 _c2.metric(
                     "SMA20",
                     f"${sma20_val:,.2f}",
-                    f"{((_last / sma20_val) - 1) * 100:+.1f}%"
-                    if sma20_val > 0 else None,
+                    delta_str,
                 )
             else:
                 _c2.metric("SMA20", "N/A")
