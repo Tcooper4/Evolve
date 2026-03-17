@@ -357,7 +357,7 @@ def create_forecast_table(forecast_data: Dict[str, Any]) -> Dict[str, Any]:
             df[col] = df[col].round(2)
 
         # Display table
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
 
         return {
             "status": "success",
@@ -483,7 +483,7 @@ def render_forecast_results(
                 show_benchmark=False
             )
             fig.update_layout(title=f"{symbol} Forecast")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         
         # Show table
         if show_table:
@@ -571,7 +571,7 @@ def render_model_comparison(comparison_results: Dict[str, Any]) -> None:
                 })
             
             comparison_df = pd.DataFrame(models_data)
-            st.dataframe(comparison_df, use_container_width=True)
+            st.dataframe(comparison_df, width='stretch')
             
             # Show best model
             if 'best_model' in comparison_results:

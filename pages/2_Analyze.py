@@ -771,7 +771,7 @@ if not hist.empty:
 
                     st.plotly_chart(
                         _fig,
-                        use_container_width=True,
+                        width='stretch',
                         key="analyze_main_chart_live",
                     )
 
@@ -932,7 +932,7 @@ if not hist.empty:
 
                 st.plotly_chart(
                     fig_chart,
-                    use_container_width=True,
+                    width='stretch',
                     key="analyze_main_chart",
                 )
         if trader_mode == "Short-term":
@@ -1662,9 +1662,9 @@ with tab1:
                                 styler = sig_df.style.applymap(
                                     _color_impact, subset=["Impact"]
                                 )
-                                st.dataframe(styler, use_container_width=True)
+                                st.dataframe(styler, width='stretch')
                             except Exception:
-                                st.dataframe(sig_df, use_container_width=True)
+                                st.dataframe(sig_df, width='stretch')
                     # Recommendation panel
                     try:
                         _rec = _generate_recommendation(
@@ -1837,7 +1837,7 @@ with tab1:
                     height=400
                 )
             
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         except ImportError:
             # Fallback to basic chart
             fig = go.Figure()
@@ -1855,7 +1855,7 @@ with tab1:
                 hovermode='x unified',
                 height=400
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         
         # Data table (expandable)
         with st.expander("📋 View Full Data"):
@@ -2405,7 +2405,7 @@ with tab1:
                                 )
                                 st.dataframe(
                                     targets_df,
-                                    use_container_width=True,
+                                    width='stretch',
                                     hide_index=True,
                                 )
 
@@ -2545,7 +2545,7 @@ with tab1:
                         confidence_intervals=confidence_intervals,
                         title=f"{st.session_state.symbol} - Historical & Forecast"
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                     
                     # Forecast table (format dates as YYYY-MM-DD, no timezone)
                     st.markdown("**Forecast Values:**")
@@ -2560,7 +2560,7 @@ with tab1:
                     display_df['forecast'] = display_df['forecast'].apply(
                         lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
                     )
-                    st.dataframe(display_df, use_container_width=True)
+                    st.dataframe(display_df, width='stretch')
                 
                 # Download button
                 csv = forecast_df.to_csv()
@@ -2792,7 +2792,7 @@ with tab2:
                         if scores is not None and len(scores) > 0:
                             import pandas as pd
                             tab_df = pd.DataFrame(scores)
-                            st.dataframe(tab_df, use_container_width=True)
+                            st.dataframe(tab_df, width='stretch')
             except Exception as e:
                 st.warning(f"⚠️ Could not load model registry: {e}. Using default models.")
                 model_type = st.selectbox(
@@ -3757,7 +3757,7 @@ with tab3:
                     _progress.empty()
                     if _comparison_rows:
                         _df = pd.DataFrame(_comparison_rows)
-                        st.dataframe(_df, use_container_width=True)
+                        st.dataframe(_df, width='stretch')
                         _working = sum(
                             1 for r in _comparison_rows if r["Status"] == "✅"
                         )
@@ -3874,7 +3874,7 @@ with tab4:
                     yaxis_title="Price ($)",
                     height=450,
                 )
-                st.plotly_chart(_fig, use_container_width=True)
+                st.plotly_chart(_fig, width='stretch')
     except Exception as e:
         st.error(f"Tab error: {type(e).__name__}: {e}")
         import traceback
@@ -3928,7 +3928,7 @@ with tab5:
                             yaxis=dict(range=[-1, 1]),
                             margin=dict(l=20, r=20, t=20, b=20),
                         )
-                        st.plotly_chart(_fig_corr, use_container_width=True)
+                        st.plotly_chart(_fig_corr, width='stretch')
                         _current_corr = float(_rolling_corr.iloc[-1])
                         st.caption(
                             f"Current 60d correlation with SPY: {_current_corr:.2f}"
@@ -4054,7 +4054,7 @@ with tab6:
             )
         
         # Load multi-asset data
-        if st.button("📥 Load Multi-Asset Data", type="primary", use_container_width=True):
+        if st.button("📥 Load Multi-Asset Data", type="primary", width='stretch'):
             if len(tickers) < 3:
                 st.error("Please select at least 3 assets")
             elif len(tickers) > 20:
@@ -4164,7 +4164,7 @@ with tab6:
                 help="GNN will forecast this asset using all connected assets"
             )
             
-            if st.button("🔮 Train GNN & Generate Forecast", type="primary", use_container_width=True):
+            if st.button("🔮 Train GNN & Generate Forecast", type="primary", width='stretch'):
                 try:
                     # Type guards: ensure scalars (sliders can sometimes be dict in edge cases)
                     _gnn_epochs = gnn_epochs
@@ -4411,7 +4411,7 @@ with tab7:
                         xaxis_title="Days",
                         yaxis_title="Price ($)",
                     )
-                    st.plotly_chart(_fig, use_container_width=True)
+                    st.plotly_chart(_fig, width='stretch')
 
                     _c1, _c2, _c3, _c4, _c5 = st.columns(5)
                     _c1.metric(
@@ -4609,7 +4609,7 @@ with tab_options:
                 _c_display["IV"] = (_c_display["IV"] * 100).round(1).astype(str) + "%"
                 st.dataframe(
                     _c_display,
-                    use_container_width=True,
+                    width='stretch',
                     height=300,
                     key="options_calls_table",
                 )
@@ -4636,7 +4636,7 @@ with tab_options:
                 _p_display["IV"] = (_p_display["IV"] * 100).round(1).astype(str) + "%"
                 st.dataframe(
                     _p_display,
-                    use_container_width=True,
+                    width='stretch',
                     height=300,
                     key="options_puts_table",
                 )
@@ -4682,7 +4682,7 @@ with tab_insider:
                         "is_buy",
                     ]
                 ]
-                st.dataframe(df_txn, use_container_width=True)
+                st.dataframe(df_txn, width='stretch')
             else:
                 st.info("No insider transactions found in the last 90 days.")
     except Exception as e:
@@ -4750,7 +4750,7 @@ with tab_earnings:
                     yaxis_title="1-Day Price Change (%)",
                     height=350,
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
                 with st.expander("Historical earnings detail"):
                     st.dataframe(
@@ -4765,7 +4765,7 @@ with tab_earnings:
                                 "move_5d",
                             ]
                         ],
-                        use_container_width=True,
+                        width='stretch',
                     )
     except Exception as e:
         st.error(f"Earnings tab error: {type(e).__name__}: {e}")

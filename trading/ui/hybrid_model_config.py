@@ -257,7 +257,7 @@ def _create_weighting_comparison_chart(metric_results: Dict[str, Dict[str, float
         barmode="group",
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def render_model_performance_dashboard(hybrid_model: HybridModel):
@@ -294,7 +294,7 @@ def render_model_performance_dashboard(hybrid_model: HybridModel):
         import pandas as pd
 
         df = pd.DataFrame(performance_data)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
 
         # Create performance visualization
         _create_performance_visualization(summary)
@@ -340,12 +340,12 @@ def _create_performance_visualization(summary: Dict[str, Any]):
         title="Model Performance Comparison",
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     # Create weight distribution chart
     fig2 = px.pie(df, values="Weight", names="Model", title="Current Model Weights")
 
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig2, width='stretch')
 
 
 def _validate_hybrid_config(config: Dict[str, Any], method: str):

@@ -51,6 +51,7 @@ tab_exec, tab_pos, tab_hist, tab_risk = st.tabs(["Execute", "Positions", "Histor
 with tab_exec:
     st.subheader("Execute")
     try:
+        # TODO S44: inline this (2809 lines)
         old_path = project_root / "scripts" / "old_4_Trade_Execution.py"
         runpy.run_path(str(old_path), run_name="__main__")
     except Exception as e:
@@ -88,6 +89,7 @@ with tab_exec:
 with tab_pos:
     st.subheader("Positions")
     try:
+        # TODO S44: inline this (2700 lines)
         old_path = project_root / "scripts" / "old_5_Portfolio.py"
         runpy.run_path(str(old_path), run_name="__main__")
     except Exception as e:
@@ -96,6 +98,7 @@ with tab_pos:
 with tab_hist:
     st.subheader("History")
     try:
+        # TODO S44: inline this (3033 lines)
         old_path = project_root / "scripts" / "old_7_Performance.py"
         runpy.run_path(str(old_path), run_name="__main__")
     except Exception as e:
@@ -104,6 +107,7 @@ with tab_hist:
 with tab_risk:
     st.subheader("Risk")
     try:
+        # TODO S44: inline this (2779 lines)
         old_path = project_root / "scripts" / "old_6_Risk_Management.py"
         runpy.run_path(str(old_path), run_name="__main__")
     except Exception as e:

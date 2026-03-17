@@ -143,6 +143,117 @@ class LSTMModel(nn.Module):
                 f"LSTM model initialization failed: {str(e)}"
             )
 
+
+class _SimpleLSTMModel(nn.Module):
+    def __init__(self, input_size: int, hidden_size: int):
+        super().__init__()
+        self.lstm = nn.LSTM(
+            input_size,
+            hidden_size,
+            num_layers=1,
+            batch_first=True,
+        )
+        self.fc = nn.Linear(hidden_size, 1)
+
+    def forward(self, x: "torch.Tensor") -> "torch.Tensor":
+        lstm_out, _ = self.lstm(x)
+        return self.fc(lstm_out[:, -1, :])
+
+
+class _DummyModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc = nn.Linear(1, 1)
+
+    def forward(self, x: "torch.Tensor") -> "torch.Tensor":
+        return self.fc(x[:, -1, :])
+
+
+class _LSTMForecasterModel(nn.Module):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int,
+        dropout: float,
+        bidirectional: bool,
+        use_attention: bool,
+        use_batch_norm: bool,
+        use_layer_norm: bool,
+        additional_dropout: float,
+    ):
+        super().__init__()
+        self.bidirectional = bidirectional
+        self.use_attention = use_attention
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.lstm = nn.LSTM(
+            input_size,
+            hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout if num_layers > 1 else 0,
+            bidirectional=bidirectional,
+        )
+
+        # Calculate LSTM output size (doubled if bidirectional)
+        lstm_output_size = hidden_size * 2 if bidirectional else hidden_size
+
+        # Add attention mechanism for better long-term dependencies
+        if use_attention:
+            self.attention = nn.MultiheadAttention(
+                embed_dim=lstm_output_size,
+                num_heads=4,
+                dropout=dropout,
+                batch_first=False,  # MultiheadAttention expects (seq_len, batch, embed_dim)
+            )
+
+        # Additional layers for enhanced functionality
+        self.batch_norm = nn.BatchNorm1d(lstm_output_size) if use_batch_norm else None
+        self.layer_norm = nn.LayerNorm(lstm_output_size) if use_layer_norm else None
+        self.dropout_layer = nn.Dropout(additional_dropout)
+        self.fc = nn.Linear(lstm_output_size, 1)
+
+    def forward(self, x: "torch.Tensor") -> "torch.Tensor":
+        try:
+            # LSTM forward pass
+            lstm_out, _ = self.lstm(
+                x
+            )  # Shape: (batch, seq_len, hidden_size * 2 if bidirectional)
+
+            # Apply attention if enabled
+            if self.use_attention:
+                # MultiheadAttention expects (seq_len, batch, embed_dim)
+                lstm_out_transposed = lstm_out.transpose(
+                    0, 1
+                )  # (seq_len, batch, hidden_size)
+                attn_out, _ = self.attention(
+                    lstm_out_transposed,
+                    lstm_out_transposed,
+                    lstm_out_transposed,
+                )
+                # Use last timestep from attention output
+                final_output = attn_out[-1, :, :]  # (batch, hidden_size)
+            else:
+                # Use last timestep from LSTM
+                final_output = lstm_out[:, -1, :]  # (batch, hidden_size)
+
+            # Apply normalization if enabled
+            if self.batch_norm is not None:
+                final_output = self.batch_norm(final_output)
+            if self.layer_norm is not None:
+                final_output = self.layer_norm(final_output)
+
+            # Apply additional dropout
+            final_output = self.dropout_layer(final_output)
+
+            # Final prediction
+            return self.fc(final_output)
+        except Exception as e:
+            logger.error(f"LSTM model forward pass failed: {e}")
+            # Return zeros as fallback
+            return torch.zeros(x.size(0), 1, device=x.device)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the LSTM model with error handling."""
         try:
@@ -485,37 +596,16 @@ class LSTMForecaster(BaseModel):
     def _build_fallback_model(self) -> nn.Module:
         """Build a simple fallback LSTM model when the main model fails."""
         try:
-
-            class SimpleLSTMModel(nn.Module):
-                def __init__(self, input_size, hidden_size):
-                    super().__init__()
-                    self.lstm = nn.LSTM(
-                        input_size, hidden_size, num_layers=1, batch_first=True
-                    )
-                    self.fc = nn.Linear(hidden_size, 1)
-
-                def forward(self, x):
-                    lstm_out, _ = self.lstm(x)
-                    return self.fc(lstm_out[:, -1, :])
-
             input_size = len(self.config["feature_columns"])
             hidden_size = min(32, input_size * 2)  # Conservative hidden size
 
-            return SimpleLSTMModel(input_size, hidden_size)
+            return _SimpleLSTMModel(input_size, hidden_size)
 
         except Exception as e:
             logger.error(f"Fallback model building failed: {e}")
 
             # Return a dummy model that always predicts the last value
-            class DummyModel(nn.Module):
-                def __init__(self):
-                    super().__init__()
-                    self.fc = nn.Linear(1, 1)
-
-                def forward(self, x):
-                    return self.fc(x[:, -1, :])
-
-            return DummyModel()
+            return _DummyModel()
 
     def build_model(self) -> nn.Module:
         """Build and return the LSTM model with error handling."""
@@ -535,91 +625,7 @@ class LSTMForecaster(BaseModel):
             use_layer_norm = self.config.get("use_layer_norm", False)
             additional_dropout = self.config.get("additional_dropout", 0)
 
-            class LSTMForecasterModel(nn.Module):
-                def __init__(
-                    self,
-                    input_size,
-                    hidden_size,
-                    num_layers,
-                    dropout,
-                    bidirectional,
-                    use_attention,
-                    use_batch_norm,
-                    use_layer_norm,
-                    additional_dropout,
-                ):
-                    super().__init__()
-                    self.bidirectional = bidirectional
-                    self.use_attention = use_attention
-                    
-                    self.lstm = nn.LSTM(
-                        input_size,
-                        hidden_size,
-                        num_layers=num_layers,
-                        batch_first=True,
-                        dropout=dropout if num_layers > 1 else 0,
-                        bidirectional=bidirectional,
-                    )
-
-                    # Calculate LSTM output size (doubled if bidirectional)
-                    lstm_output_size = hidden_size * 2 if bidirectional else hidden_size
-                    
-                    # Add attention mechanism for better long-term dependencies
-                    if use_attention:
-                        self.attention = nn.MultiheadAttention(
-                            embed_dim=lstm_output_size,
-                            num_heads=4,
-                            dropout=dropout,
-                            batch_first=False  # MultiheadAttention expects (seq_len, batch, embed_dim)
-                        )
-
-                    # Additional layers for enhanced functionality
-                    self.batch_norm = (
-                        nn.BatchNorm1d(lstm_output_size) if use_batch_norm else None
-                    )
-                    self.layer_norm = (
-                        nn.LayerNorm(lstm_output_size) if use_layer_norm else None
-                    )
-                    self.dropout_layer = nn.Dropout(additional_dropout)
-                    self.fc = nn.Linear(lstm_output_size, 1)
-
-                def forward(self, x):
-                    try:
-                        # LSTM forward pass
-                        lstm_out, _ = self.lstm(x)  # Shape: (batch, seq_len, hidden_size * 2 if bidirectional)
-
-                        # Apply attention if enabled
-                        if self.use_attention:
-                            # MultiheadAttention expects (seq_len, batch, embed_dim)
-                            lstm_out_transposed = lstm_out.transpose(0, 1)  # (seq_len, batch, hidden_size)
-                            attn_out, _ = self.attention(
-                                lstm_out_transposed,
-                                lstm_out_transposed,
-                                lstm_out_transposed
-                            )
-                            # Use last timestep from attention output
-                            final_output = attn_out[-1, :, :]  # (batch, hidden_size)
-                        else:
-                            # Use last timestep from LSTM
-                            final_output = lstm_out[:, -1, :]  # (batch, hidden_size)
-
-                        # Apply normalization if enabled
-                        if self.batch_norm is not None:
-                            final_output = self.batch_norm(final_output)
-                        if self.layer_norm is not None:
-                            final_output = self.layer_norm(final_output)
-
-                        # Apply additional dropout
-                        final_output = self.dropout_layer(final_output)
-
-                        # Final prediction
-                        return self.fc(final_output)
-                    except Exception as e:
-                        logger.error(f"LSTM model forward pass failed: {e}")
-                        # Return zeros as fallback
-                        return torch.zeros(x.size(0), 1, device=x.device)
-
-            return LSTMForecasterModel(
+            return _LSTMForecasterModel(
                 input_size,
                 hidden_size,
                 num_layers,

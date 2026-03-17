@@ -414,7 +414,7 @@ def render_cost_summary(metrics: Dict[str, Any]) -> None:
             names=list(cost_data.keys()),
             title="Trading Cost Breakdown",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     # Cash efficiency metrics
     if any(

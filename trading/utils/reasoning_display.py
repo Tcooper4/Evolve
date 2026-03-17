@@ -227,7 +227,7 @@ class ReasoningDisplay:
                 list(decision.context.market_conditions.items()),
                 columns=["Condition", "Value"],
             )
-            st.dataframe(market_df, use_container_width=True)
+            st.dataframe(market_df, width='stretch')
 
         # Chat explanation
         explanation = self.logger.get_explanation(decision.decision_id)
@@ -282,7 +282,7 @@ class ReasoningDisplay:
             )
 
         df = pd.DataFrame(decision_data)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
 
         # Allow user to click on a decision to see details
         if st.button("View Decision Details"):
@@ -347,7 +347,7 @@ class ReasoningDisplay:
         if stats["recent_activity"]:
             st.subheader("Recent Activity")
             activity_df = pd.DataFrame(stats["recent_activity"])
-            st.dataframe(activity_df, use_container_width=True)
+            st.dataframe(activity_df, width='stretch')
 
     def create_streamlit_sidebar(self):
         """Create a sidebar for reasoning controls in Streamlit."""

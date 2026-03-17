@@ -381,7 +381,7 @@ class ModelParameterTuner:
 
             if summary_data:
                 df = pd.DataFrame(summary_data)
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(df, width='stretch')
 
                 # Add parameter impact analysis
                 self._show_parameter_impact(model_type, parameters)

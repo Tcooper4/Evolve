@@ -254,7 +254,7 @@ class EnhancedUIComponents:
                 df = df.sort_values("Confidence_Value", ascending=False)
                 df = df.drop("Confidence_Value", axis=1)
 
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(df, width='stretch')
 
                 # Confidence visualization
                 st.subheader("Confidence Distribution")
@@ -290,7 +290,7 @@ class EnhancedUIComponents:
                     ]
                 )
 
-                st.dataframe(strategy_df, use_container_width=True)
+                st.dataframe(strategy_df, width='stretch')
 
     def render_session_summary_bar(self):
         """Render session summary bar showing current session information."""
@@ -649,4 +649,4 @@ class EnhancedUIComponents:
                 [{"Metric": key, "Value": value} for key, value in metrics.items()]
             )
 
-            st.dataframe(metrics_df, use_container_width=True)
+            st.dataframe(metrics_df, width='stretch')

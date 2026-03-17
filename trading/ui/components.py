@@ -850,7 +850,7 @@ def create_forecast_table(forecast_results: Dict[str, Any]) -> Dict[str, Any]:
     # Display forecast table
     st.dataframe(
         forecast_data,
-        use_container_width=True,
+        width='stretch',
         height=400,
     )
 

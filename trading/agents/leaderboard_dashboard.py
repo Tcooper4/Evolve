@@ -137,7 +137,7 @@ class LeaderboardDashboard:
 
         styled_df = display_df.style.applymap(color_status, subset=["status"])
 
-        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+        st.dataframe(styled_df, width='stretch', hide_index=True)
 
     def _render_performance_charts(self):
         """Render performance visualization charts."""
@@ -220,7 +220,7 @@ class LeaderboardDashboard:
             height=600, showlegend=False, title_text="Agent Performance Analysis"
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     def _render_summary_metrics(self):
         """Render summary metrics cards."""
@@ -279,7 +279,7 @@ class LeaderboardDashboard:
             color_discrete_map={"active": "#28a745", "deprecated": "#dc3545"},
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
         # Status details
         for status, count in status_counts.items():
@@ -358,7 +358,7 @@ class LeaderboardDashboard:
             height=400,
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     def _render_export_options(self):
         """Render data export options."""

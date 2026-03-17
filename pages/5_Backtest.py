@@ -19,16 +19,26 @@ inject_theme()
 render_top_bar()
 
 import runpy
+
+# TODO S44: inline old_3_Strategy_Testing.py
+# Keeping runpy — file is too large to
+# safely inline in one session
 try:
     runpy.run_path(
         str(project_root / "scripts" / "old_3_Strategy_Testing.py"),
-        run_name="__main__"
+        run_name="__main__",
     )
 except Exception as e:
-    st.error(f"Backtest page error: {e}")
     import traceback
-    with st.expander("Details"):
+
+    st.warning(
+        "⚠️ Strategy testing module failed "
+        "to load."
+    )
+    with st.expander("Error details", expanded=False):
         st.code(traceback.format_exc())
+    if st.button("🔄 Retry", key="backtest_retry"):
+        st.rerun()
 
 
 # Page Assistant

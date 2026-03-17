@@ -166,7 +166,7 @@ def _render_ohlc_panel(
     if rows == 2:
         fig.update_yaxes(title_text="Volume", row=2, col=1)
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     if len(close) >= 2:
         _c1, _c2, _c3, _c4 = st.columns(4)

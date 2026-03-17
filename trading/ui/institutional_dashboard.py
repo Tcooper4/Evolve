@@ -164,12 +164,12 @@ class InstitutionalDashboard:
                 # System controls
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button("▶️ Start", use_container_width=True):
+                    if st.button("▶️ Start", width='stretch'):
                         self.system.start()
                         st.rerun()
 
                 with col2:
-                    if st.button("⏸️ Stop", use_container_width=True):
+                    if st.button("⏸️ Stop", width='stretch'):
                         self.system.stop()
                         st.rerun()
 
@@ -195,10 +195,10 @@ class InstitutionalDashboard:
 
             # Quick actions
             st.header("⚡ Quick Actions")
-            if st.button("🔄 Refresh Data", use_container_width=True):
+            if st.button("🔄 Refresh Data", width='stretch'):
                 st.rerun()
 
-            if st.button("📋 Generate Report", use_container_width=True):
+            if st.button("📋 Generate Report", width='stretch'):
                 if self.system:
                     with st.spinner("Generating report..."):
                         report_path = self.system.generate_system_report()
@@ -207,7 +207,7 @@ class InstitutionalDashboard:
                         else:
                             st.error("Failed to generate report")
 
-            if st.button("💾 Export Data", use_container_width=True):
+            if st.button("💾 Export Data", width='stretch'):
                 if self.system:
                     with st.spinner("Exporting data..."):
                         self.system.export_system_data()
@@ -383,7 +383,7 @@ class InstitutionalDashboard:
 
                     if signal_data:
                         df = pd.DataFrame(signal_data)
-                        st.dataframe(df, use_container_width=True)
+                        st.dataframe(df, width='stretch')
                 else:
                     st.info("No recent signals")
 
@@ -410,7 +410,7 @@ class InstitutionalDashboard:
 
                     if trade_data:
                         df = pd.DataFrame(trade_data)
-                        st.dataframe(df, use_container_width=True)
+                        st.dataframe(df, width='stretch')
                 else:
                     st.info("No active trades")
 
@@ -469,7 +469,7 @@ class InstitutionalDashboard:
                     height=400,
                 )
 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.info("No performance data available")
 
@@ -497,7 +497,7 @@ class InstitutionalDashboard:
                     height=400,
                 )
 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.info("No risk data available")
 
@@ -519,7 +519,7 @@ class InstitutionalDashboard:
 
                 fig.update_layout(title="Market Regime Distribution", height=400)
 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
                 # Current regime info
                 if "current_regime" in regime_info:
@@ -554,7 +554,7 @@ class InstitutionalDashboard:
                     height=400,
                 )
 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.info("No signal data available")
 
@@ -569,7 +569,7 @@ class InstitutionalDashboard:
                 placeholder="e.g., What is the current market regime? Show me recent signals. Generate a performance report.",
             )
 
-            if st.button("🔍 Query", use_container_width=True):
+            if st.button("🔍 Query", width='stretch'):
                 if query:
                     with st.spinner("Processing query..."):
                         result = self.system.process_natural_language_query(query)

@@ -278,7 +278,7 @@ def _scanner_table():
     cols = st.columns(len(filter_opts))
     for i, opt in enumerate(filter_opts):
         with cols[i]:
-            if st.button(opt, key=f"scanner_filter_{opt}", use_container_width=True):
+            if st.button(opt, key=f"scanner_filter_{opt}", width='stretch'):
                 st.session_state.scanner_signal_filter = opt
                 st.rerun()
     current_filter = st.session_state.scanner_signal_filter
@@ -343,7 +343,7 @@ def _scanner_table():
             styler = styler.map(_color_news_cell, subset=["News"])
         except Exception:
             styler = styler.applymap(_color_news_cell, subset=["News"])
-    st.dataframe(styler, use_container_width=True, height=400, key="scanner_results_df")
+    st.dataframe(styler, width='stretch', height=400, key="scanner_results_df")
 
     if len(df_display) >= 3 and "AI Score" in df_display.columns:
         st.markdown("#### AI Score Distribution")
@@ -355,7 +355,7 @@ def _scanner_table():
         )
         fig.update_layout(template="plotly_dark", showlegend=False)
         fig.update_traces(textposition="outside")
-        st.plotly_chart(fig, use_container_width=True, key="scanner_dist_chart")
+        st.plotly_chart(fig, width='stretch', key="scanner_dist_chart")
 
     st.markdown("#### Drill Down")
     selected_sym = st.selectbox(
@@ -372,7 +372,7 @@ def _scanner_table():
                 st.markdown(f"**{selected_sym}** — {_ai['summary']}")
                 _sigs = pd.DataFrame(_ai.get("signals", []))
                 if not _sigs.empty and "name" in _sigs.columns:
-                    st.dataframe(_sigs[["name", "value", "impact", "description"]], use_container_width=True, key="scanner_drill_sigs")
+                    st.dataframe(_sigs[["name", "value", "impact", "description"]], width='stretch', key="scanner_drill_sigs")
         except Exception as _e:
             st.caption(f"Feature unavailable: {_e}")
 

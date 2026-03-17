@@ -172,7 +172,7 @@ class TaskDashboard:
                 height=400,
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         else:
             st.info("No tasks available for timeline")
 
@@ -206,7 +206,7 @@ class TaskDashboard:
             # Add task selection
             selected_rows = st.dataframe(
                 df,
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
                 on_click=self._on_task_select,
             )

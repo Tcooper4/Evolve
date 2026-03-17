@@ -315,7 +315,7 @@ class TradingDashboard:
                 height=400,
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         except Exception as e:
             logger.error(f"Error rendering portfolio overview: {e}")
@@ -335,7 +335,7 @@ class TradingDashboard:
             )
 
             fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         except Exception as e:
             logger.error(f"Error rendering returns distribution: {e}")
@@ -370,7 +370,7 @@ class TradingDashboard:
                 height=400,
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         except Exception as e:
             logger.error(f"Error rendering drawdown chart: {e}")
@@ -394,7 +394,7 @@ class TradingDashboard:
 
             fig.update_layout(title="Asset Allocation", height=400)
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         except Exception as e:
             logger.error(f"Error rendering asset allocation: {e}")
@@ -418,7 +418,7 @@ class TradingDashboard:
             )
 
             st.subheader("Performance Metrics")
-            st.dataframe(metrics_df, use_container_width=True)
+            st.dataframe(metrics_df, width='stretch')
 
         except Exception as e:
             logger.error(f"Error rendering performance metrics: {e}")
@@ -505,7 +505,7 @@ class StrategyDashboard:
                 height=400,
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         except Exception as e:
             logger.error(f"Error rendering strategy performance: {e}")
@@ -527,7 +527,7 @@ class StrategyDashboard:
             )
 
             fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         except Exception as e:
             logger.error(f"Error rendering trade analysis: {e}")

@@ -425,7 +425,7 @@ def render_backtest_results(backtest_results: Dict[str, Any]) -> None:
             strategy_config=strategy_config,
             show_benchmark=benchmark is not None
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
     except Exception as e:
         logger.error(f"Error rendering backtest results: {e}")

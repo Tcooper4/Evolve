@@ -54,6 +54,7 @@ with tab_wl:
 with tab_alerts:
     st.subheader("Alerts")
     try:
+        # TODO S44: inline this (1995 lines)
         old_path = project_root / "scripts" / "old_10_Alerts.py"
         runpy.run_path(str(old_path), run_name="__main__")
     except Exception as e:
@@ -67,6 +68,7 @@ with tab_admin:
             mem = psutil.virtual_memory()
             st.metric("CPU Usage", f"{cpu_percent}%")
             st.metric("RAM Usage", f"{mem.percent}%")
+        # TODO S44: inline this (4448 lines)
         old_path = project_root / "scripts" / "old_11_Admin.py"
         runpy.run_path(str(old_path), run_name="__main__")
     except Exception as e:
