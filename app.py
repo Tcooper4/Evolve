@@ -13,6 +13,10 @@ import sys
 import warnings
 from pathlib import Path
 
+# Ensure local cache directories exist for models
+os.makedirs(".cache", exist_ok=True)
+os.makedirs(".cache/lstm", exist_ok=True)
+
 # Suppress TensorFlow/keras warnings from optional dependencies
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 try:

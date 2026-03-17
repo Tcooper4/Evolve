@@ -147,6 +147,13 @@ class TransformerForecaster(BaseModel):
             default_config["input_size"] = len(default_config["feature_columns"])
 
         super().__init__(default_config)
+
+        # Normalization statistics (set during fit)
+        self.X_mean: Optional[np.ndarray] = None
+        self.X_std: Optional[np.ndarray] = None
+        self.y_mean: Optional[float] = None
+        self.y_std: Optional[float] = None
+
         self._validate_config()
         self._setup_model()
 
@@ -446,6 +453,10 @@ class TransformerForecaster(BaseModel):
             Predicted values as numpy array
         """
         try:
+            # Ensure model has been fitted before using stored normalization stats
+            if self.X_mean is None or self.X_std is None or self.y_mean is None or self.y_std is None:
+                raise ValueError("Model not fitted. Call fit() before predict().")
+
             # Prepare data
             X, _ = self._prepare_data(data, is_training=False)
 

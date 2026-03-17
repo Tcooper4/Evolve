@@ -215,6 +215,24 @@ if not hist.empty:
             index=0,
         )
         if chart_type == "News + Volume":
+            if st.expander("News overlay settings", expanded=True):
+                _news_lang = st.selectbox(
+                    "News language",
+                    ["English only", "All languages"],
+                    index=0,
+                    key="news_lang_filter",
+                )
+                _news_vol_thresh = st.slider(
+                    "Min price move % to show news",
+                    min_value=0.0,
+                    max_value=5.0,
+                    value=0.5,
+                    step=0.1,
+                    key="news_price_threshold",
+                    help=(
+                        "Only show news near bars where price moved at least this much"
+                    ),
+                )
             try:
                 _nc_interval = (
                     "5m" if period == "1d"
@@ -388,20 +406,28 @@ if not hist.empty:
                         zeroline=False,
                         tickfont=dict(color="#4a6080", size=10),
                         rangeslider=dict(visible=False),
-                        rangebreaks=[
-                            dict(bounds=["sat", "mon"]),
-                            dict(bounds=[16, 9.5], pattern="hour"),
-                        ],
+                        rangebreaks=(
+                            [
+                                dict(bounds=["sat", "mon"]),
+                                dict(bounds=[16, 9.5], pattern="hour"),
+                            ]
+                            if period == "1d"
+                            else [dict(bounds=["sat", "mon"])]
+                        ),
                     ),
                     xaxis2=dict(
                         gridcolor="#1a2535",
                         showgrid=True,
                         zeroline=False,
                         tickfont=dict(color="#4a6080", size=10),
-                        rangebreaks=[
-                            dict(bounds=["sat", "mon"]),
-                            dict(bounds=[16, 9.5], pattern="hour"),
-                        ],
+                        rangebreaks=(
+                            [
+                                dict(bounds=["sat", "mon"]),
+                                dict(bounds=[16, 9.5], pattern="hour"),
+                            ]
+                            if period == "1d"
+                            else [dict(bounds=["sat", "mon"])]
+                        ),
                     ),
                     yaxis=dict(
                         gridcolor="#1a2535",
@@ -513,12 +539,14 @@ if not hist.empty:
                         zeroline=False,
                         tickfont=dict(color="#4a6080", size=10),
                         rangeslider=dict(visible=False),
-                        rangebreaks=[
-                            dict(bounds=["sat", "mon"]),
-                            dict(bounds=[16, 9.5], pattern="hour"),
-                        ]
-                        if period in ("1d", "5d")
-                        else [dict(bounds=["sat", "mon"])],
+                        rangebreaks=(
+                            [
+                                dict(bounds=["sat", "mon"]),
+                                dict(bounds=[16, 9.5], pattern="hour"),
+                            ]
+                            if period == "1d"
+                            else [dict(bounds=["sat", "mon"])]
+                        ),
                     ),
                     yaxis=dict(
                         title="Price ($)",
@@ -544,14 +572,364 @@ if not hist.empty:
 
                 @st.fragment(run_every=60)
                 def _live_chart():
+                    _tkr = st.session_state.get("analyze_ticker", ticker)
+                    _per = period
+                    _tf = st.session_state.get(
+                        "analyze_intraday_tf",
+                        "5m" if _per == "1d" else "30m",
+                    )
+                    _ct = st.session_state.get("analyze_chart_type", "Candle")
+
+                    _hist = get_history(_tkr, period=_per, interval=_tf)
+                    if _hist.empty:
+                        st.caption("No intraday data.")
+                        return
+
+                    import datetime as _dt
+
+                    _now = _dt.datetime.now().strftime("%H:%M:%S")
+                    st.caption(f"Last updated: {_now}")
+
+                    from plotly.subplots import make_subplots as _make_subplots
+
+                    _fig = _make_subplots(
+                        rows=2,
+                        cols=1,
+                        shared_xaxes=True,
+                        vertical_spacing=0.03,
+                        row_heights=[0.75, 0.25],
+                    )
+
+                    if _ct == "Candle":
+                        _fig.add_trace(
+                            go.Candlestick(
+                                x=_hist.index,
+                                open=_hist["Open"],
+                                high=_hist["High"],
+                                low=_hist["Low"],
+                                close=_hist["Close"],
+                                increasing_line_color="#26a69a",
+                                increasing_fillcolor="#26a69a",
+                                decreasing_line_color="#ef5350",
+                                decreasing_fillcolor="#ef5350",
+                                name=_tkr,
+                                showlegend=False,
+                            ),
+                            row=1,
+                            col=1,
+                        )
+                    else:
+                        _fig.add_trace(
+                            go.Scatter(
+                                x=_hist.index,
+                                y=_hist["Close"],
+                                mode="lines",
+                                line=dict(color="#00d4ff", width=1.5),
+                                name=_tkr,
+                                showlegend=False,
+                            ),
+                            row=1,
+                            col=1,
+                        )
+
+                    try:
+                        _vwap_live = (
+                            (_hist["Close"] * _hist["Volume"]).cumsum()
+                            / _hist["Volume"].cumsum()
+                        )
+                        _fig.add_trace(
+                            go.Scatter(
+                                x=_hist.index,
+                                y=_vwap_live,
+                                mode="lines",
+                                line=dict(
+                                    color="#ff9800",
+                                    width=1,
+                                    dash="dot",
+                                ),
+                                name="VWAP",
+                            ),
+                            row=1,
+                            col=1,
+                        )
+                    except Exception:
+                        pass
+
+                    try:
+                        _vcols_live = [
+                            "#26a69a"
+                            if _hist["Close"].iloc[i] >= _hist["Open"].iloc[i]
+                            else "#ef5350"
+                            for i in range(len(_hist))
+                        ]
+                        _fig.add_trace(
+                            go.Bar(
+                                x=_hist.index,
+                                y=_hist["Volume"],
+                                marker_color=_vcols_live,
+                                name="Volume",
+                                showlegend=False,
+                            ),
+                            row=2,
+                            col=1,
+                        )
+                    except Exception:
+                        pass
+
+                    try:
+                        import yfinance as _yf_live
+
+                        _prev_live = _yf_live.Ticker(_tkr).history(
+                            period="2d", interval="1d"
+                        )
+                        if len(_prev_live) >= 2:
+                            _pc_live = float(_prev_live["Close"].iloc[-2])
+                            _fig.add_hline(
+                                y=_pc_live,
+                                line_dash="dot",
+                                line_color="#4a6080",
+                                line_width=1,
+                                annotation_text="prev close",
+                                annotation_font_color="#4a6080",
+                                annotation_font_size=10,
+                                row=1,
+                                col=1,
+                            )
+                    except Exception:
+                        pass
+
+                    try:
+                        _current_live = float(_hist["Close"].dropna().iloc[-1])
+                        if _current_live and _current_live == _current_live:
+                            _fig.add_hline(
+                                y=_current_live,
+                                line_dash="dash",
+                                line_color="#ef5350",
+                                line_width=1,
+                                annotation_text=f" ${_current_live:.2f}",
+                                annotation_position="right",
+                                annotation_font_color="#ef5350",
+                                annotation_font_size=11,
+                                row=1,
+                                col=1,
+                            )
+                    except Exception:
+                        pass
+
+                    _fig.update_layout(
+                        template="plotly_dark",
+                        paper_bgcolor="#0a0e1a",
+                        plot_bgcolor="#0f1525",
+                        font=dict(
+                            family="'Courier New',monospace",
+                            color="#e0e6f0",
+                            size=11,
+                        ),
+                        title=dict(
+                            text=f"{_tkr} — {_per} ({_tf})",
+                            font=dict(color="#e0e6f0", size=14),
+                            x=0,
+                        ),
+                        xaxis=dict(
+                            gridcolor="#1a2535",
+                            showgrid=True,
+                            zeroline=False,
+                            tickfont=dict(color="#4a6080", size=10),
+                            rangeslider=dict(visible=False),
+                        ),
+                        xaxis2=dict(
+                            gridcolor="#1a2535",
+                            showgrid=True,
+                            zeroline=False,
+                            tickfont=dict(color="#4a6080", size=10),
+                        ),
+                        yaxis=dict(
+                            gridcolor="#1a2535",
+                            showgrid=True,
+                            zeroline=False,
+                            tickfont=dict(color="#4a6080", size=10),
+                            tickprefix="$",
+                            side="right",
+                        ),
+                        yaxis2=dict(
+                            gridcolor="#1a2535",
+                            showgrid=False,
+                            zeroline=False,
+                            tickfont=dict(color="#4a6080", size=9),
+                            side="right",
+                        ),
+                        hovermode="x unified",
+                        hoverlabel=dict(
+                            bgcolor="#0f1525",
+                            bordercolor="#1e2d45",
+                            font=dict(color="#e0e6f0", size=11),
+                        ),
+                        margin=dict(l=0, r=60, t=30, b=20),
+                        height=380,
+                        showlegend=False,
+                    )
+
                     st.plotly_chart(
-                        fig_chart,
+                        _fig,
                         use_container_width=True,
-                        key="analyze_main_chart",
+                        key="analyze_main_chart_live",
                     )
 
                 _live_chart()
             else:
+                # News vlines on main chart (only for News+Vol chart type)
+                if chart_type == "News + Volume":
+                    try:
+                        from trading.data.price_cache import get_news
+                        _news_items = get_news(ticker)
+                        _lang_filter = st.session_state.get(
+                            "news_lang_filter", "English only"
+                        )
+                        _price_thresh = st.session_state.get(
+                            "news_price_threshold", 0.5
+                        )
+                        _plotted = 0
+                        if _news_items and not hist.empty:
+                            from datetime import datetime
+
+                            _prices = hist["Close"].dropna()
+
+                            for _item in _news_items[:15]:
+                                _content = _item.get("content") or {}
+                                _title = (
+                                    _item.get("title")
+                                    or _content.get("title")
+                                    or _content.get("summary")
+                                    or ""
+                                )
+                                if not _title:
+                                    continue
+
+                                if (
+                                    _lang_filter == "English only"
+                                    and not _is_english(_title)
+                                ):
+                                    continue
+
+                                _pub = (
+                                    _item.get("providerPublishTime")
+                                    or _content.get("pubDate")
+                                    or _item.get("published")
+                                )
+                                if not _pub:
+                                    continue
+                                try:
+                                    if isinstance(_pub, str):
+                                        _dt = datetime.fromisoformat(
+                                            _pub.replace("Z", "+00:00")
+                                        )
+                                        _pub_dt = _dt.replace(tzinfo=None)
+                                        _pub_ts = _dt.timestamp()
+                                    else:
+                                        _pub_ts = float(_pub)
+                                        _pub_dt = datetime.fromtimestamp(
+                                            _pub_ts
+                                        )
+                                except Exception:
+                                    continue
+
+                                if len(hist.index) > 0:
+                                    _idx_min = hist.index.min()
+                                    _idx_max = hist.index.max()
+                                    try:
+                                        _idx_min = _idx_min.replace(tzinfo=None)
+                                        _idx_max = _idx_max.replace(tzinfo=None)
+                                    except Exception:
+                                        pass
+                                    if _pub_dt < _idx_min or _pub_dt > _idx_max:
+                                        continue
+
+                                if _price_thresh > 0:
+                                    try:
+                                        if hasattr(hist.index, "tz"):
+                                            _index_dt = (
+                                                hist.index.tz_localize(
+                                                    None
+                                                ).to_pydatetime()
+                                            )
+                                        else:
+                                            _index_dt = (
+                                                hist.index.to_pydatetime()
+                                            )
+                                        _diffs = abs(_index_dt - _pub_dt)
+                                        _closest_idx = int(_diffs.argmin())
+                                        if _closest_idx > 0:
+                                            _p1 = float(
+                                                _prices.iloc[_closest_idx]
+                                            )
+                                            _p0 = float(
+                                                _prices.iloc[_closest_idx - 1]
+                                            )
+                                            if _p0 != 0:
+                                                _move = abs(
+                                                    (_p1 - _p0) / _p0 * 100
+                                                )
+                                                if _move < _price_thresh:
+                                                    continue
+                                    except Exception:
+                                        pass
+
+                                _pos_kw = [
+                                    "beat",
+                                    "surge",
+                                    "raises",
+                                    "upgrade",
+                                    "strong",
+                                    "growth",
+                                ]
+                                _neg_kw = [
+                                    "miss",
+                                    "falls",
+                                    "cuts",
+                                    "downgrade",
+                                    "weak",
+                                    "loss",
+                                ]
+                                _tl = _title.lower()
+                                _pos = sum(
+                                    1 for k in _pos_kw if k in _tl
+                                )
+                                _neg = sum(
+                                    1 for k in _neg_kw if k in _tl
+                                )
+                                _ann_color = (
+                                    "#26a69a"
+                                    if _pos > _neg
+                                    else "#ef5350"
+                                    if _neg > _pos
+                                    else "#ff9800"
+                                )
+
+                                _vline_kwargs = dict(
+                                    x=_pub_dt,
+                                    line_dash="dot",
+                                    line_color=_ann_color,
+                                    line_width=1,
+                                    annotation_text="N",
+                                    annotation_position="top",
+                                    annotation_font_color=_ann_color,
+                                    annotation_font_size=10,
+                                )
+                                if _intraday_mode:
+                                    fig_chart.add_vline(
+                                        row=1, col=1, **_vline_kwargs
+                                    )
+                                else:
+                                    fig_chart.add_vline(**_vline_kwargs)
+                                _plotted += 1
+
+                        if _plotted == 0 and period in ("1d", "5d"):
+                            st.caption(
+                                "No recent English news found within chart timeframe."
+                            )
+                    except Exception:
+                        pass
+
                 st.plotly_chart(
                     fig_chart,
                     use_container_width=True,
@@ -741,6 +1119,13 @@ def _news_sentiment_score(ticker: str) -> float:
         return round(min(10.0, max(0.0, 5.0 + normalized * 2.0)), 1)
     except Exception:
         return 5.0
+
+
+def _is_english(text: str) -> bool:
+    if not text:
+        return False
+    ascii_count = sum(1 for c in text if ord(c) < 128)
+    return ascii_count / len(text) > 0.8
 
 
 def _generate_recommendation(
@@ -1108,8 +1493,23 @@ with tab1:
                     _hist = _hist.rename(columns={"close": "Close"})
                 if "volume" in _hist.columns and "Volume" not in _hist.columns:
                     _hist = _hist.rename(columns={"volume": "Volume"})
-                with st.spinner("Computing AI Score..."):
-                    score_result = compute_ai_score(_sym, _hist)
+
+                # Cache AI score per symbol for 5 minutes to avoid recompute on tab switch
+                import time as _time
+
+                _ai_score_key = f"ai_score_{_sym}"
+                _ai_score_ts_key = f"ai_score_ts_{_sym}"
+                _cached_score = st.session_state.get(_ai_score_key)
+                _cached_ts = st.session_state.get(_ai_score_ts_key, 0.0)
+                _score_age = _time.time() - _cached_ts
+
+                if _cached_score is None or _score_age > 300:
+                    with st.spinner("Computing AI Score..."):
+                        score_result = compute_ai_score(_sym, _hist)
+                    st.session_state[_ai_score_key] = score_result
+                    st.session_state[_ai_score_ts_key] = _time.time()
+                else:
+                    score_result = _cached_score
                 if score_result.get("error") is None:
                     score = score_result["overall_score"]
                     grade = score_result["grade"]
@@ -1507,8 +1907,35 @@ with tab1:
                         consensus = None
                         try:
                             from trading.models.forecast_router import ForecastRouter
+                            import hashlib as _hashlib
+                            import time as _time
+
                             _router = ForecastRouter()
-                            consensus = _router.get_consensus_forecast(data, horizon=horizon)
+                            _data_hash = _hashlib.md5(
+                                str(data.index[-1]).encode()
+                                + str(len(data)).encode()
+                                + ticker.encode()
+                            ).hexdigest()[:8]
+                            _cons_key = f"consensus_{ticker}_{_data_hash}"
+                            _cons_ts_key = f"consensus_ts_{ticker}_{_data_hash}"
+                            _cached_cons = st.session_state.get(_cons_key)
+                            _cached_cons_ts = st.session_state.get(_cons_ts_key, 0.0)
+                            _cons_age = _time.time() - _cached_cons_ts
+
+                            if _cached_cons is None or _cons_age > 600:
+                                with st.spinner(
+                                    "Running consensus forecast (all models)..."
+                                ):
+                                    consensus = _router.get_consensus_forecast(
+                                        data, horizon=horizon
+                                    )
+                                st.session_state[_cons_key] = consensus
+                                st.session_state[_cons_ts_key] = _time.time()
+                            else:
+                                consensus = _cached_cons
+                                st.caption(
+                                    "Using cached forecast (refreshes every 10 min)"
+                                )
                             _used = consensus.get("models_used", []) if isinstance(consensus, dict) else []
                             _failed = consensus.get("models_failed", []) if isinstance(consensus, dict) else []
                             if _failed:
@@ -1872,11 +2299,33 @@ with tab1:
 
                     router = ForecastRouter()
                     horizon = st.session_state.get("forecast_horizon", 7)
+                    import hashlib as _hashlib
+                    import time as _time
+
                     try:
-                        consensus = router.get_consensus_forecast(
-                            data=hist_data_cons,
-                            horizon=horizon,
-                        )
+                        _data_hash = _hashlib.md5(
+                            str(hist_data_cons.index[-1]).encode()
+                            + str(len(hist_data_cons)).encode()
+                            + ticker.encode()
+                        ).hexdigest()[:8]
+                        _cons_key = f"consensus_{ticker}_{_data_hash}"
+                        _cons_ts_key = f"consensus_ts_{ticker}_{_data_hash}"
+                        _cached_cons = st.session_state.get(_cons_key)
+                        _cached_cons_ts = st.session_state.get(_cons_ts_key, 0.0)
+                        _cons_age = _time.time() - _cached_cons_ts
+
+                        if _cached_cons is None or _cons_age > 600:
+                            consensus = router.get_consensus_forecast(
+                                data=hist_data_cons,
+                                horizon=horizon,
+                            )
+                            st.session_state[_cons_key] = consensus
+                            st.session_state[_cons_ts_key] = _time.time()
+                        else:
+                            consensus = _cached_cons
+                            st.caption(
+                                "Using cached forecast (refreshes every 10 min)"
+                            )
                     except Exception as _ce:
                         st.caption(f"Consensus error: {_ce}")
                         consensus = {"error": str(_ce)}
