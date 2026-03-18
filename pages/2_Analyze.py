@@ -2592,16 +2592,25 @@ with tab1:
                     # Forecast table (format dates as YYYY-MM-DD, no timezone)
                     st.markdown("**Forecast Values:**")
                     display_df = forecast_df.copy()
-                    try:
-                        idx = pd.to_datetime(display_df.index)
-                        if hasattr(idx, "tz") and idx.tz is not None:
-                            idx = idx.tz_localize(None)
-                        display_df.index = idx.strftime("%Y-%m-%d")
-                    except Exception:
-                        pass
-                    display_df['forecast'] = display_df['forecast'].apply(
+                    display_df.index = display_df.index.strftime("%Y-%m-%d")
+                    display_df.columns = ["Forecast"]
+                    display_df["Forecast"] = display_df["Forecast"].apply(
                         lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
                     )
+                    # Add confidence bounds if available
+                    _lb = None
+                    _ub = None
+                    _forecast_result = st.session_state.get("current_forecast_result")
+                    if isinstance(_forecast_result, dict):
+                        _lb = _forecast_result.get("lower_bound")
+                        _ub = _forecast_result.get("upper_bound")
+                    _n = len(display_df)
+                    display_df["Lower Bound"] = [
+                        f"${v:.2f}" for v in _lb[:_n]
+                    ] if _lb and len(_lb) >= _n else ["—"] * _n
+                    display_df["Upper Bound"] = [
+                        f"${v:.2f}" for v in _ub[:_n]
+                    ] if _ub and len(_ub) >= _n else ["—"] * _n
                     st.dataframe(display_df, width='stretch')
                 
                 # Download button
@@ -4327,6 +4336,15 @@ with tab6:
                                 'Forecast': forecast_result['forecast'],
                                 'Confidence': forecast_result['confidence']
                             })
+                            _lb = forecast_result.get("lower_bound") if isinstance(forecast_result, dict) else None
+                            _ub = forecast_result.get("upper_bound") if isinstance(forecast_result, dict) else None
+                            _n = len(forecast_df)
+                            forecast_df["Lower Bound"] = [
+                                f"${v:.2f}" for v in _lb[:_n]
+                            ] if _lb and len(_lb) >= _n else ["—"] * _n
+                            forecast_df["Upper Bound"] = [
+                                f"${v:.2f}" for v in _ub[:_n]
+                            ] if _ub and len(_ub) >= _n else ["—"] * _n
                             st.dataframe(forecast_df)
                 
                 except ImportError:

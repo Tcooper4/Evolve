@@ -291,7 +291,16 @@ with tab_data_mgmt:
     ]
     if ttl_data:
         ttl_df = pd.DataFrame(ttl_data)
-        st.dataframe(ttl_df, use_container_width=True, hide_index=True)
+        try:
+            _safe_ttl = ttl_df.copy()
+            for _c in _safe_ttl.columns:
+                try:
+                    _safe_ttl[_c] = pd.to_numeric(_safe_ttl[_c])
+                except Exception:
+                    _safe_ttl[_c] = _safe_ttl[_c].astype(str)
+            st.dataframe(_safe_ttl, width='stretch', hide_index=True)
+        except Exception as _dfe:
+            st.caption(f"Table unavailable: {_dfe}")
     
     
 def _get_system_dashboard_data() -> Dict[str, Any]:
