@@ -215,7 +215,7 @@ if not hist.empty:
             index=0,
         )
         if chart_type == "News + Volume":
-            if st.expander("News overlay settings", expanded=True):
+            with st.expander("News overlay settings", expanded=True):
                 _news_lang = st.selectbox(
                     "News language",
                     ["English only", "All languages"],
@@ -1710,6 +1710,7 @@ with tab1:
                                     f'font-size:13px">{_t2}</span></div>'
                                 )
                             _mh = ""
+                            _info_row = ""
                             if _rec.get("fc_target"):
                                 _cur2 = get_quote(ticker).get("price", 0)
                                 if _cur2 and _cur2 > 0:
@@ -1723,6 +1724,31 @@ with tab1:
                                         if _pct2 > 0
                                         else "#ef5350"
                                     )
+
+                                    # Trade horizon estimate (7 business days by default)
+                                    try:
+                                        from datetime import datetime as _dtime
+                                        from datetime import timedelta as _tdelta
+
+                                        _today = _dtime.now()
+                                        _bdays = 0
+                                        _end_dt = _today
+                                        _fc_horizon = 7
+                                        while _bdays < _fc_horizon:
+                                            _end_dt += _tdelta(days=1)
+                                            if _end_dt.weekday() < 5:
+                                                _bdays += 1
+                                        _horizon_str = _end_dt.strftime("%b %d")
+                                    except Exception:
+                                        _horizon_str = "~7 days"
+                                        _fc_horizon = 7
+
+                                    _conv_explain = {
+                                        "HIGH": "Multiple models agree",
+                                        "MEDIUM": "Models show mixed signals",
+                                        "LOW": "Weak or conflicting signals",
+                                    }.get(str(_conv).upper(), "Signal strength unknown")
+
                                     _mh = (
                                         f'<div style="display:grid;'
                                         f'grid-template-columns:repeat(3,1fr);'
@@ -1770,6 +1796,22 @@ with tab1:
                                         f'-2.0% · R/R {_rr2:.1f}:1</div>'
                                         f'</div></div>'
                                     )
+
+                                    _info_row = (
+                                        f'<div style="padding:8px 16px;'
+                                        f'border-top:1px solid #1e2d45;'
+                                        f'display:flex;justify-content:space-between;'
+                                        f'flex-wrap:wrap;gap:8px">'
+                                        f'<span style="font-size:11px;'
+                                        f'color:#4a6080">⏱ Until: {_horizon_str}</span>'
+                                        f'<span style="font-size:11px;'
+                                        f'color:#4a6080">📊 Move: {_pct2:+.1f}%</span>'
+                                        f'<span style="font-size:11px;'
+                                        f'color:#4a6080">❌ Cut if: &lt;${_stop2:.2f}</span>'
+                                        f'<span style="font-size:11px;'
+                                        f'color:#4a6080" title="{_conv_explain}">💡 {_conv_explain}</span>'
+                                        f'</div>'
+                                    )
                             _components.html(
                                 f'<div style="background:#0a0e1a;border:1px solid '
                                 f'#1e2d45;border-radius:6px;overflow:hidden;'
@@ -1788,8 +1830,8 @@ with tab1:
                                 f'margin-left:auto">score {_score}/10</span>'
                                 f'</div>'
                                 f'<div style="padding:10px 16px">{_reasons_html}'
-                                f'</div>{_mh}</div>',
-                                height=260 if _mh else 160,
+                                f'</div>{_mh}{_info_row}</div>',
+                                height=300 if _mh else 160,
                             )
                     except Exception as _re:
                         st.caption(f"Recommendation unavailable: {_re}")
@@ -3483,9 +3525,10 @@ with tab3:
                                 horizon_enum = ForecastingHorizon.LONG_TERM
                             
                             # Simple market regime detection
-                            if len(price_data) < 2:
-                                regime_enum = MarketRegime.SIDEWAYS
-                            else:
+                            price_trend = 0.0
+                            volatility = 0.0
+                            regime_enum = MarketRegime.SIDEWAYS
+                            if len(price_data) >= 2:
                                 price_arr = np.asarray(price_data).astype(float)
                                 price_trend = (price_arr[-1] - price_arr[0]) / (price_arr[0] or 1)
                                 volatility = np.nanstd(price_arr)

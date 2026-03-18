@@ -624,6 +624,18 @@ class EnsembleModel(BaseModel):
 
             for model_name, model in self.models.items():
                 try:
+                    # Guard against models that require more history (e.g. Ridge)
+                    if hasattr(model, "__class__") and model.__class__.__name__.lower().startswith(
+                        "ridge"
+                    ):
+                        if isinstance(data, pd.DataFrame) and len(data) < 10:
+                            logger.warning(
+                                "EnsembleModel: insufficient data (%d rows) for Ridge; "
+                                "skipping this sub-model.",
+                                len(data),
+                            )
+                            continue
+
                     raw_pred = model.predict(data)
                     pred = self._normalize_submodel_output(raw_pred)
                     if pred.size == 0:

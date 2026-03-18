@@ -1209,6 +1209,35 @@ class ForecastRouter:
                 valid_used.append(name)
 
         if not valid_forecasts:
+            # Fallback: try a simple ARIMA model instead of returning an empty forecast
+            try:
+                from trading.models.arima_model import ARIMAModel
+
+                fb = ARIMAModel({"target_column": "close"})
+                fb.fit(df)
+                fb_result = fb.forecast(df, horizon=horizon_int)
+                fb_fc = np.asarray(
+                    (fb_result or {}).get("forecast", []), dtype="float64"
+                ).ravel()
+                if fb_fc.size >= horizon_int:
+                    return {
+                        "consensus_forecast": fb_fc[:horizon_int].tolist(),
+                        "upper_bound": None,
+                        "lower_bound": None,
+                        "model_agreement": 0.0,
+                        "conviction": "INSUFFICIENT",
+                        "direction": "NEUTRAL",
+                        "models_used": ["arima_fallback"],
+                        "models_failed": failed,
+                        "last_price": last_price,
+                        "consensus_7d_change_pct": None,
+                        "consensus_price": float(fb_fc[horizon_int - 1]),
+                        "price_targets": {},
+                        "forecast_debug": forecast_debug,
+                    }
+            except Exception:
+                pass
+
             return {
                 "error": "All model forecasts were flat (no variation). Check data or model config.",
                 "models_failed": failed,

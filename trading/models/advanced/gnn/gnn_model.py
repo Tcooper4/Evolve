@@ -336,6 +336,14 @@ class GNNForecaster:
         if data.empty:
             raise ValueError("GNNForecaster.fit received empty data frame")
 
+        # Determine actual number of assets (columns)
+        actual_assets = data.shape[1] if hasattr(data, "shape") and data.ndim == 2 else 1
+        if actual_assets < 3:
+            raise ValueError(
+                f"GNNForecaster requires at least 3 assets, got {actual_assets}. "
+                "Use a different model for single-asset forecasting."
+            )
+
         # Build adjacency matrix from correlations
         self.adjacency_matrix = self._build_adjacency_matrix(data)
         

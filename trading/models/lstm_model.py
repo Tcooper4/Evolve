@@ -1007,6 +1007,22 @@ class LSTMForecaster(BaseModel):
                 
                 # Scale X and y
                 feature_cols = self.config.get("feature_columns", list(X.columns))
+
+                # Normalize feature column names to match actual data columns
+                available_cols = [c.lower() for c in X.columns]
+                col_map = {c.lower(): c for c in X.columns}
+                feature_cols = [
+                    col_map.get(f.lower(), f)
+                    for f in feature_cols
+                    if f.lower() in available_cols
+                ]
+                if not feature_cols:
+                    raise ModelTrainingError(
+                        "No valid feature columns found. "
+                        f"Requested: {self.config.get('feature_columns')}. "
+                        f"Available: {list(X.columns)}"
+                    )
+
                 X_scaled = self.X_scaler.fit_transform(X[feature_cols])
                 y_scaled = self.y_scaler.fit_transform(y.values.reshape(-1, 1)).flatten()
                 
@@ -1028,6 +1044,13 @@ class LSTMForecaster(BaseModel):
                     y_seq.append(y_scaled_series.iloc[i + seq_len])
                 X_seq = np.array(X_seq)
                 y_seq = np.array(y_seq)
+
+                if X_seq.size == 0:
+                    raise ModelTrainingError(
+                        "DataLoader creation failed: insufficient data for sequence "
+                        f"length {seq_len}. Need at least {seq_len + 1} rows, got "
+                        f"{len(X_scaled_df)}."
+                    )
             except Exception as e:
                 logger.error(f"Failed to prepare sequences: {e}")
                 raise ModelTrainingError(f"Sequence preparation failed: {str(e)}")
