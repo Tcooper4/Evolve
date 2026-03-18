@@ -1169,7 +1169,8 @@ class ForecastRouter:
                     horizon=horizon_int,
                     run_walk_forward=False,
                 )
-                fc = np.asarray((result or {}).get("forecast", []), dtype="float64").ravel()
+                fc_result = (result or {}).get("forecast", [])
+                fc = np.asarray(fc_result, dtype="float64").ravel()
                 if fc.size < horizon_int:
                     raise ValueError("forecast shorter than horizon")
 
@@ -1181,6 +1182,29 @@ class ForecastRouter:
                 if last_price > 0:
                     if hi < last_price * 0.3 or lo > last_price * 3.0:
                         raise ValueError("forecast outside sanity band")
+
+                # Cap forecast to realistic range: max ±15% from last price
+                try:
+                    _fc_arr = np.asarray(fc_result, dtype="float64").ravel()
+                    if last_price is not None and last_price > 0 and _fc_arr.size > 0:
+                        _max_move = 0.15
+                        _upper_cap = last_price * (1 + _max_move)
+                        _lower_cap = last_price * (1 - _max_move)
+                        _clipped = np.clip(_fc_arr, _lower_cap, _upper_cap)
+                        _orig_end = float(_fc_arr[-1])
+                        _new_end = float(_clipped[-1])
+                        if abs(_orig_end - _new_end) > 0.01:
+                            logger.warning(
+                                "Model %s forecast capped: original end %.2f → %.2f (±15%% from %.2f)",
+                                name,
+                                _orig_end,
+                                _new_end,
+                                last_price,
+                            )
+                        fc = _clipped
+                    # If capping failed, fc remains as previously validated
+                except Exception:
+                    pass
 
                 target_idx = horizon_int - 1
                 price_targets[name] = float(fc[target_idx])
@@ -1244,6 +1268,44 @@ class ForecastRouter:
                 "forecast_debug": forecast_debug,
             }
 
+        # --- Outlier exclusion across valid forecasts ---
+        models_excluded: Dict[str, Dict[str, float]] = {}
+        vf_map: Dict[str, np.ndarray] = {
+            name: np.asarray(fc) for name, fc in zip(valid_used, valid_forecasts)
+        }
+        if len(vf_map) >= 3:
+            means = np.array([float(np.mean(fc)) for fc in vf_map.values()])
+            group_mean = float(np.mean(means))
+            group_std = float(np.std(means))
+
+            filtered: Dict[str, np.ndarray] = {}
+            for model_name, fc in vf_map.items():
+                m = float(np.mean(fc))
+                if group_std > 0 and abs(m - group_mean) > 2.5 * group_std:
+                    deviation_std = abs(m - group_mean) / group_std
+                    models_excluded[model_name] = {
+                        "mean": round(m, 2),
+                        "deviation_std": round(float(deviation_std), 1),
+                    }
+                    logger.warning(
+                        "Excluding %s from consensus: mean=%.2f is %.1f std from group",
+                        model_name,
+                        m,
+                        deviation_std,
+                    )
+                else:
+                    filtered[model_name] = fc
+
+            # Use filtered forecasts only if at least two models remain
+            if len(filtered) >= 2:
+                vf_map = filtered
+            else:
+                models_excluded = {}
+
+        # Rebuild valid_forecasts/valid_used from (possibly) filtered vf_map
+        valid_used = list(vf_map.keys())
+        valid_forecasts = [vf_map[name] for name in valid_used]
+
         stacked = np.stack(valid_forecasts)
         consensus = stacked.mean(axis=0)
         std = stacked.std(axis=0)
@@ -1254,12 +1316,24 @@ class ForecastRouter:
             float((consensus_price / last_price - 1) * 100.0) if last_price else 0.0
         )
 
-        # Per-model direction at horizon
+        # Direction from consensus price (not per-model votes which include excluded outliers)
+        if last_price > 0:
+            if consensus_price > last_price * 1.005:
+                direction = "BULLISH"
+            elif consensus_price < last_price * 0.995:
+                direction = "BEARISH"
+            else:
+                direction = "NEUTRAL"
+        else:
+            direction = "NEUTRAL"
+
+        # Keep per-model directions for price_targets display only (valid_used = post-exclusion)
         model_dirs: Dict[str, int] = {}
-        non_neutral_dirs: List[int] = []
-        for name in used:
+        for name in valid_used:
             target = price_targets.get(name)
-            if target is None or not np.isfinite(target) or last_price <= 0:
+            if (target is None or
+                    not np.isfinite(target) or
+                    last_price <= 0):
                 d = 0
             else:
                 if target > last_price * 1.005:
@@ -1269,43 +1343,25 @@ class ForecastRouter:
                 else:
                     d = 0
             model_dirs[name] = d
-            if d != 0:
-                non_neutral_dirs.append(d)
 
-        if non_neutral_dirs:
-            total_dir = sum(non_neutral_dirs)
-            if total_dir > 0:
-                direction = "BULLISH"
-            elif total_dir < 0:
-                direction = "BEARISH"
-            else:
-                direction = "NEUTRAL"
-            majority_count = max(
-                non_neutral_dirs.count(1), non_neutral_dirs.count(-1)
-            )
-            valid_models = len(used)
-        else:
-            direction = "NEUTRAL"
-            majority_count = 0
-            valid_models = len(used)
+        # Conviction from consensus magnitude and model agreement among valid_used
+        _agreeing = sum(
+            1 for d in model_dirs.values()
+            if (d == 1 and direction == "BULLISH")
+            or (d == -1 and direction == "BEARISH"))
+        _total_valid = max(len(valid_used), 1)
+        _agreement_ratio = _agreeing / _total_valid
 
-        if valid_models < 2:
-            conviction = "INSUFFICIENT"
+        if (abs(change_pct) >= 2.0 and
+                _agreement_ratio >= 0.6):
+            conviction = "HIGH"
+        elif (abs(change_pct) >= 0.5 and
+                _agreement_ratio >= 0.4):
+            conviction = "MEDIUM"
         else:
-            if majority_count >= 4:
-                conviction = "HIGH"
-            elif majority_count >= 3:
-                conviction = "MEDIUM"
-            elif majority_count >= 2:
-                conviction = "LOW"
-            else:
-                conviction = "INSUFFICIENT"
+            conviction = "LOW"
 
-        # Simple agreement metric based on majority vs total non-neutral
-        if non_neutral_dirs and majority_count > 0:
-            model_agreement = round(majority_count / len(non_neutral_dirs), 2)
-        else:
-            model_agreement = 0.0
+        model_agreement = round(_agreement_ratio, 2)
 
         return {
             "consensus_forecast": consensus.tolist(),
@@ -1316,6 +1372,7 @@ class ForecastRouter:
             "direction": direction,
             "models_used": valid_used,
             "models_failed": failed,
+            "models_excluded": models_excluded,
             "last_price": last_price,
             "consensus_7d_change_pct": round(change_pct, 2),
             "consensus_price": consensus_price,

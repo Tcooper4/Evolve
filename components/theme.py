@@ -200,6 +200,34 @@ input[type="number"], input[type="text"] {
     color: #e0e6f0 !important;
 }
 
+/* Market status badge */
+.market-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+.market-badge.market-open {
+    background: rgba(0, 212, 255, 0.12);
+    color: #00d4ff;
+    border: 1px solid rgba(0, 212, 255, 0.6);
+}
+.market-badge.market-closed {
+    background: rgba(128, 139, 166, 0.18);
+    color: #808ba6;
+    border: 1px solid rgba(128, 139, 166, 0.5);
+}
+.market-badge.market-pre,
+.market-badge.market-post {
+    background: rgba(255, 171, 64, 0.14);
+    color: #ffab40;
+    border: 1px solid rgba(255, 171, 64, 0.7);
+}
+
 /* Hide Streamlit branding */
 #MainMenu { visibility: hidden !important; }
 footer { visibility: hidden !important; }

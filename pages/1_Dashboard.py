@@ -457,9 +457,11 @@ if _st_ver >= (1, 37):
     @st.fragment(run_every=300)
     def _news_section():
         st.subheader("📊 Volume & News Events")
-        _vol_th = vol_threshold
-        _price_th = price_threshold
-        _all_movers = (movers_state.get("gainers") or []) + (movers_state.get("losers") or [])
+        # Always read latest thresholds and mover universe from session state
+        _vol_th = st.session_state.get("dash_vol_threshold", 3.0)
+        _price_th = st.session_state.get("dash_price_threshold", 2.0)
+        _movers_state = st.session_state.get("home_last_top_movers", movers_state)
+        _all_movers = (_movers_state.get("gainers") or []) + (_movers_state.get("losers") or [])
         _qualified = [m for m in _all_movers if m.get("volume_ratio", 1.0) >= _vol_th and abs(m.get("change", 0)) >= _price_th]
         _qualified.sort(key=lambda x: x.get("volume_ratio", 0), reverse=True)
         _top4 = _qualified[:4]
@@ -505,9 +507,10 @@ if _st_ver >= (1, 37):
     _news_section()
 else:
     st.subheader("📊 Volume & News Events")
-    _vol_th = vol_threshold
-    _price_th = price_threshold
-    _all_movers = (movers_state.get("gainers") or []) + (movers_state.get("losers") or [])
+    _vol_th = st.session_state.get("dash_vol_threshold", 3.0)
+    _price_th = st.session_state.get("dash_price_threshold", 2.0)
+    _movers_state = st.session_state.get("home_last_top_movers", movers_state)
+    _all_movers = (_movers_state.get("gainers") or []) + (_movers_state.get("losers") or [])
     _qualified = [m for m in _all_movers if m.get("volume_ratio", 1.0) >= _vol_th and abs(m.get("change", 0)) >= _price_th]
     _qualified.sort(key=lambda x: x.get("volume_ratio", 0), reverse=True)
     _top4 = _qualified[:4]

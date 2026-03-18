@@ -1135,87 +1135,180 @@ def _generate_recommendation(
     trader_mode="Short-term",
 ):
     try:
-        overall = ai_score_result.get("overall_score", 5.0)
+        # Entry is always current price from latest quote
+        _quote = get_quote(ticker) if ticker else {}
+        last_price = _quote.get("price") or _quote.get("regularMarketPrice") or 0.0
+        try:
+            last_price = float(last_price)
+        except Exception:
+            last_price = 0.0
+        if last_price <= 0:
+            # Fallback: no valid price, return neutral hold
+            return {
+                "action": "HOLD",
+                "conviction": "LOW",
+                "signal_score": 5.0,
+                "fc_target": None,
+                "fc_direction": "flat",
+                "reasons": [("~", "Price unavailable — no trade recommendation")],
+            }
+        _entry = float(last_price)
+
+        # Determine action from AI Score (not from consensus direction)
+        _score = ai_score_result.get(
+            "weighted_score", ai_score_result.get("overall_score", 5.0)
+        )
+        try:
+            _score = float(_score)
+        except Exception:
+            _score = 5.0
+
+        if _score >= 7.0:
+            _action = "BUY"
+            _conv = "HIGH"
+        elif _score >= 6.0:
+            _action = "BUY"
+            _conv = "MEDIUM"
+        elif _score <= 3.0:
+            _action = "SELL"
+            _conv = "HIGH"
+        elif _score <= 4.0:
+            _action = "SELL"
+            _conv = "MEDIUM"
+        else:
+            _action = "HOLD"
+            _conv = "LOW"
+
+        # Get consensus forecast for context (direction/conviction may be absent)
+        _consensus = st.session_state.get("current_forecast_result", {}) or (
+            forecast_result or {}
+        )
+        _fc_arr = _consensus.get("forecast", [])
+        _consensus_dir = _consensus.get("direction", "NEUTRAL")
+        _consensus_conv = (
+            _consensus.get("conviction")
+            or _consensus.get("confidence_label", "LOW")
+        )
+
+        # Override action to HOLD if AI Score and consensus strongly conflict
+        if (
+            _action == "BUY"
+            and _consensus_dir == "BEARISH"
+            and str(_consensus_conv).upper() == "HIGH"
+            and _score < 6.5
+        ):
+            _action = "HOLD"
+            _conv = "LOW"
+        elif (
+            _action == "SELL"
+            and _consensus_dir == "BULLISH"
+            and str(_consensus_conv).upper() == "HIGH"
+            and _score > 3.5
+        ):
+            _action = "HOLD"
+            _conv = "LOW"
+
+        # Set target and stop based on action direction
+        # _vol from ai_score is annualized decimal (e.g. 0.2528 = 25.28%)
+        # Convert to daily: ann_vol / sqrt(252)
+        try:
+            _ann_vol = max(float(ai_score_result.get("volatility", 0.15)), 0.05)
+        except Exception:
+            _ann_vol = 0.15
+        _daily_vol = _ann_vol / np.sqrt(252)
+        # 7-day expected move (1 std dev)
+        _horizon_vol = _daily_vol * np.sqrt(7)
+        # Target = 0.5 std dev move, cap 3%
+        _target_pct = min(_horizon_vol * 0.5, 0.03)
+        _target_pct = max(_target_pct, 0.005)
+        # Stop = 0.75 std dev move, cap 2%
+        _stop_pct = min(_horizon_vol * 0.75, 0.02)
+        _stop_pct = max(_stop_pct, 0.005)
+
+        if _action == "BUY":
+            _target = _entry * (1 + _target_pct)
+            _stop = _entry * (1 - _stop_pct)
+        elif _action == "SELL":
+            _target = _entry * (1 - _target_pct)
+            _stop = _entry * (1 + _stop_pct)
+        else:  # HOLD
+            # Show a narrow range instead of directional target
+            _target = _entry * 1.01
+            _stop = _entry * 0.98
+            _target_pct = 0.01
+            _stop_pct = 0.02
+
+        # R/R ratio and expected move
+        _upside = abs(_target - _entry)
+        _downside = abs(_entry - _stop)
+        _rr = (_upside / _downside) if _downside > 0 else 1.0
+        _pct_move = ((_target - _entry) / _entry * 100.0) if _entry else 0.0
+
+        # Build reasoning bullets aligned with action/direction
+        _reasons = []
+        # AI Score strength
+        if _score >= 6.0:
+            _reasons.append(("+", f"AI Score bullish ({_score:.1f}/10)"))
+        elif _score <= 4.0:
+            _reasons.append(("-", f"AI Score bearish ({_score:.1f}/10)"))
+
+        # Consensus direction
+        if _consensus_dir == "BULLISH":
+            _reasons.append(("+", "Forecast models project upside"))
+        elif _consensus_dir == "BEARISH":
+            _reasons.append(("-", "Forecast models project decline"))
+
+        # Technical score
         tech = ai_score_result.get("technical_score", 5.0)
-        mom = ai_score_result.get("momentum_score", 5.0)
-        sent = ai_score_result.get("sentiment_score", 5.0)
-        fund = ai_score_result.get("fundamental_score", 5.0)
-
-        # Forecast direction
-        fc_direction = None
-        fc_target = None
-        if forecast_result:
-            fc = forecast_result.get("forecast", [])
-            if hasattr(fc, "__len__") and len(fc) > 0:
-                import numpy as np
-
-                fc_arr = np.asarray(fc)
-                if fc_arr.size > 0:
-                    last_val = float(fc_arr[-1])
-                    first_val = float(fc_arr[0])
-                    if last_val > first_val * 1.005:
-                        fc_direction = "up"
-                        fc_target = last_val
-                    elif last_val < first_val * 0.995:
-                        fc_direction = "down"
-                        fc_target = last_val
-                    else:
-                        fc_direction = "flat"
-
-        # Determine action
-        if trader_mode == "Short-term":
-            signal_score = tech * 0.45 + mom * 0.40 + sent * 0.15
-        else:
-            signal_score = fund * 0.45 + tech * 0.20 + mom * 0.20 + sent * 0.15
-
-        if signal_score >= 6.5:
-            if fc_direction == "up":
-                action = "BUY"
-                conviction = "HIGH"
-            else:
-                action = "BUY"
-                conviction = "MEDIUM"
-        elif signal_score <= 4.0:
-            if fc_direction == "down":
-                action = "SELL / AVOID"
-                conviction = "HIGH"
-            else:
-                action = "SELL / AVOID"
-                conviction = "MEDIUM"
-        else:
-            action = "HOLD / WATCH"
-            conviction = "LOW"
-
-        # Build reasons
-        reasons = []
+        try:
+            tech = float(tech)
+        except Exception:
+            tech = 5.0
         if tech >= 7.0:
-            reasons.append(("pos", "Technical trend is strong"))
+            _reasons.append(("+", "Technical trend is strong"))
         elif tech <= 4.0:
-            reasons.append(("neg", "Technical trend is weak"))
-        if mom >= 7.0:
-            reasons.append(("pos", "Momentum is accelerating"))
-        elif mom <= 4.0:
-            reasons.append(("neg", "Momentum is fading"))
-        if fc_direction == "up":
-            reasons.append(("pos", "Forecast models project upward move"))
-        elif fc_direction == "down":
-            reasons.append(("neg", "Forecast models project decline"))
-        if sent >= 6.5:
-            reasons.append(("pos", "News sentiment positive"))
-        elif sent <= 3.5:
-            reasons.append(("neg", "News sentiment negative"))
-        if fund <= 4.0 and trader_mode == "Long-term":
-            reasons.append(("neg", "Fundamentals weak for long-term entry"))
-        if not reasons:
-            reasons.append(("neu", "Signals are mixed — monitor closely"))
+            _reasons.append(("-", "Technical trend is weak"))
+
+        # Signal conflict warning
+        if _action in ("BUY", "SELL"):
+            if _action == "BUY" and _consensus_dir == "BEARISH":
+                _reasons.append(
+                    ("⚠", "AI Score bullish but models bearish — use caution")
+                )
+            elif _action == "SELL" and _consensus_dir == "BULLISH":
+                _reasons.append(
+                    ("⚠", "AI Score bearish but models bullish — use caution")
+                )
+
+        if not _reasons:
+            _reasons.append(("~", "Signals are mixed — monitor closely"))
+
+        # Limit to 3 reasons
+        _reasons = _reasons[:3]
+
+        # fc_target/fc_direction for backward compatibility (used by widget)
+        if _action == "BUY":
+            fc_direction = "up"
+        elif _action == "SELL":
+            fc_direction = "down"
+        else:
+            fc_direction = "flat"
+        fc_target = _target
 
         return {
-            "action": action,
-            "conviction": conviction,
-            "signal_score": round(signal_score, 1),
+            "action": _action,
+            "conviction": _conv,
+            "signal_score": round(_score, 1),
             "fc_target": fc_target,
             "fc_direction": fc_direction,
-            "reasons": reasons,
+            "reasons": _reasons,
+            "entry": _entry,
+            "target": _target,
+            "stop": _stop,
+            "target_pct": _target_pct,
+            "stop_pct": _stop_pct,
+            "risk_reward": _rr,
+            "pct_move": _pct_move,
         }
     except Exception:
         return None
@@ -1507,6 +1600,8 @@ with tab1:
                     with st.spinner("Computing AI Score..."):
                         score_result = compute_ai_score(_sym, _hist)
                     st.session_state[_ai_score_key] = score_result
+                    # Also store under canonical key for cross-component access
+                    st.session_state["ai_score_result"] = score_result
                     st.session_state[_ai_score_ts_key] = _time.time()
                 else:
                     score_result = _cached_score
@@ -1686,20 +1781,16 @@ with tab1:
                             )
                             _reasons_html = ""
                             for _s, _t2 in _rec["reasons"]:
-                                _icon = (
-                                    "+"
-                                    if _s == "pos"
-                                    else "-"
-                                    if _s == "neg"
-                                    else "~"
-                                )
-                                _rc = (
-                                    "#26a60a"
-                                    if _s == "pos"
-                                    else "#ef5350"
-                                    if _s == "neg"
-                                    else "#8899aa"
-                                )
+                                # _s is one of "+", "-", "⚠", or "~"
+                                _icon = _s if _s in ("+", "-", "⚠") else "~"
+                                if _icon == "+":
+                                    _rc = "#26a60a"
+                                elif _icon == "-":
+                                    _rc = "#ef5350"
+                                elif _icon == "⚠":
+                                    _rc = "#ffb74d"
+                                else:
+                                    _rc = "#8899aa"
                                 _reasons_html += (
                                     f'<div style="display:flex;gap:10px;'
                                     f'margin-bottom:6px">'
@@ -1711,19 +1802,15 @@ with tab1:
                                 )
                             _mh = ""
                             _info_row = ""
-                            if _rec.get("fc_target"):
-                                _cur2 = get_quote(ticker).get("price", 0)
-                                if _cur2 and _cur2 > 0:
-                                    _pct2 = (
-                                        (_rec["fc_target"] / _cur2) - 1
-                                    ) * 100
-                                    _stop2 = _cur2 * 0.98
-                                    _rr2 = abs(_pct2) / 2.0
-                                    _tc2 = (
-                                        "#26a69a"
-                                        if _pct2 > 0
-                                        else "#ef5350"
-                                    )
+                            if _rec.get("fc_target") is not None:
+                                _entry = float(_rec.get("entry", 0.0))
+                                _target = float(_rec.get("target", _rec["fc_target"]))
+                                _stop = float(_rec.get("stop", _entry))
+                                if _entry and _entry > 0:
+                                    _pct2 = ((_target / _entry) - 1.0) * 100.0
+                                    _stop2 = _stop
+                                    _rr2 = float(_rec.get("risk_reward", 1.0))
+                                    _tc2 = "#26a69a" if _pct2 > 0 else "#ef5350"
 
                                     # Trade horizon estimate (7 business days by default)
                                     try:
@@ -1765,14 +1852,14 @@ with tab1:
                                         f'<div style="font-size:15px;'
                                         f'font-weight:bold;'
                                         f'color:#e0e6f0">'
-                                        f'${_cur2:.2f}</div></div>'
+                                        f'${_entry:.2f}</div></div>'
                                         f'<div style="background:#0f1525;'
                                         f'padding:10px 14px">'
                                         f'<div style="font-size:10px;'
                                         f'color:#4a6080;'
                                         f'letter-spacing:1px;'
                                         f'margin-bottom:3px">'
-                                        f'TARGET</div>'
+                                        f'{"TARGET ↑" if "BUY" in _action else "TARGET ↓" if "SELL" in _action else "RANGE"}</div>'
                                         f'<div style="font-size:15px;'
                                         f'font-weight:bold;'
                                         f'color:{_tc2}">'
@@ -1793,7 +1880,7 @@ with tab1:
                                         f'${_stop2:.2f}</div>'
                                         f'<div style="font-size:11px;'
                                         f'color:#ef5350">'
-                                        f'-2.0% · R/R {_rr2:.1f}:1</div>'
+                                        f'R/R {_rr2:.1f}:1</div>'
                                         f'</div></div>'
                                     )
 
@@ -2012,6 +2099,8 @@ with tab1:
                                     "last_actual_price": consensus.get("last_price"),
                                     "confidence_label": consensus.get("conviction", "INSUFFICIENT"),
                                     "warnings": [],
+                                    "lower_bound": consensus.get("lower_bound"),
+                                    "upper_bound": consensus.get("upper_bound"),
                                 }
                                 st.session_state["forecast_debug"] = consensus.get("forecast_debug", {})
                                 used_router = True
@@ -2428,6 +2517,65 @@ with tab1:
                                     f"${consensus_price:.2f}",
                                     delta=f"{delta_pct:+.2f}%",
                                 )
+
+                            # Signal synthesis: reconcile consensus, AI Score, and outlier exclusions
+                            _consensus_dir = direction
+                            _conv = conviction
+                            # Try canonical key first, then dynamic key, then any ai_score key
+                            _symbol = st.session_state.get("symbol", "")
+                            _ai_result = (
+                                st.session_state.get("ai_score_result")
+                                or st.session_state.get(f"ai_score_{_symbol}")
+                                or {}
+                            )
+                            _excluded = consensus.get("models_excluded", {}) or {}
+
+                            try:
+                                _ai_val_f = float(
+                                    _ai_result.get("weighted_score")
+                                    or _ai_result.get("overall_score")
+                                    or _ai_result.get("model_score")
+                                    or 5.0)
+                            except Exception:
+                                _ai_val_f = 5.0
+                            if _ai_val_f == 5.0 and _ai_result:
+                                import logging as _lg
+                                _lg.getLogger(__name__).warning(
+                                    "AI score result found but score keys missing: %s",
+                                    list(_ai_result.keys()))
+
+                            _signals = []
+                            if _consensus_dir == "BULLISH":
+                                _signals.append("models lean bullish")
+                            elif _consensus_dir == "BEARISH":
+                                _signals.append("models lean bearish")
+                            else:
+                                _signals.append("models are mixed")
+
+                            if _ai_val_f >= 7.0:
+                                _signals.append("AI Score is strong")
+                            elif _ai_val_f >= 5.5:
+                                _signals.append("AI Score is neutral")
+                            else:
+                                _signals.append("AI Score is weak")
+
+                            _excl_str = ""
+                            if _excluded:
+                                _excl_names = ", ".join(
+                                    f"{k} ({v.get('deviation_std', 0)}σ)"
+                                    for k, v in _excluded.items()
+                                )
+                                _excl_str = f" ⚠️ Outlier excluded: {_excl_names}."
+
+                            _synthesis = (
+                                f"**Signal synthesis:** "
+                                f"{' · '.join(_signals)}."
+                                f"{_excl_str} "
+                                "Consensus and Monte Carlo measure different things — "
+                                "point forecast vs probability distribution. "
+                                "Use Monte Carlo for risk sizing and consensus for direction bias."
+                            )
+                            st.info(_synthesis)
 
                             # Row 2: per-model price targets table
                             if price_targets:

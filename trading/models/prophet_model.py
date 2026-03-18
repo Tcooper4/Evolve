@@ -209,6 +209,7 @@ if PROPHET_AVAILABLE:
                 if date_col not in train_data.columns and isinstance(train_data.index, pd.DatetimeIndex):
                     # Use index as ds when no date column (e.g. after prepare_forecast_data)
                     df = pd.DataFrame({"ds": train_data.index, "y": train_data[target_col].values})
+                    self._last_train_date = train_data.index[-1]
                 else:
                     if date_col not in train_data.columns or target_col not in train_data.columns:
                         raise ValueError(
@@ -217,6 +218,8 @@ if PROPHET_AVAILABLE:
                     df = train_data[[date_col, target_col]].rename(
                         columns={date_col: "ds", target_col: "y"}
                     )
+                    # Track last training date for future horizon construction
+                    self._last_train_date = pd.to_datetime(df["ds"].iloc[-1])
                 df = df.dropna(subset=["ds", "y"])
                 if df.empty:
                     raise ValueError("No valid data remaining after extracting ds/y")
@@ -481,34 +484,25 @@ if PROPHET_AVAILABLE:
                     )
                     logger.info(f"Using dynamic forecast horizon: {horizon} periods")
 
-                # Prepare data for prediction – mirror fit() logic:
-                # use date column if present, else use index
-                date_col = self.config.get("date_column", "ds")
+                # Build future horizon explicitly from last training date to avoid flat forecasts
+                last_date = pd.Timestamp.now()
+                try:
+                    if hasattr(self, "_last_train_date"):
+                        last_date = pd.to_datetime(self._last_train_date)
+                    elif getattr(self, "history", None) is not None and "ds" in self.history.columns:
+                        last_date = pd.to_datetime(self.history["ds"].max())
+                except Exception:
+                    pass
 
-                if date_col in data.columns:
-                    future = data[[date_col]].rename(columns={date_col: "ds"})
-                elif hasattr(data.index, "to_frame"):
-                    # Use DatetimeIndex as ds
-                    _idx = data.index
-                    try:
-                        # Drop timezone info for compatibility
-                        if hasattr(_idx, "tz") and _idx.tz is not None:
-                            _idx = _idx.tz_localize(None)
-                    except Exception:
-                        pass
-                    future = pd.DataFrame({"ds": _idx})
-                else:
-                    logger.warning(
-                        "Prophet predict: cannot build date column from data, returning empty result"
-                    )
-                    return np.array([])
+                try:
+                    last_date = pd.to_datetime(last_date).tz_localize(None)
+                except Exception:
+                    last_date = pd.Timestamp.now()
 
-                # Normalize and validate ds column
-                future["ds"] = pd.to_datetime(future["ds"], utc=False).dt.tz_localize(
-                    None
-                )
+                future_dates = pd.bdate_range(start=last_date, periods=horizon + 1)[1:]
+                future = pd.DataFrame({"ds": future_dates})
 
-                # Make prediction
+                # Make prediction for future horizon only
                 forecast = self.model.predict(future)
                 return forecast["yhat"].values
 
