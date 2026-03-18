@@ -593,7 +593,7 @@ try:
     _cached_ts = st.session_state.get(_scan_ts_key, 0)
     if _cached is None or (_now - _cached_ts) > _scan_ttl:
         with st.spinner("Refreshing opportunities..."):
-            _cached = scan_market(filters=["top_ai_score"], universe=_quick_universe, max_results=5)
+            _cached = scan_market(filters=[], universe=_quick_universe, max_results=5)
         st.session_state[_scan_key] = _cached
         st.session_state[_scan_ts_key] = _now
     _scan = _cached
@@ -607,8 +607,10 @@ try:
         if _cached_ts > 0:
             st.caption(f"Last scanned {_cache_age_min}m ago")
     if _scan.get("error") is None and _scan.get("results"):
-        _cols = st.columns(min(5, len(_scan["results"])))
-        for _idx, _res in enumerate(_scan["results"]):
+        _results = [r for r in (_scan.get("results") or []) if float(r.get("ai_score", 0) or 0) >= 6.5]
+        _results = _results[:5]
+        _cols = st.columns(min(5, len(_results)))
+        for _idx, _res in enumerate(_results):
             with _cols[_idx]:
                 _grade_color = {"A": "🟢", "B": "🔵", "C": "🟡", "D": "🟠", "F": "🔴"}
                 st.metric(
@@ -617,7 +619,7 @@ try:
                     delta=f"AI {_res.get('ai_score', 0)}/10 ({_res.get('ai_grade', '')})",
                 )
     elif _scan.get("passed", 0) == 0:
-        st.caption("No stocks above AI Score 7.0 in watchlist right now.")
+        st.caption("No stocks above AI Score 6.5 in watchlist right now.")
     else:
         st.caption(f"Scanner: {_scan.get('error', 'no results')}")
 except Exception as _e:

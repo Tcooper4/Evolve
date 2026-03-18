@@ -19,6 +19,20 @@ import yfinance as yf
 
 logger = logging.getLogger(__name__)
 
+SECTOR_PE = {
+    "Technology": 28.0,
+    "Healthcare": 22.0,
+    "Financials": 14.0,
+    "Consumer Discretionary": 25.0,
+    "Consumer Staples": 20.0,
+    "Industrials": 20.0,
+    "Energy": 12.0,
+    "Utilities": 17.0,
+    "Materials": 18.0,
+    "Real Estate": 35.0,
+    "Communication Services": 20.0,
+}
+
 
 def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
     """
@@ -53,6 +67,8 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
         last_price = float(close[-1])
 
         signals = []
+        earnings_near = False
+        earnings_days_until = None
 
         # ── TECHNICAL SCORE (0-10) ──────────────────────────────────
         tech_points = 0.0
@@ -147,16 +163,44 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
 
             si = get_short_interest(symbol)
             squeeze_score = si.get("short_squeeze_score", 0) or 0
-            si_sentiment = min(10.0, 3.0 + squeeze_score * 0.07)
             short_pct = si.get("short_pct_float")
             if short_pct is None:
                 short_pct = 0
+            short_pct_f = float(short_pct)
+            if short_pct_f >= 20:
+                si_sentiment = 9.0
+            elif short_pct_f >= 15:
+                si_sentiment = 7.5
+            elif short_pct_f >= 10:
+                si_sentiment = 6.5
+            elif short_pct_f >= 5:
+                si_sentiment = 5.5
+            else:
+                si_sentiment = 4.0
+            squeeze_tier = (
+                "EXTREME"
+                if short_pct_f >= 20
+                else "HIGH"
+                if short_pct_f >= 15
+                else "ELEVATED"
+                if short_pct_f >= 10
+                else "MODERATE"
+                if short_pct_f >= 5
+                else "LOW"
+            )
+
+            # If float short is very elevated, also lift momentum
+            if short_pct_f >= 25:
+                momentum_score = min(10.0, momentum_score + 2.0)
+            elif short_pct_f >= 15:
+                momentum_score = min(10.0, momentum_score + 1.5)
+
             signals.append(
                 {
                     "name": "Short Squeeze Score",
                     "value": round(float(squeeze_score), 1),
                     "impact": "positive" if squeeze_score > 50 else "neutral",
-                    "description": f"Squeeze potential: {si.get('signal', 'UNKNOWN')} ({float(short_pct):.1f}% float short)",
+                    "description": f"Float short: {short_pct_f:.1f}% — Squeeze: {squeeze_tier}",
                 }
             )
             sentiment_score = si_sentiment
@@ -175,10 +219,17 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
                 "INSIDER_SELLING": 2.5,
             }.get(signal, 5.0)
             sentiment_score = (sentiment_score + insider_score) / 2
+            _buy = insider.get("buy_count", 0) or 0
+            _sell = insider.get("sell_count", 0) or 0
+            _insider_val = (
+                "No Activity"
+                if (_buy == 0 and _sell == 0)
+                else f"{_buy}B / {_sell}S"
+            )
             signals.append(
                 {
                     "name": "Insider Flow",
-                    "value": f"{insider.get('buy_count', 0)}B / {insider.get('sell_count', 0)}S",
+                    "value": _insider_val,
                     "impact": "positive"
                     if signal == "INSIDER_BUYING"
                     else "negative"
@@ -218,6 +269,51 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
                         "description": f"⚠️ Earnings in {days_until} days — elevated uncertainty",
                     }
                 )
+                earnings_near = True
+                earnings_days_until = days_until
+
+            # Valuation overlay vs sector-average P/E
+            try:
+                _ticker_obj = yf.Ticker(symbol)
+                _info = _ticker_obj.info
+                stock_pe = _info.get("trailingPE")
+                sector = _info.get("sector", "")
+                sector_pe = SECTOR_PE.get(sector, 20.0)
+                if stock_pe and stock_pe > 0 and sector_pe > 0:
+                    pe_premium = (stock_pe - sector_pe) / sector_pe * 100
+                    if pe_premium > 30:
+                        valuation_adj = -1.5
+                        val_label = "Premium"
+                        val_impact = "negative"
+                    elif pe_premium > 10:
+                        valuation_adj = -0.5
+                        val_label = "Slight Premium"
+                        val_impact = "negative"
+                    elif pe_premium < -10:
+                        valuation_adj = 1.0
+                        val_label = "Discount"
+                        val_impact = "positive"
+                    else:
+                        valuation_adj = 0.0
+                        val_label = "Fair Value"
+                        val_impact = "neutral"
+
+                    fundamental_score = min(
+                        10.0, max(0.0, fundamental_score + valuation_adj)
+                    )
+                    signals.append(
+                        {
+                            "name": "Valuation vs Sector",
+                            "value": f"{pe_premium:+.0f}% vs sector",
+                            "impact": val_impact,
+                            "description": (
+                                f"P/E {stock_pe:.1f}x vs {sector} avg "
+                                f"{sector_pe:.1f}x — {val_label}"
+                            ),
+                        }
+                    )
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -235,16 +331,24 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
             + fundamental_score * weights["fundamental"]
         )
         overall = round(min(10.0, max(1.0, overall)), 1)
+        if earnings_near:
+            overall = min(overall, 7.5)
+            for sig in signals:
+                if sig.get("name") == "Earnings Risk":
+                    sig["description"] = (
+                        f"⚠️ Earnings in {earnings_days_until}d "
+                        f"— conviction capped at 7.5"
+                    )
 
         grade = (
             "A"
-            if overall >= 8
+            if overall >= 8.0
             else "B"
-            if overall >= 6.5
+            if overall >= 6.0
             else "C"
-            if overall >= 5
+            if overall >= 4.5
             else "D"
-            if overall >= 3.5
+            if overall >= 3.0
             else "F"
         )
 

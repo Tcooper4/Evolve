@@ -187,6 +187,14 @@ with col_left:
     )
 with col_right:
     max_results = st.slider("Max results", 5, 50, 20, key="scanner_max_results")
+    min_score = st.slider(
+        "Min AI Score",
+        min_value=0.0,
+        max_value=10.0,
+        value=6.5,
+        step=0.5,
+        key="scanner_min_ai_score",
+    )
     custom_universe = st.text_input(
         "Custom universe (optional)",
         placeholder="AAPL,MSFT,NVDA,TSLA",
@@ -220,8 +228,9 @@ if st.button("🚀 Run Scan", type="primary", key="scanner_run_btn"):
         pct = done / total if total > 0 else 0
         progress_bar.progress(pct, text=f"Scanning {done}/{total}...")
     with st.spinner("Running scan..."):
+        _filters_for_scan = [f for f in selected_filters if f != "top_ai_score"]
         scan_result = scan_market(
-            filters=selected_filters,
+            filters=_filters_for_scan,
             universe=universe,
             max_results=max_results,
             progress_callback=_progress,
@@ -232,6 +241,11 @@ if st.button("🚀 Run Scan", type="primary", key="scanner_run_btn"):
         # can see what went wrong instead of an immediate rerun.
         st.error(f"Scan error: {scan_result['error']}")
     else:
+        if "top_ai_score" in selected_filters:
+            _results = scan_result.get("results") or []
+            _results = [r for r in _results if float(r.get("ai_score", 0) or 0) >= float(min_score)]
+            scan_result["results"] = _results
+            scan_result["passed"] = len(_results)
         st.session_state.scanner_results = scan_result
         st.rerun()
 
