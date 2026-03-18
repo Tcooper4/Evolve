@@ -359,7 +359,8 @@ class HybridModel:
         model_scores = {}
         weighting_metric = self.scoring_config["weighting_metric"]
 
-        for name, perf_list in self.performance.items():
+        for name in self.models:
+            perf_list = self.performance.get(name, [])
             if not perf_list:
                 model_scores[name] = 0.0
                 continue
@@ -452,7 +453,8 @@ class HybridModel:
         """Calculate weights using weighted average of performance metrics."""
         model_scores = {}
 
-        for name, perf_list in self.performance.items():
+        for name in self.models:
+            perf_list = self.performance.get(name, [])
             if not perf_list:
                 model_scores[name] = 0.0
                 continue
@@ -522,7 +524,8 @@ class HybridModel:
         # For now, we'll use a simplified version based on performance ranking
         model_rankings = {}
 
-        for name, perf_list in self.performance.items():
+        for name in self.models:
+            perf_list = self.performance.get(name, [])
             if not perf_list:
                 model_rankings[name] = 0.0
                 continue
@@ -563,7 +566,8 @@ class HybridModel:
         """Calculate weights using a composite scoring system."""
         model_scores = {}
 
-        for name, perf_list in self.performance.items():
+        for name in self.models:
+            perf_list = self.performance.get(name, [])
             if not perf_list:
                 model_scores[name] = 0.0
                 continue

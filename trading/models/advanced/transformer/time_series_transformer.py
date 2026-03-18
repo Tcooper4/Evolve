@@ -428,21 +428,42 @@ class TransformerForecaster(BaseModel):
         if data.isnull().any().any():
             raise ValidationError("Data contains missing values")
 
-        # Check if all required columns exist
-        missing_cols = [
-            col for col in self.config["feature_columns"] if col not in data.columns
-        ]
+        # Normalize column names — handle Close vs close, Volume vs volume
+        _col_map = {c.lower(): c for c in data.columns}
+
+        _feat_cols_cfg = self.config.get("feature_columns", ["close", "volume"])
+        _feat_cols = []
+        for f in _feat_cols_cfg:
+            key = str(f).lower()
+            if key in _col_map:
+                _feat_cols.append(_col_map[key])
+        if not _feat_cols:
+            _feat_cols = list(data.select_dtypes(include="number").columns[:2])
+
+        _tgt_col_cfg = self.config.get("target_column", "close")
+        _tgt_col = _col_map.get(str(_tgt_col_cfg).lower(), _tgt_col_cfg)
+        if _tgt_col not in data.columns:
+            num_cols = list(data.select_dtypes(include="number").columns)
+            if not num_cols:
+                raise ValidationError("No numeric columns available for target column")
+            _tgt_col = num_cols[0]
+
+        # Check if all required columns exist after normalization
+        missing_cols = [col for col in _feat_cols if col not in data.columns]
         if missing_cols:
             raise ValidationError(f"Missing required columns: {missing_cols}")
 
         # Convert to numpy arrays
-        X = data[self.config["feature_columns"]].values
-        y = data[self.config["target_column"]].values[self.config["sequence_length"] :]
+        X = data[_feat_cols].values.astype(float)
+        seq_len = int(self.config.get("sequence_length", 30))
+        y_all = data[_tgt_col].values.astype(float)
+        # Align target with sequences (drop first seq_len points)
+        y = y_all[seq_len:]
 
-        # Create sequences
+        # Create sequences from numpy array
         X_sequences = []
-        for i in range(len(X) - self.config["sequence_length"]):
-            X_sequences.append(X[i : i + self.config["sequence_length"]])
+        for i in range(len(X) - seq_len):
+            X_sequences.append(X[i : i + seq_len])
         X = np.array(X_sequences)
 
         # Normalize

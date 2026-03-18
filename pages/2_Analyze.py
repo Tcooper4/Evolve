@@ -2592,11 +2592,20 @@ with tab1:
                     # Forecast table (format dates as YYYY-MM-DD, no timezone)
                     st.markdown("**Forecast Values:**")
                     display_df = forecast_df.copy()
-                    display_df.index = display_df.index.strftime("%Y-%m-%d")
-                    display_df.columns = ["Forecast"]
-                    display_df["Forecast"] = display_df["Forecast"].apply(
-                        lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
+                    try:
+                        _idx = pd.to_datetime(display_df.index)
+                        if hasattr(_idx, "tz") and _idx.tz is not None:
+                            _idx = _idx.tz_localize(None)
+                        display_df.index = _idx.strftime("%Y-%m-%d")
+                    except Exception:
+                        pass
+                    display_df["forecast"] = display_df["forecast"].apply(
+                        lambda x: f"${x:.2f}"
+                        if isinstance(x, (int, float)) and not pd.isna(x)
+                        else "—"
                     )
+                    display_df.rename(columns={"forecast": "Forecast"}, inplace=True)
+
                     # Add confidence bounds if available
                     _lb = None
                     _ub = None
@@ -2605,13 +2614,17 @@ with tab1:
                         _lb = _forecast_result.get("lower_bound")
                         _ub = _forecast_result.get("upper_bound")
                     _n = len(display_df)
-                    display_df["Lower Bound"] = [
-                        f"${v:.2f}" for v in _lb[:_n]
-                    ] if _lb and len(_lb) >= _n else ["—"] * _n
-                    display_df["Upper Bound"] = [
-                        f"${v:.2f}" for v in _ub[:_n]
-                    ] if _ub and len(_ub) >= _n else ["—"] * _n
-                    st.dataframe(display_df, width='stretch')
+                    display_df["Lower Bound"] = (
+                        [f"${v:.2f}" for v in _lb[:_n]]
+                        if _lb and len(_lb) >= _n
+                        else ["—"] * _n
+                    )
+                    display_df["Upper Bound"] = (
+                        [f"${v:.2f}" for v in _ub[:_n]]
+                        if _ub and len(_ub) >= _n
+                        else ["—"] * _n
+                    )
+                    st.dataframe(display_df, width="stretch")
                 
                 # Download button
                 csv = forecast_df.to_csv()
@@ -3389,10 +3402,39 @@ with tab2:
                         # Display forecast table
                         st.markdown("**Forecast Values:**")
                         display_df = forecast_df.copy()
-                        display_df['forecast'] = display_df['forecast'].apply(
-                            lambda x: f"${x:.2f}" if pd.notna(x) and x is not None else "N/A"
+                        try:
+                            _idx = pd.to_datetime(display_df.index)
+                            if hasattr(_idx, "tz") and _idx.tz is not None:
+                                _idx = _idx.tz_localize(None)
+                            display_df.index = _idx.strftime("%Y-%m-%d")
+                        except Exception:
+                            pass
+                        display_df["forecast"] = display_df["forecast"].apply(
+                            lambda x: f"${x:.2f}"
+                            if isinstance(x, (int, float)) and not pd.isna(x)
+                            else "—"
                         )
-                        st.dataframe(display_df)
+                        display_df.rename(columns={"forecast": "Forecast"}, inplace=True)
+
+                        # Add bounds if available
+                        _lb = None
+                        _ub = None
+                        if isinstance(forecast_result, dict):
+                            _lb = forecast_result.get("lower_bound")
+                            _ub = forecast_result.get("upper_bound")
+                        _n = len(display_df)
+                        display_df["Lower Bound"] = (
+                            [f"${v:.2f}" for v in _lb[:_n]]
+                            if _lb and len(_lb) >= _n
+                            else ["—"] * _n
+                        )
+                        display_df["Upper Bound"] = (
+                            [f"${v:.2f}" for v in _ub[:_n]]
+                            if _ub and len(_ub) >= _n
+                            else ["—"] * _n
+                        )
+
+                        st.dataframe(display_df, width="stretch")
                         
                         # Add explainability section
                         st.markdown("---")
