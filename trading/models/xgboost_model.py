@@ -749,11 +749,14 @@ class XGBoostModel(BaseModel):
             print("XGBoostModel unavailable due to initialization failure")
             # Return simple fallback forecast
             fallback_forecast = np.full(horizon, 1000.0)
-            last_date = (
-                data.index[-1]
-                if hasattr(data.index[-1], "freq")
-                else pd.Timestamp.now()
-            )
+            if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+                last_date = data.index[-1]
+            else:
+                last_date = pd.Timestamp.now()
+                logger.warning(
+                    "xgboost forecast: non-datetime index, "
+                    "using current timestamp for dates"
+                )
             forecast_dates = pd.date_range(
                 start=last_date, periods=horizon + 1, freq="D"
             )[1:]
@@ -804,11 +807,14 @@ class XGBoostModel(BaseModel):
                         current_data = current_data.iloc[1:]
                     current_ratio = next_ratio
 
-                last_date = (
-                    data.index[-1]
-                    if hasattr(data.index[-1], "freq")
-                    else pd.Timestamp.now()
-                )
+                if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+                    last_date = data.index[-1]
+                else:
+                    last_date = pd.Timestamp.now()
+                    logger.warning(
+                        "xgboost forecast: non-datetime index, "
+                        "using current timestamp for dates"
+                    )
                 forecast_dates = pd.date_range(
                     start=last_date, periods=horizon + 1, freq="D"
                 )[1:]
@@ -846,11 +852,14 @@ class XGBoostModel(BaseModel):
                 else:
                     fallback_forecast = np.full(horizon, 1000.0)
 
-                last_date = (
-                    data.index[-1]
-                    if hasattr(data.index[-1], "freq")
-                    else pd.Timestamp.now()
-                )
+                if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+                    last_date = data.index[-1]
+                else:
+                    last_date = pd.Timestamp.now()
+                    logger.warning(
+                        "xgboost forecast: non-datetime index, "
+                        "using current timestamp for dates"
+                    )
                 forecast_dates = pd.date_range(
                     start=last_date, periods=horizon + 1, freq="D"
                 )[1:]

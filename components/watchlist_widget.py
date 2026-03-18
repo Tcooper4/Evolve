@@ -191,5 +191,5 @@ def render_watchlist() -> None:
         with cols[idx]:
             if st.button(f"Remove {sym}", key=f"watchlist_remove_{sym}"):
                 mgr.remove_ticker(sym)
-                st.experimental_rerun()
+                st.rerun()
 

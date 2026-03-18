@@ -798,14 +798,31 @@ class LSTMForecaster(BaseModel):
                     self.X_scaler = RobustScaler()
                 else:
                     self.X_scaler = StandardScaler()
+                _col_map = {c.lower(): c for c in data.columns}
+                _feat_cols = [_col_map.get(f.lower(), f)
+                              for f in self.config["feature_columns"]
+                              if f.lower() in _col_map]
+                if not _feat_cols:
+                    _feat_cols = list(data.select_dtypes(
+                        include="number").columns[:3])
+                self._fitted_feature_cols = list(_feat_cols)
                 normalized_data = self.X_scaler.fit_transform(
-                    data[self.config["feature_columns"]]
+                    data[_feat_cols]
                 )
             else:
                 if not hasattr(self, "X_scaler"):
                     raise ValueError("Model must be trained before prediction")
+                _col_map = {c.lower(): c for c in data.columns}
+                _fitted = getattr(self, "_fitted_feature_cols",
+                                  self.config["feature_columns"])
+                _feat_cols = [_col_map.get(f.lower(), f)
+                              for f in _fitted
+                              if f.lower() in _col_map]
+                if not _feat_cols:
+                    _feat_cols = list(data.select_dtypes(
+                        include="number").columns[:3])
                 normalized_data = self.X_scaler.transform(
-                    data[self.config["feature_columns"]]
+                    data[_feat_cols]
                 )
 
             # Convert to tensor
@@ -1433,9 +1450,14 @@ class LSTMForecaster(BaseModel):
             print("âš ï¸ LSTMForecaster unavailable due to initialization failure")
             # Return simple fallback forecast
             fallback_forecast = np.full(horizon, 1000.0)
-            last_date = (
-                data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()
-            )
+            if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+                last_date = data.index[-1]
+            else:
+                last_date = pd.Timestamp.now()
+                logger.warning(
+                    "lstm forecast: non-datetime index, "
+                    "using current timestamp for dates"
+                )
             forecast_dates = pd.date_range(
                 start=last_date, periods=horizon + 1, freq="D"
             )[1:]
@@ -1650,11 +1672,14 @@ class LSTMForecaster(BaseModel):
                 forecasts = np.maximum(forecasts, last_price * 0.1)
 
                 # Create forecast dates
-                last_date = (
-                    data.index[-1]
-                    if hasattr(data.index, "freq")
-                    else pd.Timestamp.now()
-                )
+                if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+                    last_date = data.index[-1]
+                else:
+                    last_date = pd.Timestamp.now()
+                    logger.warning(
+                        "lstm forecast: non-datetime index, "
+                        "using current timestamp for dates"
+                    )
                 forecast_dates = pd.date_range(
                     start=last_date, periods=horizon + 1, freq="D"
                 )[1:]
@@ -1694,11 +1719,14 @@ class LSTMForecaster(BaseModel):
                 else:
                     fallback_forecast = np.full(horizon, 1000)
 
-                last_date = (
-                    data.index[-1]
-                    if hasattr(data.index, "freq")
-                    else pd.Timestamp.now()
-                )
+                if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+                    last_date = data.index[-1]
+                else:
+                    last_date = pd.Timestamp.now()
+                    logger.warning(
+                        "lstm forecast: non-datetime index, "
+                        "using current timestamp for dates"
+                    )
                 forecast_dates = pd.date_range(
                     start=last_date, periods=horizon + 1, freq="D"
                 )[1:]
@@ -1736,9 +1764,14 @@ class LSTMForecaster(BaseModel):
                 last_value = 100.0
             
             fallback_forecast = np.full(horizon, last_value)
-            last_date = (
-                data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()
-            )
+            if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+                last_date = data.index[-1]
+            else:
+                last_date = pd.Timestamp.now()
+                logger.warning(
+                    "lstm forecast: non-datetime index, "
+                    "using current timestamp for dates"
+                )
             forecast_dates = pd.date_range(
                 start=last_date, periods=horizon + 1, freq="D"
             )[1:]
@@ -1753,9 +1786,14 @@ class LSTMForecaster(BaseModel):
             }
             logger.info("Using simple fallback forecast")
             fallback_forecast = np.full(horizon, 1000)
-            last_date = (
-                data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()
-            )
+            if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+                last_date = data.index[-1]
+            else:
+                last_date = pd.Timestamp.now()
+                logger.warning(
+                    "lstm forecast: non-datetime index, "
+                    "using current timestamp for dates"
+                )
             forecast_dates = pd.date_range(
                 start=last_date, periods=horizon + 1, freq="D"
             )[1:]
@@ -1846,9 +1884,14 @@ class LSTMForecaster(BaseModel):
             )
             
             # Create forecast dates
-            last_date = (
-                data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()
-            )
+            if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+                last_date = data.index[-1]
+            else:
+                last_date = pd.Timestamp.now()
+                logger.warning(
+                    "lstm forecast: non-datetime index, "
+                    "using current timestamp for dates"
+                )
             forecast_dates = pd.date_range(start=last_date, periods=horizon + 1, freq="D")[1:]
             
             return {
@@ -1866,9 +1909,14 @@ class LSTMForecaster(BaseModel):
             logger.error(f"Forecast with uncertainty failed: {e}")
             logger.error(traceback.format_exc())
             # Return fallback
-            last_date = (
-                data.index[-1] if hasattr(data.index, "freq") else pd.Timestamp.now()
-            )
+            if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
+                last_date = data.index[-1]
+            else:
+                last_date = pd.Timestamp.now()
+                logger.warning(
+                    "lstm forecast: non-datetime index, "
+                    "using current timestamp for dates"
+                )
             forecast_dates = pd.date_range(start=last_date, periods=horizon + 1, freq="D")[1:]
             return {
                 'forecast': np.full(horizon, 1000.0),

@@ -1120,6 +1120,21 @@ class ForecastRouter:
                 df.index = pd.to_datetime(df.index, errors="coerce")
             except Exception:
                 pass
+        # Drop NaT rows produced by coercion
+        nat_mask = df.index.isna()
+        if nat_mask.any():
+            logger.warning(
+                "forecast_router: %d NaT values in "
+                "index after coercion — dropping",
+                nat_mask.sum()
+            )
+            df = df[~nat_mask]
+        if len(df) == 0:
+            logger.error(
+                "forecast_router: all rows dropped "
+                "after NaT filter — cannot forecast"
+            )
+            return None
         df = df.sort_index()
         if isinstance(df.index, pd.DatetimeIndex) and getattr(df.index, "tz", None) is not None:
             try:

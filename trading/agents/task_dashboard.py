@@ -85,7 +85,7 @@ class TaskDashboard:
     def _refresh_data(self):
         """Refresh the dashboard data."""
         st.session_state.last_refresh = datetime.now()
-        st.experimental_rerun()
+        st.rerun()
 
         return {
             "success": True,
@@ -270,13 +270,13 @@ class TaskDashboard:
                         if st.button("Mark as Completed"):
                             task.status = TaskStatus.COMPLETED
                             self.task_memory.update_task(task)
-                            st.experimental_rerun()
+                            st.rerun()
 
                     with col2:
                         if st.button("Mark as Failed"):
                             task.status = TaskStatus.FAILED
                             self.task_memory.update_task(task)
-                            st.experimental_rerun()
+                            st.rerun()
         else:
             st.info("Select a task to view details")
 

@@ -651,6 +651,25 @@ class BaseModel(ABC):
             predictions = self.predict(data, horizon)
 
             # Create forecast DataFrame
+            # Ensure index is DatetimeIndex before generating forecast dates
+            if not isinstance(data.index, pd.DatetimeIndex):
+                try:
+                    data.index = pd.to_datetime(
+                        data.index, errors='coerce'
+                    )
+                    data = data[data.index.notna()]
+                except Exception:
+                    pass
+
+            if not isinstance(data.index, pd.DatetimeIndex) \
+                    or len(data) == 0:
+                self.logger.warning(
+                    "base_model.forecast: non-datetime index "
+                    "after coercion — cannot generate dates"
+                )
+                # Return empty forecast rather than crash
+                return None
+
             last_date = data.index[-1]
             forecast_dates = pd.date_range(
                 start=last_date + pd.Timedelta(days=1), periods=horizon, freq="D"
