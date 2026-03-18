@@ -1319,6 +1319,33 @@ class ForecastRouter:
 
         # Rebuild valid_forecasts/valid_used from (possibly) filtered vf_map
         valid_used = list(vf_map.keys())
+
+        # Secondary cap: Ridge must be within ±5% of
+        # median of other surviving models. Prevents
+        # Ridge skewing consensus even after 2.5σ exclusion.
+        if "ridge" in vf_map and len(vf_map) >= 2:
+            _other_means = [
+                float(np.mean(fc))
+                for name, fc in vf_map.items()
+                if name != "ridge"
+            ]
+            if _other_means:
+                _median_other = float(np.median(_other_means))
+                _ridge_mean = float(np.mean(vf_map["ridge"]))
+                _cap = 0.05
+                _lo = _median_other * (1 - _cap)
+                _hi = _median_other * (1 + _cap)
+                if _ridge_mean < _lo or _ridge_mean > _hi:
+                    logger.warning(
+                        "Ridge secondary cap triggered: "
+                        "mean=%.2f outside ±5%% of "
+                        "median=%.2f — excluding",
+                        _ridge_mean, _median_other,
+                    )
+                    vf_map.pop("ridge")
+
+        # Rebuild after possible Ridge removal
+        valid_used = list(vf_map.keys())
         valid_forecasts = [vf_map[name] for name in valid_used]
 
         stacked = np.stack(valid_forecasts)

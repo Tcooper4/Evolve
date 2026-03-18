@@ -25,21 +25,31 @@ from .base_agent_interface import AgentResult, BaseAgent
 class BayesianOptimizer:
     """Simple Bayesian optimizer stub."""
 
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self):
+        raise NotImplementedError(
+            "BayesianOptimizer is not yet implemented."
+        )
 
-    def optimize(self, *args, **kwargs):
-        return None
+    def optimize(self):
+        raise NotImplementedError(
+            "BayesianOptimizer.optimize() is not "
+            "yet implemented."
+        )
 
 
 class GeneticOptimizer:
     """Simple genetic optimizer stub."""
 
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self):
+        raise NotImplementedError(
+            "GeneticOptimizer is not yet implemented."
+        )
 
-    def optimize(self, *args, **kwargs):
-        return None
+    def optimize(self):
+        raise NotImplementedError(
+            "GeneticOptimizer.optimize() is not "
+            "yet implemented."
+        )
 
 
 logger = logging.getLogger(__name__)

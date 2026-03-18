@@ -148,7 +148,12 @@ class ModelEvaluatorAgent(BaseAgent):
         self._load_evaluation_history()
 
     def _setup(self):
-        pass
+        # Not yet implemented — raises so
+        # failures are visible, not silent
+        raise NotImplementedError(
+            f"{self.__class__.__name__}._setup() "
+            f"is not yet implemented."
+        )
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the model evaluation logic.

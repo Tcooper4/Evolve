@@ -33,6 +33,41 @@ SECTOR_PE = {
     "Communication Services": 20.0,
 }
 
+SECTOR_RISK_FLAGS = {
+    "Utilities": [
+        "⚠️ Rate case risk — regulatory approval "
+        "required for earnings growth"
+    ],
+    "Healthcare": [
+        "⚠️ FDA catalyst risk — binary event "
+        "possible from regulatory decisions"
+    ],
+    "Financials": [
+        "⚠️ Interest rate sensitivity — earnings "
+        "exposed to Fed policy changes"
+    ],
+    "Energy": [
+        "⚠️ Commodity price risk — earnings "
+        "directly tied to oil/gas prices"
+    ],
+    "Real Estate": [
+        "⚠️ Rate sensitivity — cap rate "
+        "compression risk in rising rate environment"
+    ],
+    "Technology": [
+        "⚠️ Antitrust/regulatory scrutiny "
+        "elevated for large-cap names"
+    ],
+    "Communication Services": [
+        "⚠️ Regulatory/antitrust risk — "
+        "content moderation and competition scrutiny"
+    ],
+    "Consumer Discretionary": [
+        "⚠️ Consumer spending sensitivity — "
+        "exposed to rate and sentiment cycles"
+    ],
+}
+
 
 def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
     """
@@ -243,6 +278,7 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
 
         # ── FUNDAMENTAL SCORE (0-10) ──────────────────────────────
         fundamental_score = 5.0
+        sector = ""  # initialise for use in risk flags
         try:
             from trading.data.earnings_calendar import get_upcoming_earnings
 
@@ -310,6 +346,21 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
                                 f"P/E {stock_pe:.1f}x vs {sector} avg "
                                 f"{sector_pe:.1f}x — {val_label}"
                             ),
+                        }
+                    )
+            except Exception:
+                pass
+
+            # Sector-specific risk flags
+            try:
+                _flags = SECTOR_RISK_FLAGS.get(sector, [])
+                for _flag in _flags:
+                    signals.append(
+                        {
+                            "name": "Sector Risk",
+                            "value": sector or "Unknown",
+                            "impact": "neutral",
+                            "description": _flag,
                         }
                     )
             except Exception:

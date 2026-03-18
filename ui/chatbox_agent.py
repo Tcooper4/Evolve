@@ -760,7 +760,10 @@ class ChatboxAgent:
 
     def _create_order_request(self, command: TradingCommand):
         """Create order request from command."""
-        from execution.models import OrderRequest
+        try:
+            from trading.execution.models import OrderRequest
+        except ImportError:
+            OrderRequest = None
 
         return OrderRequest.from_legacy(
             symbol=command.symbol,

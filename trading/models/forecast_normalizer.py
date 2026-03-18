@@ -198,13 +198,18 @@ class ForecastNormalizer:
     ) -> tuple[pd.DataFrame, pd.DatetimeIndex]:
         """Align forecast to datetime index."""
         # Generate reference datetime index
-        if reference is None:
-            # Use default datetime range
-            start_date = datetime.now()
-            end_date = start_date + timedelta(days=len(forecast_df))
-            reference_index = pd.date_range(
-                start=start_date, end=end_date, freq=self.default_freq
+        if reference is None or not isinstance(reference, pd.DatetimeIndex):
+            logger.warning(
+                "ForecastNormalizer: no valid reference "
+                "DatetimeIndex — returning forecast without "
+                "alignment"
             )
+            reference_index = (
+                forecast_df.index
+                if isinstance(forecast_df.index, pd.DatetimeIndex)
+                else pd.DatetimeIndex([])
+            )
+            return forecast_df, reference_index
         elif isinstance(reference, pd.DatetimeIndex):
             reference_index = reference
         elif isinstance(reference, pd.DataFrame):

@@ -1,4 +1,4 @@
-# FUTURE FEATURE � Not active. Preserved for reference.
+# FUTURE FEATURE � Not active. Preserved for reference.
 # See docs/future_features/README.md for context.
 
 """
@@ -221,7 +221,7 @@ def create_ensemble_composition_sidebar(manager: HybridModelManager):
     if summary["performance_trends"]:
         st.sidebar.subheader("ðŸ“ˆ Performance Trends")
         for model, trend in summary["performance_trends"].items():
-            trend_icon = "ðŸ“ˆ" if trend > 0 else "ðŸ“‰" if trend < 0 else "âž¡ï¸"
+            trend_icon = "ðŸ“ˆ" if trend > 0 else "ðŸ“‰" if trend < 0 else "âž¡ï¸"
             st.sidebar.write(f"{trend_icon} {model}: {trend:+.1%}")
 
 
@@ -355,7 +355,7 @@ def create_ensemble_optimization_interface(manager: HybridModelManager):
             manager.update_performance(model, perf, weighting_method)
 
         st.success("Weights updated successfully!")
-        st.experimental_rerun()
+        st.rerun()
 
 
 def create_backtest_interface(manager: HybridModelManager):

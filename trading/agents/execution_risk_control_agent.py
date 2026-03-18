@@ -184,6 +184,12 @@ class ExecutionRiskControlAgent(BaseAgent):
 
     def _setup(self):
         """Setup method called during initialization."""
+        # Not yet implemented — raises so
+        # failures are visible, not silent
+        raise NotImplementedError(
+            f"{self.__class__.__name__}._setup() "
+            f"is not yet implemented."
+        )
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the risk control agent.

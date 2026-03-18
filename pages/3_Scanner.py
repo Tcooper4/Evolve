@@ -15,6 +15,11 @@ from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
 from trading.data.price_cache import get_history, get_news, batch_quotes
 
 try:
+    from utils.dataframe_utils import normalize_for_display
+except ImportError:
+    normalize_for_display = lambda df: df
+
+try:
     st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
 except Exception:
     pass
@@ -386,7 +391,11 @@ def _scanner_table():
                 st.markdown(f"**{selected_sym}** — {_ai['summary']}")
                 _sigs = pd.DataFrame(_ai.get("signals", []))
                 if not _sigs.empty and "name" in _sigs.columns:
-                    st.dataframe(_sigs[["name", "value", "impact", "description"]], width='stretch', key="scanner_drill_sigs")
+                    st.dataframe(
+                        normalize_for_display(_sigs[["name", "value", "impact", "description"]]),
+                        width='stretch',
+                        key="scanner_drill_sigs",
+                    )
         except Exception as _e:
             st.caption(f"Feature unavailable: {_e}")
 

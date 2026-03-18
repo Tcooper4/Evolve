@@ -32,7 +32,9 @@ class BacktestVisualizer:
     """Visualizes backtest results using Plotly or Matplotlib."""
 
     def __init__(self):
-        pass
+        raise NotImplementedError(
+            "BacktestVisualizer is not yet implemented."
+        )
 
     def plot_equity_curve(
         self, df: pd.DataFrame, use_plotly: bool = True

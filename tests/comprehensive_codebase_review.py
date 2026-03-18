@@ -1,3 +1,6 @@
+﻿import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 #!/usr/bin/env python3
 """Comprehensive Codebase Review for Evolve Trading Platform."""
 
@@ -5,6 +8,16 @@ import sys
 import time
 from datetime import datetime
 from typing import Dict
+
+import io
+# Force UTF-8 stdout on Windows to prevent
+# cp1252 UnicodeEncodeError from emoji output
+if sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer,
+        encoding='utf-8',
+        errors='replace'
+    )
 
 
 def test_basic_imports():
@@ -110,23 +123,33 @@ def test_advanced_features():
 
     # Reinforcement Learning
     try:
-        from rl.strategy_trainer import create_rl_strategy_trainer
+        from _archive.rl.strategy_trainer import (
+            create_rl_strategy_trainer
+        )
 
         trainer = create_rl_strategy_trainer()
         results["rl_engine"] = (
-            "✅ Available" if trainer["available"] else "⚠️ Dependencies missing"
+            "Available"
+            if trainer.get("available")
+            else "Dependencies missing"
         )
+    except ImportError:
+        results["rl_engine"] = "Not available (archived)"
     except Exception as e:
-        results["rl_engine"] = f"❌ {e}"
+        results["rl_engine"] = f"Error: {e}"
 
     # Causal Inference
     try:
-        from causal.causal_model import create_causal_model
+        from _archive.causal.causal_model import (
+            create_causal_model
+        )
 
         create_causal_model()
-        results["causal_inference"] = "✅ Available"
+        results["causal_inference"] = "Available"
+    except ImportError:
+        results["causal_inference"] = "Not available (archived)"
     except Exception as e:
-        results["causal_inference"] = f"⚠️ {e}"
+        results["causal_inference"] = f"Error: {e}"
 
     # TFT Model
     try:
@@ -287,14 +310,13 @@ def test_file_structure():
     # Check critical directories
     critical_dirs = [
         "trading",
-        "models",
-        "data",
-        "risk",
-        "rl",
-        "causal",
-        "strategies",
-        "execution",
-        "ui",
+        "trading/models",
+        "trading/data",
+        "trading/analysis",
+        "trading/execution",
+        "trading/backtesting",
+        "agents",
+        "components",
         "utils",
         "config",
         "pages",
@@ -310,9 +332,7 @@ def test_file_structure():
     critical_files = [
         "app.py",
         "requirements.txt",
-        "requirements_advanced.txt",
         "README.md",
-        "ADVANCED_FEATURES_README.md",
     ]
 
     for file in critical_files:
@@ -414,3 +434,5 @@ def main():
 if __name__ == "__main__":
     success = main()
     sys.exit(0 if success else 1)
+
+

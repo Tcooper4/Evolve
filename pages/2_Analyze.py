@@ -23,6 +23,11 @@ from trading.data.earnings_calendar import get_upcoming_earnings
 from trading.data.insider_flow import get_insider_flow
 
 try:
+    from utils.dataframe_utils import normalize_for_display
+except ImportError:
+    normalize_for_display = lambda df: df
+
+try:
     st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
 except Exception:
     pass
@@ -1476,7 +1481,7 @@ with tab1:
                             
                             # Show data quality metrics
                             try:
-                                from src.utils.data_validation import DataValidator
+                                from trading.data.data_validator import DataValidator
                             except ImportError:
                                 DataValidator = None
                             if DataValidator is not None:
@@ -1502,6 +1507,8 @@ with tab1:
                                             st.warning("⚠️ Data Quality Issues:")
                                             for issue in quality_metrics['issues']:
                                                 st.write(f"• {issue}")
+                            else:
+                                st.caption("Data validation unavailable")
                         
             except Exception as e:
                 st.error(f"Error loading data: {str(e)}")
@@ -1537,24 +1544,30 @@ with tab1:
 
         # Show data quality metrics (optional: src.utils.data_validation)
         try:
-            from src.utils.data_validation import DataValidator
-            validator = DataValidator()
-            quality_metrics = validator.get_quality_metrics(data)
-            with st.expander("📊 Data Quality Metrics", expanded=False):
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Completeness", f"{quality_metrics['completeness']:.1%}")
-                with col2:
-                    st.metric("Missing Values", quality_metrics['missing_count'])
-                with col3:
-                    st.metric("Outliers Detected", quality_metrics['outliers'])
-                with col4:
-                    quality_score = quality_metrics['overall_quality']
-                    st.metric("Quality Score", f"{quality_score:.0f}/100")
-                if quality_metrics['issues']:
-                    st.warning("⚠️ Data Quality Issues:")
-                    for issue in quality_metrics['issues']:
-                        st.write(f"• {issue}")
+            try:
+                from trading.data.data_validator import DataValidator
+            except ImportError:
+                DataValidator = None
+            if DataValidator is not None:
+                validator = DataValidator()
+                quality_metrics = validator.get_quality_metrics(data)
+                with st.expander("📊 Data Quality Metrics", expanded=False):
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Completeness", f"{quality_metrics['completeness']:.1%}")
+                    with col2:
+                        st.metric("Missing Values", quality_metrics['missing_count'])
+                    with col3:
+                        st.metric("Outliers Detected", quality_metrics['outliers'])
+                    with col4:
+                        quality_score = quality_metrics['overall_quality']
+                        st.metric("Quality Score", f"{quality_score:.0f}/100")
+                    if quality_metrics['issues']:
+                        st.warning("⚠️ Data Quality Issues:")
+                        for issue in quality_metrics['issues']:
+                            st.write(f"• {issue}")
+            else:
+                st.caption("Data validation unavailable")
         except ImportError:
             pass
         except Exception as e:
@@ -1759,7 +1772,7 @@ with tab1:
                                 )
                                 st.dataframe(styler, width='stretch')
                             except Exception:
-                                st.dataframe(sig_df, width='stretch')
+                                st.dataframe(normalize_for_display(sig_df), width='stretch')
                     # Recommendation panel
                     try:
                         _rec = _generate_recommendation(
@@ -1988,7 +2001,7 @@ with tab1:
         
         # Data table (expandable)
         with st.expander("📋 View Full Data"):
-            st.dataframe(data.tail(50))
+            st.dataframe(normalize_for_display(data.tail(50)))
         
         # Model Selection & Forecasting
         st.markdown("---")
@@ -2772,7 +2785,7 @@ with tab1:
                         if _ub and len(_ub) >= _n
                         else ["—"] * _n
                     )
-                    st.dataframe(display_df, width="stretch")
+                    st.dataframe(normalize_for_display(display_df), width="stretch")
                 
                 # Download button
                 csv = forecast_df.to_csv()
@@ -3004,7 +3017,7 @@ with tab2:
                         if scores is not None and len(scores) > 0:
                             import pandas as pd
                             tab_df = pd.DataFrame(scores)
-                            st.dataframe(tab_df, width='stretch')
+                            st.dataframe(normalize_for_display(tab_df), width='stretch')
             except Exception as e:
                 st.warning(f"⚠️ Could not load model registry: {e}. Using default models.")
                 model_type = st.selectbox(
@@ -3582,7 +3595,7 @@ with tab2:
                             else ["—"] * _n
                         )
 
-                        st.dataframe(display_df, width="stretch")
+                        st.dataframe(normalize_for_display(display_df), width="stretch")
                         
                         # Add explainability section
                         st.markdown("---")
@@ -3662,7 +3675,7 @@ with tab2:
                 st.markdown("---")
                 st.markdown(f"**Previous Forecast ({st.session_state.get('advanced_model', 'Unknown')})**")
                 prev_forecast = st.session_state.advanced_forecast
-                st.dataframe(prev_forecast.tail(10))
+                st.dataframe(normalize_for_display(prev_forecast.tail(10)))
 
 with tab3:
     try:
@@ -3999,7 +4012,7 @@ with tab3:
                     _progress.empty()
                     if _comparison_rows:
                         _df = pd.DataFrame(_comparison_rows)
-                        st.dataframe(_df, width='stretch')
+                        st.dataframe(normalize_for_display(_df), width='stretch')
                         _working = sum(
                             1 for r in _comparison_rows if r["Status"] == "✅"
                         )
@@ -4535,7 +4548,7 @@ with tab6:
                             forecast_df["Upper Bound"] = [
                                 f"${v:.2f}" for v in _ub[:_n]
                             ] if _ub and len(_ub) >= _n else ["—"] * _n
-                            st.dataframe(forecast_df)
+                            st.dataframe(normalize_for_display(forecast_df))
                 
                 except ImportError:
                     st.error("❌ GNN model not available. Make sure it has been recreated using the prompts.")
@@ -4933,7 +4946,7 @@ with tab_insider:
                         "is_buy",
                     ]
                 ]
-                st.dataframe(df_txn, width='stretch')
+                st.dataframe(normalize_for_display(df_txn), width='stretch')
             else:
                 st.info("No insider transactions found in the last 90 days.")
     except Exception as e:

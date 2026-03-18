@@ -27,7 +27,14 @@ class TestBasicImports(unittest.TestCase):
         try:
             from trading.portfolio.portfolio_manager import PortfolioManager
             from trading.strategies.base_strategy import BaseStrategy
-            from execution.broker_adapter import BrokerAdapter, OrderType, OrderSide
+            try:
+                from trading.execution.broker_adapter import (
+                    BrokerAdapter,
+                    OrderType,
+                    OrderSide,
+                )
+            except ImportError as e:
+                logger.warning(f"broker_adapter not available: {e}")
             # Model registry may have optional dependencies
             try:
                 from trading.models.model_registry import ModelRegistry

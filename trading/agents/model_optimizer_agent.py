@@ -25,11 +25,16 @@ from trading.optimization.strategy_optimizer import BayesianOptimization
 class GeneticOptimizer:
     """Simple genetic optimizer stub."""
 
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self):
+        raise NotImplementedError(
+            "GeneticOptimizer is not yet implemented."
+        )
 
-    def optimize(self, *args, **kwargs):
-        return None
+    def optimize(self):
+        raise NotImplementedError(
+            "GeneticOptimizer.optimize() is not "
+            "yet implemented."
+        )
 
 
 logger = logging.getLogger(__name__)
@@ -135,6 +140,12 @@ class ModelOptimizerAgent(BaseAgent):
 
     def _setup(self) -> None:
         """Setup the agent. Called by BaseAgent constructor."""
+        # Not yet implemented — raises so
+        # failures are visible, not silent
+        raise NotImplementedError(
+            f"{self.__class__.__name__}._setup() "
+            f"is not yet implemented."
+        )
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the model optimization logic.

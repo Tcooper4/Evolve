@@ -23,15 +23,16 @@ from trading.utils.safe_math import safe_divide
 
 # Try to import validation and pipeline utilities
 try:
-    from src.utils.data_validation import DataValidator as UtilsDataValidator
-    from src.utils.data_pipeline import DataPipeline
-    VALIDATION_AVAILABLE = True
-except ImportError as e:
-    logger = logging.getLogger(__name__)
-    logger.warning(f"Data validation/pipeline utilities not available: {e}")
+    from trading.data.data_validator import DataValidator as UtilsDataValidator
+except ImportError:
     UtilsDataValidator = None
+
+try:
+    from trading.data.data_pipeline import DataPipeline
+except ImportError:
     DataPipeline = None
-    VALIDATION_AVAILABLE = False
+
+VALIDATION_AVAILABLE = UtilsDataValidator is not None and DataPipeline is not None
 
 # Try to import yfinance
 try:
