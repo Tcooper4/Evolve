@@ -92,15 +92,30 @@ class CatBoostModel(BaseModel):
 
     def fit(self, train_data: pd.DataFrame, val_data=None, **kwargs):
         train_data = self._normalize_columns(train_data.copy() if hasattr(train_data, "copy") else train_data)
-        if "Close" in train_data.columns and self.target_column == "close":
-            self.target_column = "Close"
+        # Standardize column names to actual case
+        _col_map = {c.lower(): c for c in train_data.columns}
+        _tgt_cfg = self.config.get("target_column", "close")
+        _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+        if _tgt_col not in train_data.columns:
+            _num = list(train_data.select_dtypes(include=[np.number]).columns)
+            if _num:
+                _tgt_col = _num[0]
+                logger.warning(
+                    "%s: target '%s' not found — using '%s'",
+                    self.__class__.__name__,
+                    _tgt_cfg,
+                    _tgt_col,
+                )
+            else:
+                raise ValueError(
+                    f"No numeric columns found in data for {self.__class__.__name__}"
+                )
+        self.target_column = _tgt_col
         fc = [c if c in train_data.columns else ("Close" if c == "close" else "Volume" if c == "volume" else c) for c in self.feature_columns]
         fc = [c for c in fc if c in train_data.columns]
         if not fc:
             fc = ["Close"] if "Close" in train_data.columns else list(train_data.columns)[:1]
-        price_col = self.target_column
-        if price_col not in train_data.columns:
-            price_col = "Close" if "Close" in train_data.columns else "close"
+        price_col = _tgt_col
         # Train on next-period return for continuity (avoid level discontinuity)
         returns = train_data[price_col].pct_change().dropna()
         target = returns.shift(-1).dropna()
@@ -123,6 +138,25 @@ class CatBoostModel(BaseModel):
         if not self.fitted:
             raise RuntimeError("Model must be fit before predicting.")
         data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+        # Standardize column names to actual case
+        _col_map = {c.lower(): c for c in data.columns}
+        _tgt_cfg = self.config.get("target_column", "close")
+        _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+        if _tgt_col not in data.columns:
+            _num = list(data.select_dtypes(include=[np.number]).columns)
+            if _num:
+                _tgt_col = _num[0]
+                logger.warning(
+                    "%s: target '%s' not found — using '%s'",
+                    self.__class__.__name__,
+                    _tgt_cfg,
+                    _tgt_col,
+                )
+            else:
+                raise ValueError(
+                    f"No numeric columns found in data for {self.__class__.__name__}"
+                )
+        self.target_column = _tgt_col
         fc = [c if c in data.columns else ("Close" if c == "close" else "Volume" if c == "volume" else c) for c in self.feature_columns]
         fc = [c for c in fc if c in data.columns] or (["Close"] if "Close" in data.columns else list(data.columns)[:1])
         X = data[fc]

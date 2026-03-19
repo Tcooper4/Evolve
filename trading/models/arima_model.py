@@ -88,12 +88,25 @@ class ARIMAModel(BaseModel):
         try:
             # ARIMA needs a 1D price series; extract from DataFrame if enriched (e.g. from prepare_forecast_data)
             if isinstance(data, pd.DataFrame):
-                if "close" in data.columns:
-                    series = data["close"].values
-                elif "Close" in data.columns:
-                    series = data["Close"].values
-                else:
-                    series = data.iloc[:, 0].values
+                _col_map = {c.lower(): c for c in data.columns}
+                _tgt_cfg = self.config.get("target_column", "close") if hasattr(self, "config") else "close"
+                _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+                if _tgt_col not in data.columns:
+                    _num_cols = list(data.select_dtypes(include="number").columns)
+                    if _num_cols:
+                        _tgt_col = _num_cols[0]
+                        logger.warning(
+                            "%s: target '%s' not found — using '%s'",
+                            self.__class__.__name__,
+                            _tgt_cfg,
+                            _tgt_col,
+                        )
+                    else:
+                        raise ValueError(
+                            f"No numeric columns available for {self.__class__.__name__} ARIMA fitting"
+                        )
+
+                series = data[_tgt_col].values
                 series = pd.Series(series, index=data.index)
             else:
                 series = pd.Series(data.values if hasattr(data, "values") else data, index=getattr(data, "index", None))
@@ -641,22 +654,19 @@ class ARIMAModel(BaseModel):
             steps = min(30, max(1, len(df) // 5))
             if not self.is_fitted:
                 # Best-effort: fit on the provided close/Close series if available
-                close_col = (
-                    "Close"
-                    if "Close" in df.columns
-                    else "close"
-                    if "close" in df.columns
-                    else df.select_dtypes(include=[np.number]).columns[-1]
-                    if not df.select_dtypes(include=[np.number]).empty
-                    else None
-                )
-                if close_col is not None:
-                    try:
-                        series = df[close_col].astype(float)
-                        self.fit(series)
-                    except Exception:
+                _col_map = {c.lower(): c for c in df.columns}
+                _tgt_cfg = self.config.get("target_column", "close") if hasattr(self, "config") else "close"
+                _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+                if _tgt_col not in df.columns:
+                    _num_cols = list(df.select_dtypes(include=[np.number]).columns)
+                    if _num_cols:
+                        _tgt_col = _num_cols[-1]
+                    else:
                         return np.full(steps, float("nan"))
-                else:
+                try:
+                    series = df[_tgt_col].astype(float)
+                    self.fit(series)
+                except Exception:
                     return np.full(steps, float("nan"))
             try:
                 # Use underlying fitted model's predict/forecast API
@@ -738,8 +748,13 @@ class ARIMAModel(BaseModel):
 
         # Last actual price (data is in raw price space)
         if isinstance(data, pd.DataFrame):
-            close_col = "close" if "close" in data.columns else "Close" if "Close" in data.columns else data.columns[0]
-            last_actual = float(data[close_col].iloc[-1])
+            _col_map = {c.lower(): c for c in data.columns}
+            _tgt_cfg = self.config.get("target_column", "close") if hasattr(self, "config") else "close"
+            _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+            if _tgt_col not in data.columns:
+                _num_cols = list(data.select_dtypes(include="number").columns)
+                _tgt_col = _num_cols[0] if _num_cols else data.columns[0]
+            last_actual = float(data[_tgt_col].iloc[-1])
         else:
             last_actual = float(data.values[-1]) if hasattr(data, "values") else float(data.iloc[-1])
 

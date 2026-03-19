@@ -21,8 +21,9 @@ try:
 
     TORCH_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ PyTorch not available. Disabling LSTM models.")
-    print(f"   Missing: {e}")
+    logging.getLogger(__name__).warning(
+        "PyTorch not available. Disabling LSTM models. Missing: %s", e
+    )
     torch = None
     nn = None
     Adam = None
@@ -37,8 +38,10 @@ try:
 
     SKLEARN_AVAILABLE = True
 except ImportError as e:
-    print("âš ï¸ scikit-learn not available. Disabling data preprocessing.")
-    print(f"   Missing: {e}")
+    logging.getLogger(__name__).warning(
+        "scikit-learn not available. Disabling data preprocessing. Missing: %s",
+        e,
+    )
     StandardScaler = None
     RobustScaler = None
     MinMaxScaler = None
@@ -71,8 +74,11 @@ class FallbackModel:
     def fit(self, X: pd.DataFrame, y: pd.Series) -> None:
         """Fit the fallback model."""
         try:
-            if "Close" in X.columns:
-                self.last_value = X["Close"].iloc[-1]
+            _col_map = {c.lower(): c for c in X.columns}
+            _num_cols = list(X.select_dtypes(include=[np.number]).columns)
+            _tgt_col = _col_map.get("close", _num_cols[0] if _num_cols else None)
+            if _tgt_col is not None and _tgt_col in X.columns:
+                self.last_value = X[_tgt_col].iloc[-1]
             elif len(y) > 0:
                 self.last_value = y.iloc[-1]
             else:
@@ -84,9 +90,12 @@ class FallbackModel:
     def predict(self, data: pd.DataFrame) -> np.ndarray:
         """Predict using simple moving average."""
         try:
-            if "Close" in data.columns:
-                # Use moving average of close prices
-                ma = data["Close"].rolling(window=self.window, min_periods=1).mean()
+            _col_map = {c.lower(): c for c in data.columns}
+            _num_cols = list(data.select_dtypes(include=[np.number]).columns)
+            _tgt_col = _col_map.get("close", _num_cols[0] if _num_cols else None)
+            if _tgt_col is not None and _tgt_col in data.columns:
+                # Use moving average of close prices (resolved column case)
+                ma = data[_tgt_col].rolling(window=self.window, min_periods=1).mean()
                 return ma.values
             else:
                 # Return constant prediction
@@ -525,7 +534,9 @@ class LSTMForecaster(BaseModel):
         if not TORCH_AVAILABLE:
             logger.error("PyTorch is not available. Cannot initialize LSTM forecaster.")
             self.available = False
-            print("âš ï¸ LSTMForecaster unavailable due to missing PyTorch")
+            logger.warning(
+                "LSTMForecaster unavailable due to missing PyTorch"
+            )
             return
 
         if not SKLEARN_AVAILABLE:
@@ -533,7 +544,9 @@ class LSTMForecaster(BaseModel):
                 "scikit-learn is not available. Cannot initialize LSTM forecaster."
             )
             self.available = False
-            print("âš ï¸ LSTMForecaster unavailable due to missing scikit-learn")
+            logger.warning(
+                "LSTMForecaster unavailable due to missing scikit-learn"
+            )
             return
 
         try:
@@ -581,16 +594,19 @@ class LSTMForecaster(BaseModel):
             except Exception as e:
                 logger.error(f"LSTM model build failed: {e}")
                 self.model = None
-                print("âš ï¸ LSTM model unavailable due to model build failure")
-                print(f"   Error: {e}")
+                logger.warning(
+                    "LSTM model unavailable due to model build failure: %s", e
+                )
                 # Don't set available to False here as we have fallback
 
         except Exception as e:
             logger.error(f"Failed to initialize LSTM forecaster: {e}")
             logger.error(traceback.format_exc())
             self.available = False
-            print("âš ï¸ LSTMForecaster unavailable due to initialization failure")
-            print(f"   Error: {e}")
+            logger.warning(
+                "LSTMForecaster unavailable due to initialization failure: %s",
+                e,
+            )
             # Don't raise exception, just mark as unavailable
 
     def _build_fallback_model(self) -> nn.Module:
@@ -946,7 +962,9 @@ class LSTMForecaster(BaseModel):
     ) -> Dict[str, List[float]]:
         """Train the model with robust error handling and input validation. If y is None, derive from X (next-period close)."""
         if not self.available:
-            print("âš ï¸ LSTMForecaster unavailable due to initialization failure")
+            self.logger.warning(
+                "LSTMForecaster unavailable due to initialization failure"
+            )
             return {
                 "train_loss": [0.0],
                 "val_loss": [0.0],
@@ -1271,12 +1289,16 @@ class LSTMForecaster(BaseModel):
     def predict(self, data: pd.DataFrame, batch_size: int = 32) -> np.ndarray:
         """Predict using the LSTM model with input validation, logging, and batch-wise evaluation."""
         if not self.available:
-            print("âš ï¸ LSTMForecaster unavailable due to initialization failure")
+            self.logger.warning(
+                "LSTMForecaster unavailable due to initialization failure"
+            )
             # Return simple fallback prediction
-            if "Close" in data.columns:
-                return data["Close"].rolling(window=20, min_periods=1).mean().values
-            else:
-                return np.full(len(data), 1000.0)
+            _col_map = {c.lower(): c for c in data.columns}
+            _num_cols = list(data.select_dtypes(include=[np.number]).columns)
+            _tgt_col = _col_map.get("close", _num_cols[0] if _num_cols else None)
+            if _tgt_col is not None and _tgt_col in data.columns:
+                return data[_tgt_col].rolling(window=20, min_periods=1).mean().values
+            return np.full(len(data), 1000.0)
 
         try:
             # Input validation: Drop NaNs
@@ -1340,10 +1362,12 @@ class LSTMForecaster(BaseModel):
 
             # Return simple fallback
             logger.info("Using simple fallback prediction")
-            if "Close" in data.columns:
-                return data["Close"].rolling(window=20, min_periods=1).mean().values
-            else:
-                return np.full(len(data), 1000)  # Default value
+            _col_map = {c.lower(): c for c in data.columns}
+            _num_cols = list(data.select_dtypes(include=[np.number]).columns)
+            _tgt_col = _col_map.get("close", _num_cols[0] if _num_cols else None)
+            if _tgt_col is not None and _tgt_col in data.columns:
+                return data[_tgt_col].rolling(window=20, min_periods=1).mean().values
+            return np.full(len(data), 1000)  # Default value
 
     def _check_data_normalization(self, data: pd.DataFrame) -> bool:
         """Check if data appears to be normalized (mean close to 0, std close to 1)."""
@@ -1447,7 +1471,9 @@ class LSTMForecaster(BaseModel):
             Dictionary containing forecast results
         """
         if not self.available:
-            print("âš ï¸ LSTMForecaster unavailable due to initialization failure")
+            self.logger.warning(
+                "LSTMForecaster unavailable due to initialization failure"
+            )
             # Return simple fallback forecast
             fallback_forecast = np.full(horizon, 1000.0)
             if isinstance(data.index, pd.DatetimeIndex) and len(data.index) > 0:
@@ -1710,9 +1736,13 @@ class LSTMForecaster(BaseModel):
 
                 # Return fallback forecast
                 logger.info("Using fallback forecast (extrapolation)")
-                if "Close" in data.columns:
-                    last_value = data["Close"].iloc[-1]
-                    trend = data["Close"].diff().mean()
+                _col_map = {c.lower(): c for c in data.columns}
+                _num_cols = list(data.select_dtypes(include=[np.number]).columns)
+                _tgt_col = _col_map.get("close", _num_cols[0] if _num_cols else None)
+                if _tgt_col is not None and _tgt_col in data.columns:
+                    _s = data[_tgt_col]
+                    last_value = _s.iloc[-1]
+                    trend = _s.diff().mean()
                     fallback_forecast = [
                         last_value + trend * (i + 1) for i in range(horizon)
                     ]
@@ -1753,10 +1783,11 @@ class LSTMForecaster(BaseModel):
 
             # Return simple fallback forecast
             try:
-                if "close" in data.columns:
-                    last_value = float(data["close"].iloc[-1])
-                elif "Close" in data.columns:
-                    last_value = float(data["Close"].iloc[-1])
+                _col_map = {c.lower(): c for c in data.columns}
+                _num_cols = list(data.select_dtypes(include=[np.number]).columns)
+                _tgt_col = _col_map.get("close", _num_cols[0] if _num_cols else None)
+                if _tgt_col is not None and _tgt_col in data.columns:
+                    last_value = float(data[_tgt_col].iloc[-1])
                 else:
                     last_value = float(data.iloc[-1, 0])
             except Exception as e:
@@ -1836,7 +1867,9 @@ class LSTMForecaster(BaseModel):
             Dictionary with mean forecast, lower/upper bounds, and confidence
         """
         if not self.available:
-            print("[WARN] LSTMForecaster unavailable due to initialization failure")
+            logger.warning(
+                "LSTMForecaster unavailable due to initialization failure (forecast_with_uncertainty)"
+            )
             return {
                 'forecast': np.full(horizon, 1000.0),
                 'lower_bound': np.full(horizon, 900.0),

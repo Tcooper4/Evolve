@@ -852,8 +852,10 @@ class PromptAgent:
                 from trading.memory import get_memory_store
 
                 get_memory_store().ingest_preference_text(prompt, source="PromptAgent")
-            except Exception:
-                pass
+            except Exception as _e:
+                self.logger.warning(
+                    "agent: preference ingestion failed: %s", _e
+                )
 
             # Estimate token usage and cost
             token_estimate = self.estimate_token_usage(prompt, model="gpt-4")
@@ -2042,16 +2044,22 @@ class PromptAgent:
                         rsi = safe_rsi(closes, period=14)
                         if rsi is not None and len(rsi) and not np.isnan(rsi.iloc[-1]):
                             parts.append(f"[RSI(14)] {float(rsi.iloc[-1]):.1f}")
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        self.logger.warning(
+                            "agent: safe_rsi failed for %s: %s", symbol, _e
+                        )
                     try:
                         ema12 = closes.ewm(span=12).mean()
                         ema26 = closes.ewm(span=26).mean()
                         macd = ema12 - ema26
                         if len(macd) and not np.isnan(macd.iloc[-1]):
                             parts.append(f"[MACD] {float(macd.iloc[-1]):.4f}")
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        self.logger.warning(
+                            "agent: MACD computation failed for %s: %s",
+                            symbol,
+                            _e,
+                        )
             # Earnings context (upcoming earnings and last EPS surprise)
             try:
                 earnings = get_upcoming_earnings(symbol)
@@ -2060,13 +2068,19 @@ class PromptAgent:
                     if earnings.get("eps_estimate") is not None:
                         try:
                             line += f", EPS est: ${earnings['eps_estimate']:.2f}"
-                        except Exception:
-                            pass
+                        except Exception as _e:
+                            self.logger.warning(
+                                "agent: EPS estimate formatting failed for %s: %s",
+                                symbol,
+                                _e,
+                            )
                     if earnings.get("last_eps_surprise_pct") is not None:
                         line += f", last surprise: {earnings['last_eps_surprise_pct']:+.1f}%"
                     parts.append(line)
-            except Exception:
-                pass
+            except Exception as _e:
+                self.logger.warning(
+                    "agent: get_upcoming_earnings failed for %s: %s", symbol, _e
+                )
 
             # Short interest and squeeze risk
             try:
@@ -2078,8 +2092,10 @@ class PromptAgent:
                     if si.get("signal") == "HIGH_SHORT":
                         line += " [HIGH SHORT — squeeze potential]"
                     parts.append(line)
-            except Exception:
-                pass
+            except Exception as _e:
+                self.logger.warning(
+                    "agent: get_short_interest failed for %s: %s", symbol, _e
+                )
 
             # Insider activity summary
             try:
@@ -2090,8 +2106,10 @@ class PromptAgent:
                 if buys + sells > 0 and sig not in ("NO_ACTIVITY", None):
                     line = f"Insider activity (90d): {buys} buys, {sells} sells → {sig}"
                     parts.append(line)
-            except Exception:
-                pass
+            except Exception as _e:
+                self.logger.warning(
+                    "agent: get_insider_flow failed for %s: %s", symbol, _e
+                )
             # AI Score
             try:
                 from trading.analysis.ai_score import compute_ai_score
@@ -2107,8 +2125,10 @@ class PromptAgent:
                         f"Technical {_ai['technical_score']}, Momentum {_ai['momentum_score']}, "
                         f"Sentiment {_ai['sentiment_score']}, Fundamental {_ai['fundamental_score']}"
                     )
-            except Exception:
-                pass
+            except Exception as _e:
+                self.logger.warning(
+                    "agent: compute_ai_score failed for %s: %s", symbol, _e
+                )
             # Recent news headlines (multi-source aggregator)
             try:
                 news_items = get_news(symbol, max_items=5)
@@ -2126,14 +2146,20 @@ class PromptAgent:
                                 )
                                 if hrs < 48:
                                     age = f" ({hrs}h ago)"
-                        except Exception:
-                            pass
+                        except Exception as _e:
+                            self.logger.warning(
+                                "agent: news published parsing failed for %s: %s",
+                                symbol,
+                                _e,
+                            )
                         parts.append(
                             f"- [{item.get('source','?')}]"
                             f"{age}: {item.get('title','')}"
                         )
-            except Exception:
-                pass
+            except Exception as _e:
+                self.logger.warning(
+                    "agent: get_news failed for %s: %s", symbol, _e
+                )
             # Consensus forecast snapshot (cached; avoid heavy recompute every call)
             try:
                 cache_key = f"consensus:{symbol}:7d"
@@ -2167,16 +2193,22 @@ class PromptAgent:
                             parts.append(
                                 f"Model consensus ({len(used)} models): {direction} (conviction: {conviction})"
                             )
-            except Exception:
-                pass
+            except Exception as _e:
+                self.logger.warning(
+                    "agent: ForecastRouter consensus snapshot failed for %s: %s",
+                    symbol,
+                    _e,
+                )
             try:
                 info = getattr(self.data_provider, "get_ticker_info", None)
                 if callable(info):
                     inf = info(symbol)
                     if isinstance(inf, dict) and inf.get("trailingPE"):
                         parts.append(f"[P/E (trailing)] {inf['trailingPE']}")
-            except Exception:
-                pass
+            except Exception as _e:
+                self.logger.warning(
+                    "agent: get_ticker_info failed for %s: %s", symbol, _e
+                )
         except Exception as e:
             self.logger.debug("_get_rich_context failed for %s: %s", symbol, e)
         return "\n".join(p for p in parts if p).strip()

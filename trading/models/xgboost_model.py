@@ -584,6 +584,24 @@ class XGBoostModel(BaseModel):
     def fit(self, data: pd.DataFrame, target=None) -> Dict[str, Any]:
         """Fit model using data (and optional target). Compatible with Forecasting page."""
         data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+        # Standardize column names to actual case
+        _col_map = {c.lower(): c for c in data.columns}
+        _tgt_cfg = self.config.get("target_column", "close")
+        _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+        if _tgt_col not in data.columns:
+            _num = list(data.select_dtypes(include="number").columns)
+            if _num:
+                _tgt_col = _num[0]
+                logger.warning(
+                    "%s: target '%s' not found — using '%s'",
+                    self.__class__.__name__,
+                    _tgt_cfg,
+                    _tgt_col,
+                )
+            else:
+                raise ValueError(
+                    f"No numeric columns found in data for {self.__class__.__name__}"
+                )
         result = self.train(data)
         return {"success": result.get("success", True), "model": self.model}
 
@@ -595,11 +613,29 @@ class XGBoostModel(BaseModel):
         by :meth:`forecast`.
         """
         data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+        # Standardize column names to actual case
+        _col_map = {c.lower(): c for c in data.columns}
+        _tgt_cfg = self.config.get("target_column", "close")
+        _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+        if _tgt_col not in data.columns:
+            _num = list(data.select_dtypes(include="number").columns)
+            if _num:
+                _tgt_col = _num[0]
+                logger.warning(
+                    "%s: target '%s' not found — using '%s'",
+                    self.__class__.__name__,
+                    _tgt_cfg,
+                    _tgt_col,
+                )
+            else:
+                raise ValueError(
+                    f"No numeric columns found in data for {self.__class__.__name__}"
+                )
         if not self.available:
             print("XGBoostModel unavailable due to initialization failure")
             # Return simple fallback prediction
-            if "close" in data.columns:
-                return data["close"].rolling(window=20).mean().values
+            if _tgt_col in data.columns:
+                return data[_tgt_col].rolling(window=20).mean().values
             else:
                 return np.full(len(data), 1000.0)
 
@@ -614,7 +650,17 @@ class XGBoostModel(BaseModel):
                 raise ValueError("No features selected during training")
 
             X = features[self.selected_features]
-            price_col = "Close" if "Close" in features.columns else "close" if "close" in features.columns else None
+            price_col = (
+                _tgt_col
+                if _tgt_col in features.columns
+                else (
+                    "Close"
+                    if "Close" in features.columns
+                    else "close"
+                    if "close" in features.columns
+                    else None
+                )
+            )
 
             # Make prediction
             if self.model is not None and self.is_trained:
@@ -653,11 +699,8 @@ class XGBoostModel(BaseModel):
                 return np.zeros(len(data))
             # Price-space fallback: return last close repeated
             if isinstance(data, pd.DataFrame):
-                if "Close" in data.columns and len(data["Close"]):
-                    last = float(data["Close"].iloc[-1])
-                    return np.full(len(data), last, dtype="float64")
-                if "close" in data.columns and len(data["close"]):
-                    last = float(data["close"].iloc[-1])
+                if _tgt_col in data.columns and len(data[_tgt_col]):
+                    last = float(data[_tgt_col].iloc[-1])
                     return np.full(len(data), last, dtype="float64")
             return np.zeros(len(data))
 
@@ -843,9 +886,13 @@ class XGBoostModel(BaseModel):
 
                 # Return fallback forecast
                 logger.info("Using fallback forecast")
-                if "close" in data.columns:
-                    last_value = data["close"].iloc[-1]
-                    trend = data["close"].diff().mean()
+                _col_map = {c.lower(): c for c in data.columns}
+                _num_cols = list(data.select_dtypes(include=[np.number]).columns)
+                _tgt_col = _col_map.get("close", _num_cols[0] if _num_cols else None)
+                if _tgt_col is not None and _tgt_col in data.columns:
+                    _s = data[_tgt_col]
+                    last_value = float(_s.iloc[-1])
+                    trend = _s.diff().mean()
                     fallback_forecast = [
                         last_value + trend * (i + 1) for i in range(horizon)
                     ]
@@ -881,10 +928,11 @@ class XGBoostModel(BaseModel):
             # Use a simple but price-aware fallback around the last close
             price_series = None
             if isinstance(data, pd.DataFrame):
-                if "close" in data.columns:
-                    price_series = data["close"]
-                elif "Close" in data.columns:
-                    price_series = data["Close"]
+                _col_map = {c.lower(): c for c in data.columns}
+                _num_cols = list(data.select_dtypes(include=[np.number]).columns)
+                _tgt_col = _col_map.get("close", _num_cols[0] if _num_cols else None)
+                if _tgt_col is not None and _tgt_col in data.columns:
+                    price_series = data[_tgt_col]
 
             if price_series is not None and not price_series.empty:
                 last_value = float(price_series.iloc[-1])

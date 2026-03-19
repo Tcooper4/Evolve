@@ -207,7 +207,27 @@ class GARCHModel(BaseModel):
         if not ARCH_AVAILABLE:
             raise RuntimeError("GARCH requires arch package: pip install arch")
         data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
-        result = self.train(data, target_col="returns" if "returns" in data.columns else "close", **{})
+        # Standardize column names to actual case
+        _col_map = {c.lower(): c for c in data.columns}
+        _tgt_cfg = self.config.get("target_column", "close")
+        _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+        if _tgt_col not in data.columns:
+            _num = list(data.select_dtypes(include="number").columns)
+            if _num:
+                _tgt_col = _num[0]
+                logger.warning(
+                    "%s: target '%s' not found — using '%s'",
+                    self.__class__.__name__,
+                    _tgt_cfg,
+                    _tgt_col,
+                )
+            else:
+                raise ValueError(
+                    f"No numeric columns found in data for {self.__class__.__name__}"
+                )
+
+        target_col = "returns" if "returns" in data.columns else _tgt_col
+        result = self.train(data, target_col=target_col, **{})
         return {"success": True, "model": self.fitted_model, **result}
 
     def build_model(self) -> Any:
@@ -332,6 +352,24 @@ class GARCHModel(BaseModel):
             Predicted volatility values
         """
         data = self._normalize_columns(data.copy() if hasattr(data, "copy") else data)
+        # Standardize column names to actual case
+        _col_map = {c.lower(): c for c in data.columns}
+        _tgt_cfg = self.config.get("target_column", "close")
+        _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+        if _tgt_col not in data.columns:
+            _num = list(data.select_dtypes(include="number").columns)
+            if _num:
+                _tgt_col = _num[0]
+                logger.warning(
+                    "%s: target '%s' not found — using '%s'",
+                    self.__class__.__name__,
+                    _tgt_cfg,
+                    _tgt_col,
+                )
+            else:
+                raise ValueError(
+                    f"No numeric columns found in data for {self.__class__.__name__}"
+                )
         if self.fitted_model is None:
             raise ModelError("Model must be trained before prediction")
 
@@ -375,10 +413,11 @@ class GARCHModel(BaseModel):
             # GARCH primarily models volatility; use a flat price path at last close as a safe default.
             last_close = None
             if isinstance(data, pd.DataFrame):
-                if "Close" in data.columns:
-                    last_close = float(data["Close"].iloc[-1])
-                elif "close" in data.columns:
-                    last_close = float(data["close"].iloc[-1])
+                _col_map = {c.lower(): c for c in data.columns}
+                _num_cols = list(data.select_dtypes(include=[np.number]).columns)
+                _tgt_col = _col_map.get("close", _num_cols[0] if _num_cols else None)
+                if _tgt_col is not None and _tgt_col in data.columns:
+                    last_close = float(data[_tgt_col].iloc[-1])
                 elif "price" in data.columns:
                     last_close = float(data["price"].iloc[-1])
             if last_close is None or not np.isfinite(last_close):

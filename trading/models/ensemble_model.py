@@ -594,6 +594,24 @@ class EnsembleModel(BaseModel):
         Args:
             data: Training data
         """
+        # Standardize column names to actual case (used for consistent sub-model inputs)
+        _col_map = {c.lower(): c for c in data.columns}
+        _tgt_cfg = self.config.get("target_column", "close")
+        _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+        if _tgt_col not in data.columns:
+            _num = list(data.select_dtypes(include="number").columns)
+            if _num:
+                _tgt_col = _num[0]
+                logger.warning(
+                    "%s: target '%s' not found — using '%s'",
+                    self.__class__.__name__,
+                    _tgt_cfg,
+                    _tgt_col,
+                )
+            else:
+                raise ValueError(
+                    f"No numeric columns found in data for {self.__class__.__name__}"
+                )
         self._initialize_models()
         for model in self.models.values():
             model.fit(data)
@@ -608,6 +626,25 @@ class EnsembleModel(BaseModel):
             Ensemble predictions
         """
         try:
+            # Standardize column names to actual case
+            _col_map = {c.lower(): c for c in data.columns}
+            _tgt_cfg = self.config.get("target_column", "close")
+            _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+            if _tgt_col not in data.columns:
+                _num = list(data.select_dtypes(include="number").columns)
+                if _num:
+                    _tgt_col = _num[0]
+                    logger.warning(
+                        "%s: target '%s' not found — using '%s'",
+                        self.__class__.__name__,
+                        _tgt_cfg,
+                        _tgt_col,
+                    )
+                else:
+                    raise ValueError(
+                        f"No numeric columns found in data for {self.__class__.__name__}"
+                    )
+
             if not self.models:
                 self._initialize_models()
 
@@ -699,20 +736,25 @@ class EnsembleModel(BaseModel):
             # Final price-space guard: if sub-models disagree wildly or produce non-price outputs,
             # fall back to a flat forecast at the last close.
             try:
-                close_col = None
-                if isinstance(data, pd.DataFrame):
-                    if "Close" in data.columns:
-                        close_col = "Close"
-                    elif "close" in data.columns:
-                        close_col = "close"
-                if close_col is not None:
-                    last_close = float(data[close_col].iloc[-1])
+                if isinstance(data, pd.DataFrame) and _tgt_col in data.columns and len(data[_tgt_col]):
+                    last_close = float(data[_tgt_col].iloc[-1])
                     ep = np.asarray(ensemble_pred, dtype="float64").ravel()
                     if last_close > 10 and ep.size:
-                        if (not np.all(np.isfinite(ep))) or ep.min() < 50.0 or ep.max() > 1000.0 or ep.max() < 10.0 or ep.max() > last_close * 10:
-                            ensemble_pred = np.full(ep.size, last_close, dtype="float64")
-            except Exception:
-                pass
+                        if (
+                            (not np.all(np.isfinite(ep)))
+                            or ep.min() < 50.0
+                            or ep.max() > 1000.0
+                            or ep.max() < 10.0
+                            or ep.max() > last_close * 10
+                        ):
+                            ensemble_pred = np.full(
+                                ep.size, last_close, dtype="float64"
+                            )
+            except Exception as _e:
+                logger.warning(
+                    "ensemble: visualization step failed: %s",
+                    _e,
+                )
 
             return ensemble_pred
 

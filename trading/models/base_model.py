@@ -658,8 +658,11 @@ class BaseModel(ABC):
                         data.index, errors='coerce'
                     )
                     data = data[data.index.notna()]
-                except Exception:
-                    pass
+                except Exception as _e:
+                    self.logger.warning(
+                        "base_model: datetime coercion failed: %s",
+                        _e,
+                    )
 
             if not isinstance(data.index, pd.DatetimeIndex) \
                     or len(data) == 0:

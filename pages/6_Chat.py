@@ -16,7 +16,10 @@ from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
 
 try:
     from agents.llm.active_llm_calls import call_active_llm_chat
-except Exception:
+except ImportError as _e:
+    logging.getLogger(__name__).warning(
+        "Chat: call_active_llm_chat not available: %s", _e
+    )
     call_active_llm_chat = None
 
 try:
@@ -97,8 +100,8 @@ with col_chat:
                     store = get_memory_store()
                     try:
                         store.ingest_preference_text(prompt, source="chat")
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning("Chat: preference ingestion failed: %s", _e)
                     router = get_chat_router()
                     route_result = chat_nl_service.parse_intent(router, prompt) if router else {"intent": "unknown", "args": {}}
                     intent = route_result.get("intent", "unknown") if isinstance(route_result, dict) else getattr(route_result, "intent", "unknown")

@@ -239,6 +239,24 @@ class TCNModel(BaseModel):
     def fit(self, data: pd.DataFrame, **kwargs):
         """Fit TCN model on training data. Warms up the model via a dry forecast run."""
         try:
+            # Standardize column names to actual case
+            _col_map = {c.lower(): c for c in data.columns}
+            _tgt_cfg = self.config.get("target_column", "close")
+            _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+            if _tgt_col not in data.columns:
+                _num = list(data.select_dtypes(include="number").columns)
+                if _num:
+                    _tgt_col = _num[0]
+                    logger.warning(
+                        "%s: target '%s' not found — using '%s'",
+                        self.__class__.__name__,
+                        _tgt_cfg,
+                        _tgt_col,
+                    )
+                else:
+                    raise ValueError(
+                        f"No numeric columns found in data for {self.__class__.__name__}"
+                    )
             self._training_data = data
             _ = self.forecast(data, horizon=1)
         except Exception as e:
@@ -417,6 +435,24 @@ class TCNModel(BaseModel):
             Dictionary containing training history
         """
         try:
+            # Standardize column names to actual case
+            _col_map = {c.lower(): c for c in data.columns}
+            _tgt_cfg = self.config.get("target_column", "close")
+            _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+            if _tgt_col not in data.columns:
+                _num = list(data.select_dtypes(include="number").columns)
+                if _num:
+                    _tgt_col = _num[0]
+                    logger.warning(
+                        "%s: target '%s' not found — using '%s'",
+                        self.__class__.__name__,
+                        _tgt_cfg,
+                        _tgt_col,
+                    )
+                else:
+                    raise ValueError(
+                        f"No numeric columns found in data for {self.__class__.__name__}"
+                    )
             # Prepare data
             X, y = self._prepare_data(data, is_training=True)
 
@@ -468,6 +504,24 @@ class TCNModel(BaseModel):
             Numpy array of predictions
         """
         try:
+            # Standardize column names to actual case
+            _col_map = {c.lower(): c for c in data.columns}
+            _tgt_cfg = self.config.get("target_column", "close")
+            _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+            if _tgt_col not in data.columns:
+                _num = list(data.select_dtypes(include="number").columns)
+                if _num:
+                    _tgt_col = _num[0]
+                    logger.warning(
+                        "%s: target '%s' not found — using '%s'",
+                        self.__class__.__name__,
+                        _tgt_cfg,
+                        _tgt_col,
+                    )
+                else:
+                    raise ValueError(
+                        f"No numeric columns found in data for {self.__class__.__name__}"
+                    )
             # Prepare data
             X, _ = self._prepare_data(data, is_training=False)
 

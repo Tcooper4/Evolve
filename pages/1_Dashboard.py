@@ -147,8 +147,13 @@ def _load_universe(name: str, fallback: list) -> list:
             tickers = json.load(f)
         if tickers:
             return tickers
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "Dashboard: universe load failed (json) for %s: %s",
+            name,
+            _e,
+        )
+        st.caption(f"⚠️ Universe load failed: {_e}")
     try:
         if name == "sp500":
             url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
@@ -184,8 +189,13 @@ def _load_universe(name: str, fallback: list) -> list:
             nasdaq100 = _load_universe("nasdaq100", fallback)
             if sp500 or nasdaq100:
                 return sorted(set(sp500 or []).union(nasdaq100 or []))
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "Dashboard: universe load failed (web) for %s: %s",
+            name,
+            _e,
+        )
+        st.caption(f"⚠️ Universe load failed: {_e}")
     return fallback
 
 

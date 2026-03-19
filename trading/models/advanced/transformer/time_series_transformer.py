@@ -369,18 +369,73 @@ class TransformerForecaster(BaseModel):
 
                 _stats_path = _Path(".cache") / "transformer_norm_stats.json"
                 if _stats_path.exists():
-                    _stats = _json.loads(_stats_path.read_text())
-                    if _stats.get("X_mean") is not None:
-                        self.X_mean = _np.array(_stats["X_mean"])
-                    if _stats.get("X_std") is not None:
-                        self.X_std = _np.array(_stats["X_std"])
-                    if _stats.get("y_mean") is not None:
-                        self.y_mean = float(_stats["y_mean"])
-                    if _stats.get("y_std") is not None:
-                        self.y_std = float(_stats["y_std"])
-            except Exception:
-                # If stats loading fails, we'll fall back to requiring fit() before predict()
-                pass
+                    try:
+                        _stats = _json.loads(
+                            _stats_path.read_text(
+                                encoding="utf-8",
+                                errors="replace",
+                            )
+                        )
+
+                        _loaded_mean = _stats.get("X_mean")
+                        _loaded_std = _stats.get("X_std")
+
+                        if _loaded_mean is not None and _loaded_std is not None:
+                            _mean_arr = _np.array(_loaded_mean)
+                            _std_arr = _np.array(_loaded_std)
+
+                            # Validate shapes against the expected feature count (when known).
+                            _expected_features = (
+                                getattr(self, "_expected_features", None)
+                                or self.config.get("input_size")
+                            )
+                            try:
+                                _expected_features = int(_expected_features)
+                            except Exception:
+                                _expected_features = 0
+
+                            if (
+                                _expected_features
+                                and _mean_arr.shape[-1] == _expected_features
+                            ):
+                                self.X_mean = _mean_arr
+                                self.X_std = _std_arr
+                            elif _expected_features:
+                                logger.warning(
+                                    "Transformer norm stats shape mismatch: expected %d features, got %d — ignoring cached stats",
+                                    _expected_features,
+                                    _mean_arr.shape[-1],
+                                )
+                                self.X_mean = None
+                                self.X_std = None
+                            else:
+                                # No feature count known yet — validate at normalization time.
+                                self.X_mean = _mean_arr
+                                self.X_std = _std_arr
+
+                        if _stats.get("y_mean") is not None:
+                            self.y_mean = float(_stats["y_mean"])
+                        if _stats.get("y_std") is not None:
+                            self.y_std = float(_stats["y_std"])
+
+                    except Exception as _e:
+                        logger.warning(
+                            "Transformer norm stats load failed: %s — will refit from scratch",
+                            _e,
+                        )
+                        self.X_mean = None
+                        self.X_std = None
+                        self.y_mean = None
+                        self.y_std = None
+            except Exception as _e:
+                logger.warning(
+                    "Transformer norm stats load failed: %s — will refit from scratch",
+                    _e,
+                )
+                self.X_mean = None
+                self.X_std = None
+                self.y_mean = None
+                self.y_std = None
 
             return True
 
@@ -499,7 +554,22 @@ class TransformerForecaster(BaseModel):
                 # Never break training just because stats persistence failed
                 pass
 
-        X = (X - self.X_mean) / self.X_std
+        if (
+            self.X_mean is not None
+            and self.X_std is not None
+            and self.X_mean.shape[-1] == X.shape[-1]
+        ):
+            X = (X - self.X_mean) / (self.X_std + 1e-8)
+        else:
+            if self.X_mean is not None:
+                logger.warning(
+                    "Transformer norm stats shape mismatch at normalization: stats=%s data=%s — refitting stats from current batch",
+                    str(getattr(self.X_mean, "shape", None)),
+                    str(getattr(X, "shape", None)),
+                )
+            self.X_mean = X.mean(axis=(0, 1))
+            self.X_std = X.std(axis=(0, 1))
+            X = (X - self.X_mean) / (self.X_std + 1e-8)
         y = (y - self.y_mean) / self.y_std
 
         # Convert to tensors
@@ -524,8 +594,78 @@ class TransformerForecaster(BaseModel):
         try:
             # Ensure model has been fitted before using stored normalization stats
             if self.X_mean is None or self.X_std is None or self.y_mean is None or self.y_std is None:
-                raise ValueError("Model not fitted. Call fit() before predict().")
+                try:
+                    import json as _j
+                    from pathlib import Path as _p
+                    import numpy as _np
+                    _sp = _p(".cache") / "transformer_norm_stats.json"
+                    if _sp.exists():
+                        try:
+                            _s = _j.loads(
+                                _sp.read_text(
+                                    encoding="utf-8",
+                                    errors="replace",
+                                )
+                            )
 
+                            _loaded_mean = _s.get("X_mean")
+                            _loaded_std = _s.get("X_std")
+
+                            if _loaded_mean is not None and _loaded_std is not None:
+                                _mean_arr = _np.array(_loaded_mean)
+                                _std_arr = _np.array(_loaded_std)
+
+                                _expected_features = (
+                                    getattr(self, "_expected_features", None)
+                                    or self.config.get("input_size")
+                                )
+                                try:
+                                    _expected_features = int(_expected_features)
+                                except Exception:
+                                    _expected_features = 0
+
+                                if (
+                                    _expected_features
+                                    and _mean_arr.shape[-1] == _expected_features
+                                ):
+                                    self.X_mean = _mean_arr
+                                    self.X_std = _std_arr
+                                elif _expected_features:
+                                    logger.warning(
+                                        "Transformer norm stats shape mismatch: expected %d features, got %d — ignoring cached stats",
+                                        _expected_features,
+                                        _mean_arr.shape[-1],
+                                    )
+                                    self.X_mean = None
+                                    self.X_std = None
+                                else:
+                                    self.X_mean = _mean_arr
+                                    self.X_std = _std_arr
+
+                            if _s.get("y_mean") is not None:
+                                self.y_mean = float(_s["y_mean"])
+                            if _s.get("y_std") is not None:
+                                self.y_std = float(_s["y_std"])
+                        except Exception as _e:
+                            logger.warning(
+                                "Transformer norm stats load failed: %s — will refit from scratch",
+                                _e,
+                            )
+                            self.X_mean = None
+                            self.X_std = None
+                            self.y_mean = None
+                            self.y_std = None
+                except Exception as _e:
+                    logger.warning(
+                        "Transformer norm stats load failed: %s — will refit from scratch",
+                        _e,
+                    )
+                    self.X_mean = None
+                    self.X_std = None
+                    self.y_mean = None
+                    self.y_std = None
+                if self.X_mean is None or self.X_std is None:
+                    raise ValueError("Transformer not fitted. Call fit() before predict().")
             # Prepare data
             X, _ = self._prepare_data(data, is_training=False)
 
@@ -614,6 +754,14 @@ class TransformerForecaster(BaseModel):
             confidence_intervals = []
             current_data = data.copy()
 
+            # Resolve the actual dataframe column case for iterative updates.
+            _col_map_iter = {c.lower(): c for c in current_data.columns}
+            _tgt_cfg_iter = self.config.get("target_column", "close")
+            _resolved_tgt = _col_map_iter.get(
+                str(_tgt_cfg_iter).lower(),
+                list(current_data.columns)[0],
+            )
+
             for i in range(horizon):
                 # Get prediction for next step
                 pred = self.predict(current_data)
@@ -627,9 +775,8 @@ class TransformerForecaster(BaseModel):
 
                 # Update data for next iteration
                 new_row = current_data.iloc[-1].copy()
-                new_row[self.config.get("target_column", "close")] = pred[
-                    -1
-                ]  # Update with prediction
+                # Update using resolved column name, not config key.
+                new_row[_resolved_tgt] = pred[-1]  # Update with prediction
                 current_data = pd.concat(
                     [current_data, pd.DataFrame([new_row])], ignore_index=True
                 )

@@ -578,8 +578,12 @@ class ForecastRouter:
                     last = float(s.iloc[-1]) if len(s) > 0 and not pd.isna(s.iloc[-1]) else None
                     if last is not None and np.isfinite(last):
                         return np.full(horizon, last, dtype="float64")
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "ForecastRouter: simple forecast parse failed for column '%s': %s",
+                        col,
+                        _e,
+                    )
 
         numeric = data.select_dtypes(include=[np.number])
         if numeric.empty:
@@ -593,8 +597,12 @@ class ForecastRouter:
             if hasattr(model, "get_confidence"):
                 c = model.get_confidence()
                 return float(c.get("confidence", 0.5)) if isinstance(c, dict) else float(c)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ForecastRouter: get_confidence failed for model '%s': %s",
+                model_name,
+                _e,
+            )
         return 0.5
 
     def _get_metadata(self, model: Any, model_name: str) -> Dict[str, Any]:
@@ -602,8 +610,12 @@ class ForecastRouter:
         try:
             if hasattr(model, "get_model_info"):
                 return model.get_model_info() or {}
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ForecastRouter: get_model_info failed for model '%s': %s",
+                model_name,
+                _e,
+            )
         return {"model": model_name}
 
     def _get_warnings(self, data: pd.DataFrame, model_name: str) -> list:
@@ -747,8 +759,11 @@ class ForecastRouter:
                 return "xgboost"
             if "ridge" in self.model_registry:
                 return "ridge"
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning(
+                "ForecastRouter: data analysis failed during auto-selection: %s",
+                _e,
+            )
 
         return default_model
 
@@ -898,10 +913,16 @@ class ForecastRouter:
                 try:
                     last_close = None
                     if isinstance(data, pd.DataFrame) and not data.empty:
-                        if "Close" in data.columns:
-                            last_close = float(data["Close"].iloc[-1])
-                        elif "close" in data.columns:
-                            last_close = float(data["close"].iloc[-1])
+                        _col_map = {c.lower(): c for c in data.columns}
+                        _num_cols = list(
+                            data.select_dtypes(include=[np.number]).columns
+                        )
+                        _tgt_col = _col_map.get(
+                            "close",
+                            _num_cols[0] if _num_cols else None,
+                        )
+                        if _tgt_col is not None and _tgt_col in data.columns:
+                            last_close = float(data[_tgt_col].iloc[-1])
                         elif "price" in data.columns:
                             last_close = float(data["price"].iloc[-1])
                     if last_close is not None and np.isfinite(last_close) and last_close > 10:
@@ -935,8 +956,11 @@ class ForecastRouter:
                         if fa3.size:
                             if (np.nanmax(fa3) > last_close * 5.0) or (np.nanmin(fa3) < last_close * 0.2):
                                 forecast_array = np.full(len(fa3), last_close, dtype="float64")
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "ForecastRouter: final price space guard failed: %s",
+                        _e,
+                    )
 
                 logger.info(f"Successfully generated forecast with {selected_model}")
             except Exception as e:
@@ -1118,8 +1142,11 @@ class ForecastRouter:
         if not isinstance(df.index, pd.DatetimeIndex):
             try:
                 df.index = pd.to_datetime(df.index, errors="coerce")
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "forecast_router: index datetime coercion failed: %s",
+                    _e,
+                )
         # Drop NaT rows produced by coercion
         nat_mask = df.index.isna()
         if nat_mask.any():
@@ -1139,9 +1166,12 @@ class ForecastRouter:
         if isinstance(df.index, pd.DatetimeIndex) and getattr(df.index, "tz", None) is not None:
             try:
                 df.index = df.index.tz_convert(None)
-            except Exception:
+            except Exception as _e:
                 # Best effort; if tz conversion fails, continue with original index
-                pass
+                logger.warning(
+                    "forecast_router: tz_convert failed; continuing with original index: %s",
+                    _e,
+                )
 
         # Ensure we have a Close column
         if "Close" not in df.columns and "close" in df.columns:
@@ -1218,8 +1248,12 @@ class ForecastRouter:
                             )
                         fc = _clipped
                     # If capping failed, fc remains as previously validated
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "ForecastRouter: forecast capping failed for model '%s' (continuing): %s",
+                        name,
+                        _e,
+                    )
 
                 target_idx = horizon_int - 1
                 price_targets[name] = float(fc[target_idx])
@@ -1274,8 +1308,11 @@ class ForecastRouter:
                         "price_targets": {},
                         "forecast_debug": forecast_debug,
                     }
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "ForecastRouter: consensus fallback ARIMA forecast failed: %s",
+                    _e,
+                )
 
             return {
                 "error": "All model forecasts were flat (no variation). Check data or model config.",

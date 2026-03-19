@@ -253,8 +253,11 @@ class ConfidenceGenerator:
             raise ValueError("Historical data required for volatility method")
 
         # Calculate historical volatility
-        if "close" in historical_data.columns:
-            returns = historical_data["close"].pct_change().dropna()
+        _col_map = {c.lower(): c for c in historical_data.columns}
+        _num_cols = list(historical_data.select_dtypes(include=[np.number]).columns)
+        _tgt_col = _col_map.get("close", _num_cols[0] if _num_cols else None)
+        if _tgt_col is not None and _tgt_col in historical_data.columns:
+            returns = historical_data[_tgt_col].pct_change().dropna()
         else:
             returns = historical_data.iloc[:, 0].pct_change().dropna()
 

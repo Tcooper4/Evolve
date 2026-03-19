@@ -486,8 +486,11 @@ def call_active_llm_simple(prompt: str, *, max_tokens: int = 2048) -> str:
         session_id = st_session_state.get("evolve_session_id", "") or st_session_state.get("session_id", "")
         if session_id:
             inject_user_keys_to_env(str(session_id))
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "active_llm_calls: key injection failed (call_active_llm_simple): %s",
+            _e,
+        )
 
     env_provider = os.getenv("LLM_PROVIDER", "").strip().lower()
     provider, model, options = get_active_llm()
@@ -551,8 +554,11 @@ def call_active_llm_chat(
         session_id = st_session_state.get("evolve_session_id", "") or st_session_state.get("session_id", "")
         if session_id:
             inject_user_keys_to_env(str(session_id))
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "active_llm_calls: key injection failed (call_active_llm_chat): %s",
+            _e,
+        )
 
     env_provider = os.getenv("LLM_PROVIDER", "").strip().lower()
     provider, model, options = get_active_llm()

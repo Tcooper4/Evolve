@@ -173,9 +173,28 @@ if PROPHET_AVAILABLE:
                 ValueError: If data is missing or malformed
                 RuntimeError: If Prophet fitting fails
             """
-            train_data = self._normalize_columns(train_data.copy() if hasattr(train_data, "copy") else train_data)
-            if "Close" in train_data.columns and self.config.get("target_column") == "close":
-                self.config["target_column"] = "Close"
+            train_data = self._normalize_columns(
+                train_data.copy() if hasattr(train_data, "copy") else train_data
+            )
+            # Standardize column names to actual case
+            _col_map = {c.lower(): c for c in train_data.columns}
+            _tgt_cfg = self.config.get("target_column", "close")
+            _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+            if _tgt_col not in train_data.columns:
+                _num = list(train_data.select_dtypes(include=[np.number]).columns)
+                if _num:
+                    _tgt_col = _num[0]
+                    logger.warning(
+                        "%s: target '%s' not found — using '%s'",
+                        self.__class__.__name__,
+                        _tgt_cfg,
+                        _tgt_col,
+                    )
+                else:
+                    raise ValueError(
+                        f"No numeric columns found in data for {self.__class__.__name__}"
+                    )
+            self.config["target_column"] = _tgt_col
             if not self.available:
                 logger.warning("ProphetModel unavailable (init failure).")
                 return {
@@ -468,6 +487,25 @@ if PROPHET_AVAILABLE:
                     )
                     return np.array([])
 
+                # Standardize column names to actual case
+                _col_map = {c.lower(): c for c in data.columns}
+                _tgt_cfg = self.config.get("target_column", "close")
+                _tgt_col = _col_map.get(str(_tgt_cfg).lower(), _tgt_cfg)
+                if _tgt_col not in data.columns:
+                    _num = list(data.select_dtypes(include=[np.number]).columns)
+                    if _num:
+                        _tgt_col = _num[0]
+                        logger.warning(
+                            "%s: target '%s' not found — using '%s'",
+                            self.__class__.__name__,
+                            _tgt_cfg,
+                            _tgt_col,
+                        )
+                    else:
+                        raise ValueError(
+                            f"No numeric columns found in data for {self.__class__.__name__}"
+                        )
+
                 if not self.fitted:
                     logger.warning(
                         "Prophet predict: Model not fitted, returning empty result"
@@ -491,8 +529,11 @@ if PROPHET_AVAILABLE:
                         last_date = pd.to_datetime(self._last_train_date)
                     elif getattr(self, "history", None) is not None and "ds" in self.history.columns:
                         last_date = pd.to_datetime(self.history["ds"].max())
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "prophet: forecast step failed (last_date build) : %s",
+                        _e,
+                    )
 
                 try:
                     last_date = pd.to_datetime(last_date).tz_localize(None)

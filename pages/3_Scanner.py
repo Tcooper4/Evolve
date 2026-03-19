@@ -4,6 +4,7 @@ Market Scanner page — screen stocks by technical and AI-driven filters.
 Reorganized from 13_Scanner with theme, price_cache, News Score, and fragment refresh.
 """
 import json
+import logging
 import os
 from datetime import datetime, timedelta
 
@@ -13,6 +14,8 @@ import streamlit as st
 
 from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
 from trading.data.price_cache import get_history, get_news, batch_quotes
+
+logger = logging.getLogger(__name__)
 
 try:
     from utils.dataframe_utils import normalize_for_display
@@ -62,8 +65,9 @@ def _load_universe(name: str, fallback: list) -> list:
             tickers = json.load(f)
         if tickers:
             return tickers
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning("Scanner: universe load failed (json) for %s: %s", name, _e)
+        st.caption(f"⚠️ Universe load failed: {_e}")
     try:
         if name == "sp500":
             url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
@@ -99,8 +103,13 @@ def _load_universe(name: str, fallback: list) -> list:
             nasdaq100 = _load_universe("nasdaq100", fallback)
             if sp500 or nasdaq100:
                 return sorted(set(sp500 or []).union(nasdaq100 or []))
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning(
+            "Scanner: universe load failed (web) for %s: %s",
+            name,
+            _e,
+        )
+        st.caption(f"⚠️ Universe load failed: {_e}")
     return fallback
 
 

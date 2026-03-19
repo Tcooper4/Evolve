@@ -29,8 +29,10 @@ except ImportError:
 
 try:
     st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
-except Exception:
-    pass
+except Exception as _e:
+    logging.getLogger(__name__).warning(
+        "Analyze: keyboard shortcut JS injection failed: %s", _e
+    )
 inject_theme()
 render_top_bar()
 
@@ -110,20 +112,20 @@ if not _be:
     st.stop()
 
 # Initialize session state variables (dict-style access is safer when imported outside streamlit)
-if "forecast_data" not in st.session_state:
-    st.session_state["forecast_data"] = None
-if "selected_models" not in st.session_state:
-    st.session_state["selected_models"] = []
-if "ai_recommendation" not in st.session_state:
-    st.session_state["ai_recommendation"] = None
+if "analyze_forecast_data" not in st.session_state:
+    st.session_state["analyze_forecast_data"] = None
+if "analyze_selected_models" not in st.session_state:
+    st.session_state["analyze_selected_models"] = []
+if "analyze_ai_recommendation" not in st.session_state:
+    st.session_state["analyze_ai_recommendation"] = None
 if "comparison_results" not in st.session_state:
     st.session_state["comparison_results"] = None
-if "market_regime" not in st.session_state:
-    st.session_state["market_regime"] = None
-if "symbol" not in st.session_state:
-    st.session_state["symbol"] = None
-if "forecast_horizon" not in st.session_state:
-    st.session_state["forecast_horizon"] = 7
+if "analyze_market_regime" not in st.session_state:
+    st.session_state["analyze_market_regime"] = None
+if "analyze_symbol" not in st.session_state:
+    st.session_state["analyze_symbol"] = None
+if "analyze_forecast_horizon" not in st.session_state:
+    st.session_state["analyze_forecast_horizon"] = 7
 
 
 def _extract_forecast_values(result):
@@ -186,11 +188,12 @@ if st.session_state.get("_last_autoload_key") != _cache_key:
     try:
         _auto_hist = get_history(ticker, period=period)
         if not _auto_hist.empty:
-            st.session_state["forecast_data"] = _auto_hist
+            st.session_state["analyze_forecast_data"] = _auto_hist
             st.session_state["_last_autoload_key"] = _cache_key
-            st.session_state["symbol"] = ticker
-    except Exception:
-        pass
+            st.session_state["analyze_symbol"] = ticker
+    except Exception as _e:
+        logger.warning("Analyze: history load failed for %s: %s", ticker, _e)
+        st.caption(f"⚠️ Could not load price history: {_e}")
 
 _st_ver = tuple(int(x) for x in st.__version__.split(".")[:2])
 
@@ -369,8 +372,10 @@ if not hist.empty:
                             row=1,
                             col=1,
                         )
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning(
+                        "Analyze: previous close yfinance fetch failed: %s", _e
+                    )
 
                 # Current price hline (intraday)
                 try:
@@ -700,8 +705,10 @@ if not hist.empty:
                                 row=1,
                                 col=1,
                             )
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "Analyze: intraday prev close fetch failed: %s", _e
+                        )
 
                     try:
                         _current_live = float(_hist["Close"].dropna().iloc[-1])
@@ -975,8 +982,10 @@ if not hist.empty:
                             f"{_sign2}{_momentum:.2f}%",
                             help="Price change over last 5 intraday bars",
                         )
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "Analyze: short-term signals failed to compute/load: %s", _e
+                )
         elif trader_mode == "Long-term":
             try:
                 st.markdown("**Value Signals**")
@@ -1028,8 +1037,11 @@ if not hist.empty:
                         _signals.append("Near 52-week low")
                     if _signals:
                         st.success("Value signals: " + ", ".join(_signals))
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.warning(
+                    "Analyze: long-term value signals failed to compute/load: %s",
+                    _e,
+                )
     except Exception as e:
         st.caption(f"Feature unavailable: {e}")
 
@@ -1472,8 +1484,8 @@ with tab1:
                         
                         if data is not None:
                             # Store in session state
-                            st.session_state["forecast_data"] = data
-                            st.session_state["symbol"] = symbol
+                            st.session_state["analyze_forecast_data"] = data
+                            st.session_state["analyze_symbol"] = symbol
                             # forecast_horizon is already in session_state (defaults to 7 if not set)
                             # No need to reassign it here unless we want to update it
                             
@@ -1516,7 +1528,7 @@ with tab1:
 
     # Earnings proximity warning (forecasts may be less reliable near earnings)
     try:
-        if st.session_state.get("forecast_data") is not None and symbol:
+        if st.session_state.get("analyze_forecast_data") is not None and symbol:
             _e = get_upcoming_earnings(symbol)
             if _e.get("is_within_window"):
                 _d, _dt = _e["days_until"], _e["next_earnings_date"]
@@ -1529,12 +1541,12 @@ with tab1:
                     f"Earnings in {_d} day{'s' if _d != 1 else ''} ({_dt}){_s} — "
                     "forecasts may be less reliable near earnings."
                 )
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning("Analyze: earnings proximity check failed: %s", _e)
 
     # Display loaded data
-    if st.session_state.get("forecast_data") is not None:
-        data = st.session_state.get("forecast_data")
+    if st.session_state.get("analyze_forecast_data") is not None:
+        data = st.session_state.get("analyze_forecast_data")
         # Normalize column case (yfinance uses Close, etc.)
         if "close" in data.columns and "Close" not in data.columns:
             data = data.rename(columns={"close": "Close"})
@@ -1592,7 +1604,7 @@ with tab1:
         # AI Score panel with trader-mode display weights and news score
         try:
             from trading.analysis.ai_score import compute_ai_score
-            _sym = st.session_state.get("symbol") or symbol
+            _sym = st.session_state.get("analyze_symbol") or symbol
             if _sym:
                 _hist = data.copy()
                 if "close" in _hist.columns and "Close" not in _hist.columns:
@@ -1942,7 +1954,7 @@ with tab1:
         with st.expander("📈 Multi-Timeframe Chart", expanded=False):
             try:
                 from components.multi_timeframe_chart import render_multi_timeframe_chart
-                _sym = st.session_state.get("symbol") or symbol
+                _sym = st.session_state.get("analyze_symbol") or symbol
                 render_multi_timeframe_chart(_sym, hist_daily=data)
             except Exception as _e:
                 st.caption(f"Chart unavailable: {_e}")
@@ -1957,7 +1969,7 @@ with tab1:
             if has_ohlcv:
                 fig = create_candlestick_chart(
                     data=data,
-                    title=f"{st.session_state.symbol} Price History",
+                    title=f"{st.session_state.analyze_symbol} Price History",
                     show_volume='volume' in data.columns,
                     show_ma=[20, 50, 200] if len(data) >= 200 else ([20, 50] if len(data) >= 50 else [20])
                 )
@@ -1972,7 +1984,7 @@ with tab1:
                     line=dict(color='blue', width=2)
                 ))
                 fig.update_layout(
-                    title=f"{st.session_state.symbol} Price History",
+                    title=f"{st.session_state.analyze_symbol} Price History",
                     xaxis_title="Date",
                     yaxis_title="Price ($)",
                     hovermode='x unified',
@@ -1991,7 +2003,7 @@ with tab1:
                 line=dict(color='blue', width=2)
             ))
             fig.update_layout(
-                title=f"{st.session_state.symbol} Price History",
+                title=f"{st.session_state.analyze_symbol} Price History",
                 xaxis_title="Date",
                 yaxis_title="Price ($)",
                 hovermode='x unified',
@@ -2012,12 +2024,12 @@ with tab1:
             "Forecast Horizon (days)",
             min_value=1,
             max_value=30,
-            value=st.session_state.forecast_horizon,
+            value=st.session_state.analyze_forecast_horizon,
             key="forecast_horizon_slider",
             help="Number of days to forecast into the future"
         )
         # Update session state immediately
-        st.session_state.forecast_horizon = forecast_horizon
+        st.session_state.analyze_forecast_horizon = forecast_horizon
         
         col1, col2 = st.columns([1, 2])
         
@@ -2033,16 +2045,16 @@ with tab1:
                 try:
                     _denorm_price = None  # safe default before any conditional that might skip assignment
                     with st.spinner("Running consensus forecast (all models)..."):
-                        data = st.session_state.get("forecast_data")
+                        data = st.session_state.get("analyze_forecast_data")
                         if data is None:
-                            raise RuntimeError("No forecast_data in session_state; please load data first.")
+                            raise RuntimeError("No analyze_forecast_data in session_state; please load data first.")
                         data = data.copy()
                         # Normalize column case (yfinance uses Close, etc.)
                         if "close" in data.columns and "Close" not in data.columns:
                             data = data.rename(columns={"close": "Close"})
                         if "Close" not in data.columns:
                             data["Close"] = data.iloc[:, 0]
-                        horizon = st.session_state.get("forecast_horizon", 7)
+                        horizon = st.session_state.get("analyze_forecast_horizon", 7)
                         if not isinstance(data.index, pd.DatetimeIndex):
                             data.index = pd.to_datetime(data.index)
                         used_router = False
@@ -2180,8 +2192,8 @@ with tab1:
 
                                     # Update session state with processed forecast
                                     st.session_state.current_forecast_result = forecast_result
-                                except ImportError:
-                                    pass  # Silently fail if postprocessor not available
+                                except ImportError as _e:
+                                    logger.debug("Forecast postprocessor not available: %s", _e)
                                 except Exception as e:
                                     logger.warning(f"Forecast postprocessing failed: {e}")
                             
@@ -2216,7 +2228,9 @@ with tab1:
                                         timestamp=datetime.now()
                                     )
                                 except Exception as e:
-                                    pass  # Silently fail if logging not available
+                                    logger.warning(
+                                        "Model performance logging failed: %s", e
+                                    )
                             
                             # Extract forecast values (robust for all result formats)
                             forecast_values = _extract_forecast_values(forecast_result)
@@ -2301,7 +2315,7 @@ with tab1:
                                         MemoryType.LONG_TERM,
                                         namespace="forecasts",
                                         value={
-                                            "symbol": st.session_state.get("symbol", ""),
+                                            "symbol": st.session_state.get("analyze_symbol", ""),
                                             "model_name": selected_model,
                                             "horizon": horizon,
                                             "forecast_first": _first,
@@ -2332,7 +2346,7 @@ with tab1:
                                         'forecast': forecast_df['forecast'].values.tolist() if hasattr(forecast_df['forecast'].values, 'tolist') else list(forecast_df['forecast'].values),
                                         'dates': forecast_df.index.tolist() if hasattr(forecast_df.index, 'tolist') else list(forecast_df.index),
                                         'model_type': selected_model,
-                                        'symbol': st.session_state.symbol
+                                        'symbol': st.session_state.analyze_symbol
                                     }
                                     
                                     # Add confidence intervals if available
@@ -2347,7 +2361,7 @@ with tab1:
                                         forecast=forecast_for_insights,
                                         historical_data=data,
                                         model_type=selected_model,
-                                        symbol=st.session_state.symbol
+                                        symbol=st.session_state.analyze_symbol
                                     )
                                     
                                     # Display insights
@@ -2391,7 +2405,7 @@ with tab1:
                                                 'forecast': forecast_df['forecast'].values.tolist() if hasattr(forecast_df['forecast'].values, 'tolist') else list(forecast_df['forecast'].values),
                                                 'dates': forecast_df.index.tolist() if hasattr(forecast_df.index, 'tolist') else list(forecast_df.index),
                                                 'model_type': selected_model,
-                                                'symbol': st.session_state.symbol
+                                                'symbol': st.session_state.analyze_symbol
                                             }
                                             
                                             # Add confidence intervals if available
@@ -2402,7 +2416,7 @@ with tab1:
                                                     forecast_for_commentary['upper_bound'] = forecast_result['upper_bound']
                                             
                                             commentary = commentary_service.generate_forecast_commentary(
-                                                symbol=st.session_state.symbol,
+                                                symbol=st.session_state.analyze_symbol,
                                                 forecast_result=forecast_for_commentary,
                                                 model_type=selected_model,
                                                 historical_data=data
@@ -2437,12 +2451,12 @@ with tab1:
             
             # Display consensus view using the ForecastRouter
             try:
-                hist_data_cons = st.session_state.get("forecast_data")
+                hist_data_cons = st.session_state.get("analyze_forecast_data")
                 if hist_data_cons is not None and len(hist_data_cons) >= 2:
                     from trading.models.forecast_router import ForecastRouter
 
                     router = ForecastRouter()
-                    horizon = st.session_state.get("forecast_horizon", 7)
+                    horizon = st.session_state.get("analyze_forecast_horizon", 7)
                     import hashlib as _hashlib
                     import time as _time
 
@@ -2535,7 +2549,7 @@ with tab1:
                             _consensus_dir = direction
                             _conv = conviction
                             # Try canonical key first, then dynamic key, then any ai_score key
-                            _symbol = st.session_state.get("symbol", "")
+                            _symbol = st.session_state.get("analyze_symbol", "")
                             _ai_result = (
                                 st.session_state.get("ai_score_result")
                                 or st.session_state.get(f"ai_score_{_symbol}")
@@ -2607,7 +2621,7 @@ with tab1:
                                     ]
                                 )
                                 st.dataframe(
-                                    targets_df,
+                                    normalize_for_display(targets_df),
                                     width='stretch',
                                     hide_index=True,
                                 )
@@ -2636,7 +2650,7 @@ with tab1:
                 try:
                     from trading.ui.forecast_components import render_forecast_results, render_confidence_metrics
                     
-                    hist_data = st.session_state.get("forecast_data")
+                    hist_data = st.session_state.get("analyze_forecast_data")
                     forecast_df = st.session_state.current_forecast
                     forecast_result = st.session_state.get('current_forecast_result', {})
                     
@@ -2685,7 +2699,7 @@ with tab1:
                     render_forecast_results(
                         forecast=forecast_data,
                         historical_data=hist_data,
-                        symbol=st.session_state.symbol,
+                        symbol=st.session_state.analyze_symbol,
                         show_chart=True,
                         show_table=True
                     )
@@ -2723,14 +2737,16 @@ with tab1:
                             f'</div>',
                             unsafe_allow_html=True
                         )
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.warning(
+                            "Analyze: news sentiment overlay failed: %s", _e
+                        )
                     
                 except ImportError:
                     # Fallback to original display code
                     from utils.plotting_helper import create_forecast_chart
                     
-                    hist_data = st.session_state.get("forecast_data")
+                    hist_data = st.session_state.get("analyze_forecast_data")
                     forecast_df = st.session_state.current_forecast
                     forecast_result = st.session_state.get('current_forecast_result', {})
                     
@@ -2746,7 +2762,7 @@ with tab1:
                         forecast=forecast_df['forecast'].values,
                         forecast_dates=forecast_df.index,
                         confidence_intervals=confidence_intervals,
-                        title=f"{st.session_state.symbol} - Historical & Forecast"
+                        title=f"{st.session_state.analyze_symbol} - Historical & Forecast"
                     )
                     st.plotly_chart(fig, width='stretch')
                     
@@ -2792,7 +2808,7 @@ with tab1:
                 st.download_button(
                     label="📥 Download Forecast CSV",
                     data=csv,
-                    file_name=f"{st.session_state.symbol}_forecast.csv",
+                    file_name=f"{st.session_state.analyze_symbol}_forecast.csv",
                     mime="text/csv"
                 )
                 
@@ -2857,19 +2873,19 @@ with tab1:
                                                 model=model,
                                                 X=features,
                                                 forecast_value=forecast_value,
-                                                forecast_horizon=st.session_state.forecast_horizon,
+                                                forecast_horizon=st.session_state.analyze_forecast_horizon,
                                                 actual_values=target_history,
                                             )
                                             st.session_state.forecast_explanation = {"success": True, "explanation": explanation}
                                         elif hasattr(explainer, 'explain_forecast'):
                                             explanation = explainer.explain_forecast(
-                                                forecast_id=f"forecast_{st.session_state.symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                                                symbol=st.session_state.symbol,
+                                                forecast_id=f"forecast_{st.session_state.analyze_symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                                                symbol=st.session_state.analyze_symbol,
                                                 forecast_value=forecast_value,
                                                 model=model,
                                                 features=features,
                                                 target_history=target_history,
-                                                horizon=st.session_state.forecast_horizon,
+                                                horizon=st.session_state.analyze_forecast_horizon,
                                             )
                                             st.session_state.forecast_explanation = explanation
                                         else:
@@ -2900,7 +2916,7 @@ with tab1:
                         from agents.llm.agent import get_prompt_agent
                         agent = get_prompt_agent()
                         model_name = st.session_state.get("current_model", "Unknown")
-                        symbol = st.session_state.get("symbol", "Unknown")
+                        symbol = st.session_state.get("analyze_symbol", "Unknown")
                         last_price = float(data["Close"].iloc[-1]) if "Close" in data.columns else (float(data["close"].iloc[-1]) if "close" in data.columns else 0.0)
                         fcast = _extract_forecast_values(forecast_result)
                         fcast = fcast if fcast is not None and fcast.size > 0 else np.array([])
@@ -2924,7 +2940,7 @@ with tab2:
     st.header("Advanced Forecasting")
     st.markdown("Full model configuration with hyperparameter tuning and feature engineering")
     
-    if st.session_state.get("forecast_data") is None:
+    if st.session_state.get("analyze_forecast_data") is None:
         st.warning("⚠️ Please load data first in the Quick Forecast tab")
     else:
         col1, col2 = st.columns([1, 2])
@@ -2991,13 +3007,13 @@ with tab2:
                 
                 # Auto-select best model (Advanced only; runs all models, slow)
                 if st.button("🔬 Auto-select best model", key="auto_select_best_advanced"):
-                    data_for_best = st.session_state.get("forecast_data")
+                    data_for_best = st.session_state.get("analyze_forecast_data")
                     if data_for_best is not None and len(data_for_best) >= 60:
                         try:
                             from trading.models.forecast_router import ForecastRouter
                             _router = ForecastRouter()
-                            _horizon = st.session_state.get("forecast_horizon", 7)
-                            _symbol = st.session_state.get("symbol", "")
+                            _horizon = st.session_state.get("analyze_forecast_horizon", 7)
+                            _symbol = st.session_state.get("analyze_symbol", "")
                             _df = data_for_best.copy()
                             if "Close" in _df.columns and "close" not in _df.columns:
                                 _df = _df.rename(columns={"Close": "close", "Open": "open", "High": "high", "Low": "low", "Volume": "volume"})
@@ -3067,7 +3083,7 @@ with tab2:
             elif model_type == "Autoformer":
                 st.markdown("**Autoformer Parameters:**")
                 params['seq_len'] = st.slider("Sequence Length", 30, 120, 60, 10)
-                params['pred_len'] = st.session_state.forecast_horizon
+                params['pred_len'] = st.session_state.analyze_forecast_horizon
                 params['d_model'] = st.slider("Model Dimension", 64, 512, 128, 32)
             
             elif model_type == "CatBoost":
@@ -3135,9 +3151,9 @@ with tab2:
                 
                 try:
                     # Prepare data
-                    data = st.session_state.get("forecast_data")
+                    data = st.session_state.get("analyze_forecast_data")
                     if data is None:
-                        raise RuntimeError("No forecast_data in session_state; please load data first.")
+                        raise RuntimeError("No analyze_forecast_data in session_state; please load data first.")
                     data = data.copy()
                     # Normalize column case (yfinance uses Close, etc.)
                     if "close" in data.columns and "Close" not in data.columns:
@@ -3303,7 +3319,7 @@ with tab2:
                                 elif model_type == "Autoformer":
                                     model_config.update({
                                         "seq_len": params.get('seq_len', 60),
-                                        "pred_len": params.get('pred_len', st.session_state.forecast_horizon),
+                                        "pred_len": params.get('pred_len', st.session_state.analyze_forecast_horizon),
                                         "d_model": params.get('d_model', 128)
                                     })
                                 elif model_type == "CatBoost":
@@ -3404,7 +3420,7 @@ with tab2:
                         
                         # Generate forecast - try with uncertainty if available; support both forecast() and predict() (e.g. HybridModel)
                         progress_bar.progress(0.9)
-                        horizon = st.session_state.forecast_horizon
+                        horizon = st.session_state.analyze_forecast_horizon
                         if hasattr(model, 'forecast_with_uncertainty'):
                             try:
                                 forecast_result = model.forecast_with_uncertainty(data, horizon=horizon, num_samples=100)
@@ -3481,13 +3497,13 @@ with tab2:
                         if isinstance(forecast_result, dict):
                             forecast_dates = forecast_result.get('dates', pd.date_range(
                                 start=data.index[-1] + timedelta(days=1),
-                                periods=st.session_state.forecast_horizon,
+                                periods=st.session_state.analyze_forecast_horizon,
                                 freq='D'
                             ))
                         else:
                             forecast_dates = pd.date_range(
                                 start=data.index[-1] + timedelta(days=1),
-                                periods=st.session_state.forecast_horizon,
+                                periods=st.session_state.analyze_forecast_horizon,
                                 freq='D'
                             )
 
@@ -3552,7 +3568,7 @@ with tab2:
                             marker=dict(size=8)
                         ))
                         fig.update_layout(
-                            title=f"{st.session_state.symbol} - Advanced Forecast ({model_type})",
+                            title=f"{st.session_state.analyze_symbol} - Advanced Forecast ({model_type})",
                             xaxis_title="Date",
                             yaxis_title="Price ($)",
                             hovermode='x unified',
@@ -3640,13 +3656,13 @@ with tab2:
                                         target_history = features[model_config["target_column"]] if model_config["target_column"] in features.columns else features.iloc[:, 0]
                                         try:
                                             explanation = explainer.explain_forecast(
-                                                forecast_id=f"forecast_{st.session_state.symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                                                symbol=st.session_state.symbol,
+                                                forecast_id=f"forecast_{st.session_state.analyze_symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                                                symbol=st.session_state.analyze_symbol,
                                                 forecast_value=forecast_value,
                                                 model=model,
                                                 features=features,
                                                 target_history=target_history,
-                                                horizon=st.session_state.forecast_horizon
+                                                horizon=st.session_state.analyze_forecast_horizon
                                             )
                                             # Persist explanation in session state so it survives reruns
                                             st.session_state.forecast_explanation_tab2 = {
@@ -3690,7 +3706,7 @@ with tab3:
         - Computational efficiency
         """)
         
-        if st.session_state.get("forecast_data") is None:
+        if st.session_state.get("analyze_forecast_data") is None:
             st.warning("⚠️ Please load data first in the Quick Forecast tab")
         else:
             col1, col2 = st.columns([1, 1])
@@ -3714,7 +3730,7 @@ with tab3:
                                 agent = None
                             
                             # Detect market regime from data
-                            fd = st.session_state.get("forecast_data")
+                            fd = st.session_state.get("analyze_forecast_data")
                             price_data = fd["close"].values if hasattr(fd, "columns") and "close" in fd.columns else (
                                 fd.get("close")
                                 if isinstance(fd, dict)
@@ -3724,7 +3740,7 @@ with tab3:
                                 price_data = np.array([])
                             if hasattr(price_data, 'tolist'):
                                 price_data = np.asarray(price_data).ravel()
-                            horizon = st.session_state.forecast_horizon
+                            horizon = st.session_state.analyze_forecast_horizon
                             
                             # Determine horizon enum
                             from trading.agents.model_selector_agent import ForecastingHorizon, MarketRegime
@@ -3811,7 +3827,7 @@ with tab3:
                                 ] if recommendations else []
                             }
                             
-                            st.session_state.ai_recommendation = recommendation
+                            st.session_state.analyze_ai_recommendation = recommendation
                         
                         except Exception as e:
                             st.error(f"Tab error: {type(e).__name__}: {e}")
@@ -3821,8 +3837,8 @@ with tab3:
             with col2:
                 st.subheader("💡 AI Recommendation")
                 
-                if st.session_state.get('ai_recommendation'):
-                    rec = st.session_state.ai_recommendation
+                if st.session_state.get('analyze_ai_recommendation'):
+                    rec = st.session_state.analyze_ai_recommendation
                     
                     # Main recommendation
                     st.success(f"**Recommended Model: {rec['model_name']}**")
@@ -3891,7 +3907,7 @@ with tab3:
                 try:
                     from trading.forecasting.hybrid_model_selector import HybridModelSelector
                     
-                    data = st.session_state.get("forecast_data")
+                    data = st.session_state.get("analyze_forecast_data")
                     selector = HybridModelSelector()
                     
                     with st.spinner("Analyzing market conditions and selecting models..."):
@@ -3942,11 +3958,11 @@ with tab3:
             st.markdown("---")
             st.subheader("📋 Model Comparison Table")
             st.caption("Run each registered model and compare MAPE / 7-day forecast. Load data in Quick Forecast first.")
-            if st.session_state.get("forecast_data") is not None:
-                _hist = st.session_state.get("forecast_data").copy()
+            if st.session_state.get("analyze_forecast_data") is not None:
+                _hist = st.session_state.get("analyze_forecast_data").copy()
                 if "Close" not in _hist.columns and "close" in _hist.columns:
                     _hist["Close"] = _hist["close"]
-                _horizon = st.session_state.get("forecast_horizon", 7)
+                _horizon = st.session_state.get("analyze_forecast_horizon", 7)
                 try:
                     from trading.models.forecast_router import ForecastRouter
                     from trading.models.model_registry import get_registry
@@ -4033,19 +4049,19 @@ with tab4:
     try:
         st.header("Model Comparison")
         st.markdown("Compare multiple models side-by-side on a single chart.")
-        if st.session_state.get("forecast_data") is None:
+        if st.session_state.get("analyze_forecast_data") is None:
             st.warning("⚠️ Please load data first in the Quick Forecast tab")
         else:
             from trading.models.forecast_router import ForecastRouter
             import plotly.graph_objects as go
 
             _router = ForecastRouter()
-            _hist = st.session_state.get("forecast_data").copy()
+            _hist = st.session_state.get("analyze_forecast_data").copy()
             if "Close" not in _hist.columns and "close" in _hist.columns:
                 _hist["Close"] = _hist["close"]
             if "close" not in _hist.columns and "Close" in _hist.columns:
                 _hist["close"] = _hist["Close"]
-            _symbol = st.session_state.get("symbol", "Symbol")
+            _symbol = st.session_state.get("analyze_symbol", "Symbol")
 
             _models_to_compare = st.multiselect(
                 "Select models to compare",
@@ -4139,11 +4155,11 @@ with tab5:
     try:
         st.header("📊 Market Analysis")
         st.markdown("Rolling correlation vs SPY and volatility regime. Load data in Quick Forecast first.")
-        if st.session_state.get("forecast_data") is None:
+        if st.session_state.get("analyze_forecast_data") is None:
             st.warning("⚠️ Please load data first in the Quick Forecast tab")
         else:
-            _symbol = st.session_state.get("symbol", "Symbol")
-            hist = st.session_state.get("forecast_data").copy()
+            _symbol = st.session_state.get("analyze_symbol", "Symbol")
+            hist = st.session_state.get("analyze_forecast_data").copy()
             if "Close" not in hist.columns and "close" in hist.columns:
                 hist["Close"] = hist["close"]
 
@@ -4566,11 +4582,11 @@ with tab7:
     try:
         st.header("🎲 Monte Carlo Price Simulation")
         st.markdown("Self-contained monte_carlo simulation: percentile fan chart and P(price > today). Load data in Quick Forecast first.")
-        if st.session_state.get("forecast_data") is None:
+        if st.session_state.get("analyze_forecast_data") is None:
             st.warning("⚠️ Please load data first in the Quick Forecast tab")
         else:
-            _symbol = st.session_state.get("symbol", "Symbol")
-            hist = st.session_state.get("forecast_data").copy()
+            _symbol = st.session_state.get("analyze_symbol", "Symbol")
+            hist = st.session_state.get("analyze_forecast_data").copy()
             if "Close" not in hist.columns and "close" in hist.columns:
                 hist["Close"] = hist["close"]
 
@@ -4795,16 +4811,18 @@ with tab_options:
                     def _fetch_chain() -> None:
                         try:
                             _result[0] = _t.option_chain(_sel_exp)
-                        except Exception:
-                            pass
+                        except Exception as _e:
+                            logger.warning(
+                                "Analyze: option_chain fetch failed: %s", _e
+                            )
 
                     _th = _threading.Thread(target=_fetch_chain)
                     _th.start()
                     _th.join(timeout=8)
                     if _result[0] is not None:
                         st.session_state[_cache_key] = _result[0]
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.warning("Analyze: options chain fetch failed: %s", _e)
 
             _chain = st.session_state.get(_cache_key)
             if _chain is None:
@@ -4872,7 +4890,7 @@ with tab_options:
                 ]
                 _c_display["IV"] = (_c_display["IV"] * 100).round(1).astype(str) + "%"
                 st.dataframe(
-                    _c_display,
+                    normalize_for_display(_c_display),
                     width='stretch',
                     height=300,
                     key="options_calls_table",
@@ -4899,7 +4917,7 @@ with tab_options:
                 ]
                 _p_display["IV"] = (_p_display["IV"] * 100).round(1).astype(str) + "%"
                 st.dataframe(
-                    _p_display,
+                    normalize_for_display(_p_display),
                     width='stretch',
                     height=300,
                     key="options_puts_table",
@@ -4912,12 +4930,12 @@ with tab_options:
 with tab_insider:
     try:
         st.header("Insider Flow")
-        if st.session_state.get("forecast_data") is None or not st.session_state.get(
-            "symbol"
+        if st.session_state.get("analyze_forecast_data") is None or not st.session_state.get(
+            "analyze_symbol"
         ):
             st.info("Load data in the Quick Forecast tab to see insider activity.")
         else:
-            symbol = st.session_state.get("symbol")
+            symbol = st.session_state.get("analyze_symbol")
             insider = get_insider_flow(symbol)
 
             c1, c2, c3 = st.columns(3)
@@ -4957,7 +4975,7 @@ with tab_earnings:
         from trading.data.earnings_reaction import get_earnings_reactions
         import plotly.graph_objects as go
 
-        symbol = st.session_state.get("symbol") or "AAPL"
+        symbol = st.session_state.get("analyze_symbol") or "AAPL"
         with st.spinner("Loading earnings history..."):
             er = get_earnings_reactions(symbol)
 
@@ -5041,7 +5059,7 @@ with tab_diag:
     st.caption("Econometric tests on price data")
 
     try:
-        _dh = st.session_state.get("forecast_data") or get_history(ticker, period="1y")
+        _dh = st.session_state.get("analyze_forecast_data") or get_history(ticker, period="1y")
 
         if _dh is not None and not _dh.empty:
             _close = _dh["Close"].dropna()

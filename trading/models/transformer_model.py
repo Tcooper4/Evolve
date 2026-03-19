@@ -21,7 +21,7 @@ class TransformerForecaster:
 
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or {}
-        self.target_column = self.config.get("target_column", "Close")
+        self.target_column = self.config.get("target_column", "close")
         self.horizon = self.config.get("horizon", 30)
         self.seq_len = self.config.get("seq_len", 60)
         self.d_model = self.config.get("d_model", 64)
@@ -73,9 +73,23 @@ class TransformerForecaster:
 
     def _prepare_features(self, df: pd.DataFrame):
         """Extract and normalize features from DataFrame."""
-        col = self.target_column if self.target_column in df.columns else "Close"
-        if col not in df.columns:
-            raise ModelPredictionError(f"Column '{col}' not found in data")
+        _col_map = {c.lower(): c for c in df.columns}
+        _tgt_lower = str(self.target_column).lower()
+        col = _col_map.get(_tgt_lower)
+
+        if col is None:
+            _num_cols = list(df.select_dtypes(include="number").columns)
+            if _num_cols:
+                col = _num_cols[0]
+                logger.warning(
+                    "TransformerModel: target column '%s' not found — using '%s'",
+                    self.target_column,
+                    col,
+                )
+            else:
+                raise ModelPredictionError(
+                    f"Column '{self.target_column}' not found in data and no numeric columns available"
+                )
         prices = df[col].values.astype(float)
         returns = np.diff(prices) / (prices[:-1] + 1e-8)
         return returns, prices
@@ -212,11 +226,12 @@ class TransformerForecaster:
             if not self.is_fitted:
                 self.fit(data)
             prices = self.predict(data, horizon=horizon)
-            last_price = float(
-                data[self.target_column].iloc[-1]
-                if self.target_column in data.columns
-                else data["Close"].iloc[-1]
+            _col_map_f = {c.lower(): c for c in data.columns}
+            _tgt_col_f = _col_map_f.get(
+                str(self.target_column).lower(),
+                list(data.select_dtypes(include="number").columns)[0],
             )
+            last_price = float(data[_tgt_col_f].iloc[-1])
             return {
                 "forecast": prices.tolist(),
                 "model": "Transformer",
