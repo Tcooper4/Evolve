@@ -1,4 +1,4 @@
-"""
+﻿"""
 Evolve Trading Platform - Streamlit entry point.
 
 Minimal launcher: page config, logging, environment loading, and sidebar branding.
@@ -83,7 +83,7 @@ except Exception as e:
 st.set_page_config(
     page_title="Evolve AI Trading",
     layout="wide",
-    initial_sidebar_state="auto",
+    initial_sidebar_state="expanded",
 )
 
 # Per-user onboarding: init DB, check keys; inject into env if complete
@@ -156,3 +156,4 @@ if "llm_processor" not in st.session_state:
 st.markdown("# Welcome to Evolve")
 st.markdown("Use the **sidebar** to open **Dashboard**, **Analyze**, **Scanner**, **Trade**, **Backtest**, **Chat**, **Settings**, or the legacy pages.")
 st.info("👉 Select a page from the sidebar to get started. New pages: 1_Dashboard, 2_Analyze, 3_Scanner, 4_Trade, 5_Backtest, 6_Chat, 7_Settings.")
+
