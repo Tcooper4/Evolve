@@ -5,6 +5,7 @@ Settings page — Watchlist, Alerts, System (from Alerts, Admin, Watchlist).
 import sys
 from pathlib import Path
 import runpy
+import os
 
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
@@ -37,7 +38,12 @@ render_top_bar()
 st.title("⚙️ Settings")
 st.caption("Watchlist, alerts, and system configuration")
 
-tab_wl, tab_alerts, tab_admin = st.tabs(["Watchlist", "Alerts", "System"])
+tab_wl, tab_keys, tab_alerts, tab_admin = st.tabs([
+    "Watchlist",
+    "🔑 API Keys",
+    "Alerts",
+    "System"
+])
 
 with tab_wl:
     st.subheader("Watchlist")
@@ -50,6 +56,100 @@ with tab_wl:
         render_watchlist()
     except Exception as e:
         st.caption(f"Feature unavailable: {e}")
+
+with tab_keys:
+    st.subheader("API Keys")
+    st.caption(
+        "Your keys are encrypted and stored "
+        "locally. They persist across sessions "
+        "and are never shared."
+    )
+    try:
+        from utils.session_utils import (
+            get_stable_user_id
+        )
+        from config.user_store import (
+            save_user_api_keys,
+            load_user_api_keys,
+            inject_user_keys_to_env,
+        )
+        _uid = get_stable_user_id()
+        _saved = load_user_api_keys(_uid) or {}
+
+        # Show masked existing keys
+        _has_anthropic = bool(
+            _saved.get("ANTHROPIC_API_KEY")
+            or os.environ.get("ANTHROPIC_API_KEY")
+        )
+        _has_openai = bool(
+            _saved.get("OPENAI_API_KEY")
+            or os.environ.get("OPENAI_API_KEY")
+        )
+
+        st.markdown("#### Anthropic (Claude)")
+        if _has_anthropic:
+            st.success("✅ Anthropic key saved")
+        anthropic_key = st.text_input(
+            "Anthropic API Key",
+            type="password",
+            placeholder="sk-ant-... (leave blank to keep existing)",
+            key="settings_anthropic_key"
+        )
+
+        st.markdown("#### OpenAI")
+        if _has_openai:
+            st.success("✅ OpenAI key saved")
+        openai_key = st.text_input(
+            "OpenAI API Key",
+            type="password",
+            placeholder="sk-... (leave blank to keep existing)",
+            key="settings_openai_key"
+        )
+
+        if st.button(
+            "Save API Keys",
+            key="settings_save_keys"
+        ):
+            keys_to_save = {}
+            if anthropic_key.strip():
+                keys_to_save[
+                    "ANTHROPIC_API_KEY"
+                ] = anthropic_key.strip()
+            if openai_key.strip():
+                keys_to_save[
+                    "OPENAI_API_KEY"
+                ] = openai_key.strip()
+            if keys_to_save:
+                save_user_api_keys(
+                    _uid, keys_to_save
+                )
+                inject_user_keys_to_env(_uid)
+                st.success(
+                    "Keys saved and activated. "
+                    "They will load automatically "
+                    "next time you open the app."
+                )
+            else:
+                st.info(
+                    "No new keys entered. "
+                    "Existing keys unchanged."
+                )
+
+        # Clear keys option
+        if st.button(
+            "Clear Saved Keys",
+            key="settings_clear_keys"
+        ):
+            save_user_api_keys(_uid, {
+                "ANTHROPIC_API_KEY": "",
+                "OPENAI_API_KEY": "",
+            })
+            st.warning("Keys cleared.")
+
+    except Exception as e:
+        st.caption(
+            f"API key storage unavailable: {e}"
+        )
 
 with tab_alerts:
     st.subheader("Alerts")

@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 # Session UUID to track runs
 SESSION_ID = str(uuid.uuid4())
@@ -114,3 +115,45 @@ def get_session_summary() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error getting session summary: {e}")
         return {"error": str(e)}
+
+
+def get_stable_user_id() -> str:
+    """
+    Returns a stable user ID that persists
+    across page refreshes using a browser
+    cookie. Falls back to session_state ID
+    if cookies are unavailable.
+    """
+    # Check if already resolved this session
+    if "evolve_stable_user_id" in st.session_state:
+        return st.session_state["evolve_stable_user_id"]
+
+    # Try to read existing cookie via
+    # st.context (Streamlit 1.55+)
+    user_id = None
+    try:
+        cookies = st.context.cookies
+        user_id = cookies.get("evolve_user_id")
+    except Exception:
+        pass
+
+    # If no cookie found, generate new ID
+    # and set it via HTML/JS
+    if not user_id:
+        user_id = str(uuid.uuid4())
+        # Set cookie via JS — 365 day expiry
+        components.html(
+            f"""
+            <script>
+            document.cookie =
+                "evolve_user_id={user_id}; "
+                + "path=/; "
+                + "max-age=31536000; "
+                + "SameSite=Lax";
+            </script>
+            """,
+            height=0,
+        )
+
+    st.session_state["evolve_stable_user_id"] = user_id
+    return user_id

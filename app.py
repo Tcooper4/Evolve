@@ -91,6 +91,22 @@ from config.user_store import init_user_db, load_user_keys, inject_user_keys_to_
 from components.onboarding import check_onboarding
 
 init_user_db()
+
+# Inject persisted user API keys
+try:
+    from utils.session_utils import (
+        get_stable_user_id
+    )
+    from config.user_store import (
+        inject_user_keys_to_env
+    )
+    _stable_uid = get_stable_user_id()
+    inject_user_keys_to_env(_stable_uid)
+    if _stable_uid and "evolve_session_id" not in st.session_state:
+        st.session_state["evolve_session_id"] = _stable_uid
+except Exception as _e:
+    pass  # Never block app load for this
+
 session_id = check_onboarding()
 
 # Always inject API keys from user store into os.environ on every run
