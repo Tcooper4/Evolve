@@ -1,4 +1,4 @@
-﻿"""
+"""
 Evolve Trading Platform - Streamlit entry point.
 
 Minimal launcher: page config, logging, environment loading, and sidebar branding.
