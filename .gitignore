@@ -216,3 +216,8 @@ reports/*.pkl
 config/agent_config.json
 config/*_config.json
 config/api_*.json
+
+hybrid_weights.json
+hybrid_performance.json
+memory.json
+.cache/
