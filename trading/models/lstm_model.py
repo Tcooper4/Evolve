@@ -787,8 +787,14 @@ class LSTMForecaster(BaseModel):
                 raise ValueError("Input data is empty")
 
             # Check for required columns
+            # Build col_map first so check is
+            # case-insensitive
+            _col_map_check = {
+                c.lower(): c for c in data.columns
+            }
             missing_cols = [
-                col for col in self.config["feature_columns"] if col not in data.columns
+                col for col in self.config["feature_columns"]
+                if col.lower() not in _col_map_check
             ]
             if missing_cols:
                 raise ValueError(f"Missing required feature columns: {missing_cols}")
@@ -849,12 +855,20 @@ class LSTMForecaster(BaseModel):
 
             if is_training:
                 # Get target values
+                _tgt = self.config["target_column"]
+                _feat_lower = [
+                    f.lower() for f in
+                    self.config["feature_columns"]
+                ]
+                _tgt_idx = (
+                    _feat_lower.index(_tgt.lower())
+                    if _tgt.lower() in _feat_lower
+                    else 0
+                )
                 y = torch.FloatTensor(
                     normalized_data[
                         self.config["sequence_length"] :,
-                        self.config["feature_columns"].index(
-                            self.config["target_column"]
-                        ),
+                        _tgt_idx,
                     ]
                 )
                 return X_seq, y
