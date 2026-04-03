@@ -25,8 +25,18 @@ MAX_TOOLS_PER_TURN = 3
 _ROUTER_STOPWORDS = {
     "AND", "THE", "FOR", "ARE", "BUT", "NOT", "YOU", "ALL", "CAN", "HER", "WAS",
     "ONE", "OUR", "OUT", "DAY", "GET", "HAS", "HIM", "HIS", "HOW", "ITS", "LET",
-    "MAY", "NEW", "NOW", "OLD", "SEE", "TWO", "WHO", "WAY",     "TOP", "LOW", "BIG",
+    "MAY", "NEW", "NOW", "OLD", "SEE", "TWO", "WHO", "WAY", "TOP", "LOW", "BIG",
     "EPS", "CEO", "IPO", "ETF", "USA", "FED",
+    # 2–5 letter English words that match \b[A-Z]{2,5}\b and are not tickers
+    "WHAT", "THIS", "WITH", "HAVE", "THAT", "FROM", "WHEN", "WILL", "JUST",
+    "ONLY", "LIKE", "BEEN", "INTO", "OVER", "ALSO", "SOME", "THEM", "THAN",
+    "THEN", "EACH", "MOST", "VERY", "WELL", "EVEN", "MADE", "SUCH", "BOTH",
+    "MUST", "DOES", "SAYS", "HERE", "THERE", "THESE", "THOSE", "YOUR", "FACT",
+    "WONT", "DONT", "WERE", "GONE", "COME", "SAID",
+    "MUCH", "MANY", "BACK", "LONG", "DOWN", "MAKE", "GOOD", "YEAR",
+    "WORK", "LAST", "NEXT", "HELP", "LOOK", "TELL", "GIVE", "KEEP", "TURN",
+    "MOVE", "HELD", "HIGH", "LEFT", "SIDE", "CASE", "WEEK",
+    "SAME", "SURE", "HALF", "FULL", "LESS", "BEST", "CAME", "DONE",
 }
 
 # Heuristic triggers (substring / regex). Single-symbol tools require a ticker
@@ -107,6 +117,20 @@ def _extract_symbols(user_message: str) -> List[str]:
     return [s for s in found if s not in _ROUTER_STOPWORDS]
 
 
+def _resolve_symbol_for_tools(
+    syms: List[str],
+    focus_symbol: Optional[str],
+) -> Optional[str]:
+    """
+    Pick a ticker for tool calls: first candidate from _extract_symbols (already
+    stopword-filtered), else the UI/session focus symbol (e.g. deep-dive chat).
+    """
+    if syms:
+        return syms[0]
+    focus = (focus_symbol or "").strip().upper() or None
+    return focus
+
+
 def _pattern_hit(msg: str, patterns: List[str]) -> bool:
     """Match substrings; supports regex: prefix for full-line patterns."""
     for p in patterns:
@@ -127,10 +151,9 @@ def _heuristic_tool_calls(
     *,
     allowed_names: set,
 ) -> List[Dict[str, Any]]:
-    _ = focus_symbol  # Router LLM may use context; heuristics need a ticker in text
     msg = (user_message or "").lower()
     syms = _extract_symbols(user_message or "")
-    sym_from_msg = (syms[0] if syms else None) or None
+    sym_from_msg = _resolve_symbol_for_tools(syms, focus_symbol)
     calls: List[Dict[str, Any]] = []
 
     if _pattern_hit(msg, _TOOL_PATTERNS.get("scan_universe", [])) and (

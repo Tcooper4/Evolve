@@ -138,7 +138,7 @@ def calculate_cvar(
         )
         var_dollar = var_result.get("var_dollar", 0)
 
-        return {
+        out: Dict[str, Any] = {
             "cvar_pct": round(cvar_pct_horizon * 100, 3),
             "cvar_dollar": round(cvar_dollar, 2),
             "var_dollar": var_dollar,
@@ -151,6 +151,18 @@ def calculate_cvar(
                 f"${cvar_dollar:.2f} ({abs(cvar_pct_horizon)*100:.2f}%)"
             ),
         }
+        try:
+            from utils.math_helpers import calculate_tail_risk_metrics
+
+            _tail = calculate_tail_risk_metrics(returns_clean, confidence_level=alpha)
+            out["tail_var"] = float(_tail.get("var", 0.0))
+            out["tail_cvar"] = float(_tail.get("cvar", 0.0))
+            out["tail_dependence"] = float(_tail.get("tail_dependence", 0.0))
+            out["tail_risk_ratio"] = float(_tail.get("tail_risk_ratio", 0.0))
+        except Exception as _te:
+            logger.debug("tail risk metrics helper skipped: %s", _te)
+
+        return out
 
     except Exception as e:
         logger.warning("CVaR calculation failed: %s", e)

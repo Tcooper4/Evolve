@@ -869,10 +869,24 @@ class HybridModel:
     def save_state(self):
         """Save weights and performance to disk (JSON and joblib)."""
         try:
-            with open(self.weight_file, "w") as f:
-                json.dump(self.weights, f, indent=2)
-            with open(self.perf_file, "w") as f:
-                json.dump(self.performance, f, indent=2)
+            try:
+                from utils.safe_json_saver import safe_json_save
+
+                _w = safe_json_save(
+                    self.weights, self.weight_file, min_data_size=1
+                )
+                _p = safe_json_save(
+                    self.performance, self.perf_file, min_data_size=1
+                )
+                if not (_w.get("success") and _p.get("success")):
+                    raise RuntimeError(
+                        f"safe_json_save: { _w.get('error') } { _p.get('error') }"
+                    )
+            except Exception:
+                with open(self.weight_file, "w", encoding="utf-8") as f:
+                    json.dump(self.weights, f, indent=2)
+                with open(self.perf_file, "w", encoding="utf-8") as f:
+                    json.dump(self.performance, f, indent=2)
             joblib.dump(self.weights, self.weight_file + ".joblib")
             joblib.dump(self.performance, self.perf_file + ".joblib")
         except Exception as e:

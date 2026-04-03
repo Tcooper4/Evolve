@@ -89,6 +89,11 @@ _CLASS_NAME_ALIASES = {
     "TcnModel": "TCNModel",
 }
 
+try:
+    from trading.system_resilience import handle_model_failure as _resilience_handle_failure
+except Exception:
+    _resilience_handle_failure = None  # type: ignore
+
 
 class ForecastRouter:
     """Router for managing and selecting forecasting models.
@@ -259,6 +264,15 @@ class ForecastRouter:
             logger.info(f"Successfully fitted {selected_model}")
         except Exception as e:
             logger.error(f"Failed to fit {selected_model}: {e}")
+            if _resilience_handle_failure is not None:
+                try:
+                    _resilience_handle_failure(
+                        selected_model,
+                        e,
+                        {"stage": "fit", "symbol": symbol, "start": start, "end": end},
+                    )
+                except Exception:
+                    pass
             # Fallback to a simpler model (non-cached) if training fails
             fallback_model = self._get_fallback_model(selected_model)
             logger.info(f"Trying fallback model: {fallback_model}")
@@ -749,6 +763,38 @@ class ForecastRouter:
         else:
             default_model = "arima" if "arima" in self.model_registry else list(self.model_registry.keys())[0]
 
+        try:
+            from trading.strategies.adaptive_selector import get_adaptive_selector
+
+            _col_map = {c.lower(): c for c in data.columns}
+            _cc = _col_map.get("close", data.columns[0])
+            _price = pd.to_numeric(data[_cc], errors="coerce").dropna()
+            if len(_price) >= 40:
+                _sel = get_adaptive_selector()
+                _mc = _sel.analyze_market_conditions(_price)
+                _avail_disp = []
+                _disp_to_key = {
+                    "LSTM": "lstm",
+                    "XGBoost": "xgboost",
+                    "ARIMA": "arima",
+                    "Prophet": "prophet",
+                    "Transformer": "transformer",
+                }
+                for disp, key in _disp_to_key.items():
+                    if key in self.model_registry:
+                        _avail_disp.append(disp)
+                if _avail_disp:
+                    _picked = _sel.model_selector.select_optimal_model(
+                        _mc, _avail_disp
+                    )
+                    _key = _disp_to_key.get(_picked)
+                    if _key is None:
+                        _key = str(_picked).lower()
+                    if _key in self.model_registry:
+                        return _key
+        except Exception as _ae:
+            logger.debug("AdaptiveSelector override skipped: %s", _ae)
+
         # Heuristic selection (only in auto mode)
         try:
             characteristics = self._analyze_data(data)
@@ -967,6 +1013,18 @@ class ForecastRouter:
                 logger.info(f"Successfully generated forecast with {selected_model}")
             except Exception as e:
                 logger.error(f"Failed to generate forecast with {selected_model}: {e}")
+                if _resilience_handle_failure is not None:
+                    try:
+                        _resilience_handle_failure(
+                            selected_model,
+                            e,
+                            {
+                                "stage": "forecast",
+                                "symbol": kwargs.get("symbol") or kwargs.get("ticker"),
+                            },
+                        )
+                    except Exception:
+                        pass
                 # Return simple forecast as fallback (in normalized space; denorm once)
                 forecast_array = self._generate_simple_forecast(prepared_data, horizon)
                 lp = getattr(self, "_last_price_used", 1.0)

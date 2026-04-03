@@ -93,6 +93,19 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
         error: str | None
     """
     try:
+        _external_bundle: Optional[Dict[str, Any]] = None
+        try:
+            import asyncio
+
+            from trading.data.external_signals import get_external_signals_manager
+
+            _esm = get_external_signals_manager()
+            _external_bundle = asyncio.run(
+                _esm.get_all_signals(symbol, days_back=3)
+            )
+        except Exception:
+            _external_bundle = None
+
         # --- Fetch data ---
         if hist is None or hist.empty:
             try:
@@ -209,6 +222,32 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
 
         momentum_score = min(10.0, mom_points / max(mom_signals, 1))
 
+        try:
+            from utils.math_helpers import (
+                calculate_momentum_score as _mh_momentum,
+                calculate_regime_probability as _mh_regime,
+            )
+
+            close_s = pd.Series(close)
+            _ms = _mh_momentum(close_s)
+            if len(_ms) and not bool(pd.isna(_ms.iloc[-1])):
+                _z = float(_ms.iloc[-1])
+                _adj = 0.25 * float(np.tanh(_z))
+                momentum_score = float(
+                    min(10.0, max(0.0, momentum_score + _adj))
+                )
+            _rets = close_s.pct_change().dropna()
+            if len(_rets) >= 30:
+                _rp = _mh_regime(_rets, window=min(60, len(_rets)))
+                _bull = _rp.get("bull")
+                if _bull is not None and len(_bull) and not pd.isna(_bull.iloc[-1]):
+                    _bp = float(_bull.iloc[-1])
+                    momentum_score = float(
+                        min(10.0, max(0.0, momentum_score + 0.3 * (_bp - 0.5)))
+                    )
+        except Exception as _e:
+            logger.debug("math_helpers momentum/regime refinement skipped: %s", _e)
+
         # ── SENTIMENT SCORE (0-10) ──────────────────────────────────
         sentiment_score = 5.0  # neutral default
         try:
@@ -259,6 +298,25 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
             sentiment_score = si_sentiment
         except Exception:
             pass
+
+        if _external_bundle:
+            try:
+                _news = _external_bundle.get("news_sentiment") or []
+                _n = len(_news) if isinstance(_news, list) else 0
+                if _n > 0:
+                    signals.append(
+                        {
+                            "name": "External signal bundle",
+                            "value": float(_n),
+                            "impact": "neutral",
+                            "description": (
+                                f"Unified external feed returned {_n} news/social "
+                                "records (see data pipeline for details)."
+                            ),
+                        }
+                    )
+            except Exception as _e:
+                logger.debug("external_signals bundle annotate skipped: %s", _e)
 
         try:
             from trading.data.insider_flow import get_insider_flow

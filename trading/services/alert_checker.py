@@ -33,6 +33,19 @@ def check_alerts_for_user(session_id: str) -> List[Dict[str, Any]]:
         from config.user_store import load_user_preferences
         from trading.data.price_cache import get_history, get_quote
 
+        try:
+            from datetime import datetime
+
+            import pytz
+            from trading.utils.time_utils import MarketHours
+
+            _mh = MarketHours(timezone="America/New_York")
+            _market_open = _mh.is_market_open(
+                datetime.now(pytz.timezone("America/New_York"))
+            )
+        except Exception:
+            _market_open = True
+
         prefs = load_user_preferences(session_id) or {}
         raw = prefs.get("evolve_alerts", [])
         if not isinstance(raw, list):
@@ -69,8 +82,12 @@ def check_alerts_for_user(session_id: str) -> List[Dict[str, Any]]:
 
                 fired = False
                 if cond == "price_above" and price is not None:
+                    if not _market_open:
+                        continue
                     fired = float(price) >= thr
                 elif cond == "price_below" and price is not None:
+                    if not _market_open:
+                        continue
                     fired = float(price) <= thr
                 elif cond == "ai_score_above":
                     from trading.analysis.ai_score import compute_ai_score
@@ -80,6 +97,8 @@ def check_alerts_for_user(session_id: str) -> List[Dict[str, Any]]:
                     row["ai_score"] = ov
                     fired = ov >= thr
                 elif cond == "pct_change":
+                    if not _market_open:
+                        continue
                     h = get_history(sym, period="5d")
                     if h is not None and len(h) >= 2:
                         _cm = {c.lower(): c for c in h.columns}

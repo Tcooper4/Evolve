@@ -120,6 +120,19 @@ def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
             )
 
         avg_c = float(statistics.mean(compounds)) if compounds else 0.0
+        try:
+            from trading.nlp.sentiment_processor import SentimentProcessor
+
+            _sp = SentimentProcessor()
+            _combo = " ".join(
+                f"{p.get('title', '')} {p.get('selftext', '')}" for p in posts[:15]
+            )
+            if len(_combo.strip()) > 20:
+                _sr = _sp.analyze_sentiment(_combo[:8000])
+                _blend = float(getattr(_sr, "scaled_score", 0.0) or 0.0)
+                avg_c = 0.6 * avg_c + 0.4 * max(-1.0, min(1.0, _blend))
+        except Exception:
+            pass
         out["sentiment_score"] = max(-1.0, min(1.0, avg_c))
         if avg_c >= 0.15:
             out["sentiment_label"] = "BULLISH"

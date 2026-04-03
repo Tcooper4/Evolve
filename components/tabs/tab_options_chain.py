@@ -281,6 +281,26 @@ def render(
                                 )
                     except Exception as e:
                         st.caption(f"Options flow unavailable: {e}")
+
+                    try:
+                        from trading.options.options_forecaster import (
+                            OptionsForecaster,
+                        )
+
+                        _of = OptionsForecaster()
+                        _surf = _of.build_volatility_surface(ticker)
+                        _ivm = float(
+                            np.mean(_surf.implied_volatilities)
+                            if len(_surf.implied_volatilities)
+                            else 0.0
+                        )
+                        st.markdown("**Implied volatility surface**")
+                        st.caption(
+                            f"Sampled {len(_surf.strikes)} strikes · "
+                            f"mean IV ≈ {_ivm * 100:.1f}%"
+                        )
+                    except Exception as _ive:
+                        st.caption(f"Options forecasting unavailable: {_ive}")
             else:
                 st.info("No options data available for " + ticker)
         except Exception as _oe:

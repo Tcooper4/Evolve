@@ -611,6 +611,102 @@ with tab_admin:
         except Exception as e:
             st.caption(f"ML Score training unavailable: {e}")
 
+        st.markdown("---")
+        st.markdown("**Model Hyperparameter Optimization**")
+        try:
+            import yfinance as yf
+
+            from trading.optimization.optuna_optimizer import get_optimizer
+
+            st.caption(
+                "Optimize XGBoost hyperparameters using Bayesian search (Optuna) "
+                "on a short SPY feature window."
+            )
+            opt_model = st.selectbox(
+                "Model to optimize",
+                ["xgboost", "ridge", "catboost"],
+                key="opt_model_select",
+            )
+            if st.button("Run Optimization", key="optuna_run_btn"):
+                if opt_model != "xgboost":
+                    st.caption(
+                        "Only the XGBoost + Optuna path is wired here; "
+                        "choose xgboost for a live run."
+                    )
+                else:
+                    with st.spinner(
+                        "Optimizing xgboost… this may take several minutes"
+                    ):
+                        try:
+                            _h = yf.Ticker("SPY").history(period="2y")
+                            if _h.empty:
+                                st.warning("No SPY data.")
+                            else:
+                                import pandas as pd
+
+                                _c = _h["Close"].astype(float)
+                                _df = pd.DataFrame(
+                                    {
+                                        "y": _c.pct_change().shift(-1),
+                                        "x1": _c.shift(1),
+                                        "x2": _c.shift(2),
+                                    }
+                                ).dropna()
+                                X = _df[["x1", "x2"]]
+                                y = _df["y"]
+                                optimizer = get_optimizer()
+                                result = optimizer.optimize_xgboost(
+                                    X, y, n_trials=min(40, 80)
+                                )
+                                if result and not result.get("error"):
+                                    st.success(
+                                        f"Best score (RMSE): "
+                                        f"{result.get('best_score', 'N/A')}"
+                                    )
+                                    st.json(result.get("best_params", {}))
+                                else:
+                                    st.caption(
+                                        f"Optimization failed: "
+                                        f"{result.get('error', 'unknown')}"
+                                    )
+                        except Exception as oe:
+                            st.caption(f"Optimization failed: {oe}")
+        except Exception as e:
+            st.caption(f"Optimizer unavailable: {e}")
+
+        st.markdown("---")
+        st.markdown("**System Backup & Recovery**")
+        try:
+            import asyncio
+
+            from trading.recovery.disaster_recovery_manager import (
+                DisasterRecoveryManager,
+            )
+
+            drm = DisasterRecoveryManager()
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                if st.button("Create Backup", key="backup_btn"):
+                    try:
+                        asyncio.run(drm.create_backup())
+                        st.success("Backup created")
+                    except Exception as be:
+                        st.caption(f"Backup failed: {be}")
+            with col_b2:
+                if st.button("List Backups", key="list_backups_btn"):
+                    try:
+                        backups = drm.list_backups()
+                        if backups:
+                            st.json(
+                                [b.backup_id for b in backups[:5]]
+                            )
+                        else:
+                            st.caption("No backups found")
+                    except Exception as le:
+                        st.caption(f"Could not list backups: {le}")
+        except Exception as re:
+            st.caption(f"Recovery system unavailable: {re}")
+
         if st.button(
             "Clear session & reload",
             key="settings_session_reboot",

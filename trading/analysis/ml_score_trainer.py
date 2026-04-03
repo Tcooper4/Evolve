@@ -253,6 +253,21 @@ class MLScoreTrainer:
         X = pd.DataFrame(X_list).fillna(0)
         y = pd.Series(y_list)
 
+        try:
+            from trading.feature_engineering.utils import (
+                create_lag_features,
+                normalize_features,
+            )
+
+            _base_cols = [c for c in X.columns if c != "symbol_hash"]
+            if _base_cols:
+                X = normalize_features(X)
+                X = create_lag_features(X, _base_cols, [1, 2])
+                X = X.fillna(0)
+        except Exception as _fe:
+            logger.debug("feature_engineering utils skipped: %s", _fe)
+            X = pd.DataFrame(X_list).fillna(0)
+
         logger.info(
             "Training dataset: %d observations, %d features",
             len(X), len(X.columns)

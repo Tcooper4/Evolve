@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Single-ticker deep analysis surface (scroll + 4 tabs)."""
+import asyncio
 import logging
 from datetime import datetime
 
@@ -303,6 +304,32 @@ def render_deep_dive(ticker: str) -> None:
             val = s.get("value", "")
             st.markdown(f"{icon} **{nm}** — {val}")
         st.caption(top_signals_summary(signals))
+
+        try:
+            from trading.commentary.commentary_engine import (
+                CommentaryRequest,
+                CommentaryType,
+                create_commentary_engine,
+            )
+
+            _eng = create_commentary_engine()
+            _req = CommentaryRequest(
+                commentary_type=CommentaryType.MARKET_REGIME,
+                symbol=sym,
+                timestamp=datetime.now(),
+                market_data=hist,
+            )
+            _resp = asyncio.run(_eng.generate_commentary(_req))
+            _txt = (
+                getattr(_resp, "detailed_analysis", None)
+                or getattr(_resp, "summary", None)
+                or ""
+            )
+            if _txt:
+                st.markdown("**AI Commentary**")
+                st.markdown(_txt[:4000])
+        except Exception:
+            pass
 
         tf, tn, tr, tp = st.tabs(["Forecast", "News", "Risk", "Patterns"])
         with tf:

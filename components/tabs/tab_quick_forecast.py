@@ -1174,6 +1174,33 @@ def render(
                                 price_targets = consensus.get("price_targets") or {}
                                 models_failed = consensus.get("models_failed") or []
 
+                                _ff_hint = ""
+                                try:
+                                    from trading.utils.forecast_formatter import (
+                                        ForecastFormatter,
+                                    )
+
+                                    _ff = ForecastFormatter()
+                                    _pv = pd.DataFrame(
+                                        {"close": [last_price, consensus_price]}
+                                    )
+                                    _pv.index = pd.DatetimeIndex(
+                                        pd.date_range(
+                                            end=pd.Timestamp.utcnow(),
+                                            periods=2,
+                                            freq="D",
+                                        )
+                                    )
+                                    _val = _ff.validate_forecast_format(_pv)
+                                    if _val.get("warnings"):
+                                        _ff_hint = " · ".join(
+                                            _val["warnings"][:3]
+                                        )
+                                except Exception:
+                                    pass
+                                if _ff_hint:
+                                    st.caption(f"Forecast format: {_ff_hint}")
+
                                 # Row 1: direction, conviction, consensus price
                                 col1, col2, col3 = st.columns(3)
                                 direction_emoji = (

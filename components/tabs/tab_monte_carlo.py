@@ -200,6 +200,25 @@ def render(
                             f"{_prob_up:.1f}%",
                         )
 
+                        try:
+                            from trading.backtesting.monte_carlo import (
+                                MonteCarloSimulator,
+                            )
+
+                            _mcs = MonteCarloSimulator()
+                            _ret_s = pd.Series(_returns)
+                            _boot = _mcs.simulate_portfolio_paths(
+                                _ret_s,
+                                initial_capital=_last,
+                                n_simulations=min(500, _mc_sims),
+                            )
+                            st.caption(
+                                "MonteCarloSimulator (historical bootstrap): "
+                                f"{_boot.shape[0]} paths × {_boot.shape[1]} steps"
+                            )
+                        except Exception as _me:
+                            st.caption(f"Bootstrap path supplement: {_me}")
+
                     except Exception as _e:
                         st.error(
                             f"Monte Carlo error: {type(_e).__name__}: {_e}"

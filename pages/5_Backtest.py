@@ -248,6 +248,85 @@ else:
                     st.code(traceback.format_exc())
                 st.caption(f"{type(ex).__name__}: {ex}")
 
+with st.expander("📊 Enhanced Multi-Model Backtest"):
+    try:
+        from trading.backtesting.enhanced_backtester import (
+            run_multi_model_backtest,
+        )
+        from trading.models.arima_model import ARIMAModel
+        from trading.models.ridge_model import RidgeModel
+        from trading.strategies.registry import get_strategy_registry
+
+        _e_sym = st.text_input(
+            "Symbol (enhanced)", value="AAPL", key="enhanced_bt_symbol"
+        ).strip().upper()
+        if st.button("Run Enhanced Backtest", key="enhanced_bt_btn"):
+            with st.spinner("Running multi-model comparison..."):
+                import yfinance as yf
+
+                _raw = yf.Ticker(_e_sym).history(period="2y", auto_adjust=True)
+                if _raw.empty:
+                    st.warning("No data.")
+                else:
+                    _cm = {c.lower(): c for c in _raw.columns}
+                    _cc = _cm.get("close", _raw.columns[0])
+                    _ohlc = _raw.rename(
+                        columns={
+                            _cc: "close",
+                            "Open": "open",
+                            "High": "high",
+                            "Low": "low",
+                            "Volume": "volume",
+                        }
+                    )
+                    _reg = get_strategy_registry()
+                    _sn = st.session_state.get("bt_strategy_name") or (
+                        _names[0] if _names else ""
+                    )
+                    _st = _reg.get_strategy(_sn) if _reg and _sn else None
+                    if _st is None:
+                        st.caption("Pick a valid strategy above for enhanced run.")
+                    else:
+                        _models = [
+                            ARIMAModel(
+                                {
+                                    "order": (2, 1, 0),
+                                    "use_auto_arima": True,
+                                    "target_column": "close",
+                                }
+                            ),
+                            RidgeModel(
+                                {
+                                    "target_column": "close",
+                                    "alpha": 1.0,
+                                    "max_iter": 1000,
+                                }
+                            ),
+                        ]
+                        results = run_multi_model_backtest(
+                            _ohlc,
+                            _models,
+                            _st,
+                            _e_sym,
+                            forecast_period=7,
+                        )
+                        if results and not results.get("error"):
+                            st.json(
+                                {
+                                    k: results[k]
+                                    for k in ("models", "strategy", "symbol")
+                                    if k in results
+                                }
+                            )
+                            if results.get("results"):
+                                st.caption("Ensemble backtest completed — see logs for full report.")
+                        else:
+                            st.caption(
+                                f"Enhanced backtest: {results.get('error', 'no result')}"
+                            )
+    except Exception as e:
+        st.caption(f"Enhanced backtest unavailable: {e}")
+
 try:
     st.markdown("---")
     st.subheader("📊 Walk-Forward Validation")

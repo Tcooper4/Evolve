@@ -154,6 +154,23 @@ def render(
                         height=450,
                     )
                     st.plotly_chart(_fig, width='stretch')
+
+                    st.markdown("---")
+                    st.markdown("**Strategy comparison (bootstrap CIs)**")
+                    try:
+                        from trading.strategies.strategy_comparison import (
+                            get_strategy_comparison,
+                        )
+
+                        _cmp = get_strategy_comparison()
+                        _mat = _cmp.generate_comparison_matrix(_hist)
+                        if _mat is not None and not _mat.empty:
+                            st.dataframe(
+                                normalize_for_display(_mat),
+                                width="stretch",
+                            )
+                    except Exception as _se:
+                        st.caption(f"Strategy comparison unavailable: {_se}")
         except Exception as e:
             st.error(f"Tab error: {type(e).__name__}: {e}")
             import traceback

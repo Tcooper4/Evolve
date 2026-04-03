@@ -209,6 +209,25 @@ with col_right:
         step=0.5,
         key="scanner_min_ai_score",
     )
+    _streaming_mode = st.toggle(
+        "⚡ Live Streaming Mode",
+        value=False,
+        key="scanner_streaming_mode",
+        help="Prepare live pipeline (yfinance); scanner table still refreshes on fragment interval.",
+    )
+    if _streaming_mode:
+        try:
+            from data.streaming_pipeline import create_streaming_pipeline
+
+            _u = universe if universe else ["SPY"]
+            create_streaming_pipeline(_u[:20], timeframes=["1d"], providers=["yfinance"])
+            st.caption(
+                "Streaming pipeline ready — quotes refresh with the scanner fragment."
+            )
+        except Exception as _se:
+            st.caption(
+                f"Streaming unavailable: {_se}. Using standard mode."
+            )
     custom_universe = st.text_input(
         "Custom universe (optional)",
         placeholder="AAPL,MSFT,NVDA,TSLA",
@@ -384,6 +403,52 @@ def _scanner_table():
         fig.update_layout(template="plotly_dark", showlegend=False)
         fig.update_traces(textposition="outside")
         st.plotly_chart(fig, width='stretch', key="scanner_dist_chart")
+
+    with st.expander("🔗 Pairs Trading Scanner"):
+        try:
+            from trading.strategies.pairs_trading_engine import PairsTradingEngine
+
+            from trading.data.price_cache import get_history
+
+            _pe = PairsTradingEngine()
+            if st.button("Find Cointegrated Pairs", key="pairs_scan_btn"):
+                with st.spinner("Running cointegration tests…"):
+                    _syms = [
+                        str(r.get("symbol"))
+                        for r in results
+                        if r.get("symbol")
+                    ][:12]
+                    _pd: dict = {}
+                    for _s in _syms:
+                        _h = get_history(_s, period="1y")
+                        if _h is not None and not _h.empty:
+                            _cm = {c.lower(): c for c in _h.columns}
+                            _cc = _cm.get("close", _h.columns[0])
+                            _pd[_s] = pd.DataFrame({"close": _h[_cc].astype(float)})
+                    _pairs = _pe.find_cointegrated_pairs(_pd, _syms)
+                    if _pairs:
+                        st.dataframe(
+                            normalize_for_display(
+                                pd.DataFrame(
+                                    [
+                                        {
+                                            "A": a,
+                                            "B": b,
+                                            "p_value": getattr(r, "p_value", None),
+                                            "hedge_ratio": getattr(
+                                                r, "hedge_ratio", None
+                                            ),
+                                        }
+                                        for a, b, r in _pairs[:20]
+                                    ]
+                                )
+                            ),
+                            width="stretch",
+                        )
+                    else:
+                        st.caption("No cointegrated pairs found in this sample.")
+        except Exception as _pe:
+            st.caption(f"Pairs trading unavailable: {_pe}")
 
     st.markdown("#### Drill Down")
     selected_sym = st.selectbox(

@@ -262,6 +262,17 @@ reg_line = f"{reg_lbl.replace('_', '-').title()}"
 if vix_l is not None:
     reg_line += f" · VIX {vix_l:.1f}"
 st.markdown(f"**{reg_line}** — {reg.get('description', '')}")
+try:
+    from datetime import datetime
+
+    from trading.utils.time_utils import format_timestamp
+
+    _ts = report.get("timestamp") or ""
+    if _ts:
+        _dt = datetime.fromisoformat(_ts.replace("Z", "+00:00"))
+        st.caption(f"Briefing generated: {format_timestamp(_dt, timezone='America/New_York')}")
+except Exception:
+    pass
 
 opps = report.get("top_opportunities") or []
 if opps:

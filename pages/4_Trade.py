@@ -447,6 +447,43 @@ with tab_perf:
                     m4.metric("Win rate (marks)", f"{pm.win_rate*100:.1f}%")
                     with st.expander("Full metrics"):
                         st.json(pm.to_dict())
+
+                    st.markdown("**Alpha Attribution**")
+                    try:
+                        import yfinance as yf
+
+                        from trading.analytics.alpha_attribution_engine import (
+                            AttributionMethod,
+                            get_alpha_attribution_engine,
+                        )
+
+                        _bench = yf.Ticker("SPY").history(period="1y")
+                        if not _bench.empty:
+                            _cm = {c.lower(): c for c in _bench.columns}
+                            _bc = _cm.get("close", _bench.columns[0])
+                            _br = _bench[_bc].pct_change().dropna()
+                            _br = _br.reindex(rets.index).fillna(0.0)
+                            _pr = rets.reindex(_br.index).fillna(0.0)
+                            if len(_pr) > 10:
+                                _eng = get_alpha_attribution_engine()
+                                _att = _eng.perform_attribution_analysis(
+                                    _pr,
+                                    {"paper": _pr},
+                                    _br,
+                                    method=AttributionMethod.STRATEGY_DECOMPOSITION,
+                                )
+                                _rows = []
+                                for k, v in (
+                                    _att.strategy_attribution or {}
+                                ).items():
+                                    _rows.append({"Component": k, "Contribution": v})
+                                if _rows:
+                                    st.dataframe(
+                                        normalize_for_display(pd.DataFrame(_rows)),
+                                        use_container_width=True,
+                                    )
+                    except Exception as _ae:
+                        st.caption(f"Alpha attribution unavailable: {_ae}")
             except Exception as e:
                 st.caption(f"Could not compute performance metrics: {e}")
         else:
@@ -503,6 +540,33 @@ with tab_risk:
                     st.caption(vr.get("interpretation", ""))
         except Exception as e:
             st.caption(f"Kelly/VaR unavailable: {e}")
+
+    st.markdown("---")
+    st.markdown("**Advanced risk (volatility & stress)**")
+    try:
+        import yfinance as yf
+
+        from trading.risk.risk_manager import RiskManager
+
+        if st.button("Run stress scenarios", key="trade_rm_stress"):
+            with st.spinner("Stress tests…"):
+                _h = yf.Ticker("SPY").history(period="2y")
+                if not _h.empty:
+                    _cm = {c.lower(): c for c in _h.columns}
+                    _cc = _cm.get("close", _h.columns[0])
+                    _r = _h[_cc].pct_change().dropna()
+                    _rm = RiskManager()
+                    _rm.update_returns(_r)
+                    _stress = _rm.run_stress_tests(float(_paper_equity()))
+                    if _stress:
+                        st.dataframe(
+                            normalize_for_display(
+                                pd.DataFrame([s.__dict__ for s in _stress])
+                            ),
+                            use_container_width=True,
+                        )
+    except Exception as _re:
+        st.caption(f"Advanced risk analysis unavailable: {_re}")
 
     st.markdown("---")
     st.subheader("📊 Advanced Risk Analytics")
