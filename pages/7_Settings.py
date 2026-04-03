@@ -2,12 +2,15 @@
 """
 Settings page — Watchlist, Alerts, System (from Alerts, Admin, Watchlist).
 """
+import logging
 import sys
+import uuid
+from datetime import datetime
 from pathlib import Path
-import runpy
 import os
 
 project_root = Path(__file__).resolve().parent.parent
+logger = logging.getLogger(__name__)
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
@@ -155,26 +158,259 @@ with tab_keys:
 
 with tab_alerts:
     st.subheader("Alerts")
+    st.caption(
+        "Saved price and score alerts (stored with your user preferences)."
+    )
     try:
-        # TODO S44: inline this (1995 lines)
-        old_path = project_root / "scripts" / "old_10_Alerts.py"
-        runpy.run_path(str(old_path), run_name="__main__")
+        from utils.session_utils import get_stable_user_id
+        from utils.dataframe_utils import normalize_for_display
+
+        import pandas as pd
+
+        _sid = get_stable_user_id()
+        if not _sid:
+            st.caption(
+                "Sign in or complete onboarding so alerts can be saved."
+            )
+        elif not (load_user_preferences and save_user_preferences):
+            st.caption("User preferences storage is not available.")
+        else:
+            _prefs = load_user_preferences(_sid) or {}
+            _alerts = list(_prefs.get("evolve_alerts", []))
+            if not isinstance(_alerts, list):
+                _alerts = []
+
+            _cond_labels = {
+                "price_above": "Price Above",
+                "price_below": "Price Below",
+                "ai_score_above": "AI Score Above",
+                "pct_change": "% Change",
+            }
+
+            if _alerts:
+                st.markdown("#### Saved alerts")
+                _rows = []
+                for _a in _alerts:
+                    if not isinstance(_a, dict):
+                        continue
+                    _rows.append({
+                        "Symbol": _a.get("symbol", ""),
+                        "Condition": _cond_labels.get(
+                            _a.get("condition", ""),
+                            _a.get("condition", ""),
+                        ),
+                        "Threshold": _a.get("threshold", ""),
+                        "Created": _a.get("created_at", "")[:19]
+                        if _a.get("created_at")
+                        else "",
+                        "id": _a.get("id", ""),
+                    })
+                if _rows:
+                    _adf = pd.DataFrame(_rows)
+                    _display = _adf.drop(columns=["id"], errors="ignore")
+                    st.dataframe(
+                        normalize_for_display(_display),
+                        width="stretch",
+                        hide_index=True,
+                    )
+
+                _del_opts = [
+                    f"{r.get('Symbol', '')} — {r.get('Condition', '')} "
+                    f"(threshold {r.get('Threshold', '')})"
+                    for r in _rows
+                    if r.get("id")
+                ]
+                _ids = [r.get("id") for r in _rows if r.get("id")]
+                if _del_opts and _ids:
+                    _pick = st.selectbox(
+                        "Remove alert",
+                        list(range(len(_ids))),
+                        format_func=lambda i: _del_opts[i],
+                        key="settings_alert_delete_pick",
+                    )
+                    if st.button(
+                        "Delete selected alert",
+                        key="settings_alert_delete_btn",
+                    ):
+                        _rid = _ids[_pick]
+                        _alerts = [
+                            _x for _x in _alerts
+                            if isinstance(_x, dict)
+                            and _x.get("id") != _rid
+                        ]
+                        _prefs["evolve_alerts"] = _alerts
+                        try:
+                            save_user_preferences(_sid, _prefs)
+                            st.success("Alert removed.")
+                            st.rerun()
+                        except Exception as _se:
+                            logger.warning(
+                                "settings: save after delete failed: %s",
+                                _se,
+                            )
+                            st.caption(
+                                f"Could not save removal: {_se}"
+                            )
+            else:
+                st.info("No saved alerts yet.")
+
+            st.markdown("---")
+            st.markdown("#### New alert")
+            _sym = st.text_input(
+                "Symbol",
+                value="AAPL",
+                key="settings_alert_symbol",
+            ).strip().upper()
+            _cond_ui = st.selectbox(
+                "Condition",
+                [
+                    "Price Above",
+                    "Price Below",
+                    "AI Score Above",
+                    "% Change",
+                ],
+                key="settings_alert_condition",
+            )
+            _cond_key = {
+                "Price Above": "price_above",
+                "Price Below": "price_below",
+                "AI Score Above": "ai_score_above",
+                "% Change": "pct_change",
+            }[_cond_ui]
+            _thr = st.number_input(
+                "Threshold value",
+                value=150.0
+                if _cond_key in ("price_above", "price_below")
+                else (6.5 if _cond_key == "ai_score_above" else 3.0),
+                step=0.25,
+                key="settings_alert_threshold",
+            )
+            if st.button("Save alert", key="settings_alert_save", type="primary"):
+                if not _sym:
+                    st.warning("Enter a symbol.")
+                else:
+                    _new = {
+                        "id": str(uuid.uuid4()),
+                        "symbol": _sym,
+                        "condition": _cond_key,
+                        "threshold": float(_thr),
+                        "created_at": datetime.now().isoformat(),
+                    }
+                    _alerts.append(_new)
+                    _prefs["evolve_alerts"] = _alerts
+                    try:
+                        save_user_preferences(_sid, _prefs)
+                        st.success(f"Saved alert for {_sym}.")
+                        st.rerun()
+                    except Exception as _se:
+                        logger.warning(
+                            "settings: save alert failed: %s", _se
+                        )
+                        st.caption(f"Could not save alert: {_se}")
     except Exception as e:
-        st.caption(f"Feature unavailable: {e}")
+        logger.warning("settings alerts tab failed: %s", e)
+        st.caption(f"Alerts unavailable: {e}")
 
 with tab_admin:
     st.subheader("System")
     try:
+        st.caption(
+            "Process metrics, optional packages, and cache footprint."
+        )
+
         if psutil:
-            cpu_percent = psutil.cpu_percent(interval=0.1)
-            mem = psutil.virtual_memory()
-            st.metric("CPU Usage", f"{cpu_percent}%")
-            st.metric("RAM Usage", f"{mem.percent}%")
-        # TODO S44: inline this (4448 lines)
-        old_path = project_root / "scripts" / "old_11_Admin.py"
-        runpy.run_path(str(old_path), run_name="__main__")
+            _cpu = psutil.cpu_percent(interval=0.1)
+            _mem = psutil.virtual_memory()
+            st.markdown("#### Resource usage")
+            _m1, _m2 = st.columns(2)
+            with _m1:
+                st.metric("CPU usage", f"{_cpu:.1f}%")
+            with _m2:
+                st.metric("RAM usage", f"{_mem.percent:.1f}%")
+            try:
+                _root = (
+                    os.environ.get("SystemDrive", "C:") + "\\"
+                    if os.name == "nt"
+                    else "/"
+                )
+                _disk = psutil.disk_usage(_root)
+                st.metric(
+                    "Disk usage",
+                    f"{_disk.percent:.1f}%",
+                    help=f"Root: {_root}",
+                )
+            except Exception as _de:
+                logger.warning("settings: disk usage failed: %s", _de)
+                st.caption(f"Disk metrics unavailable: {_de}")
+        else:
+            st.caption(
+                "Install psutil for CPU, memory, and disk metrics."
+            )
+
+        st.markdown("#### App")
+        st.metric("Version", "v3.17.0")
+
+        st.markdown("#### Optional packages")
+        _opt = [
+            ("shap", "shap"),
+            ("neuralforecast", "neuralforecast"),
+            ("faiss", "faiss"),
+            ("cvxpy", "cvxpy"),
+            ("pandas_ta", "pandas_ta"),
+        ]
+        _oc1, _oc2 = st.columns(2)
+        for _i, (_label, _mod) in enumerate(_opt):
+            _ok = False
+            try:
+                __import__(_mod)
+                _ok = True
+            except Exception:
+                pass
+            _target = _oc1 if _i % 2 == 0 else _oc2
+            with _target:
+                st.write(
+                    f"{'✅' if _ok else '❌'} {_label}"
+                )
+
+        st.markdown("#### Model cache (.cache/)")
+        _cache_root = project_root / ".cache"
+        _n_files = 0
+        _size_b = 0
+        try:
+            if _cache_root.exists():
+                for _p in _cache_root.rglob("*"):
+                    if _p.is_file():
+                        _n_files += 1
+                        try:
+                            _size_b += _p.stat().st_size
+                        except OSError as _oe:
+                            logger.debug(
+                                "settings: cache stat skip: %s", _oe
+                            )
+            _mb = _size_b / (1024 * 1024)
+            st.metric("Cache files", f"{_n_files}")
+            st.metric("Approx. size", f"{_mb:.2f} MB")
+        except Exception as _ce:
+            logger.warning("settings: cache scan failed: %s", _ce)
+            st.caption(f"Could not scan .cache: {_ce}")
+
+        if st.button(
+            "Clear session & reload",
+            key="settings_session_reboot",
+            help="Clears Streamlit session state and cached data, then reloads.",
+        ):
+            try:
+                st.cache_data.clear()
+            except Exception as _x:
+                logger.warning("settings: cache_data.clear: %s", _x)
+            try:
+                st.session_state.clear()
+            except Exception as _x:
+                logger.warning("settings: session_state.clear: %s", _x)
+            st.rerun()
     except Exception as e:
-        st.caption(f"Feature unavailable: {e}")
+        logger.warning("settings system tab failed: %s", e)
+        st.caption(f"System panel unavailable: {e}")
 
 
 # Page Assistant
