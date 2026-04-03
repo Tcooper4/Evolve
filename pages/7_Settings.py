@@ -123,6 +123,8 @@ with tab_keys:
                 save_user_api_keys(
                     _uid, keys_to_save
                 )
+                for k, v in keys_to_save.items():
+                    st.session_state[f"user_key_{k}"] = v
                 inject_user_keys_to_env(_uid)
                 st.success(
                     "Keys saved and activated. "

@@ -97,11 +97,21 @@ try:
     from utils.session_utils import (
         get_stable_user_id
     )
-    from config.user_store import (
-        inject_user_keys_to_env
-    )
     _stable_uid = get_stable_user_id()
-    inject_user_keys_to_env(_stable_uid)
+    try:
+        import os as _os
+        _is_cloud = (
+            _os.environ.get("STREAMLIT_SHARING_MODE") or
+            _os.environ.get("IS_STREAMLIT_CLOUD") or
+            not _os.path.exists(".env")
+        )
+        if _is_cloud:
+            from config.user_store import inject_user_keys_to_session
+            inject_user_keys_to_session(_stable_uid)
+        else:
+            inject_user_keys_to_env(_stable_uid)
+    except Exception as _e:
+        pass
     if _stable_uid and "evolve_session_id" not in st.session_state:
         st.session_state["evolve_session_id"] = _stable_uid
 except Exception as _e:
@@ -109,9 +119,20 @@ except Exception as _e:
 
 session_id = check_onboarding()
 
-# Always inject API keys from user store into os.environ on every run
+# Always inject API keys from user store on every run
 try:
-    inject_user_keys_to_env(session_id or st.session_state.get("evolve_session_id", "") or "")
+    _sid = session_id or st.session_state.get("evolve_session_id", "") or ""
+    import os as _os2
+    _is_cloud2 = (
+        _os2.environ.get("STREAMLIT_SHARING_MODE") or
+        _os2.environ.get("IS_STREAMLIT_CLOUD") or
+        not _os2.path.exists(".env")
+    )
+    if _is_cloud2:
+        from config.user_store import inject_user_keys_to_session
+        inject_user_keys_to_session(_sid)
+    else:
+        inject_user_keys_to_env(_sid)
 except Exception:
     # Keys may not be set yet; continue without failing
     pass

@@ -27,13 +27,16 @@ import streamlit as st
 # Backend imports
 try:
     from trading.monitoring.health_check import HealthMonitor
-    from system.infra.agents.alert_manager import AlertManager
     from trading.utils.notification_system import NotificationSystem
-    
     ALERT_MODULES_AVAILABLE = True
 except ImportError as e:
     logging.warning(f"Some alert modules not available: {e}")
     ALERT_MODULES_AVAILABLE = False
+
+try:
+    from system.infra.agents.alert_manager import AlertManager
+except ImportError:
+    AlertManager = None
 
 # Setup logging
 logger = logging.getLogger(__name__)

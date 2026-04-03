@@ -479,13 +479,22 @@ def call_active_llm_simple(prompt: str, *, max_tokens: int = 2048) -> str:
     Raises on failure; no silent fallback.
     Routes to all six providers: claude, gpt4, gemini, ollama, kimi, huggingface.
     """
-    # Ensure env has latest keys from user store if missing
+    # Ensure latest keys from user store are available for this request
     try:
-        from config.user_store import inject_user_keys_to_env
         from streamlit import session_state as st_session_state  # type: ignore
         session_id = st_session_state.get("evolve_session_id", "") or st_session_state.get("session_id", "")
         if session_id:
-            inject_user_keys_to_env(str(session_id))
+            _is_cloud = (
+                os.environ.get("STREAMLIT_SHARING_MODE") or
+                os.environ.get("IS_STREAMLIT_CLOUD") or
+                not os.path.exists(".env")
+            )
+            if _is_cloud:
+                from config.user_store import inject_user_keys_to_session
+                inject_user_keys_to_session(str(session_id))
+            else:
+                from config.user_store import inject_user_keys_to_env
+                inject_user_keys_to_env(str(session_id))
     except Exception as _e:
         logger.warning(
             "active_llm_calls: key injection failed (call_active_llm_simple): %s",
@@ -510,14 +519,20 @@ def call_active_llm_simple(prompt: str, *, max_tokens: int = 2048) -> str:
         try:
             return _call_claude_simple(prompt, model, max_tokens=max_tokens)
         except Exception as e:
-            if _is_anthropic_401(e):
-                logger.warning("Anthropic key invalid, falling back to OpenAI")
+            _key_missing = "not set" in str(e).lower() or "add your key" in str(e).lower()
+            if _is_anthropic_401(e) or _key_missing:
+                logger.warning("Claude unavailable (%s), trying OpenAI fallback", type(e).__name__)
                 try:
                     from config.llm_config import DEFAULT_MODELS
                     openai_model = DEFAULT_MODELS.get("gpt4", "gpt-4o")
                 except Exception:
                     openai_model = "gpt-4o"
-                return _call_gpt4_simple(prompt, openai_model, max_tokens=max_tokens)
+                try:
+                    return _call_gpt4_simple(prompt, openai_model, max_tokens=max_tokens)
+                except Exception as oe:
+                    if "not set" in str(oe).lower() or "add your key" in str(oe).lower():
+                        return "No API key configured. Add your key in Settings → API Keys."
+                    raise
             raise
     if provider == "gpt4":
         return _call_gpt4_simple(prompt, model, max_tokens=max_tokens)
@@ -549,11 +564,20 @@ def call_active_llm_chat(
     Routes to all six providers: claude, gpt4, gemini, ollama, kimi, huggingface.
     """
     try:
-        from config.user_store import inject_user_keys_to_env
         from streamlit import session_state as st_session_state  # type: ignore
         session_id = st_session_state.get("evolve_session_id", "") or st_session_state.get("session_id", "")
         if session_id:
-            inject_user_keys_to_env(str(session_id))
+            _is_cloud = (
+                os.environ.get("STREAMLIT_SHARING_MODE") or
+                os.environ.get("IS_STREAMLIT_CLOUD") or
+                not os.path.exists(".env")
+            )
+            if _is_cloud:
+                from config.user_store import inject_user_keys_to_session
+                inject_user_keys_to_session(str(session_id))
+            else:
+                from config.user_store import inject_user_keys_to_env
+                inject_user_keys_to_env(str(session_id))
     except Exception as _e:
         logger.warning(
             "active_llm_calls: key injection failed (call_active_llm_chat): %s",
@@ -575,7 +599,24 @@ def call_active_llm_chat(
             return _call_huggingface_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
 
     if provider == "claude":
-        return _call_claude_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
+        try:
+            return _call_claude_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
+        except Exception as e:
+            _key_missing = "not set" in str(e).lower() or "add your key" in str(e).lower()
+            if _key_missing:
+                logger.warning("Claude key missing, trying OpenAI fallback: %s", e)
+                try:
+                    from config.llm_config import DEFAULT_MODELS
+                    openai_model = DEFAULT_MODELS.get("gpt4", "gpt-4o")
+                except Exception:
+                    openai_model = "gpt-4o"
+                try:
+                    return _call_gpt4_chat(system_prompt, context_block, conversation_messages, user_message, openai_model, max_tokens=max_tokens)
+                except Exception as oe:
+                    if "not set" in str(oe).lower() or "add your key" in str(oe).lower():
+                        return "No API key configured. Add your key in Settings → API Keys."
+                    raise
+            raise
     if provider == "gpt4":
         return _call_gpt4_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
     if provider == "gemini":

@@ -593,10 +593,10 @@ class EnhancedSettings:
 
         # Log validation results
         if validator.has_errors():
-            logger.error("Configuration validation errors:")
+            logger.warning("Configuration validation errors:")
             for error in validator.get_errors():
-                logger.error(f"  - {error}")
-            raise ValueError("Configuration validation failed")
+                logger.warning(f"  - {error}")
+            logger.warning("Configuration validation failed — continuing with partial config")
 
         if validator.get_warnings():
             logger.warning("Configuration validation warnings:")

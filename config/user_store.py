@@ -132,6 +132,34 @@ def inject_user_keys_to_env(session_id: str) -> None:
         pass
 
 
+def inject_user_keys_to_session(session_id: str) -> None:
+    """
+    Load stored API keys for the given session and store them in st.session_state.
+    Never touches os.environ — safe for multi-user cloud deployments.
+    """
+    if not session_id:
+        return
+    try:
+        import streamlit as st
+        keys: dict = {}
+        try:
+            keys.update(load_user_api_keys(session_id) or {})
+        except Exception:
+            pass
+        try:
+            keys.update(load_user_keys(session_id) or {})
+        except Exception:
+            pass
+        if not keys:
+            return
+        for key, value in keys.items():
+            if not value or not isinstance(value, str):
+                continue
+            st.session_state[f"user_key_{key}"] = value
+    except Exception as e:
+        logger.warning("user_store: inject_user_keys_to_session failed: %s", e)
+
+
 def save_user_api_keys(session_id: str, keys: dict) -> None:
     """
     Save API keys for a user session.

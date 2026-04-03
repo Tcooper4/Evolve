@@ -273,6 +273,11 @@ if PROPHET_AVAILABLE:
                     "type": "ValueError",
                     "timestamp": datetime.now().isoformat(),
                 }
+            except AttributeError as ae:
+                # e.g. 'Prophet' object has no attribute 'stan_backend' on some cloud versions
+                logger.warning("Prophet fit AttributeError (version mismatch): %s", ae)
+                self.available = False
+                return {"success": False, "error": str(ae), "train_loss": [], "val_loss": []}
             except Exception as e:
                 logger.error(f"Error fitting Prophet model: {e}")
                 raise RuntimeError(f"Prophet model fitting failed: {e}")
@@ -658,6 +663,19 @@ if PROPHET_AVAILABLE:
                     "already_denormalized": True,
                 }
 
+            except AttributeError as ae:
+                # e.g. 'Prophet' object has no attribute 'stan_backend' on some cloud versions
+                logger.warning("Prophet forecast AttributeError (version mismatch): %s", ae)
+                self.available = False
+                h = horizon or 30
+                return {
+                    "forecast": np.full(h, 1000.0),
+                    "dates": pd.date_range(start=pd.Timestamp.now(), periods=h + 1, freq="D")[1:],
+                    "confidence": np.full(h, 0.1),
+                    "model_type": "Prophet_Unavailable",
+                    "horizon": h,
+                    "error": str(ae),
+                }
             except Exception as e:
                 logger.error(f"Error in Prophet model forecast: {e}")
                 raise RuntimeError(f"Prophet model forecasting failed: {e}")

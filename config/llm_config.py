@@ -190,21 +190,37 @@ def get_openai_client():
     """Return an OpenAI client instance using centralized config. Caller must handle ImportError."""
     from openai import OpenAI
 
-    llm = get_llm_config()
-    if not llm.openai_api_key:
+    # Per-user session key takes priority over shared env (safe on Streamlit Cloud)
+    api_key = None
+    try:
+        import streamlit as st
+        api_key = st.session_state.get("user_key_OPENAI_API_KEY") or None
+    except Exception:
+        pass
+    if not api_key:
+        api_key = get_llm_config().openai_api_key
+    if not api_key:
         raise ValueError(
-            "OPENAI_API_KEY not set. Configure in config/app_config.yaml or set OPENAI_API_KEY env."
+            "OPENAI_API_KEY not set. Add your key in Settings → API Keys."
         )
-    return OpenAI(api_key=llm.openai_api_key)
+    return OpenAI(api_key=api_key)
 
 
 def get_anthropic_client():
     """Return an Anthropic client instance using centralized config. Caller must handle ImportError."""
     import anthropic
 
-    llm = get_llm_config()
-    if not llm.anthropic_api_key:
+    # Per-user session key takes priority over shared env (safe on Streamlit Cloud)
+    api_key = None
+    try:
+        import streamlit as st
+        api_key = st.session_state.get("user_key_ANTHROPIC_API_KEY") or None
+    except Exception:
+        pass
+    if not api_key:
+        api_key = get_llm_config().anthropic_api_key
+    if not api_key:
         raise ValueError(
-            "ANTHROPIC_API_KEY not set. Set ANTHROPIC_API_KEY env for Claude."
+            "ANTHROPIC_API_KEY not set. Add your key in Settings → API Keys."
         )
-    return anthropic.Anthropic(api_key=llm.anthropic_api_key)
+    return anthropic.Anthropic(api_key=api_key)

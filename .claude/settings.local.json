@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python tests/model_smoke_test.py)"
+    ]
+  }
+}
