@@ -368,8 +368,10 @@ def compute_performance_metrics(
     # Sharpe ratio
     excess_returns = r - daily_rf
     sharpe = float(
-        excess_returns.mean() / r.std() * np.sqrt(trading_days)
-    ) if r.std() > 0 else 0.0
+        excess_returns.mean()
+        / (excess_returns.std() + 1e-10)
+        * np.sqrt(trading_days)
+    )
 
     # Sortino ratio (downside deviation only)
     downside = r[r < daily_rf] - daily_rf

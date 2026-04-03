@@ -233,10 +233,10 @@ class WalkForwardValidator:
                 if len(context) < 30:
                     continue
 
-                result = router.forecast(
+                result = router.get_forecast(
                     data=context,
-                    model=self.model_name,
                     horizon=horizon,
+                    model_type=self.model_name,
                 )
 
                 if result is None:

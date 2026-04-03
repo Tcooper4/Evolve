@@ -239,6 +239,48 @@ def render(
                         height=300,
                         key="options_puts_table",
                     )
+
+                    try:
+                        from trading.data.options_flow import get_options_flow
+
+                        flow = get_options_flow(ticker)
+                        if flow and not flow.get("error"):
+                            st.markdown("**Unusual Options Activity**")
+                            net = flow.get("net_flow", "NEUTRAL")
+                            color = (
+                                "green"
+                                if net == "BULLISH"
+                                else "red"
+                                if net == "BEARISH"
+                                else "gray"
+                            )
+                            st.markdown(
+                                f"Net flow: :{color}[**{net}**] · "
+                                f"P/C Ratio: {flow.get('put_call_ratio', 0):.2f} · "
+                                f"Max pain: ${flow.get('max_pain', 0):.2f}"
+                            )
+                            calls = flow.get("unusual_calls", [])
+                            puts = flow.get("unusual_puts", [])
+                            if calls:
+                                st.caption(
+                                    "Unusual calls: "
+                                    + ", ".join(
+                                        f"${c['strike']:.0f} "
+                                        f"({c['expiry']})"
+                                        for c in calls[:5]
+                                    )
+                                )
+                            if puts:
+                                st.caption(
+                                    "Unusual puts: "
+                                    + ", ".join(
+                                        f"${p['strike']:.0f} "
+                                        f"({p['expiry']})"
+                                        for p in puts[:5]
+                                    )
+                                )
+                    except Exception as e:
+                        st.caption(f"Options flow unavailable: {e}")
             else:
                 st.info("No options data available for " + ticker)
         except Exception as _oe:

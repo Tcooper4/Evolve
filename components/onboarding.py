@@ -5,12 +5,13 @@ localStorage is used only as a best-effort fallback and may not work in Streamli
 """
 
 import hashlib
+import os as _os
 from typing import Optional
 
 import streamlit as st
 import streamlit.components.v1 as components
 
-from config.user_store import load_user_keys, save_user_keys, save_user_preferences, inject_user_keys_to_env
+from config.user_store import load_user_keys, save_user_keys, save_user_preferences
 
 
 def _ensure_session_id() -> Optional[str]:
@@ -89,7 +90,17 @@ def _render_onboarding_form(session_id: Optional[str]) -> bool:
         st.query_params["sid"] = session_id
         st.session_state["evolve_show_form"] = False
         st.session_state["evolve_onboarding_done"] = True
-        inject_user_keys_to_env(session_id)
+        _is_cloud = (
+            _os.environ.get("STREAMLIT_SHARING_MODE")
+            or _os.environ.get("IS_STREAMLIT_CLOUD")
+            or not _os.path.exists(".env")
+        )
+        if _is_cloud:
+            from config.user_store import inject_user_keys_to_session
+            inject_user_keys_to_session(session_id)
+        else:
+            from config.user_store import inject_user_keys_to_env
+            inject_user_keys_to_env(session_id)
         st.success("Your keys are saved. You won't need to enter them again on this device.")
         st.caption("Bookmark this URL to return without re-entering your keys.")
         return True

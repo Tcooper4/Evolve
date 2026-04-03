@@ -36,6 +36,30 @@ except ImportError as e:
     Dataset = None
     TORCH_AVAILABLE = False
 
+
+def get_torch_device_string() -> str:
+    """
+    Resolve PyTorch device string: CUDA > MPS > CPU.
+    For nn.Module subclasses that do not inherit BaseModel.
+    """
+    try:
+        if not TORCH_AVAILABLE or torch is None:
+            return "cpu"
+        if torch.cuda.is_available():
+            logging.getLogger(__name__).info(
+                "PyTorch: CUDA available — using GPU"
+            )
+            return "cuda"
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            logging.getLogger(__name__).info(
+                "PyTorch: MPS available — using Apple GPU"
+            )
+            return "mps"
+        return "cpu"
+    except Exception:
+        return "cpu"
+
+
 # Try to import scikit-learn
 try:
     from sklearn.preprocessing import StandardScaler
@@ -254,17 +278,19 @@ class BaseModel(ABC):
         # Setup logging
         self._setup_logging()
 
-        # Setup device with fallback
+        # Setup device with fallback (CUDA > MPS > CPU)
         try:
-            if torch.cuda.is_available():
-                self.device = torch.device("cuda")
-                self.logger.info("Using CUDA device")
+            if TORCH_AVAILABLE and torch is not None:
+                self.device = torch.device(self._get_device())
             else:
-                self.device = torch.device("cpu")
-                self.logger.info("Using CPU device")
+                self.device = None
         except Exception as e:
-            self.device = torch.device("cpu")
-            self.logger.warning(f"CUDA setup failed, using CPU: {e}")
+            self.device = (
+                torch.device("cpu")
+                if TORCH_AVAILABLE and torch is not None
+                else None
+            )
+            self.logger.warning("Device setup failed, using CPU: %s", e)
 
         # Validate configuration
         self._validate_config()
@@ -272,7 +298,27 @@ class BaseModel(ABC):
         # Build model
         self.build_model()
 
-        self.logger.info(f"Model initialized on {self.device}")
+        self.logger.info("Model initialized on %s", self.device)
+
+    def _get_device(self) -> str:
+        try:
+            if not TORCH_AVAILABLE or torch is None:
+                return "cpu"
+            if torch.cuda.is_available():
+                self.logger.info(
+                    "%s: CUDA available — using GPU",
+                    self.__class__.__name__,
+                )
+                return "cuda"
+            if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                self.logger.info(
+                    "%s: MPS available — using Apple GPU",
+                    self.__class__.__name__,
+                )
+                return "mps"
+            return "cpu"
+        except Exception:
+            return "cpu"
 
     def _setup_logging(self) -> None:
         """Setup logging for the model."""

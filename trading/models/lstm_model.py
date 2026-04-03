@@ -58,7 +58,7 @@ from utils.forecast_helpers import safe_forecast
 from utils.model_cache import cache_model_operation
 
 # Local imports
-from .base_model import BaseModel
+from .base_model import BaseModel, get_torch_device_string
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -136,7 +136,7 @@ class LSTMModel(nn.Module):
             self.hidden_dim = hidden_dim
             self.num_layers = num_layers
             self.dropout = dropout
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.device = torch.device(get_torch_device_string())
             self.to(self.device)
             self.logger = logging.getLogger(self.__class__.__name__)
             # Bypass nn.Module __setattr__ so config and scalers are not treated as parameters/buffers
@@ -194,7 +194,7 @@ class _LSTMForecasterModel(nn.Module):
         super().__init__()
         self.bidirectional = bidirectional
         self.use_attention = use_attention
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(get_torch_device_string())
 
         self.lstm = nn.LSTM(
             input_size,
@@ -567,8 +567,7 @@ class LSTMForecaster(BaseModel):
                 self.y_scaler = StandardScaler()
             self.is_trained = False
             self.training_history = {"loss": [], "val_loss": []}
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            
+
             # Initialize caching attributes
             object.__setattr__(self, "last_input_hash", None)
             object.__setattr__(self, "compiled_model", None)

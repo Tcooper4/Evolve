@@ -494,13 +494,18 @@ class ChartPatternDetector:
             n = len(self.closes)
             result = {}
 
+            min_slope_pct = 0.001
+
             # Short term (20 days)
             if n >= 20:
                 short_slope = np.polyfit(
                     range(20), self.closes[-20:], 1
                 )[0]
+                short_trend_up = short_slope > (
+                    np.mean(self.closes[-20:]) * min_slope_pct
+                )
                 result["short_term"] = (
-                    "BULLISH" if short_slope > 0 else "BEARISH"
+                    "BULLISH" if short_trend_up else "BEARISH"
                 )
                 result["short_slope"] = round(float(short_slope), 4)
 
@@ -509,8 +514,11 @@ class ChartPatternDetector:
                 med_slope = np.polyfit(
                     range(50), self.closes[-50:], 1
                 )[0]
+                med_trend_up = med_slope > (
+                    np.mean(self.closes[-50:]) * min_slope_pct
+                )
                 result["medium_term"] = (
-                    "BULLISH" if med_slope > 0 else "BEARISH"
+                    "BULLISH" if med_trend_up else "BEARISH"
                 )
 
             # Long term (200 days)
@@ -518,8 +526,11 @@ class ChartPatternDetector:
                 long_slope = np.polyfit(
                     range(200), self.closes[-200:], 1
                 )[0]
+                long_trend_up = long_slope > (
+                    np.mean(self.closes[-200:]) * min_slope_pct
+                )
                 result["long_term"] = (
-                    "BULLISH" if long_slope > 0 else "BEARISH"
+                    "BULLISH" if long_trend_up else "BEARISH"
                 )
 
             # Higher highs / lower lows

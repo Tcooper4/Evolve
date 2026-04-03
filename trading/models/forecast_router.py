@@ -58,13 +58,13 @@ except ImportError:
 # Try to import Transformer model
 try:
     from trading.models.advanced.transformer.time_series_transformer import (
-        TimeSeriesTransformer,
+        TransformerForecaster,
     )
 
     TRANSFORMER_AVAILABLE = True
 except ImportError:
     TRANSFORMER_AVAILABLE = False
-    TimeSeriesTransformer = None
+    TransformerForecaster = None
 
 # Stem (from filename) -> (module_path, class_name) for discovery
 _DISCOVERY_CLASS_MAP = {
@@ -119,7 +119,7 @@ class ForecastRouter:
 
         # Add Transformer only if available
         if TRANSFORMER_AVAILABLE:
-            self.model_registry["transformer"] = TimeSeriesTransformer
+            self.model_registry["transformer"] = TransformerForecaster
 
         self.performance_history = pd.DataFrame()
         self.model_weights = self._initialize_weights()
@@ -346,7 +346,7 @@ class ForecastRouter:
 
         # Add Transformer if available
         if TRANSFORMER_AVAILABLE:
-            default_models["transformer"] = TimeSeriesTransformer
+            default_models["transformer"] = TransformerForecaster
 
         for model_name, model_class in default_models.items():
             try:
@@ -482,7 +482,8 @@ class ForecastRouter:
         Returns:
             True if seasonality is detected
         """
-        # Implement seasonality detection
+        # TODO: implement seasonality detection
+        # Currently defaults to False so auto selection uses XGBoost/Ridge path
         return False
 
     def _check_trend(self, data: pd.DataFrame) -> bool:
@@ -494,7 +495,8 @@ class ForecastRouter:
         Returns:
             True if trend is detected
         """
-        # Implement trend detection
+        # TODO: implement trend detection
+        # Currently defaults to False so auto selection uses XGBoost/Ridge path
         return False
 
     def _prepare_data_safely(self, data: pd.DataFrame, normalize_close: bool = False) -> pd.DataFrame:
@@ -1161,7 +1163,17 @@ class ForecastRouter:
                 "forecast_router: all rows dropped "
                 "after NaT filter — cannot forecast"
             )
-            return None
+            return {
+                "error": "All data dropped after datetime coercion",
+                "consensus_forecast": [],
+                "models_failed": [],
+                "models_used": [],
+                "direction": "NEUTRAL",
+                "conviction": "INSUFFICIENT",
+                "last_price": None,
+                "consensus_price": None,
+                "consensus_7d_change_pct": None,
+            }
         df = df.sort_index()
         if isinstance(df.index, pd.DatetimeIndex) and getattr(df.index, "tz", None) is not None:
             try:
@@ -1384,6 +1396,11 @@ class ForecastRouter:
         # Rebuild after possible Ridge removal
         valid_used = list(vf_map.keys())
         valid_forecasts = [vf_map[name] for name in valid_used]
+
+        price_targets = {
+            k: v for k, v in price_targets.items()
+            if k in valid_used
+        }
 
         stacked = np.stack(valid_forecasts)
         consensus = stacked.mean(axis=0)

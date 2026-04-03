@@ -74,7 +74,6 @@ with tab_keys:
         from config.user_store import (
             save_user_api_keys,
             load_user_api_keys,
-            inject_user_keys_to_env,
         )
         _uid = get_stable_user_id()
         _saved = load_user_api_keys(_uid) or {}
@@ -128,7 +127,17 @@ with tab_keys:
                 )
                 for k, v in keys_to_save.items():
                     st.session_state[f"user_key_{k}"] = v
-                inject_user_keys_to_env(_uid)
+                _is_cloud = (
+                    os.environ.get("STREAMLIT_SHARING_MODE")
+                    or os.environ.get("IS_STREAMLIT_CLOUD")
+                    or not os.path.exists(".env")
+                )
+                if _is_cloud:
+                    from config.user_store import inject_user_keys_to_session
+                    inject_user_keys_to_session(_uid)
+                else:
+                    from config.user_store import inject_user_keys_to_env
+                    inject_user_keys_to_env(_uid)
                 st.success(
                     "Keys saved and activated. "
                     "They will load automatically "

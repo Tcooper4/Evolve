@@ -563,8 +563,7 @@ def render(
 
                             # Store full forecast result for confidence intervals
                             st.session_state.current_forecast_result = forecast_result
-                            model = st.session_state.get("current_model_instance", None)
-                            st.session_state.current_model_instance = model  # Store model instance for explainability
+                            st.session_state.current_model_instance = model  # trained instance for explainability
 
                             # Postprocess forecast
                             try:

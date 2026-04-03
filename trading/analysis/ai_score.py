@@ -3,7 +3,7 @@ AI Score — composite signal strength rating (1-10) for any ticker.
 
 Dimensions scored:
   Technical  (0-10): trend strength, momentum, volatility regime
-  Sentiment  (0-10): short interest squeeze potential, insider flow
+  Sentiment  (0-10): short interest, insider flow, Reddit mention tone
   Fundamental(0-10): earnings surprise, analyst estimates proximity
   Momentum   (0-10): price vs 20/50/200 SMA, RSI positioning
 
@@ -97,8 +97,18 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
         if hist.empty or len(hist) < 20:
             return _error_score(symbol, "Insufficient price history")
 
-        close = hist["Close"].values.astype(float)
-        volume = hist["Volume"].values.astype(float) if "Volume" in hist.columns else None
+        _col_map = {c.lower(): c for c in hist.columns}
+        _close_col = _col_map.get(
+            "close",
+            list(hist.select_dtypes(include="number").columns)[0],
+        )
+        _volume_col = _col_map.get("volume")
+        close = hist[_close_col].values.astype(float)
+        volume = (
+            hist[_volume_col].values.astype(float)
+            if _volume_col is not None
+            else None
+        )
         last_price = float(close[-1])
 
         signals = []
@@ -275,6 +285,48 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
             )
         except Exception:
             pass
+
+        try:
+            from trading.data.social_sentiment import get_social_sentiment
+
+            social = get_social_sentiment(symbol)
+            if (
+                social
+                and not social.get("error")
+                and social.get("success")
+                and int(social.get("mention_count") or 0) > 0
+            ):
+                sentiment_score_social = (
+                    (float(social["sentiment_score"]) + 1) / 2 * 10
+                )
+                sentiment_score = (
+                    sentiment_score * 0.7 + sentiment_score_social * 0.3
+                )
+                signals.append(
+                    {
+                        "name": "Social Sentiment",
+                        "value": social["mention_count"],
+                        "impact": (
+                            "positive"
+                            if social["sentiment_label"] == "BULLISH"
+                            else "negative"
+                            if social["sentiment_label"] == "BEARISH"
+                            else "neutral"
+                        ),
+                        "description": (
+                            f"Reddit: {social['sentiment_label']} "
+                            f"({social['mention_count']} mentions today"
+                            + (
+                                " · trending"
+                                if social.get("trending")
+                                else ""
+                            )
+                            + ")"
+                        ),
+                    }
+                )
+        except Exception as e:
+            logger.debug("Social sentiment skipped: %s", e)
 
         # ── FUNDAMENTAL SCORE (0-10) ──────────────────────────────
         fundamental_score = 5.0

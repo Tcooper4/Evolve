@@ -117,7 +117,7 @@ class MorningBriefing:
             import numpy as np
 
             spy = yf.Ticker("SPY").history(period="3mo")
-            vix = yf.Ticker("^VIX").history(period="5d")
+            vix_hist = yf.Ticker("^VIX").history(period="5d")
 
             if not spy.empty:
                 _col_map = {c.lower(): c for c in spy.columns}
@@ -130,10 +130,10 @@ class MorningBriefing:
                     (current - sma50) / sma50 * 100, 2
                 )
 
-            if not vix.empty:
-                _col_map = {c.lower(): c for c in vix.columns}
-                close_col = _col_map.get("close", vix.columns[0])
-                vix_level = float(vix[close_col].iloc[-1])
+            if not vix_hist.empty:
+                _col_map = {c.lower(): c for c in vix_hist.columns}
+                close_col = _col_map.get("close", vix_hist.columns[0])
+                vix_level = float(vix_hist[close_col].iloc[-1])
                 regime["vix_level"] = round(vix_level, 2)
 
                 if vix_level > 30:
@@ -143,13 +143,17 @@ class MorningBriefing:
                 else:
                     regime["volatility"] = "NORMAL"
 
-            # Determine overall regime
+            # Determine overall regime (None = unknown VIX → neutral 20 for thresholds; keep real 0.0)
             is_bullish = regime["spy_trend"] == "BULLISH"
-            vix = regime.get("vix_level", 20)
-            if is_bullish and (vix or 20) < 20:
+            vix_val = regime["vix_level"]
+            if vix_val is None:
+                vix_n = 20.0
+            else:
+                vix_n = float(vix_val)
+            if is_bullish and vix_n < 20:
                 regime["regime"] = "RISK_ON"
                 regime["description"] = "Market is in risk-on mode — momentum strategies favored"
-            elif not is_bullish and (vix or 20) > 25:
+            elif not is_bullish and vix_n > 25:
                 regime["regime"] = "RISK_OFF"
                 regime["description"] = "Market is in risk-off mode — defensive positioning recommended"
             else:
@@ -391,8 +395,8 @@ class MorningBriefing:
                 f"{regime_emoji} **{regime.get('regime', 'NEUTRAL')}** "
                 f"— {regime.get('description', '')}"
             )
-            if regime.get("vix_level"):
-                lines.append(f"VIX: **{regime['vix_level']:.1f}**")
+            if regime.get("vix_level") is not None:
+                lines.append(f"VIX: **{float(regime['vix_level']):.1f}**")
             if regime.get("spy_50d_pct"):
                 lines.append(
                     f"SPY vs 50-day MA: **{regime['spy_50d_pct']:+.1f}%**"
@@ -406,11 +410,12 @@ class MorningBriefing:
             for i, opp in enumerate(opportunities, 1):
                 symbol = opp["symbol"]
                 score = opp.get("ai_score", "N/A")
-                price = opp.get("current_price", "N/A")
+                _cp = opp.get("current_price")
+                price_disp = f"${_cp:.2f}" if _cp is not None else "N/A"
 
                 lines.append(
                     f"\n### {i}. {symbol} — "
-                    f"AI Score: {score} | ${price}"
+                    f"AI Score: {score} | {price_disp}"
                 )
 
                 forecast = opp.get("forecast", {})
@@ -525,7 +530,11 @@ class MorningBriefing:
                     rows.append({
                         "Symbol": opp["symbol"],
                         "AI Score": opp.get("ai_score", "N/A"),
-                        "Price": f"${opp.get('current_price', 0):.2f}",
+                        "Price": (
+                            f"${float(opp['current_price']):.2f}"
+                            if opp.get("current_price") is not None
+                            else "N/A"
+                        ),
                         "Direction": forecast.get("direction", "N/A"),
                         "Target": f"${opp.get('target', 0):.2f}"
                         if opp.get("target") else "N/A",

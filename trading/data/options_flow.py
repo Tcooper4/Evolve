@@ -1,0 +1,180 @@
+# -*- coding: utf-8 -*-
+"""Options flow / unusual activity from yfinance chains."""
+
+from __future__ import annotations
+
+import logging
+from typing import Any, Dict, List
+
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+
+def _max_pain_strike(calls: pd.DataFrame, puts: pd.DataFrame) -> float:
+    """Strike minimizing total ITM intrinsic * open interest (writer pain)."""
+    try:
+        if calls.empty and puts.empty:
+            return 0.0
+        strikes: List[float] = []
+        if not calls.empty and "strike" in calls.columns:
+            strikes.extend(calls["strike"].astype(float).tolist())
+        if not puts.empty and "strike" in puts.columns:
+            strikes.extend(puts["strike"].astype(float).tolist())
+        if not strikes:
+            return 0.0
+        candidates = sorted(set(strikes))
+        best_k = candidates[0]
+        min_pain = float("inf")
+        for k in candidates:
+            pain = 0.0
+            if not calls.empty:
+                for _, row in calls.iterrows():
+                    oi = float(row.get("openInterest") or 0)
+                    strike = float(row["strike"])
+                    pain += max(0.0, k - strike) * oi * 100.0
+            if not puts.empty:
+                for _, row in puts.iterrows():
+                    oi = float(row.get("openInterest") or 0)
+                    strike = float(row["strike"])
+                    pain += max(0.0, strike - k) * oi * 100.0
+            if pain < min_pain:
+                min_pain = pain
+                best_k = k
+        return float(best_k)
+    except Exception as e:
+        logger.debug("max pain calc failed: %s", e)
+        return 0.0
+
+
+def _unusual_for_expiry(
+    calls: pd.DataFrame,
+    puts: pd.DataFrame,
+    expiry: str,
+    top_n: int,
+) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    unusual_calls: List[Dict[str, Any]] = []
+    unusual_puts: List[Dict[str, Any]] = []
+    try:
+        for name, df, bucket in (
+            ("call", calls, unusual_calls),
+            ("put", puts, unusual_puts),
+        ):
+            if df is None or df.empty or "volume" not in df.columns:
+                continue
+            vol = pd.to_numeric(df["volume"], errors="coerce").fillna(0)
+            pos = vol[vol > 0]
+            avg_v = float(pos.mean()) if len(pos) > 0 else 0.0
+            if avg_v <= 0:
+                continue
+            thresh = 2.0 * avg_v
+            mask = vol > thresh
+            sub = df.loc[mask].copy()
+            sub = sub.assign(_v=vol.loc[mask])
+            sub = sub.sort_values("_v", ascending=False).head(top_n)
+            for _, row in sub.iterrows():
+                bucket.append(
+                    {
+                        "strike": float(row["strike"]),
+                        "expiry": expiry,
+                        "volume": float(row.get("volume") or 0),
+                        "openInterest": float(row.get("openInterest") or 0),
+                        "type": name,
+                    }
+                )
+    except Exception as e:
+        logger.debug("unusual activity scan failed: %s", e)
+    return unusual_calls, unusual_puts
+
+
+def get_options_flow(symbol: str, top_n: int = 10) -> Dict[str, Any]:
+    """
+    Fetch options chains via yfinance and surface unusual volume vs expiry average.
+
+    Returns:
+        put_call_ratio, unusual_calls, unusual_puts, max_pain, net_flow,
+        expiries, success/error.
+    """
+    out: Dict[str, Any] = {
+        "success": False,
+        "put_call_ratio": 0.0,
+        "unusual_calls": [],
+        "unusual_puts": [],
+        "max_pain": 0.0,
+        "net_flow": "NEUTRAL",
+        "expiries": [],
+        "error": None,
+    }
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        out["error"] = "symbol required"
+        return out
+    try:
+        import yfinance as yf
+
+        t = yf.Ticker(sym)
+        expiries = list(t.options or [])[:8]
+        out["expiries"] = [str(e) for e in expiries]
+        if not expiries:
+            out["error"] = "no options expiries"
+            return out
+
+        total_cv = 0.0
+        total_pv = 0.0
+        all_uc: List[Dict[str, Any]] = []
+        all_up: List[Dict[str, Any]] = []
+        primary_calls = pd.DataFrame()
+        primary_puts = pd.DataFrame()
+
+        for exp in expiries:
+            try:
+                chain = t.option_chain(exp)
+                c = chain.calls
+                p = chain.puts
+                if exp == expiries[0]:
+                    primary_calls, primary_puts = c, p
+                if not c.empty:
+                    total_cv += float(
+                        pd.to_numeric(c["volume"], errors="coerce").fillna(0).sum()
+                    )
+                if not p.empty:
+                    total_pv += float(
+                        pd.to_numeric(p["volume"], errors="coerce").fillna(0).sum()
+                    )
+                uc, up = _unusual_for_expiry(c, p, str(exp), top_n)
+                all_uc.extend(uc)
+                all_up.extend(up)
+            except Exception as e:
+                logger.debug("option_chain %s %s: %s", sym, exp, e)
+                continue
+
+        out["put_call_ratio"] = (
+            round(total_pv / total_cv, 4) if total_cv > 0 else 0.0
+        )
+        all_uc.sort(key=lambda x: x.get("volume", 0), reverse=True)
+        all_up.sort(key=lambda x: x.get("volume", 0), reverse=True)
+        out["unusual_calls"] = all_uc[:top_n]
+        out["unusual_puts"] = all_up[:top_n]
+        out["max_pain"] = _max_pain_strike(primary_calls, primary_puts)
+
+        uc_n = len(out["unusual_calls"])
+        up_n = len(out["unusual_puts"])
+        if uc_n > up_n * 1.25:
+            out["net_flow"] = "BULLISH"
+        elif up_n > uc_n * 1.25:
+            out["net_flow"] = "BEARISH"
+        else:
+            pc = out["put_call_ratio"]
+            if pc > 1.15:
+                out["net_flow"] = "BEARISH"
+            elif pc > 0 and pc < 0.85:
+                out["net_flow"] = "BULLISH"
+            else:
+                out["net_flow"] = "NEUTRAL"
+
+        out["success"] = True
+        return out
+    except Exception as e:
+        logger.warning("get_options_flow failed for %s: %s", sym, e)
+        out["error"] = str(e)
+        return out

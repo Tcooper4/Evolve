@@ -1,0 +1,140 @@
+# -*- coding: utf-8 -*-
+"""Reddit mention sentiment (public JSON API, no API key)."""
+
+from __future__ import annotations
+
+import json
+import logging
+import statistics
+import urllib.error
+import urllib.parse
+import urllib.request
+from typing import Any, Dict, List
+
+logger = logging.getLogger(__name__)
+
+_USER_AGENT = "EvolveTradingBot/3.23 (research; contact: local)"
+_SUBREDDITS = ("wallstreetbets", "stocks")
+
+
+def _fetch_subreddit_search(sub: str, query: str, limit: int) -> List[Dict[str, Any]]:
+    q = urllib.parse.urlencode(
+        {
+            "q": query,
+            "restrict_sr": "1",
+            "sort": "new",
+            "limit": str(min(limit, 100)),
+            "t": "day",
+        }
+    )
+    url = f"https://www.reddit.com/r/{sub}/search.json?{q}"
+    req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+        data = json.loads(raw)
+        children = (
+            data.get("data", {}).get("children", [])
+        )
+        posts = []
+        for ch in children:
+            d = ch.get("data") or {}
+            posts.append(
+                {
+                    "id": d.get("id") or "",
+                    "title": (d.get("title") or "")[:500],
+                    "selftext": (d.get("selftext") or "")[:1500],
+                    "score": int(d.get("score") or 0),
+                    "subreddit": sub,
+                }
+            )
+        return posts
+    except urllib.error.HTTPError as e:
+        logger.debug("Reddit HTTP %s for r/%s: %s", e.code, sub, e)
+        return []
+    except Exception as e:
+        logger.debug("Reddit fetch r/%s failed: %s", sub, e)
+        return []
+
+
+def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
+    """
+    Reddit sentiment from r/wallstreetbets and r/stocks (last day, search).
+
+    Returns sentiment_score (-1..1), label, mention_count, top_posts, trending.
+    """
+    out: Dict[str, Any] = {
+        "success": False,
+        "sentiment_score": 0.0,
+        "sentiment_label": "NEUTRAL",
+        "mention_count": 0,
+        "top_posts": [],
+        "trending": False,
+        "error": None,
+    }
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        out["error"] = "symbol required"
+        return out
+    try:
+        from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+        analyzer = SentimentIntensityAnalyzer()
+    except Exception as e:
+        logger.warning("VADER not available: %s", e)
+        out["error"] = str(e)
+        return out
+
+    try:
+        seen = set()
+        posts: List[Dict[str, Any]] = []
+        for sub in _SUBREDDITS:
+            for q in (sym, f"${sym}"):
+                batch = _fetch_subreddit_search(sub, q, limit)
+                for p in batch:
+                    pid = (p.get("id") or "").strip()
+                    key = pid or (sub, p.get("title"), p.get("score"))
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    posts.append(p)
+
+        if not posts:
+            out["success"] = True
+            out["mention_count"] = 0
+            return out
+
+        compounds: List[float] = []
+        top_with_sent: List[Dict[str, Any]] = []
+        for p in posts[: max(limit * 2, 25)]:
+            text = f"{p.get('title', '')} {p.get('selftext', '')}"
+            vs = analyzer.polarity_scores(text)
+            comp = float(vs.get("compound", 0.0))
+            compounds.append(comp)
+            top_with_sent.append(
+                {
+                    "title": p.get("title", ""),
+                    "score": p.get("score", 0),
+                    "sentiment": round(comp, 3),
+                }
+            )
+
+        avg_c = float(statistics.mean(compounds)) if compounds else 0.0
+        out["sentiment_score"] = max(-1.0, min(1.0, avg_c))
+        if avg_c >= 0.15:
+            out["sentiment_label"] = "BULLISH"
+        elif avg_c <= -0.15:
+            out["sentiment_label"] = "BEARISH"
+        else:
+            out["sentiment_label"] = "NEUTRAL"
+
+        out["mention_count"] = len(posts)
+        top_with_sent.sort(key=lambda x: (x.get("score", 0), abs(x.get("sentiment", 0))), reverse=True)
+        out["top_posts"] = top_with_sent[:10]
+        out["trending"] = len(posts) >= max(8, limit // 2)
+        out["success"] = True
+        return out
+    except Exception as e:
+        logger.warning("get_social_sentiment failed for %s: %s", sym, e)
+        out["error"] = str(e)
+        return out
