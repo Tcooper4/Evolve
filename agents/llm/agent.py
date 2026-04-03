@@ -104,8 +104,7 @@ class LLMAgent:
         """Process a prompt asynchronously."""
         self.metrics["prompts_processed"] += 1
 
-        # Simple placeholder implementation
-        # Removed return statement - __init__ should not return values
+        # Intentional no-op: async agent path not wired; use PromptAgent sync flow.
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get agent metrics."""
@@ -2782,7 +2781,11 @@ def get_evolve_platform_tool_registry():
     ]
 
 
-# Global prompt agent instance (lazy; avoid module-level init that pulls in ForecastRouter/ModelRegistry and can trigger Windows Unicode errors)
+# Process-wide singleton PromptAgent (lazy init). Safe for Streamlit Cloud regarding
+# **conversation privacy**: `process_prompt` does not append user text to a per-user
+# conversation list on `self`; chat history lives in Streamlit session_state / memory
+# store elsewhere. Subcomponents (e.g. ForecastRouter) may cache trained models by
+# symbol/date range for performance — shared across users in-process, not user chat text.
 prompt_agent = None
 try:
     prompt_agent = PromptAgent()
@@ -2793,5 +2796,5 @@ except Exception as e:
 
 
 def get_prompt_agent():
-    """Get the global prompt agent instance. May be None if init failed."""
+    """Return the shared PromptAgent, or None if init failed. Not per-session by design."""
     return prompt_agent

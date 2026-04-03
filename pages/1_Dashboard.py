@@ -297,8 +297,28 @@ if opps:
 else:
     st.caption("No opportunities passed the score threshold right now.")
 
+try:
+    from trading.services.alert_checker import check_alerts_for_user
+    from utils.session_utils import get_stable_user_id
+
+    _uid = get_stable_user_id()
+    _triggered = check_alerts_for_user(_uid)
+    if _triggered:
+        for _alert in _triggered:
+            st.warning(
+                "Alert triggered: "
+                f"{_alert.get('symbol', '')} "
+                f"{_alert.get('condition', '')} "
+                f"{_alert.get('threshold', '')}"
+            )
+except Exception as _e:
+    logger.debug("Alert check failed: %s", _e)
+
 # --- Watchlist ---
 st.subheader("Your watchlist")
+MAX_WATCHLIST_SCORES = 5
+if "watchlist_load_all_scores" not in st.session_state:
+    st.session_state["watchlist_load_all_scores"] = False
 try:
     from trading.analysis.ai_score import compute_ai_score
     from trading.data.watchlist import WatchlistManager
@@ -308,47 +328,73 @@ try:
     syms = [str(r.get("symbol", "")).upper() for r in rows if r.get("symbol")]
     if not syms:
         st.caption("Add tickers from the watchlist widget on other pages, or use search.")
-    for sym in syms[:15]:
-        try:
-            q = get_quote(sym)
-            px = q.get("price")
-            prev = q.get("prev_close")
-            if px is None:
-                h = get_history(sym, period="5d")
-                if not h.empty:
-                    px = float(h["Close"].iloc[-1])
-                if len(h) >= 2 and prev in (None, 0):
-                    prev = float(h["Close"].iloc[-2])
-            dlt = None
-            if px is not None and prev not in (None, 0):
-                dlt = (float(px) - float(prev)) / float(prev) * 100
-            ai = compute_ai_score(sym)
-            asc = float(ai.get("overall_score", 0) or 0)
-            c1, c2 = st.columns([3, 1])
-            with c1:
-                d_s = f"{dlt:+.2f}%" if dlt is not None else "—"
-                color = (
-                    "green"
-                    if dlt and dlt > 0
-                    else "red"
-                    if dlt and dlt < 0
-                    else "gray"
-                )
-                px_s = f"${float(px):.2f}" if px is not None else "—"
-                st.markdown(
-                    f"**{sym}** {px_s} :{color}[{d_s}] · "
-                    f":{_score_color(asc)}[AI {asc:.1f}]"
-                )
-            with c2:
-                if st.button("View", key=f"wl_{sym}"):
-                    _set_deep_dive(sym)
-        except Exception as ex:
-            st.caption(f"unavailable: {ex}")
+    else:
+        _load_all = bool(st.session_state.get("watchlist_load_all_scores"))
+        _max_score = len(syms[:15]) if _load_all else min(
+            MAX_WATCHLIST_SCORES, len(syms[:15])
+        )
+        if len(syms) > MAX_WATCHLIST_SCORES:
+            _b1, _b2 = st.columns([3, 1])
+            with _b1:
+                if not _load_all:
+                    st.caption(
+                        f"Showing AI scores for the first {MAX_WATCHLIST_SCORES} "
+                        "tickers. Open a ticker for full analysis."
+                    )
+            with _b2:
+                if st.button("Load all scores", key="wl_load_all_scores"):
+                    try:
+                        st.session_state["watchlist_load_all_scores"] = True
+                        st.rerun()
+                    except Exception as _re:
+                        logger.warning("watchlist load all: %s", _re)
+        scored_count = 0
+        for sym in syms[:15]:
+            if scored_count >= _max_score:
+                break
+            try:
+                q = get_quote(sym)
+                px = q.get("price")
+                prev = q.get("prev_close")
+                if px is None:
+                    h = get_history(sym, period="5d")
+                    if not h.empty:
+                        px = float(h["Close"].iloc[-1])
+                    if len(h) >= 2 and prev in (None, 0):
+                        prev = float(h["Close"].iloc[-2])
+                dlt = None
+                if px is not None and prev not in (None, 0):
+                    dlt = (float(px) - float(prev)) / float(prev) * 100
+                ai = compute_ai_score(sym)
+                asc = float(ai.get("overall_score", 0) or 0)
+                c1, c2 = st.columns([3, 1])
+                with c1:
+                    d_s = f"{dlt:+.2f}%" if dlt is not None else "—"
+                    color = (
+                        "green"
+                        if dlt and dlt > 0
+                        else "red"
+                        if dlt and dlt < 0
+                        else "gray"
+                    )
+                    px_s = f"${float(px):.2f}" if px is not None else "—"
+                    st.markdown(
+                        f"**{sym}** {px_s} :{color}[{d_s}] · "
+                        f":{_score_color(asc)}[AI {asc:.1f}]"
+                    )
+                with c2:
+                    if st.button("View", key=f"wl_{sym}"):
+                        _set_deep_dive(sym)
+                scored_count += 1
+            except Exception as ex:
+                st.caption(f"unavailable: {ex}")
 except Exception as e:
     st.caption(f"unavailable: {e}")
 
 # --- Breaking news ---
 st.subheader("Breaking news")
+_news_cache_key = "home_news_summaries"
+_news_cache_ts = "home_news_summaries_ts"
 try:
     from trading.data.news_aggregator import (
         get_financial_headlines,
@@ -356,20 +402,45 @@ try:
     )
 
     items = get_walter_bloomberg_headlines(5) or get_financial_headlines(5) or []
-    for it in items[:5]:
-        title = (it.get("title") or "")[:200]
-        if not title:
-            continue
-        why = ""
+    if (
+        _news_cache_key not in st.session_state
+        or time.time() - st.session_state.get(_news_cache_ts, 0) > 3600
+    ):
+        summaries = []
         try:
             from agents.llm.active_llm_calls import call_active_llm_simple
 
-            why = call_active_llm_simple(
-                f"In one short sentence, why might this matter to traders: {title}",
-                max_tokens=80,
-            ).strip()
-        except Exception:
-            why = ""
+            for it in items[:5]:
+                title = (it.get("title") or "")[:200]
+                if not title:
+                    continue
+                why = ""
+                try:
+                    why = call_active_llm_simple(
+                        f"In one short sentence, why might this matter to traders: {title}",
+                        max_tokens=80,
+                    ).strip()
+                except Exception:
+                    why = ""
+                summaries.append({"title": title, "why": why})
+        except Exception as _ne:
+            logger.warning("Home news: LLM summaries failed: %s", _ne)
+            summaries = [
+                {"title": (it.get("title") or "")[:200], "why": ""}
+                for it in items[:5]
+                if (it.get("title") or "").strip()
+            ]
+        try:
+            st.session_state[_news_cache_key] = summaries
+            st.session_state[_news_cache_ts] = time.time()
+        except Exception as _se:
+            logger.warning("Home news: session cache failed: %s", _se)
+    news_with_summaries = st.session_state.get(_news_cache_key) or []
+    for row in news_with_summaries:
+        title = (row.get("title") or "")[:200]
+        if not title:
+            continue
+        why = (row.get("why") or "").strip()
         st.markdown(f"**{title}**")
         if why:
             st.caption(f"Why it matters: {why}")

@@ -20,6 +20,7 @@ xgboost==2.0.3
 catboost==1.2.10
 prophet==1.1.7
 pmdarima==2.0.3
+setuptools>=70.0,<81  # pmdarima needs pkg_resources (not in setuptools 82+)
 torch==2.1.2
 # torchaudio==2.1.2       # not needed
 # torchvision==0.16.2     # not needed

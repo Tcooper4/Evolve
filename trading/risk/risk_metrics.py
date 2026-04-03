@@ -1,4 +1,13 @@
-"""Core risk metrics module with reusable functions and visualization support."""
+"""Rolling / visualization risk metrics (Plotly) for trading dashboards.
+
+This module is **not** a duplicate of ``utils/risk_metrics.py``:
+- ``utils/risk_metrics.py`` — VaR/CVaR, Kelly, ``PerformanceMetrics`` / portfolio
+  analytics (audited canonical formulas for Trade page style flows).
+- ``trading/risk/risk_metrics.py`` — ``RiskMetrics`` dataclass, rolling Sharpe/
+  Sortino/Calmar, Plotly charts for institutional-style views.
+
+Import the one that matches your UI layer; do not merge blindly.
+"""
 
 import logging
 from dataclasses import dataclass

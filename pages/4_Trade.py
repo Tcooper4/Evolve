@@ -135,9 +135,9 @@ with tab_paper:
             st.warning("Enter a symbol and positive quantity.")
         else:
             try:
-                import yfinance as yf
+                from trading.data.price_cache import get_history
 
-                hist = yf.Ticker(p_sym).history(period="5d")
+                hist = get_history(p_sym, period="5d")
                 if hist.empty:
                     st.warning(f"No quote data for {p_sym}.")
                 else:
@@ -223,24 +223,105 @@ with tab_paper:
     if not _pos:
         st.info("No open paper positions.")
     else:
+        if st.button("Refresh market marks", key="paper_refresh_marks"):
+            try:
+                from trading.data.price_cache import get_history, get_quote
+
+                for _msym in list(
+                    st.session_state.evolve_paper_positions.keys()
+                ):
+                    _mq = get_quote(_msym)
+                    _mpx = _mq.get("price")
+                    if _mpx is None:
+                        _mh = get_history(_msym, period="5d")
+                        if _mh is not None and not _mh.empty:
+                            _mcm = {
+                                c.lower(): c for c in _mh.columns
+                            }
+                            _mcc = _mcm.get("close", _mh.columns[0])
+                            _mpx = float(_mh[_mcc].iloc[-1])
+                    if _mpx is not None:
+                        st.session_state.evolve_last_prices[_msym] = float(
+                            _mpx
+                        )
+                st.rerun()
+            except Exception as e:
+                st.caption(f"Refresh failed: {e}")
         rows = []
         for sym, row in _pos.items():
             q = float(row.get("qty", 0) or 0)
             avg = float(row.get("avg", 0) or 0)
             px = float(_prices.get(sym, avg) or avg)
             u_pnl = (px - avg) * q if q else 0.0
+            pnl_pct = ((px - avg) / avg * 100.0) if avg else 0.0
             rows.append({
                 "Symbol": sym,
                 "Qty": q,
                 "Avg cost": round(avg, 4),
                 "Last mark": round(px, 4),
                 "Unrealized P&L": round(u_pnl, 2),
+                "P&L %": round(pnl_pct, 2),
             })
         st.dataframe(
             normalize_for_display(pd.DataFrame(rows)),
             use_container_width=True,
             key="paper_positions_df",
         )
+        st.caption("Close a full long via market fill at last mark.")
+        _c_sym = st.selectbox(
+            "Position to close",
+            list(_pos.keys()),
+            key="paper_close_pick",
+        )
+        if st.button("Close full position", key="paper_close_btn"):
+            try:
+                from trading.data.price_cache import get_history, get_quote
+
+                _ensure_paper()
+                cash = float(st.session_state.evolve_paper_cash)
+                pos = dict(st.session_state.evolve_paper_positions)
+                cur = pos.get(_c_sym, {"qty": 0.0, "avg": 0.0})
+                cur_q = float(cur.get("qty", 0) or 0)
+                cur_avg = float(cur.get("avg", 0) or 0)
+                if cur_q <= 0:
+                    st.warning("No quantity for selected symbol.")
+                else:
+                    _cq = get_quote(_c_sym)
+                    fill = _cq.get("price")
+                    if fill is None:
+                        _ch = get_history(_c_sym, period="5d")
+                        if _ch is None or _ch.empty:
+                            st.warning("No price for close.")
+                        else:
+                            _ccm = {c.lower(): c for c in _ch.columns}
+                            _ccc = _ccm.get("close", _ch.columns[0])
+                            fill = float(_ch[_ccc].iloc[-1])
+                    if fill is not None:
+                        fill = float(fill)
+                        fee_rate = 0.0001
+                        proceeds = cur_q * fill * (1.0 - fee_rate)
+                        pnl = (fill - cur_avg) * cur_q
+                        st.session_state.evolve_paper_cash = cash + proceeds
+                        pos.pop(_c_sym, None)
+                        st.session_state.evolve_paper_positions = pos
+                        st.session_state.evolve_last_prices[_c_sym] = fill
+                        st.session_state.evolve_paper_trades.append({
+                            "id": str(uuid.uuid4()),
+                            "time": datetime.now().isoformat(),
+                            "symbol": _c_sym,
+                            "side": "SELL",
+                            "qty": cur_q,
+                            "price": fill,
+                            "type": "Market",
+                            "realized_pnl": round(pnl, 2),
+                        })
+                        _log_equity("close")
+                        st.success(
+                            f"Closed {_c_sym} {cur_q} sh @ ~{fill:.2f} (paper)."
+                        )
+                        st.rerun()
+            except Exception as e:
+                st.caption(f"Close failed: {e}")
 
     st.markdown("**Estimated costs**")
     try:

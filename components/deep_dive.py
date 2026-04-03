@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Single-ticker deep analysis surface (scroll + 4 tabs)."""
 import logging
+from datetime import datetime
 
 import streamlit as st
 
@@ -251,6 +252,43 @@ def render_deep_dive(ticker: str) -> None:
                 f"Entry {rec.get('entry')} · Target {rec.get('target')} · "
                 f"Stop {rec.get('stop')} · Expected move **{rec.get('pct_move', '—')}%**"
             )
+            if st.button(
+                "Track recommendation",
+                key=f"track_{sym}",
+            ):
+                try:
+                    from trading.services.recommendation_tracker import (
+                        RecommendationTracker,
+                    )
+                    from utils.session_utils import get_stable_user_id
+
+                    _uid = get_stable_user_id()
+                    if not _uid:
+                        st.warning(
+                            "Sign in or complete onboarding to save tracking."
+                        )
+                    else:
+                        _ai = float(
+                            (score or {}).get("overall_score")
+                            or rec.get("signal_score")
+                            or 0
+                        )
+                        tracker = RecommendationTracker()
+                        tracker.save_recommendation(
+                            session_id=_uid,
+                            symbol=sym,
+                            action=str(rec.get("action", "HOLD")),
+                            entry_price=float(rec.get("entry") or 0),
+                            target_price=float(rec.get("target") or 0),
+                            stop_price=float(rec.get("stop") or 0),
+                            ai_score=_ai,
+                            timestamp=datetime.now().isoformat(),
+                        )
+                        st.success(
+                            "Recommendation saved for tracking"
+                        )
+                except Exception as e:
+                    st.caption(f"Tracking unavailable: {e}")
         elif score and not score.get("error"):
             st.caption(score.get("summary", ""))
         else:

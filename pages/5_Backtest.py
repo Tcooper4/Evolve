@@ -304,7 +304,7 @@ try:
         type="primary"
     ):
         try:
-            import yfinance as yf
+            from trading.data.price_cache import get_history
             from trading.validation.walk_forward_utils import (
                 WalkForwardValidator
             )
@@ -314,8 +314,9 @@ try:
                 f"Running walk-forward validation on "
                 f"{wf_symbol} with {wf_model}..."
             ):
-                hist = yf.Ticker(wf_symbol).history(
-                    period="3y"
+                hist = get_history(
+                    wf_symbol.strip().upper(),
+                    period="3y",
                 )
                 if hist.empty or len(hist) < wf_train + wf_test:
                     st.warning(
@@ -345,7 +346,7 @@ try:
                     else:
                         # Summary metrics
                         st.markdown("#### Results Summary")
-                        m1, m2, m3, m4, m5 = st.columns(5)
+                        m1, m2, m3, m4, m5, m6 = st.columns(6)
                         m1.metric(
                             "Windows",
                             summary.get("n_windows", 0)
@@ -364,12 +365,18 @@ try:
                             else "N/A"
                         )
                         m4.metric(
-                            "Mean Sharpe",
-                            f"{summary.get('mean_sharpe_ratio', 0):.2f}"
-                            if summary.get('mean_sharpe_ratio') is not None
+                            "Hit rate (MAPE < 5%)",
+                            f"{summary.get('hit_rate_5pct', 0)*100:.1f}%"
+                            if summary.get('hit_rate_5pct') is not None
                             else "N/A"
                         )
                         m5.metric(
+                            "Hit rate (MAPE < 10%)",
+                            f"{summary.get('hit_rate_10pct', 0)*100:.1f}%"
+                            if summary.get('hit_rate_10pct') is not None
+                            else "N/A"
+                        )
+                        m6.metric(
                             "Consistency Score",
                             f"{summary.get('consistency_score', 0):.1f}/10"
                             if summary.get('consistency_score') is not None

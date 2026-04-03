@@ -156,11 +156,11 @@ class MacroFactors:
         """Get yield curve data (10Y-2Y spread)."""
         result = {}
         try:
-            import yfinance as yf
+            from trading.data.price_cache import get_macro_history
             # TNX = 10Y Treasury, IRX = 13-week T-bill
-            tnx = yf.Ticker("^TNX").history(period="5d")
-            tyx = yf.Ticker("^TYX").history(period="5d")  # 30Y
-            fvx = yf.Ticker("^FVX").history(period="5d")  # 5Y
+            tnx = get_macro_history("^TNX", period="5d")
+            tyx = get_macro_history("^TYX", period="5d")  # 30Y
+            fvx = get_macro_history("^FVX", period="5d")  # 5Y
 
             rates = {}
             for name, ticker_data in [
@@ -185,7 +185,7 @@ class MacroFactors:
                     )
 
             # Approximate 2Y from short-end
-            irx = yf.Ticker("^IRX").history(period="5d")
+            irx = get_macro_history("^IRX", period="5d")
             if not irx.empty:
                 _col_map = {c.lower(): c for c in irx.columns}
                 close_col = _col_map.get("close", irx.columns[0])
@@ -210,8 +210,8 @@ class MacroFactors:
         """Get VIX level and regime."""
         result = {}
         try:
-            import yfinance as yf
-            vix = yf.Ticker("^VIX").history(period="1mo")
+            from trading.data.price_cache import get_macro_history
+            vix = get_macro_history("^VIX", period="1mo")
             if not vix.empty:
                 _col_map = {c.lower(): c for c in vix.columns}
                 close_col = _col_map.get("close", vix.columns[0])
@@ -240,9 +240,9 @@ class MacroFactors:
         """Get credit spread proxy using HYG/IEI."""
         result = {}
         try:
-            import yfinance as yf
-            hyg = yf.Ticker("HYG").history(period="1mo")
-            iei = yf.Ticker("IEI").history(period="1mo")
+            from trading.data.price_cache import get_macro_history
+            hyg = get_macro_history("HYG", period="1mo")
+            iei = get_macro_history("IEI", period="1mo")
 
             if not hyg.empty and not iei.empty:
                 _col_map_h = {c.lower(): c for c in hyg.columns}
@@ -275,10 +275,10 @@ class MacroFactors:
         """Get DXY dollar strength."""
         result = {}
         try:
-            import yfinance as yf
-            dxy = yf.Ticker("DX-Y.NYB").history(period="1mo")
+            from trading.data.price_cache import get_macro_history
+            dxy = get_macro_history("DX-Y.NYB", period="1mo")
             if dxy.empty:
-                dxy = yf.Ticker("UUP").history(period="1mo")
+                dxy = get_macro_history("UUP", period="1mo")
 
             if not dxy.empty:
                 _col_map = {c.lower(): c for c in dxy.columns}
@@ -311,9 +311,9 @@ class MacroFactors:
         """Get inflation regime proxy using TIP/IEF."""
         result = {}
         try:
-            import yfinance as yf
-            tip = yf.Ticker("TIP").history(period="1mo")
-            ief = yf.Ticker("IEF").history(period="1mo")
+            from trading.data.price_cache import get_macro_history
+            tip = get_macro_history("TIP", period="1mo")
+            ief = get_macro_history("IEF", period="1mo")
 
             if not tip.empty and not ief.empty:
                 _col_map_t = {c.lower(): c for c in tip.columns}

@@ -1361,7 +1361,7 @@ def render(
                             show_table=True
                         )
 
-                        # Show confidence metrics
+                        # Model agreement bands (not calibrated CIs)
                         if isinstance(forecast_result, dict) and ('lower_bound' in forecast_result or 'confidence' in forecast_result):
                             render_confidence_metrics(forecast_data)
                         # News sentiment overlay below forecast results
@@ -1407,9 +1407,9 @@ def render(
                         forecast_df = st.session_state.current_forecast
                         forecast_result = st.session_state.get('current_forecast_result', {})
 
-                        confidence_intervals = None
+                        model_agreement_bands = None
                         if isinstance(forecast_result, dict) and 'lower_bound' in forecast_result and 'upper_bound' in forecast_result:
-                            confidence_intervals = {
+                            model_agreement_bands = {
                                 'lower': forecast_result['lower_bound'],
                                 'upper': forecast_result['upper_bound']
                             }
@@ -1418,7 +1418,7 @@ def render(
                             historical=hist_data,
                             forecast=forecast_df['forecast'].values,
                             forecast_dates=forecast_df.index,
-                            confidence_intervals=confidence_intervals,
+                            confidence_intervals=model_agreement_bands,
                             title=f"{st.session_state.analyze_symbol} - Historical & Forecast"
                         )
                         st.plotly_chart(fig, width='stretch')

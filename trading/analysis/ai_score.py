@@ -17,6 +17,9 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
+from trading.data.price_cache import get_history as _pc_get_history
+from trading.utils.safe_math import safe_rsi
+
 logger = logging.getLogger(__name__)
 
 SECTOR_PE = {
@@ -76,7 +79,7 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
     Args:
         symbol: ticker string
         hist: optional pre-fetched history DataFrame (Close, Volume, etc.)
-              If None, fetches 6mo from yfinance.
+              If None, fetches 6mo via price_cache (shared TTL).
 
     Returns dict:
         overall_score: float 1-10
@@ -92,8 +95,11 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
     try:
         # --- Fetch data ---
         if hist is None or hist.empty:
-            ticker = yf.Ticker(symbol)
-            hist = ticker.history(period="6mo")
+            try:
+                hist = _pc_get_history(symbol, period="6mo")
+            except Exception as e:
+                logger.warning("ai_score: price_cache get_history failed: %s", e)
+                hist = pd.DataFrame()
         if hist.empty or len(hist) < 20:
             return _error_score(symbol, "Insufficient price history")
 
@@ -118,9 +124,11 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
         # ── TECHNICAL SCORE (0-10) ──────────────────────────────────
         tech_points = 0.0
 
-        # RSI (0-100 → score)
-        rsi = _calc_rsi(close, 14)
-        if rsi is not None:
+        # RSI (0-100 → score) — Wilder smoothing via safe_rsi (same as XGBoost / platform)
+        _rsi_series = safe_rsi(close, 14)
+        _rsi_flat = np.asarray(_rsi_series, dtype=float).ravel()
+        rsi = float(_rsi_flat[-1]) if _rsi_flat.size else None
+        if rsi is not None and np.isfinite(rsi):
             if 40 <= rsi <= 60:
                 rsi_score = 5.0
             elif 30 <= rsi < 40 or 60 < rsi <= 70:
@@ -453,7 +461,10 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
         )
         overall = round(min(10.0, max(1.0, overall)), 1)
 
-        # ML Score blend (if model is trained)
+        if earnings_near:
+            overall = min(overall, 7.5)
+
+        # ML Score blend (if model is trained) — after pre-earnings cap
         try:
             from trading.analysis.ml_score_trainer import (
                 MLScoreTrainer,
@@ -530,20 +541,6 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
     except Exception as e:
         logger.error(f"AI Score failed for {symbol}: {e}")
         return _error_score(symbol, str(e))
-
-
-def _calc_rsi(prices: np.ndarray, period: int = 14) -> Optional[float]:
-    if len(prices) < period + 1:
-        return None
-    deltas = np.diff(prices)
-    gains = np.where(deltas > 0, deltas, 0.0)
-    losses = np.where(deltas < 0, -deltas, 0.0)
-    avg_gain = np.mean(gains[-period:])
-    avg_loss = np.mean(losses[-period:])
-    if avg_loss == 0:
-        return 100.0
-    rs = avg_gain / avg_loss
-    return 100.0 - (100.0 / (1.0 + rs))
 
 
 def _error_score(symbol: str, error: str) -> Dict[str, Any]:

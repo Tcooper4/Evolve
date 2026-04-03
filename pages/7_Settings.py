@@ -2,6 +2,7 @@
 """
 Settings page — Watchlist, Alerts, System (from Alerts, Admin, Watchlist).
 """
+import json
 import logging
 import sys
 import uuid
@@ -41,11 +42,12 @@ render_top_bar()
 st.title("⚙️ Settings")
 st.caption("Watchlist, alerts, and system configuration")
 
-tab_wl, tab_keys, tab_alerts, tab_admin = st.tabs([
+tab_wl, tab_keys, tab_alerts, tab_track, tab_admin = st.tabs([
     "Watchlist",
     "🔑 API Keys",
     "Alerts",
-    "System"
+    "Performance",
+    "System",
 ])
 
 with tab_wl:
@@ -320,6 +322,88 @@ with tab_alerts:
         logger.warning("settings alerts tab failed: %s", e)
         st.caption(f"Alerts unavailable: {e}")
 
+with tab_track:
+    st.subheader("Performance tracking")
+    st.caption(
+        "Tracked recommendations from Deep Dive — live P&L vs entry, "
+        "target, and stop."
+    )
+    try:
+        from utils.session_utils import get_stable_user_id
+        from utils.dataframe_utils import normalize_for_display
+        import pandas as pd
+        from trading.services.recommendation_tracker import (
+            RecommendationTracker,
+        )
+
+        _tsid = get_stable_user_id()
+        if not _tsid:
+            st.info(
+                "Complete onboarding so recommendations can be tied to "
+                "your account."
+            )
+        else:
+            _trk = RecommendationTracker()
+            _clr_c, _ = st.columns([1, 3])
+            with _clr_c:
+                if st.button(
+                    "Clear closed recommendations",
+                    key="rec_clear_closed",
+                    help="Remove closed rows from stored tracking history.",
+                ):
+                    try:
+                        _nrm = _trk.clear_closed_recommendations(_tsid)
+                        st.success(
+                            f"Removed {_nrm} closed recommendation(s)."
+                        )
+                        st.rerun()
+                    except Exception as _cle:
+                        logger.warning(
+                            "settings: clear closed recs failed: %s", _cle
+                        )
+                        st.caption(f"Could not clear: {_cle}")
+            _summ = _trk.get_performance_summary(_tsid)
+            t1, t2, t3, t4 = st.columns(4)
+            with t1:
+                st.metric(
+                    "Tracked (open)",
+                    str(_summ.get("total_recommendations") or 0),
+                )
+            with t2:
+                _wr = _summ.get("win_rate")
+                st.metric(
+                    "Win rate (target vs stop)",
+                    f"{float(_wr)*100:.1f}%"
+                    if _wr is not None
+                    else "—",
+                )
+            with t3:
+                _ar = _summ.get("avg_return_pct")
+                st.metric(
+                    "Avg P&L %",
+                    f"{_ar:.2f}" if _ar is not None else "—",
+                )
+            with t4:
+                st.caption(
+                    f"Best {_summ.get('best_trade_pct')} · "
+                    f"worst {_summ.get('worst_trade_pct')}"
+                )
+            _outs = _trk.check_outcomes(_tsid)
+            if _outs:
+                _odf = pd.DataFrame(_outs)
+                st.dataframe(
+                    normalize_for_display(_odf),
+                    width="stretch",
+                    hide_index=True,
+                )
+            else:
+                st.info(
+                    "No open tracked picks. Use **Track recommendation** "
+                    "on a ticker’s Deep Dive card."
+                )
+    except Exception as e:
+        st.caption(f"Feature unavailable: {e}")
+
 with tab_admin:
     st.subheader("System")
     try:
@@ -446,28 +530,83 @@ with tab_admin:
         try:
             from trading.analysis.ml_score_trainer import MLScoreTrainer
 
-            model_exists = (
-                Path(".cache/ml_score/ml_score_model.joblib").exists()
-            )
-            if model_exists:
-                st.success("ML Score model is trained and active")
+            _ml_dir = project_root / ".cache" / "ml_score"
+            _ml_model = _ml_dir / "ml_score_model.joblib"
+            _ml_meta_f = _ml_dir / "ml_score_meta.json"
+            model_exists = _ml_model.is_file()
+            _ml_meta = {}
+            if _ml_meta_f.is_file():
+                try:
+                    _ml_meta = json.loads(
+                        _ml_meta_f.read_text(encoding="utf-8")
+                    )
+                except Exception as _je:
+                    logger.debug("settings: ml meta read: %s", _je)
+            if model_exists and _ml_meta.get("training_date"):
+                _vda = _ml_meta.get("val_directional_accuracy")
+                _da_pct = (
+                    f"{float(_vda)*100:.1f}%"
+                    if _vda is not None
+                    else "—"
+                )
+                st.success("ML Score model is trained and active.")
+                st.caption(
+                    f"Training date: {_ml_meta.get('training_date', '')[:19]} · "
+                    f"Directional accuracy (val): {_da_pct} · "
+                    f"n_samples: {_ml_meta.get('n_samples', '—')}"
+                )
             else:
                 st.warning(
-                    "ML Score model not trained — using rules-based scoring only"
+                    "AI Score is using rules-based scoring. Train the ML "
+                    "model to enable blended ML scoring."
                 )
+            _uni_choice = st.selectbox(
+                "Training universe size",
+                [
+                    "Quick (20 stocks)",
+                    "Standard (50 stocks)",
+                    "Full SP100 (100 stocks)",
+                ],
+                key="ml_train_universe",
+            )
+            _sp100_fp = project_root / "data" / "universes" / "sp100.json"
+            _train_uni = []
+            try:
+                _raw_u = json.loads(
+                    _sp100_fp.read_text(encoding="utf-8")
+                )
+                if isinstance(_raw_u, list):
+                    if "Quick" in _uni_choice:
+                        _train_uni = [str(x) for x in _raw_u[:20]]
+                    elif "Standard" in _uni_choice:
+                        _train_uni = [str(x) for x in _raw_u[:50]]
+                    else:
+                        _train_uni = [str(x) for x in _raw_u[:100]]
+            except Exception as _ue:
+                logger.warning("settings: universe load failed: %s", _ue)
             if st.button("Train ML Score Model", key="train_ml_score"):
+                _n = len(_train_uni) if _train_uni else 20
                 with st.spinner(
-                    "Training on default universe... (may take several minutes)"
+                    f"Training on {_n} stocks… this may take 5–10 minutes."
                 ):
                     trainer = MLScoreTrainer()
-                    result = trainer.train()
+                    result = trainer.train(
+                        universe=_train_uni if _train_uni else None
+                    )
                     if result.get("error"):
                         st.error(f"Training failed: {result['error']}")
                     else:
-                        _da = result.get("val_directional_accuracy") or 0
+                        _da = float(
+                            result.get("val_directional_accuracy") or 0
+                        )
+                        _r2 = result.get("val_r2")
                         st.success(
-                            f"Trained on {result.get('n_samples')} samples. "
-                            f"Directional accuracy: {_da*100:.1f}%"
+                            f"Trained on {result.get('n_samples')} samples."
+                        )
+                        st.caption(
+                            f"Validation — directional accuracy: "
+                            f"{_da*100:.1f}% · R²: {_r2} · "
+                            f"n_samples: {result.get('n_samples')}"
                         )
         except Exception as e:
             st.caption(f"ML Score training unavailable: {e}")

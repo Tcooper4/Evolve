@@ -29,6 +29,31 @@ _ROUTER_STOPWORDS = {
     "EPS", "CEO", "IPO", "ETF", "USA", "FED",
 }
 
+# Heuristic triggers (substring / regex). Single-symbol tools require a ticker
+# extracted from the user message (see _heuristic_tool_calls).
+_TOOL_PATTERNS = {
+    "scan_universe": [
+        "scan", "screener", "screen", "universe", "stock picks", "top picks",
+        "opportunities", "what to buy", "what to look at", "best stocks",
+        "find me", "ideas", "run the scanner", "run scanner", "best setups",
+        "what should i look",
+    ],
+    "get_ai_score": [
+        "ai score", "score for", "rate ", "should i buy", "should i sell",
+        "analyze ", "analysis", "deep dive", "what do you think of",
+    ],
+    "get_forecast": [
+        "forecast", "predict", "price target", "7 day", "7-day", "outlook",
+    ],
+    "get_news": [
+        "news", "headline", "headlines", "article", "what happened",
+        "latest on", "catalyst",
+    ],
+    "get_risk_metrics": [
+        "risk", "volatility", "sharpe", "drawdown", "var", "kelly",
+    ],
+}
+
 
 @dataclass
 class ToolChatResult:
@@ -82,53 +107,87 @@ def _extract_symbols(user_message: str) -> List[str]:
     return [s for s in found if s not in _ROUTER_STOPWORDS]
 
 
+def _pattern_hit(msg: str, patterns: List[str]) -> bool:
+    """Match substrings; supports regex: prefix for full-line patterns."""
+    for p in patterns:
+        try:
+            if p.startswith("regex:"):
+                if re.search(p[6:].strip(), msg, re.IGNORECASE | re.DOTALL):
+                    return True
+            elif p in msg:
+                return True
+        except Exception:
+            continue
+    return False
+
+
 def _heuristic_tool_calls(
     user_message: str,
     focus_symbol: Optional[str],
     *,
     allowed_names: set,
 ) -> List[Dict[str, Any]]:
+    _ = focus_symbol  # Router LLM may use context; heuristics need a ticker in text
     msg = (user_message or "").lower()
     syms = _extract_symbols(user_message or "")
-    sym = (syms[0] if syms else (focus_symbol or "").strip().upper()) or None
+    sym_from_msg = (syms[0] if syms else None) or None
     calls: List[Dict[str, Any]] = []
 
-    scan_triggers = (
-        "scan", "screener", "screen", "universe", "stock picks", "top picks",
-        "ideas", "what should i look", "what to buy", "look at today",
-        "run the scanner", "run scanner", "best setups", "opportunities",
-    )
-    if any(x in msg for x in scan_triggers) and "scan_universe" in allowed_names:
+    if _pattern_hit(msg, _TOOL_PATTERNS.get("scan_universe", [])) and (
+        "scan_universe" in allowed_names
+    ):
         calls.append({
             "name": "scan_universe",
             "arguments": {"universe": "default", "min_score": 6.0, "max_results": 12},
         })
 
-    if sym:
-        if any(x in msg for x in ("forecast", "target", "price target", "7 day", "7-day")):
-            if "get_forecast" in allowed_names:
-                calls.append({
-                    "name": "get_forecast",
-                    "arguments": {"symbol": sym, "horizon": 7},
-                })
-        if any(x in msg for x in ("news", "headline", "headlines", "article")):
-            if "get_news" in allowed_names:
-                calls.append({
-                    "name": "get_news",
-                    "arguments": {"symbol": sym, "max_items": 8},
-                })
-        if any(x in msg for x in ("risk", "sharpe", "drawdown", "var", "volatility")):
-            if "get_risk_metrics" in allowed_names:
-                calls.append({
-                    "name": "get_risk_metrics",
-                    "arguments": {"symbol": sym, "period": "1y"},
-                })
-        if any(x in msg for x in ("ai score", "score", "analyze", "analysis", "deep dive")):
-            if "get_ai_score" in allowed_names:
-                calls.append({
-                    "name": "get_ai_score",
-                    "arguments": {"symbol": sym},
-                })
+    if re.search(r"where\s+is\s+.+\s+going", msg) and "get_forecast" in allowed_names:
+        if sym_from_msg:
+            calls.append({
+                "name": "get_forecast",
+                "arguments": {"symbol": sym_from_msg, "horizon": 7},
+            })
+
+    if not sym_from_msg:
+        seen = set()
+        deduped: List[Dict[str, Any]] = []
+        for c in calls:
+            n = c.get("name")
+            if not n or n in seen or n not in allowed_names:
+                continue
+            seen.add(n)
+            deduped.append(c)
+        return deduped[:MAX_TOOLS_PER_TURN]
+
+    sym = sym_from_msg
+    if _pattern_hit(msg, _TOOL_PATTERNS.get("get_forecast", [])) and (
+        "get_forecast" in allowed_names
+    ):
+        calls.append({
+            "name": "get_forecast",
+            "arguments": {"symbol": sym, "horizon": 7},
+        })
+    if _pattern_hit(msg, _TOOL_PATTERNS.get("get_news", [])) and (
+        "get_news" in allowed_names
+    ):
+        calls.append({
+            "name": "get_news",
+            "arguments": {"symbol": sym, "max_items": 8},
+        })
+    if _pattern_hit(msg, _TOOL_PATTERNS.get("get_risk_metrics", [])) and (
+        "get_risk_metrics" in allowed_names
+    ):
+        calls.append({
+            "name": "get_risk_metrics",
+            "arguments": {"symbol": sym, "period": "1y"},
+        })
+    if _pattern_hit(msg, _TOOL_PATTERNS.get("get_ai_score", [])) and (
+        "get_ai_score" in allowed_names
+    ):
+        calls.append({
+            "name": "get_ai_score",
+            "arguments": {"symbol": sym},
+        })
 
     seen = set()
     deduped: List[Dict[str, Any]] = []

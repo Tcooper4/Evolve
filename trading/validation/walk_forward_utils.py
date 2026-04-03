@@ -2,7 +2,7 @@
 Walk-Forward Validation Utilities
 ==================================
 INTEGRATION NOTES:
-- Drop into: trading/validation/walk_forward_utils.py (replace existing stub)
+- Drop into: trading/validation/walk_forward_utils.py (integration template)
 - Wire into: pages/5_Backtest.py Walk-Forward tab
 - Call pattern:
     from trading.validation.walk_forward_utils import WalkForwardValidator
@@ -35,8 +35,6 @@ class WalkForwardWindow:
     mse: float
     mape: float
     directional_accuracy: float
-    sharpe_ratio: float
-    max_drawdown: float
 
 
 @dataclass
@@ -62,8 +60,6 @@ class WalkForwardResult:
                 "mse": round(w.mse, 4),
                 "mape": round(w.mape, 2),
                 "directional_accuracy": round(w.directional_accuracy, 3),
-                "sharpe_ratio": round(w.sharpe_ratio, 3),
-                "max_drawdown": round(w.max_drawdown, 4),
             })
         return pd.DataFrame(rows)
 
@@ -155,7 +151,7 @@ class WalkForwardValidator:
                 test_data = data.iloc[test_start_idx:test_end_idx].copy()
 
                 # Generate forecasts using forecast router
-                preds, actuals = self._generate_forecasts(
+                preds, actuals, anchors = self._generate_forecasts(
                     train_data, test_data, close_col, horizon
                 )
 
@@ -169,7 +165,7 @@ class WalkForwardValidator:
                     continue
 
                 # Calculate metrics
-                metrics = self._calculate_metrics(preds, actuals)
+                metrics = self._calculate_metrics(preds, actuals, anchors)
 
                 window = WalkForwardWindow(
                     window_index=window_idx,
@@ -213,15 +209,20 @@ class WalkForwardValidator:
         test_data: pd.DataFrame,
         close_col: str,
         horizon: int,
-    ) -> Tuple[List[float], List[float]]:
-        """Generate forecasts for a single window."""
+    ) -> Tuple[List[float], List[float], List[float]]:
+        """Generate forecasts for a single window.
+
+        Returns parallel lists: predicted prices, actual prices, and per-step
+        anchor (last known close before each predicted step) for directional
+        accuracy vs path co-movement.
+        """
         try:
             from trading.models.forecast_router import ForecastRouter
             router = ForecastRouter()
 
-            # Fit on train, predict on test
-            preds = []
-            actuals = []
+            preds: List[float] = []
+            actuals: List[float] = []
+            anchors: List[float] = []
 
             # Step through test data one horizon at a time
             for i in range(0, len(test_data), horizon):
@@ -237,6 +238,7 @@ class WalkForwardValidator:
                     data=context,
                     horizon=horizon,
                     model_type=self.model_name,
+                    run_walk_forward=False,
                 )
 
                 if result is None:
@@ -255,38 +257,51 @@ class WalkForwardValidator:
                 ][close_col].values.tolist()
 
                 min_len = min(len(forecast_vals), len(actual_slice))
-                preds.extend(forecast_vals[:min_len])
-                actuals.extend(actual_slice[:min_len])
+                for j in range(min_len):
+                    if j == 0:
+                        anchor = float(context.iloc[-1][close_col])
+                    else:
+                        anchor = float(actual_slice[j - 1])
+                    anchors.append(anchor)
+                    preds.append(float(forecast_vals[j]))
+                    actuals.append(float(actual_slice[j]))
 
-            return preds, actuals
+            return preds, actuals, anchors
 
         except Exception as e:
             logger.warning(
                 "WalkForwardValidator: forecast generation failed: %s", e
             )
-            return [], []
+            return [], [], []
 
     def _calculate_metrics(
         self,
         predictions: List[float],
         actuals: List[float],
+        anchors: List[float],
     ) -> Dict[str, float]:
         """Calculate performance metrics for a window."""
-        if not predictions or not actuals:
+        if (
+            not predictions
+            or not actuals
+            or not anchors
+            or len(predictions) != len(actuals)
+            or len(anchors) != len(actuals)
+        ):
             return {
                 "mae": float("nan"),
                 "mse": float("nan"),
                 "mape": float("nan"),
                 "directional_accuracy": float("nan"),
-                "sharpe_ratio": float("nan"),
-                "max_drawdown": float("nan"),
             }
 
         preds = np.array(predictions)
         acts = np.array(actuals)
-        min_len = min(len(preds), len(acts))
+        anch = np.array(anchors)
+        min_len = min(len(preds), len(acts), len(anch))
         preds = preds[:min_len]
         acts = acts[:min_len]
+        anch = anch[:min_len]
 
         # Error metrics
         mae = float(np.mean(np.abs(preds - acts)))
@@ -298,43 +313,16 @@ class WalkForwardValidator:
             np.mean(np.abs((preds[nonzero] - acts[nonzero]) / acts[nonzero])) * 100
         ) if nonzero.any() else float("nan")
 
-        # Directional accuracy
-        if len(acts) > 1:
-            actual_dirs = np.sign(np.diff(acts))
-            pred_dirs = np.sign(np.diff(preds))
-            da = float(np.mean(actual_dirs == pred_dirs))
-        else:
-            da = float("nan")
-
-        # Returns-based metrics
-        if len(acts) > 1:
-            returns = np.diff(acts) / acts[:-1]
-            pred_returns = np.diff(preds) / preds[:-1]
-
-            # Sharpe (annualized, assuming daily)
-            if returns.std() > 0:
-                sharpe = float(
-                    returns.mean() / returns.std() * np.sqrt(252)
-                )
-            else:
-                sharpe = 0.0
-
-            # Max drawdown
-            cumulative = np.cumprod(1 + returns)
-            running_max = np.maximum.accumulate(cumulative)
-            drawdown = (cumulative - running_max) / running_max
-            max_dd = float(drawdown.min())
-        else:
-            sharpe = float("nan")
-            max_dd = float("nan")
+        # Directional accuracy: sign(pred - anchor) vs sign(actual - anchor)
+        dir_pred = np.sign(preds - anch)
+        dir_act = np.sign(acts - anch)
+        da = float(np.mean(dir_pred == dir_act))
 
         return {
             "mae": mae,
             "mse": mse,
             "mape": mape,
             "directional_accuracy": da,
-            "sharpe_ratio": sharpe,
-            "max_drawdown": max_dd,
         }
 
     def _aggregate_performance(self) -> Dict[str, Any]:
@@ -346,10 +334,16 @@ class WalkForwardValidator:
         mapes = [w.mape for w in self._windows if not np.isnan(w.mape)]
         das = [w.directional_accuracy for w in self._windows
                if not np.isnan(w.directional_accuracy)]
-        sharpes = [w.sharpe_ratio for w in self._windows
-                   if not np.isnan(w.sharpe_ratio)]
-        drawdowns = [w.max_drawdown for w in self._windows
-                     if not np.isnan(w.max_drawdown)]
+
+        mapes_ok = [w.mape for w in self._windows if not np.isnan(w.mape)]
+        hit_5 = (
+            float(np.mean([m < 5.0 for m in mapes_ok]))
+            if mapes_ok else None
+        )
+        hit_10 = (
+            float(np.mean([m < 10.0 for m in mapes_ok]))
+            if mapes_ok else None
+        )
 
         return {
             "model": self.model_name,
@@ -358,8 +352,8 @@ class WalkForwardValidator:
             "mean_mae": round(np.mean(maes), 4) if maes else None,
             "mean_mape": round(np.mean(mapes), 2) if mapes else None,
             "mean_directional_accuracy": round(np.mean(das), 3) if das else None,
-            "mean_sharpe_ratio": round(np.mean(sharpes), 3) if sharpes else None,
-            "mean_max_drawdown": round(np.mean(drawdowns), 4) if drawdowns else None,
+            "hit_rate_5pct": round(hit_5, 3) if hit_5 is not None else None,
+            "hit_rate_10pct": round(hit_10, 3) if hit_10 is not None else None,
             "consistency_score": self._consistency_score(das),
             "window_type": self.window_type,
         }
@@ -380,7 +374,7 @@ class WalkForwardValidator:
     def get_summary(self) -> Dict[str, Any]:
         """Get human-readable summary of results."""
         if self.results is None:
-            return {"error": "Run validate() first"}
+            return {"error": "Run run() first"}
         return self.results.model_performance
 
     def get_dataframe(self) -> pd.DataFrame:

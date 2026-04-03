@@ -1128,7 +1128,9 @@ class ForecastRouter:
 
         Returns a dict containing:
         - consensus_forecast: mean path across models
-        - upper_bound / lower_bound: mean ± std band
+        - upper_bound / lower_bound: mean ± std across models (model agreement
+          band; NOT a calibrated prediction interval)
+        - band_type: "model_disagreement"
         - consensus_price: day-horizon consensus price
         - price_targets: per-model day-horizon prices
         - direction: BULLISH / BEARISH / NEUTRAL
@@ -1309,6 +1311,7 @@ class ForecastRouter:
                         "consensus_forecast": fb_fc[:horizon_int].tolist(),
                         "upper_bound": None,
                         "lower_bound": None,
+                        "band_type": "model_disagreement",
                         "model_agreement": 0.0,
                         "conviction": "INSUFFICIENT",
                         "direction": "NEUTRAL",
@@ -1404,6 +1407,8 @@ class ForecastRouter:
 
         stacked = np.stack(valid_forecasts)
         consensus = stacked.mean(axis=0)
+        # Per-timestep std across models — dispersion of model paths, not
+        # empirical forecast error; used for agreement bands only.
         std = stacked.std(axis=0)
 
         # Consensus price at horizon
@@ -1463,6 +1468,7 @@ class ForecastRouter:
             "consensus_forecast": consensus.tolist(),
             "upper_bound": (consensus + std).tolist(),
             "lower_bound": (consensus - std).tolist(),
+            "band_type": "model_disagreement",
             "model_agreement": model_agreement,
             "conviction": conviction,
             "direction": direction,

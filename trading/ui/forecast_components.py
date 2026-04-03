@@ -446,7 +446,7 @@ def render_forecast_results(
             else pd.RangeIndex(len(forecast_array)),
         )
         
-        # Add confidence intervals if available
+        # Model agreement bands (inter-model std), not calibrated CIs
         if lower_bound is not None and upper_bound is not None:
             if isinstance(lower_bound, (list, np.ndarray)) and isinstance(upper_bound, (list, np.ndarray)):
                 lb = np.asarray([v for v in lower_bound if v is not None], dtype="float64")
@@ -501,15 +501,19 @@ def render_forecast_results(
 
 
 def render_confidence_metrics(forecast_result: Dict[str, Any]) -> None:
-    """Render confidence metrics for forecast.
-    
+    """Render model agreement band metrics (not calibrated prediction intervals).
+
     Args:
-        forecast_result: Dictionary containing forecast results with confidence intervals
+        forecast_result: Forecast dict; may include band_type, lower/upper bounds
     """
     try:
-        st.subheader("📊 Confidence Metrics")
-        
-        # Extract confidence data
+        st.subheader("📊 Model agreement band")
+        st.caption(
+            "Range of model forecasts (mean ± std across models). "
+            "Not a calibrated prediction interval."
+        )
+
+        # Extract band data
         raw_values = forecast_result.get('forecast', forecast_result.get('values', []))
         lower_bound = forecast_result.get('lower_bound', None)
         upper_bound = forecast_result.get('upper_bound', None)
@@ -527,14 +531,14 @@ def render_confidence_metrics(forecast_result: Dict[str, Any]) -> None:
             ub = np.asarray([v for v in upper_bound if v is not None], dtype="float64")
 
             if fv.size > 0 and lb.size == fv.size and ub.size == fv.size:
-                ci_width = float(np.mean(ub - lb))
-                ci_width_pct = float((ci_width / np.mean(fv)) * 100) if np.mean(fv) != 0 else 0.0
+                band_width = float(np.mean(ub - lb))
+                band_width_pct = float((band_width / np.mean(fv)) * 100) if np.mean(fv) != 0 else 0.0
 
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.metric("Avg CI Width", f"{ci_width:.2f}")
+                    st.metric("Avg band width", f"{band_width:.2f}")
                 with col2:
-                    st.metric("CI Width %", f"{ci_width_pct:.2f}%")
+                    st.metric("Band width % (of mean forecast)", f"{band_width_pct:.2f}%")
                 with col3:
                     if confidence is not None:
                         avg_confidence = (
@@ -542,11 +546,11 @@ def render_confidence_metrics(forecast_result: Dict[str, Any]) -> None:
                             if isinstance(confidence, (list, np.ndarray))
                             else float(confidence)
                         )
-                        st.metric("Avg Confidence", f"{avg_confidence:.1%}")
+                        st.metric("Model / MAPE confidence", f"{avg_confidence:.1%}")
                     else:
-                        st.metric("Confidence Level", "95%")
+                        st.metric("Band source", "Inter-model σ")
         else:
-            st.info("No confidence intervals available for this forecast")
+            st.info("No model agreement bands available for this forecast")
     except Exception as e:
         logger.error(f"Error rendering confidence metrics: {e}")
         st.warning("Could not display confidence metrics")

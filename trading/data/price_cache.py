@@ -51,6 +51,19 @@ def get_news(ticker: str) -> list:
         return []
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_macro_history(
+    ticker: str,
+    period: str = "1mo",
+    interval: str = "1d",
+) -> pd.DataFrame:
+    """Macro / index series — 1h TTL bucket for SPY, VIX, yields, etc."""
+    try:
+        return yf.Ticker(ticker).history(period=period, interval=interval)
+    except Exception:
+        return pd.DataFrame()
+
+
 @st.cache_data(ttl=300, show_spinner=False)
 def batch_quotes(tickers: list) -> pd.DataFrame:
     """Batch OHLCV for scanner — 5 min TTL."""

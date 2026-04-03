@@ -113,11 +113,11 @@ class MorningBriefing:
             "description": "",
         }
         try:
-            import yfinance as yf
             import numpy as np
+            from trading.data.price_cache import get_history, get_macro_history
 
-            spy = yf.Ticker("SPY").history(period="3mo")
-            vix_hist = yf.Ticker("^VIX").history(period="5d")
+            spy = get_history("SPY", period="3mo")
+            vix_hist = get_macro_history("^VIX", period="5d")
 
             if not spy.empty:
                 _col_map = {c.lower(): c for c in spy.columns}
@@ -232,9 +232,9 @@ class MorningBriefing:
         }
 
         try:
-            import yfinance as yf
-            ticker = yf.Ticker(symbol)
-            hist = ticker.history(period="6mo")
+            from trading.data.price_cache import get_history
+
+            hist = get_history(str(symbol), period="6mo")
 
             if hist.empty:
                 return None
@@ -329,12 +329,12 @@ class MorningBriefing:
             if not watchlist:
                 return []
 
-            import yfinance as yf
             import numpy as np
+            from trading.data.price_cache import get_history
 
             for symbol in watchlist[:10]:
                 try:
-                    hist = yf.Ticker(symbol).history(period="5d")
+                    hist = get_history(str(symbol), period="5d")
                     if hist.empty:
                         continue
                     _col_map = {c.lower(): c for c in hist.columns}

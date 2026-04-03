@@ -157,7 +157,8 @@ def create_forecast_chart(
         historical: Historical data DataFrame
         forecast: Forecast values
         forecast_dates: Dates for forecast (if None, will be generated)
-        confidence_intervals: Dict with 'lower' and 'upper' keys for confidence bands
+        confidence_intervals: Dict with 'lower' and 'upper' keys for model
+            agreement bands (not calibrated CIs)
         title: Chart title
         **kwargs: Additional arguments
     
@@ -219,7 +220,7 @@ def create_forecast_chart(
                     x=forecast_dates,
                     y=upper,
                     mode='lines',
-                    name='Upper CI',
+                    name='Upper (model agreement)',
                     line=dict(width=0),
                     showlegend=False
                 )
@@ -231,7 +232,7 @@ def create_forecast_chart(
                     x=forecast_dates,
                     y=lower,
                     mode='lines',
-                    name='Confidence Interval',
+                    name='Model agreement band',
                     fill='tonexty',
                     fillcolor='rgba(255, 0, 0, 0.2)',
                     line=dict(width=0)

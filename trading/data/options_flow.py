@@ -123,16 +123,18 @@ def get_options_flow(symbol: str, top_n: int = 10) -> Dict[str, Any]:
         total_pv = 0.0
         all_uc: List[Dict[str, Any]] = []
         all_up: List[Dict[str, Any]] = []
-        primary_calls = pd.DataFrame()
-        primary_puts = pd.DataFrame()
+        agg_calls_frames: List[pd.DataFrame] = []
+        agg_puts_frames: List[pd.DataFrame] = []
 
         for exp in expiries:
             try:
                 chain = t.option_chain(exp)
                 c = chain.calls
                 p = chain.puts
-                if exp == expiries[0]:
-                    primary_calls, primary_puts = c, p
+                if not c.empty:
+                    agg_calls_frames.append(c)
+                if not p.empty:
+                    agg_puts_frames.append(p)
                 if not c.empty:
                     total_cv += float(
                         pd.to_numeric(c["volume"], errors="coerce").fillna(0).sum()
@@ -155,7 +157,21 @@ def get_options_flow(symbol: str, top_n: int = 10) -> Dict[str, Any]:
         all_up.sort(key=lambda x: x.get("volume", 0), reverse=True)
         out["unusual_calls"] = all_uc[:top_n]
         out["unusual_puts"] = all_up[:top_n]
-        out["max_pain"] = _max_pain_strike(primary_calls, primary_puts)
+        try:
+            agg_calls = (
+                pd.concat(agg_calls_frames, ignore_index=True)
+                if agg_calls_frames
+                else pd.DataFrame()
+            )
+            agg_puts = (
+                pd.concat(agg_puts_frames, ignore_index=True)
+                if agg_puts_frames
+                else pd.DataFrame()
+            )
+            out["max_pain"] = _max_pain_strike(agg_calls, agg_puts)
+        except Exception as e:
+            logger.debug("max pain aggregate failed: %s", e)
+            out["max_pain"] = 0.0
 
         uc_n = len(out["unusual_calls"])
         up_n = len(out["unusual_puts"])

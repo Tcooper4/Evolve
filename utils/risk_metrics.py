@@ -11,6 +11,9 @@ INTEGRATION NOTES:
     )
 
 Dependencies: numpy, pandas, scipy (all in requirements)
+
+Related: ``trading/risk/risk_metrics.py`` provides Plotly/rolling-dashboard metrics;
+keep this module as the canonical VaR/Kelly/``PerformanceMetrics`` stack.
 """
 
 import logging
@@ -373,7 +376,9 @@ def compute_performance_metrics(
         * np.sqrt(trading_days)
     )
 
-    # Sortino ratio (downside deviation only)
+    # Sortino ratio (MAR = risk-free rate variant)
+    # Downside deviation = std of returns below rf (excess vs daily_rf)
+    # Note: some implementations use MAR=0 (negative returns only). This uses MAR=rf.
     downside = r[r < daily_rf] - daily_rf
     downside_dev = float(
         np.sqrt(np.mean(downside ** 2)) * np.sqrt(trading_days)

@@ -25,6 +25,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from trading.utils.safe_math import safe_rsi
+
 logger = logging.getLogger(__name__)
 
 MODEL_CACHE_PATH = Path(".cache/ml_score")
@@ -59,6 +61,7 @@ class MLScoreTrainer:
         self.is_trained = False
         self.training_date: Optional[str] = None
         self._scaler = None
+        self._last_train_metrics: Dict[str, Any] = {}
 
     def build_features(
         self,
@@ -80,8 +83,14 @@ class MLScoreTrainer:
             last = float(close[-1])
             features = {}
 
-            # RSI
-            features["rsi"] = self._calc_rsi(close, 14) or 50.0
+            # RSI (Wilder — same as ai_score / XGBoost features)
+            _rsi_arr = safe_rsi(close, 14)
+            _rv = np.asarray(_rsi_arr, dtype=float).ravel()
+            features["rsi"] = (
+                float(_rv[-1])
+                if _rv.size and np.isfinite(_rv[-1])
+                else 50.0
+            )
 
             # Bollinger position
             sma20 = np.mean(close[-20:])
@@ -324,6 +333,12 @@ class MLScoreTrainer:
 
             self.is_trained = True
             self.training_date = datetime.now().isoformat()
+            self._last_train_metrics = {
+                "n_samples": int(len(X)),
+                "val_r2": round(r2, 4),
+                "val_directional_accuracy": round(da, 3),
+                "val_mse": round(mse, 6),
+            }
 
             # Save model
             self._save_model()
@@ -470,6 +485,14 @@ class MLScoreTrainer:
                 "feature_names": self.feature_names,
                 "training_date": self.training_date,
                 "model_type": self.model_type,
+                "n_samples": (self._last_train_metrics or {}).get("n_samples"),
+                "val_r2": (self._last_train_metrics or {}).get("val_r2"),
+                "val_directional_accuracy": (
+                    (self._last_train_metrics or {}).get(
+                        "val_directional_accuracy"
+                    )
+                ),
+                "val_mse": (self._last_train_metrics or {}).get("val_mse"),
             }
             meta_path.write_text(
                 json.dumps(meta),
@@ -502,6 +525,14 @@ class MLScoreTrainer:
             self.feature_names = meta["feature_names"]
             self.training_date = meta["training_date"]
             self.model_type = meta["model_type"]
+            self._last_train_metrics = {
+                "n_samples": meta.get("n_samples"),
+                "val_r2": meta.get("val_r2"),
+                "val_directional_accuracy": meta.get(
+                    "val_directional_accuracy"
+                ),
+                "val_mse": meta.get("val_mse"),
+            }
             self.is_trained = True
 
             logger.info(
@@ -512,17 +543,3 @@ class MLScoreTrainer:
         except Exception as e:
             logger.warning("ML Score model load failed: %s", e)
             return False
-
-    @staticmethod
-    def _calc_rsi(prices: np.ndarray, period: int = 14) -> Optional[float]:
-        if len(prices) < period + 1:
-            return None
-        deltas = np.diff(prices)
-        gains = np.where(deltas > 0, deltas, 0.0)
-        losses = np.where(deltas < 0, -deltas, 0.0)
-        avg_gain = np.mean(gains[-period:])
-        avg_loss = np.mean(losses[-period:])
-        if avg_loss == 0:
-            return 100.0
-        rs = avg_gain / avg_loss
-        return 100.0 - (100.0 / (1.0 + rs))
