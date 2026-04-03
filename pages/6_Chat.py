@@ -31,6 +31,33 @@ render_top_bar()
 
 logger = logging.getLogger(__name__)
 
+# Autonomous mode toggle
+_auto_mode = st.toggle(
+    "🤖 Autonomous Mode — Morning Briefing",
+    value=False,
+    key="chat_autonomous_mode",
+    help=(
+        "When ON, generates a morning briefing "
+        "with top opportunities before chat."
+    ),
+)
+
+if _auto_mode:
+    try:
+        from agents.briefing.morning_briefing import (
+            MorningBriefing,
+        )
+        MorningBriefing(
+            universe="sp100",
+            min_ai_score=6.5,
+            max_positions=5,
+        ).render_streamlit()
+        st.markdown("---")
+    except Exception as e:
+        st.caption(
+            f"Morning briefing unavailable: {e}"
+        )
+
 st.title("💬 Chat")
 st.caption("Ask about portfolio, strategies, risk. News and research on the right.")
 

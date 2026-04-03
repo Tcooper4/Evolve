@@ -365,6 +365,24 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
                     )
             except Exception:
                 pass
+
+            # Macro factor adjustment
+            try:
+                from trading.analysis.macro_factors import MacroFactors
+                _macro = MacroFactors()
+                _macro_adj = _macro.get_ai_score_adjustment(
+                    sector=sector
+                )
+                _macro_score_adj = _macro_adj.get(
+                    "score_adjustment", 0.0
+                )
+                fundamental_score = min(10.0, max(0.0,
+                    fundamental_score + _macro_score_adj
+                ))
+                for _msig in _macro_adj.get("signals", []):
+                    signals.append(_msig)
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -382,6 +400,39 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
             + fundamental_score * weights["fundamental"]
         )
         overall = round(min(10.0, max(1.0, overall)), 1)
+
+        # ML Score blend (if model is trained)
+        try:
+            from trading.analysis.ml_score_trainer import (
+                MLScoreTrainer,
+            )
+            _ml_trainer = MLScoreTrainer()
+            _ml_result = _ml_trainer.predict(symbol, hist)
+            if (not _ml_result.get("fallback")
+                    and _ml_result.get("ml_score") is not None):
+                _ml_score = float(_ml_result["ml_score"])
+                # Blend 40% ML, 60% rules-based
+                overall = round(
+                    overall * 0.6 + _ml_score * 0.4, 1
+                )
+                overall = float(np.clip(overall, 1.0, 10.0))
+                signals.append({
+                    "name": "ML Score",
+                    "value": round(_ml_score, 1),
+                    "impact": (
+                        "positive" if _ml_score > 6.0
+                        else "negative" if _ml_score < 4.0
+                        else "neutral"
+                    ),
+                    "description": (
+                        f"ML model: {_ml_result.get('predicted_7d_return', 0):+.1f}% "
+                        f"7-day forecast "
+                        f"({_ml_result.get('direction', 'NEUTRAL')})"
+                    ),
+                })
+        except Exception:
+            pass
+
         if earnings_near:
             overall = min(overall, 7.5)
             for sig in signals:

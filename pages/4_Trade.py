@@ -169,6 +169,91 @@ with tab_risk:
     except Exception as _re:
         st.caption(f"Advanced risk unavailable: {_re}")
 
+try:
+    st.markdown("---")
+    st.subheader("📉 Risk Analytics")
+
+    risk_col1, risk_col2 = st.columns(2)
+    with risk_col1:
+        risk_symbol = st.text_input(
+            "Symbol", "AAPL", key="risk_symbol"
+        )
+    with risk_col2:
+        risk_portfolio_value = st.number_input(
+            "Portfolio Value ($)",
+            min_value=1000,
+            max_value=10000000,
+            value=10000,
+            step=1000,
+            key="risk_portfolio_value"
+        )
+
+    if st.button(
+        "▶ Calculate Risk Metrics",
+        key="risk_calc_btn",
+        type="primary"
+    ):
+        try:
+            import yfinance as yf
+            from utils.risk_metrics import (
+                render_risk_metrics_streamlit
+            )
+            with st.spinner(
+                f"Calculating risk metrics for "
+                f"{risk_symbol}..."
+            ):
+                _hist = yf.Ticker(
+                    risk_symbol
+                ).history(period="1y")
+                _spy = yf.Ticker(
+                    "SPY"
+                ).history(period="1y")
+
+                if _hist.empty:
+                    st.warning(
+                        f"No data for {risk_symbol}"
+                    )
+                else:
+                    _col_map = {
+                        c.lower(): c
+                        for c in _hist.columns
+                    }
+                    _close_col = _col_map.get(
+                        "close", _hist.columns[0]
+                    )
+                    _returns = _hist[
+                        _close_col
+                    ].pct_change().dropna()
+
+                    _spy_returns = None
+                    if not _spy.empty:
+                        _spy_col_map = {
+                            c.lower(): c
+                            for c in _spy.columns
+                        }
+                        _spy_close = _spy_col_map.get(
+                            "close", _spy.columns[0]
+                        )
+                        _spy_returns = _spy[
+                            _spy_close
+                        ].pct_change().dropna()
+
+                    render_risk_metrics_streamlit(
+                        returns=_returns,
+                        symbol=risk_symbol,
+                        portfolio_value=float(
+                            risk_portfolio_value
+                        ),
+                        benchmark_returns=_spy_returns,
+                    )
+        except Exception as e:
+            st.caption(
+                f"Risk metrics unavailable: {e}"
+            )
+except Exception as e:
+    st.caption(
+        f"Risk analytics section unavailable: {e}"
+    )
 
 # Page Assistant
 try:

@@ -255,6 +255,27 @@ if not hist.empty:
                     price_threshold=0.02,
                     show_annotations=True,
                 )
+                try:
+                    from trading.analysis.chart_pattern_detector import (
+                        ChartPatternDetector,
+                    )
+                    with st.expander(
+                        "🔍 Chart Patterns & Support/Resistance",
+                        expanded=False,
+                    ):
+                        if hist is not None and not hist.empty:
+                            detector = ChartPatternDetector(
+                                ticker, hist
+                            )
+                            detector.render_streamlit()
+                        else:
+                            st.caption(
+                                "Load a symbol to detect patterns."
+                            )
+                except Exception as e:
+                    st.caption(
+                        f"Pattern detection unavailable: {e}"
+                    )
             except Exception as e:
                 st.caption(f"News chart unavailable: {e}")
         else:
@@ -788,6 +809,27 @@ if not hist.empty:
                     )
 
                 _live_chart()
+                try:
+                    from trading.analysis.chart_pattern_detector import (
+                        ChartPatternDetector,
+                    )
+                    with st.expander(
+                        "🔍 Chart Patterns & Support/Resistance",
+                        expanded=False,
+                    ):
+                        if hist is not None and not hist.empty:
+                            detector = ChartPatternDetector(
+                                ticker, hist
+                            )
+                            detector.render_streamlit()
+                        else:
+                            st.caption(
+                                "Load a symbol to detect patterns."
+                            )
+                except Exception as e:
+                    st.caption(
+                        f"Pattern detection unavailable: {e}"
+                    )
             else:
                 # News vlines on main chart (only for News+Vol chart type)
                 if chart_type == "News + Volume":
@@ -947,6 +989,27 @@ if not hist.empty:
                     width='stretch',
                     key="analyze_main_chart",
                 )
+                try:
+                    from trading.analysis.chart_pattern_detector import (
+                        ChartPatternDetector,
+                    )
+                    with st.expander(
+                        "🔍 Chart Patterns & Support/Resistance",
+                        expanded=False,
+                    ):
+                        if hist is not None and not hist.empty:
+                            detector = ChartPatternDetector(
+                                ticker, hist
+                            )
+                            detector.render_streamlit()
+                        else:
+                            st.caption(
+                                "Load a symbol to detect patterns."
+                            )
+                except Exception as e:
+                    st.caption(
+                        f"Pattern detection unavailable: {e}"
+                    )
         if trader_mode == "Short-term":
             try:
                 st.markdown("**Short-term Signals**")
@@ -5057,6 +5120,21 @@ with tab_earnings:
 with tab_diag:
     st.subheader("Model Diagnostics")
     st.caption("Econometric tests on price data")
+
+    try:
+        from trading.analysis.econometric_diagnostics import (
+            EconometricDiagnostics,
+        )
+        if hist is not None and not hist.empty:
+            diag = EconometricDiagnostics(ticker, hist)
+            diag.render_streamlit()
+        else:
+            st.caption("Load a symbol to run diagnostics.")
+    except Exception as e:
+        st.caption(f"Diagnostics unavailable: {e}")
+
+    st.markdown("---")
+    st.caption("Quick checks (ADF, Ljung-Box, ARCH)")
 
     try:
         _dh = st.session_state.get("analyze_forecast_data") or get_history(ticker, period="1y")
