@@ -164,3 +164,129 @@ def critique_backtest(metrics: Dict[str, Any]) -> Dict[str, Any]:
             "critique": "Could not run full critique.",
             "suggestions": ["Check Strategy Testing page for detailed metrics."],
         }
+
+
+def scan_universe(
+    universe: str = "default",
+    min_score: float = 6.0,
+    max_results: int = 15,
+) -> Dict[str, Any]:
+    """
+    Screen tickers with optional AI score floor. Use for scanners, ideas, or
+    “what looks good” questions.
+    """
+    try:
+        from trading.analysis.market_scanner import (
+            DEFAULT_UNIVERSE,
+            scan_market,
+        )
+
+        uni = list(DEFAULT_UNIVERSE)
+        u = (universe or "default").lower()
+        if u in ("sp50", "large", "mega"):
+            uni = uni[:50]
+        elif u in ("sp30", "core"):
+            uni = uni[:30]
+        # Wider cap so min_score can filter client-side
+        raw = scan_market(
+            filters=[],
+            universe=uni,
+            max_results=min(200, max(len(uni), max_results * 8)),
+        )
+        if raw.get("error"):
+            return {"success": False, "error": raw["error"], "results": []}
+        rows = raw.get("results") or []
+        filtered = [
+            r
+            for r in rows
+            if float(r.get("ai_score", 0) or 0) >= float(min_score)
+        ][: int(max_results)]
+        return {
+            "success": True,
+            "results": filtered,
+            "scanned": raw.get("scanned"),
+            "scan_time_s": raw.get("scan_time_s"),
+        }
+    except Exception as e:
+        logger.exception("scan_universe failed: %s", e)
+        return {"success": False, "error": str(e), "results": []}
+
+
+def get_ai_score(symbol: str) -> Dict[str, Any]:
+    """Compute Evolve AI Score for one ticker. Use for single-name quality checks."""
+    try:
+        import yfinance as yf
+        from trading.analysis.ai_score import compute_ai_score
+
+        sym = (symbol or "").strip().upper()
+        if not sym:
+            return {"success": False, "error": "symbol required"}
+        hist = yf.Ticker(sym).history(period="6mo")
+        if hist.empty:
+            return {"success": False, "error": f"No data for {sym}"}
+        out = compute_ai_score(sym, hist)
+        return {"success": True, "symbol": sym, "score": out}
+    except Exception as e:
+        logger.exception("get_ai_score failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def get_forecast(symbol: str, horizon: int = 7) -> Dict[str, Any]:
+    """Consensus multi-model forecast. Use when user asks price targets or direction."""
+    try:
+        import yfinance as yf
+        from trading.models.forecast_router import ForecastRouter
+
+        sym = (symbol or "").strip().upper()
+        if not sym:
+            return {"success": False, "error": "symbol required"}
+        hist = yf.Ticker(sym).history(period="2y")
+        if hist.empty:
+            return {"success": False, "error": f"No data for {sym}"}
+        router = ForecastRouter()
+        fc = router.get_consensus_forecast(data=hist, horizon=int(horizon))
+        if fc.get("error"):
+            return {"success": False, "error": fc["error"], "forecast": fc}
+        return {"success": True, "symbol": sym, "forecast": fc}
+    except Exception as e:
+        logger.exception("get_forecast failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def get_news(symbol: str, max_items: int = 10) -> Dict[str, Any]:
+    """Headlines and ranked articles for a symbol."""
+    try:
+        from trading.data.news_aggregator import get_news as _gn
+
+        sym = (symbol or "").strip().upper()
+        if not sym:
+            return {"success": False, "error": "symbol required", "items": []}
+        items = _gn(sym, max_items=int(max_items))
+        return {"success": True, "symbol": sym, "items": items}
+    except Exception as e:
+        logger.exception("get_news failed: %s", e)
+        return {"success": False, "error": str(e), "items": []}
+
+
+def get_risk_metrics(symbol: str, period: str = "1y") -> Dict[str, Any]:
+    """Performance and risk stats from daily returns (Sharpe, drawdown, etc.)."""
+    try:
+        import yfinance as yf
+        from utils.risk_metrics import compute_performance_metrics
+
+        sym = (symbol or "").strip().upper()
+        if not sym:
+            return {"success": False, "error": "symbol required"}
+        hist = yf.Ticker(sym).history(period=period or "1y")
+        if hist.empty:
+            return {"success": False, "error": f"No data for {sym}"}
+        _cm = {c.lower(): c for c in hist.columns}
+        cc = _cm.get("close", hist.columns[0])
+        rets = hist[cc].pct_change().dropna()
+        if len(rets) < 30:
+            return {"success": False, "error": "Insufficient return history"}
+        pm = compute_performance_metrics(rets)
+        return {"success": True, "symbol": sym, "metrics": pm.to_dict()}
+    except Exception as e:
+        logger.exception("get_risk_metrics failed: %s", e)
+        return {"success": False, "error": str(e)}

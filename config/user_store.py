@@ -84,10 +84,22 @@ def load_user_keys(session_id: str) -> dict:
 
 
 def save_user_preferences(session_id: str, prefs: dict):
+    """
+    Persist preferences for a session. Upserts the users row so saves work
+    even when no row existed yet (e.g. before onboarding wrote encrypted_keys).
+    """
+    if not session_id:
+        return
     with _get_conn() as conn:
         conn.execute(
-            "UPDATE users SET preferences=?, last_seen=datetime('now') WHERE session_id=?",
-            (json.dumps(prefs), session_id),
+            """
+            INSERT INTO users (session_id, created_at, last_seen, preferences)
+            VALUES (?, datetime('now'), datetime('now'), ?)
+            ON CONFLICT(session_id) DO UPDATE SET
+                preferences = excluded.preferences,
+                last_seen = datetime('now')
+            """,
+            (session_id, json.dumps(prefs)),
         )
         conn.commit()
 

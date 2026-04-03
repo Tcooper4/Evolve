@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-Trade page — Execute, Positions, History, Risk (reorganized from Trade Execution, Performance, Portfolio).
+Trade page — Paper trading, portfolio, performance, and risk (inlined; no runpy).
 """
+import logging
 import sys
+import uuid
+from datetime import datetime
 from pathlib import Path
-import runpy
+
+import pandas as pd
+import streamlit as st
 
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-import streamlit as st
-
 from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
+from utils.dataframe_utils import normalize_for_display
 
 try:
     st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
@@ -21,99 +25,404 @@ except Exception:
 inject_theme()
 render_top_bar()
 
+logger = logging.getLogger(__name__)
+
+_PAPER_INIT = 100_000.0
+
+
+def _paper_reset():
+    st.session_state.evolve_paper_cash = _PAPER_INIT
+    st.session_state.evolve_paper_positions = {}
+    st.session_state.evolve_paper_trades = []
+    st.session_state.evolve_last_prices = {}
+    st.session_state.evolve_equity_log = []
+
+
+def _ensure_paper():
+    if "evolve_paper_cash" not in st.session_state:
+        _paper_reset()
+    if "evolve_equity_log" not in st.session_state:
+        st.session_state.evolve_equity_log = []
+
+
+def _paper_equity() -> float:
+    _ensure_paper()
+    cash = float(st.session_state.evolve_paper_cash)
+    pos = st.session_state.evolve_paper_positions
+    prices = st.session_state.evolve_last_prices
+    mv = 0.0
+    for sym, row in (pos or {}).items():
+        q = float(row.get("qty", 0) or 0)
+        if q <= 0:
+            continue
+        p = float(prices.get(sym) or row.get("avg", 0) or 0)
+        mv += q * p
+    return cash + mv
+
+
+def _log_equity(note: str = ""):
+    st.session_state.evolve_equity_log.append({
+        "time": datetime.now().isoformat(),
+        "equity": _paper_equity(),
+        "note": note,
+    })
+
+
+_ensure_paper()
+
 st.title("💰 Trade")
-st.caption("Execution, positions, history, and risk")
+st.caption("Paper execution, portfolio, performance, and risk")
 
-# Summary metrics row (placeholder when no portfolio)
-try:
-    if "portfolio_manager" not in st.session_state:
-        from trading.portfolio.portfolio_manager import PortfolioManager
-        st.session_state.portfolio_manager = PortfolioManager()
-    pm = st.session_state.portfolio_manager
-    positions = pm.get_all_positions() if hasattr(pm, "get_all_positions") else []
-    total_val = sum(float(p.get("market_value", 0) or 0) for p in positions) if isinstance(positions, list) else 0
-    if not total_val and hasattr(pm, "get_portfolio_value"):
-        total_val = float(pm.get_portfolio_value() or 0)
-except Exception:
-    total_val = 0
-    positions = []
-
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.metric("Portfolio Value", f"${total_val:,.2f}")
-with c2:
-    st.metric("Day P&L", "—", delta=None)
-with c3:
-    st.metric("Total Return", "—", delta=None)
-
-tab_exec, tab_pos, tab_hist, tab_risk = st.tabs(["Execute", "Positions", "History", "Risk"])
-
-with tab_exec:
-    st.subheader("Execute")
+eq = _paper_equity()
+day_delta = None
+_log = st.session_state.evolve_equity_log
+if len(_log) >= 2:
     try:
-        # TODO S44: inline this (2809 lines)
-        old_path = project_root / "scripts" / "old_4_Trade_Execution.py"
-        runpy.run_path(str(old_path), run_name="__main__")
+        prev = float(_log[-2]["equity"])
+        if prev > 0:
+            day_delta = (eq - prev) / prev
     except Exception as e:
-        st.caption(f"Feature unavailable: {e}")
+        logger.debug("trade: day pnl calc skip: %s", e)
 
-    # Estimated costs / slippage calculator
+c1, c2, c3, c4 = st.columns(4)
+with c1:
+    st.metric("Portfolio value (paper)", f"${eq:,.2f}")
+with c2:
+    st.metric(
+        "Session Δ vs last mark",
+        f"{day_delta*100:.2f}%" if day_delta is not None else "—",
+        delta=None,
+    )
+with c3:
+    tr = (eq / _PAPER_INIT - 1.0) if _PAPER_INIT else 0.0
+    st.metric("Total return (vs $100k start)", f"{tr*100:.2f}%")
+with c4:
+    if st.button("Reset paper book", key="paper_reset_all"):
+        _paper_reset()
+        st.rerun()
+
+tab_paper, tab_port, tab_perf, tab_risk = st.tabs(
+    ["Paper Trading", "Portfolio", "Performance", "Risk Management"]
+)
+
+with tab_paper:
+    st.subheader("Paper Trading")
+    st.caption(
+        "Simulated fills at last close from yfinance. "
+        "No live broker — for experimentation only."
+    )
+    pc1, pc2, pc3 = st.columns(3)
+    with pc1:
+        p_sym = st.text_input("Symbol", "AAPL", key="paper_sym").strip().upper()
+    with pc2:
+        p_side = st.selectbox("Side", ["Buy", "Sell"], key="paper_side")
+    with pc3:
+        p_ot = st.selectbox("Order type", ["Market", "Limit"], key="paper_ot")
+    pc4, pc5 = st.columns(2)
+    with pc4:
+        p_qty = st.number_input("Quantity (shares)", min_value=0.0, value=1.0, step=1.0, key="paper_qty")
+    with pc5:
+        p_limit = st.number_input(
+            "Limit price (limit orders only)",
+            min_value=0.0,
+            value=0.0,
+            format="%.2f",
+            key="paper_limit",
+        )
+
+    if st.button("Place order", key="paper_place", type="primary"):
+        if not p_sym or p_qty <= 0:
+            st.warning("Enter a symbol and positive quantity.")
+        else:
+            try:
+                import yfinance as yf
+
+                hist = yf.Ticker(p_sym).history(period="5d")
+                if hist.empty:
+                    st.warning(f"No quote data for {p_sym}.")
+                else:
+                    _cm = {c.lower(): c for c in hist.columns}
+                    _cc = _cm.get("close", hist.columns[0])
+                    last = float(hist[_cc].iloc[-1])
+                    fill = last
+                    if p_ot == "Limit" and p_limit > 0:
+                        if p_side == "Buy":
+                            fill = min(last, p_limit)
+                        else:
+                            fill = max(last, p_limit)
+                    fee_rate = 0.0001
+                    _ensure_paper()
+                    cash = float(st.session_state.evolve_paper_cash)
+                    pos = dict(st.session_state.evolve_paper_positions)
+                    cur = pos.get(p_sym, {"qty": 0.0, "avg": 0.0})
+                    cur_q = float(cur.get("qty", 0) or 0)
+                    cur_avg = float(cur.get("avg", 0) or 0)
+
+                    if p_side == "Buy":
+                        cost = p_qty * fill * (1.0 + fee_rate)
+                        if cost > cash + 1e-6:
+                            st.warning("Insufficient paper cash for this order.")
+                        else:
+                            new_q = cur_q + p_qty
+                            new_avg = (
+                                (cur_q * cur_avg + p_qty * fill) / new_q
+                                if new_q > 0
+                                else 0.0
+                            )
+                            st.session_state.evolve_paper_cash = cash - cost
+                            pos[p_sym] = {"qty": new_q, "avg": new_avg}
+                            st.session_state.evolve_paper_positions = pos
+                            st.session_state.evolve_last_prices[p_sym] = fill
+                            st.session_state.evolve_paper_trades.append({
+                                "id": str(uuid.uuid4()),
+                                "time": datetime.now().isoformat(),
+                                "symbol": p_sym,
+                                "side": "BUY",
+                                "qty": p_qty,
+                                "price": fill,
+                                "type": p_ot,
+                            })
+                            _log_equity("buy")
+                            st.success(f"Bought {p_qty} {p_sym} @ ~{fill:.2f} (paper).")
+                    else:
+                        if p_qty > cur_q + 1e-9:
+                            st.warning("Cannot sell more than open position.")
+                        else:
+                            proceeds = p_qty * fill * (1.0 - fee_rate)
+                            pnl = (fill - cur_avg) * p_qty
+                            st.session_state.evolve_paper_cash = cash + proceeds
+                            new_q = cur_q - p_qty
+                            if new_q < 1e-9:
+                                pos.pop(p_sym, None)
+                            else:
+                                pos[p_sym] = {"qty": new_q, "avg": cur_avg}
+                            st.session_state.evolve_paper_positions = pos
+                            st.session_state.evolve_last_prices[p_sym] = fill
+                            st.session_state.evolve_paper_trades.append({
+                                "id": str(uuid.uuid4()),
+                                "time": datetime.now().isoformat(),
+                                "symbol": p_sym,
+                                "side": "SELL",
+                                "qty": p_qty,
+                                "price": fill,
+                                "type": p_ot,
+                                "realized_pnl": round(pnl, 2),
+                            })
+                            _log_equity("sell")
+                            st.success(
+                                f"Sold {p_qty} {p_sym} @ ~{fill:.2f} "
+                                f"(paper). Realized Δ vs avg: ${pnl:,.2f}"
+                            )
+            except Exception as e:
+                st.caption(f"Order failed: {e}")
+
+    st.markdown("#### Open positions")
+    _ensure_paper()
+    _pos = st.session_state.evolve_paper_positions
+    _prices = st.session_state.evolve_last_prices
+    if not _pos:
+        st.info("No open paper positions.")
+    else:
+        rows = []
+        for sym, row in _pos.items():
+            q = float(row.get("qty", 0) or 0)
+            avg = float(row.get("avg", 0) or 0)
+            px = float(_prices.get(sym, avg) or avg)
+            u_pnl = (px - avg) * q if q else 0.0
+            rows.append({
+                "Symbol": sym,
+                "Qty": q,
+                "Avg cost": round(avg, 4),
+                "Last mark": round(px, 4),
+                "Unrealized P&L": round(u_pnl, 2),
+            })
+        st.dataframe(
+            normalize_for_display(pd.DataFrame(rows)),
+            use_container_width=True,
+            key="paper_positions_df",
+        )
+
+    st.markdown("**Estimated costs**")
     try:
-        st.markdown("**Estimated Costs**")
         _slippage_bps = st.slider(
             "Slippage (bps)",
             min_value=1,
             max_value=50,
             value=5,
             key="trade_slippage_bps",
-            help="Basis points of slippage to assume. "
-                 "5bps is typical for liquid large-caps.",
+            help="Assumed basis points for quick notional estimates.",
         )
-        _shares = st.number_input("Shares (for estimate)", min_value=0, value=0, key="trade_est_shares")
-        _price = st.number_input("Price (for estimate)", min_value=0.0, value=0.0, format="%.2f", key="trade_est_price")
+        _shares = st.number_input(
+            "Shares (for estimate)", min_value=0, value=0, key="trade_est_shares"
+        )
+        _price = st.number_input(
+            "Price (for estimate)",
+            min_value=0.0,
+            value=0.0,
+            format="%.2f",
+            key="trade_est_price",
+        )
         if _shares and _price:
             _notional = float(_shares) * float(_price)
             _slip_cost = _notional * (_slippage_bps / 10000)
             _commission = max(1.0, _notional * 0.0001)
             _total_cost = _slip_cost + _commission
-            c1, c2, c3 = st.columns(3)
-            with c1:
+            e1, e2, e3 = st.columns(3)
+            with e1:
                 st.metric("Notional", f"${_notional:,.2f}")
-            with c2:
-                st.metric("Est. Slippage", f"${_slip_cost:.2f}", f"{_slippage_bps}bps")
-            with c3:
-                st.metric("Total Cost", f"${_total_cost:.2f}")
-    except Exception:
-        pass
-
-with tab_pos:
-    st.subheader("Positions")
-    try:
-        # TODO S44: inline this (2700 lines)
-        old_path = project_root / "scripts" / "old_5_Portfolio.py"
-        runpy.run_path(str(old_path), run_name="__main__")
+            with e2:
+                st.metric("Est. slippage", f"${_slip_cost:.2f}", f"{_slippage_bps}bps")
+            with e3:
+                st.metric("Total cost", f"${_total_cost:.2f}")
     except Exception as e:
-        st.caption(f"Feature unavailable: {e}")
+        st.caption(f"Cost estimate unavailable: {e}")
 
-with tab_hist:
-    st.subheader("History")
+with tab_port:
+    st.subheader("Portfolio")
+    _ensure_paper()
+    cash = float(st.session_state.evolve_paper_cash)
+    st.metric("Cash (paper)", f"${cash:,.2f}")
+    st.metric("Equity (cash + marks)", f"${_paper_equity():,.2f}")
+
+    st.markdown("#### Holdings (paper)")
+    if not st.session_state.evolve_paper_positions:
+        st.info("No holdings. Place a paper trade in the Paper Trading tab.")
+    else:
+        rows = []
+        for sym, row in st.session_state.evolve_paper_positions.items():
+            q = float(row.get("qty", 0) or 0)
+            avg = float(row.get("avg", 0) or 0)
+            px = float(st.session_state.evolve_last_prices.get(sym, avg) or avg)
+            rows.append({
+                "Symbol": sym,
+                "Quantity": q,
+                "Avg price": avg,
+                "Mark": px,
+                "Market value": round(q * px, 2),
+            })
+        st.dataframe(
+            normalize_for_display(pd.DataFrame(rows)),
+            use_container_width=True,
+            key="port_holdings_df",
+        )
+
+    st.markdown("#### Platform portfolio (optional)")
     try:
-        # TODO S44: inline this (3033 lines)
-        old_path = project_root / "scripts" / "old_7_Performance.py"
-        runpy.run_path(str(old_path), run_name="__main__")
+        from trading.portfolio.portfolio_manager import PortfolioManager
+
+        if "portfolio_manager" not in st.session_state:
+            st.session_state.portfolio_manager = PortfolioManager()
+        pm = st.session_state.portfolio_manager
+        ext = pm.get_all_positions() if hasattr(pm, "get_all_positions") else []
+        if ext:
+            st.caption("Positions from portfolio manager (if configured).")
+            st.dataframe(
+                normalize_for_display(pd.DataFrame(ext)),
+                use_container_width=True,
+                key="port_pm_df",
+            )
+        else:
+            st.caption(
+                "Portfolio manager has no positions, or module uses external "
+                "storage that is not populated."
+            )
     except Exception as e:
-        st.caption(f"Feature unavailable: {e}")
+        st.caption(
+            f"Portfolio module unavailable — paper book above is the "
+            f"supported path. ({e})"
+        )
+
+with tab_perf:
+    st.subheader("Performance")
+    _ensure_paper()
+    trades = list(st.session_state.evolve_paper_trades)
+    if not trades:
+        st.info("No paper trades yet. Executions appear here after you place orders.")
+    else:
+        tdf = pd.DataFrame(trades)
+        st.markdown("#### Trade history")
+        st.dataframe(
+            normalize_for_display(tdf),
+            use_container_width=True,
+            key="perf_trades_df",
+        )
+
+        elog = st.session_state.get("evolve_equity_log") or []
+        if len(elog) >= 3:
+            edf = pd.DataFrame(elog)
+            try:
+                edf["t"] = pd.to_datetime(edf["time"])
+                edf = edf.sort_values("t")
+                rets = edf["equity"].astype(float).pct_change().dropna()
+                if len(rets) > 5:
+                    from utils.risk_metrics import compute_performance_metrics
+
+                    pm = compute_performance_metrics(rets)
+                    st.markdown("#### Metrics (from paper equity marks)")
+                    m1, m2, m3, m4 = st.columns(4)
+                    m1.metric("Total return (window)", f"{pm.total_return*100:.2f}%")
+                    m2.metric("Sharpe (approx)", f"{pm.sharpe_ratio:.2f}")
+                    m3.metric("Max drawdown", f"{pm.max_drawdown*100:.2f}%")
+                    m4.metric("Win rate (marks)", f"{pm.win_rate*100:.1f}%")
+                    with st.expander("Full metrics"):
+                        st.json(pm.to_dict())
+            except Exception as e:
+                st.caption(f"Could not compute performance metrics: {e}")
+        else:
+            st.caption(
+                "More equity marks are needed for performance metrics "
+                "(place additional trades)."
+            )
 
 with tab_risk:
-    st.subheader("Risk")
-    try:
-        # TODO S44: inline this (2779 lines)
-        old_path = project_root / "scripts" / "old_6_Risk_Management.py"
-        runpy.run_path(str(old_path), run_name="__main__")
-    except Exception as e:
-        st.caption(f"Feature unavailable: {e}")
+    st.subheader("Risk Management")
 
-    # Advanced Risk Analytics from archive (now wired via trading.risk)
+    st.markdown("#### Position sizing (Kelly) & VaR")
+    rk_sym = st.text_input(
+        "Symbol for return history",
+        "SPY",
+        key="risk_kelly_symbol",
+    ).strip().upper()
+    rk_pv = st.number_input(
+        "Notional for VaR ($)",
+        min_value=1000.0,
+        value=10000.0,
+        key="risk_kelly_pv",
+    )
+    if st.button("Compute Kelly & VaR", key="risk_kelly_btn"):
+        try:
+            import yfinance as yf
+            from utils.risk_metrics import (
+                calculate_var,
+                kelly_from_returns,
+            )
+
+            h = yf.Ticker(rk_sym).history(period="1y")
+            if h.empty:
+                st.warning(f"No data for {rk_sym}.")
+            else:
+                _cm = {c.lower(): c for c in h.columns}
+                _cc = _cm.get("close", h.columns[0])
+                r = h[_cc].pct_change().dropna()
+                kv = kelly_from_returns(r)
+                if kv.get("error"):
+                    st.caption(f"Kelly: {kv['error']}")
+                else:
+                    st.json({k: v for k, v in kv.items() if k != "interpretation"})
+                    st.caption(kv.get("interpretation", ""))
+                vr = calculate_var(
+                    r,
+                    confidence=0.95,
+                    portfolio_value=float(rk_pv),
+                )
+                if vr.get("error"):
+                    st.caption(f"VaR: {vr['error']}")
+                else:
+                    st.metric("VaR (95%, 1d)", f"${vr.get('var_dollar', 0):,.2f}")
+                    st.caption(vr.get("interpretation", ""))
+        except Exception as e:
+            st.caption(f"Kelly/VaR unavailable: {e}")
+
     st.markdown("---")
     st.subheader("📊 Advanced Risk Analytics")
     try:
@@ -124,17 +433,12 @@ with tab_risk:
         if _pm and isinstance(_pm, PortfolioManager):
             _positions = _pm.get_all_positions()
             if _positions:
-                # Expect a mapping of ticker -> position/weight
                 _analyzer = AdvancedRiskAnalyzer()
-
-                # For now, use synthetic returns built from position notional history if available.
-                # If the portfolio manager exposes historical returns, prefer that.
                 _hist_returns = getattr(_pm, "get_portfolio_returns", None)
                 if callable(_hist_returns):
                     _rets = _hist_returns()
                 else:
                     _rets = None
-
                 if _rets is not None and not _rets.empty:
                     _risk_metrics = _analyzer.calculate_comprehensive_risk(_rets)
                     if _risk_metrics:
@@ -163,21 +467,21 @@ with tab_risk:
                         "Not enough return history to compute advanced risk metrics."
                     )
             else:
-                st.caption("No open positions to analyze.")
+                st.caption("No open positions from portfolio manager to analyze.")
         else:
-            st.caption("Portfolio manager not initialized.")
+            st.caption(
+                "Advanced analytics apply when the portfolio manager is initialized "
+                "and has positions."
+            )
     except Exception as _re:
         st.caption(f"Advanced risk unavailable: {_re}")
 
-try:
     st.markdown("---")
     st.subheader("📉 Risk Analytics")
 
     risk_col1, risk_col2 = st.columns(2)
     with risk_col1:
-        risk_symbol = st.text_input(
-            "Symbol", "AAPL", key="risk_symbol"
-        )
+        risk_symbol = st.text_input("Symbol", "AAPL", key="risk_symbol")
     with risk_col2:
         risk_portfolio_value = st.number_input(
             "Portfolio Value ($)",
@@ -185,79 +489,47 @@ try:
             max_value=10000000,
             value=10000,
             step=1000,
-            key="risk_portfolio_value"
+            key="risk_portfolio_value",
         )
 
     if st.button(
         "▶ Calculate Risk Metrics",
         key="risk_calc_btn",
-        type="primary"
+        type="primary",
     ):
         try:
             import yfinance as yf
-            from utils.risk_metrics import (
-                render_risk_metrics_streamlit
-            )
-            with st.spinner(
-                f"Calculating risk metrics for "
-                f"{risk_symbol}..."
-            ):
-                _hist = yf.Ticker(
-                    risk_symbol
-                ).history(period="1y")
-                _spy = yf.Ticker(
-                    "SPY"
-                ).history(period="1y")
+            from utils.risk_metrics import render_risk_metrics_streamlit
+
+            with st.spinner(f"Calculating risk metrics for {risk_symbol}..."):
+                _hist = yf.Ticker(risk_symbol).history(period="1y")
+                _spy = yf.Ticker("SPY").history(period="1y")
 
                 if _hist.empty:
-                    st.warning(
-                        f"No data for {risk_symbol}"
-                    )
+                    st.warning(f"No data for {risk_symbol}")
                 else:
-                    _col_map = {
-                        c.lower(): c
-                        for c in _hist.columns
-                    }
-                    _close_col = _col_map.get(
-                        "close", _hist.columns[0]
-                    )
-                    _returns = _hist[
-                        _close_col
-                    ].pct_change().dropna()
+                    _col_map = {c.lower(): c for c in _hist.columns}
+                    _close_col = _col_map.get("close", _hist.columns[0])
+                    _returns = _hist[_close_col].pct_change().dropna()
 
                     _spy_returns = None
                     if not _spy.empty:
-                        _spy_col_map = {
-                            c.lower(): c
-                            for c in _spy.columns
-                        }
-                        _spy_close = _spy_col_map.get(
-                            "close", _spy.columns[0]
-                        )
-                        _spy_returns = _spy[
-                            _spy_close
-                        ].pct_change().dropna()
+                        _spy_col_map = {c.lower(): c for c in _spy.columns}
+                        _spy_close = _spy_col_map.get("close", _spy.columns[0])
+                        _spy_returns = _spy[_spy_close].pct_change().dropna()
 
                     render_risk_metrics_streamlit(
                         returns=_returns,
                         symbol=risk_symbol,
-                        portfolio_value=float(
-                            risk_portfolio_value
-                        ),
+                        portfolio_value=float(risk_portfolio_value),
                         benchmark_returns=_spy_returns,
                     )
         except Exception as e:
-            st.caption(
-                f"Risk metrics unavailable: {e}"
-            )
-except Exception as e:
-    st.caption(
-        f"Risk analytics section unavailable: {e}"
-    )
+            st.caption(f"Risk metrics unavailable: {e}")
 
-# Page Assistant
 try:
     from ui.page_assistant import render_page_assistant
+
     render_page_assistant("Trade")
 except Exception:
     pass

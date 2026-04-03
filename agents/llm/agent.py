@@ -2676,6 +2676,105 @@ class PromptAgent:
             )
 
 
+def get_evolve_platform_tool_registry():
+    """
+    Platform tools for autonomous LLM use: name, description, callable, JSON schema.
+    Callers (chat / orchestration) can map these to provider-native function calling.
+    """
+    from trading.services import agent_tools as _agent_tools
+
+    return [
+        {
+            "name": "scan_universe",
+            "description": (
+                "Screen a liquid ticker list with optional minimum AI score; "
+                "returns ranked candidates. Use for scanners or idea generation."
+            ),
+            "function": _agent_tools.scan_universe,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "universe": {
+                        "type": "string",
+                        "description": "default | large | sp50 | core (subset of platform universe)",
+                    },
+                    "min_score": {
+                        "type": "number",
+                        "description": "Minimum AI score (1–10)",
+                    },
+                    "max_results": {"type": "integer"},
+                },
+            },
+        },
+        {
+            "name": "get_ai_score",
+            "description": (
+                "Compute Evolve AI Score (technical, momentum, sentiment, fundamentals) "
+                "for one symbol."
+            ),
+            "function": _agent_tools.get_ai_score,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string", "description": "Ticker, e.g. AAPL"},
+                },
+                "required": ["symbol"],
+            },
+        },
+        {
+            "name": "get_forecast",
+            "description": (
+                "Multi-model consensus forecast and direction for a symbol. "
+                "Use for targets and horizon views."
+            ),
+            "function": _agent_tools.get_forecast,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "horizon": {
+                        "type": "integer",
+                        "description": "Forecast horizon in trading days",
+                    },
+                },
+                "required": ["symbol"],
+            },
+        },
+        {
+            "name": "get_news",
+            "description": "Recent headlines and articles for a symbol.",
+            "function": _agent_tools.get_news,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "max_items": {"type": "integer"},
+                },
+                "required": ["symbol"],
+            },
+        },
+        {
+            "name": "get_risk_metrics",
+            "description": (
+                "Historical performance metrics (Sharpe, max drawdown, win rate, VaR) "
+                "from daily returns."
+            ),
+            "function": _agent_tools.get_risk_metrics,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "period": {
+                        "type": "string",
+                        "description": "yfinance period, e.g. 1y, 6mo",
+                    },
+                },
+                "required": ["symbol"],
+            },
+        },
+    ]
+
+
 # Global prompt agent instance (lazy; avoid module-level init that pulls in ForecastRouter/ModelRegistry and can trigger Windows Unicode errors)
 prompt_agent = None
 try:

@@ -348,7 +348,7 @@ with tab_admin:
             )
 
         st.markdown("#### App")
-        st.metric("Version", "v3.17.0")
+        st.metric("Version", "v3.19.0")
 
         st.markdown("#### Optional packages")
         _opt = [
@@ -393,6 +393,75 @@ with tab_admin:
         except Exception as _ce:
             logger.warning("settings: cache scan failed: %s", _ce)
             st.caption(f"Could not scan .cache: {_ce}")
+
+        st.markdown("---")
+        st.markdown("#### Platform Monitoring")
+        try:
+            import sys as _sys
+            from pathlib import Path as _Path
+
+            _mroot = project_root / "_archive" / "monitoring"
+            _mon_ok = False
+            if _mroot.is_dir():
+                _mp = str(_mroot)
+                if _mp not in _sys.path:
+                    _sys.path.insert(0, _mp)
+                try:
+                    from health_check import HealthChecker
+
+                    _hc = HealthChecker()
+                    _health = _hc.check_system_health()
+                    st.json(
+                        {
+                            k: _health[k]
+                            for k in ("timestamp", "status", "uptime_seconds")
+                            if k in _health
+                        }
+                    )
+                    _comps = _health.get("components") or {}
+                    if _comps:
+                        st.caption("Components")
+                        st.json(_comps)
+                    _mon_ok = True
+                except Exception as _me:
+                    logger.warning("settings: monitoring failed: %s", _me)
+            if not _mon_ok:
+                st.info(
+                    "Monitoring module not yet available."
+                )
+        except Exception as _me2:
+            st.caption(f"Monitoring unavailable: {_me2}")
+
+        st.markdown("---")
+        st.markdown("**ML Score Model**")
+        try:
+            from trading.analysis.ml_score_trainer import MLScoreTrainer
+
+            model_exists = (
+                Path(".cache/ml_score/ml_score_model.joblib").exists()
+            )
+            if model_exists:
+                st.success("ML Score model is trained and active")
+            else:
+                st.warning(
+                    "ML Score model not trained — using rules-based scoring only"
+                )
+            if st.button("Train ML Score Model", key="train_ml_score"):
+                with st.spinner(
+                    "Training on default universe... (may take several minutes)"
+                ):
+                    trainer = MLScoreTrainer()
+                    result = trainer.train()
+                    if result.get("error"):
+                        st.error(f"Training failed: {result['error']}")
+                    else:
+                        _da = result.get("val_directional_accuracy") or 0
+                        st.success(
+                            f"Trained on {result.get('n_samples')} samples. "
+                            f"Directional accuracy: {_da*100:.1f}%"
+                        )
+        except Exception as e:
+            st.caption(f"ML Score training unavailable: {e}")
 
         if st.button(
             "Clear session & reload",

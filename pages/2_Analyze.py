@@ -68,25 +68,6 @@ def _get_forecasting_backend():
         logger.warning(f"Forecasting backend not available: {e}")
         return None
 
-# Global page-level error boundary (outermost catch)
-import os as _os
-import runpy as _runpy
-_guard_key = "EVOLVE_PAGE_GUARD_FORECASTING"
-# if _os.environ.get(_guard_key) != "1":
-#     _os.environ[_guard_key] = "1"
-#     try:
-#         _runpy.run_path(__file__, run_name="__main__")
-#     except Exception as _page_error:
-#         import traceback
-#         st.error(f"⚠️ Page error: {type(_page_error).__name__}: {_page_error}")
-#         with st.expander("Developer details"):
-#             st.code(traceback.format_exc(), language="python")
-#         st.info("Try refreshing the page or selecting a different symbol.")
-#         st.stop()
-#     finally:
-#         _os.environ.pop(_guard_key, None)
-#     st.stop()
-
 # Lazy init: resolve backend when Forecasting page is first rendered (not at app startup)
 if "forecasting_backend" not in st.session_state:
     st.session_state.forecasting_backend = _get_forecasting_backend()
@@ -5218,6 +5199,85 @@ with tab_diag:
             st.caption("Load price data (e.g. run Quick Forecast) to see diagnostics.")
     except Exception as _de:
         st.caption(f"Diagnostics unavailable: {_de}")
+
+    st.markdown("---")
+    st.subheader("🔬 Causal Analysis")
+    try:
+        import sys as _sys
+        from pathlib import Path as _Path
+
+        _aroot = _Path(__file__).resolve().parent.parent
+        _cap = _aroot / "_archive" / "causal"
+        _causal_ok = False
+        CausalModel = None
+        if _cap.is_dir():
+            _p = str(_cap)
+            if _p not in _sys.path:
+                _sys.path.insert(0, _p)
+            try:
+                from causal_model import CausalModel as _CM
+
+                CausalModel = _CM
+                _causal_ok = True
+            except Exception as _ce:
+                logger.warning("Analyze: causal import failed: %s", _ce)
+        if not _causal_ok or CausalModel is None:
+            st.info(
+                "Causal analysis module not yet available. "
+                "Install dependencies (e.g. networkx) to enable."
+            )
+        else:
+            st.caption(
+                "Exploratory causal graph from price/volume columns "
+                "(archive module)."
+            )
+            try:
+                _dh = st.session_state.get("analyze_forecast_data") or get_history(
+                    ticker, period="1y"
+                )
+                if _dh is None or _dh.empty:
+                    st.caption("Load a symbol to build a causal graph.")
+                else:
+                    _feat = _dh.select_dtypes(include=[np.number]).dropna(
+                        axis=0, how="any"
+                    )
+                    if _feat.shape[1] < 2:
+                        st.caption("Need at least two numeric series for causal view.")
+                    else:
+                        _cols = list(_feat.columns[:6])
+                        _sub = _feat[_cols].copy()
+                        _cmodel = CausalModel()
+                        _g = _cmodel.build_causal_graph(
+                            _sub,
+                            treatment_vars=_cols[:1],
+                            outcome_vars=_cols[1:2],
+                            confounders=_cols[2:] or None,
+                        )
+                        st.write(
+                            f"Nodes: **{_g.number_of_nodes()}**, "
+                            f"edges: **{_g.number_of_edges()}**"
+                        )
+                        if _g.number_of_edges():
+                            _edges = list(_g.edges(data=True))[:20]
+                            st.dataframe(
+                                normalize_for_display(
+                                    pd.DataFrame(
+                                        [
+                                            {
+                                                "from": a,
+                                                "to": b,
+                                                "weight": d.get("weight"),
+                                            }
+                                            for a, b, d in _edges
+                                        ]
+                                    )
+                                ),
+                                width="stretch",
+                            )
+            except Exception as _cae:
+                st.caption(f"Causal analysis unavailable: {_cae}")
+    except Exception as _cae2:
+        st.caption(f"Causal section error: {_cae2}")
 
 render_page_assistant("Analyze")
 
