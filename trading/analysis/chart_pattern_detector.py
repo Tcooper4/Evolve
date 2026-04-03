@@ -545,11 +545,13 @@ class ChartPatternDetector:
                 result.get("higher_highs", False),
                 result.get("higher_lows", False),
             ])
-            result["direction"] = (
-                "BULLISH" if bullish_signals >= 3
-                else "BEARISH" if bullish_signals <= 2
-                else "NEUTRAL"
-            )
+            # 0–5 booleans: require strong majority for bull/bear; middle = mixed/neutral
+            if bullish_signals >= 4:
+                result["direction"] = "BULLISH"
+            elif bullish_signals <= 1:
+                result["direction"] = "BEARISH"
+            else:
+                result["direction"] = "NEUTRAL"
             result["strength"] = round(bullish_signals / 5, 2)
 
             return result

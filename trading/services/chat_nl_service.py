@@ -276,6 +276,24 @@ def _agent_response_to_dict(agent_response: Any) -> Dict[str, Any]:
     }
 
 
+def _platform_tools_context_block() -> str:
+    """Inject tool names/descriptions so the active LLM can use them in reasoning."""
+    try:
+        from agents.llm.agent import get_evolve_platform_tool_registry
+
+        spec = get_evolve_platform_tool_registry()
+        if not spec:
+            return ""
+        lines = [f"- **{t['name']}**: {t['description']}" for t in spec]
+        return (
+            "\n\nPlatform tools (names and roles; align answers with available data):\n"
+            + "\n".join(lines)
+        )
+    except Exception as e:
+        logger.debug("chat: platform tools context skipped: %s", e)
+        return ""
+
+
 def build_context_block(memory_context: str, agent_response: Dict[str, Any], intent: Optional[str] = None, store: Any = None) -> str:
     """Build the context string to send to Claude (optional trading context + memory + last agent output)."""
     agent_response = _agent_response_to_dict(agent_response)
@@ -299,6 +317,9 @@ def build_context_block(memory_context: str, agent_response: Dict[str, Any], int
         blocks.append(f"Next actions: {agent_response['next_actions']}")
     if intent:
         blocks.append(f"(Detected intent: {intent})")
+    _pt = _platform_tools_context_block()
+    if _pt:
+        blocks.append(_pt)
     return "\n".join(blocks)
 
 

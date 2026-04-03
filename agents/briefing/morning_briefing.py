@@ -163,25 +163,43 @@ class MorningBriefing:
         return regime
 
     def _scan_universe(self) -> List[Dict[str, Any]]:
-        """Run scanner on universe and return top candidates."""
+        """Run scanner on universe and return top candidates (symbol + ai_score)."""
         try:
-            from trading.analysis.market_scanner import MarketScanner
-            scanner = MarketScanner()
-            results = scanner.scan_universe(
-                universe=self.universe,
-                min_score=self.min_ai_score,
+            from trading.analysis.market_scanner import (
+                DEFAULT_UNIVERSE,
+                scan_market,
             )
-            if isinstance(results, dict):
-                candidates = results.get("results", [])
-            else:
-                candidates = results or []
 
-            # Sort by AI score
+            uni = list(DEFAULT_UNIVERSE)
+            u = (self.universe or "default").lower()
+            if u in ("sp50", "large", "mega"):
+                uni = uni[:50]
+            elif u in ("sp30", "core"):
+                uni = uni[:30]
+            # sp100 / default: use full platform default list (same as agent_tools.scan_universe)
+
+            raw = scan_market(
+                filters=[],
+                universe=uni,
+                max_results=min(
+                    200,
+                    max(len(uni), self.max_positions * 16),
+                ),
+            )
+            if raw.get("error"):
+                logger.warning("Universe scan error: %s", raw.get("error"))
+                return []
+            rows = raw.get("results") or []
+            candidates = [
+                r
+                for r in rows
+                if float(r.get("ai_score", 0) or 0) >= float(self.min_ai_score)
+            ]
             candidates.sort(
                 key=lambda x: float(x.get("ai_score", 0) or 0),
-                reverse=True
+                reverse=True,
             )
-            return candidates[:self.max_positions * 2]
+            return candidates[: self.max_positions * 2]
 
         except Exception as e:
             logger.warning("Universe scan failed: %s", e)

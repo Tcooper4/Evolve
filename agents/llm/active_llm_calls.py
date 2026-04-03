@@ -603,8 +603,11 @@ def call_active_llm_chat(
             return _call_claude_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
         except Exception as e:
             _key_missing = "not set" in str(e).lower() or "add your key" in str(e).lower()
-            if _key_missing:
-                logger.warning("Claude key missing, trying OpenAI fallback: %s", e)
+            if _is_anthropic_401(e) or _key_missing:
+                logger.warning(
+                    "Claude unavailable (%s), trying OpenAI fallback",
+                    type(e).__name__,
+                )
                 try:
                     from config.llm_config import DEFAULT_MODELS
                     openai_model = DEFAULT_MODELS.get("gpt4", "gpt-4o")

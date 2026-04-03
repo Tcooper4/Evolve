@@ -279,6 +279,13 @@ class PromptAgent:
             "ridge": "Ridge Regression",
         }
 
+        # Platform LLM tools (names + callables + schemas); see get_evolve_platform_tool_registry()
+        try:
+            self.platform_tool_registry = get_evolve_platform_tool_registry()
+        except Exception as e:
+            self.logger.warning("Platform tool registry unavailable: %s", e)
+            self.platform_tool_registry = []
+
         self.logger.info("Enhanced Prompt Agent initialized with full pipeline routing")
 
     def _load_prompt_examples(self) -> Optional[Dict[str, Any]]:

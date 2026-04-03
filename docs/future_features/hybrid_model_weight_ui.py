@@ -419,8 +419,6 @@ def create_backtest_interface(manager: HybridModelManager):
 
 def main():
     """Main function for the Hybrid Model page."""
-    st.set_page_config(page_title="Hybrid Model", page_icon="ðŸŽ¯", layout="wide")
-
     st.title("ðŸŽ¯ Hybrid Model Management")
     st.markdown("---")
 

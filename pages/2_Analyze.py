@@ -5080,17 +5080,19 @@ with tab_earnings:
 
                 with st.expander("Historical earnings detail"):
                     st.dataframe(
-                        df_r[
-                            [
-                                "date",
-                                "eps_estimate",
-                                "eps_actual",
-                                "surprise_pct",
-                                "move_1d",
-                                "move_3d",
-                                "move_5d",
+                        normalize_for_display(
+                            df_r[
+                                [
+                                    "date",
+                                    "eps_estimate",
+                                    "eps_actual",
+                                    "surprise_pct",
+                                    "move_1d",
+                                    "move_3d",
+                                    "move_5d",
+                                ]
                             ]
-                        ],
+                        ),
                         width='stretch',
                     )
     except Exception as e:
