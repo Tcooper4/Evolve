@@ -145,6 +145,8 @@ if "global_search_ticker" not in st.session_state:
     st.session_state["global_search_ticker"] = ""
 
 with st.sidebar:
+    st.markdown("### Evolve")
+    st.caption("Trading copilot")
     _gsearch = st.text_input(
         "Search ticker",
         placeholder="/ to search any ticker...",
@@ -154,12 +156,29 @@ with st.sidebar:
     if _gsearch and len(_gsearch.strip()) >= 1:
         _sym = _gsearch.strip().upper()
         if st.sidebar.button(
-            "Analyze " + _sym,
+            "Open " + _sym + " on Home",
             key="global_search_go",
             use_container_width=True,
         ):
             st.session_state["analyze_ticker"] = _sym
-            st.switch_page("pages/2_Analyze.py")
+            st.session_state["deep_dive_ticker"] = _sym
+            st.switch_page("pages/1_Dashboard.py")
+    try:
+        import datetime as _dt
+
+        if _dt.datetime.now().weekday() < 5:
+            st.caption("Market status: **Weekday session** (US)")
+        else:
+            st.caption("Market status: **Weekend**")
+    except Exception:
+        st.caption("Market status: —")
+    st.page_link("pages/7_Settings.py", label="⚙️ Settings")
+    with st.expander("Advanced tools", expanded=False):
+        st.page_link("pages/2_Analyze.py", label="Analyze")
+        st.page_link("pages/3_Scanner.py", label="Scanner")
+        st.page_link("pages/4_Trade.py", label="Trade")
+        st.page_link("pages/5_Backtest.py", label="Backtest")
+        st.page_link("pages/6_Chat.py", label="Chat")
     st.markdown("---")
 
 # ── Inject theme globally ────────────────────────────
@@ -190,7 +209,7 @@ if "llm_processor" not in st.session_state:
         st.session_state.llm_processor = None
 
 # Main area when this script is the active page
-st.markdown("# Welcome to Evolve")
-st.markdown("Use the **sidebar** to open **Dashboard**, **Analyze**, **Scanner**, **Trade**, **Backtest**, **Chat**, **Settings**, or the legacy pages.")
-st.info("👉 Select a page from the sidebar to get started. New pages: 1_Dashboard, 2_Analyze, 3_Scanner, 4_Trade, 5_Backtest, 6_Chat, 7_Settings.")
+st.markdown("# Evolve")
+st.markdown("Open **Home** from the sidebar for the main experience, or use **Advanced tools** for full pages.")
+st.page_link("pages/1_Dashboard.py", label="🏠 Go to Home")
 
