@@ -109,6 +109,9 @@ with col_chat:
         role = msg.get("role", "user")
         content = msg.get("content", "")
         with st.chat_message(role):
+            if role == "assistant":
+                for _tc in msg.get("tool_captions") or []:
+                    st.caption(_tc)
             st.markdown(content)
             if role == "assistant" and msg.get("action_data"):
                 _render_action_data(msg["action_data"])
@@ -138,12 +141,44 @@ with col_chat:
                         memory_context, agent_response, intent=intent, store=store,
                     )
                     conv = [{"role": m["role"], "content": m.get("content", "")} for m in st.session_state.chat_messages[:-1]]
+                    tool_captions = []
+                    _focus = (
+                        st.session_state.get("deep_dive_ticker")
+                        or st.session_state.get("analyze_ticker")
+                        or ""
+                    )
+                    _focus_sym = str(_focus).strip().upper() or None
                     if call_active_llm_chat:
-                        reply = call_active_llm_chat(
-                            chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT, context_block, conv, prompt,
-                            max_tokens=2048,
-                        )
-                        reply = reply.strip() or "I didn't get a response. Please try again."
+                        try:
+                            from agents.llm.tool_executor import execute_with_tools
+
+                            _tres = execute_with_tools(
+                                user_message=prompt,
+                                context_block=context_block,
+                                conversation_messages=conv,
+                                system_prompt=chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT,
+                                platform_context_suffix="",
+                                focus_symbol=_focus_sym,
+                                available_tools=[
+                                    "scan_universe",
+                                    "get_ai_score",
+                                    "get_forecast",
+                                    "get_news",
+                                    "get_risk_metrics",
+                                ],
+                                max_tokens=2048,
+                            )
+                            reply = (_tres.text or "").strip() or (
+                                "I didn't get a response. Please try again."
+                            )
+                            tool_captions = _tres.tool_captions or []
+                        except Exception as _te:
+                            logger.warning("Chat: execute_with_tools failed, fallback: %s", _te)
+                            reply = call_active_llm_chat(
+                                chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT, context_block, conv, prompt,
+                                max_tokens=2048,
+                            )
+                            reply = reply.strip() or "I didn't get a response. Please try again."
                     else:
                         reply = chat_nl_service.call_claude(
                             chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT, context_block, conv, prompt,
@@ -154,8 +189,15 @@ with col_chat:
                         action_data = _ar["data"]
                     elif _ar.get("data") is not None:
                         action_data = {"raw": str(_ar["data"])[:500]}
+                    for _tc in tool_captions:
+                        st.caption(_tc)
                     st.markdown(reply)
-                    st.session_state.chat_messages.append({"role": "assistant", "content": reply, "action_data": action_data})
+                    st.session_state.chat_messages.append({
+                        "role": "assistant",
+                        "content": reply,
+                        "action_data": action_data,
+                        "tool_captions": tool_captions,
+                    })
                     if action_data:
                         _render_action_data(action_data)
                 except Exception as e:

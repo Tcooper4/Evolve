@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Single-ticker deep analysis surface (scroll + 4 tabs)."""
+import logging
+
 import streamlit as st
 
 from components.analyze_ai_score import get_ai_recommendation_dict, top_signals_summary
@@ -9,6 +11,180 @@ from components.analyze_forecast import render_forecast
 from components.analyze_news import render_news
 from components.analyze_options import render_options
 from trading.data.price_cache import get_history, get_info, get_quote
+
+logger = logging.getLogger(__name__)
+
+
+def _deep_dive_platform_suffix(
+    sym: str,
+    price,
+    chg,
+    score,
+    rec,
+) -> str:
+    """Pre-loaded ticker context for tool router + synthesis (no tool execution here)."""
+    parts = [f"Deep dive symbol: {sym}"]
+    if price is not None:
+        chg_s = f"{float(chg):+.2f}%" if chg is not None else "—"
+        parts.append(f"Last price: ${float(price):.2f} · session change {chg_s}")
+    if score and not score.get("error"):
+        parts.append(
+            f"AI score: overall {score.get('overall_score')} grade {score.get('grade')} "
+            f"(T/M/S/F: {score.get('technical_score')}/"
+            f"{score.get('momentum_score')}/{score.get('sentiment_score')}/"
+            f"{score.get('fundamental_score')})"
+        )
+        summ = score.get("summary") or ""
+        if summ:
+            parts.append(f"Score summary: {summ[:600]}")
+    sigs = (score or {}).get("signals") or []
+    if sigs:
+        parts.append("Top signals:")
+        for s in sigs[:5]:
+            parts.append(
+                f"  - [{s.get('impact')}] {s.get('name')}: {s.get('value')}"
+            )
+    if rec:
+        parts.append(
+            f"Recommendation snapshot: {rec.get('action')} · "
+            f"conviction {rec.get('conviction')} · entry {rec.get('entry')} · "
+            f"target {rec.get('target')} · stop {rec.get('stop')}"
+        )
+    try:
+        from trading.data.earnings_calendar import get_upcoming_earnings
+
+        er = get_upcoming_earnings(sym)
+        if er and er.get("days_until") is not None:
+            parts.append(f"Upcoming earnings: in {er.get('days_until')} days")
+    except Exception:
+        pass
+    try:
+        from trading.data.news_aggregator import get_news
+
+        items = get_news(sym, max_items=5)
+        if items:
+            parts.append("Recent headlines (snapshot):")
+            for it in items[:5]:
+                t = (it.get("title") or it.get("headline") or str(it))[:200]
+                parts.append(f"  - {t}")
+    except Exception:
+        pass
+    return "\n".join(parts)
+
+
+def _render_deep_dive_chat(
+    sym: str,
+    price,
+    chg,
+    score,
+    rec,
+) -> None:
+    """Bottom chat bar: same tool loop as Home, with ticker-heavy context."""
+    st.markdown("---")
+    st.subheader(f"Ask about {sym}")
+    _dk = f"deep_dive_chat_{sym}"
+    if _dk not in st.session_state:
+        st.session_state[_dk] = []
+
+    platform_suffix = _deep_dive_platform_suffix(sym, price, chg, score, rec)
+    _inp = st.chat_input(f"Ask about {sym}...", key=f"dd_chat_in_{sym}")
+    _raw = (_inp or "").strip()
+
+    if _raw:
+        st.session_state[_dk].append({"role": "user", "content": _raw})
+
+    for msg in st.session_state[_dk]:
+        with st.chat_message(msg.get("role", "user")):
+            if msg.get("role") == "assistant":
+                for _c in msg.get("tool_captions") or []:
+                    st.caption(_c)
+            st.markdown(msg.get("content", ""))
+
+    if not _raw:
+        return
+
+    res = None
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            try:
+                from agents.llm.tool_executor import execute_with_tools
+                from trading.memory import get_memory_store
+                from trading.services import chat_nl_service
+
+                store = get_memory_store()
+                um = f"[Deep dive: {sym}]\n{_raw}"
+                try:
+                    store.ingest_preference_text(um, source="deep_dive_chat")
+                except Exception as e:
+                    logger.warning("Deep dive chat: preference ingest failed: %s", e)
+                if "chat_router" not in st.session_state:
+                    try:
+                        from trading.agents.enhanced_prompt_router import (
+                            EnhancedPromptRouterAgent,
+                        )
+
+                        st.session_state.chat_router = EnhancedPromptRouterAgent()
+                    except Exception as e:
+                        logger.warning("Deep dive chat: router failed: %s", e)
+                        st.session_state.chat_router = None
+                router = st.session_state.get("chat_router")
+                route_result = (
+                    chat_nl_service.parse_intent(router, um)
+                    if router
+                    else {"intent": "unknown", "args": {}}
+                )
+                intent = (
+                    route_result.get("intent", "unknown")
+                    if isinstance(route_result, dict)
+                    else getattr(route_result, "intent", "unknown")
+                )
+                memory_context = chat_nl_service.get_memory_context(store)
+                agent_response = chat_nl_service.run_agent_action(um)
+                context_block = chat_nl_service.build_context_block(
+                    memory_context,
+                    agent_response,
+                    intent=intent,
+                    store=store,
+                )
+                conv = [
+                    {"role": m["role"], "content": m.get("content", "")}
+                    for m in st.session_state[_dk][:-1]
+                ]
+                res = execute_with_tools(
+                    user_message=um,
+                    context_block=context_block,
+                    conversation_messages=conv,
+                    system_prompt=chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT,
+                    platform_context_suffix=platform_suffix,
+                    focus_symbol=sym,
+                    available_tools=[
+                        "scan_universe",
+                        "get_ai_score",
+                        "get_forecast",
+                        "get_news",
+                        "get_risk_metrics",
+                    ],
+                    max_tokens=2048,
+                )
+                for _c in res.tool_captions or []:
+                    st.caption(_c)
+                st.markdown(res.text)
+            except Exception as e:
+                logger.exception("Deep dive chat failed: %s", e)
+                from agents.llm.tool_executor import ToolChatResult
+
+                res = ToolChatResult(
+                    text=f"Chat unavailable: {e}",
+                    tool_captions=[],
+                )
+                st.caption(res.text)
+    st.session_state[_dk].append(
+        {
+            "role": "assistant",
+            "content": res.text if res else "",
+            "tool_captions": (res.tool_captions or []) if res else [],
+        }
+    )
 
 
 def render_deep_dive(ticker: str) -> None:
@@ -117,5 +293,6 @@ def render_deep_dive(ticker: str) -> None:
                 f"target {rec.get('target')})"
             )
         st.session_state["home_chat_context_ticker"] = ctx
+        _render_deep_dive_chat(sym, price, chg, score, rec)
     except Exception as e:
         st.caption(f"unavailable: {e}")

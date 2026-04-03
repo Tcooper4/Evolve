@@ -71,9 +71,37 @@ def _score_color(val: float) -> str:
     return "red"
 
 
-def _home_chat_reply(prompt: str) -> str:
+def _home_platform_context() -> str:
+    """Extra context for router + synthesis: focus ticker, briefing regime, top picks."""
+    parts = []
+    dd = st.session_state.get("deep_dive_ticker") or st.session_state.get(
+        "analyze_ticker"
+    )
+    if dd:
+        parts.append(f"User focus ticker (deep dive / Home): {str(dd).strip().upper()}")
+    br = st.session_state.get("home_briefing_report") or {}
+    reg = br.get("market_regime") or {}
+    if reg:
+        parts.append(
+            f"Latest morning briefing regime: {reg.get('regime')} — "
+            f"{reg.get('description', '')} "
+            f"VIX={reg.get('vix_level')} SPY_trend={reg.get('spy_trend')}"
+        )
+    opps = br.get("top_opportunities") or []
+    if opps:
+        lines = [f"Top opportunities from cached briefing ({len(opps)}):"]
+        for o in opps[:5]:
+            lines.append(
+                f"  - {o.get('symbol')}: AI score {o.get('ai_score')} "
+                f"price {o.get('current_price')}"
+            )
+        parts.append("\n".join(lines))
+    return "\n\n".join(parts)
+
+
+def _home_chat_reply(prompt: str):
     try:
-        from agents.llm.active_llm_calls import call_active_llm_chat
+        from agents.llm.tool_executor import execute_with_tools
         from trading.memory import get_memory_store
         from trading.services import chat_nl_service
 
@@ -120,25 +148,32 @@ def _home_chat_reply(prompt: str) -> str:
             {"role": m["role"], "content": m.get("content", "")}
             for m in st.session_state.home_chat_messages[:-1]
         ]
-        if call_active_llm_chat:
-            reply = call_active_llm_chat(
-                chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT,
-                context_block,
-                conv,
-                prompt,
-                max_tokens=2048,
-            )
-        else:
-            reply = chat_nl_service.call_claude(
-                chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT,
-                context_block,
-                conv,
-                prompt,
-            )
-        return (reply or "").strip() or "No response."
+        focus = ""
+        if dd:
+            focus = str(dd).strip().upper()
+            if "(" in focus:
+                focus = focus.split("(")[0].strip().upper()
+        return execute_with_tools(
+            user_message=prompt,
+            context_block=context_block,
+            conversation_messages=conv,
+            system_prompt=chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT,
+            platform_context_suffix=_home_platform_context(),
+            focus_symbol=focus or None,
+            available_tools=[
+                "scan_universe",
+                "get_ai_score",
+                "get_forecast",
+                "get_news",
+                "get_risk_metrics",
+            ],
+            max_tokens=2048,
+        )
     except Exception as e:
         logger.exception("Home chat turn failed: %s", e)
-        return f"Something went wrong: {e}"
+        from agents.llm.tool_executor import ToolChatResult
+
+        return ToolChatResult(text=f"Something went wrong: {e}", tool_captions=[])
 
 
 session_id = st.session_state.get("evolve_session_id") or st.session_state.get(
@@ -366,13 +401,23 @@ if _prompt:
 
 for msg in st.session_state.home_chat_messages:
     with st.chat_message(msg.get("role", "user")):
+        if msg.get("role") == "assistant":
+            for _c in msg.get("tool_captions") or []:
+                st.caption(_c)
         st.markdown(msg.get("content", ""))
 
 if _prompt:
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            _reply = _home_chat_reply(_prompt)
+            _chat_res = _home_chat_reply(_prompt)
+            _reply = _chat_res.text
+            for _c in _chat_res.tool_captions or []:
+                st.caption(_c)
             st.markdown(_reply)
     st.session_state.home_chat_messages.append(
-        {"role": "assistant", "content": _reply}
+        {
+            "role": "assistant",
+            "content": _reply,
+            "tool_captions": _chat_res.tool_captions or [],
+        }
     )
