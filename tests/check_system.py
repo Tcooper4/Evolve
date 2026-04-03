@@ -46,7 +46,7 @@ def check_core_modules() -> Dict[str, bool]:
         "trading.models.forecast_router",
         "trading.strategies.bollinger_strategy",
         "trading.data.data_loader",
-        "trading.execution.execution_engine",
+        "trading.execution.execution_replay",
         "trading.optimization.bayesian_optimizer",
         "trading.risk.risk_analyzer",
         "trading.portfolio.portfolio_manager",

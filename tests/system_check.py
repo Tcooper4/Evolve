@@ -298,7 +298,7 @@ def main():
         ("trading.memory.agent_memory", "AgentMemory", "Memory class"),
         ("trading.market.market_data", "MarketData", "Market data class"),
         ("trading.evaluation.metrics", "calculate_metrics", "Metrics calculation"),
-        ("trading.execution.execution_engine", "ExecutionEngine", "Execution engine"),
+        ("trading.execution.execution_replay", "ExecutionReplay", "Execution replay"),
         ("trading.llm.agent", "LLMAgent", "LLM agent"),
         ("trading.risk.risk_analyzer", "RiskAnalyzer", "Risk analyzer"),
         (

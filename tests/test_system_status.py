@@ -36,7 +36,7 @@ class SystemStatusTester:
             "trading.models.forecast_router",
             "trading.strategies.bollinger_strategy",
             "trading.data.data_loader",
-            "trading.execution.execution_engine",
+            # Archived: trading.execution.execution_engine -> _archive/trading/execution/
             "trading.optimization.bayesian_optimizer",
             "trading.risk.risk_analyzer",
             "trading.portfolio.portfolio_manager",

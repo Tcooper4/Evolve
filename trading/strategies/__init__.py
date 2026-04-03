@@ -1,73 +1,34 @@
-"""Trading strategies module."""
+"""Trading strategies — import submodules directly; barrel avoids eager-loading all strategies."""
 
-import functools
 import logging
 from datetime import datetime
 from typing import Any, Dict, List
 
 import pandas as pd
 
-from trading.strategies.atr_strategy import ATRConfig, ATRStrategy, generate_atr_signals
-from trading.strategies.bollinger_strategy import BollingerConfig, BollingerStrategy
-from trading.strategies.cci_strategy import CCIConfig, CCIStrategy, generate_cci_signals
-from trading.strategies.ensemble import (
-    EnsembleConfig,
-    WeightedEnsembleStrategy,
-    create_balanced_ensemble,
-    create_conservative_ensemble,
-    create_ensemble_strategy,
-    create_rsi_macd_bollinger_ensemble,
-)
-from trading.strategies.gatekeeper import (
-    GatekeeperDecision,
-    GatekeeperDecisionResult,
-    MarketRegime,
-    RegimeClassifier,
-    RegimeMetrics,
-    StrategyGatekeeper,
-    StrategyPerformance,
-    StrategyStatus,
-    create_strategy_gatekeeper,
-)
-from trading.strategies.macd_strategy import MACDConfig, MACDStrategy
-from trading.strategies.rsi_signals import (
-    generate_rsi_signals,
-    generate_signals,
-    load_optimized_settings,
-)
-from trading.strategies.sma_strategy import SMAConfig, SMAStrategy
-from trading.strategies.strategy_manager import (
-    Strategy,
-    StrategyManager,
-    StrategyMetrics,
-)
-from trading.strategies.strategy_runner import (
-    AsyncStrategyRunner,
-    run_strategies_parallel_example,
-)
+logger = logging.getLogger(__name__)
 
 
 def get_signals(strategy_name: str, data: pd.DataFrame, **kwargs) -> Dict[str, Any]:
-    """Get trading signals for a specific strategy.
-
-    Args:
-        strategy_name: Name of the strategy to use
-        data: Price data DataFrame
-        **kwargs: Strategy-specific parameters
-
-    Returns:
-        Dictionary containing signals and metadata
-    """
+    """Get trading signals for a specific strategy (lazy imports)."""
     try:
         if strategy_name.lower() == "rsi":
+            from trading.strategies.rsi_signals import generate_signals
+
             return generate_signals(data, **kwargs)
         elif strategy_name.lower() == "bollinger":
+            from trading.strategies.bollinger_strategy import BollingerStrategy
+
             strategy = BollingerStrategy()
             return strategy.generate_signals(data, **kwargs)
         elif strategy_name.lower() == "macd":
+            from trading.strategies.macd_strategy import MACDStrategy
+
             strategy = MACDStrategy()
             return strategy.generate_signals(data, **kwargs)
         elif strategy_name.lower() == "sma":
+            from trading.strategies.sma_strategy import SMAStrategy
+
             strategy = SMAStrategy()
             return {
                 "success": True,
@@ -76,41 +37,39 @@ def get_signals(strategy_name: str, data: pd.DataFrame, **kwargs) -> Dict[str, A
                 "timestamp": datetime.now().isoformat(),
             }
         elif strategy_name.lower() == "cci":
+            from trading.strategies.cci_strategy import generate_cci_signals
+
             return generate_cci_signals(data, **kwargs)
         elif strategy_name.lower() == "atr":
+            from trading.strategies.atr_strategy import generate_atr_signals
+
             return generate_atr_signals(data, **kwargs)
         elif strategy_name.lower() == "ensemble":
-            # Handle ensemble strategy
+            from trading.strategies.ensemble import create_ensemble_strategy
+
             strategy_weights = kwargs.get(
                 "strategy_weights", {"rsi": 0.4, "macd": 0.4, "bollinger": 0.2}
             )
             combination_method = kwargs.get("combination_method", "weighted_average")
-
-            # Create ensemble strategy
             ensemble = create_ensemble_strategy(
                 strategy_weights, combination_method, **kwargs
             )
-
-            # Generate individual strategy signals
             strategy_signals = {}
-            for strategy_name in strategy_weights.keys():
+            for sn in strategy_weights.keys():
                 try:
-                    individual_signals = get_signals(strategy_name, data, **kwargs)
+                    individual_signals = get_signals(sn, data, **kwargs)
                     if (
                         isinstance(individual_signals, dict)
                         and "result" in individual_signals
                     ):
-                        strategy_signals[strategy_name] = individual_signals["result"]
+                        strategy_signals[sn] = individual_signals["result"]
                     else:
-                        strategy_signals[strategy_name] = individual_signals
+                        strategy_signals[sn] = individual_signals
                 except Exception as e:
                     logging.warning(
-                        f"Failed to generate signals for {strategy_name}: {e}"
+                        f"Failed to generate signals for {sn}: {e}"
                     )
-
-            # Combine signals
             combined_signals = ensemble.combine_signals(strategy_signals)
-
             return {
                 "success": True,
                 "result": combined_signals,
@@ -125,77 +84,40 @@ def get_signals(strategy_name: str, data: pd.DataFrame, **kwargs) -> Dict[str, A
 
 
 def get_available_strategies() -> List[str]:
-    """Get list of available strategies.
-
-    Returns:
-        List[str]: Available strategy names
-    """
+    """Get list of available strategies."""
     return ["rsi", "bollinger", "macd", "sma", "cci", "atr", "ensemble"]
 
 
-# Not safe to cache a factory function with variable **kwargs — different kwargs would return same cached instance
 def create_strategy(strategy_name: str, **kwargs) -> Any:
-    """Create a strategy instance.
+    """Create a strategy instance (lazy imports)."""
+    sn = strategy_name.lower()
+    if sn == "rsi":
+        return None
+    if sn == "bollinger":
+        from trading.strategies.bollinger_strategy import BollingerConfig, BollingerStrategy
 
-    Args:
-        strategy_name: Name of the strategy
-        **kwargs: Strategy parameters
+        return BollingerStrategy(BollingerConfig(**kwargs))
+    if sn == "macd":
+        from trading.strategies.macd_strategy import MACDConfig, MACDStrategy
 
-    Returns:
-        Strategy instance
-    """
-    strategy_map = {
-        "rsi": lambda: None,  # RSI uses function-based approach
-        "bollinger": lambda: BollingerStrategy(BollingerConfig(**kwargs)),
-        "macd": lambda: MACDStrategy(MACDConfig(**kwargs)),
-        "sma": lambda: SMAStrategy(SMAConfig(**kwargs)),
-        "cci": lambda: CCIStrategy(CCIConfig(**kwargs)),
-        "atr": lambda: ATRStrategy(ATRConfig(**kwargs)),
-    }
+        return MACDStrategy(MACDConfig(**kwargs))
+    if sn == "sma":
+        from trading.strategies.sma_strategy import SMAConfig, SMAStrategy
 
-    if strategy_name.lower() not in strategy_map:
-        raise ValueError(f"Unknown strategy: {strategy_name}")
+        return SMAStrategy(SMAConfig(**kwargs))
+    if sn == "cci":
+        from trading.strategies.cci_strategy import CCIConfig, CCIStrategy
 
-    return strategy_map[strategy_name.lower()]()
+        return CCIStrategy(CCIConfig(**kwargs))
+    if sn == "atr":
+        from trading.strategies.atr_strategy import ATRConfig, ATRStrategy
+
+        return ATRStrategy(ATRConfig(**kwargs))
+    raise ValueError(f"Unknown strategy: {strategy_name}")
 
 
 __all__ = [
-    "StrategyManager",
-    "Strategy",
-    "StrategyMetrics",
-    "generate_rsi_signals",
-    "load_optimized_settings",
-    "generate_signals",
     "get_signals",
     "get_available_strategies",
     "create_strategy",
-    "BollingerStrategy",
-    "BollingerConfig",
-    "MACDStrategy",
-    "MACDConfig",
-    "SMAStrategy",
-    "SMAConfig",
-    "CCIStrategy",
-    "CCIConfig",
-    "generate_cci_signals",
-    "ATRStrategy",
-    "ATRConfig",
-    "generate_atr_signals",
-    "StrategyGatekeeper",
-    "RegimeClassifier",
-    "MarketRegime",
-    "StrategyStatus",
-    "GatekeeperDecision",
-    "GatekeeperDecisionResult",
-    "RegimeMetrics",
-    "StrategyPerformance",
-    "create_strategy_gatekeeper",
-    "WeightedEnsembleStrategy",
-    "EnsembleConfig",
-    "create_ensemble_strategy",
-    "create_rsi_macd_bollinger_ensemble",
-    "create_balanced_ensemble",
-    "create_conservative_ensemble",
-    "AsyncStrategyRunner",
-    "run_strategies_parallel_example",
 ]
