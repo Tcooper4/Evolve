@@ -41,7 +41,7 @@ try:
     create_forecast_interface = create_forecast_form
     create_model_config = create_model_selector
     
-    # Import chatbox agent if available
+    # Import chatbox agent if available (must not propagate ImportError: would drop all trading.ui imports)
     try:
         from trading.ui.chatbox_agent import (
             ChatboxAgent,
@@ -54,18 +54,42 @@ try:
             create_chatbox_agent,
         )
     except ImportError:
-        # Use local chatbox_agent if trading.ui.chatbox_agent doesn't exist
-        from .chatbox_agent import (
-            ChatboxAgent,
-            ChatMessage,
-            CommandParser,
-            SpeechRecognizer,
-            TextToSpeech,
-            TradingCommand,
-            VoiceInput,
-            create_chatbox_agent,
-        )
-            
+        try:
+            from .chatbox_agent import (
+                ChatboxAgent,
+                ChatMessage,
+                CommandParser,
+                SpeechRecognizer,
+                TextToSpeech,
+                TradingCommand,
+                VoiceInput,
+                create_chatbox_agent,
+            )
+        except ImportError:
+            class ChatboxAgent:
+                pass
+
+            class ChatMessage:
+                pass
+
+            class CommandParser:
+                pass
+
+            class SpeechRecognizer:
+                pass
+
+            class TextToSpeech:
+                pass
+
+            class TradingCommand:
+                pass
+
+            class VoiceInput:
+                pass
+
+            def create_chatbox_agent():
+                return None
+
 except ImportError as e:
     # Fallback to local implementations if trading.ui is not available
     print(f"Warning: trading.ui not available: {e}")
