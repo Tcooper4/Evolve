@@ -117,6 +117,44 @@ def get_session_summary() -> Dict[str, Any]:
         return {"error": str(e)}
 
 
+def prune_streamlit_session_cache(max_tickers: int = 10) -> None:
+    """Bound per-ticker cache growth: keep last N tickers and stamp session start."""
+    try:
+        import time as _time
+
+        if "_evolve_session_start_ts" not in st.session_state:
+            st.session_state["_evolve_session_start_ts"] = _time.time()
+        cur = (
+            st.session_state.get("analyze_ticker")
+            or st.session_state.get("deep_dive_ticker")
+            or ""
+        )
+        if isinstance(cur, str):
+            cur = cur.strip().upper()
+        hist = st.session_state.get("_evolve_recent_tickers")
+        if not isinstance(hist, list):
+            hist = []
+        if cur:
+            if cur in hist:
+                hist.remove(cur)
+            hist.insert(0, cur)
+            hist = hist[:max_tickers]
+        st.session_state["_evolve_recent_tickers"] = hist
+        allowed = set(hist)
+        for key in list(st.session_state.keys()):
+            if not isinstance(key, str):
+                continue
+            if key.startswith("evolve_ticker_blob_"):
+                sym = key.replace("evolve_ticker_blob_", "", 1).split("_", 1)[0]
+                if sym and sym not in allowed:
+                    try:
+                        del st.session_state[key]
+                    except Exception:
+                        pass
+    except Exception as e:
+        logger.debug("prune_streamlit_session_cache: %s", e)
+
+
 def get_stable_user_id() -> str:
     """
     Returns a stable user ID that persists

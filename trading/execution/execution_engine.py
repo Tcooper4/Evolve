@@ -20,27 +20,26 @@ except ImportError:
     CCXT_AVAILABLE = False
     ccxt = None
 
-# Import from trading package
+# Import from trading package (trading.evaluation.metrics archived; TradingConfig local)
 try:
-    from trading.config.configuration import TradingConfig
-    from trading.evaluation.metrics import calculate_metrics
     from trading.memory.agent_memory import AgentMemory
     from trading.utils.common import get_logger
 except ImportError:
-    # Fallback imports
     def get_logger(name):
         return logging.getLogger(name)
 
-    class TradingConfig:
+    class AgentMemory:
         def __init__(self):
-            self.execution_mode = "simulation"
-            self.broker_api_key = None
-            self.broker_secret_key = None
+            self.memory = []
 
 
-class AgentMemory:
+class TradingConfig:
+    """Minimal execution config when trading.config enhanced_settings is archived."""
+
     def __init__(self):
-        self.memory = []
+        self.execution_mode = "simulation"
+        self.broker_api_key = None
+        self.broker_secret_key = None
 
 
 def calculate_metrics(returns):

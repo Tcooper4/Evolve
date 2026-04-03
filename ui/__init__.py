@@ -24,14 +24,20 @@ try:
         create_forecast_export,
         create_forecast_explanation,
     )
-    from trading.ui.strategy_components import (
-        create_strategy_form,
-        create_performance_chart,
-        create_performance_metrics,
-        create_trade_list,
-        create_strategy_export,
-    )
-    
+
+    # trading/ui/strategy_components.py archived — local placeholders
+    def create_strategy_form(*a, **kw):
+        return {"status": "placeholder", "message": "Strategy form not available"}
+
+    def create_performance_chart(*a, **kw):
+        return {"status": "placeholder", "message": "Performance chart not available"}
+
+    def create_trade_list(*a, **kw):
+        return {"status": "placeholder", "message": "Trade list not available"}
+
+    def create_strategy_export(*a, **kw):
+        return {"status": "placeholder", "message": "Strategy export not available"}
+
     # Create aliases for missing functions to maintain compatibility
     create_forecast_display = create_forecast_chart
     create_model_selection = create_model_selector

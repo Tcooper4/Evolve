@@ -1,52 +1,30 @@
 """Agents Module for Evolve Trading Platform.
 
 This module contains various autonomous trading agents and a centralized registry.
-Legacy agents (model_generator_agent, model_innovation_agent, prompt_agent,
-strategy_research_agent) may be in _dead_code; imports are optional so the
-package and agents.llm load successfully without them.
+Optional agents (model_generator_agent, model_innovation_agent, prompt_agent,
+strategy_research_agent) are archived under _archive/; exports are None.
 """
 
-try:
-    from .model_generator_agent import (
-        ArxivResearchFetcher,
-        AutoEvolutionaryModelGenerator,
-        BenchmarkResult,
-        ModelBenchmarker,
-        ModelCandidate,
-        ResearchPaper,
-        run_model_evolution,
-    )
-    from .model_generator_agent import ModelImplementationGenerator as MIGenerator
-except ImportError:
-    ArxivResearchFetcher = None
-    AutoEvolutionaryModelGenerator = None
-    BenchmarkResult = None
-    ModelBenchmarker = None
-    ModelCandidate = None
-    MIGenerator = None
-    ResearchPaper = None
-    run_model_evolution = None
+# Archived — not on disk: agents/model_generator_agent.py
+ArxivResearchFetcher = None
+AutoEvolutionaryModelGenerator = None
+BenchmarkResult = None
+ModelBenchmarker = None
+ModelCandidate = None
+MIGenerator = None
+ResearchPaper = None
+run_model_evolution = None
 
-try:
-    from .model_innovation_agent import (
-        InnovationConfig,
-        ModelCandidate as InnovationModelCandidate,
-        ModelEvaluation,
-        ModelInnovationAgent,
-        create_model_innovation_agent,
-    )
-except ImportError:
-    InnovationConfig = None
-    InnovationModelCandidate = None
-    ModelEvaluation = None
-    ModelInnovationAgent = None
-    create_model_innovation_agent = None
+# Archived — not on disk: agents/model_innovation_agent.py
+InnovationConfig = None
+InnovationModelCandidate = None
+ModelEvaluation = None
+ModelInnovationAgent = None
+create_model_innovation_agent = None
 
-try:
-    from .prompt_agent import PromptAgent, create_prompt_agent
-except ImportError:
-    PromptAgent = None
-    create_prompt_agent = None
+# Archived — not on disk: agents/prompt_agent.py
+PromptAgent = None
+create_prompt_agent = None
 
 try:
     from .agent_controller import AgentController, get_agent_controller
@@ -69,10 +47,8 @@ from .registry import (
     search_agents,
 )
 
-try:
-    from .strategy_research_agent import StrategyResearchAgent
-except ImportError:
-    StrategyResearchAgent = None
+# Not in agents/ (only docs/future_features/) — no import
+StrategyResearchAgent = None
 
 # Import task router if available
 try:

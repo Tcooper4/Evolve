@@ -140,6 +140,13 @@ except Exception:
 if not session_id:
     st.stop()
 
+try:
+    from utils.session_utils import prune_streamlit_session_cache
+
+    prune_streamlit_session_cache(max_tickers=10)
+except Exception:
+    pass
+
 # ── Global ticker search (sidebar) ──────────────────
 if "global_search_ticker" not in st.session_state:
     st.session_state["global_search_ticker"] = ""
