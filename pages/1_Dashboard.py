@@ -354,6 +354,8 @@ if opps:
                     f"Entry **{opp.get('entry')}** → Target "
                     f"**{fc.get('consensus_price')}**"
                 )
+            if opp.get("risk_note"):
+                st.caption(opp["risk_note"])
         with col_b:
             if st.button("Open", key=f"hb_{sym}"):
                 _set_deep_dive(sym)

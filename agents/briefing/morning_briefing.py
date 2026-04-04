@@ -492,6 +492,36 @@ class MorningBriefing:
             except Exception as e:
                 logger.debug("Forecast failed for %s: %s", symbol, e)
 
+            if briefing:
+                try:
+                    from trading.backtesting.monte_carlo import (
+                        MonteCarloConfig,
+                        MonteCarloSimulator,
+                    )
+
+                    import numpy as np
+
+                    _cm = {c.lower(): c for c in hist.columns}
+                    _cc = _cm.get("close", hist.columns[0])
+                    _rets = hist[_cc].astype(float).pct_change().dropna()
+                    if len(_rets) >= 30:
+                        _cfg = MonteCarloConfig(n_simulations=50)
+                        _mc = MonteCarloSimulator(_cfg)
+                        _paths = _mc.simulate_portfolio_paths(
+                            _rets, n_simulations=50
+                        )
+                        if _paths is not None and len(_paths) > 1:
+                            _first = _paths.iloc[0].values.astype(float)
+                            _last = _paths.iloc[-1].values.astype(float)
+                            _term = (_last / np.maximum(_first, 1e-12)) - 1.0
+                            _p10 = float(np.percentile(_term, 10))
+                            if _p10 < -0.05:
+                                opp["risk_note"] = (
+                                    f"⚠️ Downside risk: 10th pct = {_p10:.1%}"
+                                )
+                except Exception:
+                    pass
+
             if not briefing:
                 try:
                     from trading.backtesting.monte_carlo import (

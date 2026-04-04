@@ -67,8 +67,9 @@ class LLMInterface:
             tool_registry=self.tool_registry,
         )
 
-        # Load model
-        asyncio.create_task(self.model_loader.load_model(model_name, api_key))
+        self._lazy_model_name = model_name
+        self._lazy_api_key = api_key
+        self._model_loader_ready = False
 
         # Initialize metrics
         self.metrics: Dict[str, Any] = {
@@ -83,6 +84,13 @@ class LLMInterface:
         }
 
         logger.info("LLM interface initialized successfully")
+
+    async def _ensure_model_loaded(self) -> None:
+        """Load underlying model on first async use (no asyncio.create_task in __init__)."""
+        if self._model_loader_ready:
+            return
+        await self.model_loader.load_model(self._lazy_model_name, self._lazy_api_key)
+        self._model_loader_ready = True
 
     async def process_prompt(
         self,
@@ -106,6 +114,7 @@ class LLMInterface:
         logger.info(f"Processing prompt: {prompt[:100]}...")
 
         try:
+            await self._ensure_model_loaded()
             # Process with agent
             result = await self.agent.process_prompt(prompt, context, tools)
 
@@ -167,6 +176,7 @@ class LLMInterface:
         Routes through get_active_llm(); supports Claude, GPT-4, Gemini, Ollama, HuggingFace.
         Failures are logged and re-raised (no silent fallback).
         """
+        await self._ensure_model_loaded()
         try:
             from agents.llm.active_llm_calls import call_active_llm_simple
         except ImportError:
@@ -286,6 +296,9 @@ class LLMInterface:
 
     def __del__(self):
         """Cleanup when the interface is destroyed."""
-        logger.info("Cleaning up LLM interface")
-        if self.memory_manager:
-            self.memory_manager.clear_memories()
+        try:
+            logger.info("Cleaning up LLM interface")
+            if self.memory_manager:
+                self.memory_manager.clear_memories()
+        except Exception:
+            pass

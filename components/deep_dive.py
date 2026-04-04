@@ -355,13 +355,22 @@ def render_deep_dive(ticker: str) -> None:
             )
 
             _eng = create_commentary_engine()
+            if _eng is None:
+                raise ValueError("Commentary engine unavailable")
             _req = CommentaryRequest(
                 commentary_type=CommentaryType.MARKET_REGIME,
                 symbol=sym,
                 timestamp=datetime.now(),
                 market_data=hist,
             )
-            _resp = asyncio.run(_eng.generate_commentary(_req))
+            _loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(_loop)
+            try:
+                _resp = _loop.run_until_complete(
+                    _eng.generate_commentary(_req)
+                )
+            finally:
+                _loop.close()
             _txt = (
                 getattr(_resp, "detailed_analysis", None)
                 or getattr(_resp, "summary", None)
@@ -370,12 +379,31 @@ def render_deep_dive(ticker: str) -> None:
             if _txt:
                 st.markdown("**AI Commentary**")
                 st.markdown(_txt[:4000])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Commentary: %s", e)
 
         tf, tn, tr, tp = st.tabs(["Forecast", "News", "Risk", "Patterns"])
         with tf:
-            render_forecast(sym, hist, horizon=7)
+            forecast_result = render_forecast(sym, hist, horizon=7)
+            _wf_conf = (forecast_result or {}).get("walk_forward_confidence")
+            _wf_warn = (forecast_result or {}).get("walk_forward_warnings") or []
+            if _wf_conf:
+                _conf_color = {
+                    "high": "🟢",
+                    "medium": "🟡",
+                    "low": "🔴",
+                }.get(str(_wf_conf).lower(), "⬜")
+                st.caption(
+                    f"{_conf_color} Walk-forward validated confidence: "
+                    f"{str(_wf_conf).upper()} — run Backtest → Walk-Forward to update."
+                )
+            else:
+                st.caption(
+                    "⬜ Walk-forward confidence: not yet validated. Run "
+                    "Backtest → Walk-Forward tab to calibrate."
+                )
+            for w in _wf_warn:
+                st.warning(w)
         with tn:
             render_news(sym)
         with tr:

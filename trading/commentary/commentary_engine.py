@@ -121,22 +121,30 @@ class CommentaryEngine:
             CommentaryType.TRADE_EXPLANATION: {
                 "title": "Trade Explanation: {symbol}",
                 "system_prompt": "You are a quantitative trading analyst explaining trade decisions.",
-                "user_template": self._get_trade_explanation_template(),
+                "user_template": (
+                    "Explain the trade rationale for {symbol} using the supplied context."
+                ),
             },
             CommentaryType.PERFORMANCE_ANALYSIS: {
                 "title": "Performance Analysis: {symbol}",
                 "system_prompt": "You are a performance analyst providing insights on trading results.",
-                "user_template": self._get_performance_analysis_template(),
+                "user_template": (
+                    "Summarize performance drivers for {symbol} from the data provided."
+                ),
             },
             CommentaryType.MARKET_REGIME: {
                 "title": "Market Regime Analysis: {symbol}",
                 "system_prompt": "You are a market analyst explaining current market conditions.",
-                "user_template": self._get_market_regime_template(),
+                "user_template": (
+                    "Describe the current market regime for {symbol} from price/volume context."
+                ),
             },
             CommentaryType.RISK_ASSESSMENT: {
                 "title": "Risk Assessment: {symbol}",
                 "system_prompt": "You are a risk analyst assessing trading risks.",
-                "user_template": self._get_risk_assessment_template(),
+                "user_template": (
+                    "Assess key risks for {symbol} given the portfolio and market inputs."
+                ),
             },
         }
 
@@ -569,6 +577,10 @@ class CommentaryEngine:
 
 def create_commentary_engine(
     config: Optional[Dict[str, Any]] = None,
-) -> CommentaryEngine:
-    """Create a configured commentary engine."""
-    return CommentaryEngine(config)
+) -> Optional[CommentaryEngine]:
+    """Create a configured commentary engine (sync-safe; returns None on init failure)."""
+    try:
+        return CommentaryEngine(config)
+    except Exception as e:
+        logger.warning("Commentary engine init failed: %s", e)
+        return None
