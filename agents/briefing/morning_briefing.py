@@ -75,6 +75,11 @@ class MorningBriefing:
         fc = opp.get("forecast") or {}
         entry = float(opp.get("entry") or 0)
         target = float(opp.get("target") or fc.get("consensus_price") or 0)
+        MIN_MOVE_PCT = 0.005
+        if target > 0 and entry > 0:
+            move_pct = abs(target - entry) / entry
+            if move_pct < MIN_MOVE_PCT:
+                return False
         exp_pct = float(fc.get("expected_move_pct", 0) or 0) / 100.0
         if entry > 0 and target > 0:
             forecast_return = (target - entry) / entry
@@ -446,6 +451,7 @@ class MorningBriefing:
                     horizon=7,
                     symbol=str(symbol),
                     models=self.BRIEFING_MODELS,
+                    model_configs={"arima": {"fast_mode": True}},
                 )
                 if forecast and "error" not in forecast:
                     consensus_price = forecast.get("consensus_price")

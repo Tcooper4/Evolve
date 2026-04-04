@@ -27,6 +27,46 @@ logger = logging.getLogger(__name__)
 _MACRO_FACTORS_INSTANCE = None
 
 
+def _get_scoring_weights() -> Dict[str, float]:
+    """Dimension weights; adjusted by Settings → scoring_style when available."""
+    base = {
+        "technical": 0.30,
+        "momentum": 0.35,
+        "sentiment": 0.20,
+        "fundamental": 0.15,
+    }
+    try:
+        from config.user_store import load_user_preferences
+        from utils.session_utils import get_stable_user_id
+
+        prefs = load_user_preferences(get_stable_user_id()) or {}
+        style = str(prefs.get("scoring_style", "Balanced"))
+        if "Momentum" in style:
+            return {
+                "technical": 0.20,
+                "momentum": 0.50,
+                "sentiment": 0.20,
+                "fundamental": 0.10,
+            }
+        if "Technical" in style:
+            return {
+                "technical": 0.50,
+                "momentum": 0.25,
+                "sentiment": 0.15,
+                "fundamental": 0.10,
+            }
+        if "Fundamental" in style:
+            return {
+                "technical": 0.20,
+                "momentum": 0.20,
+                "sentiment": 0.15,
+                "fundamental": 0.45,
+            }
+    except Exception:
+        pass
+    return base
+
+
 def _has_external_api_keys() -> bool:
     """True only if at least one paid/external API key is configured."""
     import os
@@ -171,6 +211,15 @@ def _compute_ai_score_cached(symbol: str) -> Dict[str, Any]:
 def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
     """Internal AI score computation (used by compute_ai_score)."""
     try:
+        try:
+            weights = _get_scoring_weights()
+        except Exception:
+            weights = {
+                "technical": 0.30,
+                "momentum": 0.35,
+                "sentiment": 0.20,
+                "fundamental": 0.15,
+            }
         _external_bundle: Optional[Dict[str, Any]] = None
         if _has_external_api_keys():
             try:
@@ -699,12 +748,6 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             pass
 
         # ── COMPOSITE SCORE ─────────────────────────────────────────
-        weights = {
-            "technical": 0.30,
-            "momentum": 0.35,
-            "sentiment": 0.20,
-            "fundamental": 0.15,
-        }
         overall = (
             technical_score * weights["technical"]
             + momentum_score * weights["momentum"]

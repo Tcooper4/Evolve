@@ -147,6 +147,30 @@ try:
 except Exception:
     pass
 
+
+def _market_status() -> str:
+    """US/Eastern session label for sidebar (approximate NYSE-style hours)."""
+    import datetime
+
+    import pytz
+
+    now = datetime.datetime.now(pytz.timezone("US/Eastern"))
+    wd = now.weekday()
+    h, m = now.hour, now.minute
+    mins = h * 60 + m
+    if wd >= 5:
+        return "Market closed · Weekend"
+    if 240 <= mins < 270:
+        return "Pre-market · 4:00–4:30 AM ET"
+    if 270 <= mins < 570:
+        return "Pre-market · Open"
+    if 570 <= mins < 960:
+        return "Market open · NYSE/NASDAQ"
+    if 960 <= mins < 1200:
+        return "After-hours · Open"
+    return "Market closed"
+
+
 # ── Global ticker search (sidebar, above nav) ───────
 if "global_search_ticker" not in st.session_state:
     st.session_state["global_search_ticker"] = ""
@@ -171,12 +195,7 @@ with st.sidebar:
             st.session_state["deep_dive_ticker"] = _sym
             st.switch_page("pages/1_Dashboard.py")
     try:
-        import datetime as _dt
-
-        if _dt.datetime.now().weekday() < 5:
-            st.caption("Market status: **Weekday session** (US)")
-        else:
-            st.caption("Market status: **Weekend**")
+        st.caption("Market status: **" + _market_status() + "**")
     except Exception:
         st.caption("Market status: —")
     st.markdown("---")

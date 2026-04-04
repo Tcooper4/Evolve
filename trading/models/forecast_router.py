@@ -173,7 +173,11 @@ class ForecastRouter:
             start = ""
             end = ""
 
-        key = self._cached_model_key(symbol, start, end, selected_model)
+        _cache_model = selected_model
+        if selected_model == "arima" and kwargs.get("fast_mode"):
+            _cache_model = "arima|fast"
+
+        key = self._cached_model_key(symbol, start, end, _cache_model)
 
         # Attach a simple in-memory cache dict on the instance
         cache: Dict[Tuple[str, str, str, str], Any] = getattr(
@@ -1096,7 +1100,11 @@ class ForecastRouter:
                         f"Model {selected_model} has poor in-sample fit (MAPE={in_sample_mape:.1f}%). "
                         "Consider more training data or different hyperparameters."
                     )
-                    logger.warning(msg)
+                    logger.debug(
+                        "Model %s MAPE=%.1f%%",
+                        selected_model,
+                        in_sample_mape,
+                    )
                     warnings_list.append(msg)
 
             last_actual_price = getattr(self, "_last_price_used", 1.0)
@@ -1236,6 +1244,7 @@ class ForecastRouter:
         horizon: int = 7,
         models: Optional[List[str]] = None,
         symbol: Optional[str] = None,
+        model_configs: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Run multiple models and build a consensus forecast.
@@ -1361,11 +1370,14 @@ class ForecastRouter:
             try:
 
                 def _run_one_forecast():
+                    _per = dict((model_configs or {}).get(name) or {})
                     return self.get_forecast(
                         df,
                         model_type=name,
                         horizon=horizon_int,
                         run_walk_forward=False,
+                        symbol=symbol,
+                        **_per,
                     )
 
                 _to = _consensus_timeout_s(name)

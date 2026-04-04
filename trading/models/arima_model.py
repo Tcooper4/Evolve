@@ -68,6 +68,7 @@ class ARIMAModel(BaseModel):
 
         # Auto_arima specific configuration
         self.auto_arima_config = config.get("auto_arima_config", {}) if config else {}
+        self.fast_mode = bool(config.get("fast_mode", False)) if config else False
 
         # Validate optimization criterion
         if self.optimization_criterion not in ["aic", "bic", "mse", "rmse"]:
@@ -154,6 +155,24 @@ class ARIMAModel(BaseModel):
                 "random_state": 42,
             }
 
+            if getattr(self, "fast_mode", False):
+                # Tighter search (~fewer candidates) for latency-sensitive paths (e.g. briefing)
+                base_config.update(
+                    {
+                        "start_p": 1,
+                        "start_q": 0,
+                        "max_p": 2,
+                        "max_q": 2,
+                        "max_P": 1,
+                        "max_Q": 1,
+                        "stepwise": True,
+                        "seasonal": False,
+                        "m": 1,
+                        "D": 0,
+                    }
+                )
+                self.optimization_criterion = "aic"
+
             # Merge with user config
             config = {**base_config, **self.auto_arima_config}
 
@@ -161,6 +180,8 @@ class ARIMAModel(BaseModel):
             if self.optimization_criterion in ["aic", "bic"]:
                 # Use built-in AIC/BIC optimization
                 config["information_criterion"] = self.optimization_criterion
+                if getattr(self, "fast_mode", False):
+                    config["information_criterion"] = "aic"
                 auto_model = pm.auto_arima(data, **config)
 
             elif self.optimization_criterion in ["mse", "rmse"]:

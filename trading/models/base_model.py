@@ -362,7 +362,16 @@ class BaseModel(ABC):
             missing_keys = [key for key in required_keys if key not in self.config]
 
             if missing_keys:
-                self.logger.warning(f"Missing config keys: {missing_keys}")
+                _neural_tokens = (
+                    "lstm",
+                    "tcn",
+                    "transformer",
+                    "neural",
+                    "deep",
+                )
+                _name = self.__class__.__name__.lower()
+                if any(n in _name for n in _neural_tokens):
+                    self.logger.warning("Missing config keys: %s", missing_keys)
                 # Set defaults
                 self.config.setdefault("input_size", 10)
                 self.config.setdefault("hidden_size", 64)

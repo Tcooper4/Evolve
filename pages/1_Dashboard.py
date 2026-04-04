@@ -373,7 +373,10 @@ try:
     rows = wm.get_all() or []
     syms = [str(r.get("symbol", "")).upper() for r in rows if r.get("symbol")]
     if not syms:
-        st.caption("Add tickers from the watchlist widget on other pages, or use search.")
+        st.caption(
+            "Your watchlist is empty. Search any ticker using the search bar above, "
+            "open it, then click 'Add to watchlist' in the deep dive."
+        )
     else:
         _load_all = bool(st.session_state.get("watchlist_load_all_scores"))
         _max_score = len(syms[:15]) if _load_all else min(

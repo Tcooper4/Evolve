@@ -59,6 +59,28 @@ if not SENTENCE_TRANSFORMERS_AVAILABLE:
 if not TIKTOKEN_AVAILABLE:
     logger.warning("Token counting disabled (pip install tiktoken to enable)")
 
+_ST_ENCODER = None
+_ST_ENCODER_FAILED = False
+
+
+def _get_sentence_transformer_encoder():
+    """Lazy-load MiniLM encoder to avoid ~3–5s cold start when semantic match is unused."""
+    global _ST_ENCODER, _ST_ENCODER_FAILED
+    if _ST_ENCODER_FAILED:
+        return None
+    if _ST_ENCODER is not None:
+        return _ST_ENCODER
+    if not SENTENCE_TRANSFORMERS_AVAILABLE or SentenceTransformer is None:
+        _ST_ENCODER_FAILED = True
+        return None
+    try:
+        _ST_ENCODER = SentenceTransformer("all-MiniLM-L6-v2")
+    except Exception as e:
+        logger.warning("Could not initialize sentence transformer: %s", e)
+        _ST_ENCODER_FAILED = True
+        return None
+    return _ST_ENCODER
+
 
 @dataclass
 class AgentConfig:
@@ -144,25 +166,10 @@ class PromptAgent:
         self.logger = logging.getLogger(__name__)
         self.config = config or {}
 
-        # Initialize prompt examples system
+        # Initialize prompt examples system (encoder loads lazily on first semantic use)
         self.prompt_examples = self._load_prompt_examples()
         self.sentence_transformer = None
         self.example_embeddings = None
-
-        if SENTENCE_TRANSFORMERS_AVAILABLE and SentenceTransformer is not None:
-            try:
-                self.sentence_transformer = SentenceTransformer("all-MiniLM-L6-v2")
-                if self.prompt_examples:
-                    self.example_embeddings = self._compute_example_embeddings()
-                    self.logger.info("Prompt examples system initialized successfully")
-                else:
-                    self.logger.info("SentenceTransformers available but no prompt examples file found - system will work without examples")
-            except Exception as e:
-                self.logger.warning(f"Could not initialize sentence transformer: {e}")
-        else:
-            self.logger.info(
-                "Prompt examples system disabled (SentenceTransformers not available)"
-            )
 
         # Initialize token usage tracking
         self.token_usage = {
@@ -303,7 +310,7 @@ class PromptAgent:
                 )
                 return examples
             else:
-                self.logger.warning("Prompt examples file not found")
+                self.logger.debug("Prompt examples file not found")
                 return None
         except Exception as e:
             self.logger.error(f"Error loading prompt examples: {e}")
@@ -315,13 +322,15 @@ class PromptAgent:
         Returns:
             Numpy array of embeddings or None if computation fails
         """
-        if not self.prompt_examples or not self.sentence_transformer:
+        enc = _get_sentence_transformer_encoder()
+        self.sentence_transformer = enc
+        if not self.prompt_examples or not enc:
             return None
 
         try:
             examples = self.prompt_examples.get("examples", [])
             prompts = [example["prompt"] for example in examples]
-            embeddings = self.sentence_transformer.encode(prompts)
+            embeddings = enc.encode(prompts)
             self.logger.info(f"Computed embeddings for {len(prompts)} examples")
             return embeddings
         except Exception as e:
@@ -517,12 +526,16 @@ class PromptAgent:
         Returns:
             List of similar examples with their similarity scores
         """
-        if not self.sentence_transformer or not self.example_embeddings:
+        if self.prompt_examples and self.example_embeddings is None:
+            self.example_embeddings = self._compute_example_embeddings()
+        enc = self.sentence_transformer or _get_sentence_transformer_encoder()
+        self.sentence_transformer = enc
+        if not enc or not self.example_embeddings:
             return []
 
         try:
             # Encode the input prompt
-            prompt_embedding = self.sentence_transformer.encode([prompt])
+            prompt_embedding = enc.encode([prompt])
 
             # Compute cosine similarities
             similarities = np.dot(self.example_embeddings, prompt_embedding.T).flatten()
@@ -640,8 +653,10 @@ class PromptAgent:
             with open(examples_path, "w") as f:
                 json.dump(self.prompt_examples, f, indent=2)
 
-            # Update embeddings if available
-            if self.sentence_transformer:
+            # Update embeddings if encoder available
+            _enc = _get_sentence_transformer_encoder()
+            if _enc:
+                self.sentence_transformer = _enc
                 self.example_embeddings = self._compute_example_embeddings()
 
             self.logger.info(f"Saved successful prompt example: {new_example['id']}")
@@ -836,7 +851,7 @@ class PromptAgent:
             "unique_strategy_types": list(strategy_types),
             "average_performance_score": avg_performance,
             "embeddings_available": self.example_embeddings is not None,
-            "sentence_transformer_available": self.sentence_transformer is not None,
+            "sentence_transformer_available": SENTENCE_TRANSFORMERS_AVAILABLE,
             "metadata": metadata,
         }
 

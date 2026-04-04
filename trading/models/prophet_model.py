@@ -122,6 +122,19 @@ if PROPHET_AVAILABLE:
                     self.model = None
             return self.model
 
+        def _df_with_ds_for_horizon(self, data: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+            """Ensure a date column exists for calculate_forecast_horizon (avoids missing 'ds' warnings)."""
+            date_col = self.config.get("date_column", "ds")
+            if date_col not in data.columns and isinstance(
+                data.index, pd.DatetimeIndex
+            ):
+                df = data.reset_index()
+                df = df.rename(columns={df.columns[0]: "ds"})
+                return df, "ds"
+            if "ds" in data.columns:
+                return data, "ds"
+            return data, date_col
+
         def _prepare_data(
             self, data: pd.DataFrame, is_training: bool
         ) -> tuple[np.ndarray, np.ndarray]:
@@ -519,9 +532,10 @@ if PROPHET_AVAILABLE:
 
                 # Calculate dynamic forecast horizon if not provided
                 if horizon is None:
+                    _hdf, _dcol = self._df_with_ds_for_horizon(data)
                     horizon = calculate_forecast_horizon(
-                        data,
-                        self.config["date_column"],
+                        _hdf,
+                        _dcol,
                         target_horizon=self.config.get("default_horizon"),
                         max_horizon=self.config.get("max_horizon", 365),
                     )
@@ -623,9 +637,10 @@ if PROPHET_AVAILABLE:
 
                 # Calculate dynamic forecast horizon if not provided
                 if horizon is None:
+                    _hdf, _dcol = self._df_with_ds_for_horizon(data)
                     horizon = calculate_forecast_horizon(
-                        data,
-                        self.config["date_column"],
+                        _hdf,
+                        _dcol,
                         target_horizon=self.config.get("default_horizon"),
                         max_horizon=self.config.get("max_horizon", 365),
                     )
